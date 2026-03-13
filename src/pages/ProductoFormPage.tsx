@@ -48,7 +48,6 @@ export default function ProductoFormPage() {
   const [starred, setStarred] = useState(false);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
-  const [starred, setStarred] = useState(false);
 
   useEffect(() => {
     if (existing) setForm(existing);
