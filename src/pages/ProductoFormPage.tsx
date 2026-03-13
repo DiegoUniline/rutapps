@@ -369,35 +369,86 @@ export default function ProductoFormPage() {
                       </div>
                     </div>
 
-                    {/* Tarifas table */}
-                    {tarifasDisp && tarifasDisp.length > 0 && (
-                      <div className="mt-3">
-                        <OdooSection title="TARIFAS DISPONIBLES">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="border-b border-table-border">
-                                <th className="th-odoo text-left">Nombre</th>
-                                <th className="th-odoo text-left">Tipo</th>
-                                <th className="th-odoo text-center">Activa</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {tarifasDisp.map(t => (
-                                <tr key={t.id} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer" onClick={() => navigate(`/tarifas/${t.id}`)}>
-                                  <td className="py-1.5 px-3">{t.nombre}</td>
-                                  <td className="py-1.5 px-3 text-muted-foreground">{t.tipo}</td>
-                                  <td className="py-1.5 px-3 text-center">
-                                    {t.activa
-                                      ? <span className="text-[11px] font-medium text-success">Sí</span>
-                                      : <span className="text-[11px] text-muted-foreground">No</span>}
-                                  </td>
+                    {/* Calculated prices per tarifa */}
+                    {(() => {
+                      // Group tarifa lines by tarifa, pick highest priority per tarifa
+                      const byTarifa = new Map<string, { nombre: string; activa: boolean; linea: any }>();
+                      const priorityOrder: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
+
+                      (tarifaLineas ?? []).forEach((tl: any) => {
+                        if (!tl.tarifas) return;
+                        const tarifaId = tl.tarifas.id;
+                        const existing = byTarifa.get(tarifaId);
+                        const thisPriority = priorityOrder[tl.aplica_a] ?? 99;
+                        if (!existing || thisPriority < priorityOrder[existing.linea.aplica_a]) {
+                          byTarifa.set(tarifaId, { nombre: tl.tarifas.nombre, activa: tl.tarifas.activa, linea: tl });
+                        }
+                      });
+
+                      const calcPrice = (linea: any) => {
+                        const costo = form.costo ?? 0;
+                        const precio = form.precio_principal ?? 0;
+                        if (linea.tipo_calculo === 'margen_costo') {
+                          const p = costo * (1 + (linea.margen_pct ?? 0) / 100);
+                          return Math.max(p, linea.precio_minimo ?? 0);
+                        }
+                        if (linea.tipo_calculo === 'descuento_precio') {
+                          const p = precio * (1 - (linea.descuento_pct ?? 0) / 100);
+                          return Math.max(p, linea.precio_minimo ?? 0);
+                        }
+                        return Math.max(linea.precio ?? 0, linea.precio_minimo ?? 0);
+                      };
+
+                      const calcLabel = (linea: any) => {
+                        if (linea.tipo_calculo === 'margen_costo') return `+${linea.margen_pct}% s/costo`;
+                        if (linea.tipo_calculo === 'descuento_precio') return `-${linea.descuento_pct}% s/precio`;
+                        return 'Precio fijo';
+                      };
+
+                      const aplLabels: Record<string, string> = { producto: 'Producto', categoria: 'Categoría', todos: 'Todos' };
+                      const entries = Array.from(byTarifa.entries());
+
+                      if (entries.length === 0) return null;
+
+                      return (
+                        <div className="mt-3">
+                          <OdooSection title="PRECIO CALCULADO POR TARIFA">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-table-border">
+                                  <th className="th-odoo text-left">Tarifa</th>
+                                  <th className="th-odoo text-left">Regla</th>
+                                  <th className="th-odoo text-left">Tipo</th>
+                                  <th className="th-odoo text-right">Precio Calculado</th>
+                                  <th className="th-odoo text-center">Activa</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </OdooSection>
-                      </div>
-                    )}
+                              </thead>
+                              <tbody>
+                                {entries.map(([tarifaId, { nombre, activa, linea }]) => (
+                                  <tr key={tarifaId} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer" onClick={() => navigate(`/tarifas/${tarifaId}`)}>
+                                    <td className="py-1.5 px-3 font-medium">{nombre}</td>
+                                    <td className="py-1.5 px-3">
+                                      <span className={`text-[11px] px-1.5 py-0.5 rounded ${linea.aplica_a === 'producto' ? 'bg-green-100 text-green-800' : linea.aplica_a === 'categoria' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                                        {aplLabels[linea.aplica_a]}
+                                      </span>
+                                    </td>
+                                    <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
+                                    <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">
+                                      $ {calcPrice(linea).toFixed(2)}
+                                    </td>
+                                    <td className="py-1.5 px-3 text-center">
+                                      {activa
+                                        ? <span className="text-[11px] font-medium text-success">Sí</span>
+                                        : <span className="text-[11px] text-muted-foreground">No</span>}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </OdooSection>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ),
               },
