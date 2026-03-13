@@ -84,27 +84,39 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
             <tr className="border-b border-table-border">
               <th className="th-odoo text-left">Lista de precios</th>
               <th className="th-odoo text-left">Tipo</th>
+              <th className="th-odoo text-right">Costo</th>
               <th className="th-odoo text-right">Precio</th>
+              <th className="th-odoo text-right">Ganancia $</th>
+              <th className="th-odoo text-right">Ganancia %</th>
               <th className="th-odoo w-10"></th>
             </tr>
           </thead>
           <tbody>
-            {entries.map(([tarifaId, { nombre, linea }]) => (
-              <tr key={tarifaId} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                <td className="py-1.5 px-3 font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/tarifas/${tarifaId}`)}>{nombre}</td>
-                <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
-                <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">$ {calcPrice(linea).toFixed(2)}</td>
-                <td className="py-1.5 px-3 text-center">
-                  {linea.aplica_a === 'producto' && (
-                    <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {entries.map(([tarifaId, { nombre, linea }]) => {
+              const precio = calcPrice(linea);
+              const costo = form.costo ?? 0;
+              const ganancia = precio - costo;
+              const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
+              return (
+                <tr key={tarifaId} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                  <td className="py-1.5 px-3 font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/tarifas/${tarifaId}`)}>{nombre}</td>
+                  <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {costo.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">$ {precio.toFixed(2)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
+                  <td className="py-1.5 px-3 text-center">
+                    {linea.aplica_a === 'producto' && (
+                      <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
             {entries.length === 0 && (
-              <tr><td colSpan={4} className="py-3 px-3 text-[12px] text-muted-foreground">Sin precios configurados</td></tr>
+              <tr><td colSpan={7} className="py-3 px-3 text-[12px] text-muted-foreground">Sin precios configurados</td></tr>
             )}
           </tbody>
         </table>
