@@ -164,7 +164,12 @@ export default function ClienteFormPage() {
                 <OdooField label="Zona" value={form.zona_id} onChange={v => set('zona_id', v || null)} type="select"
                   options={zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? []} />
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
-                <OdooField label="Fecha de Alta" value={form.fecha_alta} onChange={v => set('fecha_alta', v)} readOnly />
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Fecha de alta</span>
+                  <div className="flex-1">
+                    <OdooDatePicker value={form.fecha_alta ?? ''} onChange={v => set('fecha_alta', v)} />
+                  </div>
+                </div>
               </div>
             </div>
           ),
