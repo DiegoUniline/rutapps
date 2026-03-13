@@ -274,9 +274,12 @@ export default function ProductoFormPage() {
       return;
     }
     try {
-      await saveMutation.mutateAsync(isNew ? form : { ...form, id });
+      const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
       toast.success('Producto guardado');
-      navigate('/productos');
+      setOriginalForm({ ...form });
+      if (isNew && result?.id) {
+        navigate(`/productos/${result.id}`, { replace: true });
+      }
     } catch (err: any) {
       toast.error(err.message);
     }
