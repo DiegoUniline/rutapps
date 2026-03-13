@@ -180,3 +180,22 @@ export function useTarifasForSelect() {
     },
   });
 }
+
+export function useTarifaLineasForProducto(productoId?: string, clasificacionId?: string | null) {
+  return useQuery({
+    queryKey: ['tarifa-lineas-producto', productoId, clasificacionId],
+    queryFn: async () => {
+      const filters: string[] = ['aplica_a.eq.todos'];
+      if (productoId) filters.push(`producto_ids.cs.{${productoId}}`);
+      if (clasificacionId) filters.push(`clasificacion_ids.cs.{${clasificacionId}}`);
+
+      const { data, error } = await supabase
+        .from('tarifa_lineas')
+        .select('*, tarifas(id, nombre, activa)')
+        .or(filters.join(','));
+      if (error) throw error;
+      return data as (TarifaLinea & { tarifas: { id: string; nombre: string; activa: boolean } })[];
+    },
+    enabled: !!productoId,
+  });
+}
