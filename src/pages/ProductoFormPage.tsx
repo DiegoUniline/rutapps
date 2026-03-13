@@ -198,6 +198,19 @@ export default function ProductoFormPage() {
                   format={v => `$ ${(v ?? 0).toFixed(2)}`}
                 />
                 <OdooField
+                  label="Cálculo Costo" value={form.calculo_costo} type="select" help
+                  options={[
+                    { value: 'manual', label: 'Manual' },
+                    { value: 'ultimo', label: 'Último costo de compra' },
+                    { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' },
+                    { value: 'promedio', label: 'Promedio' },
+                    { value: 'estandar', label: 'Estándar' },
+                    { value: 'ultimo_compra', label: 'Último costo (compra directa)' },
+                  ]}
+                  onChange={v => set('calculo_costo', v)}
+                  format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
+                />
+                <OdooField
                   label="Proveedor" value={form.proveedor_id} type="select"
                   options={proveedores?.map(p => ({ value: p.id, label: p.nombre })) ?? []}
                   onChange={v => set('proveedor_id', v || null)}
