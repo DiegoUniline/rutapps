@@ -1084,6 +1084,10 @@ export type Database = {
     }
     Functions: {
       get_my_empresa_id: { Args: never; Returns: string }
+      next_folio: {
+        Args: { p_empresa_id: string; prefix: string }
+        Returns: string
+      }
     }
     Enums: {
       aplica_a_tarifa: "todos" | "categoria" | "producto"
