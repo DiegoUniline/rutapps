@@ -865,6 +865,190 @@ export type Database = {
           },
         ]
       }
+      venta_lineas: {
+        Row: {
+          cantidad: number
+          created_at: string
+          descripcion: string | null
+          descuento_pct: number | null
+          id: string
+          ieps_monto: number | null
+          ieps_pct: number | null
+          iva_monto: number | null
+          iva_pct: number | null
+          notas: string | null
+          precio_unitario: number
+          producto_id: string | null
+          subtotal: number | null
+          total: number | null
+          unidad_id: string | null
+          venta_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          descripcion?: string | null
+          descuento_pct?: number | null
+          id?: string
+          ieps_monto?: number | null
+          ieps_pct?: number | null
+          iva_monto?: number | null
+          iva_pct?: number | null
+          notas?: string | null
+          precio_unitario?: number
+          producto_id?: string | null
+          subtotal?: number | null
+          total?: number | null
+          unidad_id?: string | null
+          venta_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          descripcion?: string | null
+          descuento_pct?: number | null
+          id?: string
+          ieps_monto?: number | null
+          ieps_pct?: number | null
+          iva_monto?: number | null
+          iva_pct?: number | null
+          notas?: string | null
+          precio_unitario?: number
+          producto_id?: string | null
+          subtotal?: number | null
+          total?: number | null
+          unidad_id?: string | null
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_lineas_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_lineas_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ventas: {
+        Row: {
+          almacen_id: string | null
+          cliente_id: string | null
+          condicion_pago: Database["public"]["Enums"]["condicion_pago"]
+          created_at: string
+          descuento_total: number | null
+          empresa_id: string
+          entrega_inmediata: boolean | null
+          fecha: string
+          fecha_entrega: string | null
+          folio: string | null
+          id: string
+          ieps_total: number | null
+          iva_total: number | null
+          notas: string | null
+          status: Database["public"]["Enums"]["status_venta"]
+          subtotal: number | null
+          tarifa_id: string | null
+          tipo: Database["public"]["Enums"]["tipo_venta"]
+          total: number | null
+          vendedor_id: string | null
+        }
+        Insert: {
+          almacen_id?: string | null
+          cliente_id?: string | null
+          condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
+          created_at?: string
+          descuento_total?: number | null
+          empresa_id: string
+          entrega_inmediata?: boolean | null
+          fecha?: string
+          fecha_entrega?: string | null
+          folio?: string | null
+          id?: string
+          ieps_total?: number | null
+          iva_total?: number | null
+          notas?: string | null
+          status?: Database["public"]["Enums"]["status_venta"]
+          subtotal?: number | null
+          tarifa_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_venta"]
+          total?: number | null
+          vendedor_id?: string | null
+        }
+        Update: {
+          almacen_id?: string | null
+          cliente_id?: string | null
+          condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
+          created_at?: string
+          descuento_total?: number | null
+          empresa_id?: string
+          entrega_inmediata?: boolean | null
+          fecha?: string
+          fecha_entrega?: string | null
+          folio?: string | null
+          id?: string
+          ieps_total?: number | null
+          iva_total?: number | null
+          notas?: string | null
+          status?: Database["public"]["Enums"]["status_venta"]
+          subtotal?: number | null
+          tarifa_id?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_venta"]
+          total?: number | null
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ventas_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_tarifa_id_fkey"
+            columns: ["tarifa_id"]
+            isOneToOne: false
+            referencedRelation: "tarifas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zonas: {
         Row: {
           created_at: string
@@ -910,12 +1094,20 @@ export type Database = {
         | "manual"
         | "ultimo_compra"
         | "ultimo_proveedor"
+      condicion_pago: "contado" | "credito" | "por_definir"
       frecuencia_visita: "diaria" | "semanal" | "quincenal" | "mensual"
       status_cliente: "activo" | "inactivo" | "suspendido"
       status_producto: "activo" | "inactivo" | "borrador"
+      status_venta:
+        | "borrador"
+        | "confirmado"
+        | "entregado"
+        | "facturado"
+        | "cancelado"
       tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
+      tipo_venta: "pedido" | "venta_directa"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1052,12 +1244,21 @@ export const Constants = {
         "ultimo_compra",
         "ultimo_proveedor",
       ],
+      condicion_pago: ["contado", "credito", "por_definir"],
       frecuencia_visita: ["diaria", "semanal", "quincenal", "mensual"],
       status_cliente: ["activo", "inactivo", "suspendido"],
       status_producto: ["activo", "inactivo", "borrador"],
+      status_venta: [
+        "borrador",
+        "confirmado",
+        "entregado",
+        "facturado",
+        "cancelado",
+      ],
       tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],
+      tipo_venta: ["pedido", "venta_directa"],
     },
   },
 } as const
