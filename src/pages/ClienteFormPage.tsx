@@ -85,7 +85,7 @@ export default function ClienteFormPage() {
   ];
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-secondary/50 min-h-full">
       <div className="mb-0.5">
         <Link to="/clientes" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Clientes</Link>
       </div>
@@ -141,6 +141,7 @@ export default function ClienteFormPage() {
       </div>
 
       {/* Tabs */}
+      <div className="bg-card border border-border rounded px-4 pb-4 pt-1">
       <OdooTabs tabs={[
         {
           key: 'general', label: 'Información General',
@@ -236,6 +237,7 @@ export default function ClienteFormPage() {
           ),
         },
       ]} />
+      </div>
     </div>
   );
 }
