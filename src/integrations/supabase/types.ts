@@ -728,7 +728,13 @@ export type Database = {
       get_my_empresa_id: { Args: never; Returns: string }
     }
     Enums: {
-      calculo_costo: "promedio" | "ultimo" | "estandar" | "manual"
+      calculo_costo:
+        | "promedio"
+        | "ultimo"
+        | "estandar"
+        | "manual"
+        | "ultimo_compra"
+        | "ultimo_proveedor"
       status_producto: "activo" | "inactivo" | "borrador"
       tipo_comision: "porcentaje" | "monto_fijo"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
@@ -859,7 +865,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      calculo_costo: ["promedio", "ultimo", "estandar", "manual"],
+      calculo_costo: [
+        "promedio",
+        "ultimo",
+        "estandar",
+        "manual",
+        "ultimo_compra",
+        "ultimo_proveedor",
+      ],
       status_producto: ["activo", "inactivo", "borrador"],
       tipo_comision: ["porcentaje", "monto_fijo"],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],

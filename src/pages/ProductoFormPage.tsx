@@ -91,7 +91,7 @@ export default function ProductoFormPage() {
     return u ? `${u.clave} - ${u.nombre}` : '';
   };
 
-  const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último', estandar: 'Estándar', manual: 'Manual' };
+  const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último costo de compra', estandar: 'Estándar', manual: 'Manual', ultimo_compra: 'Último costo (compra directa)', ultimo_proveedor: 'Último costo del proveedor principal' };
   const comisionLabels: Record<string, string> = { porcentaje: 'Porcentaje', monto_fijo: 'Monto Fijo' };
 
   return (
@@ -196,6 +196,19 @@ export default function ProductoFormPage() {
                   label="Costo" value={form.costo} type="number" teal
                   onChange={v => set('costo', +v)}
                   format={v => `$ ${(v ?? 0).toFixed(2)}`}
+                />
+                <OdooField
+                  label="Cálculo Costo" value={form.calculo_costo} type="select" help
+                  options={[
+                    { value: 'manual', label: 'Manual' },
+                    { value: 'ultimo', label: 'Último costo de compra' },
+                    { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' },
+                    { value: 'promedio', label: 'Promedio' },
+                    { value: 'estandar', label: 'Estándar' },
+                    { value: 'ultimo_compra', label: 'Último costo (compra directa)' },
+                  ]}
+                  onChange={v => set('calculo_costo', v)}
+                  format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
                 />
                 <OdooField
                   label="Proveedor" value={form.proveedor_id} type="select"
