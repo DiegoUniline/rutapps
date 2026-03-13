@@ -9,6 +9,8 @@ import ProductosListPage from "@/pages/ProductosListPage";
 import ProductoFormPage from "@/pages/ProductoFormPage";
 import TarifasListPage from "@/pages/TarifasListPage";
 import TarifaFormPage from "@/pages/TarifaFormPage";
+import ClientesListPage from "@/pages/ClientesListPage";
+import ClienteFormPage from "@/pages/ClienteFormPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 import NotFound from "@/pages/NotFound";
 
@@ -35,7 +37,8 @@ function AppRoutes() {
         <Route path="/productos/:id" element={<ProductoFormPage />} />
         <Route path="/tarifas" element={<TarifasListPage />} />
         <Route path="/tarifas/:id" element={<TarifaFormPage />} />
-        <Route path="/clientes" element={<PlaceholderPage title="Clientes" />} />
+        <Route path="/clientes" element={<ClientesListPage />} />
+        <Route path="/clientes/:id" element={<ClienteFormPage />} />
         <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />
         <Route path="/pedidos" element={<PlaceholderPage title="Pedidos" />} />
         <Route path="/facturacion" element={<PlaceholderPage title="Facturación" />} />
