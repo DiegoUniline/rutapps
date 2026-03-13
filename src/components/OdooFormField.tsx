@@ -32,7 +32,11 @@ export function OdooField({
   }, [editing]);
 
   const isEdit = alwaysEdit || editing;
-  const displayValue = format ? format(value) : (value?.toString() || '');
+  const displayValue = format
+    ? format(value)
+    : type === 'select' && options
+      ? options.find(o => o.value === value?.toString())?.label ?? (value?.toString() || '')
+      : (value?.toString() || '');
   const isEmpty = !value && value !== 0;
 
   const handleBlur = () => {
