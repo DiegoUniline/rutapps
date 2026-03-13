@@ -131,7 +131,7 @@ function ClientesTable() {
 
 export default function ClientesListPage() {
   return (
-    <div className="p-4 space-y-3">
+    <div className="p-4 space-y-3 bg-secondary/50 min-h-full">
       <h1 className="text-xl font-semibold text-foreground">Clientes</h1>
       <OdooTabs
         tabs={[
