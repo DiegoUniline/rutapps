@@ -8,6 +8,199 @@ import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedo
 import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
 
+
+/* ── Precios Tab Component ── */
+function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, navigate }: {
+  form: Partial<Producto>;
+  set: (key: keyof Producto, value: any) => void;
+  tarifaLineas: any;
+  tarifasDisp: any;
+  productoId?: string;
+  isNew: boolean;
+  navigate: (path: string) => void;
+}) {
+  const saveLinea = useSaveTarifaLinea();
+  const deleteLineaMut = useDeleteTarifaLinea();
+  const [showModal, setShowModal] = useState(false);
+  const [newRule, setNewRule] = useState({
+    tarifa_id: '',
+    tipo_calculo: 'precio_fijo' as TipoCalculoTarifa,
+    precio: 0,
+    margen_pct: 0,
+    descuento_pct: 0,
+    precio_minimo: 0,
+  });
+
+  const calcPrice = (linea: any) => {
+    const c = form.costo ?? 0, pr = form.precio_principal ?? 0;
+    if (linea.tipo_calculo === 'margen_costo') return Math.max(c * (1 + (linea.margen_pct ?? 0) / 100), linea.precio_minimo ?? 0);
+    if (linea.tipo_calculo === 'descuento_precio') return Math.max(pr * (1 - (linea.descuento_pct ?? 0) / 100), linea.precio_minimo ?? 0);
+    return Math.max(linea.precio ?? 0, linea.precio_minimo ?? 0);
+  };
+
+  const handleSaveRule = async () => {
+    if (!newRule.tarifa_id) { toast.error('Selecciona una lista de precios'); return; }
+    try {
+      await saveLinea.mutateAsync({
+        tarifa_id: newRule.tarifa_id,
+        aplica_a: 'producto',
+        tipo_calculo: newRule.tipo_calculo,
+        precio: newRule.precio,
+        margen_pct: newRule.margen_pct,
+        descuento_pct: newRule.descuento_pct,
+        precio_minimo: newRule.precio_minimo,
+        producto_ids: [productoId!],
+        clasificacion_ids: [],
+      } as any);
+      toast.success('Precio agregado');
+      setShowModal(false);
+      setNewRule({ tarifa_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDeleteRule = async (lineaId: string) => {
+    try { await deleteLineaMut.mutateAsync(lineaId); toast.success('Precio eliminado'); } catch (err: any) { toast.error(err.message); }
+  };
+
+  const byTarifa = new Map<string, { nombre: string; activa: boolean; linea: any }>();
+  const priorityOrder: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
+  (tarifaLineas ?? []).forEach((tl: any) => {
+    if (!tl.tarifas) return;
+    const tarifaId = tl.tarifas.id;
+    const ex = byTarifa.get(tarifaId);
+    const p = priorityOrder[tl.aplica_a] ?? 99;
+    if (!ex || p < priorityOrder[ex.linea.aplica_a]) {
+      byTarifa.set(tarifaId, { nombre: tl.tarifas.nombre, activa: tl.tarifas.activa, linea: tl });
+    }
+  });
+  const entries = Array.from(byTarifa.entries());
+  const calcLabel = (l: any) => l.tipo_calculo === 'margen_costo' ? `+${l.margen_pct}% s/costo` : l.tipo_calculo === 'descuento_precio' ? `-${l.descuento_pct}% s/precio` : 'Precio fijo';
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto border border-border rounded">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-table-border">
+              <th className="th-odoo text-left">Lista de precios</th>
+              <th className="th-odoo text-left">Tipo</th>
+              <th className="th-odoo text-right">Precio</th>
+              <th className="th-odoo w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map(([tarifaId, { nombre, linea }]) => (
+              <tr key={tarifaId} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                <td className="py-1.5 px-3 font-medium cursor-pointer hover:text-primary" onClick={() => navigate(`/tarifas/${tarifaId}`)}>{nombre}</td>
+                <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
+                <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">$ {calcPrice(linea).toFixed(2)}</td>
+                <td className="py-1.5 px-3 text-center">
+                  {linea.aplica_a === 'producto' && (
+                    <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {entries.length === 0 && (
+              <tr><td colSpan={4} className="py-3 px-3 text-[12px] text-muted-foreground">Sin precios configurados</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {!isNew && (
+        <button className="odoo-link" onClick={() => setShowModal(true)}>
+          Agregar un precio
+        </button>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+          <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-[600px]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <h3 className="text-[15px] font-semibold">Crear Regla de lista de precios</h3>
+              <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                <div>
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Producto</span>
+                    <span className="text-[13px] text-odoo-teal">{form.nombre ?? '—'}</span>
+                  </div>
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Tipo de precio</span>
+                    <div className="flex gap-3 text-[13px]">
+                      {(['descuento_precio', 'margen_costo', 'precio_fijo'] as TipoCalculoTarifa[]).map(t => (
+                        <label key={t} className="flex items-center gap-1 cursor-pointer">
+                          <input type="radio" name="tipo_calc" checked={newRule.tipo_calculo === t}
+                            onChange={() => setNewRule(p => ({ ...p, tipo_calculo: t }))} className="h-3.5 w-3.5" />
+                          {t === 'descuento_precio' ? 'Descuento' : t === 'margen_costo' ? 'Fórmula' : 'Precio fijo'}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  {newRule.tipo_calculo === 'precio_fijo' && (
+                    <div className="odoo-field-row">
+                      <span className="odoo-field-label">Precio fijo</span>
+                      <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.precio}
+                        onChange={e => setNewRule(p => ({ ...p, precio: +e.target.value }))} />
+                    </div>
+                  )}
+                  {newRule.tipo_calculo === 'margen_costo' && (
+                    <div className="odoo-field-row">
+                      <span className="odoo-field-label">Margen %</span>
+                      <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.margen_pct}
+                        onChange={e => setNewRule(p => ({ ...p, margen_pct: +e.target.value }))} />
+                    </div>
+                  )}
+                  {newRule.tipo_calculo === 'descuento_precio' && (
+                    <div className="odoo-field-row">
+                      <span className="odoo-field-label">Descuento %</span>
+                      <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.descuento_pct}
+                        onChange={e => setNewRule(p => ({ ...p, descuento_pct: +e.target.value }))} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Precio mínimo</span>
+                    <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.precio_minimo}
+                      onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
+                  </div>
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Lista de precios</span>
+                    <select className="input-odoo py-1 text-[13px]" value={newRule.tarifa_id}
+                      onChange={e => setNewRule(p => ({ ...p, tarifa_id: e.target.value }))}>
+                      <option value="">Seleccionar...</option>
+                      {tarifasDisp?.map((t: any) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 bg-accent/30 border border-accent/50 rounded px-3 py-2 text-[12px] text-muted-foreground">
+                Para precios con fórmula o fijos, el precio original no aparece en las órdenes de venta ni en el pago.
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-3 border-t border-border">
+              <button onClick={handleSaveRule} disabled={saveLinea.isPending} className="btn-odoo-primary">
+                Guardar y cerrar
+              </button>
+              <button onClick={() => setShowModal(false)} className="btn-odoo-secondary">
+                Descartar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const defaultProduct: Partial<Producto> = {
   codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0,
   se_puede_comprar: true, se_puede_vender: true, vender_sin_stock: false,
