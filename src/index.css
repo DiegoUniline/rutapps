@@ -209,7 +209,7 @@
 
   /* Section divider - Odoo collapsible section */
   .odoo-section-title {
-    @apply text-[11px] uppercase tracking-wider font-bold text-muted-foreground py-2 flex items-center gap-2 cursor-pointer select-none;
+    @apply text-[11px] tracking-wide font-bold text-muted-foreground py-2 flex items-center gap-2 cursor-pointer select-none;
   }
   .odoo-section-divider {
     @apply border-t border-border;
