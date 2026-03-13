@@ -144,10 +144,14 @@ function ProductosTable() {
 }
 
 export default function ProductosListPage() {
+  const [searchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'productos';
+
   return (
     <div className="p-4 space-y-3 bg-secondary/50 min-h-full">
       <h1 className="text-xl font-semibold text-foreground">Productos & Catálogos</h1>
       <OdooTabs
+        activeTab={activeTab}
         tabs={[
           { key: 'productos', label: 'Productos', content: <ProductosTable /> },
           { key: 'marcas', label: 'Marcas', content: <CatalogCRUD title="Marcas" tableName="marcas" queryKey="marcas" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
