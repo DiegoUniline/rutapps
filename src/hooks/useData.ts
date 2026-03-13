@@ -119,7 +119,10 @@ export function useSaveTarifaLinea() {
         return data;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tarifa'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tarifa'] });
+      qc.invalidateQueries({ queryKey: ['tarifa-lineas-producto'] });
+    },
   });
 }
 
