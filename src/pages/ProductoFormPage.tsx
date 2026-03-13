@@ -43,9 +43,11 @@ export default function ProductoFormPage() {
   const { data: almacenes } = useAlmacenes();
   const { data: unidadesSat } = useUnidadesSat();
   const { data: tarifasDisp } = useTarifasForSelect();
-  const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
 
   const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
+  const [starred, setStarred] = useState(false);
+
+  const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
   const [starred, setStarred] = useState(false);
 
   useEffect(() => {
