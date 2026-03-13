@@ -510,36 +510,58 @@ export type Database = {
       }
       tarifa_lineas: {
         Row: {
+          aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
+          clasificacion_id: string | null
           created_at: string
           descuento_max: number | null
+          descuento_pct: number | null
           id: string
+          margen_pct: number | null
           notas: string | null
           precio: number
           precio_minimo: number | null
-          producto_id: string
+          producto_id: string | null
           tarifa_id: string
+          tipo_calculo: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Insert: {
+          aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
+          clasificacion_id?: string | null
           created_at?: string
           descuento_max?: number | null
+          descuento_pct?: number | null
           id?: string
+          margen_pct?: number | null
           notas?: string | null
           precio?: number
           precio_minimo?: number | null
-          producto_id: string
+          producto_id?: string | null
           tarifa_id: string
+          tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Update: {
+          aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
+          clasificacion_id?: string | null
           created_at?: string
           descuento_max?: number | null
+          descuento_pct?: number | null
           id?: string
+          margen_pct?: number | null
           notas?: string | null
           precio?: number
           precio_minimo?: number | null
-          producto_id?: string
+          producto_id?: string | null
           tarifa_id?: string
+          tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Relationships: [
+          {
+            foreignKeyName: "tarifa_lineas_clasificacion_id_fkey"
+            columns: ["clasificacion_id"]
+            isOneToOne: false
+            referencedRelation: "clasificaciones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tarifa_lineas_producto_id_fkey"
             columns: ["producto_id"]
@@ -728,6 +750,7 @@ export type Database = {
       get_my_empresa_id: { Args: never; Returns: string }
     }
     Enums: {
+      aplica_a_tarifa: "todos" | "categoria" | "producto"
       calculo_costo:
         | "promedio"
         | "ultimo"
@@ -736,6 +759,7 @@ export type Database = {
         | "ultimo_compra"
         | "ultimo_proveedor"
       status_producto: "activo" | "inactivo" | "borrador"
+      tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
     }
@@ -865,6 +889,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      aplica_a_tarifa: ["todos", "categoria", "producto"],
       calculo_costo: [
         "promedio",
         "ultimo",
@@ -874,6 +899,7 @@ export const Constants = {
         "ultimo_proveedor",
       ],
       status_producto: ["activo", "inactivo", "borrador"],
+      tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],
     },

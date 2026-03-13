@@ -76,7 +76,7 @@ export function useTarifa(id?: string) {
   return useQuery({
     queryKey: ['tarifa', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas').select('*, tarifa_lineas(*, productos(codigo, nombre))').eq('id', id!).single();
+      const { data, error } = await supabase.from('tarifas').select('*, tarifa_lineas(*, productos(codigo, nombre), clasificaciones(nombre))').eq('id', id!).single();
       if (error) throw error;
       return data as Tarifa;
     },
