@@ -38,10 +38,16 @@
 
     --radius: 0.25rem;
 
-    /* Navbar */
+    /* Sidebar */
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 210 11% 25%;
+    --sidebar-border: 210 14% 89%;
+    --sidebar-hover: 210 14% 95%;
+
+    /* Navbar (legacy) */
     --navbar: 0 0% 100%;
     --navbar-foreground: 210 11% 15%;
-    --navbar-border: 210 14% 87%; /* #dee2e6 */
+    --navbar-border: 210 14% 87%;
     --navbar-hover: 210 14% 95%;
 
     /* Status colors */

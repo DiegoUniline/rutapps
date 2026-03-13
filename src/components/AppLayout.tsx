@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Package, Tag, Users, MapPin, ShoppingCart, FileText, BarChart3,
-  Menu, X, LogOut, Bell, ChevronDown, ChevronRight
+  Package, Tag, Users, ShoppingCart, FileText, BarChart3,
+  LogOut, ChevronDown, ChevronRight, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,59 +38,71 @@ const navItems: NavItem[] = [
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
 ];
 
-function NavDropdown({ item, isActive, onNavigate }: { item: NavItem; isActive: boolean; onNavigate: () => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const location = useLocation();
+  const isActive = location.pathname.startsWith(item.path.split('?')[0]);
+  const [open, setOpen] = useState(isActive);
 
   if (!item.children) {
     return (
       <Link
         to={item.path}
-        onClick={onNavigate}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors",
-          isActive ? "bg-primary text-primary-foreground" : "text-navbar-foreground hover:bg-navbar-hover"
+          "flex items-center gap-2.5 px-3 py-2 rounded text-[13px] font-medium transition-colors",
+          collapsed ? "justify-center px-2" : "",
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-hover"
         )}
+        title={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-3.5 w-3.5" />
-        {item.label}
+        <item.icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span>{item.label}</span>}
       </Link>
     );
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div>
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors",
-          isActive ? "bg-primary text-primary-foreground" : "text-navbar-foreground hover:bg-navbar-hover"
+          "w-full flex items-center gap-2.5 px-3 py-2 rounded text-[13px] font-medium transition-colors",
+          collapsed ? "justify-center px-2" : "",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-sidebar-foreground hover:bg-sidebar-hover"
         )}
+        title={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-3.5 w-3.5" />
-        {item.label}
-        <ChevronDown className="h-3 w-3" />
+        <item.icon className="h-4 w-4 shrink-0" />
+        {!collapsed && (
+          <>
+            <span className="flex-1 text-left">{item.label}</span>
+            <ChevronDown className={cn("h-3 w-3 transition-transform", open ? "" : "-rotate-90")} />
+          </>
+        )}
       </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded shadow-lg py-1 min-w-[180px] z-50">
-          {item.children.map(child => (
-            <Link
-              key={child.path}
-              to={child.path}
-              onClick={() => { setOpen(false); onNavigate(); }}
-              className="block px-4 py-1.5 text-sm text-foreground hover:bg-navbar-hover transition-colors"
-            >
-              {child.label}
-            </Link>
-          ))}
+      {open && !collapsed && (
+        <div className="ml-4 pl-3 border-l border-sidebar-border space-y-0.5 mt-0.5">
+          {item.children.map(child => {
+            const childActive = location.pathname + location.search === child.path ||
+              (location.pathname === '/productos' && child.path.includes('tab=productos') && !location.search);
+            return (
+              <Link
+                key={child.path}
+                to={child.path}
+                className={cn(
+                  "block px-2 py-1.5 rounded text-[12px] transition-colors",
+                  childActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-hover"
+                )}
+              >
+                {child.label}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
@@ -103,14 +115,14 @@ function Breadcrumb() {
 
   const labels: Record<string, string> = {
     productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
-    ventas: 'Ventas', rutas: 'Rutas', facturacion: 'Facturación',
+    ventas: 'Ventas', facturacion: 'Facturación',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
   };
 
   if (segments.length <= 1) return null;
 
   return (
-    <div className="h-8 flex items-center px-4 bg-card border-b border-navbar-border text-xs text-muted-foreground gap-1.5">
+    <div className="h-8 flex items-center px-4 bg-card border-b border-border text-xs text-muted-foreground gap-1.5">
       {segments.map((seg, i) => {
         const isLast = i === segments.length - 1;
         const label = labels[seg] || seg;
@@ -131,86 +143,71 @@ function Breadcrumb() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
   const { empresa, profile, signOut } = useAuth();
 
-  const isActive = (path: string) => location.pathname.startsWith(path.split('?')[0]);
-
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Navbar */}
-      <header className="h-12 bg-navbar border-b border-navbar-border flex items-center px-4 shrink-0 z-40">
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
+          collapsed ? "w-14" : "w-56"
+        )}
+      >
         {/* Logo */}
-        <Link to="/" className="text-lg font-bold text-primary mr-6 tracking-tight">
-          Rutapp
-        </Link>
+        <div className={cn(
+          "h-12 flex items-center border-b border-sidebar-border shrink-0",
+          collapsed ? "justify-center px-2" : "px-4"
+        )}>
+          {collapsed ? (
+            <span className="text-lg font-bold text-primary">R</span>
+          ) : (
+            <span className="text-lg font-bold text-primary tracking-tight">Rutapp</span>
+          )}
+        </div>
 
-        {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-1 flex-1">
+        {/* Nav items */}
+        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
           {navItems.map(item => (
-            <NavDropdown
-              key={item.path}
-              item={item}
-              isActive={isActive(item.path)}
-              onNavigate={() => {}}
-            />
+            <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
         </nav>
 
-        {/* Mobile hamburger */}
-        <button className="lg:hidden mr-auto" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-
-        {/* Right side */}
-        <div className="flex items-center gap-3">
-          <button className="text-muted-foreground hover:text-foreground transition-colors">
-            <Bell className="h-4 w-4" />
-          </button>
-          <span className="text-sm font-medium text-foreground hidden sm:block">
-            {empresa?.nombre ?? 'Mi Empresa'}
-          </span>
-          <div className="h-7 w-7 rounded-full bg-primary flex items-center justify-center text-[11px] font-semibold text-primary-foreground">
-            {(profile?.nombre?.[0] ?? 'U').toUpperCase()}
-          </div>
-          <button
-            onClick={signOut}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            title="Cerrar sesión"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="lg:hidden bg-card border-b border-navbar-border px-4 py-2 space-y-0.5">
-          {navItems.map(item => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors",
-                isActive(item.path) ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-navbar-hover"
-              )}
+        {/* User / footer */}
+        <div className="border-t border-sidebar-border p-2 space-y-1">
+          {!collapsed && (
+            <div className="px-2 py-1.5">
+              <div className="text-xs font-medium text-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
+              <div className="text-[11px] text-muted-foreground truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
+            </div>
+          )}
+          <div className={cn("flex gap-1", collapsed ? "flex-col items-center" : "")}>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-sidebar-hover transition-colors"
+              title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
             >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
+              {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={signOut}
+              className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-sidebar-hover transition-colors"
+              title="Cerrar sesión"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      )}
+      </aside>
 
-      {/* Breadcrumb */}
-      <Breadcrumb />
-
-      {/* Content - full width */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <Breadcrumb />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
