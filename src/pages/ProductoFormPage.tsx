@@ -125,62 +125,67 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                <div>
-                  <div className="odoo-field-row">
-                    <span className="odoo-field-label">Producto</span>
-                    <span className="text-[13px] text-odoo-teal">{form.nombre ?? '—'}</span>
-                  </div>
-                  <div className="odoo-field-row">
-                    <span className="odoo-field-label">Tipo de precio</span>
-                    <div className="flex gap-3 text-[13px]">
-                      {(['descuento_precio', 'margen_costo', 'precio_fijo'] as TipoCalculoTarifa[]).map(t => (
-                        <label key={t} className="flex items-center gap-1 cursor-pointer">
-                          <input type="radio" name="tipo_calc" checked={newRule.tipo_calculo === t}
-                            onChange={() => setNewRule(p => ({ ...p, tipo_calculo: t }))} className="h-3.5 w-3.5" />
-                          {t === 'descuento_precio' ? 'Descuento' : t === 'margen_costo' ? 'Fórmula' : 'Precio fijo'}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  {newRule.tipo_calculo === 'precio_fijo' && (
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Precio fijo</span>
-                      <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.precio}
-                        onChange={e => setNewRule(p => ({ ...p, precio: +e.target.value }))} />
-                    </div>
-                  )}
-                  {newRule.tipo_calculo === 'margen_costo' && (
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Margen %</span>
-                      <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.margen_pct}
-                        onChange={e => setNewRule(p => ({ ...p, margen_pct: +e.target.value }))} />
-                    </div>
-                  )}
-                  {newRule.tipo_calculo === 'descuento_precio' && (
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Descuento %</span>
-                      <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.descuento_pct}
-                        onChange={e => setNewRule(p => ({ ...p, descuento_pct: +e.target.value }))} />
-                    </div>
-                  )}
+            <div className="p-5 space-y-4">
+              {/* Row 1: Producto + Precio mínimo */}
+              <div className="grid grid-cols-2 gap-x-8">
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Producto</span>
+                  <span className="text-[13px] font-medium">{form.nombre ?? '—'}</span>
                 </div>
-                <div>
-                  <div className="odoo-field-row">
-                    <span className="odoo-field-label">Precio mínimo</span>
-                    <input type="number" className="input-odoo py-1 text-[13px] w-24" value={newRule.precio_minimo}
-                      onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
-                  </div>
-                  <div className="odoo-field-row">
-                    <span className="odoo-field-label">Lista de precios</span>
-                    <select className="input-odoo py-1 text-[13px]" value={newRule.tarifa_id}
-                      onChange={e => setNewRule(p => ({ ...p, tarifa_id: e.target.value }))}>
-                      <option value="">Seleccionar...</option>
-                      {tarifasDisp?.map((t: any) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                    </select>
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Precio mínimo</span>
+                  <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio_minimo}
+                    onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
+                </div>
+              </div>
+
+              {/* Row 2: Tipo de precio + Lista de precios */}
+              <div className="grid grid-cols-2 gap-x-8">
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Tipo de precio</span>
+                  <div className="flex flex-col gap-1.5 text-[13px]">
+                    {(['descuento_precio', 'margen_costo', 'precio_fijo'] as TipoCalculoTarifa[]).map(t => (
+                      <label key={t} className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" name="tipo_calc" checked={newRule.tipo_calculo === t}
+                          onChange={() => setNewRule(p => ({ ...p, tipo_calculo: t }))} className="h-3.5 w-3.5" />
+                        {t === 'descuento_precio' ? 'Descuento' : t === 'margen_costo' ? 'Fórmula' : 'Precio fijo'}
+                      </label>
+                    ))}
                   </div>
                 </div>
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Lista de precios</span>
+                  <select className="input-odoo py-1 text-[13px] w-full" value={newRule.tarifa_id}
+                    onChange={e => setNewRule(p => ({ ...p, tarifa_id: e.target.value }))}>
+                    <option value="">Seleccionar...</option>
+                    {tarifasDisp?.map((t: any) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Dynamic field based on type */}
+              <div className="grid grid-cols-2 gap-x-8">
+                {newRule.tipo_calculo === 'precio_fijo' && (
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Precio fijo</span>
+                    <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio}
+                      onChange={e => setNewRule(p => ({ ...p, precio: +e.target.value }))} />
+                  </div>
+                )}
+                {newRule.tipo_calculo === 'margen_costo' && (
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Margen %</span>
+                    <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.margen_pct}
+                      onChange={e => setNewRule(p => ({ ...p, margen_pct: +e.target.value }))} />
+                  </div>
+                )}
+                {newRule.tipo_calculo === 'descuento_precio' && (
+                  <div className="odoo-field-row">
+                    <span className="odoo-field-label">Descuento %</span>
+                    <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.descuento_pct}
+                      onChange={e => setNewRule(p => ({ ...p, descuento_pct: +e.target.value }))} />
+                  </div>
+                )}
               </div>
               <div className="mt-3 bg-accent/30 border border-accent/50 rounded px-3 py-2 text-[12px] text-muted-foreground">
                 Para precios con fórmula o fijos, el precio original no aparece en las órdenes de venta ni en el pago.
