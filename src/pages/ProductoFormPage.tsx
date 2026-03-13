@@ -410,8 +410,6 @@ export default function ProductoFormPage() {
                       onChange={v => set('min', +v)} format={v => (v ?? 0).toString()} />
                     <OdooField label="Max Stock" value={form.max} type="number" teal
                       onChange={v => set('max', +v)} format={v => (v ?? 0).toString()} />
-                    <OdooField label="Cantidad" value={form.cantidad} type="number" teal
-                      onChange={v => set('cantidad', +v)} format={v => (v ?? 0).toString()} />
                   </div>
                   {/* Right column */}
                   <div>
