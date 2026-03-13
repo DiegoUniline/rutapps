@@ -1,4 +1,4 @@
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 interface OdooTab {
@@ -10,10 +10,15 @@ interface OdooTab {
 interface OdooTabsProps {
   tabs: OdooTab[];
   defaultTab?: string;
+  activeTab?: string;
 }
 
-export function OdooTabs({ tabs, defaultTab }: OdooTabsProps) {
-  const [active, setActive] = useState(defaultTab ?? tabs[0]?.key);
+export function OdooTabs({ tabs, defaultTab, activeTab }: OdooTabsProps) {
+  const [active, setActive] = useState(activeTab ?? defaultTab ?? tabs[0]?.key);
+
+  useEffect(() => {
+    if (activeTab) setActive(activeTab);
+  }, [activeTab]);
 
   return (
     <div>
