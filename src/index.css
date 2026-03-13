@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;500;600;700;900&family=EB+Garamond:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,73 +6,149 @@
 
 @layer base {
   :root {
-    /* Odoo-inspired palette */
-    --background: 0 0% 96%; /* #f5f5f5 */
-    --foreground: 210 11% 15%; /* dark text */
+    /* Core palette — Light */
+    --background: 0 0% 96%;
+    --foreground: 0 0% 9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 210 11% 15%;
+    --card: 0 0% 98%;
+    --card-foreground: 0 0% 9%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 210 11% 15%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 0 0% 9%;
 
-    /* Primary: Corporate #6561E9 */
-    --primary: 242 78% 65%;
-    --primary-foreground: 0 0% 100%;
+    /* Primary: corporate blue-violet #6561E9 */
+    --primary: 243 75% 58%;
+    --primary-foreground: 225 100% 96%;
 
-    --secondary: 210 14% 95%;
-    --secondary-foreground: 210 11% 25%;
+    --secondary: 0 0% 32%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 210 14% 95%;
-    --muted-foreground: 210 7% 46%; /* #6c757d */
+    --muted: 0 0% 63%;
+    --muted-foreground: 0 0% 9%;
 
-    --accent: 242 78% 65%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 250 100% 97%;
+    --accent-foreground: 258 89% 66%;
 
-    --destructive: 0 65% 51%;
+    --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 14% 83%; /* #ced4da */
-    --input: 210 14% 83%;
-    --ring: 242 78% 65%;
-
-    --radius: 0.25rem;
-
-    /* Sidebar */
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 210 11% 25%;
-    --sidebar-border: 210 14% 89%;
-    --sidebar-hover: 210 14% 95%;
-
-    /* Navbar (legacy) */
-    --navbar: 0 0% 100%;
-    --navbar-foreground: 210 11% 15%;
-    --navbar-border: 210 14% 87%;
-    --navbar-hover: 210 14% 95%;
-
-    /* Status colors */
-    --success: 134 61% 41%;
+    --success: 142 72% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 45 100% 51%;
+
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 83%;
+    --input: 0 0% 83%;
+    --ring: 243 75% 58%;
+
+    --radius: 1.25rem;
+
+    /* Sidebar — dark */
+    --sidebar: 240 50% 18%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-border: 240 30% 25%;
+    --sidebar-hover: 240 40% 24%;
+    --sidebar-accent: 243 75% 58%;
+    --sidebar-muted: 240 20% 50%;
+
+    /* Chart colors */
+    --chart-1: 234 89% 73%;
+    --chart-2: 255 91% 76%;
+    --chart-3: 270 95% 75%;
+    --chart-4: 238 83% 66%;
+    --chart-5: 0 0% 45%;
+
+    /* Status */
     --info: 211 100% 50%;
     --info-foreground: 0 0% 100%;
 
-    /* Odoo-specific */
-    --table-header: 210 7% 46%;
-    --table-hover: 210 17% 98%; /* #f8f9fa */
-    --table-border: 210 14% 89%;
+    /* Table */
+    --table-header: 0 0% 46%;
+    --table-hover: 0 0% 98%;
+    --table-border: 0 0% 89%;
 
-    /* Teal for editable monetary values */
-    --teal: 182 100% 26%; /* #017e84 */
+    /* Accents */
+    --teal: 182 100% 26%;
     --teal-foreground: 0 0% 100%;
+    --notes-bg: 0 0% 98%;
+    --badge-bg: 0 0% 91%;
+    --badge-fg: 0 0% 25%;
 
-    /* Notes area */
-    --notes-bg: 0 0% 98%; /* #fafafa */
+    /* Shadows */
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+  }
 
-    /* Badge pill */
-    --badge-bg: 210 16% 91%; /* #e9ecef */
-    --badge-fg: 210 11% 25%;
+  .dark {
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 14%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 14%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 234 89% 73%;
+    --primary-foreground: 243 47% 20%;
+
+    --secondary: 0 0% 45%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 45%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 261 72% 22%;
+    --accent-foreground: 255 91% 76%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 35%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 32%;
+    --input: 0 0% 32%;
+    --ring: 234 89% 73%;
+
+    --sidebar: 240 40% 8%;
+    --sidebar-foreground: 0 0% 85%;
+    --sidebar-border: 240 20% 16%;
+    --sidebar-hover: 240 30% 14%;
+    --sidebar-accent: 234 89% 73%;
+    --sidebar-muted: 240 15% 40%;
+
+    --chart-1: 234 89% 73%;
+    --chart-2: 255 91% 76%;
+    --chart-3: 270 95% 75%;
+    --chart-4: 238 83% 66%;
+    --chart-5: 0 0% 45%;
+
+    --table-header: 0 0% 55%;
+    --table-hover: 0 0% 16%;
+    --table-border: 0 0% 22%;
+
+    --teal: 182 80% 40%;
+    --notes-bg: 0 0% 12%;
+    --badge-bg: 0 0% 22%;
+    --badge-fg: 0 0% 80%;
+
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.15);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.25), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.25), 0 4px 6px -1px hsl(0 0% 0% / 0.2);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25), 0 8px 10px -1px hsl(0 0% 0% / 0.2);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.5);
   }
 }
 
@@ -82,89 +158,109 @@
   }
   html {
     font-size: 13px;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Lato', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* Custom scrollbar for webkit */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted) / 0.5);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted));
   }
 }
 
 @layer components {
-  /* Status pills - Odoo style */
+  /* Status pills */
   .status-pill {
-    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold leading-tight tracking-wide;
   }
   .status-borrador {
-    background-color: hsl(210 14% 89%);
-    color: hsl(210 7% 46%);
+    background-color: hsl(var(--badge-bg));
+    color: hsl(var(--badge-fg));
   }
   .status-activo {
-    background-color: hsl(134 40% 90%);
-    color: hsl(134 61% 30%);
+    background-color: hsl(142 72% 92%);
+    color: hsl(142 72% 30%);
   }
   .status-inactivo {
     background-color: hsl(0 50% 93%);
     color: hsl(0 65% 45%);
   }
   .status-confirmado {
-    background-color: hsl(211 60% 92%);
-    color: hsl(211 80% 42%);
+    background-color: hsl(234 60% 92%);
+    color: hsl(234 75% 50%);
   }
 
-  /* Odoo link style */
+  /* Links */
   .odoo-link {
     @apply text-primary hover:underline cursor-pointer font-medium text-[13px] inline-flex items-center gap-1;
   }
 
-  /* Section card - minimal Odoo style */
+  /* Section card */
   .section-card {
-    @apply bg-card rounded border p-4;
+    @apply bg-card rounded-lg border p-4;
+    box-shadow: var(--shadow-xs);
   }
 
-  /* Odoo button styles */
+  /* Buttons */
   .btn-odoo-primary {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded text-[13px] font-medium
-           bg-primary text-primary-foreground hover:opacity-90 transition-opacity
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold
+           bg-primary text-primary-foreground hover:opacity-90 transition-all
            disabled:opacity-50 disabled:pointer-events-none;
+    box-shadow: var(--shadow-xs);
   }
   .btn-odoo-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded text-[13px] font-medium
-           bg-card text-foreground border border-border hover:bg-secondary transition-colors
+    @apply inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium
+           bg-card text-foreground border border-border hover:bg-accent transition-all
            disabled:opacity-50 disabled:pointer-events-none;
   }
 
-  /* Odoo input */
+  /* Inputs */
   .input-odoo {
-    @apply w-full border border-input rounded px-2.5 py-1.5 text-[13px] bg-card
-           focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
-           placeholder:text-muted-foreground;
+    @apply w-full border border-input rounded-lg px-3 py-2 text-[13px] bg-card
+           focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary
+           placeholder:text-muted-foreground/60 transition-all;
   }
 
-  /* Odoo table header */
+  /* Table headers — sentence case */
   .th-odoo {
-    @apply text-[11px] tracking-wide font-medium text-muted-foreground py-2 px-3
-           border-b bg-card select-none cursor-pointer;
+    @apply text-[11px] tracking-wide font-semibold text-muted-foreground py-2.5 px-3
+           border-b bg-card select-none;
   }
 
-  /* Odoo form label - used in edit mode above inputs */
+  /* Form label */
   .label-odoo {
-    @apply text-[12px] text-muted-foreground font-medium mb-0.5 block;
+    @apply text-[12px] text-muted-foreground font-semibold mb-1 block;
   }
 
-  /* Odoo tabs - teal underline, no bg, normal weight */
+  /* Tabs */
   .odoo-tab {
-    @apply px-3 py-2 text-[13px] border-b-2 border-transparent cursor-pointer
-           text-muted-foreground hover:text-foreground transition-colors;
+    @apply px-4 py-2.5 text-[13px] border-b-2 border-transparent cursor-pointer
+           text-muted-foreground hover:text-foreground transition-all font-medium;
   }
   .odoo-tab-active {
     color: hsl(var(--foreground));
-    border-color: hsl(var(--teal));
+    border-color: hsl(var(--primary));
   }
 
-  /* Statusbar pipeline */
+  /* Statusbar */
   .statusbar-step {
-    @apply px-3 py-1 text-[12px] font-medium cursor-pointer transition-colors relative;
+    @apply px-4 py-1.5 text-[12px] font-semibold cursor-pointer transition-all relative;
   }
   .statusbar-step-active {
     @apply bg-primary text-primary-foreground;
@@ -173,21 +269,19 @@
     @apply bg-primary/10 text-primary;
   }
   .statusbar-step-pending {
-    @apply bg-secondary text-muted-foreground hover:bg-secondary/80;
+    @apply bg-accent text-muted-foreground hover:bg-accent/80;
   }
 
-  /* ===== ODOO FORM READ/EDIT FIELD ===== */
-
-  /* Read-mode field row: label left, value right — like invisible table */
+  /* Form field rows */
   .odoo-field-row {
-    @apply flex items-start py-[5px] min-h-[30px];
+    @apply flex items-start py-[6px] min-h-[32px];
   }
   .odoo-field-label {
     @apply text-[13px] font-semibold text-foreground w-[140px] shrink-0 flex items-center gap-1 pt-[2px];
   }
   .odoo-field-value {
-    @apply text-[13px] text-foreground flex-1 cursor-pointer min-h-[22px] px-1 rounded
-           hover:bg-secondary/60 transition-colors;
+    @apply text-[13px] text-foreground flex-1 cursor-pointer min-h-[24px] px-1.5 rounded-md
+           hover:bg-accent transition-colors;
   }
   .odoo-field-value-empty {
     @apply text-muted-foreground;
@@ -199,15 +293,15 @@
     @apply flex-1;
   }
   .odoo-field-editing .input-odoo {
-    @apply py-1 text-[13px];
+    @apply py-1.5 text-[13px];
   }
 
-  /* Help icon next to label */
+  /* Help icon */
   .odoo-help-icon {
     @apply text-muted-foreground/50 text-[11px] cursor-help;
   }
 
-  /* Section divider - Odoo collapsible section */
+  /* Section divider */
   .odoo-section-title {
     @apply text-[11px] tracking-wide font-bold text-muted-foreground py-2 flex items-center gap-2 cursor-pointer select-none;
   }
@@ -215,9 +309,9 @@
     @apply border-t border-border;
   }
 
-  /* Badge pill (tags, taxes) */
+  /* Badge pill */
   .odoo-badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-normal;
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[12px] font-medium;
     background-color: hsl(var(--badge-bg));
     color: hsl(var(--badge-fg));
   }
@@ -227,21 +321,21 @@
 
   /* Notes textarea */
   .odoo-textarea {
-    @apply w-full border-0 rounded px-2 py-1.5 text-[13px] resize-y min-h-[60px]
-           focus:outline-none focus:ring-1 focus:ring-primary
+    @apply w-full border-0 rounded-lg px-3 py-2 text-[13px] resize-y min-h-[60px]
+           focus:outline-none focus:ring-2 focus:ring-ring/30
            placeholder:text-muted-foreground/50;
     background-color: hsl(var(--notes-bg));
   }
 
   /* Image placeholder */
   .odoo-image-placeholder {
-    @apply w-[120px] h-[120px] rounded border-2 border-dashed border-border
+    @apply w-[120px] h-[120px] rounded-lg border-2 border-dashed border-border
            flex items-center justify-center cursor-pointer
            hover:border-primary/40 transition-colors;
     background-color: hsl(var(--notes-bg));
   }
 
-  /* Module checkboxes row */
+  /* Module checkboxes */
   .odoo-module-checks {
     @apply flex items-center gap-6 py-2 px-1 border-b border-border;
   }

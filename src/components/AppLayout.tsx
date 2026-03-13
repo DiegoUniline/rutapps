@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Package, Tag, Users, ShoppingCart, FileText, BarChart3,
-  LogOut, ChevronDown, ChevronRight, PanelLeftClose, PanelLeft
+  LogOut, ChevronDown, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,11 +48,11 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
       <Link
         to={item.path}
         className={cn(
-          "flex items-center gap-2.5 px-3 py-2 rounded text-[13px] font-medium transition-colors",
+          "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? "bg-primary text-primary-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-hover"
+            ? "bg-sidebar-accent text-primary-foreground"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
       >
@@ -67,11 +67,11 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          "w-full flex items-center gap-2.5 px-3 py-2 rounded text-[13px] font-medium transition-colors",
+          "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-sidebar-foreground hover:bg-sidebar-hover"
+            ? "text-primary-foreground/90"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
       >
@@ -79,12 +79,12 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
         {!collapsed && (
           <>
             <span className="flex-1 text-left">{item.label}</span>
-            <ChevronDown className={cn("h-3 w-3 transition-transform", open ? "" : "-rotate-90")} />
+            <ChevronDown className={cn("h-3 w-3 transition-transform opacity-50", open ? "" : "-rotate-90")} />
           </>
         )}
       </button>
       {open && !collapsed && (
-        <div className="ml-4 pl-3 border-l border-sidebar-border space-y-0.5 mt-0.5">
+        <div className="ml-4 pl-3 border-l border-sidebar-border/50 space-y-0.5 mt-0.5">
           {item.children.map(child => {
             const childActive = location.pathname + location.search === child.path ||
               (location.pathname === '/productos' && child.path.includes('tab=productos') && !location.search);
@@ -93,10 +93,10 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
                 key={child.path}
                 to={child.path}
                 className={cn(
-                  "block px-2 py-1.5 rounded text-[12px] transition-colors",
+                  "block px-2.5 py-1.5 rounded-md text-[12px] transition-all",
                   childActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-sidebar-hover"
+                    ? "bg-sidebar-accent/20 text-primary-foreground font-semibold"
+                    : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
                 )}
               >
                 {child.label}
@@ -122,16 +122,16 @@ function Breadcrumb() {
   if (segments.length <= 1) return null;
 
   return (
-    <div className="h-8 flex items-center px-4 bg-card border-b border-border text-xs text-muted-foreground gap-1.5">
+    <div className="h-9 flex items-center px-5 bg-card border-b border-border text-xs text-muted-foreground gap-1.5">
       {segments.map((seg, i) => {
         const isLast = i === segments.length - 1;
         const label = labels[seg] || seg;
         const path = '/' + segments.slice(0, i + 1).join('/');
         return (
           <span key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight className="h-3 w-3" />}
+            {i > 0 && <span className="text-muted-foreground/40">/</span>}
             {isLast ? (
-              <span className="text-foreground font-medium">{label}</span>
+              <span className="text-foreground font-semibold">{label}</span>
             ) : (
               <Link to={path} className="hover:text-foreground transition-colors">{label}</Link>
             )}
@@ -148,51 +148,51 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Sidebar */}
+      {/* Sidebar — dark */}
       <aside
         className={cn(
-          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
-          collapsed ? "w-14" : "w-56"
+          "h-screen sticky top-0 flex flex-col bg-sidebar transition-all duration-200 shrink-0",
+          collapsed ? "w-[52px]" : "w-56"
         )}
       >
         {/* Logo */}
         <div className={cn(
-          "h-12 flex items-center border-b border-sidebar-border shrink-0",
+          "h-14 flex items-center shrink-0 border-b border-sidebar-border/30",
           collapsed ? "justify-center px-2" : "px-4"
         )}>
           {collapsed ? (
-            <span className="text-lg font-bold text-primary">R</span>
+            <span className="text-[18px] font-black text-primary-foreground">R</span>
           ) : (
-            <span className="text-lg font-bold text-primary tracking-tight">Rutapp</span>
+            <span className="text-[18px] font-black text-primary-foreground tracking-tight">Rutapp</span>
           )}
         </div>
 
-        {/* Nav items */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
           {navItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
         </nav>
 
-        {/* User / footer */}
-        <div className="border-t border-sidebar-border p-2 space-y-1">
+        {/* Footer */}
+        <div className="border-t border-sidebar-border/30 p-2.5">
           {!collapsed && (
-            <div className="px-2 py-1.5">
-              <div className="text-xs font-medium text-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
-              <div className="text-[11px] text-muted-foreground truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
+            <div className="px-2 py-2 mb-1">
+              <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
+              <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
             </div>
           )}
-          <div className={cn("flex gap-1", collapsed ? "flex-col items-center" : "")}>
+          <div className={cn("flex gap-0.5", collapsed ? "flex-col items-center" : "")}>
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-sidebar-hover transition-colors"
-              title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+              className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+              title={collapsed ? 'Expandir' : 'Colapsar'}
             >
               {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
             <button
               onClick={signOut}
-              className="p-2 rounded text-muted-foreground hover:text-foreground hover:bg-sidebar-hover transition-colors"
+              className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
               title="Cerrar sesión"
             >
               <LogOut className="h-4 w-4" />
@@ -201,7 +201,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         <Breadcrumb />
         <main className="flex-1 overflow-auto">
