@@ -272,17 +272,6 @@ export default function ProductoFormPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
                     <div>
                       <OdooField
-                        label="Cálculo Costo" value={form.calculo_costo} type="select" help
-                        options={[
-                          { value: 'promedio', label: 'Promedio' },
-                          { value: 'ultimo', label: 'Último' },
-                          { value: 'estandar', label: 'Estándar' },
-                          { value: 'manual', label: 'Manual' },
-                        ]}
-                        onChange={v => set('calculo_costo', v)}
-                        format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
-                      />
-                      <OdooField
                         label="Código SAT" value={form.codigo_sat} help
                         onChange={v => set('codigo_sat', v)}
                       />
