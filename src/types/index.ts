@@ -6,6 +6,9 @@ export type CalculoCosto = 'promedio' | 'ultimo' | 'estandar' | 'manual';
 export type TipoTarifa = 'general' | 'por_cliente' | 'por_ruta';
 export type AplicaATarifa = 'todos' | 'categoria' | 'producto';
 export type TipoCalculoTarifa = 'margen_costo' | 'descuento_precio' | 'precio_fijo';
+export type TipoVenta = 'pedido' | 'venta_directa';
+export type CondicionPago = 'contado' | 'credito' | 'por_definir';
+export type StatusVenta = 'borrador' | 'confirmado' | 'entregado' | 'facturado' | 'cancelado';
 
 export interface Producto {
   id: string;
