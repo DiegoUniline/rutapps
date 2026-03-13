@@ -64,6 +64,12 @@ export default {
           border: "hsl(var(--navbar-border))",
           hover: "hsl(var(--navbar-hover))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          hover: "hsl(var(--sidebar-hover))",
+        },
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
