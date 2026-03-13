@@ -133,7 +133,10 @@ export function useDeleteTarifaLinea() {
       const { error } = await supabase.from('tarifa_lineas').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tarifa'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tarifa'] });
+      qc.invalidateQueries({ queryKey: ['tarifa-lineas-producto'] });
+    },
   });
 }
 
