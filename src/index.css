@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 210 11% 15%;
 
-    /* Primary: Odoo purple #714B67 */
-    --primary: 315 21% 37%;
+    /* Primary: Corporate #6561E9 */
+    --primary: 242 78% 65%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 14% 95%;
@@ -26,7 +26,7 @@
     --muted: 210 14% 95%;
     --muted-foreground: 210 7% 46%; /* #6c757d */
 
-    --accent: 315 21% 37%;
+    --accent: 242 78% 65%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 65% 51%;
@@ -34,7 +34,7 @@
 
     --border: 210 14% 83%; /* #ced4da */
     --input: 210 14% 83%;
-    --ring: 315 21% 37%;
+    --ring: 242 78% 65%;
 
     --radius: 0.25rem;
 
