@@ -141,7 +141,7 @@ export default function ClienteFormPage() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-card border border-border rounded-b p-0">
+      <div className="bg-card border border-border rounded px-4 pb-4 pt-1">
       <OdooTabs tabs={[
         {
           key: 'general', label: 'Información General',
