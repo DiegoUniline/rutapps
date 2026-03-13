@@ -167,7 +167,7 @@ export default function TarifaFormPage() {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 bg-secondary/50 min-h-full">
       {/* Breadcrumb */}
       <div className="mb-1">
         <Link to="/tarifas" className="text-xs text-muted-foreground hover:text-primary">Tarifas /</Link>
