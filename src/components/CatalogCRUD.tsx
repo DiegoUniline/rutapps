@@ -44,7 +44,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
     try {
       const { data: profile } = await supabase.from('profiles').select('empresa_id').maybeSingle();
       if (!profile) { toast.error('Sin perfil'); return; }
-      const { error } = await supabase.from(tableName).insert({ ...newRow, empresa_id: profile.empresa_id });
+      const { error } = await (supabase.from as any)(tableName).insert({ ...newRow, empresa_id: profile.empresa_id });
       if (error) throw error;
       setNewRow({});
       qc.invalidateQueries({ queryKey: [queryKey] });
