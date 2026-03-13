@@ -511,7 +511,7 @@ export type Database = {
       tarifa_lineas: {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
-          clasificacion_id: string | null
+          clasificacion_ids: string[]
           created_at: string
           descuento_max: number | null
           descuento_pct: number | null
@@ -520,13 +520,13 @@ export type Database = {
           notas: string | null
           precio: number
           precio_minimo: number | null
-          producto_id: string | null
+          producto_ids: string[]
           tarifa_id: string
           tipo_calculo: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Insert: {
           aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
-          clasificacion_id?: string | null
+          clasificacion_ids?: string[]
           created_at?: string
           descuento_max?: number | null
           descuento_pct?: number | null
@@ -535,13 +535,13 @@ export type Database = {
           notas?: string | null
           precio?: number
           precio_minimo?: number | null
-          producto_id?: string | null
+          producto_ids?: string[]
           tarifa_id: string
           tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Update: {
           aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
-          clasificacion_id?: string | null
+          clasificacion_ids?: string[]
           created_at?: string
           descuento_max?: number | null
           descuento_pct?: number | null
@@ -550,25 +550,11 @@ export type Database = {
           notas?: string | null
           precio?: number
           precio_minimo?: number | null
-          producto_id?: string | null
+          producto_ids?: string[]
           tarifa_id?: string
           tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Relationships: [
-          {
-            foreignKeyName: "tarifa_lineas_clasificacion_id_fkey"
-            columns: ["clasificacion_id"]
-            isOneToOne: false
-            referencedRelation: "clasificaciones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tarifa_lineas_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "tarifa_lineas_tarifa_id_fkey"
             columns: ["tarifa_id"]

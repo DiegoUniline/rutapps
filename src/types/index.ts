@@ -68,8 +68,8 @@ export interface Tarifa {
 export interface TarifaLinea {
   id: string;
   tarifa_id: string;
-  producto_id?: string | null;
-  clasificacion_id?: string | null;
+  producto_ids: string[];
+  clasificacion_ids: string[];
   aplica_a: AplicaATarifa;
   tipo_calculo: TipoCalculoTarifa;
   precio: number;
@@ -79,8 +79,6 @@ export interface TarifaLinea {
   descuento_pct: number;
   notas?: string;
   created_at: string;
-  productos?: { codigo: string; nombre: string } | null;
-  clasificaciones?: { nombre: string } | null;
 }
 
 export interface Marca { id: string; empresa_id: string; nombre: string; }
