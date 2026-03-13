@@ -237,6 +237,7 @@ export default function ClienteFormPage() {
           ),
         },
       ]} />
+      </div>
     </div>
   );
 }
