@@ -72,6 +72,66 @@ export type Database = {
           },
         ]
       }
+      clientes: {
+        Row: {
+          contacto: string | null
+          created_at: string
+          direccion: string | null
+          email: string | null
+          empresa_id: string
+          id: string
+          nombre: string
+          notas: string | null
+          rfc: string | null
+          status: string | null
+          tarifa_id: string | null
+          telefono: string | null
+        }
+        Insert: {
+          contacto?: string | null
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          empresa_id: string
+          id?: string
+          nombre: string
+          notas?: string | null
+          rfc?: string | null
+          status?: string | null
+          tarifa_id?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          contacto?: string | null
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          notas?: string | null
+          rfc?: string | null
+          status?: string | null
+          tarifa_id?: string | null
+          telefono?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_tarifa_id_fkey"
+            columns: ["tarifa_id"]
+            isOneToOne: false
+            referencedRelation: "tarifas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           created_at: string
