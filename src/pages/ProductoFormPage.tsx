@@ -401,12 +401,6 @@ export default function ProductoFormPage() {
                       onChange={v => set('calculo_costo', v)}
                       format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
                     />
-                    <OdooField label="Código SAT" value={form.codigo_sat} help onChange={v => set('codigo_sat', v)} />
-                    <OdooField label="Unidad SAT" value={form.udem_sat_id} type="select"
-                      options={unidadesSat?.map(u => ({ value: u.id, label: `${u.clave} - ${u.nombre}` })) ?? []}
-                      onChange={v => set('udem_sat_id', v || null)}
-                      format={() => findSat(unidadesSat, form.udem_sat_id ?? undefined)}
-                    />
                     <OdooField label="Min Stock" value={form.min} type="number" teal
                       onChange={v => set('min', +v)} format={v => (v ?? 0).toString()} />
                     <OdooField label="Max Stock" value={form.max} type="number" teal
@@ -509,6 +503,12 @@ export default function ProductoFormPage() {
               content: (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                   <div>
+                    <OdooField label="Código SAT" value={form.codigo_sat} help onChange={v => set('codigo_sat', v)} />
+                    <OdooField label="Unidad SAT" value={form.udem_sat_id} type="select"
+                      options={unidadesSat?.map(u => ({ value: u.id, label: `${u.clave} - ${u.nombre}` })) ?? []}
+                      onChange={v => set('udem_sat_id', v || null)}
+                      format={() => findSat(unidadesSat, form.udem_sat_id ?? undefined)}
+                    />
                     <div className="odoo-field-row">
                       <span className="odoo-field-label">IVA</span>
                       <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
