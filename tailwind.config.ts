@@ -14,7 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Lato', 'system-ui', 'sans-serif'],
+        serif: ['EB Garamond', 'Georgia', 'serif'],
+        mono: ['Fira Code', 'monospace'],
       },
       fontSize: {
         'xxs': '11px',
@@ -23,6 +25,7 @@ export default {
         'base': '13px',
         'lg': '15px',
         'xl': '17px',
+        '2xl': '20px',
       },
       colors: {
         border: "hsl(var(--border))",
@@ -58,17 +61,13 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        navbar: {
-          DEFAULT: "hsl(var(--navbar))",
-          foreground: "hsl(var(--navbar-foreground))",
-          border: "hsl(var(--navbar-border))",
-          hover: "hsl(var(--navbar-hover))",
-        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar))",
           foreground: "hsl(var(--sidebar-foreground))",
           border: "hsl(var(--sidebar-border))",
           hover: "hsl(var(--sidebar-hover))",
+          accent: "hsl(var(--sidebar-accent))",
+          muted: "hsl(var(--sidebar-muted))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
@@ -85,14 +84,27 @@ export default {
         'table-header': "hsl(var(--table-header))",
         'table-hover': "hsl(var(--table-hover))",
         'table-border': "hsl(var(--table-border))",
+        chart: {
+          '1': "hsl(var(--chart-1))",
+          '2': "hsl(var(--chart-2))",
+          '3': "hsl(var(--chart-3))",
+          '4': "hsl(var(--chart-4))",
+          '5': "hsl(var(--chart-5))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 1px)",
-        sm: "calc(var(--radius) - 2px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 8px)",
       },
-      spacing: {
-        'odoo': '16px',
+      boxShadow: {
+        '2xs': "var(--shadow-2xs)",
+        'xs': "var(--shadow-xs)",
+        'sm': "var(--shadow-sm)",
+        'md': "var(--shadow-md)",
+        'lg': "var(--shadow-lg)",
+        'xl': "var(--shadow-xl)",
+        '2xl': "var(--shadow-2xl)",
       },
       keyframes: {
         "accordion-down": {
