@@ -57,7 +57,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar este registro?')) return;
     try {
-      const { error } = await supabase.from(tableName).delete().eq('id', id);
+      const { error } = await (supabase.from as any)(tableName).delete().eq('id', id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: [queryKey] });
       toast.success('Eliminado');
