@@ -9,7 +9,7 @@ export function useProductos(search?: string, statusFilter?: string) {
     queryFn: async () => {
       let q = supabase.from('productos').select('*, marcas(nombre)').order('created_at', { ascending: false });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter);
+      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       const { data, error } = await q;
       if (error) throw error;
       return data as Producto[];
