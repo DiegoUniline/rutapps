@@ -76,7 +76,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
   const handleSaveEdit = async () => {
     if (!editId) return;
     try {
-      const { error } = await supabase.from(tableName).update(editRow).eq('id', editId);
+      const { error } = await (supabase.from as any)(tableName).update(editRow).eq('id', editId);
       if (error) throw error;
       setEditId(null);
       qc.invalidateQueries({ queryKey: [queryKey] });
