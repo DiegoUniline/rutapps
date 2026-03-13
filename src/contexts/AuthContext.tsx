@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Empresa } from '@/types';
@@ -23,30 +23,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).single();
-        setProfile(p);
-        if (p?.empresa_id) {
-          const { data: e } = await supabase.from('empresas').select('*').eq('id', p.empresa_id).single();
-          setEmpresa(e);
-        }
+  const loadUserData = useCallback(async (u: User | null) => {
+    if (u) {
+      const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).maybeSingle();
+      setProfile(p);
+      if (p?.empresa_id) {
+        const { data: e } = await supabase.from('empresas').select('*').eq('id', p.empresa_id).maybeSingle();
+        setEmpresa(e);
       } else {
-        setProfile(null);
         setEmpresa(null);
       }
-      setLoading(false);
+    } else {
+      setProfile(null);
+      setEmpresa(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    // 1. Set up listener FIRST (non-blocking — no awaits inside callback)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      // Fire-and-forget: load profile data without blocking
+      loadUserData(u).finally(() => setLoading(false));
     });
 
+    // 2. Then restore session from storage
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setLoading(false);
+      const u = session?.user ?? null;
+      setUser(u);
+      loadUserData(u).finally(() => setLoading(false));
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUserData]);
 
   const signOut = async () => { await supabase.auth.signOut(); };
 
