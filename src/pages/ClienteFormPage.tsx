@@ -4,6 +4,7 @@ import { Save, Trash2, Star, Camera } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
+import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores } from '@/hooks/useClientes';
 import { useListas, useTarifasForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
