@@ -41,9 +41,11 @@ function AppRoutes() {
         <Route path="/tarifas/:id" element={<TarifaFormPage />} />
         <Route path="/clientes" element={<ClientesListPage />} />
         <Route path="/clientes/:id" element={<ClienteFormPage />} />
+        <Route path="/ventas" element={<VentasListPage />} />
+        <Route path="/ventas/:id" element={<VentaFormPage />} />
         <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />
-        <Route path="/pedidos" element={<PlaceholderPage title="Pedidos" />} />
         <Route path="/facturacion" element={<PlaceholderPage title="Facturación" />} />
+        <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
         <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

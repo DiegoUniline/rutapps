@@ -33,8 +33,7 @@ const navItems: NavItem[] = [
   },
   { label: 'Tarifas', icon: Tag, path: '/tarifas' },
   { label: 'Clientes', icon: Users, path: '/clientes' },
-  { label: 'Rutas', icon: MapPin, path: '/rutas' },
-  { label: 'Pedidos', icon: ShoppingCart, path: '/pedidos' },
+  { label: 'Ventas', icon: ShoppingCart, path: '/ventas' },
   { label: 'Facturación', icon: FileText, path: '/facturacion' },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
 ];
