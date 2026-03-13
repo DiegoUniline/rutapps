@@ -17,18 +17,18 @@ export function OdooTabs({ tabs, defaultTab }: OdooTabsProps) {
 
   return (
     <div>
-      <div className="flex border-b border-border gap-0">
+      <div className="flex border-b border-border gap-0 overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActive(tab.key)}
-            className={cn("odoo-tab", active === tab.key && "odoo-tab-active")}
+            className={cn("odoo-tab whitespace-nowrap", active === tab.key && "odoo-tab-active")}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div className="py-3">
+      <div className="pt-3">
         {tabs.find(t => t.key === active)?.content}
       </div>
     </div>

@@ -56,6 +56,17 @@
     --table-header: 210 7% 46%;
     --table-hover: 210 17% 98%; /* #f8f9fa */
     --table-border: 210 14% 89%;
+
+    /* Teal for editable monetary values */
+    --teal: 182 100% 26%; /* #017e84 */
+    --teal-foreground: 0 0% 100%;
+
+    /* Notes area */
+    --notes-bg: 0 0% 98%; /* #fafafa */
+
+    /* Badge pill */
+    --badge-bg: 210 16% 91%; /* #e9ecef */
+    --badge-fg: 210 11% 25%;
   }
 }
 
@@ -130,18 +141,19 @@
            border-b bg-card select-none cursor-pointer;
   }
 
-  /* Odoo form label */
+  /* Odoo form label - used in edit mode above inputs */
   .label-odoo {
     @apply text-[12px] text-muted-foreground font-medium mb-0.5 block;
   }
 
-  /* Odoo tabs */
+  /* Odoo tabs - teal underline, no bg, normal weight */
   .odoo-tab {
-    @apply px-3 py-2 text-[13px] font-medium border-b-2 border-transparent cursor-pointer
+    @apply px-3 py-2 text-[13px] border-b-2 border-transparent cursor-pointer
            text-muted-foreground hover:text-foreground transition-colors;
   }
   .odoo-tab-active {
-    @apply text-foreground border-primary;
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--teal));
   }
 
   /* Statusbar pipeline */
@@ -156,5 +168,81 @@
   }
   .statusbar-step-pending {
     @apply bg-secondary text-muted-foreground hover:bg-secondary/80;
+  }
+
+  /* ===== ODOO FORM READ/EDIT FIELD ===== */
+
+  /* Read-mode field row: label left, value right — like invisible table */
+  .odoo-field-row {
+    @apply flex items-start py-[5px] min-h-[30px];
+  }
+  .odoo-field-label {
+    @apply text-[13px] font-semibold text-foreground w-[140px] shrink-0 flex items-center gap-1 pt-[2px];
+  }
+  .odoo-field-value {
+    @apply text-[13px] text-foreground flex-1 cursor-pointer min-h-[22px] px-1 rounded
+           hover:bg-secondary/60 transition-colors;
+  }
+  .odoo-field-value-empty {
+    @apply text-muted-foreground;
+  }
+  .odoo-field-value-teal {
+    color: hsl(var(--teal));
+  }
+  .odoo-field-editing {
+    @apply flex-1;
+  }
+  .odoo-field-editing .input-odoo {
+    @apply py-1 text-[13px];
+  }
+
+  /* Help icon next to label */
+  .odoo-help-icon {
+    @apply text-muted-foreground/50 text-[11px] cursor-help;
+  }
+
+  /* Section divider - Odoo collapsible section */
+  .odoo-section-title {
+    @apply text-[11px] uppercase tracking-wider font-bold text-muted-foreground py-2 flex items-center gap-2 cursor-pointer select-none;
+  }
+  .odoo-section-divider {
+    @apply border-t border-border;
+  }
+
+  /* Badge pill (tags, taxes) */
+  .odoo-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded text-[12px] font-normal;
+    background-color: hsl(var(--badge-bg));
+    color: hsl(var(--badge-fg));
+  }
+  .odoo-badge-remove {
+    @apply text-muted-foreground hover:text-foreground cursor-pointer text-[10px] leading-none;
+  }
+
+  /* Notes textarea */
+  .odoo-textarea {
+    @apply w-full border-0 rounded px-2 py-1.5 text-[13px] resize-y min-h-[60px]
+           focus:outline-none focus:ring-1 focus:ring-primary
+           placeholder:text-muted-foreground/50;
+    background-color: hsl(var(--notes-bg));
+  }
+
+  /* Image placeholder */
+  .odoo-image-placeholder {
+    @apply w-[120px] h-[120px] rounded border-2 border-dashed border-border
+           flex items-center justify-center cursor-pointer
+           hover:border-primary/40 transition-colors;
+    background-color: hsl(var(--notes-bg));
+  }
+
+  /* Module checkboxes row */
+  .odoo-module-checks {
+    @apply flex items-center gap-6 py-2 px-1 border-b border-border;
+  }
+  .odoo-module-check {
+    @apply flex items-center gap-1.5 text-[13px] cursor-pointer select-none;
+  }
+  .odoo-module-check input[type="checkbox"] {
+    @apply rounded border-input h-3.5 w-3.5;
   }
 }
