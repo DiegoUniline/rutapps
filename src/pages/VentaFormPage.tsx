@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Plus, X } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
@@ -6,9 +6,8 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
-import { useProductosForSelect, useUnidades, useAlmacenes } from '@/hooks/useData';
+import { useProductosForSelect, useUnidades, useAlmacenes, useTarifasForSelect, useTasasIva, useTasasIeps } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
-import { useTarifasForSelect } from '@/hooks/useData';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -31,6 +30,16 @@ function emptyVenta(): Partial<Venta> {
   };
 }
 
+function emptyLine(): Partial<VentaLinea> {
+  return {
+    cantidad: 1, precio_unitario: 0, descuento_pct: 0,
+    iva_pct: 0, ieps_pct: 0, subtotal: 0, iva_monto: 0, ieps_monto: 0, total: 0,
+  };
+}
+
+// Editable columns in order for Tab navigation
+const EDITABLE_COLS = ['producto', 'unidad', 'cantidad', 'precio', 'descuento', 'iva', 'ieps'] as const;
+
 export default function VentaFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -46,21 +55,94 @@ export default function VentaFormPage() {
   const { data: unidadesList } = useUnidades();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
+  const { data: tasasIvaList } = useTasasIva();
+  const { data: tasasIepsList } = useTasasIeps();
 
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
-  const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([]);
+  // Always start with one blank line
+  const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+
+  // Refs for tab navigation: cellRefs[rowIdx][colIdx]
+  const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
+    const key = `${row}-${col}`;
+    if (el) cellRefs.current.set(key, el);
+    else cellRefs.current.delete(key);
+  }, []);
+
+  const focusCell = useCallback((row: number, col: number) => {
+    const el = cellRefs.current.get(`${row}-${col}`);
+    if (el) {
+      el.focus();
+      if (el instanceof HTMLInputElement) el.select();
+    }
+  }, []);
 
   useEffect(() => {
     if (existingVenta) {
       setForm(existingVenta);
-      setLineas(existingVenta.venta_lineas ?? []);
+      const existingLines = existingVenta.venta_lineas ?? [];
+      // Always ensure at least one blank line at the end
+      setLineas([...existingLines, emptyLine()]);
     }
   }, [existingVenta]);
 
   const set = (field: string, val: any) => {
     setForm(prev => ({ ...prev, [field]: val }));
     setDirty(true);
+  };
+
+  // Auto-fill product data when selecting a product
+  const handleProductSelect = (idx: number, productoId: string) => {
+    const producto = productosList?.find(p => p.id === productoId);
+    setLineas(prev => {
+      const next = [...prev];
+      next[idx] = {
+        ...next[idx],
+        producto_id: productoId,
+        precio_unitario: producto?.precio_principal ?? 0,
+        unidad_id: producto?.unidad_venta_id ?? next[idx].unidad_id,
+        iva_pct: producto?.tiene_iva && producto.tasa_iva_id
+          ? (tasasIvaList?.find(t => t.id === producto.tasa_iva_id)?.porcentaje ?? 0)
+          : 0,
+        ieps_pct: producto?.tiene_ieps && producto.tasa_ieps_id
+          ? (tasasIepsList?.find(t => t.id === producto.tasa_ieps_id)?.porcentaje ?? 0)
+          : 0,
+      };
+      return next;
+    });
+    setDirty(true);
+  };
+
+  // Tab key handler for line cells
+  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+
+    const isLastCol = colIdx >= EDITABLE_COLS.length - 1;
+    const isLastRow = rowIdx >= lineas.length - 1;
+
+    if (e.shiftKey) {
+      // Shift+Tab: go back
+      if (colIdx > 0) {
+        focusCell(rowIdx, colIdx - 1);
+      } else if (rowIdx > 0) {
+        focusCell(rowIdx - 1, EDITABLE_COLS.length - 1);
+      }
+    } else {
+      if (!isLastCol) {
+        focusCell(rowIdx, colIdx + 1);
+      } else if (isLastRow) {
+        // Last cell of last row: add new row and focus it
+        setLineas(prev => [...prev, emptyLine()]);
+        setDirty(true);
+        setTimeout(() => focusCell(rowIdx + 1, 0), 50);
+      } else {
+        focusCell(rowIdx + 1, 0);
+      }
+    }
   };
 
   const totals = useMemo(() => {
@@ -89,6 +171,7 @@ export default function VentaFormPage() {
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
 
+      // Only save lines that have a product selected
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const qty = Number(l.cantidad) || 0;
@@ -127,11 +210,9 @@ export default function VentaFormPage() {
   };
 
   const addLine = () => {
-    setLineas(prev => [...prev, {
-      cantidad: 1, precio_unitario: 0, descuento_pct: 0,
-      iva_pct: 0, ieps_pct: 0, subtotal: 0, iva_monto: 0, ieps_monto: 0, total: 0,
-    }]);
+    setLineas(prev => [...prev, emptyLine()]);
     setDirty(true);
+    setTimeout(() => focusCell(lineas.length, 0), 50);
   };
 
   const updateLine = (idx: number, field: string, val: any) => {
@@ -146,7 +227,9 @@ export default function VentaFormPage() {
   const removeLine = async (idx: number) => {
     const line = lineas[idx];
     if (line.id) await deleteLinea.mutateAsync(line.id);
-    setLineas(prev => prev.filter((_, i) => i !== idx));
+    const newLineas = lineas.filter((_, i) => i !== idx);
+    // Always keep at least one blank line
+    setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas);
     setDirty(true);
   };
 
@@ -327,8 +410,8 @@ export default function VentaFormPage() {
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Cantidad</th>
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Precio unit.</th>
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">IVA %</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">IEPS %</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Iva %</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Ieps %</th>
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
                           <th className="py-2 px-2 w-8"></th>
                         </tr>
@@ -343,31 +426,78 @@ export default function VentaFormPage() {
                             <tr key={idx} className="border-b border-table-border hover:bg-table-hover transition-colors">
                               <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                               <td className="py-1 px-2">
-                                <select className="input-odoo text-[12px] !py-1" value={l.producto_id ?? ''} onChange={e => updateLine(idx, 'producto_id', e.target.value)}>
+                                <select
+                                  ref={el => setCellRef(idx, 0, el)}
+                                  className="input-odoo text-[12px] !py-1"
+                                  value={l.producto_id ?? ''}
+                                  onChange={e => handleProductSelect(idx, e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 0)}
+                                >
                                   <option value="">Seleccionar producto</option>
                                   {productoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </select>
                               </td>
                               <td className="py-1 px-2">
-                                <select className="input-odoo text-[12px] !py-1" value={l.unidad_id ?? ''} onChange={e => updateLine(idx, 'unidad_id', e.target.value)}>
+                                <select
+                                  ref={el => setCellRef(idx, 1, el)}
+                                  className="input-odoo text-[12px] !py-1"
+                                  value={l.unidad_id ?? ''}
+                                  onChange={e => updateLine(idx, 'unidad_id', e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 1)}
+                                >
                                   <option value="">—</option>
                                   {unidadOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </select>
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)} min="0" step="1" />
+                                <input
+                                  ref={el => setCellRef(idx, 2, el)}
+                                  type="number" className="input-odoo text-[12px] text-right !py-1"
+                                  value={l.cantidad ?? ''}
+                                  onChange={e => updateLine(idx, 'cantidad', e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 2)}
+                                  min="0" step="1"
+                                />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)} min="0" step="0.01" />
+                                <input
+                                  ref={el => setCellRef(idx, 3, el)}
+                                  type="number" className="input-odoo text-[12px] text-right !py-1"
+                                  value={l.precio_unitario ?? ''}
+                                  onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 3)}
+                                  min="0" step="0.01"
+                                />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.descuento_pct ?? ''} onChange={e => updateLine(idx, 'descuento_pct', e.target.value)} min="0" max="100" step="0.1" />
+                                <input
+                                  ref={el => setCellRef(idx, 4, el)}
+                                  type="number" className="input-odoo text-[12px] text-right !py-1"
+                                  value={l.descuento_pct ?? ''}
+                                  onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 4)}
+                                  min="0" max="100" step="0.1"
+                                />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.iva_pct ?? ''} onChange={e => updateLine(idx, 'iva_pct', e.target.value)} min="0" step="1" />
+                                <input
+                                  ref={el => setCellRef(idx, 5, el)}
+                                  type="number" className="input-odoo text-[12px] text-right !py-1"
+                                  value={l.iva_pct ?? ''}
+                                  onChange={e => updateLine(idx, 'iva_pct', e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 5)}
+                                  min="0" step="1"
+                                />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.ieps_pct ?? ''} onChange={e => updateLine(idx, 'ieps_pct', e.target.value)} min="0" step="1" />
+                                <input
+                                  ref={el => setCellRef(idx, 6, el)}
+                                  type="number" className="input-odoo text-[12px] text-right !py-1"
+                                  value={l.ieps_pct ?? ''}
+                                  onChange={e => updateLine(idx, 'ieps_pct', e.target.value)}
+                                  onKeyDown={e => handleCellKeyDown(e, idx, 6)}
+                                  min="0" step="1"
+                                />
                               </td>
                               <td className="py-1.5 px-2 text-right font-medium">${lineBase.toFixed(2)}</td>
                               <td className="py-1.5 px-2">
@@ -401,13 +531,13 @@ export default function VentaFormPage() {
                       )}
                       {totals.iva_total > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">IVA</span>
+                          <span className="text-muted-foreground">Iva</span>
                           <span>${totals.iva_total.toFixed(2)}</span>
                         </div>
                       )}
                       {totals.ieps_total > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">IEPS</span>
+                          <span className="text-muted-foreground">Ieps</span>
                           <span>${totals.ieps_total.toFixed(2)}</span>
                         </div>
                       )}
