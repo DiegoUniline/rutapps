@@ -127,7 +127,7 @@ export default function ProductoFormPage() {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={handleSave} disabled={saveMutation.isPending} className="btn-odoo-primary">
+        <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
           <Save className="h-3.5 w-3.5" /> Guardar
         </button>
         <button onClick={() => navigate('/productos')} className="btn-odoo-secondary">
