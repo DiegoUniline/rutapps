@@ -1,0 +1,36 @@
+import { useState, ReactNode } from 'react';
+import { cn } from '@/lib/utils';
+
+interface OdooTab {
+  key: string;
+  label: string;
+  content: ReactNode;
+}
+
+interface OdooTabsProps {
+  tabs: OdooTab[];
+  defaultTab?: string;
+}
+
+export function OdooTabs({ tabs, defaultTab }: OdooTabsProps) {
+  const [active, setActive] = useState(defaultTab ?? tabs[0]?.key);
+
+  return (
+    <div>
+      <div className="flex border-b border-border gap-0">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActive(tab.key)}
+            className={cn("odoo-tab", active === tab.key && "odoo-tab-active")}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div className="py-3">
+        {tabs.find(t => t.key === active)?.content}
+      </div>
+    </div>
+  );
+}

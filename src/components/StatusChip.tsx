@@ -1,9 +1,9 @@
 import type { StatusProducto } from '@/types';
 
 const config: Record<StatusProducto, { label: string; className: string }> = {
-  activo: { label: 'Activo', className: 'status-chip status-activo' },
-  inactivo: { label: 'Inactivo', className: 'status-chip status-inactivo' },
-  borrador: { label: 'Borrador', className: 'status-chip status-borrador' },
+  activo: { label: 'Activo', className: 'status-pill status-activo' },
+  inactivo: { label: 'Inactivo', className: 'status-pill status-inactivo' },
+  borrador: { label: 'Borrador', className: 'status-pill status-borrador' },
 };
 
 export function StatusChip({ status }: { status: StatusProducto }) {

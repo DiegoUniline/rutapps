@@ -16,6 +16,14 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      fontSize: {
+        'xxs': '11px',
+        'xs': '12px',
+        'sm': '13px',
+        'base': '13px',
+        'lg': '15px',
+        'xl': '17px',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -50,15 +58,11 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+        navbar: {
+          DEFAULT: "hsl(var(--navbar))",
+          foreground: "hsl(var(--navbar-foreground))",
+          border: "hsl(var(--navbar-border))",
+          hover: "hsl(var(--navbar-hover))",
         },
         success: {
           DEFAULT: "hsl(var(--success))",
@@ -72,11 +76,17 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        'table-header': "hsl(var(--table-header))",
+        'table-hover': "hsl(var(--table-hover))",
+        'table-border': "hsl(var(--table-border))",
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 1px)",
+        sm: "calc(var(--radius) - 2px)",
+      },
+      spacing: {
+        'odoo': '16px',
       },
       keyframes: {
         "accordion-down": {

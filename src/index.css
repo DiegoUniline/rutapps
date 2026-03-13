@@ -6,51 +6,56 @@
 
 @layer base {
   :root {
-    --background: 210 20% 99%;
-    --foreground: 215 28% 17%;
+    /* Odoo-inspired palette */
+    --background: 0 0% 96%; /* #f5f5f5 */
+    --foreground: 210 11% 15%; /* dark text */
 
     --card: 0 0% 100%;
-    --card-foreground: 215 28% 17%;
+    --card-foreground: 210 11% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 17%;
+    --popover-foreground: 210 11% 15%;
 
-    --primary: 213 47% 20%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Odoo purple #714B67 */
+    --primary: 315 21% 37%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 215 28% 17%;
+    --secondary: 210 14% 95%;
+    --secondary-foreground: 210 11% 25%;
 
-    --muted: 210 33% 97%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 14% 95%;
+    --muted-foreground: 210 7% 46%; /* #6c757d */
 
-    --accent: 174 100% 27%;
+    --accent: 315 21% 37%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 65% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 174 100% 27%;
+    --border: 210 14% 83%; /* #ced4da */
+    --input: 210 14% 83%;
+    --ring: 315 21% 37%;
 
-    --radius: 0.5rem;
+    --radius: 0.25rem;
 
-    --sidebar-background: 213 47% 20%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 174 100% 27%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 213 47% 26%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 213 47% 28%;
-    --sidebar-ring: 174 100% 27%;
+    /* Navbar */
+    --navbar: 0 0% 100%;
+    --navbar-foreground: 210 11% 15%;
+    --navbar-border: 210 14% 87%; /* #dee2e6 */
+    --navbar-hover: 210 14% 95%;
 
-    --success: 160 84% 39%;
+    /* Status colors */
+    --success: 134 61% 41%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 45 100% 51%;
     --warning-foreground: 0 0% 100%;
-    --info: 217 91% 60%;
+    --info: 211 100% 50%;
     --info-foreground: 0 0% 100%;
+
+    /* Odoo-specific */
+    --table-header: 210 7% 46%;
+    --table-hover: 210 17% 98%; /* #f8f9fa */
+    --table-border: 210 14% 89%;
   }
 }
 
@@ -58,29 +63,98 @@
   * {
     @apply border-border;
   }
+  html {
+    font-size: 13px;
+  }
   body {
-    @apply bg-background text-foreground font-sans;
-    font-family: 'Inter', sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
 @layer components {
-  .status-chip {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-  .status-activo {
-    @apply bg-emerald-100 text-emerald-700;
-  }
-  .status-inactivo {
-    @apply bg-red-100 text-red-700;
+  /* Status pills - Odoo style */
+  .status-pill {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight;
   }
   .status-borrador {
-    @apply bg-slate-100 text-slate-600;
+    background-color: hsl(210 14% 89%);
+    color: hsl(210 7% 46%);
   }
+  .status-activo {
+    background-color: hsl(134 40% 90%);
+    color: hsl(134 61% 30%);
+  }
+  .status-inactivo {
+    background-color: hsl(0 50% 93%);
+    color: hsl(0 65% 45%);
+  }
+  .status-confirmado {
+    background-color: hsl(211 60% 92%);
+    color: hsl(211 80% 42%);
+  }
+
+  /* Odoo link style */
   .odoo-link {
-    @apply text-accent hover:underline cursor-pointer font-medium text-sm inline-flex items-center gap-1;
+    @apply text-primary hover:underline cursor-pointer font-medium text-[13px] inline-flex items-center gap-1;
   }
+
+  /* Section card - minimal Odoo style */
   .section-card {
-    @apply bg-card rounded-lg border p-4 md:p-6;
+    @apply bg-card rounded border p-4;
+  }
+
+  /* Odoo button styles */
+  .btn-odoo-primary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded text-[13px] font-medium
+           bg-primary text-primary-foreground hover:opacity-90 transition-opacity
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-odoo-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded text-[13px] font-medium
+           bg-card text-foreground border border-border hover:bg-secondary transition-colors
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Odoo input */
+  .input-odoo {
+    @apply w-full border border-input rounded px-2.5 py-1.5 text-[13px] bg-card
+           focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary
+           placeholder:text-muted-foreground;
+  }
+
+  /* Odoo table header */
+  .th-odoo {
+    @apply text-[11px] uppercase tracking-wider font-semibold text-muted-foreground py-2 px-3
+           border-b bg-card select-none cursor-pointer;
+  }
+
+  /* Odoo form label */
+  .label-odoo {
+    @apply text-[12px] text-muted-foreground font-medium mb-0.5 block;
+  }
+
+  /* Odoo tabs */
+  .odoo-tab {
+    @apply px-3 py-2 text-[13px] font-medium border-b-2 border-transparent cursor-pointer
+           text-muted-foreground hover:text-foreground transition-colors;
+  }
+  .odoo-tab-active {
+    @apply text-foreground border-primary;
+  }
+
+  /* Statusbar pipeline */
+  .statusbar-step {
+    @apply px-3 py-1 text-[12px] font-medium cursor-pointer transition-colors relative;
+  }
+  .statusbar-step-active {
+    @apply bg-primary text-primary-foreground;
+  }
+  .statusbar-step-done {
+    @apply bg-primary/10 text-primary;
+  }
+  .statusbar-step-pending {
+    @apply bg-secondary text-muted-foreground hover:bg-secondary/80;
   }
 }
