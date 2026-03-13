@@ -30,7 +30,7 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
   const { data: items, isLoading } = useQuery({
     queryKey: [queryKey],
     queryFn: async () => {
-      const { data, error } = await supabase.from(tableName).select('*').order('nombre');
+      const { data, error } = await (supabase.from as any)(tableName).select('*').order('nombre');
       if (error) throw error;
       return data as any[];
     },
