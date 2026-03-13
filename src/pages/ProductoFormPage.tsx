@@ -45,13 +45,16 @@ export default function ProductoFormPage() {
   const { data: tarifasDisp } = useTarifasForSelect();
 
   const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
+  const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
   const [starred, setStarred] = useState(false);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
 
   useEffect(() => {
-    if (existing) setForm(existing);
+    if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
+
+  const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
   const set = (key: keyof Producto, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
