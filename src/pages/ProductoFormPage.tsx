@@ -299,81 +299,16 @@ export default function ProductoFormPage() {
             },
             {
               key: 'precios',
-              label: 'Precios & Tarifas',
-              content: (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-                    <div>
-                      <div className="odoo-field-row">
-                        <span className="odoo-field-label">Permitir Desc.</span>
-                        <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                          <input type="checkbox" checked={!!form.permitir_descuento} onChange={e => set('permitir_descuento', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
-                        </label>
-                      </div>
-                      {form.permitir_descuento && (
-                        <OdooField label="Monto Máx Desc." value={form.monto_maximo} type="number" teal
-                          onChange={v => set('monto_maximo', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
-                      )}
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const byTarifa = new Map<string, { nombre: string; activa: boolean; linea: any }>();
-                    const priorityOrder: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
-                    (tarifaLineas ?? []).forEach((tl: any) => {
-                      if (!tl.tarifas) return;
-                      const tarifaId = tl.tarifas.id;
-                      const ex = byTarifa.get(tarifaId);
-                      const p = priorityOrder[tl.aplica_a] ?? 99;
-                      if (!ex || p < priorityOrder[ex.linea.aplica_a]) {
-                        byTarifa.set(tarifaId, { nombre: tl.tarifas.nombre, activa: tl.tarifas.activa, linea: tl });
-                      }
-                    });
-                    const calcPrice = (linea: any) => {
-                      const c = form.costo ?? 0, pr = form.precio_principal ?? 0;
-                      if (linea.tipo_calculo === 'margen_costo') return Math.max(c * (1 + (linea.margen_pct ?? 0) / 100), linea.precio_minimo ?? 0);
-                      if (linea.tipo_calculo === 'descuento_precio') return Math.max(pr * (1 - (linea.descuento_pct ?? 0) / 100), linea.precio_minimo ?? 0);
-                      return Math.max(linea.precio ?? 0, linea.precio_minimo ?? 0);
-                    };
-                    const calcLabel = (l: any) => l.tipo_calculo === 'margen_costo' ? `+${l.margen_pct}% s/costo` : l.tipo_calculo === 'descuento_precio' ? `-${l.descuento_pct}% s/precio` : 'Fijo';
-                    const aplLabels: Record<string, string> = { producto: 'Producto', categoria: 'Categoría', todos: 'Todos' };
-                    const entries = Array.from(byTarifa.entries());
-                    if (entries.length === 0) return <p className="text-[12px] text-muted-foreground py-3">No hay tarifas que apliquen a este producto.</p>;
-                    return (
-                      <OdooSection title="PRECIO CALCULADO POR TARIFA">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-table-border">
-                              <th className="th-odoo text-left">Tarifa</th>
-                              <th className="th-odoo text-left">Regla</th>
-                              <th className="th-odoo text-left">Tipo</th>
-                              <th className="th-odoo text-right">Precio Calculado</th>
-                              <th className="th-odoo text-center">Activa</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {entries.map(([tarifaId, { nombre, activa, linea }]) => (
-                              <tr key={tarifaId} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer" onClick={() => navigate(`/tarifas/${tarifaId}`)}>
-                                <td className="py-1.5 px-3 font-medium">{nombre}</td>
-                                <td className="py-1.5 px-3">
-                                  <span className={`text-[11px] px-1.5 py-0.5 rounded ${linea.aplica_a === 'producto' ? 'bg-green-100 text-green-800' : linea.aplica_a === 'categoria' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
-                                    {aplLabels[linea.aplica_a]}
-                                  </span>
-                                </td>
-                                <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
-                                <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">$ {calcPrice(linea).toFixed(2)}</td>
-                                <td className="py-1.5 px-3 text-center">
-                                  {activa ? <span className="text-[11px] font-medium text-success">Sí</span> : <span className="text-[11px] text-muted-foreground">No</span>}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </OdooSection>
-                    );
-                  })()}
-                </div>
-              ),
+              label: 'Precios',
+              content: <PreciosTab
+                form={form}
+                set={set}
+                tarifaLineas={tarifaLineas}
+                tarifasDisp={tarifasDisp}
+                productoId={id}
+                isNew={isNew}
+                navigate={navigate}
+              />,
             },
             {
               key: 'fiscal',
