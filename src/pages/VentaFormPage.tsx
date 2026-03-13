@@ -257,8 +257,8 @@ export default function VentaFormPage() {
         <div className="px-4 pt-3">
           <OdooStatusbar
             steps={VENTA_STEPS}
-            current={form.status as StatusVenta}
-            onSelect={handleStatusChange}
+            current={form.status as string}
+            onStepClick={(key) => handleStatusChange(key as StatusVenta)}
           />
         </div>
       )}
