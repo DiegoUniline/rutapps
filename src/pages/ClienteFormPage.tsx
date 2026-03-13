@@ -138,10 +138,6 @@ export default function ClienteFormPage() {
           current={form.status ?? 'activo'}
           onStepClick={val => set('status', val as StatusCliente)}
         />
-          steps={statusSteps}
-          current={form.status ?? 'activo'}
-          onChange={val => set('status', val as StatusCliente)}
-        />
       </div>
 
       {/* Tabs */}
