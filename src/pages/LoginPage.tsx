@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -32,28 +29,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted">
-      <div className="w-full max-w-sm section-card">
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-full max-w-sm bg-card border border-border rounded p-6">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Rutapp</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl font-bold text-primary">Rutapp</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <label className="label-odoo">Email</label>
+            <input type="email" className="input-odoo" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           <div>
-            <Label htmlFor="password">Contraseña</Label>
-            <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <label className="label-odoo">Contraseña</label>
+            <input type="password" className="input-odoo" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
-          <Button type="submit" className="w-full bg-info hover:bg-info/90 text-info-foreground" disabled={loading}>
+          <button type="submit" className="btn-odoo-primary w-full justify-center" disabled={loading}>
             {loading ? 'Cargando...' : isSignUp ? 'Registrarse' : 'Entrar'}
-          </Button>
+          </button>
         </form>
-        <p className="text-center text-sm text-muted-foreground mt-4">
+        <p className="text-center text-xs text-muted-foreground mt-4">
           {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
           <button onClick={() => setIsSignUp(!isSignUp)} className="odoo-link">
             {isSignUp ? 'Iniciar sesión' : 'Registrarse'}

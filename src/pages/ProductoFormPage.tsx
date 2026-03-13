@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, X, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Save, X, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { OdooStatusbar } from '@/components/OdooStatusbar';
+import { OdooTabs } from '@/components/OdooTabs';
+import { OdooCollapsible } from '@/components/OdooCollapsible';
 import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Producto } from '@/types';
@@ -21,6 +19,29 @@ const defaultProduct: Partial<Producto> = {
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
 };
+
+const statusSteps = [
+  { key: 'borrador', label: 'Borrador' },
+  { key: 'activo', label: 'Activo' },
+  { key: 'inactivo', label: 'Inactivo' },
+];
+
+function OdooField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="label-odoo">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function OdooSelect({ value, onChange, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select value={value} onChange={onChange} className="input-odoo" {...props}>
+      {children}
+    </select>
+  );
+}
 
 export default function ProductoFormPage() {
   const { id } = useParams();
@@ -47,7 +68,7 @@ export default function ProductoFormPage() {
   useEffect(() => {
     if (existing) {
       setForm(existing);
-      setPrecioMode(existing.contador_tarifas > 0 ? 'tarifas' : 'unico');
+      setPrecioMode((existing.contador_tarifas ?? 0) > 0 ? 'tarifas' : 'unico');
     }
   }, [existing]);
 
@@ -80,361 +101,308 @@ export default function ProductoFormPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-4xl">
+    <div className="p-4">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/productos')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-xl font-semibold flex-1">
-          {isNew ? 'Nuevo Producto' : form.nombre || 'Producto'}
-        </h1>
-        <div className="flex gap-2">
-          {!isNew && (
-            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-destructive hover:text-destructive">
-              <Trash2 className="h-4 w-4 mr-1" /> Eliminar
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => navigate('/productos')}>
-            <X className="h-4 w-4 mr-1" /> Descartar
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending} className="bg-info hover:bg-info/90 text-info-foreground">
-            <Save className="h-4 w-4 mr-1" /> Guardar
-          </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="flex-1 flex items-center gap-3">
+          <h1 className="text-xl font-bold text-foreground">
+            {isNew ? 'Nuevo Producto' : form.nombre || 'Producto'}
+          </h1>
         </div>
+        <OdooStatusbar
+          steps={statusSteps}
+          current={form.status ?? 'borrador'}
+          onStepClick={key => set('status', key)}
+        />
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList className="overflow-x-auto flex w-full justify-start bg-muted">
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="precios">Precios & Tarifas</TabsTrigger>
-          <TabsTrigger value="fiscal">Fiscal</TabsTrigger>
-          <TabsTrigger value="unidades">Unidades</TabsTrigger>
-          <TabsTrigger value="comisiones">Comisiones</TabsTrigger>
-          <TabsTrigger value="almacenes">Almacenes</TabsTrigger>
-        </TabsList>
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={handleSave} disabled={saveMutation.isPending} className="btn-odoo-primary">
+          <Save className="h-3.5 w-3.5" /> Guardar
+        </button>
+        <button onClick={() => navigate('/productos')} className="btn-odoo-secondary">
+          <X className="h-3.5 w-3.5" /> Descartar
+        </button>
+        {!isNew && (
+          <button onClick={handleDelete} className="btn-odoo-secondary text-destructive hover:text-destructive">
+            <Trash2 className="h-3.5 w-3.5" /> Eliminar
+          </button>
+        )}
+      </div>
 
-        {/* Tab General */}
-        <TabsContent value="general" className="space-y-6">
-          <div className="section-card space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Código *</Label>
-                <Input value={form.codigo ?? ''} onChange={e => set('codigo', e.target.value)} />
-              </div>
-              <div>
-                <Label>Nombre *</Label>
-                <Input value={form.nombre ?? ''} onChange={e => set('nombre', e.target.value)} />
-              </div>
-              <div>
-                <Label>Clave Alterna</Label>
-                <Input value={form.clave_alterna ?? ''} onChange={e => set('clave_alterna', e.target.value)} />
-              </div>
-              <div>
-                <Label>Marca</Label>
-                <Select value={form.marca_id ?? ''} onValueChange={v => set('marca_id', v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {marcas?.map(m => <SelectItem key={m.id} value={m.id}>{m.nombre}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Proveedor</Label>
-                <Select value={form.proveedor_id ?? ''} onValueChange={v => set('proveedor_id', v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {proveedores?.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Clasificación</Label>
-                <Select value={form.clasificacion_id ?? ''} onValueChange={v => set('clasificacion_id', v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {clasificaciones?.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Lista</Label>
-                <Select value={form.lista_id ?? ''} onValueChange={v => set('lista_id', v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                  <SelectContent>
-                    {listas?.map(l => <SelectItem key={l.id} value={l.id}>{l.nombre}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Status</Label>
-                <Select value={form.status ?? 'borrador'} onValueChange={v => set('status', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="activo">Activo</SelectItem>
-                    <SelectItem value="inactivo">Inactivo</SelectItem>
-                    <SelectItem value="borrador">Borrador</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="border-t pt-4">
-              <p className="text-sm font-medium text-foreground mb-3">Opciones</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 gap-x-6">
-                {([
-                  ['se_puede_comprar', 'Se puede Comprar'],
-                  ['se_puede_vender', 'Se puede Vender'],
-                  ['se_puede_inventariar', 'Inventariar'],
-                  ['vender_sin_stock', 'Vender sin Stock'],
-                  ['es_combo', 'Es Combo'],
-                  ['manejar_lotes', 'Manejar Lotes'],
-                ] as const).map(([key, label]) => (
-                  <div key={key} className="flex items-center gap-2">
-                    <Switch checked={!!form[key]} onCheckedChange={v => set(key, v)} />
-                    <Label className="text-sm">{label}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
-              <div>
-                <Label>Min Stock</Label>
-                <Input type="number" value={form.min ?? 0} onChange={e => set('min', +e.target.value)} />
-              </div>
-              <div>
-                <Label>Max Stock</Label>
-                <Input type="number" value={form.max ?? 0} onChange={e => set('max', +e.target.value)} />
-              </div>
-            </div>
+      {/* Form body */}
+      <div className="bg-card border border-border rounded p-4">
+        <OdooCollapsible title="Información General" summary={form.codigo ? `${form.codigo} — ${form.nombre}` : ''}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+            <OdooField label="Código *">
+              <input className="input-odoo" value={form.codigo ?? ''} onChange={e => set('codigo', e.target.value)} />
+            </OdooField>
+            <OdooField label="Nombre *">
+              <input className="input-odoo" value={form.nombre ?? ''} onChange={e => set('nombre', e.target.value)} />
+            </OdooField>
+            <OdooField label="Clave Alterna">
+              <input className="input-odoo" value={form.clave_alterna ?? ''} onChange={e => set('clave_alterna', e.target.value)} />
+            </OdooField>
+            <OdooField label="Marca">
+              <OdooSelect value={form.marca_id ?? ''} onChange={e => set('marca_id', e.target.value || null)}>
+                <option value="">Seleccionar</option>
+                {marcas?.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+              </OdooSelect>
+            </OdooField>
+            <OdooField label="Proveedor">
+              <OdooSelect value={form.proveedor_id ?? ''} onChange={e => set('proveedor_id', e.target.value || null)}>
+                <option value="">Seleccionar</option>
+                {proveedores?.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </OdooSelect>
+            </OdooField>
+            <OdooField label="Clasificación">
+              <OdooSelect value={form.clasificacion_id ?? ''} onChange={e => set('clasificacion_id', e.target.value || null)}>
+                <option value="">Seleccionar</option>
+                {clasificaciones?.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </OdooSelect>
+            </OdooField>
+            <OdooField label="Lista">
+              <OdooSelect value={form.lista_id ?? ''} onChange={e => set('lista_id', e.target.value || null)}>
+                <option value="">Seleccionar</option>
+                {listas?.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}
+              </OdooSelect>
+            </OdooField>
           </div>
-        </TabsContent>
+        </OdooCollapsible>
 
-        {/* Tab Precios */}
-        <TabsContent value="precios" className="space-y-4">
-          <div className="section-card space-y-4">
-            <div className="flex gap-2">
-              <Button
-                variant={precioMode === 'unico' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPrecioMode('unico')}
-                className={precioMode === 'unico' ? 'bg-accent text-accent-foreground' : ''}
-              >
-                • Usar Precio Único
-              </Button>
-              <Button
-                variant={precioMode === 'tarifas' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setPrecioMode('tarifas')}
-                className={precioMode === 'tarifas' ? 'bg-accent text-accent-foreground' : ''}
-              >
-                • Usar Tarifas
-              </Button>
-            </div>
-
-            {precioMode === 'unico' ? (
-              <div className="space-y-4">
-                <div>
-                  <Label>Precio Principal</Label>
-                  <Input
-                    type="number"
-                    value={form.precio_principal ?? 0}
-                    onChange={e => set('precio_principal', +e.target.value)}
-                    className="text-2xl font-bold h-14 max-w-xs"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch checked={!!form.permitir_descuento} onCheckedChange={v => set('permitir_descuento', v)} />
-                  <Label>Permitir Descuento</Label>
-                </div>
-                {form.permitir_descuento && (
-                  <div className="max-w-xs">
-                    <Label>Monto Máximo Descuento</Label>
-                    <Input type="number" value={form.monto_maximo ?? 0} onChange={e => set('monto_maximo', +e.target.value)} />
-                  </div>
-                )}
+        <OdooCollapsible title="Opciones">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-y-2.5 gap-x-6">
+            {([
+              ['se_puede_comprar', 'Se puede Comprar'],
+              ['se_puede_vender', 'Se puede Vender'],
+              ['se_puede_inventariar', 'Inventariar'],
+              ['vender_sin_stock', 'Vender sin Stock'],
+              ['es_combo', 'Es Combo'],
+              ['manejar_lotes', 'Manejar Lotes'],
+            ] as const).map(([key, label]) => (
+              <div key={key} className="flex items-center gap-2">
+                <Switch checked={!!form[key]} onCheckedChange={v => set(key, v)} />
+                <span className="text-sm">{label}</span>
               </div>
-            ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">Tarifas asignadas a este producto. Gestiona las tarifas desde el módulo Tarifas.</p>
-                {tarifasDisp?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4">No hay tarifas disponibles.</p>
-                ) : (
-                  <div className="border rounded-md overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/50">
-                          <th className="text-left p-2 font-medium">Nombre Tarifa</th>
-                          <th className="text-left p-2 font-medium">Tipo</th>
-                          <th className="text-center p-2 font-medium">Activa</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {tarifasDisp?.map(t => (
-                          <tr key={t.id} className="border-b last:border-0">
-                            <td className="p-2">{t.nombre}</td>
-                            <td className="p-2 text-muted-foreground">{t.tipo}</td>
-                            <td className="p-2 text-center">
-                              {t.activa ? <span className="text-success text-xs font-medium">Sí</span> : <span className="text-muted-foreground text-xs">No</span>}
-                            </td>
-                          </tr>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-4 mt-3 max-w-sm">
+            <OdooField label="Min Stock">
+              <input type="number" className="input-odoo" value={form.min ?? 0} onChange={e => set('min', +e.target.value)} />
+            </OdooField>
+            <OdooField label="Max Stock">
+              <input type="number" className="input-odoo" value={form.max ?? 0} onChange={e => set('max', +e.target.value)} />
+            </OdooField>
+          </div>
+        </OdooCollapsible>
+
+        {/* Tabs below */}
+        <div className="mt-4">
+          <OdooTabs
+            tabs={[
+              {
+                key: 'precios',
+                label: 'Precios & Tarifas',
+                content: (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPrecioMode('unico')}
+                        className={precioMode === 'unico' ? 'btn-odoo-primary' : 'btn-odoo-secondary'}
+                      >
+                        Precio Único
+                      </button>
+                      <button
+                        onClick={() => setPrecioMode('tarifas')}
+                        className={precioMode === 'tarifas' ? 'btn-odoo-primary' : 'btn-odoo-secondary'}
+                      >
+                        Usar Tarifas
+                      </button>
+                    </div>
+                    {precioMode === 'unico' ? (
+                      <div className="space-y-3 max-w-sm">
+                        <OdooField label="Precio Principal">
+                          <input
+                            type="number"
+                            className="input-odoo text-xl font-bold"
+                            value={form.precio_principal ?? 0}
+                            onChange={e => set('precio_principal', +e.target.value)}
+                          />
+                        </OdooField>
+                        <div className="flex items-center gap-2">
+                          <Switch checked={!!form.permitir_descuento} onCheckedChange={v => set('permitir_descuento', v)} />
+                          <span className="text-sm">Permitir Descuento</span>
+                        </div>
+                        {form.permitir_descuento && (
+                          <OdooField label="Monto Máximo Descuento">
+                            <input type="number" className="input-odoo" value={form.monto_maximo ?? 0} onChange={e => set('monto_maximo', +e.target.value)} />
+                          </OdooField>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">Tarifas asignadas. Gestiona desde el módulo Tarifas.</p>
+                        {tarifasDisp?.length === 0 ? (
+                          <p className="text-xs text-muted-foreground py-4">No hay tarifas disponibles.</p>
+                        ) : (
+                          <table className="w-full text-sm border border-border rounded overflow-hidden">
+                            <thead>
+                              <tr className="border-b border-table-border">
+                                <th className="th-odoo text-left">Nombre</th>
+                                <th className="th-odoo text-left">Tipo</th>
+                                <th className="th-odoo text-center">Activa</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {tarifasDisp?.map(t => (
+                                <tr key={t.id} className="border-b border-table-border last:border-0">
+                                  <td className="py-1.5 px-3">{t.nombre}</td>
+                                  <td className="py-1.5 px-3 text-muted-foreground">{t.tipo}</td>
+                                  <td className="py-1.5 px-3 text-center">
+                                    {t.activa ? <span className="text-xxs font-medium text-success">Sí</span> : <span className="text-xxs text-muted-foreground">No</span>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                        <button className="odoo-link" onClick={() => navigate('/tarifas')}>+ Agregar Tarifa</button>
+                      </div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'fiscal',
+                label: 'Fiscal',
+                content: (
+                  <div className="space-y-3 max-w-lg">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!form.tiene_iva} onCheckedChange={v => set('tiene_iva', v)} />
+                      <span className="text-sm font-medium">IVA</span>
+                    </div>
+                    {form.tiene_iva && (
+                      <OdooField label="Tasa IVA">
+                        <OdooSelect value={form.tasa_iva_id ?? ''} onChange={e => set('tasa_iva_id', e.target.value || null)}>
+                          <option value="">Seleccionar tasa</option>
+                          {tasasIva?.map(t => <option key={t.id} value={t.id}>{t.nombre} ({t.porcentaje}%)</option>)}
+                        </OdooSelect>
+                      </OdooField>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!form.tiene_ieps} onCheckedChange={v => set('tiene_ieps', v)} />
+                      <span className="text-sm font-medium">IEPS</span>
+                    </div>
+                    {form.tiene_ieps && (
+                      <OdooField label="Tasa IEPS">
+                        <OdooSelect value={form.tasa_ieps_id ?? ''} onChange={e => set('tasa_ieps_id', e.target.value || null)}>
+                          <option value="">Seleccionar tasa</option>
+                          {tasasIeps?.map(t => <option key={t.id} value={t.id}>{t.nombre} ({t.porcentaje}%)</option>)}
+                        </OdooSelect>
+                      </OdooField>
+                    )}
+                    <OdooField label="Código SAT">
+                      <input className="input-odoo" value={form.codigo_sat ?? ''} onChange={e => set('codigo_sat', e.target.value)} />
+                    </OdooField>
+                    <OdooField label="Unidad SAT">
+                      <OdooSelect value={form.udem_sat_id ?? ''} onChange={e => set('udem_sat_id', e.target.value || null)}>
+                        <option value="">Seleccionar</option>
+                        {unidadesSat?.map(u => <option key={u.id} value={u.id}>{u.clave} - {u.nombre}</option>)}
+                      </OdooSelect>
+                    </OdooField>
+                    <OdooField label="Cálculo de Costo">
+                      <OdooSelect value={form.calculo_costo ?? 'promedio'} onChange={e => set('calculo_costo', e.target.value)}>
+                        <option value="promedio">Promedio</option>
+                        <option value="ultimo">Último</option>
+                        <option value="estandar">Estándar</option>
+                        <option value="manual">Manual</option>
+                      </OdooSelect>
+                    </OdooField>
+                  </div>
+                ),
+              },
+              {
+                key: 'unidades',
+                label: 'Unidades',
+                content: (
+                  <div className="space-y-3 max-w-sm">
+                    <OdooField label="Unidad de Compra">
+                      <OdooSelect value={form.unidad_compra_id ?? ''} onChange={e => set('unidad_compra_id', e.target.value || null)}>
+                        <option value="">Seleccionar</option>
+                        {unidades?.map(u => <option key={u.id} value={u.id}>{u.nombre}{u.abreviatura ? ` (${u.abreviatura})` : ''}</option>)}
+                      </OdooSelect>
+                    </OdooField>
+                    <OdooField label="Unidad de Venta">
+                      <OdooSelect value={form.unidad_venta_id ?? ''} onChange={e => set('unidad_venta_id', e.target.value || null)}>
+                        <option value="">Seleccionar</option>
+                        {unidades?.map(u => <option key={u.id} value={u.id}>{u.nombre}{u.abreviatura ? ` (${u.abreviatura})` : ''}</option>)}
+                      </OdooSelect>
+                    </OdooField>
+                    <OdooField label="Factor de Conversión">
+                      <input type="number" step="0.01" className="input-odoo" value={form.factor_conversion ?? 1} onChange={e => set('factor_conversion', +e.target.value)} />
+                    </OdooField>
+                  </div>
+                ),
+              },
+              {
+                key: 'comisiones',
+                label: 'Comisiones',
+                content: (
+                  <div className="space-y-3 max-w-sm">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={!!form.tiene_comision} onCheckedChange={v => set('tiene_comision', v)} />
+                      <span className="text-sm font-medium">¿Maneja Comisión?</span>
+                    </div>
+                    {form.tiene_comision && (
+                      <>
+                        <OdooField label="Tipo">
+                          <OdooSelect value={form.tipo_comision ?? 'porcentaje'} onChange={e => set('tipo_comision', e.target.value)}>
+                            <option value="porcentaje">Porcentaje</option>
+                            <option value="monto_fijo">Monto Fijo</option>
+                          </OdooSelect>
+                        </OdooField>
+                        <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : '$'})`}>
+                          <input type="number" step="0.01" className="input-odoo" value={form.pct_comision ?? 0} onChange={e => set('pct_comision', +e.target.value)} />
+                        </OdooField>
+                      </>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: 'almacenes',
+                label: 'Almacenes',
+                content: (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Almacenes donde está disponible este producto.</p>
+                    {almacenes?.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-4">No hay almacenes configurados.</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {almacenes?.map(a => (
+                          <label key={a.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={form.almacenes?.includes(a.id) ?? false}
+                              onChange={e => {
+                                const current = form.almacenes ?? [];
+                                set('almacenes', e.target.checked ? [...current, a.id] : current.filter(x => x !== a.id));
+                              }}
+                              className="rounded border-input"
+                            />
+                            {a.nombre}
+                          </label>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    )}
                   </div>
-                )}
-                <button className="odoo-link" onClick={() => navigate('/tarifas')}>+ Agregar Tarifa</button>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Tab Fiscal */}
-        <TabsContent value="fiscal">
-          <div className="section-card space-y-4">
-            <div className="flex items-center gap-3">
-              <Switch checked={!!form.tiene_iva} onCheckedChange={v => set('tiene_iva', v)} />
-              <Label>IVA</Label>
-            </div>
-            {form.tiene_iva && (
-              <div className="max-w-xs">
-                <Label>Tasa IVA</Label>
-                <Select value={form.tasa_iva_id ?? ''} onValueChange={v => set('tasa_iva_id', v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar tasa" /></SelectTrigger>
-                  <SelectContent>
-                    {tasasIva?.map(t => <SelectItem key={t.id} value={t.id}>{t.nombre} ({t.porcentaje}%)</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <Switch checked={!!form.tiene_ieps} onCheckedChange={v => set('tiene_ieps', v)} />
-              <Label>IEPS</Label>
-            </div>
-            {form.tiene_ieps && (
-              <div className="max-w-xs">
-                <Label>Tasa IEPS</Label>
-                <Select value={form.tasa_ieps_id ?? ''} onValueChange={v => set('tasa_ieps_id', v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Seleccionar tasa" /></SelectTrigger>
-                  <SelectContent>
-                    {tasasIeps?.map(t => <SelectItem key={t.id} value={t.id}>{t.nombre} ({t.porcentaje}%)</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div>
-              <Label>Código SAT</Label>
-              <Input value={form.codigo_sat ?? ''} onChange={e => set('codigo_sat', e.target.value)} className="max-w-xs" />
-            </div>
-            <div className="max-w-xs">
-              <Label>Unidad de Medida SAT</Label>
-              <Select value={form.udem_sat_id ?? ''} onValueChange={v => set('udem_sat_id', v || null)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  {unidadesSat?.map(u => <SelectItem key={u.id} value={u.id}>{u.clave} - {u.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="max-w-xs">
-              <Label>Cálculo de Costo</Label>
-              <Select value={form.calculo_costo ?? 'promedio'} onValueChange={v => set('calculo_costo', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="promedio">Promedio</SelectItem>
-                  <SelectItem value="ultimo">Último</SelectItem>
-                  <SelectItem value="estandar">Estándar</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Tab Unidades */}
-        <TabsContent value="unidades">
-          <div className="section-card space-y-4">
-            <div className="max-w-xs">
-              <Label>Unidad de Compra</Label>
-              <Select value={form.unidad_compra_id ?? ''} onValueChange={v => set('unidad_compra_id', v || null)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  {unidades?.map(u => <SelectItem key={u.id} value={u.id}>{u.nombre}{u.abreviatura ? ` (${u.abreviatura})` : ''}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="max-w-xs">
-              <Label>Unidad de Venta</Label>
-              <Select value={form.unidad_venta_id ?? ''} onValueChange={v => set('unidad_venta_id', v || null)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                <SelectContent>
-                  {unidades?.map(u => <SelectItem key={u.id} value={u.id}>{u.nombre}{u.abreviatura ? ` (${u.abreviatura})` : ''}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="max-w-xs">
-              <Label>Factor de Conversión</Label>
-              <Input type="number" step="0.01" value={form.factor_conversion ?? 1} onChange={e => set('factor_conversion', +e.target.value)} />
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Tab Comisiones */}
-        <TabsContent value="comisiones">
-          <div className="section-card space-y-4">
-            <div className="flex items-center gap-3">
-              <Switch checked={!!form.tiene_comision} onCheckedChange={v => set('tiene_comision', v)} />
-              <Label>¿Maneja Comisión?</Label>
-            </div>
-            {form.tiene_comision && (
-              <>
-                <div className="max-w-xs">
-                  <Label>Tipo</Label>
-                  <Select value={form.tipo_comision ?? 'porcentaje'} onValueChange={v => set('tipo_comision', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="porcentaje">Porcentaje</SelectItem>
-                      <SelectItem value="monto_fijo">Monto Fijo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="max-w-xs">
-                  <Label>Valor ({form.tipo_comision === 'porcentaje' ? '%' : '$'})</Label>
-                  <Input type="number" step="0.01" value={form.pct_comision ?? 0} onChange={e => set('pct_comision', +e.target.value)} />
-                </div>
-              </>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Tab Almacenes */}
-        <TabsContent value="almacenes">
-          <div className="section-card space-y-3">
-            <p className="text-sm text-muted-foreground">Selecciona los almacenes donde está disponible este producto.</p>
-            {almacenes?.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4">No hay almacenes configurados.</p>
-            ) : (
-              <div className="space-y-2">
-                {almacenes?.map(a => (
-                  <label key={a.id} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.almacenes?.includes(a.id) ?? false}
-                      onChange={e => {
-                        const current = form.almacenes ?? [];
-                        set('almacenes', e.target.checked ? [...current, a.id] : current.filter(x => x !== a.id));
-                      }}
-                      className="rounded border-input"
-                    />
-                    <span className="text-sm">{a.nombre}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-      </Tabs>
+                ),
+              },
+            ]}
+          />
+        </div>
+      </div>
     </div>
   );
 }

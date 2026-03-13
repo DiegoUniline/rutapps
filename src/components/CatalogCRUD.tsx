@@ -1,8 +1,5 @@
 import { useState } from 'react';
 import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -87,81 +84,81 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
   };
 
   return (
-    <div className="space-y-4">
-      <div className="section-card overflow-x-auto">
+    <div className="space-y-3">
+      <div className="bg-card border border-border rounded overflow-x-auto">
         {isLoading ? (
-          <TableSkeleton rows={4} cols={columns.length + 1} />
+          <div className="p-4"><TableSkeleton rows={4} cols={columns.length + 1} /></div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-table-border">
                 {columns.map(c => (
-                  <TableHead key={c.key}>{c.label}</TableHead>
+                  <th key={c.key} className="th-odoo text-left">{c.label}</th>
                 ))}
-                <TableHead className="w-24 text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                <th className="th-odoo w-24 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
               {items?.map(item => (
-                <TableRow key={item.id}>
+                <tr key={item.id} className="border-b border-table-border last:border-0 hover:bg-table-hover transition-colors">
                   {columns.map(c => (
-                    <TableCell key={c.key}>
+                    <td key={c.key} className="py-1.5 px-3">
                       {editId === item.id ? (
-                        <Input
+                        <input
                           type={c.type === 'number' ? 'number' : 'text'}
                           value={editRow[c.key] ?? ''}
                           onChange={e => setEditRow(prev => ({ ...prev, [c.key]: c.type === 'number' ? +e.target.value : e.target.value }))}
-                          className="h-8 text-sm"
+                          className="input-odoo text-xs"
                         />
                       ) : (
-                        <span className="text-sm">{item[c.key] ?? '—'}</span>
+                        <span>{item[c.key] ?? '—'}</span>
                       )}
-                    </TableCell>
+                    </td>
                   ))}
-                  <TableCell className="text-right">
+                  <td className="py-1.5 px-3 text-right">
                     {editId === item.id ? (
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={handleSaveEdit}>
+                        <button className="text-success hover:text-success/80 p-1" onClick={handleSaveEdit}>
                           <Check className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditId(null)}>
+                        </button>
+                        <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setEditId(null)}>
                           <X className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       </div>
                     ) : (
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(item)}>
+                        <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => startEdit(item)}>
                           <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(item.id)}>
+                        </button>
+                        <button className="text-destructive hover:text-destructive/80 p-1" onClick={() => handleDelete(item.id)}>
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       </div>
                     )}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))}
               {/* Add row */}
-              <TableRow>
+              <tr className="bg-table-hover">
                 {columns.map(c => (
-                  <TableCell key={c.key}>
-                    <Input
+                  <td key={c.key} className="py-1.5 px-3">
+                    <input
                       type={c.type === 'number' ? 'number' : 'text'}
                       placeholder={c.label}
                       value={newRow[c.key] ?? ''}
                       onChange={e => setNewRow(prev => ({ ...prev, [c.key]: c.type === 'number' ? +e.target.value : e.target.value }))}
-                      className="h-8 text-sm"
+                      className="input-odoo text-xs"
                     />
-                  </TableCell>
+                  </td>
                 ))}
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-accent" onClick={handleAdd}>
+                <td className="py-1.5 px-3 text-right">
+                  <button className="text-primary hover:text-primary/80 p-1" onClick={handleAdd}>
                     <Plus className="h-3.5 w-3.5" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         )}
       </div>
     </div>

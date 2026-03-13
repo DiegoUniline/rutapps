@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, X, Trash2, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Save, X, Trash2, Plus } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { OdooTabs } from '@/components/OdooTabs';
+import { OdooCollapsible } from '@/components/OdooCollapsible';
 import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Tarifa, TarifaLinea } from '@/types';
+
+function OdooField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="label-odoo">{label}</label>
+      {children}
+    </div>
+  );
+}
 
 export default function TarifaFormPage() {
   const { id } = useParams();
@@ -56,122 +62,128 @@ export default function TarifaFormPage() {
   const lineas = (existing?.tarifa_lineas ?? []) as TarifaLinea[];
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-4xl">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/tarifas')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="text-xl font-semibold flex-1">{isNew ? 'Nueva Tarifa' : form.nombre || 'Tarifa'}</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/tarifas')}>
-            <X className="h-4 w-4 mr-1" /> Descartar
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saveMutation.isPending} className="bg-info hover:bg-info/90 text-info-foreground">
-            <Save className="h-4 w-4 mr-1" /> Guardar
-          </Button>
-        </div>
+    <div className="p-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <h1 className="text-xl font-bold text-foreground flex-1">
+          {isNew ? 'Nueva Tarifa' : form.nombre || 'Tarifa'}
+        </h1>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 mb-4">
+        <button onClick={handleSave} disabled={saveMutation.isPending} className="btn-odoo-primary">
+          <Save className="h-3.5 w-3.5" /> Guardar
+        </button>
+        <button onClick={() => navigate('/tarifas')} className="btn-odoo-secondary">
+          <X className="h-3.5 w-3.5" /> Descartar
+        </button>
       </div>
 
       {/* Form */}
-      <div className="section-card space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Nombre *</Label>
-            <Input value={form.nombre ?? ''} onChange={e => set('nombre', e.target.value)} />
+      <div className="bg-card border border-border rounded p-4">
+        <OdooCollapsible title="Información General" summary={form.nombre ?? ''}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+            <OdooField label="Nombre *">
+              <input className="input-odoo" value={form.nombre ?? ''} onChange={e => set('nombre', e.target.value)} />
+            </OdooField>
+            <OdooField label="Tipo">
+              <select className="input-odoo" value={form.tipo ?? 'general'} onChange={e => set('tipo', e.target.value)}>
+                <option value="general">General</option>
+                <option value="por_cliente">Por Cliente</option>
+                <option value="por_ruta">Por Ruta</option>
+              </select>
+            </OdooField>
+            <OdooField label="Moneda">
+              <input className="input-odoo" value={form.moneda ?? 'MXN'} onChange={e => set('moneda', e.target.value)} />
+            </OdooField>
+            <div className="flex items-center gap-2 pt-5">
+              <Switch checked={!!form.activa} onCheckedChange={v => set('activa', v)} />
+              <span className="text-sm">Activa</span>
+            </div>
+            <OdooField label="Vigencia Inicio">
+              <input type="date" className="input-odoo" value={form.vigencia_inicio ?? ''} onChange={e => set('vigencia_inicio', e.target.value)} />
+            </OdooField>
+            <OdooField label="Vigencia Fin">
+              <input type="date" className="input-odoo" value={form.vigencia_fin ?? ''} onChange={e => set('vigencia_fin', e.target.value)} />
+            </OdooField>
           </div>
-          <div>
-            <Label>Tipo</Label>
-            <Select value={form.tipo ?? 'general'} onValueChange={v => set('tipo', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="general">General</SelectItem>
-                <SelectItem value="por_cliente">Por Cliente</SelectItem>
-                <SelectItem value="por_ruta">Por Ruta</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="mt-3">
+            <OdooField label="Descripción">
+              <input className="input-odoo" value={form.descripcion ?? ''} onChange={e => set('descripcion', e.target.value)} />
+            </OdooField>
           </div>
-          <div>
-            <Label>Moneda</Label>
-            <Input value={form.moneda ?? 'MXN'} onChange={e => set('moneda', e.target.value)} />
-          </div>
-          <div className="flex items-center gap-3 pt-6">
-            <Switch checked={!!form.activa} onCheckedChange={v => set('activa', v)} />
-            <Label>Activa</Label>
-          </div>
-          <div>
-            <Label>Vigencia Inicio</Label>
-            <Input type="date" value={form.vigencia_inicio ?? ''} onChange={e => set('vigencia_inicio', e.target.value)} />
-          </div>
-          <div>
-            <Label>Vigencia Fin</Label>
-            <Input type="date" value={form.vigencia_fin ?? ''} onChange={e => set('vigencia_fin', e.target.value)} />
-          </div>
-        </div>
-        <div>
-          <Label>Descripción</Label>
-          <Input value={form.descripcion ?? ''} onChange={e => set('descripcion', e.target.value)} />
-        </div>
-      </div>
+        </OdooCollapsible>
 
-      {/* Lineas - only show after save */}
-      {!isNew && (
-        <div className="section-card space-y-4">
-          <h2 className="text-base font-semibold">Líneas de Tarifa</h2>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="text-right">Precio</TableHead>
-                  <TableHead className="text-right">Precio Mín</TableHead>
-                  <TableHead className="text-right">Desc. Máx</TableHead>
-                  <TableHead>Notas</TableHead>
-                  <TableHead className="w-10"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lineas.map(l => (
-                  <TableRow key={l.id}>
-                    <TableCell>{l.productos?.nombre ?? l.producto_id}</TableCell>
-                    <TableCell className="text-right">${l.precio.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">${l.precio_minimo.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">${l.descuento_max.toFixed(2)}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{l.notas ?? '—'}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteLinea(l.id)} className="text-destructive h-7 w-7">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {/* Add row */}
-                <TableRow>
-                  <TableCell>
-                    <Select value={newLinea.producto_id} onValueChange={v => setNewLinea(p => ({ ...p, producto_id: v }))}>
-                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Producto..." /></SelectTrigger>
-                      <SelectContent>
-                        {productosDisp?.map(p => <SelectItem key={p.id} value={p.id}>{p.codigo} — {p.nombre}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell><Input type="number" className="h-8 text-sm text-right" value={newLinea.precio} onChange={e => setNewLinea(p => ({ ...p, precio: +e.target.value }))} /></TableCell>
-                  <TableCell><Input type="number" className="h-8 text-sm text-right" value={newLinea.precio_minimo} onChange={e => setNewLinea(p => ({ ...p, precio_minimo: +e.target.value }))} /></TableCell>
-                  <TableCell><Input type="number" className="h-8 text-sm text-right" value={newLinea.descuento_max} onChange={e => setNewLinea(p => ({ ...p, descuento_max: +e.target.value }))} /></TableCell>
-                  <TableCell><Input className="h-8 text-sm" value={newLinea.notas} onChange={e => setNewLinea(p => ({ ...p, notas: e.target.value }))} /></TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={handleAddLinea} disabled={!newLinea.producto_id} className="h-7 w-7 text-accent">
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+        {/* Lineas */}
+        {!isNew && (
+          <div className="mt-4">
+            <OdooTabs
+              tabs={[
+                {
+                  key: 'lineas',
+                  label: 'Líneas de Tarifa',
+                  content: (
+                    <div className="space-y-2">
+                      <div className="overflow-x-auto border border-border rounded">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-table-border">
+                              <th className="th-odoo text-left">Producto</th>
+                              <th className="th-odoo text-right">Precio</th>
+                              <th className="th-odoo text-right">Precio Mín</th>
+                              <th className="th-odoo text-right">Desc. Máx</th>
+                              <th className="th-odoo text-left">Notas</th>
+                              <th className="th-odoo w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lineas.map(l => (
+                              <tr key={l.id} className="border-b border-table-border last:border-0">
+                                <td className="py-1.5 px-3">{l.productos?.nombre ?? l.producto_id}</td>
+                                <td className="py-1.5 px-3 text-right">${l.precio.toFixed(2)}</td>
+                                <td className="py-1.5 px-3 text-right">${l.precio_minimo.toFixed(2)}</td>
+                                <td className="py-1.5 px-3 text-right">${l.descuento_max.toFixed(2)}</td>
+                                <td className="py-1.5 px-3 text-muted-foreground">{l.notas ?? '—'}</td>
+                                <td className="py-1.5 px-3 text-center">
+                                  <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80 text-xs">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                            {/* Add row */}
+                            <tr className="border-b border-table-border last:border-0 bg-table-hover">
+                              <td className="py-1.5 px-3">
+                                <select className="input-odoo text-xs" value={newLinea.producto_id} onChange={e => setNewLinea(p => ({ ...p, producto_id: e.target.value }))}>
+                                  <option value="">Producto...</option>
+                                  {productosDisp?.map(p => <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>)}
+                                </select>
+                              </td>
+                              <td className="py-1.5 px-3"><input type="number" className="input-odoo text-right text-xs" value={newLinea.precio} onChange={e => setNewLinea(p => ({ ...p, precio: +e.target.value }))} /></td>
+                              <td className="py-1.5 px-3"><input type="number" className="input-odoo text-right text-xs" value={newLinea.precio_minimo} onChange={e => setNewLinea(p => ({ ...p, precio_minimo: +e.target.value }))} /></td>
+                              <td className="py-1.5 px-3"><input type="number" className="input-odoo text-right text-xs" value={newLinea.descuento_max} onChange={e => setNewLinea(p => ({ ...p, descuento_max: +e.target.value }))} /></td>
+                              <td className="py-1.5 px-3"><input className="input-odoo text-xs" value={newLinea.notas} onChange={e => setNewLinea(p => ({ ...p, notas: e.target.value }))} /></td>
+                              <td className="py-1.5 px-3 text-center">
+                                <button onClick={handleAddLinea} disabled={!newLinea.producto_id} className="text-primary hover:text-primary/80 disabled:opacity-30">
+                                  <Plus className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <button className="odoo-link" onClick={handleAddLinea} disabled={!newLinea.producto_id}>
+                        + Agregar una línea
+                      </button>
+                    </div>
+                  ),
+                },
+              ]}
+            />
           </div>
-          <button className="odoo-link" onClick={handleAddLinea} disabled={!newLinea.producto_id}>
-            + Agregar una línea
-          </button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
