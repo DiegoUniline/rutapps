@@ -48,7 +48,7 @@ export default function VentasListPage() {
 
   return (
     <div className="p-4 space-y-3 bg-secondary/50 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground">Ventas & Pedidos</h1>
+      <h1 className="text-xl font-semibold text-foreground">Ventas y pedidos</h1>
 
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -62,7 +62,7 @@ export default function VentasListPage() {
               onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
               className="input-odoo w-auto min-w-[120px]"
             >
-              <option value="todos">Todos</option>
+              <option value="todos">Todos los estados</option>
               <option value="borrador">Borrador</option>
               <option value="confirmado">Confirmado</option>
               <option value="entregado">Entregado</option>
@@ -80,7 +80,7 @@ export default function VentasListPage() {
             </select>
           </OdooFilterBar>
           <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
-            <Plus className="h-3.5 w-3.5" /> Nueva Venta
+            <Plus className="h-3.5 w-3.5" /> Nueva venta
           </button>
         </div>
 
@@ -89,26 +89,26 @@ export default function VentasListPage() {
             <div className="p-4"><TableSkeleton rows={8} cols={8} /></div>
           ) : (
             <>
-              <table className="w-full text-sm">
+              <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-table-border">
-                    <th className="th-odoo w-10 text-center">
+                  <tr className="border-b border-table-border text-left">
+                    <th className="py-2 px-3 w-10 text-center">
                       <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
                     </th>
-                    <th className="th-odoo text-left">Folio</th>
-                    <th className="th-odoo text-left">Tipo</th>
-                    <th className="th-odoo text-left">Cliente</th>
-                    <th className="th-odoo text-left hidden md:table-cell">Vendedor</th>
-                    <th className="th-odoo text-left hidden lg:table-cell">Condición</th>
-                    <th className="th-odoo text-left hidden lg:table-cell">Fecha</th>
-                    <th className="th-odoo text-right">Total</th>
-                    <th className="th-odoo text-center">Status</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
+                    <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {pageData.length === 0 && (
                     <tr>
-                      <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                      <td colSpan={9} className="text-center py-12 text-muted-foreground">
                         No hay ventas. Crea la primera.
                       </td>
                     </tr>
@@ -122,24 +122,24 @@ export default function VentasListPage() {
                       )}
                       onClick={() => navigate(`/ventas/${v.id}`)}
                     >
-                      <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(v.id); }}>
+                      <td className="py-2 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(v.id); }}>
                         <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggleOne(v.id)} className="rounded border-input" />
                       </td>
-                      <td className="py-1.5 px-3 font-mono text-xs">{v.folio || v.id.slice(0, 8)}</td>
-                      <td className="py-1.5 px-3">
+                      <td className="py-2 px-3 font-mono text-xs font-medium">{v.folio || v.id.slice(0, 8)}</td>
+                      <td className="py-2 px-3">
                         <span className={cn(
-                          "text-xs font-medium px-2 py-0.5 rounded-full",
-                          v.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-accent text-accent-foreground"
+                          "text-[11px] font-medium px-2 py-0.5 rounded",
+                          v.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
                         )}>
                           {TIPO_LABELS[v.tipo] || v.tipo}
                         </span>
                       </td>
-                      <td className="py-1.5 px-3 font-medium">{v.clientes?.nombre ?? '—'}</td>
-                      <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
-                      <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
-                      <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{v.fecha}</td>
-                      <td className="py-1.5 px-3 text-right font-medium">${v.total?.toFixed(2)}</td>
-                      <td className="py-1.5 px-3 text-center">
+                      <td className="py-2 px-3">{v.clientes?.nombre ?? '—'}</td>
+                      <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
+                      <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
+                      <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{v.fecha}</td>
+                      <td className="py-2 px-3 text-right font-medium">${v.total?.toFixed(2)}</td>
+                      <td className="py-2 px-3 text-center">
                         <StatusChip status={v.status} />
                       </td>
                     </tr>

@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Plus, X } from 'lucide-react';
-import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
+import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
-import { useProductosForSelect, useUnidades, useTasasIva, useTasasIeps, useAlmacenes } from '@/hooks/useData';
+import { useProductosForSelect, useUnidades, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { useTarifasForSelect } from '@/hooks/useData';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
@@ -20,17 +20,6 @@ const VENTA_STEPS: { key: StatusVenta; label: string }[] = [
   { key: 'facturado', label: 'Facturado' },
 ];
 
-const TIPO_OPTIONS = [
-  { value: 'pedido', label: 'Pedido' },
-  { value: 'venta_directa', label: 'Venta directa' },
-];
-
-const CONDICION_OPTIONS = [
-  { value: 'contado', label: 'Contado' },
-  { value: 'credito', label: 'Crédito' },
-  { value: 'por_definir', label: 'Por definir' },
-];
-
 function emptyVenta(): Partial<Venta> {
   return {
     tipo: 'pedido',
@@ -38,11 +27,7 @@ function emptyVenta(): Partial<Venta> {
     condicion_pago: 'contado',
     fecha: new Date().toISOString().slice(0, 10),
     entrega_inmediata: false,
-    subtotal: 0,
-    descuento_total: 0,
-    iva_total: 0,
-    ieps_total: 0,
-    total: 0,
+    subtotal: 0, descuento_total: 0, iva_total: 0, ieps_total: 0, total: 0,
   };
 }
 
@@ -61,8 +46,6 @@ export default function VentaFormPage() {
   const { data: unidadesList } = useUnidades();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
-  const { data: tasasIva } = useTasasIva();
-  const { data: tasasIeps } = useTasasIeps();
 
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([]);
@@ -80,7 +63,6 @@ export default function VentaFormPage() {
     setDirty(true);
   };
 
-  // Recalculate totals from lines
   const totals = useMemo(() => {
     let subtotal = 0, descuento_total = 0, iva_total = 0, ieps_total = 0;
     lineas.forEach(l => {
@@ -103,14 +85,10 @@ export default function VentaFormPage() {
   const handleSave = async () => {
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     try {
-      const payload = {
-        ...form,
-        ...totals,
-      };
+      const payload = { ...form, ...totals };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
 
-      // Save lines
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const qty = Number(l.cantidad) || 0;
@@ -121,23 +99,16 @@ export default function VentaFormPage() {
         const base = lineSubtotal - discountAmt;
         const iva = base * ((Number(l.iva_pct) || 0) / 100);
         const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
-
         await saveLinea.mutateAsync({
-          ...l,
-          venta_id: ventaId,
-          subtotal: lineSubtotal - discountAmt,
-          iva_monto: iva,
-          ieps_monto: ieps,
-          total: base + iva + ieps,
+          ...l, venta_id: ventaId,
+          subtotal: base, iva_monto: iva, ieps_monto: ieps, total: base + iva + ieps,
         } as any);
       }
 
       toast.success('Venta guardada');
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const handleDelete = async () => {
@@ -149,25 +120,16 @@ export default function VentaFormPage() {
 
   const handleStatusChange = async (newStatus: StatusVenta) => {
     if (!form.id) return;
-    if (newStatus === 'cancelado') {
-      if (!confirm('¿Cancelar esta venta?')) return;
-    }
+    if (newStatus === 'cancelado' && !confirm('¿Cancelar esta venta?')) return;
     set('status', newStatus);
     await saveVenta.mutateAsync({ id: form.id, status: newStatus } as any);
-    toast.success(`Status cambiado a ${newStatus}`);
+    toast.success(`Estado: ${newStatus}`);
   };
 
   const addLine = () => {
     setLineas(prev => [...prev, {
-      cantidad: 1,
-      precio_unitario: 0,
-      descuento_pct: 0,
-      iva_pct: 0,
-      ieps_pct: 0,
-      subtotal: 0,
-      iva_monto: 0,
-      ieps_monto: 0,
-      total: 0,
+      cantidad: 1, precio_unitario: 0, descuento_pct: 0,
+      iva_pct: 0, ieps_pct: 0, subtotal: 0, iva_monto: 0, ieps_monto: 0, total: 0,
     }]);
     setDirty(true);
   };
@@ -183,69 +145,58 @@ export default function VentaFormPage() {
 
   const removeLine = async (idx: number) => {
     const line = lineas[idx];
-    if (line.id) {
-      await deleteLinea.mutateAsync(line.id);
-    }
+    if (line.id) await deleteLinea.mutateAsync(line.id);
     setLineas(prev => prev.filter((_, i) => i !== idx));
     setDirty(true);
-  };
-
-  const handleProductSelect = (idx: number, productoId: string) => {
-    updateLine(idx, 'producto_id', productoId);
-    // Auto-fill price and taxes from product
-    // We'd need the full product data, but we have productosList which is minimal
-    // For now just set the product id
   };
 
   if (!isNew && isLoading) {
     return <div className="p-4 bg-secondary/50 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
 
-  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' - ' : ''}${c.nombre}` }));
-  const vendedorOptions = [{ value: '', label: 'Sin vendedor' }];
+  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
-  const productoOptions = (productosList ?? []).map(p => ({ value: p.id, label: `${p.codigo} - ${p.nombre}` }));
+  const productoOptions = (productosList ?? []).map(p => ({ value: p.id, label: `${p.codigo} · ${p.nombre}` }));
   const unidadOptions = (unidadesList ?? []).map(u => ({ value: u.id, label: u.nombre }));
+
+  const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
 
   return (
     <div className="bg-secondary/50 min-h-full">
-      {/* Top bar */}
-      <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between gap-3 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/ventas')} className="btn-odoo-secondary">
-            <ArrowLeft className="h-3.5 w-3.5" /> Ventas
+      {/* Header bar */}
+      <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => navigate('/ventas')} className="btn-odoo-secondary !px-2.5">
+            <ArrowLeft className="h-3.5 w-3.5" />
           </button>
-          <h1 className="text-base font-semibold text-foreground">
-            {isNew ? 'Nueva Venta' : (form.folio || `Venta ${form.id?.slice(0, 8)}`)}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="text-[15px] font-semibold text-foreground truncate">
+              {isNew ? 'Nueva venta' : (form.folio || `Venta`)}
+            </h1>
+            {clienteNombre && (
+              <p className="text-xs text-muted-foreground truncate">{clienteNombre}</p>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {!isNew && form.status !== 'cancelado' && (
-            <button onClick={() => handleStatusChange('cancelado')} className="btn-odoo-secondary text-destructive">
-              Cancelar
-            </button>
-          )}
+        <div className="flex items-center gap-2 shrink-0">
           {!isNew && form.status === 'borrador' && (
-            <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">
-              Confirmar
-            </button>
+            <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
           {!isNew && form.status === 'confirmado' && (
-            <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">
-              Marcar Entregado
-            </button>
+            <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
           )}
           {!isNew && form.status === 'entregado' && (
-            <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">
-              Facturar
-            </button>
+            <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
           )}
           <button onClick={handleSave} disabled={saveVenta.isPending} className="btn-odoo-primary">
             <Save className="h-3.5 w-3.5" /> Guardar
           </button>
+          {!isNew && form.status !== 'cancelado' && (
+            <button onClick={() => handleStatusChange('cancelado')} className="btn-odoo-secondary text-destructive text-xs">Cancelar</button>
+          )}
           {!isNew && (
-            <button onClick={handleDelete} className="btn-odoo-secondary text-destructive">
+            <button onClick={handleDelete} className="btn-odoo-secondary text-destructive !px-2">
               <Trash2 className="h-3.5 w-3.5" />
             </button>
           )}
@@ -254,70 +205,132 @@ export default function VentaFormPage() {
 
       {/* Status bar */}
       {!isNew && (
-        <div className="px-4 pt-3">
-          <OdooStatusbar
-            steps={VENTA_STEPS}
-            current={form.status as string}
-            onStepClick={(key) => handleStatusChange(key as StatusVenta)}
-          />
+        <div className="px-5 pt-3">
+          <OdooStatusbar steps={VENTA_STEPS} current={form.status as string} onStepClick={k => handleStatusChange(k as StatusVenta)} />
         </div>
       )}
 
       {/* Form body */}
-      <div className="p-4 space-y-4">
-        {/* Header fields */}
-        <div className="bg-card border border-border rounded p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
-            <OdooField label="Tipo" value={form.tipo} onChange={v => set('tipo', v)} type="select" options={TIPO_OPTIONS} alwaysEdit />
-            <OdooField label="Folio" value={form.folio} onChange={v => set('folio', v)} placeholder="Automático" />
-            <OdooField label="Cliente" value={form.cliente_id} onChange={v => set('cliente_id', v)} type="select" options={clienteOptions} alwaysEdit />
-            <OdooField label="Fecha" value={form.fecha} onChange={v => set('fecha', v)} type="text" placeholder="YYYY-MM-DD" alwaysEdit />
-            <OdooField label="Condición de Pago" value={form.condicion_pago} onChange={v => set('condicion_pago', v)} type="select" options={CONDICION_OPTIONS} alwaysEdit />
-            <OdooField label="Tarifa" value={form.tarifa_id} onChange={v => set('tarifa_id', v)} type="select" options={[{ value: '', label: 'Sin tarifa' }, ...tarifaOptions]} />
-            <OdooField label="Almacén" value={form.almacen_id} onChange={v => set('almacen_id', v)} type="select" options={[{ value: '', label: 'Sin almacén' }, ...almacenOptions]} />
-
-            <div className="odoo-field-row">
-              <span className="odoo-field-label">Entrega Inmediata</span>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!form.entrega_inmediata}
-                  onChange={e => set('entrega_inmediata', e.target.checked)}
-                  className="rounded border-input"
-                />
-                <span className="text-sm text-foreground">{form.entrega_inmediata ? 'Sí' : 'No'}</span>
-              </label>
+      <div className="p-5 space-y-4 max-w-[1200px]">
+        {/* Header card */}
+        <div className="bg-card border border-border rounded-md p-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Col 1 */}
+            <div className="space-y-3">
+              <div>
+                <label className="label-odoo">Tipo</label>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => set('tipo', 'pedido')}
+                    className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
+                      form.tipo === 'pedido' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
+                    )}
+                  >Pedido</button>
+                  <button
+                    onClick={() => set('tipo', 'venta_directa')}
+                    className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
+                      form.tipo === 'venta_directa' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
+                    )}
+                  >Venta directa</button>
+                </div>
+              </div>
+              <div>
+                <label className="label-odoo">Cliente</label>
+                <select className="input-odoo" value={form.cliente_id ?? ''} onChange={e => set('cliente_id', e.target.value)}>
+                  <option value="">Seleccionar cliente</option>
+                  {clienteOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label-odoo">Condición de pago</label>
+                <div className="flex gap-1">
+                  {[
+                    { value: 'contado', label: 'Contado' },
+                    { value: 'credito', label: 'Crédito' },
+                    { value: 'por_definir', label: 'Por definir' },
+                  ].map(o => (
+                    <button key={o.value}
+                      onClick={() => set('condicion_pago', o.value)}
+                      className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
+                        form.condicion_pago === o.value ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
+                      )}
+                    >{o.label}</button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {!form.entrega_inmediata && (
-              <OdooField label="Fecha de Entrega" value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} type="text" placeholder="YYYY-MM-DD" alwaysEdit />
-            )}
+            {/* Col 2 */}
+            <div className="space-y-3">
+              <div>
+                <label className="label-odoo">Fecha</label>
+                <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />
+              </div>
+              <div>
+                <label className="label-odoo flex items-center gap-2">
+                  <span>Entrega</span>
+                  <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground cursor-pointer">
+                    <input type="checkbox" checked={!!form.entrega_inmediata} onChange={e => set('entrega_inmediata', e.target.checked)} className="rounded border-input h-3 w-3" />
+                    Inmediata
+                  </label>
+                </label>
+                {!form.entrega_inmediata && (
+                  <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha de entrega" />
+                )}
+                {form.entrega_inmediata && (
+                  <div className="text-xs text-muted-foreground py-1.5 px-2">Se entrega hoy</div>
+                )}
+              </div>
+              <div>
+                <label className="label-odoo">Folio</label>
+                <div className="text-[13px] text-muted-foreground py-1.5 px-1">
+                  {form.folio || (isNew ? 'Se asigna al guardar' : '—')}
+                </div>
+              </div>
+            </div>
+
+            {/* Col 3 */}
+            <div className="space-y-3">
+              <div>
+                <label className="label-odoo">Tarifa</label>
+                <select className="input-odoo" value={form.tarifa_id ?? ''} onChange={e => set('tarifa_id', e.target.value || null)}>
+                  <option value="">Sin tarifa</option>
+                  {tarifaOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label-odoo">Almacén</label>
+                <select className="input-odoo" value={form.almacen_id ?? ''} onChange={e => set('almacen_id', e.target.value || null)}>
+                  <option value="">Sin almacén</option>
+                  {almacenOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Lines */}
-        <div className="bg-card border border-border rounded">
+        <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
             {
               key: 'lineas',
-              label: 'Líneas de Venta',
+              label: 'Líneas de venta',
               content: (
                 <div className="p-4 space-y-3">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-[13px]">
                       <thead>
-                        <tr className="border-b border-table-border">
-                          <th className="th-odoo text-left w-8">#</th>
-                          <th className="th-odoo text-left min-w-[200px]">Producto</th>
-                          <th className="th-odoo text-left w-24">Unidad</th>
-                          <th className="th-odoo text-right w-20">Cant.</th>
-                          <th className="th-odoo text-right w-28">P. Unit.</th>
-                          <th className="th-odoo text-right w-20">Desc %</th>
-                          <th className="th-odoo text-right w-20">IVA %</th>
-                          <th className="th-odoo text-right w-20">IEPS %</th>
-                          <th className="th-odoo text-right w-28">Subtotal</th>
-                          <th className="th-odoo w-16">Notas</th>
-                          <th className="th-odoo w-10"></th>
+                        <tr className="border-b border-table-border text-left">
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[200px]">Producto</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Unidad</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Cantidad</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Precio unit.</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">IVA %</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">IEPS %</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
+                          <th className="py-2 px-2 w-8"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -327,49 +340,38 @@ export default function VentaFormPage() {
                           const desc = Number(l.descuento_pct) || 0;
                           const lineBase = qty * price * (1 - desc / 100);
                           return (
-                            <tr key={idx} className="border-b border-table-border">
+                            <tr key={idx} className="border-b border-table-border hover:bg-table-hover transition-colors">
                               <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                               <td className="py-1 px-2">
-                                <select
-                                  className="input-odoo text-xs w-full"
-                                  value={l.producto_id ?? ''}
-                                  onChange={e => handleProductSelect(idx, e.target.value)}
-                                >
+                                <select className="input-odoo text-[12px] !py-1" value={l.producto_id ?? ''} onChange={e => updateLine(idx, 'producto_id', e.target.value)}>
                                   <option value="">Seleccionar producto</option>
                                   {productoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </select>
                               </td>
                               <td className="py-1 px-2">
-                                <select
-                                  className="input-odoo text-xs w-full"
-                                  value={l.unidad_id ?? ''}
-                                  onChange={e => updateLine(idx, 'unidad_id', e.target.value)}
-                                >
+                                <select className="input-odoo text-[12px] !py-1" value={l.unidad_id ?? ''} onChange={e => updateLine(idx, 'unidad_id', e.target.value)}>
                                   <option value="">—</option>
                                   {unidadOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                 </select>
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-xs text-right w-full" value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)} min="0" step="1" />
+                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)} min="0" step="1" />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-xs text-right w-full" value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)} min="0" step="0.01" />
+                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)} min="0" step="0.01" />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-xs text-right w-full" value={l.descuento_pct ?? ''} onChange={e => updateLine(idx, 'descuento_pct', e.target.value)} min="0" max="100" step="0.1" />
+                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.descuento_pct ?? ''} onChange={e => updateLine(idx, 'descuento_pct', e.target.value)} min="0" max="100" step="0.1" />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-xs text-right w-full" value={l.iva_pct ?? ''} onChange={e => updateLine(idx, 'iva_pct', e.target.value)} min="0" step="0.01" />
+                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.iva_pct ?? ''} onChange={e => updateLine(idx, 'iva_pct', e.target.value)} min="0" step="1" />
                               </td>
                               <td className="py-1 px-2">
-                                <input type="number" className="input-odoo text-xs text-right w-full" value={l.ieps_pct ?? ''} onChange={e => updateLine(idx, 'ieps_pct', e.target.value)} min="0" step="0.01" />
+                                <input type="number" className="input-odoo text-[12px] text-right !py-1" value={l.ieps_pct ?? ''} onChange={e => updateLine(idx, 'ieps_pct', e.target.value)} min="0" step="1" />
                               </td>
-                              <td className="py-1.5 px-2 text-right font-medium text-xs">${lineBase.toFixed(2)}</td>
-                              <td className="py-1 px-2">
-                                <input type="text" className="input-odoo text-xs w-full" value={l.notas ?? ''} onChange={e => updateLine(idx, 'notas', e.target.value)} placeholder="—" />
-                              </td>
-                              <td className="py-1.5 px-2 text-center">
-                                <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive">
+                              <td className="py-1.5 px-2 text-right font-medium">${lineBase.toFixed(2)}</td>
+                              <td className="py-1.5 px-2">
+                                <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors">
                                   <X className="h-3.5 w-3.5" />
                                 </button>
                               </td>
@@ -385,32 +387,32 @@ export default function VentaFormPage() {
                   </button>
 
                   {/* Totals */}
-                  <div className="flex justify-end">
-                    <div className="w-64 space-y-1 text-sm">
+                  <div className="flex justify-end pt-2">
+                    <div className="w-72 bg-secondary/50 rounded-md p-3 space-y-1.5 text-[13px]">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal:</span>
-                        <span className="font-medium">${totals.subtotal.toFixed(2)}</span>
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>${totals.subtotal.toFixed(2)}</span>
                       </div>
                       {totals.descuento_total > 0 && (
                         <div className="flex justify-between text-destructive">
-                          <span>Descuento:</span>
+                          <span>Descuento</span>
                           <span>-${totals.descuento_total.toFixed(2)}</span>
                         </div>
                       )}
                       {totals.iva_total > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">IVA:</span>
+                          <span className="text-muted-foreground">IVA</span>
                           <span>${totals.iva_total.toFixed(2)}</span>
                         </div>
                       )}
                       {totals.ieps_total > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">IEPS:</span>
+                          <span className="text-muted-foreground">IEPS</span>
                           <span>${totals.ieps_total.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between border-t border-border pt-1 font-semibold text-base">
-                        <span>Total:</span>
+                      <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
+                        <span>Total</span>
                         <span>${totals.total.toFixed(2)}</span>
                       </div>
                     </div>
@@ -424,7 +426,7 @@ export default function VentaFormPage() {
               content: (
                 <div className="p-4">
                   <textarea
-                    className="input-odoo w-full min-h-[100px] text-sm"
+                    className="input-odoo w-full min-h-[100px]"
                     value={form.notas ?? ''}
                     onChange={e => set('notas', e.target.value)}
                     placeholder="Notas internas de la venta..."

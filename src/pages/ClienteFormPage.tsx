@@ -4,6 +4,7 @@ import { Save, Trash2, Star, Camera } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
+import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores } from '@/hooks/useClientes';
 import { useListas, useTarifasForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
@@ -148,7 +149,7 @@ export default function ClienteFormPage() {
           content: (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
-                <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Ej. CLI-001" alwaysEdit={isNew} />
+                <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Se asigna automáticamente" readOnly={!isNew} />
                 <OdooField label="Nombre" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
                 <OdooField label="Persona de Contacto" value={form.contacto} onChange={v => set('contacto', v)} />
                 <OdooField label="Teléfono" value={form.telefono} onChange={v => set('telefono', v)} />
@@ -163,7 +164,12 @@ export default function ClienteFormPage() {
                 <OdooField label="Zona" value={form.zona_id} onChange={v => set('zona_id', v || null)} type="select"
                   options={zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? []} />
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
-                <OdooField label="Fecha de Alta" value={form.fecha_alta} onChange={v => set('fecha_alta', v)} readOnly />
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Fecha de alta</span>
+                  <div className="flex-1">
+                    <OdooDatePicker value={form.fecha_alta ?? ''} onChange={v => set('fecha_alta', v)} />
+                  </div>
+                </div>
               </div>
             </div>
           ),
