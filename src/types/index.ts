@@ -138,3 +138,54 @@ export interface Vendedor { id: string; empresa_id: string; nombre: string; }
 export interface Cobrador { id: string; empresa_id: string; nombre: string; }
 export interface Profile { id: string; user_id: string; empresa_id: string; nombre?: string; avatar_url?: string; }
 export interface Empresa { id: string; nombre: string; }
+
+export interface Venta {
+  id: string;
+  empresa_id: string;
+  folio?: string;
+  tipo: TipoVenta;
+  status: StatusVenta;
+  cliente_id?: string;
+  vendedor_id?: string;
+  condicion_pago: CondicionPago;
+  tarifa_id?: string;
+  almacen_id?: string;
+  fecha: string;
+  fecha_entrega?: string;
+  entrega_inmediata: boolean;
+  notas?: string;
+  subtotal: number;
+  descuento_total: number;
+  iva_total: number;
+  ieps_total: number;
+  total: number;
+  created_at: string;
+  // joined
+  clientes?: { nombre: string };
+  vendedores?: { nombre: string };
+  tarifas?: { nombre: string };
+  almacenes?: { nombre: string };
+  venta_lineas?: VentaLinea[];
+}
+
+export interface VentaLinea {
+  id: string;
+  venta_id: string;
+  producto_id?: string;
+  descripcion?: string;
+  cantidad: number;
+  unidad_id?: string;
+  precio_unitario: number;
+  descuento_pct: number;
+  subtotal: number;
+  iva_pct: number;
+  ieps_pct: number;
+  iva_monto: number;
+  ieps_monto: number;
+  total: number;
+  notas?: string;
+  created_at: string;
+  // joined
+  productos?: { id: string; codigo: string; nombre: string; precio_principal: number; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; unidad_venta_id: string | null };
+  unidades?: { nombre: string; abreviatura?: string };
+}
