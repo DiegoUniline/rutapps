@@ -91,7 +91,7 @@ export default function ProductoFormPage() {
     return u ? `${u.clave} - ${u.nombre}` : '';
   };
 
-  const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último', estandar: 'Estándar', manual: 'Manual' };
+  const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último costo de compra', estandar: 'Estándar', manual: 'Manual', ultimo_compra: 'Último costo (compra directa)', ultimo_proveedor: 'Último costo del proveedor principal' };
   const comisionLabels: Record<string, string> = { porcentaje: 'Porcentaje', monto_fijo: 'Monto Fijo' };
 
   return (
