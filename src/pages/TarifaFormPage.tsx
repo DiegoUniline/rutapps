@@ -80,10 +80,13 @@ export default function TarifaFormPage() {
   const [form, setForm] = useState<Partial<Tarifa>>({
     nombre: '', descripcion: '', tipo: 'general', moneda: 'MXN', activa: true,
   });
+  const [originalForm, setOriginalForm] = useState<Partial<Tarifa>>({});
   const [newLinea, setNewLinea] = useState({ ...EMPTY_LINEA });
   const [fav, setFav] = useState(false);
 
-  useEffect(() => { if (existing) setForm(existing); }, [existing]);
+  useEffect(() => { if (existing) { setForm(existing); setOriginalForm(existing); } }, [existing]);
+
+  const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
   const set = (key: keyof Tarifa, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
