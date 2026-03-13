@@ -74,48 +74,106 @@ export type Database = {
       }
       clientes: {
         Row: {
+          cobrador_id: string | null
+          codigo: string | null
+          colonia: string | null
           contacto: string | null
           created_at: string
+          credito: boolean | null
+          dia_visita: string[] | null
+          dias_credito: number | null
           direccion: string | null
           email: string | null
           empresa_id: string
+          fecha_alta: string | null
+          foto_fachada_url: string | null
+          foto_url: string | null
+          frecuencia: Database["public"]["Enums"]["frecuencia_visita"] | null
+          gps_lat: number | null
+          gps_lng: number | null
           id: string
+          limite_credito: number | null
+          lista_id: string | null
           nombre: string
           notas: string | null
+          orden: number | null
           rfc: string | null
-          status: string | null
+          status: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id: string | null
           telefono: string | null
+          vendedor_id: string | null
+          zona_id: string | null
         }
         Insert: {
+          cobrador_id?: string | null
+          codigo?: string | null
+          colonia?: string | null
           contacto?: string | null
           created_at?: string
+          credito?: boolean | null
+          dia_visita?: string[] | null
+          dias_credito?: number | null
           direccion?: string | null
           email?: string | null
           empresa_id: string
+          fecha_alta?: string | null
+          foto_fachada_url?: string | null
+          foto_url?: string | null
+          frecuencia?: Database["public"]["Enums"]["frecuencia_visita"] | null
+          gps_lat?: number | null
+          gps_lng?: number | null
           id?: string
+          limite_credito?: number | null
+          lista_id?: string | null
           nombre: string
           notas?: string | null
+          orden?: number | null
           rfc?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
+          vendedor_id?: string | null
+          zona_id?: string | null
         }
         Update: {
+          cobrador_id?: string | null
+          codigo?: string | null
+          colonia?: string | null
           contacto?: string | null
           created_at?: string
+          credito?: boolean | null
+          dia_visita?: string[] | null
+          dias_credito?: number | null
           direccion?: string | null
           email?: string | null
           empresa_id?: string
+          fecha_alta?: string | null
+          foto_fachada_url?: string | null
+          foto_url?: string | null
+          frecuencia?: Database["public"]["Enums"]["frecuencia_visita"] | null
+          gps_lat?: number | null
+          gps_lng?: number | null
           id?: string
+          limite_credito?: number | null
+          lista_id?: string | null
           nombre?: string
           notas?: string | null
+          orden?: number | null
           rfc?: string | null
-          status?: string | null
+          status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
+          vendedor_id?: string | null
+          zona_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_cobrador_id_fkey"
+            columns: ["cobrador_id"]
+            isOneToOne: false
+            referencedRelation: "cobradores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -124,10 +182,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clientes_lista_id_fkey"
+            columns: ["lista_id"]
+            isOneToOne: false
+            referencedRelation: "listas"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "clientes_tarifa_id_fkey"
             columns: ["tarifa_id"]
             isOneToOne: false
             referencedRelation: "tarifas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_zona_id_fkey"
+            columns: ["zona_id"]
+            isOneToOne: false
+            referencedRelation: "zonas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cobradores: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobradores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
             referencedColumns: ["id"]
           },
         ]
@@ -728,6 +836,64 @@ export type Database = {
         }
         Relationships: []
       }
+      vendedores: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendedores_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zonas: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zonas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -744,6 +910,8 @@ export type Database = {
         | "manual"
         | "ultimo_compra"
         | "ultimo_proveedor"
+      frecuencia_visita: "diaria" | "semanal" | "quincenal" | "mensual"
+      status_cliente: "activo" | "inactivo" | "suspendido"
       status_producto: "activo" | "inactivo" | "borrador"
       tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
@@ -884,6 +1052,8 @@ export const Constants = {
         "ultimo_compra",
         "ultimo_proveedor",
       ],
+      frecuencia_visita: ["diaria", "semanal", "quincenal", "mensual"],
+      status_cliente: ["activo", "inactivo", "suspendido"],
       status_producto: ["activo", "inactivo", "borrador"],
       tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
