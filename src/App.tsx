@@ -11,6 +11,8 @@ import TarifasListPage from "@/pages/TarifasListPage";
 import TarifaFormPage from "@/pages/TarifaFormPage";
 import ClientesListPage from "@/pages/ClientesListPage";
 import ClienteFormPage from "@/pages/ClienteFormPage";
+import VentasListPage from "@/pages/VentasListPage";
+import VentaFormPage from "@/pages/VentaFormPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 import NotFound from "@/pages/NotFound";
 
