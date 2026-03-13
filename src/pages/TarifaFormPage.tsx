@@ -80,10 +80,13 @@ export default function TarifaFormPage() {
   const [form, setForm] = useState<Partial<Tarifa>>({
     nombre: '', descripcion: '', tipo: 'general', moneda: 'MXN', activa: true,
   });
+  const [originalForm, setOriginalForm] = useState<Partial<Tarifa>>({});
   const [newLinea, setNewLinea] = useState({ ...EMPTY_LINEA });
   const [fav, setFav] = useState(false);
 
-  useEffect(() => { if (existing) setForm(existing); }, [existing]);
+  useEffect(() => { if (existing) { setForm(existing); setOriginalForm(existing); } }, [existing]);
+
+  const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
   const set = (key: keyof Tarifa, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
@@ -192,7 +195,7 @@ export default function TarifaFormPage() {
 
       {/* Action buttons */}
       <div className="flex items-center gap-2 mb-4">
-        <button onClick={handleSave} disabled={saveMutation.isPending} className="btn-odoo-primary">
+        <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
           <Save className="h-3.5 w-3.5" /> Guardar
         </button>
         <button onClick={() => navigate('/tarifas')} className="btn-odoo-secondary">
