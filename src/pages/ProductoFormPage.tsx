@@ -4,9 +4,9 @@ import { Save, X, Trash2, Star, Camera } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection, OdooBadge } from '@/components/OdooFormField';
-import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto } from '@/hooks/useData';
+import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea } from '@/hooks/useData';
 import { toast } from 'sonner';
-import type { Producto } from '@/types';
+import type { Producto, TipoCalculoTarifa } from '@/types';
 
 const defaultProduct: Partial<Producto> = {
   codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0,
