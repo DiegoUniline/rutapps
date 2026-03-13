@@ -2,6 +2,8 @@ export type StatusProducto = 'activo' | 'inactivo' | 'borrador';
 export type TipoComision = 'porcentaje' | 'monto_fijo';
 export type CalculoCosto = 'promedio' | 'ultimo' | 'estandar' | 'manual';
 export type TipoTarifa = 'general' | 'por_cliente' | 'por_ruta';
+export type AplicaATarifa = 'todos' | 'categoria' | 'producto';
+export type TipoCalculoTarifa = 'margen_costo' | 'descuento_precio' | 'precio_fijo';
 
 export interface Producto {
   id: string;
