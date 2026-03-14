@@ -378,7 +378,7 @@ export default function EntregasPage() {
                     {/* Expanded detail */}
                     {isExpanded && (
                       <TableRow>
-                        <TableCell colSpan={8} className="p-0 bg-muted/20">
+                        <TableCell colSpan={9} className="p-0 bg-muted/20">
                           <div className="px-8 py-4">
                             {/* Client info */}
                             <div className="grid grid-cols-3 gap-4 mb-4">
