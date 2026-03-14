@@ -86,6 +86,21 @@ export default function RutaNuevaVenta() {
   const [showReemplazoFor, setShowReemplazoFor] = useState<string | null>(null);
   const [searchReemplazo, setSearchReemplazo] = useState('');
 
+  // Auto-select client from URL param
+  useEffect(() => {
+    if (urlClienteId && clientes) {
+      const c = clientes.find(cl => cl.id === urlClienteId);
+      if (c) {
+        setClienteNombre(c.nombre);
+        setClienteCredito({
+          credito: c.credito ?? false,
+          limite: c.limite_credito ?? 0,
+          dias: c.dias_credito ?? 0,
+        });
+      }
+    }
+  }, [urlClienteId, clientes]);
+
   const entregaInmediata = tipoVenta === 'venta_directa';
 
   const { data: clientes } = useQuery({
