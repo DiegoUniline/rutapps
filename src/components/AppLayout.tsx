@@ -41,6 +41,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Todas las ventas', path: '/ventas' },
       { label: 'Demanda', path: '/ventas/demanda' },
+      { label: 'Entregas', path: '/ventas/entregas' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
       { label: 'Rutas', path: '/ventas/rutas' },
     ],
@@ -152,7 +153,7 @@ function Breadcrumb() {
     productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
     ventas: 'Ventas', almacen: 'Almacén', finanzas: 'Finanzas',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
-    demanda: 'Demanda', inventario: 'Inventario', cobranza: 'Cobranza',
+    demanda: 'Demanda', entregas: 'Entregas', inventario: 'Inventario', cobranza: 'Cobranza',
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',

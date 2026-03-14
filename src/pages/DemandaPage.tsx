@@ -128,6 +128,7 @@ export default function DemandaPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [surtidoCantidades, setSurtidoCantidades] = useState<Record<string, number>>({});
   const [origenId, setOrigenId] = useState<string>('almacen');
+  const [vendedorEntrega, setVendedorEntrega] = useState<Record<string, string | null>>({});
 
   const origenes = origenesData?.origenes ?? [];
   const origenActual = origenes.find(o => o.id === origenId) ?? origenes[0];
@@ -171,14 +172,15 @@ export default function DemandaPage() {
 
       const total = lineas.reduce((s: number, l: any) => s + l.total, 0);
 
-      // Create delivery
+      // Create delivery with assigned vendedor (editable)
+      const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
       const { data: venta, error } = await supabase.from('ventas').insert({
         empresa_id: empresa!.id,
         tipo: 'venta_directa',
         status: 'entregado',
         condicion_pago: pedido.condicion_pago,
         cliente_id: pedido.cliente_id,
-        vendedor_id: pedido.vendedor_id,
+        vendedor_id: assignedVendedor,
         pedido_origen_id: pedido.id,
         subtotal: total,
         total,
@@ -234,13 +236,26 @@ export default function DemandaPage() {
     (p.folio ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
+  // Fetch vendedores for assignment
+  const { data: vendedoresList } = useQuery({
+    queryKey: ['vendedores-list', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return data ?? [];
+    },
+  });
+
   const initSurtido = (pedido: any) => {
-    // Initialize with 0 — user fills or uses "Surtir todo"
     const newQtys: Record<string, number> = {};
     for (const l of pedido.venta_lineas) {
       newQtys[`${pedido.id}-${l.producto_id}`] = 0;
     }
     setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
+    // Auto-assign vendedor from client's vendedor (already on pedido)
+    if (!vendedorEntrega[pedido.id]) {
+      setVendedorEntrega(prev => ({ ...prev, [pedido.id]: pedido.vendedor_id ?? null }));
+    }
     setExpandedId(pedido.id);
   };
 
@@ -368,12 +383,32 @@ export default function DemandaPage() {
                     <TableRow>
                       <TableCell colSpan={9} className="p-0 bg-muted/30">
                         <div className="px-6 py-3">
-                          {/* Origin reminder */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-[11px] text-muted-foreground">
-                              Surtiendo desde: <strong className="text-foreground">{origenActual?.label}</strong>
-                            </span>
+                          {/* Origin + route assignment */}
+                          <div className="flex items-center gap-4 mb-2 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">
+                                Surtiendo desde: <strong className="text-foreground">{origenActual?.label}</strong>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Truck className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">Ruta/Vendedor:</span>
+                              <select
+                                className="border border-input rounded px-2 py-0.5 text-[11px] bg-background min-w-[150px]"
+                                value={vendedorEntrega[pedido.id] ?? ''}
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => {
+                                  e.stopPropagation();
+                                  setVendedorEntrega(prev => ({ ...prev, [pedido.id]: e.target.value || null }));
+                                }}
+                              >
+                                <option value="">— Sin asignar —</option>
+                                {vendedoresList?.map(v => (
+                                  <option key={v.id} value={v.id}>{v.nombre}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
 
                           <Table>
