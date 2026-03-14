@@ -375,7 +375,7 @@ export default function RutaVentaDetalle() {
               <TicketRow label="Folio" value={ticketData.folio} />
               <TicketRow label="Cliente" value={clienteNombre} />
               <TicketRow label="Método" value={ticketData.metodo === 'efectivo' ? 'Efectivo' : ticketData.metodo === 'transferencia' ? 'Transferencia' : 'Tarjeta'} />
-              <TicketRow label="Fecha" value={ticketData.fecha} />
+              <TicketRow label="Fecha" value={fmtDate(ticketData.fecha)} />
               {cuentasPendientes.filter(c => c.montoAplicar > 0).length > 0 && (
                 <div className="border-t border-border pt-3">
                   <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1.5">Aplicado a cuentas anteriores</p>
