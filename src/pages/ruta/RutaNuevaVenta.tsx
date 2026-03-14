@@ -35,6 +35,7 @@ export default function RutaNuevaVenta() {
   const [step, setStep] = useState<Step>('cliente');
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNombre, setClienteNombre] = useState('');
+  const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchCliente, setSearchCliente] = useState('');
   const [searchProducto, setSearchProducto] = useState('');
@@ -52,11 +53,27 @@ export default function RutaNuevaVenta() {
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
-        .select('id, codigo, nombre, telefono')
+        .select('id, codigo, nombre, telefono, credito, limite_credito, dias_credito')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
       return data ?? [];
+    },
+  });
+
+  // Fetch saldo pendiente (ventas a crédito no canceladas) for selected client
+  const { data: saldoPendiente } = useQuery({
+    queryKey: ['ruta-saldo-cliente', clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ventas')
+        .select('total')
+        .eq('cliente_id', clienteId!)
+        .eq('condicion_pago', 'credito')
+        .in('status', ['confirmado', 'entregado', 'facturado']);
+      const total = (data ?? []).reduce((sum, v) => sum + (v.total ?? 0), 0);
+      return total;
     },
   });
 
@@ -126,6 +143,9 @@ export default function RutaNuevaVenta() {
     });
     return { subtotal, iva, total: subtotal + iva, items: cart.reduce((s, c) => s + c.cantidad, 0) };
   }, [cart]);
+
+  const creditoDisponible = clienteCredito ? clienteCredito.limite - (saldoPendiente ?? 0) : 0;
+  const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
 
   const handleSave = async () => {
     if (!empresa || !user) return;
@@ -231,7 +251,7 @@ export default function RutaNuevaVenta() {
           <div className="flex-1 overflow-auto px-3 pb-4">
             {/* Skip client */}
             <button
-              onClick={() => { setClienteId(null); setClienteNombre('Público general'); setStep('productos'); }}
+              onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteCredito(null); setCondicionPago('contado'); setStep('productos'); }}
               className="w-full mb-1.5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 bg-accent/40 border border-dashed border-primary/25 active:scale-[0.98] transition-transform text-left"
             >
               <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
@@ -248,7 +268,7 @@ export default function RutaNuevaVenta() {
               {filteredClientes?.map(c => (
                 <button
                   key={c.id}
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setStep('productos'); }}
+                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteCredito({ credito: c.credito ?? false, limite: c.limite_credito ?? 0, dias: c.dias_credito ?? 0 }); setCondicionPago('contado'); setStep('productos'); }}
                   className={`w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left ${
                     clienteId === c.id
                       ? 'bg-primary/8 ring-1.5 ring-primary/40'
@@ -447,10 +467,14 @@ export default function RutaNuevaVenta() {
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</p>
               </div>
               <div className="flex gap-1.5">
-                {([['contado', 'Contado'], ['credito', 'Crédito'], ['por_definir', 'Por definir']] as const).map(([val, label]) => (
+                {([
+                  ['contado', 'Contado'],
+                  ...(clienteCredito?.credito ? [['credito', 'Crédito'] as const] : []),
+                  ['por_definir', 'Por definir'],
+                ] as const).map(([val, label]) => (
                   <button
                     key={val}
-                    onClick={() => setCondicionPago(val)}
+                    onClick={() => setCondicionPago(val as typeof condicionPago)}
                     className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${
                       condicionPago === val
                         ? 'bg-primary text-primary-foreground shadow-sm'
@@ -461,6 +485,35 @@ export default function RutaNuevaVenta() {
                   </button>
                 ))}
               </div>
+
+              {/* Credit info */}
+              {condicionPago === 'credito' && clienteCredito && (
+                <div className={`mt-2.5 rounded-md px-2.5 py-2 text-[11px] space-y-1 ${
+                  excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'
+                }`}>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Límite de crédito</span>
+                    <span className="font-medium text-foreground">${clienteCredito.limite.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Saldo pendiente</span>
+                    <span className="font-medium text-foreground">${(saldoPendiente ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-border/40 pt-1">
+                    <span className="text-muted-foreground">Disponible</span>
+                    <span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-success'}`}>
+                      ${creditoDisponible.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Días de crédito</span>
+                    <span className="font-medium text-foreground">{clienteCredito.dias} días</span>
+                  </div>
+                  {excedeCredito && (
+                    <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total de la venta excede el crédito disponible</p>
+                  )}
+                </div>
+              )}
 
               <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center shrink-0">
@@ -538,7 +591,7 @@ export default function RutaNuevaVenta() {
           <div className="fixed bottom-14 left-0 right-0 z-30 px-3 pb-2 safe-area-bottom">
             <button
               onClick={handleSave}
-              disabled={saving || cart.length === 0}
+              disabled={saving || cart.length === 0 || excedeCredito}
               className="w-full bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-1.5"
             >
               <Check className="h-4 w-4" />
