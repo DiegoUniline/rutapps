@@ -17,6 +17,7 @@ import VentasListPage from "@/pages/VentasListPage";
 import VentaFormPage from "@/pages/VentaFormPage";
 import DemandaPage from "@/pages/DemandaPage";
 import EntregasPage from "@/pages/EntregasPage";
+import ReporteEntregasPage from "@/pages/ReporteEntregasPage";
 import CobranzaPage from "@/pages/CobranzaPage";
 import RutasMapPage from "@/pages/RutasMapPage";
 import InventarioPage from "@/pages/InventarioPage";
