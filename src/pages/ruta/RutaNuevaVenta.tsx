@@ -347,6 +347,72 @@ export default function RutaNuevaVenta() {
               <p className="text-[14px] font-semibold text-foreground">{clienteNombre}</p>
             </div>
 
+            {/* Sale options */}
+            <div className="bg-card border border-border rounded-xl p-3.5 space-y-4">
+              {/* Tipo */}
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Tipo de operación</p>
+                <div className="flex gap-2">
+                  {([['venta_directa', 'Venta directa'], ['pedido', 'Pedido']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setTipoVenta(val)}
+                      className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all active:scale-95 ${
+                        tipoVenta === val
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-accent text-foreground border border-border'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Condición de pago */}
+              <div>
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Condición de pago</p>
+                <div className="flex gap-2">
+                  {([['contado', 'Contado'], ['credito', 'Crédito'], ['por_definir', 'Por definir']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setCondicionPago(val)}
+                      className={`flex-1 py-2.5 rounded-xl text-[13px] font-semibold transition-all active:scale-95 ${
+                        condicionPago === val
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-accent text-foreground border border-border'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Entrega inmediata */}
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] font-medium text-foreground">Entrega inmediata</p>
+                <button
+                  onClick={() => setEntregaInmediata(!entregaInmediata)}
+                  className={`w-11 h-6 rounded-full transition-colors relative ${entregaInmediata ? 'bg-primary' : 'bg-border'}`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white shadow absolute top-0.5 transition-transform ${entregaInmediata ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                </button>
+              </div>
+            </div>
+
+            {/* Notas */}
+            <div className="bg-card border border-border rounded-xl p-3.5">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Notas (opcional)</p>
+              <textarea
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                rows={2}
+                placeholder="Instrucciones, observaciones..."
+                value={notas}
+                onChange={e => setNotas(e.target.value)}
+              />
+            </div>
+
             {/* Items */}
             <div className="space-y-2">
               <p className="text-[12px] font-semibold text-muted-foreground uppercase">Productos ({totals.items})</p>
