@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN ticket_campos jsonb DEFAULT '{"logo":true,"nombre":true,"razon_social":true,"rfc":true,"direccion":true,"telefono":true,"notas_ticket":true,"firmas":true}'::jsonb;
