@@ -4,7 +4,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
+import MobileLayout from "@/components/MobileLayout";
 import LoginPage from "@/pages/LoginPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import ProductosListPage from "@/pages/ProductosListPage";
 import ProductoFormPage from "@/pages/ProductoFormPage";
 import TarifasListPage from "@/pages/TarifasListPage";
@@ -14,8 +16,12 @@ import ClienteFormPage from "@/pages/ClienteFormPage";
 import VentasListPage from "@/pages/VentasListPage";
 import VentaFormPage from "@/pages/VentaFormPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
-import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
+import RutaDashboard from "@/pages/ruta/RutaDashboard";
+import RutaVentas from "@/pages/ruta/RutaVentas";
+import RutaClientes from "@/pages/ruta/RutaClientes";
+import RutaStock from "@/pages/ruta/RutaStock";
+import RutaGastos from "@/pages/ruta/RutaGastos";
 
 const queryClient = new QueryClient();
 
@@ -40,24 +46,37 @@ function AppRoutes() {
   }
 
   return (
-    <AppLayout>
-      <Routes>
-        <Route path="/" element={<Navigate to="/productos" replace />} />
-        <Route path="/productos" element={<ProductosListPage />} />
-        <Route path="/productos/:id" element={<ProductoFormPage />} />
-        <Route path="/tarifas" element={<TarifasListPage />} />
-        <Route path="/tarifas/:id" element={<TarifaFormPage />} />
-        <Route path="/clientes" element={<ClientesListPage />} />
-        <Route path="/clientes/:id" element={<ClienteFormPage />} />
-        <Route path="/ventas" element={<VentasListPage />} />
-        <Route path="/ventas/:id" element={<VentaFormPage />} />
-        <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />
-        <Route path="/facturacion" element={<PlaceholderPage title="Facturación" />} />
-        <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
-        <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AppLayout>
+    <Routes>
+      {/* Mobile route sales module */}
+      <Route path="/ruta" element={<MobileLayout />}>
+        <Route index element={<RutaDashboard />} />
+        <Route path="ventas" element={<RutaVentas />} />
+        <Route path="clientes" element={<RutaClientes />} />
+        <Route path="stock" element={<RutaStock />} />
+        <Route path="gastos" element={<RutaGastos />} />
+      </Route>
+
+      {/* Desktop ERP */}
+      <Route path="*" element={
+        <AppLayout>
+          <Routes>
+            <Route path="/" element={<Navigate to="/productos" replace />} />
+            <Route path="/productos" element={<ProductosListPage />} />
+            <Route path="/productos/:id" element={<ProductoFormPage />} />
+            <Route path="/tarifas" element={<TarifasListPage />} />
+            <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+            <Route path="/clientes" element={<ClientesListPage />} />
+            <Route path="/clientes/:id" element={<ClienteFormPage />} />
+            <Route path="/ventas" element={<VentasListPage />} />
+            <Route path="/ventas/:id" element={<VentaFormPage />} />
+            <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />
+            <Route path="/facturacion" element={<PlaceholderPage title="Facturación" />} />
+            <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppLayout>
+      } />
+    </Routes>
   );
 }
 
