@@ -7,13 +7,13 @@
 @layer base {
   :root {
     /* Core palette — Light */
-    --background: 0 0% 96%;
+    --background: 0 0% 99%;
     --foreground: 0 0% 9%;
 
-    --card: 0 0% 98%;
+    --card: 0 0% 100%;
     --card-foreground: 0 0% 9%;
 
-    --popover: 0 0% 98%;
+    --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
 
     /* Primary: corporate blue-violet #6561E9 */
@@ -38,8 +38,8 @@
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 0 0% 83%;
-    --input: 0 0% 83%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
     --ring: 243 75% 58%;
 
     --radius: 1.25rem;
@@ -65,14 +65,14 @@
 
     /* Table */
     --table-header: 0 0% 46%;
-    --table-hover: 0 0% 98%;
-    --table-border: 0 0% 89%;
+    --table-hover: 0 0% 99%;
+    --table-border: 0 0% 92%;
 
     /* Accents */
     --teal: 182 100% 26%;
     --teal-foreground: 0 0% 100%;
-    --notes-bg: 0 0% 98%;
-    --badge-bg: 0 0% 91%;
+    --notes-bg: 0 0% 99%;
+    --badge-bg: 0 0% 94%;
     --badge-fg: 0 0% 25%;
 
     /* Shadows */
