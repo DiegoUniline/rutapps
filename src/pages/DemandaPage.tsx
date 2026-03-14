@@ -179,6 +179,7 @@ export default function DemandaPage() {
       // Create delivery order with status "confirmado" (pending delivery, stock already deducted)
       const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
       if (!assignedVendedor) throw new Error('Asigna un vendedor/ruta antes de generar la entrega');
+      const fechaEnt = fechaEntrega[pedido.id] ?? new Date();
       const { data: venta, error } = await supabase.from('ventas').insert({
         empresa_id: empresa!.id,
         tipo: 'venta_directa',
@@ -187,6 +188,7 @@ export default function DemandaPage() {
         cliente_id: pedido.cliente_id,
         vendedor_id: assignedVendedor,
         pedido_origen_id: pedido.id,
+        fecha_entrega: fechaEnt.toISOString().slice(0, 10),
         subtotal: total,
         total,
         saldo_pendiente: pedido.condicion_pago === 'credito' ? total : 0,
