@@ -203,6 +203,59 @@ export default function RutaNuevaVenta() {
     ));
   };
 
+  // Save without payment (just create the sale)
+  const handleSaveOnly = async () => {
+    if (!empresa || !user) return;
+    setSaving(true);
+    try {
+      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+      const { data: venta, error: ventaErr } = await supabase.from('ventas').insert({
+        empresa_id: profile!.empresa_id,
+        cliente_id: clienteId,
+        tipo: tipoVenta,
+        condicion_pago: condicionPago,
+        entrega_inmediata: entregaInmediata,
+        fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
+        status: 'borrador' as const,
+        notas: notas || null,
+        subtotal: totals.subtotal,
+        iva_total: totals.iva,
+        ieps_total: 0,
+        descuento_total: 0,
+        total: totals.total,
+        saldo_pendiente: totals.total,
+      }).select('id').single();
+      if (ventaErr) throw ventaErr;
+
+      const lineas = cart.map(item => ({
+        venta_id: venta.id,
+        producto_id: item.producto_id,
+        descripcion: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        subtotal: item.precio_unitario * item.cantidad,
+        iva_pct: item.iva_pct,
+        iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
+        ieps_pct: 0,
+        ieps_monto: 0,
+        descuento_pct: 0,
+        total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+      }));
+      const { error: lineasErr } = await supabase.from('venta_lineas').insert(lineas);
+      if (lineasErr) throw lineasErr;
+
+      toast.success('Venta guardada');
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      navigate('/ruta/ventas');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!empresa || !user) return;
     setSaving(true);
