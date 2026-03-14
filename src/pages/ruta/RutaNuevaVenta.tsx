@@ -33,8 +33,11 @@ export default function RutaNuevaVenta() {
   const [saving, setSaving] = useState(false);
   const [tipoVenta, setTipoVenta] = useState<'venta_directa' | 'pedido'>('venta_directa');
   const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
-  const [entregaInmediata, setEntregaInmediata] = useState(true);
   const [notas, setNotas] = useState('');
+  const [fechaEntrega, setFechaEntrega] = useState('');
+
+  // Derived: venta_directa = entrega inmediata, pedido = no
+  const entregaInmediata = tipoVenta === 'venta_directa';
 
   // Fetch clients
   const { data: clientes } = useQuery({
