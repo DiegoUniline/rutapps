@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation, ShoppingCart } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation, ShoppingCart, MapPinned, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import AlertasVendedor from '@/components/ruta/AlertasVendedor';
+import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
