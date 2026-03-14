@@ -234,7 +234,7 @@ export default function VentaFormPage() {
   };
 
   if (!isNew && isLoading) {
-    return <div className="p-4 bg-secondary/50 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
+    return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
 
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
@@ -246,7 +246,7 @@ export default function VentaFormPage() {
   const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
 
   return (
-    <div className="bg-secondary/50 min-h-full">
+    <div className="min-h-full">
       {/* Header bar */}
       <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
@@ -518,7 +518,7 @@ export default function VentaFormPage() {
 
                   {/* Totals */}
                   <div className="flex justify-end pt-2">
-                    <div className="w-72 bg-secondary/50 rounded-md p-3 space-y-1.5 text-[13px]">
+                    <div className="w-72 bg-accent rounded-md p-3 space-y-1.5 text-[13px]">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
                         <span>${totals.subtotal.toFixed(2)}</span>

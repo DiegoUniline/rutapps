@@ -313,7 +313,7 @@ export default function ProductoFormPage() {
   const comisionLabels: Record<string, string> = { porcentaje: 'Porcentaje', monto_fijo: 'Monto Fijo' };
 
   return (
-    <div className="p-4 bg-secondary/50 min-h-full">
+    <div className="p-4 min-h-full">
       {/* Breadcrumb */}
       <div className="mb-0.5">
         <Link to="/productos" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Producto</Link>

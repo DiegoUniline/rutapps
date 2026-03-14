@@ -47,7 +47,7 @@ export default function VentasListPage() {
   };
 
   return (
-    <div className="p-4 space-y-3 bg-secondary/50 min-h-full">
+    <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground">Ventas y pedidos</h1>
 
       <div className="space-y-3">

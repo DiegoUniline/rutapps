@@ -148,7 +148,7 @@ export default function ProductosListPage() {
   const activeTab = searchParams.get('tab') || 'productos';
 
   return (
-    <div className="p-4 space-y-3 bg-secondary/50 min-h-full">
+    <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground">Productos & Catálogos</h1>
       <OdooTabs
         activeTab={activeTab}
