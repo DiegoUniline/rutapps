@@ -129,7 +129,7 @@ export default function CuentasCobrarPage() {
                   <TableCell className="font-mono text-[11px]">{v.folio ?? v.id.slice(0, 8)}</TableCell>
                   <TableCell className="font-medium text-[12px]">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
-                  <TableCell className="text-[12px]">{v.fecha}</TableCell>
+                  <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
                   <TableCell className="text-right text-[12px]">$ {fmt(v.total ?? 0)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">$ {fmt(pagado)}</TableCell>
