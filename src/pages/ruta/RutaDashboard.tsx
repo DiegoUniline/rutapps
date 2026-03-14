@@ -13,19 +13,23 @@ function useTodayStats() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const eid = empresa!.id;
-      const [ventas, clientes, gastos] = await Promise.all([
+      const [ventas, clientes, gastos, cobros] = await Promise.all([
         supabase.from('ventas').select('id, total, status').eq('empresa_id', eid).eq('fecha', today),
         supabase.from('clientes').select('id').eq('empresa_id', eid).eq('status', 'activo'),
         supabase.from('gastos').select('id, monto').eq('empresa_id', eid).eq('fecha', today),
+        supabase.from('cobros').select('id, monto').eq('empresa_id', eid).eq('fecha', today),
       ]);
       const ventasData = ventas.data ?? [];
       const gastosData = gastos.data ?? [];
+      const cobrosData = cobros.data ?? [];
       return {
         ventasHoy: ventasData.length,
         totalVentas: ventasData.reduce((s, v) => s + (v.total ?? 0), 0),
         clientesActivos: (clientes.data ?? []).length,
         gastosHoy: gastosData.reduce((s, g) => s + (g.monto ?? 0), 0),
         numGastos: gastosData.length,
+        cobrosHoy: cobrosData.reduce((s, c) => s + (c.monto ?? 0), 0),
+        numCobros: cobrosData.length,
       };
     },
   });
