@@ -21,6 +21,7 @@ export default function RutaClientes() {
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [showAllDays, setShowAllDays] = useState(false);
   const [modo, setModo] = useState<'visitas' | 'todos'>('visitas');
+  const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
 
   const { data: clientes, isLoading } = useQuery({
     queryKey: ['ruta-clientes-full', empresa?.id],
