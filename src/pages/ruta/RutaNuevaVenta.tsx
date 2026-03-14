@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import TicketVenta from '@/components/ruta/TicketVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -85,6 +86,7 @@ export default function RutaNuevaVenta() {
   const [showDevSearch, setShowDevSearch] = useState(false);
   const [showReemplazoFor, setShowReemplazoFor] = useState<string | null>(null);
   const [searchReemplazo, setSearchReemplazo] = useState('');
+  const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
@@ -410,7 +412,7 @@ export default function RutaNuevaVenta() {
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
-      navigate('/ruta/ventas');
+      setTicketInfo({ folio: venta.id.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
@@ -488,7 +490,7 @@ export default function RutaNuevaVenta() {
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
-      navigate('/ruta/ventas');
+      setTicketInfo({ folio: venta.id.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
@@ -543,6 +545,33 @@ export default function RutaNuevaVenta() {
 
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
+
+  // Show ticket after save
+  if (ticketInfo) {
+    return (
+      <TicketVenta
+        empresa={{ nombre: empresa?.nombre ?? '', telefono: empresa?.telefono, direccion: empresa?.direccion }}
+        folio={ticketInfo.folio}
+        fecha={ticketInfo.fecha}
+        clienteNombre={clienteNombre}
+        lineas={cart.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio: item.precio_unitario,
+          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          esCambio: item.es_cambio,
+        }))}
+        subtotal={totals.subtotal}
+        iva={totals.iva}
+        total={totals.total}
+        condicionPago={condicionPago}
+        metodoPago={metodoPago}
+        montoRecibido={montoRecibidoNum}
+        cambio={cambio}
+        onClose={() => navigate('/ruta')}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-background">

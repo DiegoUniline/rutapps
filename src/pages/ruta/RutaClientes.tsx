@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation, ShoppingCart } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation, ShoppingCart, MapPinned, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import AlertasVendedor from '@/components/ruta/AlertasVendedor';
+import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -19,6 +21,7 @@ export default function RutaClientes() {
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [showAllDays, setShowAllDays] = useState(false);
   const [modo, setModo] = useState<'visitas' | 'todos'>('visitas');
+  const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
 
   const { data: clientes, isLoading } = useQuery({
     queryKey: ['ruta-clientes-full', empresa?.id],
@@ -86,7 +89,15 @@ export default function RutaClientes() {
       <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-2 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-[20px] font-bold text-foreground">Clientes</h1>
-          <Badge variant="secondary" className="text-[11px]">{filtered.length} clientes</Badge>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/ruta/mapa')}
+              className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
+            >
+              <MapPinned className="h-4 w-4" />
+            </button>
+            <Badge variant="secondary" className="text-[11px]">{filtered.length}</Badge>
+          </div>
         </div>
 
         {/* Mode toggle */}
@@ -149,8 +160,11 @@ export default function RutaClientes() {
         </div>
       </div>
 
+      {/* Alertas */}
+      <AlertasVendedor />
+
       {/* List */}
-      <div className="flex-1 px-4 space-y-2 pb-4 pt-2">
+      <div className="flex-1 overflow-auto px-4 space-y-2 pb-4 pt-2">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
 
         {filtered.map((c, idx) => (
@@ -182,7 +196,7 @@ export default function RutaClientes() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-semibold text-foreground truncate">{c.nombre}</p>
+                <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-[14px] font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
                 <div className="flex items-center gap-2 mt-0.5">
                   {c.codigo && <span className="text-[10px] text-muted-foreground font-mono">{c.codigo}</span>}
                   {(c as any).zonas?.nombre && (
@@ -248,6 +262,15 @@ export default function RutaClientes() {
           </div>
         )}
       </div>
+
+      {/* Historial modal */}
+      {historialCliente && (
+        <ClienteHistorial
+          clienteId={historialCliente.id}
+          clienteNombre={historialCliente.nombre}
+          onClose={() => setHistorialCliente(null)}
+        />
+      )}
     </div>
   );
 }
