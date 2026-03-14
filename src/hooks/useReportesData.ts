@@ -30,7 +30,7 @@ export function useReportesData(desde: string, hasta: string) {
       const ventaLineas = ventaLineasRes.data ?? [];
       const cargas = cargasRes.data ?? [];
       const devoluciones = devolucionesRes.data ?? [];
-      const entregas = devLineasRes.data ?? [];
+      const entregas = entregasRes.data ?? [];
 
       // === RESUMEN ===
       const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
