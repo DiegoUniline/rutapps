@@ -83,6 +83,65 @@ export default function CargaFormPage() {
     }
   }, [carga, isNew]);
 
+  // Fetch confirmed pedidos for the selected vendedor to load from orders
+  const { data: pedidosVendedor, isLoading: loadingPedidos } = useQuery({
+    queryKey: ['pedidos-vendedor-carga', empresa?.id, vendedorId],
+    enabled: !!empresa?.id && !!vendedorId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ventas')
+        .select('id, folio, fecha, total, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, productos(codigo, nombre, cantidad))')
+        .eq('empresa_id', empresa!.id)
+        .eq('tipo', 'pedido')
+        .eq('status', 'confirmado')
+        .eq('vendedor_id', vendedorId)
+        .order('fecha', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const loadFromPedidos = () => {
+    if (!pedidosVendedor || pedidosVendedor.length === 0) {
+      toast.error('No hay pedidos confirmados para este vendedor');
+      return;
+    }
+    // Sum product quantities across all orders
+    const sumMap: Record<string, { producto_id: string; codigo: string; nombre: string; cantidad: number; stock_actual: number }> = {};
+    for (const ped of pedidosVendedor) {
+      for (const vl of (ped.venta_lineas ?? [])) {
+        if (!vl.producto_id) continue;
+        if (!sumMap[vl.producto_id]) {
+          sumMap[vl.producto_id] = {
+            producto_id: vl.producto_id,
+            codigo: (vl.productos as any)?.codigo ?? '',
+            nombre: (vl.productos as any)?.nombre ?? '',
+            cantidad: 0,
+            stock_actual: (vl.productos as any)?.cantidad ?? 0,
+          };
+        }
+        sumMap[vl.producto_id].cantidad += vl.cantidad;
+      }
+    }
+    // Merge with existing lines
+    const merged = [...lineas];
+    for (const item of Object.values(sumMap)) {
+      const existing = merged.find(l => l.producto_id === item.producto_id);
+      if (existing) {
+        existing.cantidad_cargada += item.cantidad;
+      } else {
+        merged.push({
+          producto_id: item.producto_id,
+          codigo: item.codigo,
+          nombre: item.nombre,
+          cantidad_cargada: item.cantidad,
+          stock_actual: item.stock_actual,
+        });
+      }
+    }
+    setLineas(merged);
+    toast.success(`${pedidosVendedor.length} pedido(s) cargados con ${Object.keys(sumMap).length} producto(s)`);
+  };
+
   const filteredProducts = productos?.filter(p =>
     !searchProd || p.nombre.toLowerCase().includes(searchProd.toLowerCase()) || p.codigo.toLowerCase().includes(searchProd.toLowerCase())
   ).filter(p => !lineas.some(l => l.producto_id === p.id));
