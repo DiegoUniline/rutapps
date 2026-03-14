@@ -382,32 +382,39 @@ export default function CargaFormPage() {
               {lineas.length === 0 && (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin productos</TableCell></TableRow>
               )}
-              {lineas.map((l, idx) => (
-                <TableRow key={l.producto_id}>
-                  <TableCell className="text-muted-foreground text-xs">{l.codigo}</TableCell>
-                  <TableCell className="font-medium">{l.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">{l.stock_actual}</TableCell>
-                  <TableCell>
-                    {(isEditable || isNew) ? (
-                      <Input
-                        type="number"
-                        className="w-24"
-                        value={l.cantidad_cargada}
-                        onChange={e => updateQty(idx, parseFloat(e.target.value) || 0)}
-                        min={0}
-                      />
-                    ) : l.cantidad_cargada}
-                  </TableCell>
-                  {!isNew && <TableCell>{(carga?.carga_lineas as any)?.[idx]?.cantidad_devuelta ?? 0}</TableCell>}
-                  {!isNew && <TableCell>{(carga?.carga_lineas as any)?.[idx]?.cantidad_vendida ?? 0}</TableCell>}
-                  {(isEditable || isNew) && (
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+              {lineas.map((l, idx) => {
+                const vendido = (carga?.carga_lineas as any)?.[idx]?.cantidad_vendida ?? 0;
+                const devuelto = (carga?.carga_lineas as any)?.[idx]?.cantidad_devuelta ?? 0;
+                const enMano = l.cantidad_cargada - vendido - devuelto;
+                return (
+                  <TableRow key={l.producto_id}>
+                    <TableCell className="text-muted-foreground text-[11px] font-mono py-1.5">{l.codigo}</TableCell>
+                    <TableCell className="text-[12px] font-medium py-1.5">{l.nombre}</TableCell>
+                    <TableCell className="text-right text-[12px] text-muted-foreground py-1.5">{l.stock_actual}</TableCell>
+                    <TableCell className="py-1.5">
+                      {(isEditable || isNew) ? (
+                        <Input
+                          type="number"
+                          className="w-24 h-7 text-[12px]"
+                          value={l.cantidad_cargada}
+                          onChange={e => updateQty(idx, parseFloat(e.target.value) || 0)}
+                          min={0}
+                        />
+                      ) : <span className="font-medium">{l.cantidad_cargada}</span>}
                     </TableCell>
-                  )}
-                </TableRow>
+                    {!isNew && <TableCell className="text-right text-[12px] py-1.5">{vendido}</TableCell>}
+                    {!isNew && <TableCell className="text-right text-[12px] py-1.5">{devuelto}</TableCell>}
+                    {!isNew && <TableCell className="text-right text-[12px] font-semibold py-1.5">{enMano}</TableCell>}
+                    {(isEditable || isNew) && (
+                      <TableCell className="py-1.5">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
               ))}
             </TableBody>
           </Table>
