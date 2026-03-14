@@ -368,13 +368,14 @@ export default function CargaFormPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Producto</TableHead>
-                <TableHead className="w-24">Stock</TableHead>
-                <TableHead className="w-32">Cantidad</TableHead>
-                {!isNew && <TableHead className="w-24">Devuelto</TableHead>}
-                {!isNew && <TableHead className="w-24">Vendido</TableHead>}
-                {(isEditable || isNew) && <TableHead className="w-12"></TableHead>}
+                <TableHead className="text-[11px]">Código</TableHead>
+                <TableHead className="text-[11px]">Producto</TableHead>
+                <TableHead className="text-[11px] text-right w-24">Stock almacén</TableHead>
+                <TableHead className="text-[11px] w-28">Cant. a cargar</TableHead>
+                {!isNew && <TableHead className="text-[11px] text-right w-20">Vendido</TableHead>}
+                {!isNew && <TableHead className="text-[11px] text-right w-20">Devuelto</TableHead>}
+                {!isNew && <TableHead className="text-[11px] text-right w-20">En mano</TableHead>}
+                {(isEditable || isNew) && <TableHead className="w-10"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
