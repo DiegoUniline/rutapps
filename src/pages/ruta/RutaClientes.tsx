@@ -262,6 +262,15 @@ export default function RutaClientes() {
           </div>
         )}
       </div>
+
+      {/* Historial modal */}
+      {historialCliente && (
+        <ClienteHistorial
+          clienteId={historialCliente.id}
+          clienteNombre={historialCliente.nombre}
+          onClose={() => setHistorialCliente(null)}
+        />
+      )}
     </div>
   );
 }
