@@ -4,7 +4,7 @@ import { UnilineFooter } from '@/components/UnilineFooter';
 import { cn } from '@/lib/utils';
 
 const tabs = [
-  { label: 'Inicio', icon: Home, path: '/ruta' },
+  { label: 'Clientes', icon: Users, path: '/ruta' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
   { label: 'Entregas', icon: Truck, path: '/ruta/entregas' },
   { label: 'Carga', icon: Package, path: '/ruta/carga' },
