@@ -162,7 +162,7 @@ function Breadcrumb() {
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
-    configuracion: 'Configuración',
+    configuracion: 'Configuración', descargas: 'Descargas de ruta',
   };
 
   if (segments.length <= 1) return null;
