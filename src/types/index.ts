@@ -137,7 +137,22 @@ export interface Zona { id: string; empresa_id: string; nombre: string; }
 export interface Vendedor { id: string; empresa_id: string; nombre: string; }
 export interface Cobrador { id: string; empresa_id: string; nombre: string; }
 export interface Profile { id: string; user_id: string; empresa_id: string; nombre?: string; avatar_url?: string; }
-export interface Empresa { id: string; nombre: string; }
+export interface Empresa {
+  id: string;
+  nombre: string;
+  razon_social?: string;
+  rfc?: string;
+  regimen_fiscal?: string;
+  direccion?: string;
+  colonia?: string;
+  ciudad?: string;
+  estado?: string;
+  cp?: string;
+  telefono?: string;
+  email?: string;
+  logo_url?: string;
+  notas_ticket?: string;
+}
 
 export interface Gasto {
   id: string;
