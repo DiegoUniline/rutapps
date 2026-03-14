@@ -246,7 +246,7 @@ export default function VentaFormPage() {
   const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
 
   return (
-    <div className="bg-secondary/50 min-h-full">
+    <div className="min-h-full">
       {/* Header bar */}
       <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
