@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin } from 'lucide-react';
+import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin, Truck, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
