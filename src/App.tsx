@@ -74,11 +74,11 @@ function AppRoutes() {
     <Routes>
       {/* Mobile route sales module */}
       <Route path="/ruta" element={<MobileLayout />}>
-        <Route index element={<RutaDashboard />} />
+        <Route index element={<RutaClientes />} />
+        <Route path="dashboard" element={<RutaDashboard />} />
         <Route path="ventas" element={<RutaVentas />} />
         <Route path="carga" element={<RutaMiCarga />} />
         <Route path="cobros" element={<RutaCobros />} />
-        <Route path="clientes" element={<RutaClientes />} />
         <Route path="stock" element={<RutaStock />} />
         <Route path="gastos" element={<RutaGastos />} />
         <Route path="entregas" element={<RutaEntregas />} />
