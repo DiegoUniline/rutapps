@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
