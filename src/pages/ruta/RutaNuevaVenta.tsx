@@ -280,8 +280,11 @@ export default function RutaNuevaVenta() {
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[11px] text-muted-foreground">{p.codigo}</span>
                         <span className="text-[11px] text-muted-foreground">·</span>
-                        <span className={`text-[11px] font-medium ${stock > 0 ? 'text-success' : 'text-destructive'}`}>{stock} disp.</span>
-                      </div>
+                         <span className={`text-[11px] font-medium ${stock > 0 ? 'text-success' : 'text-destructive'}`}>{stock} disp.</span>
+                       </div>
+                       {inCart && inCart.cantidad > stock && tipoVenta === 'venta_directa' && (
+                         <p className="text-[10px] text-destructive font-medium mt-0.5">⚠ Excede stock a bordo</p>
+                       )}
                       <p className="text-[14px] font-bold text-primary mt-0.5">$ {(p.precio_principal ?? 0).toFixed(2)}</p>
                     </div>
 
