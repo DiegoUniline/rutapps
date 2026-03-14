@@ -43,6 +43,96 @@ export type Database = {
           },
         ]
       }
+      carga_lineas: {
+        Row: {
+          cantidad_cargada: number
+          cantidad_devuelta: number
+          cantidad_vendida: number
+          carga_id: string
+          created_at: string
+          id: string
+          producto_id: string
+        }
+        Insert: {
+          cantidad_cargada?: number
+          cantidad_devuelta?: number
+          cantidad_vendida?: number
+          carga_id: string
+          created_at?: string
+          id?: string
+          producto_id: string
+        }
+        Update: {
+          cantidad_cargada?: number
+          cantidad_devuelta?: number
+          cantidad_vendida?: number
+          carga_id?: string
+          created_at?: string
+          id?: string
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carga_lineas_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carga_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cargas: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          notas: string | null
+          status: Database["public"]["Enums"]["status_carga"]
+          vendedor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          status?: Database["public"]["Enums"]["status_carga"]
+          vendedor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          status?: Database["public"]["Enums"]["status_carga"]
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cargas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargas_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clasificaciones: {
         Row: {
           created_at: string
@@ -329,6 +419,119 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devolucion_lineas: {
+        Row: {
+          cantidad: number
+          created_at: string
+          devolucion_id: string
+          id: string
+          motivo: Database["public"]["Enums"]["motivo_devolucion"]
+          notas: string | null
+          producto_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          devolucion_id: string
+          id?: string
+          motivo?: Database["public"]["Enums"]["motivo_devolucion"]
+          notas?: string | null
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          devolucion_id?: string
+          id?: string
+          motivo?: Database["public"]["Enums"]["motivo_devolucion"]
+          notas?: string | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devolucion_lineas_devolucion_id_fkey"
+            columns: ["devolucion_id"]
+            isOneToOne: false
+            referencedRelation: "devoluciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucion_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      devoluciones: {
+        Row: {
+          carga_id: string | null
+          cliente_id: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          notas: string | null
+          tipo: Database["public"]["Enums"]["tipo_devolucion"]
+          user_id: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          carga_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_devolucion"]
+          user_id: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          carga_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_devolucion"]
+          user_id?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "devoluciones_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
             referencedColumns: ["id"]
           },
         ]
@@ -1250,6 +1453,8 @@ export type Database = {
         | "ultimo_proveedor"
       condicion_pago: "contado" | "credito" | "por_definir"
       frecuencia_visita: "diaria" | "semanal" | "quincenal" | "mensual"
+      motivo_devolucion: "no_vendido" | "vencido" | "danado" | "cambio" | "otro"
+      status_carga: "pendiente" | "en_ruta" | "completada" | "cancelada"
       status_cliente: "activo" | "inactivo" | "suspendido"
       status_producto: "activo" | "inactivo" | "borrador"
       status_venta:
@@ -1260,6 +1465,7 @@ export type Database = {
         | "cancelado"
       tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
+      tipo_devolucion: "almacen" | "tienda"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
       tipo_venta: "pedido" | "venta_directa"
     }
@@ -1400,6 +1606,8 @@ export const Constants = {
       ],
       condicion_pago: ["contado", "credito", "por_definir"],
       frecuencia_visita: ["diaria", "semanal", "quincenal", "mensual"],
+      motivo_devolucion: ["no_vendido", "vencido", "danado", "cambio", "otro"],
+      status_carga: ["pendiente", "en_ruta", "completada", "cancelada"],
       status_cliente: ["activo", "inactivo", "suspendido"],
       status_producto: ["activo", "inactivo", "borrador"],
       status_venta: [
@@ -1411,6 +1619,7 @@ export const Constants = {
       ],
       tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
+      tipo_devolucion: ["almacen", "tienda"],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],
       tipo_venta: ["pedido", "venta_directa"],
     },

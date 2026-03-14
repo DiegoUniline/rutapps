@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin } from 'lucide-react';
+import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin, Truck, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -128,14 +128,23 @@ export default function RutaDashboard() {
         ))}
       </div>
 
-      {/* Quick action */}
-      <button
-        onClick={() => navigate('/ruta/ventas/nueva')}
-        className="w-full bg-primary text-primary-foreground rounded-2xl py-4 text-[15px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-      >
-        <ShoppingCart className="h-5 w-5" />
-        Nueva venta rápida
-      </button>
+      {/* Quick actions */}
+      <div className="space-y-2">
+        <button
+          onClick={() => navigate('/ruta/ventas/nueva')}
+          className="w-full bg-primary text-primary-foreground rounded-2xl py-4 text-[15px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        >
+          <ShoppingCart className="h-5 w-5" />
+          Nueva venta rápida
+        </button>
+        <button
+          onClick={() => navigate('/ruta/devolucion')}
+          className="w-full bg-card border border-border text-foreground rounded-2xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        >
+          <RotateCcw className="h-4 w-4 text-destructive" />
+          Registrar devolución
+        </button>
+      </div>
     </div>
   );
 }

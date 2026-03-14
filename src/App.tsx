@@ -15,6 +15,8 @@ import ClientesListPage from "@/pages/ClientesListPage";
 import ClienteFormPage from "@/pages/ClienteFormPage";
 import VentasListPage from "@/pages/VentasListPage";
 import VentaFormPage from "@/pages/VentaFormPage";
+import CargasListPage from "@/pages/CargasListPage";
+import CargaFormPage from "@/pages/CargaFormPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 import NotFound from "@/pages/NotFound";
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
@@ -26,6 +28,8 @@ import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta";
 import RutaCobros from "@/pages/ruta/RutaCobros";
 import RutaCobrar from "@/pages/ruta/RutaCobrar";
 import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
+import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
+import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +59,7 @@ function AppRoutes() {
       <Route path="/ruta" element={<MobileLayout />}>
         <Route index element={<RutaDashboard />} />
         <Route path="ventas" element={<RutaVentas />} />
+        <Route path="carga" element={<RutaMiCarga />} />
         <Route path="cobros" element={<RutaCobros />} />
         <Route path="clientes" element={<RutaClientes />} />
         <Route path="stock" element={<RutaStock />} />
@@ -63,6 +68,7 @@ function AppRoutes() {
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
       <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
+      <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
 
       {/* Desktop ERP */}
       <Route path="*" element={
@@ -77,6 +83,8 @@ function AppRoutes() {
             <Route path="/clientes/:id" element={<ClienteFormPage />} />
             <Route path="/ventas" element={<VentasListPage />} />
             <Route path="/ventas/:id" element={<VentaFormPage />} />
+            <Route path="/cargas" element={<CargasListPage />} />
+            <Route path="/cargas/:id" element={<CargaFormPage />} />
             <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />
             <Route path="/facturacion" element={<PlaceholderPage title="Facturación" />} />
             <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
