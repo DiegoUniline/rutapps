@@ -546,6 +546,33 @@ export default function RutaNuevaVenta() {
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
 
+  // Show ticket after save
+  if (ticketInfo) {
+    return (
+      <TicketVenta
+        empresa={{ nombre: empresa?.nombre ?? '', telefono: empresa?.telefono, direccion: empresa?.direccion }}
+        folio={ticketInfo.folio}
+        fecha={ticketInfo.fecha}
+        clienteNombre={clienteNombre}
+        lineas={cart.map(item => ({
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precio: item.precio_unitario,
+          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          esCambio: item.es_cambio,
+        }))}
+        subtotal={totals.subtotal}
+        iva={totals.iva}
+        total={totals.total}
+        condicionPago={condicionPago}
+        metodoPago={metodoPago}
+        montoRecibido={montoRecibidoNum}
+        cambio={cambio}
+        onClose={() => navigate('/ruta')}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* ─── Header ─── */}
