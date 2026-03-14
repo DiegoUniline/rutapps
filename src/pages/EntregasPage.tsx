@@ -190,6 +190,16 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
           <div><div className="sign-line">Entregó</div></div>
           <div><div className="sign-line">Recibió</div></div>
         </div>
+
+        {(empresaConfig as any)?.notas_ticket && (
+          <div style={{ marginTop: '24px', padding: '8px 12px', background: '#f9f9f9', borderRadius: '4px', fontSize: '10px', color: '#888', textAlign: 'center' }}>
+            {(empresaConfig as any).notas_ticket}
+          </div>
+        )}
+
+        <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#bbb' }}>
+          Elaborado por Uniline — Innovación en la nube
+        </div>
       </div>
     </div>
   );
