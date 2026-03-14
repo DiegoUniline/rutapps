@@ -392,17 +392,28 @@ export default function RutaNuevaVenta() {
                 </div>
               </div>
 
-              {/* Entrega inmediata */}
-              <div className="flex items-center justify-between">
-                <p className="text-[13px] font-medium text-foreground">Entrega inmediata</p>
-                <button
-                  onClick={() => setEntregaInmediata(!entregaInmediata)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${entregaInmediata ? 'bg-primary' : 'bg-border'}`}
-                >
-                  <div className={`w-5 h-5 rounded-full bg-white shadow absolute top-0.5 transition-transform ${entregaInmediata ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
-                </button>
+              {/* Entrega info */}
+              <div className="bg-accent/50 rounded-xl p-3 flex items-center gap-2">
+                {tipoVenta === 'venta_directa' ? (
+                  <>
+                    <Check className="h-4 w-4 text-success shrink-0" />
+                    <p className="text-[12px] text-foreground">Entrega inmediata · Descuenta stock a bordo</p>
+                  </>
+                ) : (
+                  <div className="flex-1 space-y-2">
+                    <p className="text-[12px] text-muted-foreground font-medium">Pedido · No descuenta stock</p>
+                    <div>
+                      <label className="text-[11px] text-muted-foreground">Fecha de entrega</label>
+                      <input
+                        type="date"
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] mt-1 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        value={fechaEntrega}
+                        onChange={e => setFechaEntrega(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
 
             {/* Notas */}
             <div className="bg-card border border-border rounded-xl p-3.5">
