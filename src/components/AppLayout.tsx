@@ -198,9 +198,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           collapsed ? "justify-center px-2" : "px-4"
         )}>
           {collapsed ? (
-            <span className="text-[18px] font-black text-primary-foreground">R</span>
+            <span className="text-[18px] font-black text-primary">R</span>
           ) : (
-            <span className="text-[18px] font-black text-primary-foreground tracking-tight">Rutapp</span>
+            <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
           )}
         </div>
 
