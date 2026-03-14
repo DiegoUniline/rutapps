@@ -1,9 +1,8 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Truck, Check, ChevronRight, Search, ClipboardList } from 'lucide-react';
+import { Truck, Check, ChevronRight, Search, ClipboardList, Warehouse, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,24 +10,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 
-// Pedidos confirmados that need fulfillment
+// ─── Data hooks ────────────────────────────────────────────
+
 function useDemanda() {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['demanda', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // Get confirmed pedidos (not yet fully delivered)
       const { data: pedidos, error } = await supabase
         .from('ventas')
-        .select('*, clientes(nombre), vendedores(nombre), venta_lineas(*, productos(codigo, nombre, unidades:unidad_venta_id(abreviatura)))')
+        .select('*, clientes(nombre), vendedores(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('empresa_id', empresa!.id)
         .eq('tipo', 'pedido')
         .in('status', ['confirmado', 'entregado'])
         .order('fecha', { ascending: true });
       if (error) throw error;
 
-      // For each pedido, get how much has been delivered via partial ventas
       const pedidoIds = (pedidos ?? []).map(p => p.id);
       let entregas: any[] = [];
       if (pedidoIds.length > 0) {
@@ -39,7 +37,6 @@ function useDemanda() {
         entregas = data ?? [];
       }
 
-      // Build delivery map: pedido_id -> { producto_id -> cantidad_entregada }
       const deliveryMap: Record<string, Record<string, number>> = {};
       for (const e of entregas) {
         if (!e.pedido_origen_id) continue;
@@ -62,9 +59,7 @@ function useDemanda() {
         return {
           ...p,
           venta_lineas: lineasConPendiente,
-          totalPendiente,
-          totalEntregado,
-          totalDemanda,
+          totalPendiente, totalEntregado, totalDemanda,
           pctEntregado: totalDemanda > 0 ? Math.round((totalEntregado / totalDemanda) * 100) : 0,
           fullyDelivered: totalPendiente <= 0,
         };
@@ -73,43 +68,110 @@ function useDemanda() {
   });
 }
 
+function useOrigenes() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['origenes-surtido', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const eid = empresa!.id;
+      // Almacenes
+      const { data: almacenes } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', eid).order('nombre');
+      // Products with warehouse stock
+      const { data: productos } = await supabase.from('productos').select('id, cantidad').eq('empresa_id', eid).eq('status', 'activo');
+      const stockAlmacen: Record<string, number> = {};
+      for (const p of (productos ?? [])) { stockAlmacen[p.id] = p.cantidad ?? 0; }
+
+      // Active cargas with lines
+      const { data: cargas } = await supabase
+        .from('cargas')
+        .select('id, vendedor_id, vendedores(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
+        .eq('empresa_id', eid)
+        .in('status', ['en_ruta', 'pendiente'] as any)
+        .order('fecha', { ascending: false });
+
+      const rutaOrigenes = (cargas ?? []).map(c => {
+        const stockMap: Record<string, number> = {};
+        for (const cl of (c.carga_lineas ?? [])) {
+          stockMap[cl.producto_id] = Math.max(0, cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta);
+        }
+        return {
+          id: `ruta-${c.id}`,
+          cargaId: c.id,
+          label: `Ruta: ${(c.vendedores as any)?.nombre ?? '—'} (${fmtDate(c.fecha)})`,
+          type: 'ruta' as const,
+          stock: stockMap,
+        };
+      });
+
+      const almacenOrigen = {
+        id: 'almacen',
+        cargaId: null as string | null,
+        label: (almacenes ?? []).length === 1 ? `Almacén: ${almacenes![0].nombre}` : 'Almacén general',
+        type: 'almacen' as const,
+        stock: stockAlmacen,
+      };
+
+      return { origenes: [almacenOrigen, ...rutaOrigenes] };
+    },
+  });
+}
+
+// ─── Component ────────────────────────────────────────────
+
 export default function DemandaPage() {
-  const navigate = useNavigate();
   const { empresa } = useAuth();
   const qc = useQueryClient();
   const { data: pedidos, isLoading } = useDemanda();
+  const { data: origenesData } = useOrigenes();
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [surtidoCantidades, setSurtidoCantidades] = useState<Record<string, number>>({});
+  const [origenId, setOrigenId] = useState<string>('almacen');
+
+  const origenes = origenesData?.origenes ?? [];
+  const origenActual = origenes.find(o => o.id === origenId) ?? origenes[0];
+
+  const getStockOrigen = (productoId: string) => origenActual?.stock[productoId] ?? 0;
 
   const generarEntrega = useMutation({
     mutationFn: async (pedido: any) => {
-      // Build lines to deliver
+      if (!origenActual) throw new Error('Selecciona un origen');
+
       const lineas = pedido.venta_lineas
         .filter((l: any) => {
           const key = `${pedido.id}-${l.producto_id}`;
-          const qty = surtidoCantidades[key] ?? 0;
-          return qty > 0;
+          return (surtidoCantidades[key] ?? 0) > 0;
         })
         .map((l: any) => {
           const key = `${pedido.id}-${l.producto_id}`;
+          const qty = surtidoCantidades[key] ?? 0;
           return {
             producto_id: l.producto_id,
-            cantidad: surtidoCantidades[key] ?? 0,
+            cantidad: qty,
             precio_unitario: l.precio_unitario,
             descripcion: l.descripcion,
             unidad_id: l.unidad_id,
             descuento_pct: l.descuento_pct ?? 0,
-            subtotal: (surtidoCantidades[key] ?? 0) * l.precio_unitario,
-            total: (surtidoCantidades[key] ?? 0) * l.precio_unitario,
+            subtotal: qty * l.precio_unitario,
+            total: qty * l.precio_unitario,
           };
         });
 
       if (lineas.length === 0) throw new Error('Selecciona al menos un producto a surtir');
 
+      // Validate stock
+      for (const l of lineas) {
+        const disponible = getStockOrigen(l.producto_id);
+        if (l.cantidad > disponible) {
+          const prod = pedido.venta_lineas.find((vl: any) => vl.producto_id === l.producto_id);
+          throw new Error(`Stock insuficiente para ${prod?.productos?.nombre ?? 'producto'}: disponible ${disponible}, solicitado ${l.cantidad}`);
+        }
+      }
+
       const total = lineas.reduce((s: number, l: any) => s + l.total, 0);
 
-      // Create the delivery venta
+      // Create delivery
       const { data: venta, error } = await supabase.from('ventas').insert({
         empresa_id: empresa!.id,
         tipo: 'venta_directa',
@@ -125,18 +187,42 @@ export default function DemandaPage() {
       } as any).select().single();
       if (error) throw error;
 
-      // Insert lines
       const { error: lErr } = await supabase.from('venta_lineas').insert(
         lineas.map((l: any) => ({ ...l, venta_id: venta.id }))
       );
       if (lErr) throw lErr;
 
+      // Deduct stock from origin
+      if (origenActual.type === 'almacen') {
+        for (const l of lineas) {
+          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+          if (prod) {
+            await supabase.from('productos').update({ cantidad: Math.max(0, (prod.cantidad ?? 0) - l.cantidad) } as any).eq('id', l.producto_id);
+          }
+        }
+      } else if (origenActual.type === 'ruta' && origenActual.cargaId) {
+        // Deduct from carga_lineas (increment cantidad_vendida)
+        for (const l of lineas) {
+          const { data: cl } = await supabase
+            .from('carga_lineas')
+            .select('id, cantidad_vendida')
+            .eq('carga_id', origenActual.cargaId)
+            .eq('producto_id', l.producto_id)
+            .single();
+          if (cl) {
+            await supabase.from('carga_lineas').update({ cantidad_vendida: (cl.cantidad_vendida ?? 0) + l.cantidad }).eq('id', cl.id);
+          }
+        }
+      }
+
       return venta;
     },
     onSuccess: () => {
-      toast.success('Entrega generada');
+      toast.success('Entrega generada — stock descontado del origen');
       qc.invalidateQueries({ queryKey: ['demanda'] });
       qc.invalidateQueries({ queryKey: ['ventas'] });
+      qc.invalidateQueries({ queryKey: ['origenes-surtido'] });
+      qc.invalidateQueries({ queryKey: ['cargas'] });
       setSurtidoCantidades({});
       setExpandedId(null);
     },
@@ -149,16 +235,26 @@ export default function DemandaPage() {
   );
 
   const initSurtido = (pedido: any) => {
+    // Initialize with 0 — user fills or uses "Surtir todo"
     const newQtys: Record<string, number> = {};
     for (const l of pedido.venta_lineas) {
-      const key = `${pedido.id}-${l.producto_id}`;
-      newQtys[key] = Math.max(0, l.cantidad_pendiente);
+      newQtys[`${pedido.id}-${l.producto_id}`] = 0;
     }
     setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
     setExpandedId(pedido.id);
   };
 
-  // Resumen de demanda total
+  const surtirTodo = (pedido: any) => {
+    const newQtys: Record<string, number> = {};
+    for (const l of pedido.venta_lineas) {
+      const pendiente = Math.max(0, l.cantidad_pendiente);
+      const disponible = getStockOrigen(l.producto_id);
+      newQtys[`${pedido.id}-${l.producto_id}`] = Math.min(pendiente, disponible);
+    }
+    setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
+  };
+
+  // Totals
   const totalPedidos = filtered?.length ?? 0;
   const totalLineasPendientes = filtered?.reduce((s, p) => s + p.totalPendiente, 0) ?? 0;
   const totalValorPendiente = filtered?.reduce((s, p) => {
@@ -189,10 +285,26 @@ export default function DemandaPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Buscar por folio o cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+      {/* Search + Origin selector */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por folio o cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">
+            <Warehouse className="h-3 w-3 inline mr-1" />Surtir desde
+          </label>
+          <select
+            className="border border-input rounded-md px-3 py-2 text-sm bg-background min-w-[220px]"
+            value={origenId}
+            onChange={e => setOrigenId(e.target.value)}
+          >
+            {origenes.map(o => (
+              <option key={o.id} value={o.id}>{o.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
@@ -225,9 +337,8 @@ export default function DemandaPage() {
             {filtered?.map(pedido => {
               const isExpanded = expandedId === pedido.id;
               return (
-                <>
+                <React.Fragment key={pedido.id}>
                   <TableRow
-                    key={pedido.id}
                     className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isExpanded && "bg-accent/30")}
                     onClick={() => isExpanded ? setExpandedId(null) : initSurtido(pedido)}
                   >
@@ -253,19 +364,27 @@ export default function DemandaPage() {
                     </TableCell>
                   </TableRow>
 
-                  {/* Expanded detail row */}
                   {isExpanded && (
-                    <TableRow key={`${pedido.id}-detail`}>
+                    <TableRow>
                       <TableCell colSpan={9} className="p-0 bg-muted/30">
                         <div className="px-6 py-3">
+                          {/* Origin reminder */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-[11px] text-muted-foreground">
+                              Surtiendo desde: <strong className="text-foreground">{origenActual?.label}</strong>
+                            </span>
+                          </div>
+
                           <Table>
                             <TableHeader>
                               <TableRow>
                                 <TableHead className="text-[11px]">Código</TableHead>
                                 <TableHead className="text-[11px]">Producto</TableHead>
                                 <TableHead className="text-[11px] w-20 text-right">Demanda</TableHead>
-                                <TableHead className="text-[11px] w-20 text-right">Entregado</TableHead>
+                                <TableHead className="text-[11px] w-20 text-right">Surtido</TableHead>
                                 <TableHead className="text-[11px] w-20 text-right">Pendiente</TableHead>
+                                <TableHead className="text-[11px] w-20 text-right">Disponible</TableHead>
                                 <TableHead className="text-[11px] w-28 text-center">A surtir</TableHead>
                               </TableRow>
                             </TableHeader>
@@ -273,9 +392,13 @@ export default function DemandaPage() {
                               {pedido.venta_lineas.map((l: any) => {
                                 const key = `${pedido.id}-${l.producto_id}`;
                                 const pendiente = Math.max(0, l.cantidad_pendiente);
+                                const disponible = getStockOrigen(l.producto_id);
+                                const aSurtir = surtidoCantidades[key] ?? 0;
+                                const sinStock = disponible <= 0 && pendiente > 0;
+                                const excede = aSurtir > disponible;
                                 const unidad = l.productos?.unidades?.abreviatura ?? '';
                                 return (
-                                  <TableRow key={l.id}>
+                                  <TableRow key={l.id} className={cn(sinStock && "bg-destructive/5")}>
                                     <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{l.productos?.codigo}</TableCell>
                                     <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? l.descripcion}</TableCell>
                                     <TableCell className="text-right text-[12px] py-1.5">{l.cantidad} {unidad}</TableCell>
@@ -283,20 +406,33 @@ export default function DemandaPage() {
                                     <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-warning" : "text-success")}>
                                       {pendiente} {unidad}
                                     </TableCell>
+                                    <TableCell className={cn("text-right text-[12px] py-1.5", sinStock ? "text-destructive font-bold" : "text-muted-foreground")}>
+                                      {disponible} {unidad}
+                                      {sinStock && <AlertTriangle className="h-3 w-3 inline ml-1 text-destructive" />}
+                                    </TableCell>
                                     <TableCell className="text-center py-1.5">
                                       {pendiente > 0 ? (
-                                        <Input
-                                          type="number"
-                                          className="w-20 mx-auto text-center h-7 text-[12px]"
-                                          min={0}
-                                          max={pendiente}
-                                          value={surtidoCantidades[key] ?? 0}
-                                          onClick={e => e.stopPropagation()}
-                                          onChange={e => setSurtidoCantidades(prev => ({
-                                            ...prev,
-                                            [key]: Math.min(pendiente, Math.max(0, parseFloat(e.target.value) || 0)),
-                                          }))}
-                                        />
+                                        <div>
+                                          <Input
+                                            type="number"
+                                            className={cn(
+                                              "w-20 mx-auto text-center h-7 text-[12px]",
+                                              excede && "border-destructive text-destructive"
+                                            )}
+                                            min={0}
+                                            max={Math.min(pendiente, disponible)}
+                                            value={aSurtir}
+                                            onClick={e => e.stopPropagation()}
+                                            onChange={e => {
+                                              const val = parseFloat(e.target.value) || 0;
+                                              setSurtidoCantidades(prev => ({
+                                                ...prev,
+                                                [key]: Math.min(pendiente, Math.max(0, val)),
+                                              }));
+                                            }}
+                                          />
+                                          {excede && <p className="text-[9px] text-destructive mt-0.5">Excede stock</p>}
+                                        </div>
                                       ) : (
                                         <Check className="h-4 w-4 text-success mx-auto" />
                                       )}
@@ -314,14 +450,10 @@ export default function DemandaPage() {
                                 variant="outline"
                                 onClick={e => {
                                   e.stopPropagation();
-                                  const newQtys: Record<string, number> = {};
-                                  for (const l of pedido.venta_lineas) {
-                                    newQtys[`${pedido.id}-${l.producto_id}`] = Math.max(0, l.cantidad_pendiente);
-                                  }
-                                  setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
+                                  surtirTodo(pedido);
                                 }}
                               >
-                                Surtir todo
+                                Surtir todo (disponible)
                               </Button>
                               <Button
                                 size="sm"
@@ -353,7 +485,7 @@ export default function DemandaPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               );
             })}
           </TableBody>
