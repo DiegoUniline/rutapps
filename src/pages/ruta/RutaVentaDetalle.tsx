@@ -701,7 +701,7 @@ export default function RutaVentaDetalle() {
                     <div className="flex items-center justify-between mb-1.5">
                       <div>
                         <span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span>
-                        <span className="text-[10px] text-muted-foreground ml-2">{cuenta.fecha}</span>
+                        <span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span>
                       </div>
                       <span className="text-[11px] font-medium text-destructive">Debe: ${fmt(cuenta.saldo_pendiente)}</span>
                     </div>
