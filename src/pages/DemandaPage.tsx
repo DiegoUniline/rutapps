@@ -197,138 +197,167 @@ export default function DemandaPage() {
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
 
-      {/* Pedidos list */}
-      <div className="space-y-3">
-        {filtered?.map(pedido => {
-          const isExpanded = expandedId === pedido.id;
-          return (
-            <div key={pedido.id} className="bg-card border border-border rounded-lg overflow-hidden">
-              {/* Header */}
-              <button
-                onClick={() => isExpanded ? setExpandedId(null) : initSurtido(pedido)}
-                className="w-full flex items-center gap-3 p-4 text-left hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold">{pedido.folio}</span>
-                    <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
-                  </div>
-                  <p className="text-sm font-medium text-foreground mt-0.5">{pedido.clientes?.nombre ?? '—'}</p>
-                  <p className="text-[11px] text-muted-foreground">Vendedor: {pedido.vendedores?.nombre ?? '—'} · {pedido.fecha}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-muted-foreground">{pedido.pctEntregado}% surtido</p>
-                  <div className="w-20 h-1.5 bg-secondary rounded-full mt-1 overflow-hidden">
-                    <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-1">$ {pedido.total?.toFixed(2)}</p>
-                </div>
-                <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
-              </button>
+      {/* Pedidos table */}
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[11px]">Folio</TableHead>
+              <TableHead className="text-[11px]">Cliente</TableHead>
+              <TableHead className="text-[11px]">Vendedor</TableHead>
+              <TableHead className="text-[11px]">Fecha</TableHead>
+              <TableHead className="text-[11px] text-center">Cond. pago</TableHead>
+              <TableHead className="text-[11px] text-right">Total</TableHead>
+              <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
+              <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
+              <TableHead className="w-8"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {!isLoading && filtered?.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+                  <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  No hay pedidos pendientes de surtir
+                </TableCell>
+              </TableRow>
+            )}
+            {filtered?.map(pedido => {
+              const isExpanded = expandedId === pedido.id;
+              return (
+                <>
+                  <TableRow
+                    key={pedido.id}
+                    className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isExpanded && "bg-accent/30")}
+                    onClick={() => isExpanded ? setExpandedId(null) : initSurtido(pedido)}
+                  >
+                    <TableCell className="font-mono text-[11px] font-bold py-2">{pedido.folio}</TableCell>
+                    <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
+                    <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
+                    <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.fecha}</TableCell>
+                    <TableCell className="text-center py-2">
+                      <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right text-[12px] font-medium py-2">$ {pedido.total?.toFixed(2)}</TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex items-center gap-2 justify-center">
+                        <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
+                        </div>
+                        <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center text-[12px] font-bold text-warning py-2">{pedido.totalPendiente}</TableCell>
+                    <TableCell className="py-2">
+                      <ChevronRight className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
+                    </TableCell>
+                  </TableRow>
 
-              {/* Expanded: lines to fulfill */}
-              {isExpanded && (
-                <div className="border-t border-border px-4 pb-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-[11px]">Producto</TableHead>
-                        <TableHead className="text-[11px] w-20 text-center">Demanda</TableHead>
-                        <TableHead className="text-[11px] w-20 text-center">Entregado</TableHead>
-                        <TableHead className="text-[11px] w-20 text-center">Pendiente</TableHead>
-                        <TableHead className="text-[11px] w-28 text-center">A surtir</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pedido.venta_lineas.map((l: any) => {
-                        const key = `${pedido.id}-${l.producto_id}`;
-                        const pendiente = Math.max(0, l.cantidad_pendiente);
-                        const unidad = l.productos?.unidades?.abreviatura ?? '';
-                        return (
-                          <TableRow key={l.id}>
-                            <TableCell>
-                              <p className="text-[12px] font-medium">{l.productos?.nombre ?? l.descripcion}</p>
-                              <p className="text-[10px] text-muted-foreground">{l.productos?.codigo}</p>
-                            </TableCell>
-                            <TableCell className="text-center font-medium">{l.cantidad} {unidad}</TableCell>
-                            <TableCell className="text-center text-success">{l.cantidad_entregada} {unidad}</TableCell>
-                            <TableCell className={cn("text-center font-bold", pendiente > 0 ? "text-warning" : "text-success")}>
-                              {pendiente} {unidad}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {pendiente > 0 ? (
-                                <Input
-                                  type="number"
-                                  className="w-20 mx-auto text-center"
-                                  min={0}
-                                  max={pendiente}
-                                  value={surtidoCantidades[key] ?? 0}
-                                  onChange={e => setSurtidoCantidades(prev => ({
-                                    ...prev,
-                                    [key]: Math.min(pendiente, Math.max(0, parseFloat(e.target.value) || 0)),
-                                  }))}
-                                />
-                              ) : (
-                                <Check className="h-4 w-4 text-success mx-auto" />
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                  {/* Expanded detail row */}
+                  {isExpanded && (
+                    <TableRow key={`${pedido.id}-detail`}>
+                      <TableCell colSpan={9} className="p-0 bg-muted/30">
+                        <div className="px-6 py-3">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="text-[11px]">Código</TableHead>
+                                <TableHead className="text-[11px]">Producto</TableHead>
+                                <TableHead className="text-[11px] w-20 text-right">Demanda</TableHead>
+                                <TableHead className="text-[11px] w-20 text-right">Entregado</TableHead>
+                                <TableHead className="text-[11px] w-20 text-right">Pendiente</TableHead>
+                                <TableHead className="text-[11px] w-28 text-center">A surtir</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {pedido.venta_lineas.map((l: any) => {
+                                const key = `${pedido.id}-${l.producto_id}`;
+                                const pendiente = Math.max(0, l.cantidad_pendiente);
+                                const unidad = l.productos?.unidades?.abreviatura ?? '';
+                                return (
+                                  <TableRow key={l.id}>
+                                    <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{l.productos?.codigo}</TableCell>
+                                    <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? l.descripcion}</TableCell>
+                                    <TableCell className="text-right text-[12px] py-1.5">{l.cantidad} {unidad}</TableCell>
+                                    <TableCell className="text-right text-[12px] text-success py-1.5">{l.cantidad_entregada} {unidad}</TableCell>
+                                    <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-warning" : "text-success")}>
+                                      {pendiente} {unidad}
+                                    </TableCell>
+                                    <TableCell className="text-center py-1.5">
+                                      {pendiente > 0 ? (
+                                        <Input
+                                          type="number"
+                                          className="w-20 mx-auto text-center h-7 text-[12px]"
+                                          min={0}
+                                          max={pendiente}
+                                          value={surtidoCantidades[key] ?? 0}
+                                          onClick={e => e.stopPropagation()}
+                                          onChange={e => setSurtidoCantidades(prev => ({
+                                            ...prev,
+                                            [key]: Math.min(pendiente, Math.max(0, parseFloat(e.target.value) || 0)),
+                                          }))}
+                                        />
+                                      ) : (
+                                        <Check className="h-4 w-4 text-success mx-auto" />
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
 
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          // Fill all pending
-                          const newQtys: Record<string, number> = {};
-                          for (const l of pedido.venta_lineas) {
-                            const key = `${pedido.id}-${l.producto_id}`;
-                            newQtys[key] = Math.max(0, l.cantidad_pendiente);
-                          }
-                          setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
-                        }}
-                      >
-                        Surtir todo
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          const newQtys: Record<string, number> = {};
-                          for (const l of pedido.venta_lineas) {
-                            newQtys[`${pedido.id}-${l.producto_id}`] = 0;
-                          }
-                          setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
-                        }}
-                      >
-                        Limpiar
-                      </Button>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => generarEntrega.mutate(pedido)}
-                      disabled={generarEntrega.isPending}
-                    >
-                      <Truck className="h-3.5 w-3.5 mr-1" /> Generar entrega
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {!isLoading && filtered?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <ClipboardList className="h-10 w-10 mx-auto mb-2 opacity-30" />
-            <p>No hay pedidos pendientes de surtir</p>
-          </div>
-        )}
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  const newQtys: Record<string, number> = {};
+                                  for (const l of pedido.venta_lineas) {
+                                    newQtys[`${pedido.id}-${l.producto_id}`] = Math.max(0, l.cantidad_pendiente);
+                                  }
+                                  setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
+                                }}
+                              >
+                                Surtir todo
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  const newQtys: Record<string, number> = {};
+                                  for (const l of pedido.venta_lineas) {
+                                    newQtys[`${pedido.id}-${l.producto_id}`] = 0;
+                                  }
+                                  setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
+                                }}
+                              >
+                                Limpiar
+                              </Button>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={e => {
+                                e.stopPropagation();
+                                generarEntrega.mutate(pedido);
+                              }}
+                              disabled={generarEntrega.isPending}
+                            >
+                              <Truck className="h-3.5 w-3.5 mr-1" /> Generar entrega
+                            </Button>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
