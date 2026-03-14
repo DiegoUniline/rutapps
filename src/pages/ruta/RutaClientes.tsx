@@ -196,7 +196,7 @@ export default function RutaClientes() {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-semibold text-foreground truncate">{c.nombre}</p>
+                <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-[14px] font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
                 <div className="flex items-center gap-2 mt-0.5">
                   {c.codigo && <span className="text-[10px] text-muted-foreground font-mono">{c.codigo}</span>}
                   {(c as any).zonas?.nombre && (
