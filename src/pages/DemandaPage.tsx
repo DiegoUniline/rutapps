@@ -221,7 +221,7 @@ export default function DemandaPage() {
       return venta;
     },
     onSuccess: () => {
-      toast.success('Entrega generada — stock descontado del origen');
+      toast.success('Pedido de entrega generado y asignado a ruta — stock descontado del origen');
       qc.invalidateQueries({ queryKey: ['demanda'] });
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['origenes-surtido'] });
