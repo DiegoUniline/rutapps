@@ -5,7 +5,7 @@ import { Warehouse, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CatalogCRUD } from '@/components/CatalogCRUD';
+import CatalogCRUD from '@/components/CatalogCRUD';
 
 export default function AlmacenesPage() {
   return (

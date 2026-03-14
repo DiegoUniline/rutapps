@@ -15,11 +15,20 @@ import ClientesListPage from "@/pages/ClientesListPage";
 import ClienteFormPage from "@/pages/ClienteFormPage";
 import VentasListPage from "@/pages/VentasListPage";
 import VentaFormPage from "@/pages/VentaFormPage";
+import DemandaPage from "@/pages/DemandaPage";
+import CobranzaPage from "@/pages/CobranzaPage";
+import RutasMapPage from "@/pages/RutasMapPage";
+import InventarioPage from "@/pages/InventarioPage";
 import CargasListPage from "@/pages/CargasListPage";
 import CargaFormPage from "@/pages/CargaFormPage";
+import AlmacenesPage from "@/pages/AlmacenesPage";
+import ComprasPage from "@/pages/ComprasPage";
+import LotesPage from "@/pages/LotesPage";
+import CuentasCobrarPage from "@/pages/CuentasCobrarPage";
+import CuentasPagarPage from "@/pages/CuentasPagarPage";
+import GastosDesktopPage from "@/pages/GastosDesktopPage";
+import ReportesPage from "@/pages/ReportesPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
-import DemandaPage from "@/pages/DemandaPage";
-import InventarioPage from "@/pages/InventarioPage";
 import NotFound from "@/pages/NotFound";
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
 import RutaVentas from "@/pages/ruta/RutaVentas";
@@ -76,22 +85,34 @@ function AppRoutes() {
       <Route path="*" element={
         <AppLayout>
           <Routes>
-            <Route path="/" element={<Navigate to="/productos" replace />} />
+            <Route path="/" element={<Navigate to="/ventas" replace />} />
+            {/* Productos */}
             <Route path="/productos" element={<ProductosListPage />} />
             <Route path="/productos/:id" element={<ProductoFormPage />} />
             <Route path="/tarifas" element={<TarifasListPage />} />
             <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+            {/* Clientes */}
             <Route path="/clientes" element={<ClientesListPage />} />
             <Route path="/clientes/:id" element={<ClienteFormPage />} />
+            {/* Ventas module */}
             <Route path="/ventas" element={<VentasListPage />} />
             <Route path="/ventas/:id" element={<VentaFormPage />} />
-            <Route path="/demanda" element={<DemandaPage />} />
-            <Route path="/inventario" element={<InventarioPage />} />
-            <Route path="/cargas" element={<CargasListPage />} />
-            <Route path="/cargas/:id" element={<CargaFormPage />} />
-            <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />
-            <Route path="/facturacion" element={<PlaceholderPage title="Facturación" />} />
-            <Route path="/reportes" element={<PlaceholderPage title="Reportes" />} />
+            <Route path="/ventas/demanda" element={<DemandaPage />} />
+            <Route path="/ventas/cobranza" element={<CobranzaPage />} />
+            <Route path="/ventas/rutas" element={<RutasMapPage />} />
+            {/* Almacén module */}
+            <Route path="/almacen/inventario" element={<InventarioPage />} />
+            <Route path="/almacen/cargas" element={<CargasListPage />} />
+            <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
+            <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
+            <Route path="/almacen/compras" element={<ComprasPage />} />
+            <Route path="/almacen/lotes" element={<LotesPage />} />
+            {/* Finanzas module */}
+            <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
+            <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
+            <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
+            {/* Reportes */}
+            <Route path="/reportes" element={<ReportesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
