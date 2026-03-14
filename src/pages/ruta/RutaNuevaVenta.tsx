@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -201,6 +201,59 @@ export default function RutaNuevaVenta() {
     setCuentasPendientes(prev => prev.map(c =>
       c.id === id ? { ...c, montoAplicar: Math.min(Math.max(0, monto), c.saldo_pendiente) } : c
     ));
+  };
+
+  // Save without payment (just create the sale)
+  const handleSaveOnly = async () => {
+    if (!empresa || !user) return;
+    setSaving(true);
+    try {
+      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+      const { data: venta, error: ventaErr } = await supabase.from('ventas').insert({
+        empresa_id: profile!.empresa_id,
+        cliente_id: clienteId,
+        tipo: tipoVenta,
+        condicion_pago: condicionPago,
+        entrega_inmediata: entregaInmediata,
+        fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
+        status: 'borrador' as const,
+        notas: notas || null,
+        subtotal: totals.subtotal,
+        iva_total: totals.iva,
+        ieps_total: 0,
+        descuento_total: 0,
+        total: totals.total,
+        saldo_pendiente: totals.total,
+      }).select('id').single();
+      if (ventaErr) throw ventaErr;
+
+      const lineas = cart.map(item => ({
+        venta_id: venta.id,
+        producto_id: item.producto_id,
+        descripcion: item.nombre,
+        cantidad: item.cantidad,
+        precio_unitario: item.precio_unitario,
+        subtotal: item.precio_unitario * item.cantidad,
+        iva_pct: item.iva_pct,
+        iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
+        ieps_pct: 0,
+        ieps_monto: 0,
+        descuento_pct: 0,
+        total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+      }));
+      const { error: lineasErr } = await supabase.from('venta_lineas').insert(lineas);
+      if (lineasErr) throw lineasErr;
+
+      toast.success('Venta guardada');
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      navigate('/ruta/ventas');
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -594,16 +647,26 @@ export default function RutaNuevaVenta() {
             )}
           </div>
 
-          {/* Continue to payment */}
+          {/* Action buttons: Guardar (no cobro) or Cobrar */}
           <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
-            <button
-              onClick={goToPayment}
-              disabled={cart.length === 0}
-              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
-            >
-              <Banknote className="h-4 w-4" />
-              Continuar al pago
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveOnly}
+                disabled={saving || cart.length === 0}
+                className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5"
+              >
+                <Save className="h-4 w-4" />
+                Guardar
+              </button>
+              <button
+                onClick={goToPayment}
+                disabled={cart.length === 0}
+                className="flex-[2] bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
+              >
+                <Banknote className="h-4 w-4" />
+                Cobrar ${fmt(totals.total)}
+              </button>
+            </div>
           </div>
         </div>
       )}
