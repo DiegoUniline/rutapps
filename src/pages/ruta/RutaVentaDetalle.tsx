@@ -181,8 +181,6 @@ export default function RutaVentaDetalle() {
         iva_pct: p.tiene_iva ? ((p.tasas_iva as any)?.porcentaje ?? 16) : 0,
       }]);
     }
-    setShowProductSearch(false);
-    setSearchProducto('');
   };
 
   const updateEditQty = (idx: number, delta: number) => {
@@ -484,43 +482,13 @@ export default function RutaVentaDetalle() {
                 Productos ({editLineas.length})
               </p>
               <button
-                onClick={() => setShowProductSearch(!showProductSearch)}
+                onClick={() => setShowProductSearch(true)}
                 className="text-[11px] text-primary font-semibold flex items-center gap-1"
               >
                 <Plus className="h-3.5 w-3.5" /> Agregar
               </button>
             </div>
 
-            {/* Product search */}
-            {showProductSearch && (
-              <div className="mb-3 border border-border rounded-lg p-2.5 bg-accent/20">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <input
-                    className="w-full bg-background rounded-lg pl-8 pr-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                    placeholder="Buscar producto..."
-                    value={searchProducto}
-                    onChange={e => setSearchProducto(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-40 overflow-auto space-y-0.5">
-                  {filteredProductos?.slice(0, 15).map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => addProductToEdit(p)}
-                      className="w-full text-left px-2.5 py-2 rounded-md hover:bg-accent text-[12px] flex justify-between"
-                    >
-                      <span className="text-foreground truncate">{p.codigo} — {p.nombre}</span>
-                      <span className="text-muted-foreground shrink-0 ml-2">${fmt(p.precio_principal ?? 0)}</span>
-                    </button>
-                  ))}
-                  {filteredProductos?.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground text-center py-3">Sin resultados</p>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Lines */}
             <div className="space-y-1.5">
@@ -554,7 +522,103 @@ export default function RutaVentaDetalle() {
             </div>
           </section>
 
-          {/* Notas */}
+          {/* Full-screen product picker overlay */}
+          {showProductSearch && (
+            <div className="fixed inset-0 z-50 bg-background flex flex-col">
+              <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border">
+                <div className="flex items-center gap-2 px-3 h-12">
+                  <button onClick={() => { setShowProductSearch(false); setSearchProducto(''); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all">
+                    <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
+                  </button>
+                  <span className="text-[15px] font-semibold text-foreground flex-1">Agregar productos</span>
+                  <span className="text-[11px] text-muted-foreground">{editLineas.length} sel.</span>
+                </div>
+              </header>
+
+              <div className="px-3 pt-2.5 pb-1.5">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar producto..."
+                    className="w-full bg-accent/60 rounded-lg pl-8 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40 transition-shadow"
+                    value={searchProducto}
+                    onChange={e => setSearchProducto(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-auto px-3 space-y-[3px] pb-20">
+                {filteredProductos?.map(p => {
+                  const inEdit = editLineas.find(l => l.producto_id === p.id);
+                  const inEditIdx = editLineas.findIndex(l => l.producto_id === p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`rounded-lg px-3 py-2 transition-all ${
+                        inEdit ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex-1 min-w-0" onClick={() => !inEdit && addProductToEdit(p)}>
+                          <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
+                          <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
+                          <p className="text-[13px] font-bold text-foreground mt-px">
+                            ${fmt(p.precio_principal ?? 0)}
+                          </p>
+                        </div>
+
+                        {inEdit ? (
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <button
+                              onClick={() => inEdit.cantidad === 1 ? removeEditLine(inEditIdx) : updateEditQty(inEditIdx, -1)}
+                              className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                              {inEdit.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
+                            </button>
+                            <span className="text-[13px] font-bold w-8 text-center text-foreground">{inEdit.cantidad}</span>
+                            <button
+                              onClick={() => updateEditQty(inEditIdx, 1)}
+                              className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-90 transition-transform"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => addProductToEdit(p)}
+                            className="w-8 h-8 rounded-lg bg-accent hover:bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-all shrink-0"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredProductos?.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground text-center py-8">Sin resultados</p>
+                )}
+              </div>
+
+              {editLineas.length > 0 && (
+                <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
+                  <button
+                    onClick={() => { setShowProductSearch(false); setSearchProducto(''); }}
+                    className="w-full bg-primary text-primary-foreground rounded-xl py-3 flex items-center justify-between px-4 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Package className="h-4 w-4 opacity-80" />
+                      <span className="text-[13px] font-medium">{editLineas.length} {editLineas.length === 1 ? 'producto' : 'productos'}</span>
+                    </div>
+                    <span className="text-[14px] font-bold">${fmt(editTotals.total)}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           <section className="bg-card rounded-xl border border-border p-3.5">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notas</p>
             <textarea
