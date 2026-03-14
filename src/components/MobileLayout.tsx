@@ -1,13 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Home, ShoppingCart, Users, Truck, Banknote } from 'lucide-react';
+import { Home, ShoppingCart, Users, Truck, Banknote, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { label: 'Inicio', icon: Home, path: '/ruta' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
-  { label: 'Carga', icon: Truck, path: '/ruta/carga' },
+  { label: 'Entregas', icon: Truck, path: '/ruta/entregas' },
+  { label: 'Carga', icon: Package, path: '/ruta/carga' },
   { label: 'Cobros', icon: Banknote, path: '/ruta/cobros' },
-  { label: 'Clientes', icon: Users, path: '/ruta/clientes' },
 ];
 
 export default function MobileLayout() {

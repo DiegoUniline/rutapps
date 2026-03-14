@@ -42,6 +42,7 @@ import RutaCobrar from "@/pages/ruta/RutaCobrar";
 import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
 import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
 import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
+import RutaEntregas from "@/pages/ruta/RutaEntregas";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="clientes" element={<RutaClientes />} />
         <Route path="stock" element={<RutaStock />} />
         <Route path="gastos" element={<RutaGastos />} />
+        <Route path="entregas" element={<RutaEntregas />} />
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
       <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
