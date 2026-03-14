@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { UnilineFooter } from '@/components/UnilineFooter';
 import {
   Package, Tag, Users, ShoppingCart, FileText, BarChart3, Truck,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, ClipboardList, Warehouse,
-  Banknote, Receipt, MapPin, DollarSign, CreditCard, TrendingDown, Layers
+  Banknote, Receipt, MapPin, DollarSign, CreditCard, TrendingDown, Layers, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
