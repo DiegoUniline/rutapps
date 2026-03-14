@@ -414,6 +414,7 @@ export default function RutaNuevaVenta() {
                   </div>
                 )}
               </div>
+            </div>
 
             {/* Notas */}
             <div className="bg-card border border-border rounded-xl p-3.5">
