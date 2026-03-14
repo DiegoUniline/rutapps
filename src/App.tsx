@@ -96,10 +96,10 @@ function AppRoutes() {
             <Route path="/clientes/:id" element={<ClienteFormPage />} />
             {/* Ventas module */}
             <Route path="/ventas" element={<VentasListPage />} />
-            <Route path="/ventas/:id" element={<VentaFormPage />} />
             <Route path="/ventas/demanda" element={<DemandaPage />} />
             <Route path="/ventas/cobranza" element={<CobranzaPage />} />
             <Route path="/ventas/rutas" element={<RutasMapPage />} />
+            <Route path="/ventas/:id" element={<VentaFormPage />} />
             {/* Almacén module */}
             <Route path="/almacen/inventario" element={<InventarioPage />} />
             <Route path="/almacen/cargas" element={<CargasListPage />} />
