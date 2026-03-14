@@ -69,6 +69,8 @@ export default function CargaFormPage() {
   useEffect(() => {
     if (carga && !isNew) {
       setVendedorId(carga.vendedor_id ?? '');
+      setRepartidorId((carga as any).repartidor_id ?? '');
+      setAlmacenId((carga as any).almacen_id ?? '');
       setFecha(carga.fecha);
       setNotas(carga.notas ?? '');
       setLineas((carga.carga_lineas ?? []).map((l: any) => ({
