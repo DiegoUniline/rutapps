@@ -346,3 +346,8 @@
     @apply rounded border-input h-3.5 w-3.5;
   }
 }
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
