@@ -44,13 +44,13 @@
 
     --radius: 0.625rem;
 
-    /* Sidebar — dark */
-    --sidebar: 225 30% 14%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-border: 225 20% 20%;
-    --sidebar-hover: 225 25% 19%;
+    /* Sidebar — clean light */
+    --sidebar: 220 14% 96%;
+    --sidebar-foreground: 220 14% 28%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-hover: 220 14% 92%;
     --sidebar-accent: 230 55% 52%;
-    --sidebar-muted: 225 15% 45%;
+    --sidebar-muted: 220 10% 56%;
 
     /* Chart colors */
     --chart-1: 230 55% 60%;
