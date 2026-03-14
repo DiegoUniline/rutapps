@@ -132,6 +132,7 @@ export default function DemandaPage() {
   const [surtidoCantidades, setSurtidoCantidades] = useState<Record<string, number>>({});
   const [origenId, setOrigenId] = useState<string>('almacen');
   const [vendedorEntrega, setVendedorEntrega] = useState<Record<string, string | null>>({});
+  const [fechaEntrega, setFechaEntrega] = useState<Record<string, Date>>({});
 
   const origenes = origenesData?.origenes ?? [];
   const origenActual = origenes.find(o => o.id === origenId) ?? origenes[0];
