@@ -87,6 +87,7 @@ function AppRoutes() {
       <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
       <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
+      <Route path="/ruta/descarga" element={<RutaDescarga />} />
 
       {/* Desktop ERP */}
       <Route path="*" element={
