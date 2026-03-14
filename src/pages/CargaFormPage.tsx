@@ -108,6 +108,8 @@ export default function CargaFormPage() {
       const saved = await saveCarga.mutateAsync({
         id: isNew ? undefined : id,
         vendedor_id: vendedorId,
+        repartidor_id: repartidorId || null,
+        almacen_id: almacenId || null,
         fecha,
         notas: notas || null,
       });
