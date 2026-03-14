@@ -188,14 +188,21 @@ export default function CargaFormPage() {
     if (!id || isNew) return;
     try {
       // When sending to route, deduct stock from warehouse
-      if (newStatus === 'en_ruta' && lineas.length > 0) {
-        for (const l of lineas) {
-          const { error } = await supabase.rpc('deduct_stock' as any, {} as any);
-          // Use direct update instead - decrement producto cantidad
-          await supabase
-            .from('productos')
-            .update({ cantidad: Math.max(0, l.stock_actual - l.cantidad_cargada) } as any)
-            .eq('id', l.producto_id);
+      if (newStatus === 'en_ruta') {
+        // Re-fetch current carga lines to get accurate quantities
+        const { data: currentLineas } = await supabase
+          .from('carga_lineas')
+          .select('producto_id, cantidad_cargada')
+          .eq('carga_id', id);
+        for (const cl of (currentLineas ?? [])) {
+          // Fetch current stock and decrement
+          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', cl.producto_id).single();
+          if (prod) {
+            await supabase
+              .from('productos')
+              .update({ cantidad: Math.max(0, (prod.cantidad ?? 0) - cl.cantidad_cargada) } as any)
+              .eq('id', cl.producto_id);
+          }
         }
       }
       await updateStatus.mutateAsync({ id, status: newStatus });
