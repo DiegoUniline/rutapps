@@ -17,6 +17,7 @@ export default function MobileLayout() {
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16">
         <Outlet />
+        <UnilineFooter />
       </main>
 
       {/* Bottom navigation */}
