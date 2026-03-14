@@ -416,6 +416,35 @@ export default function DemandaPage() {
                                 ))}
                               </select>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">Fecha entrega:</span>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <CalendarIcon className="h-3 w-3 mr-1" />
+                                    {fechaEntrega[pedido.id]
+                                      ? format(fechaEntrega[pedido.id], 'dd/MM/yyyy')
+                                      : format(new Date(), 'dd/MM/yyyy')}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={fechaEntrega[pedido.id] ?? new Date()}
+                                    onSelect={d => {
+                                      if (d) setFechaEntrega(prev => ({ ...prev, [pedido.id]: d }));
+                                    }}
+                                    className={cn("p-3 pointer-events-auto")}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
                           </div>
 
                           <Table>
