@@ -61,6 +61,7 @@ function AppRoutes() {
         <Route path="gastos" element={<RutaGastos />} />
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
+      <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
 
       {/* Desktop ERP */}
