@@ -308,6 +308,7 @@ export default function EntregasPage() {
                 <TableHead className="text-[11px]">Folio</TableHead>
                 <TableHead className="text-[11px]">Cliente</TableHead>
                 <TableHead className="text-[11px]">Fecha</TableHead>
+                <TableHead className="text-[11px]">F. entrega</TableHead>
                 <TableHead className="text-[11px] text-center">Status</TableHead>
                 <TableHead className="text-[11px] text-center">Líneas</TableHead>
                 <TableHead className="text-[11px] text-right">Total</TableHead>
