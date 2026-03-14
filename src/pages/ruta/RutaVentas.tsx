@@ -68,7 +68,7 @@ export default function RutaVentas() {
         {filtered?.map(v => (
           <button
             key={v.id}
-            onClick={() => navigate(`/ventas/${v.id}`)}
+            onClick={() => navigate(`/ruta/ventas/${v.id}`)}
             className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
           >
             <div className="flex-1 min-w-0">
