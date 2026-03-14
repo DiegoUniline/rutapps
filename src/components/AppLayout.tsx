@@ -71,6 +71,7 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
+  { label: 'Configuración', icon: Settings, path: '/configuracion' },
 ];
 
 function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
