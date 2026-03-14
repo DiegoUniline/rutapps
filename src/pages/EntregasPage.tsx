@@ -308,6 +308,7 @@ export default function EntregasPage() {
                 <TableHead className="text-[11px]">Folio</TableHead>
                 <TableHead className="text-[11px]">Cliente</TableHead>
                 <TableHead className="text-[11px]">Fecha</TableHead>
+                <TableHead className="text-[11px]">F. entrega</TableHead>
                 <TableHead className="text-[11px] text-center">Status</TableHead>
                 <TableHead className="text-[11px] text-center">Líneas</TableHead>
                 <TableHead className="text-[11px] text-right">Total</TableHead>
@@ -329,6 +330,7 @@ export default function EntregasPage() {
                       <TableCell className="font-mono text-[11px] font-bold py-2">{e.folio}</TableCell>
                       <TableCell className="text-[12px] font-medium py-2">{e.clientes?.nombre ?? '—'}</TableCell>
                       <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(e.fecha)}</TableCell>
+                      <TableCell className="text-[12px] font-medium py-2">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</TableCell>
                       <TableCell className="text-center py-2">
                         {e.status === 'confirmado' ? (
                           <Badge variant="outline" className="text-[10px] border-warning text-warning">
@@ -376,7 +378,7 @@ export default function EntregasPage() {
                     {/* Expanded detail */}
                     {isExpanded && (
                       <TableRow>
-                        <TableCell colSpan={8} className="p-0 bg-muted/20">
+                        <TableCell colSpan={9} className="p-0 bg-muted/20">
                           <div className="px-8 py-4">
                             {/* Client info */}
                             <div className="grid grid-cols-3 gap-4 mb-4">

@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, ChevronRight, Search, ClipboardList, Warehouse, AlertTriangle } from 'lucide-react';
+import { Truck, Check, ChevronRight, Search, ClipboardList, Warehouse, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 
@@ -129,6 +132,7 @@ export default function DemandaPage() {
   const [surtidoCantidades, setSurtidoCantidades] = useState<Record<string, number>>({});
   const [origenId, setOrigenId] = useState<string>('almacen');
   const [vendedorEntrega, setVendedorEntrega] = useState<Record<string, string | null>>({});
+  const [fechaEntrega, setFechaEntrega] = useState<Record<string, Date>>({});
 
   const origenes = origenesData?.origenes ?? [];
   const origenActual = origenes.find(o => o.id === origenId) ?? origenes[0];
@@ -175,6 +179,7 @@ export default function DemandaPage() {
       // Create delivery order with status "confirmado" (pending delivery, stock already deducted)
       const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
       if (!assignedVendedor) throw new Error('Asigna un vendedor/ruta antes de generar la entrega');
+      const fechaEnt = fechaEntrega[pedido.id] ?? new Date();
       const { data: venta, error } = await supabase.from('ventas').insert({
         empresa_id: empresa!.id,
         tipo: 'venta_directa',
@@ -183,6 +188,7 @@ export default function DemandaPage() {
         cliente_id: pedido.cliente_id,
         vendedor_id: assignedVendedor,
         pedido_origen_id: pedido.id,
+        fecha_entrega: fechaEnt.toISOString().slice(0, 10),
         subtotal: total,
         total,
         saldo_pendiente: pedido.condicion_pago === 'credito' ? total : 0,
@@ -409,6 +415,35 @@ export default function DemandaPage() {
                                   <option key={v.id} value={v.id}>{v.nombre}</option>
                                 ))}
                               </select>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">Fecha entrega:</span>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <CalendarIcon className="h-3 w-3 mr-1" />
+                                    {fechaEntrega[pedido.id]
+                                      ? format(fechaEntrega[pedido.id], 'dd/MM/yyyy')
+                                      : format(new Date(), 'dd/MM/yyyy')}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={fechaEntrega[pedido.id] ?? new Date()}
+                                    onSelect={d => {
+                                      if (d) setFechaEntrega(prev => ({ ...prev, [pedido.id]: d }));
+                                    }}
+                                    className={cn("p-3 pointer-events-auto")}
+                                  />
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </div>
 
