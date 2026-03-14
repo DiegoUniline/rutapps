@@ -160,8 +160,11 @@ export default function RutaClientes() {
         </div>
       </div>
 
+      {/* Alertas */}
+      <AlertasVendedor />
+
       {/* List */}
-      <div className="flex-1 px-4 space-y-2 pb-4 pt-2">
+      <div className="flex-1 overflow-auto px-4 space-y-2 pb-4 pt-2">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
 
         {filtered.map((c, idx) => (
