@@ -489,36 +489,6 @@ export default function RutaVentaDetalle() {
               </button>
             </div>
 
-            {/* Product search */}
-            {showProductSearch && (
-              <div className="mb-3 border border-border rounded-lg p-2.5 bg-accent/20">
-                <div className="relative mb-2">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <input
-                    className="w-full bg-background rounded-lg pl-8 pr-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                    placeholder="Buscar producto..."
-                    value={searchProducto}
-                    onChange={e => setSearchProducto(e.target.value)}
-                    autoFocus
-                  />
-                </div>
-                <div className="max-h-40 overflow-auto space-y-0.5">
-                  {filteredProductos?.slice(0, 15).map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => addProductToEdit(p)}
-                      className="w-full text-left px-2.5 py-2 rounded-md hover:bg-accent text-[12px] flex justify-between"
-                    >
-                      <span className="text-foreground truncate">{p.codigo} — {p.nombre}</span>
-                      <span className="text-muted-foreground shrink-0 ml-2">${fmt(p.precio_principal ?? 0)}</span>
-                    </button>
-                  ))}
-                  {filteredProductos?.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground text-center py-3">Sin resultados</p>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Lines */}
             <div className="space-y-1.5">
