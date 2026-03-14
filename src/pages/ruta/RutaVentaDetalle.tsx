@@ -181,8 +181,6 @@ export default function RutaVentaDetalle() {
         iva_pct: p.tiene_iva ? ((p.tasas_iva as any)?.porcentaje ?? 16) : 0,
       }]);
     }
-    setShowProductSearch(false);
-    setSearchProducto('');
   };
 
   const updateEditQty = (idx: number, delta: number) => {
