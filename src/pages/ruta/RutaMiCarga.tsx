@@ -3,6 +3,7 @@ import { Package, Truck, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCargaActiva } from '@/hooks/useCargas';
 import { supabase } from '@/lib/supabase';
+import { fmtDate } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 
 export default function RutaMiCarga() {
