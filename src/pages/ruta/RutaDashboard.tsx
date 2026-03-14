@@ -64,13 +64,13 @@ const cards = [
     sub: () => 'Productos cargados',
   },
   {
-    key: 'gastos',
-    label: 'Gastos de hoy',
-    icon: Receipt,
-    color: 'bg-destructive/10 text-destructive',
-    path: '/ruta/gastos',
-    stat: (s: any) => `${s.numGastos} gastos`,
-    sub: (s: any) => `$ ${s.gastosHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+    key: 'cobros',
+    label: 'Cobros de hoy',
+    icon: Banknote,
+    color: 'bg-success/10 text-success',
+    path: '/ruta/cobros',
+    stat: (s: any) => `${s.numCobros} cobros`,
+    sub: (s: any) => `$ ${s.cobrosHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
   },
 ];
 
