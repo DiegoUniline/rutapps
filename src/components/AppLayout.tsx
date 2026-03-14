@@ -116,7 +116,7 @@ function Breadcrumb() {
 
   const labels: Record<string, string> = {
     productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
-    ventas: 'Ventas', facturacion: 'Facturación',
+    ventas: 'Ventas', cargas: 'Cargas', facturacion: 'Facturación',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
   };
 
