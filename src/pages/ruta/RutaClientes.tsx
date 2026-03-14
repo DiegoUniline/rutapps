@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -228,9 +228,9 @@ export default function RutaClientes() {
                 )}
                 <button
                   onClick={() => navigate(`/ruta/ventas/nueva?clienteId=${c.id}`)}
-                  className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center text-muted-foreground active:scale-90 transition-transform"
+                  className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ShoppingCart className="h-4 w-4" />
                 </button>
               </div>
             </div>
