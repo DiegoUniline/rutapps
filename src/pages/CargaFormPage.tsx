@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Save, Truck, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Save, Truck, Search, ClipboardList } from 'lucide-react';
 import { useCarga, useSaveCarga, useSaveCargaLineas, useUpdateCargaStatus, useDeleteCarga } from '@/hooks/useCargas';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -83,6 +83,65 @@ export default function CargaFormPage() {
     }
   }, [carga, isNew]);
 
+  // Fetch confirmed pedidos for the selected vendedor to load from orders
+  const { data: pedidosVendedor, isLoading: loadingPedidos } = useQuery({
+    queryKey: ['pedidos-vendedor-carga', empresa?.id, vendedorId],
+    enabled: !!empresa?.id && !!vendedorId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ventas')
+        .select('id, folio, fecha, total, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, productos(codigo, nombre, cantidad))')
+        .eq('empresa_id', empresa!.id)
+        .eq('tipo', 'pedido')
+        .eq('status', 'confirmado')
+        .eq('vendedor_id', vendedorId)
+        .order('fecha', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const loadFromPedidos = () => {
+    if (!pedidosVendedor || pedidosVendedor.length === 0) {
+      toast.error('No hay pedidos confirmados para este vendedor');
+      return;
+    }
+    // Sum product quantities across all orders
+    const sumMap: Record<string, { producto_id: string; codigo: string; nombre: string; cantidad: number; stock_actual: number }> = {};
+    for (const ped of pedidosVendedor) {
+      for (const vl of (ped.venta_lineas ?? [])) {
+        if (!vl.producto_id) continue;
+        if (!sumMap[vl.producto_id]) {
+          sumMap[vl.producto_id] = {
+            producto_id: vl.producto_id,
+            codigo: (vl.productos as any)?.codigo ?? '',
+            nombre: (vl.productos as any)?.nombre ?? '',
+            cantidad: 0,
+            stock_actual: (vl.productos as any)?.cantidad ?? 0,
+          };
+        }
+        sumMap[vl.producto_id].cantidad += vl.cantidad;
+      }
+    }
+    // Merge with existing lines
+    const merged = [...lineas];
+    for (const item of Object.values(sumMap)) {
+      const existing = merged.find(l => l.producto_id === item.producto_id);
+      if (existing) {
+        existing.cantidad_cargada += item.cantidad;
+      } else {
+        merged.push({
+          producto_id: item.producto_id,
+          codigo: item.codigo,
+          nombre: item.nombre,
+          cantidad_cargada: item.cantidad,
+          stock_actual: item.stock_actual,
+        });
+      }
+    }
+    setLineas(merged);
+    toast.success(`${pedidosVendedor.length} pedido(s) cargados con ${Object.keys(sumMap).length} producto(s)`);
+  };
+
   const filteredProducts = productos?.filter(p =>
     !searchProd || p.nombre.toLowerCase().includes(searchProd.toLowerCase()) || p.codigo.toLowerCase().includes(searchProd.toLowerCase())
   ).filter(p => !lineas.some(l => l.producto_id === p.id));
@@ -128,8 +187,26 @@ export default function CargaFormPage() {
   const handleStatusChange = async (newStatus: string) => {
     if (!id || isNew) return;
     try {
+      // When sending to route, deduct stock from warehouse
+      if (newStatus === 'en_ruta') {
+        // Re-fetch current carga lines to get accurate quantities
+        const { data: currentLineas } = await supabase
+          .from('carga_lineas')
+          .select('producto_id, cantidad_cargada')
+          .eq('carga_id', id);
+        for (const cl of (currentLineas ?? [])) {
+          // Fetch current stock and decrement
+          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', cl.producto_id).single();
+          if (prod) {
+            await supabase
+              .from('productos')
+              .update({ cantidad: Math.max(0, (prod.cantidad ?? 0) - cl.cantidad_cargada) } as any)
+              .eq('id', cl.producto_id);
+          }
+        }
+      }
       await updateStatus.mutateAsync({ id, status: newStatus });
-      toast.success(`Status: ${newStatus}`);
+      toast.success(newStatus === 'en_ruta' ? 'Carga enviada a ruta — stock descontado del almacén' : `Status: ${newStatus}`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -238,9 +315,17 @@ export default function CargaFormPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Productos a cargar</h2>
           {(isEditable || isNew) && (
-            <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
-            </Button>
+            <div className="flex gap-2">
+              {vendedorId && (
+                <Button size="sm" variant="outline" onClick={loadFromPedidos} disabled={loadingPedidos || !pedidosVendedor?.length}>
+                  <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                  Cargar desde pedidos {pedidosVendedor?.length ? `(${pedidosVendedor.length})` : ''}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
+              </Button>
+            </div>
           )}
         </div>
 
