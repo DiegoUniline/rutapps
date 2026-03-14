@@ -141,7 +141,7 @@ export default function CargaFormPage() {
     try {
       await deleteCarga.mutateAsync(id);
       toast.success('Carga eliminada');
-      navigate('/cargas');
+      navigate('/almacen/cargas');
     } catch (err: any) {
       toast.error(err.message);
     }
