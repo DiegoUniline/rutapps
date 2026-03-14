@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
