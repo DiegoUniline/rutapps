@@ -86,6 +86,7 @@ export default function RutaNuevaVenta() {
   const [showDevSearch, setShowDevSearch] = useState(false);
   const [showReemplazoFor, setShowReemplazoFor] = useState<string | null>(null);
   const [searchReemplazo, setSearchReemplazo] = useState('');
+  const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
