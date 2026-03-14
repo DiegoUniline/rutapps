@@ -102,6 +102,21 @@ export default function RutaNuevaVenta() {
     },
   });
 
+  // Auto-select client from URL param
+  useEffect(() => {
+    if (urlClienteId && clientes) {
+      const c = clientes.find(cl => cl.id === urlClienteId);
+      if (c) {
+        setClienteNombre(c.nombre);
+        setClienteCredito({
+          credito: c.credito ?? false,
+          limite: c.limite_credito ?? 0,
+          dias: c.dias_credito ?? 0,
+        });
+      }
+    }
+  }, [urlClienteId, clientes]);
+
   const { data: ventasPendientes } = useQuery({
     queryKey: ['ruta-cuentas-pendientes', clienteId],
     enabled: !!clienteId,
