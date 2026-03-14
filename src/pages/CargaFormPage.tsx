@@ -230,7 +230,7 @@ export default function CargaFormPage() {
   if (!isNew && isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
 
   return (
-    <div className="p-6 space-y-5 max-w-4xl">
+    <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/almacen/cargas')}>
