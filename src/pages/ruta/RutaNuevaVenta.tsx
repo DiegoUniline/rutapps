@@ -46,6 +46,8 @@ export default function RutaNuevaVenta() {
   const [fechaEntrega, setFechaEntrega] = useState('');
 
   const entregaInmediata = tipoVenta === 'venta_directa';
+  const creditoDisponible = clienteCredito ? clienteCredito.limite - (saldoPendiente ?? 0) : 0;
+  const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
 
   const { data: clientes } = useQuery({
     queryKey: ['ruta-clientes-venta', empresa?.id],
