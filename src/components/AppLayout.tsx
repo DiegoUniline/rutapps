@@ -19,33 +19,33 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   {
-    label: 'Productos',
-    icon: Package,
-    path: '/productos',
-    children: [
-      { label: 'Productos', path: '/productos?tab=productos' },
-      { label: 'Marcas', path: '/productos?tab=marcas' },
-      { label: 'Clasificaciones', path: '/productos?tab=clasificaciones' },
-      { label: 'Proveedores', path: '/productos?tab=proveedores' },
-      { label: 'Unidades', path: '/productos?tab=unidades' },
-      { label: 'Listas', path: '/productos?tab=listas' },
-      { label: 'Tasas IVA', path: '/productos?tab=tasas_iva' },
-      { label: 'Tasas IEPS', path: '/productos?tab=tasas_ieps' },
-    ],
-  },
-  { label: 'Tarifas', icon: Tag, path: '/tarifas' },
-  { label: 'Clientes', icon: Users, path: '/clientes' },
-  {
     label: 'Ventas',
     icon: ShoppingCart,
     path: '/ventas',
     children: [
       { label: 'Todas las ventas', path: '/ventas' },
-      { label: 'Demanda', path: '/ventas/demanda' },
       { label: 'Entregas', path: '/ventas/entregas' },
       { label: 'Reporte entregas', path: '/ventas/reporte-entregas' },
+      { label: 'Demanda', path: '/ventas/demanda' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
       { label: 'Rutas', path: '/ventas/rutas' },
+    ],
+  },
+  { label: 'Clientes', icon: Users, path: '/clientes' },
+  {
+    label: 'Catálogo',
+    icon: Package,
+    path: '/productos',
+    children: [
+      { label: 'Productos', path: '/productos?tab=productos' },
+      { label: 'Tarifas', path: '/tarifas' },
+      { label: 'Clasificaciones', path: '/productos?tab=clasificaciones' },
+      { label: 'Marcas', path: '/productos?tab=marcas' },
+      { label: 'Proveedores', path: '/productos?tab=proveedores' },
+      { label: 'Unidades', path: '/productos?tab=unidades' },
+      { label: 'Listas de precios', path: '/productos?tab=listas' },
+      { label: 'Tasas IVA', path: '/productos?tab=tasas_iva' },
+      { label: 'Tasas IEPS', path: '/productos?tab=tasas_ieps' },
     ],
   },
   {
@@ -54,11 +54,11 @@ const navItems: NavItem[] = [
     path: '/almacen',
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
+      { label: 'Compras', path: '/almacen/compras' },
       { label: 'Cargas', path: '/almacen/cargas' },
       { label: 'Descargas de ruta', path: '/almacen/descargas' },
-      { label: 'Almacenes', path: '/almacen/almacenes' },
-      { label: 'Compras', path: '/almacen/compras' },
       { label: 'Lotes', path: '/almacen/lotes' },
+      { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
   },
   {
