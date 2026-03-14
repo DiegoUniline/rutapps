@@ -156,7 +156,7 @@ export default function CargaFormPage() {
     <div className="p-6 space-y-5 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/cargas')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/almacen/cargas')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
