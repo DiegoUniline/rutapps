@@ -57,6 +57,15 @@ export default function CargaFormPage() {
     },
   });
 
+  const { data: almacenes } = useQuery({
+    queryKey: ['almacenes-carga', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return data ?? [];
+    },
+  });
+
   useEffect(() => {
     if (carga && !isNew) {
       setVendedorId(carga.vendedor_id ?? '');
