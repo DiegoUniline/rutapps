@@ -335,17 +335,31 @@ export default function CargaFormPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar producto..." className="pl-8" value={searchProd} onChange={e => setSearchProd(e.target.value)} autoFocus />
             </div>
-            <div className="max-h-48 overflow-auto space-y-1">
-              {filteredProducts?.slice(0, 20).map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => addProduct(p)}
-                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent text-sm flex justify-between"
-                >
-                  <span>{p.codigo} — {p.nombre}</span>
-                  <span className="text-muted-foreground">Stock: {p.cantidad ?? 0}</span>
-                </button>
-              ))}
+            <div className="max-h-64 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[11px]">Código</TableHead>
+                    <TableHead className="text-[11px]">Producto</TableHead>
+                    <TableHead className="text-[11px] text-right w-20">Stock</TableHead>
+                    <TableHead className="text-[11px] text-right w-20">Precio</TableHead>
+                    <TableHead className="w-16"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts?.slice(0, 30).map(p => (
+                    <TableRow key={p.id} className="cursor-pointer hover:bg-accent/50" onClick={() => addProduct(p)}>
+                      <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{p.codigo}</TableCell>
+                      <TableCell className="text-[12px] py-1.5">{p.nombre}</TableCell>
+                      <TableCell className="text-right text-[12px] py-1.5">{p.cantidad ?? 0}</TableCell>
+                      <TableCell className="text-right text-[12px] py-1.5">$ {(p.precio_principal ?? 0).toFixed(2)}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Button size="sm" variant="ghost" className="h-6 text-[11px] text-primary">+ Agregar</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
