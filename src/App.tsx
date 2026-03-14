@@ -30,6 +30,7 @@ import CuentasCobrarPage from "@/pages/CuentasCobrarPage";
 import CuentasPagarPage from "@/pages/CuentasPagarPage";
 import GastosDesktopPage from "@/pages/GastosDesktopPage";
 import ReportesPage from "@/pages/ReportesPage";
+import ConfiguracionPage from "@/pages/ConfiguracionPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 import NotFound from "@/pages/NotFound";
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
