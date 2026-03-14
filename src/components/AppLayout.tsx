@@ -130,7 +130,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
                 className={cn(
                   "block px-2.5 py-1.5 rounded-md text-[12px] transition-all",
                   childActive
-                    ? "bg-sidebar-accent/20 text-primary-foreground font-semibold"
+                    ? "bg-primary/10 text-primary font-semibold"
                     : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
                 )}
               >
