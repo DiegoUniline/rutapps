@@ -139,6 +139,19 @@ export interface Cobrador { id: string; empresa_id: string; nombre: string; }
 export interface Profile { id: string; user_id: string; empresa_id: string; nombre?: string; avatar_url?: string; }
 export interface Empresa { id: string; nombre: string; }
 
+export interface Gasto {
+  id: string;
+  empresa_id: string;
+  vendedor_id?: string;
+  user_id: string;
+  fecha: string;
+  concepto: string;
+  monto: number;
+  foto_url?: string;
+  notas?: string;
+  created_at: string;
+}
+
 export interface Venta {
   id: string;
   empresa_id: string;
