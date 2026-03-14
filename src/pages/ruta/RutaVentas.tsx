@@ -4,6 +4,7 @@ import { Plus, Search, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { fmtDate } from '@/lib/utils';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
