@@ -98,6 +98,7 @@ function AppRoutes() {
             {/* Ventas module */}
             <Route path="/ventas" element={<VentasListPage />} />
             <Route path="/ventas/demanda" element={<DemandaPage />} />
+            <Route path="/ventas/entregas" element={<EntregasPage />} />
             <Route path="/ventas/cobranza" element={<CobranzaPage />} />
             <Route path="/ventas/rutas" element={<RutasMapPage />} />
             <Route path="/ventas/:id" element={<VentaFormPage />} />

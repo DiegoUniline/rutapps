@@ -383,12 +383,32 @@ export default function DemandaPage() {
                     <TableRow>
                       <TableCell colSpan={9} className="p-0 bg-muted/30">
                         <div className="px-6 py-3">
-                          {/* Origin reminder */}
-                          <div className="flex items-center gap-2 mb-2">
-                            <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-[11px] text-muted-foreground">
-                              Surtiendo desde: <strong className="text-foreground">{origenActual?.label}</strong>
-                            </span>
+                          {/* Origin + route assignment */}
+                          <div className="flex items-center gap-4 mb-2 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">
+                                Surtiendo desde: <strong className="text-foreground">{origenActual?.label}</strong>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Truck className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-[11px] text-muted-foreground">Ruta/Vendedor:</span>
+                              <select
+                                className="border border-input rounded px-2 py-0.5 text-[11px] bg-background min-w-[150px]"
+                                value={vendedorEntrega[pedido.id] ?? ''}
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => {
+                                  e.stopPropagation();
+                                  setVendedorEntrega(prev => ({ ...prev, [pedido.id]: e.target.value || null }));
+                                }}
+                              >
+                                <option value="">— Sin asignar —</option>
+                                {vendedoresList?.map(v => (
+                                  <option key={v.id} value={v.id}>{v.nombre}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
 
                           <Table>

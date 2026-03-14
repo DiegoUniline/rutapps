@@ -153,7 +153,7 @@ function Breadcrumb() {
     productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
     ventas: 'Ventas', almacen: 'Almacén', finanzas: 'Finanzas',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
-    demanda: 'Demanda', inventario: 'Inventario', cobranza: 'Cobranza',
+    demanda: 'Demanda', entregas: 'Entregas', inventario: 'Inventario', cobranza: 'Cobranza',
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
