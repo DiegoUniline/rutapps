@@ -514,7 +514,7 @@ export default function DemandaPage() {
                               }}
                               disabled={generarEntrega.isPending}
                             >
-                              <Truck className="h-3.5 w-3.5 mr-1" /> Generar entrega
+                              <Truck className="h-3.5 w-3.5 mr-1" /> Generar pedido de entrega
                             </Button>
                           </div>
                         </div>
