@@ -482,7 +482,7 @@ export default function RutaVentaDetalle() {
                 Productos ({editLineas.length})
               </p>
               <button
-                onClick={() => setShowProductSearch(!showProductSearch)}
+                onClick={() => setShowProductSearch(true)}
                 className="text-[11px] text-primary font-semibold flex items-center gap-1"
               >
                 <Plus className="h-3.5 w-3.5" /> Agregar
