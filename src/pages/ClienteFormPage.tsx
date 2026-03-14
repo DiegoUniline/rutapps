@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, Trash2, Star, Camera } from 'lucide-react';
+import { Save, Trash2, Star, Camera, Plus, Minus, Search, X } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores } from '@/hooks/useClientes';
-import { useListas, useTarifasForSelect } from '@/hooks/useData';
+import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
+import { useListas, useTarifasForSelect, useProductosForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 
@@ -37,14 +37,34 @@ export default function ClienteFormPage() {
   const { data: cobradores } = useCobradores();
   const { data: listas } = useListas();
   const { data: tarifas } = useTarifasForSelect();
+  const { data: productosSelect } = useProductosForSelect();
+  const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
+  const savePedidoMutation = useSavePedidoSugerido();
 
   const [form, setForm] = useState<Partial<Cliente>>(defaultCliente);
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
   const [starred, setStarred] = useState(false);
 
+  // Pedido sugerido state
+  const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
+  const [pedidoSearch, setPedidoSearch] = useState('');
+  const [showPedidoSearch, setShowPedidoSearch] = useState(false);
+  const [pedidoDirty, setPedidoDirty] = useState(false);
+
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
+
+  useEffect(() => {
+    if (pedidoSugerido) {
+      setPedidoItems(pedidoSugerido.map(ps => ({
+        producto_id: ps.producto_id,
+        nombre: ps.productos?.nombre ?? '',
+        codigo: ps.productos?.codigo ?? '',
+        cantidad: ps.cantidad,
+      })));
+    }
+  }, [pedidoSugerido]);
 
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
@@ -54,6 +74,15 @@ export default function ClienteFormPage() {
     if (!form.nombre) { toast.error('Nombre es obligatorio'); return; }
     try {
       const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
+      // Save pedido sugerido
+      const clienteId = isNew ? result?.id : id;
+      if (clienteId && pedidoDirty) {
+        await savePedidoMutation.mutateAsync({
+          clienteId,
+          items: pedidoItems.map(i => ({ producto_id: i.producto_id, cantidad: i.cantidad })),
+        });
+        setPedidoDirty(false);
+      }
       toast.success('Cliente guardado');
       setOriginalForm({ ...form });
       if (isNew && result?.id) navigate(`/clientes/${result.id}`, { replace: true });
@@ -70,9 +99,6 @@ export default function ClienteFormPage() {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const findName = (list: { id: string; nombre: string }[] | undefined, id: string | undefined) =>
-    list?.find(i => i.id === id)?.nombre ?? '';
-
   const toggleDia = (dia: string) => {
     const current = form.dia_visita ?? [];
     set('dia_visita', current.includes(dia) ? current.filter(d => d !== dia) : [...current, dia]);
@@ -84,6 +110,33 @@ export default function ClienteFormPage() {
     { value: 'quincenal', label: 'Quincenal' },
     { value: 'mensual', label: 'Mensual' },
   ];
+
+  // Pedido sugerido helpers
+  const addPedidoProduct = (p: { id: string; codigo: string; nombre: string }) => {
+    if (pedidoItems.find(i => i.producto_id === p.id)) return;
+    setPedidoItems(prev => [...prev, { producto_id: p.id, nombre: p.nombre, codigo: p.codigo, cantidad: 1 }]);
+    setPedidoDirty(true);
+    setShowPedidoSearch(false);
+    setPedidoSearch('');
+  };
+
+  const updatePedidoQty = (productoId: string, qty: number) => {
+    if (qty <= 0) {
+      setPedidoItems(prev => prev.filter(i => i.producto_id !== productoId));
+    } else {
+      setPedidoItems(prev => prev.map(i => i.producto_id === productoId ? { ...i, cantidad: qty } : i));
+    }
+    setPedidoDirty(true);
+  };
+
+  const removePedidoItem = (productoId: string) => {
+    setPedidoItems(prev => prev.filter(i => i.producto_id !== productoId));
+    setPedidoDirty(true);
+  };
+
+  const filteredPedidoProducts = productosSelect?.filter(p =>
+    !pedidoSearch || p.nombre.toLowerCase().includes(pedidoSearch.toLowerCase()) || p.codigo.toLowerCase().includes(pedidoSearch.toLowerCase())
+  ).filter(p => !pedidoItems.find(i => i.producto_id === p.id));
 
   return (
     <div className="p-4 min-h-full">
@@ -125,7 +178,7 @@ export default function ClienteFormPage() {
 
       {/* Action buttons + statusbar */}
       <div className="flex items-center gap-2 mb-3">
-        <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
+        <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
           <Save className="h-3.5 w-3.5" /> Guardar
         </button>
         {!isNew && (
@@ -226,6 +279,103 @@ export default function ClienteFormPage() {
                   )}
                 </OdooSection>
               </div>
+            </div>
+          ),
+        },
+        {
+          key: 'pedido_sugerido', label: 'Pedido Sugerido',
+          content: (
+            <div className="max-w-3xl">
+              <p className="text-[12px] text-muted-foreground mb-3">
+                Define los productos y cantidades que normalmente se surten a este cliente. Se usará como base para calcular el pedido en ruta.
+              </p>
+
+              {/* Add product */}
+              <div className="mb-3">
+                {!showPedidoSearch ? (
+                  <button onClick={() => setShowPedidoSearch(true)} className="btn-odoo-secondary text-[12px]">
+                    <Plus className="h-3.5 w-3.5" /> Agregar producto
+                  </button>
+                ) : (
+                  <div className="border border-border rounded-md p-2.5 bg-accent/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                          className="w-full bg-background rounded-md pl-8 pr-3 py-1.5 text-[12px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                          placeholder="Buscar producto..."
+                          value={pedidoSearch}
+                          onChange={e => setPedidoSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <button onClick={() => { setShowPedidoSearch(false); setPedidoSearch(''); }}>
+                        <X className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                    <div className="max-h-40 overflow-auto space-y-0.5">
+                      {filteredPedidoProducts?.slice(0, 15).map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => addPedidoProduct(p)}
+                          className="w-full text-left px-2.5 py-1.5 rounded hover:bg-accent text-[12px] flex justify-between text-foreground"
+                        >
+                          <span className="truncate">{p.codigo} — {p.nombre}</span>
+                          <span className="text-muted-foreground shrink-0 ml-2">${(p.precio_principal ?? 0).toFixed(2)}</span>
+                        </button>
+                      ))}
+                      {filteredPedidoProducts?.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-2">Sin resultados</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Items table */}
+              {pedidoItems.length > 0 ? (
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left py-1.5 font-medium">Producto</th>
+                      <th className="text-left py-1.5 font-medium w-20">Código</th>
+                      <th className="text-center py-1.5 font-medium w-28">Cantidad</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pedidoItems.map(item => (
+                      <tr key={item.producto_id} className="border-b border-border/40">
+                        <td className="py-1.5 text-foreground">{item.nombre}</td>
+                        <td className="py-1.5 text-muted-foreground font-mono">{item.codigo}</td>
+                        <td className="py-1.5">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => updatePedidoQty(item.producto_id, item.cantidad - 1)} className="w-6 h-6 rounded bg-accent flex items-center justify-center hover:bg-accent/80">
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <input
+                              type="number"
+                              className="w-12 text-center bg-transparent text-foreground font-medium focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={item.cantidad}
+                              onChange={e => updatePedidoQty(item.producto_id, parseInt(e.target.value) || 0)}
+                            />
+                            <button onClick={() => updatePedidoQty(item.producto_id, item.cantidad + 1)} className="w-6 h-6 rounded bg-accent flex items-center justify-center hover:bg-accent/80">
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-1.5">
+                          <button onClick={() => removePedidoItem(item.producto_id)} className="text-destructive hover:text-destructive/80">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-[12px] text-muted-foreground text-center py-6 border border-dashed border-border rounded-md">
+                  No hay productos configurados. Agrega productos para definir el pedido sugerido.
+                </p>
+              )}
             </div>
           ),
         },

@@ -73,3 +73,36 @@ export function useVendedores() {
 export function useCobradores() {
   return useQuery({ queryKey: ['cobradores'], queryFn: async () => { const { data } = await supabase.from('cobradores').select('*').order('nombre'); return data as Cobrador[]; }});
 }
+
+// Pedido sugerido per client
+export function usePedidoSugerido(clienteId?: string) {
+  return useQuery({
+    queryKey: ['pedido-sugerido', clienteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cliente_pedido_sugerido')
+        .select('*, productos(id, codigo, nombre, precio_principal)')
+        .eq('cliente_id', clienteId!)
+        .order('created_at');
+      if (error) throw error;
+      return data as { id: string; cliente_id: string; producto_id: string; cantidad: number; productos: { id: string; codigo: string; nombre: string; precio_principal: number } }[];
+    },
+    enabled: !!clienteId,
+  });
+}
+
+export function useSavePedidoSugerido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clienteId, items }: { clienteId: string; items: { producto_id: string; cantidad: number }[] }) => {
+      // Delete existing and re-insert
+      await supabase.from('cliente_pedido_sugerido').delete().eq('cliente_id', clienteId);
+      if (items.length > 0) {
+        const rows = items.map(i => ({ cliente_id: clienteId, producto_id: i.producto_id, cantidad: i.cantidad }));
+        const { error } = await supabase.from('cliente_pedido_sugerido').insert(rows);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pedido-sugerido'] }),
+  });
+}
