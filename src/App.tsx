@@ -117,6 +117,7 @@ function AppRoutes() {
             <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
             <Route path="/almacen/compras" element={<ComprasPage />} />
             <Route path="/almacen/lotes" element={<LotesPage />} />
+            <Route path="/almacen/descargas" element={<DescargasPage />} />
             {/* Finanzas module */}
             <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
             <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
