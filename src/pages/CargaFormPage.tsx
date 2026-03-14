@@ -119,7 +119,7 @@ export default function CargaFormPage() {
         lineas: lineas.map(l => ({ producto_id: l.producto_id, cantidad_cargada: l.cantidad_cargada })),
       });
       toast.success(isNew ? 'Carga creada' : 'Carga actualizada');
-      navigate(`/cargas/${cargaId}`);
+      navigate(`/almacen/cargas/${cargaId}`);
     } catch (err: any) {
       toast.error(err.message);
     }
