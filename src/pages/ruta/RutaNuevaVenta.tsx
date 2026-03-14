@@ -268,7 +268,7 @@ export default function RutaNuevaVenta() {
               {filteredClientes?.map(c => (
                 <button
                   key={c.id}
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setStep('productos'); }}
+                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteCredito({ credito: c.credito ?? false, limite: c.limite_credito ?? 0, dias: c.dias_credito ?? 0 }); setCondicionPago('contado'); setStep('productos'); }}
                   className={`w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left ${
                     clienteId === c.id
                       ? 'bg-primary/8 ring-1.5 ring-primary/40'
