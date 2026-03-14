@@ -317,7 +317,7 @@ export default function CargaFormPage() {
       {/* Save */}
       {(isEditable || isNew) && (
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={() => navigate('/cargas')}>Cancelar</Button>
+          <Button variant="outline" onClick={() => navigate('/almacen/cargas')}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saveCarga.isPending}>
             <Save className="h-4 w-4 mr-1" /> {isNew ? 'Crear carga' : 'Guardar'}
           </Button>
