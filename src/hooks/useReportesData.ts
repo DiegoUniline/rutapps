@@ -10,7 +10,7 @@ export function useReportesData(desde: string, hasta: string) {
     queryFn: async () => {
       const eid = empresa!.id;
 
-      const [ventasRes, cobrosRes, gastosRes, clientesRes, productosRes, ventaLineasRes, cargasRes, cargaLineasRes, devolucionesRes, devLineasRes] = await Promise.all([
+      const [ventasRes, cobrosRes, gastosRes, clientesRes, productosRes, ventaLineasRes, cargasRes, devolucionesRes, entregasRes] = await Promise.all([
         supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta),
         supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta),
         supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta),
@@ -18,9 +18,7 @@ export function useReportesData(desde: string, hasta: string) {
         supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo'),
         supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta),
         supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }),
-        // carga_lineas already nested above
         supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }),
-        // entregas = ventas con fecha_entrega
         supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha_entrega', desde).lte('fecha_entrega', hasta).in('status', ['confirmado', 'entregado']),
       ]);
 
