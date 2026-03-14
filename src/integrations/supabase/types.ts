@@ -727,6 +727,7 @@ export type Database = {
           regimen_fiscal: string | null
           rfc: string | null
           telefono: string | null
+          ticket_campos: Json | null
         }
         Insert: {
           ciudad?: string | null
@@ -744,6 +745,7 @@ export type Database = {
           regimen_fiscal?: string | null
           rfc?: string | null
           telefono?: string | null
+          ticket_campos?: Json | null
         }
         Update: {
           ciudad?: string | null
@@ -761,6 +763,7 @@ export type Database = {
           regimen_fiscal?: string | null
           rfc?: string | null
           telefono?: string | null
+          ticket_campos?: Json | null
         }
         Relationships: []
       }
