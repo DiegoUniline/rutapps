@@ -467,10 +467,14 @@ export default function RutaNuevaVenta() {
                 <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</p>
               </div>
               <div className="flex gap-1.5">
-                {([['contado', 'Contado'], ['credito', 'Crédito'], ['por_definir', 'Por definir']] as const).map(([val, label]) => (
+                {([
+                  ['contado', 'Contado'],
+                  ...(clienteCredito?.credito ? [['credito', 'Crédito'] as const] : []),
+                  ['por_definir', 'Por definir'],
+                ] as const).map(([val, label]) => (
                   <button
                     key={val}
-                    onClick={() => setCondicionPago(val)}
+                    onClick={() => setCondicionPago(val as typeof condicionPago)}
                     className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${
                       condicionPago === val
                         ? 'bg-primary text-primary-foreground shadow-sm'
@@ -481,6 +485,35 @@ export default function RutaNuevaVenta() {
                   </button>
                 ))}
               </div>
+
+              {/* Credit info */}
+              {condicionPago === 'credito' && clienteCredito && (
+                <div className={`mt-2.5 rounded-md px-2.5 py-2 text-[11px] space-y-1 ${
+                  excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'
+                }`}>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Límite de crédito</span>
+                    <span className="font-medium text-foreground">${clienteCredito.limite.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Saldo pendiente</span>
+                    <span className="font-medium text-foreground">${(saldoPendiente ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-border/40 pt-1">
+                    <span className="text-muted-foreground">Disponible</span>
+                    <span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-success'}`}>
+                      ${creditoDisponible.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Días de crédito</span>
+                    <span className="font-medium text-foreground">{clienteCredito.dias} días</span>
+                  </div>
+                  {excedeCredito && (
+                    <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total de la venta excede el crédito disponible</p>
+                  )}
+                </div>
+              )}
 
               <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2">
                 <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center shrink-0">
