@@ -31,6 +31,10 @@ export default function RutaNuevaVenta() {
   const [searchCliente, setSearchCliente] = useState('');
   const [searchProducto, setSearchProducto] = useState('');
   const [saving, setSaving] = useState(false);
+  const [tipoVenta, setTipoVenta] = useState<'venta_directa' | 'pedido'>('venta_directa');
+  const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
+  const [entregaInmediata, setEntregaInmediata] = useState(true);
+  const [notas, setNotas] = useState('');
 
   // Fetch clients
   const { data: clientes } = useQuery({
