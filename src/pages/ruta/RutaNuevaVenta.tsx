@@ -281,7 +281,21 @@ export default function RutaNuevaVenta() {
                           className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center active:scale-90 transition-transform">
                           {inCart.cantidad === 1 ? <Trash2 className="h-3.5 w-3.5 text-destructive" /> : <Minus className="h-3.5 w-3.5" />}
                         </button>
-                        <span className="w-8 text-center text-[15px] font-bold">{inCart.cantidad}</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          className="w-10 text-center text-[15px] font-bold bg-transparent border-b-2 border-primary/30 focus:border-primary focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={inCart.cantidad}
+                          onChange={e => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val > 0) {
+                              setCart(prev => prev.map(c => c.producto_id === p.id ? { ...c, cantidad: val } : c));
+                            } else if (e.target.value === '') {
+                              setCart(prev => prev.map(c => c.producto_id === p.id ? { ...c, cantidad: 1 } : c));
+                            }
+                          }}
+                          onFocus={e => e.target.select()}
+                        />
                         <button onClick={() => addToCart(p)}
                           className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center active:scale-90 transition-transform">
                           <Plus className="h-3.5 w-3.5" />
