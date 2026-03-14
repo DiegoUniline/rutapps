@@ -144,6 +144,9 @@ export default function RutaNuevaVenta() {
     return { subtotal, iva, total: subtotal + iva, items: cart.reduce((s, c) => s + c.cantidad, 0) };
   }, [cart]);
 
+  const creditoDisponible = clienteCredito ? clienteCredito.limite - (saldoPendiente ?? 0) : 0;
+  const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
+
   const handleSave = async () => {
     if (!empresa || !user) return;
     setSaving(true);
