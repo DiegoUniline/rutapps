@@ -239,7 +239,7 @@ export default function CargaFormPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5" /> {isNew ? 'Nueva carga' : `Carga — ${fecha}`}
+            <Truck className="h-5 w-5" /> {isNew ? 'Nueva carga' : `Carga — ${fmtDate(fecha)}`}
           </h1>
         </div>
         {!isNew && (
