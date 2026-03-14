@@ -839,8 +839,8 @@ export default function RutaVentaDetalle() {
 
         <div className="bg-card border border-border rounded-xl divide-y divide-border">
           <InfoRow icon={User} label="Cliente" value={clienteNombre} />
-          <InfoRow icon={Calendar} label="Fecha" value={venta.fecha} />
-          {venta.fecha_entrega && <InfoRow icon={Calendar} label="Entrega" value={venta.fecha_entrega} />}
+          <InfoRow icon={Calendar} label="Fecha" value={fmtDate(venta.fecha)} />
+          {venta.fecha_entrega && <InfoRow icon={Calendar} label="Entrega" value={fmtDate(venta.fecha_entrega)} />}
           <InfoRow icon={Banknote} label="Pago" value={venta.condicion_pago} />
           <InfoRow icon={FileText} label="Vendedor" value={vendedorNombre} />
         </div>
