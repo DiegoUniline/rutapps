@@ -103,7 +103,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
           "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? "text-primary-foreground/90"
+            ? "text-primary font-semibold"
             : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
