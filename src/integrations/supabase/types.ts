@@ -258,6 +258,60 @@ export type Database = {
         }
         Relationships: []
       }
+      gastos: {
+        Row: {
+          concepto: string
+          created_at: string
+          empresa_id: string
+          fecha: string
+          foto_url: string | null
+          id: string
+          monto: number
+          notas: string | null
+          user_id: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          concepto: string
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          foto_url?: string | null
+          id?: string
+          monto?: number
+          notas?: string | null
+          user_id: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          concepto?: string
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          foto_url?: string | null
+          id?: string
+          monto?: number
+          notas?: string | null
+          user_id?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gastos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listas: {
         Row: {
           created_at: string
