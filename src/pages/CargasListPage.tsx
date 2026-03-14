@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { fmtDate } from '@/lib/utils';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
