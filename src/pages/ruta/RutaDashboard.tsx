@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin, Truck, RotateCcw } from 'lucide-react';
+import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin, Truck, RotateCcw, PackageCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -143,6 +143,13 @@ export default function RutaDashboard() {
         >
           <RotateCcw className="h-4 w-4 text-destructive" />
           Registrar devolución
+        </button>
+        <button
+          onClick={() => navigate('/ruta/descarga')}
+          className="w-full bg-card border border-border text-foreground rounded-2xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+        >
+          <PackageCheck className="h-4 w-4 text-primary" />
+          Descargar ruta
         </button>
       </div>
     </div>

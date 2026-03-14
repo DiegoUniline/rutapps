@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Cargas', path: '/almacen/cargas' },
+      { label: 'Descargas de ruta', path: '/almacen/descargas' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
       { label: 'Compras', path: '/almacen/compras' },
       { label: 'Lotes', path: '/almacen/lotes' },
@@ -161,7 +162,7 @@ function Breadcrumb() {
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
-    configuracion: 'Configuración',
+    configuracion: 'Configuración', descargas: 'Descargas de ruta',
   };
 
   if (segments.length <= 1) return null;

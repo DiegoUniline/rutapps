@@ -45,6 +45,8 @@ import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
 import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
 import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
 import RutaEntregas from "@/pages/ruta/RutaEntregas";
+import RutaDescarga from "@/pages/ruta/RutaDescarga";
+import DescargasPage from "@/pages/DescargasPage";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +87,7 @@ function AppRoutes() {
       <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
       <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
+      <Route path="/ruta/descarga" element={<RutaDescarga />} />
 
       {/* Desktop ERP */}
       <Route path="*" element={
@@ -114,6 +117,7 @@ function AppRoutes() {
             <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
             <Route path="/almacen/compras" element={<ComprasPage />} />
             <Route path="/almacen/lotes" element={<LotesPage />} />
+            <Route path="/almacen/descargas" element={<DescargasPage />} />
             {/* Finanzas module */}
             <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
             <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />

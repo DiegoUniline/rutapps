@@ -597,6 +597,133 @@ export type Database = {
           },
         ]
       }
+      descarga_ruta: {
+        Row: {
+          aprobado_por: string | null
+          carga_id: string
+          created_at: string
+          diferencia_efectivo: number
+          efectivo_entregado: number
+          efectivo_esperado: number
+          empresa_id: string
+          fecha: string
+          fecha_aprobacion: string | null
+          id: string
+          notas: string | null
+          notas_supervisor: string | null
+          status: Database["public"]["Enums"]["status_descarga"]
+          user_id: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          aprobado_por?: string | null
+          carga_id: string
+          created_at?: string
+          diferencia_efectivo?: number
+          efectivo_entregado?: number
+          efectivo_esperado?: number
+          empresa_id: string
+          fecha?: string
+          fecha_aprobacion?: string | null
+          id?: string
+          notas?: string | null
+          notas_supervisor?: string | null
+          status?: Database["public"]["Enums"]["status_descarga"]
+          user_id: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          aprobado_por?: string | null
+          carga_id?: string
+          created_at?: string
+          diferencia_efectivo?: number
+          efectivo_entregado?: number
+          efectivo_esperado?: number
+          empresa_id?: string
+          fecha?: string
+          fecha_aprobacion?: string | null
+          id?: string
+          notas?: string | null
+          notas_supervisor?: string | null
+          status?: Database["public"]["Enums"]["status_descarga"]
+          user_id?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "descarga_ruta_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "descarga_ruta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "descarga_ruta_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      descarga_ruta_lineas: {
+        Row: {
+          cantidad_esperada: number
+          cantidad_real: number
+          created_at: string
+          descarga_id: string
+          diferencia: number
+          id: string
+          motivo: Database["public"]["Enums"]["motivo_diferencia"] | null
+          notas: string | null
+          producto_id: string
+        }
+        Insert: {
+          cantidad_esperada?: number
+          cantidad_real?: number
+          created_at?: string
+          descarga_id: string
+          diferencia?: number
+          id?: string
+          motivo?: Database["public"]["Enums"]["motivo_diferencia"] | null
+          notas?: string | null
+          producto_id: string
+        }
+        Update: {
+          cantidad_esperada?: number
+          cantidad_real?: number
+          created_at?: string
+          descarga_id?: string
+          diferencia?: number
+          id?: string
+          motivo?: Database["public"]["Enums"]["motivo_diferencia"] | null
+          notas?: string | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "descarga_ruta_lineas_descarga_id_fkey"
+            columns: ["descarga_id"]
+            isOneToOne: false
+            referencedRelation: "descarga_ruta"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "descarga_ruta_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devolucion_lineas: {
         Row: {
           cantidad: number
@@ -1738,8 +1865,16 @@ export type Database = {
       condicion_pago: "contado" | "credito" | "por_definir"
       frecuencia_visita: "diaria" | "semanal" | "quincenal" | "mensual"
       motivo_devolucion: "no_vendido" | "vencido" | "danado" | "cambio" | "otro"
+      motivo_diferencia:
+        | "error_entrega"
+        | "merma"
+        | "danado"
+        | "faltante"
+        | "sobrante"
+        | "otro"
       status_carga: "pendiente" | "en_ruta" | "completada" | "cancelada"
       status_cliente: "activo" | "inactivo" | "suspendido"
+      status_descarga: "pendiente" | "aprobada" | "rechazada"
       status_producto: "activo" | "inactivo" | "borrador"
       status_venta:
         | "borrador"
@@ -1891,8 +2026,17 @@ export const Constants = {
       condicion_pago: ["contado", "credito", "por_definir"],
       frecuencia_visita: ["diaria", "semanal", "quincenal", "mensual"],
       motivo_devolucion: ["no_vendido", "vencido", "danado", "cambio", "otro"],
+      motivo_diferencia: [
+        "error_entrega",
+        "merma",
+        "danado",
+        "faltante",
+        "sobrante",
+        "otro",
+      ],
       status_carga: ["pendiente", "en_ruta", "completada", "cancelada"],
       status_cliente: ["activo", "inactivo", "suspendido"],
+      status_descarga: ["pendiente", "aprobada", "rechazada"],
       status_producto: ["activo", "inactivo", "borrador"],
       status_venta: [
         "borrador",
