@@ -14,6 +14,7 @@ import ClienteFormPage from "@/pages/ClienteFormPage";
 import VentasListPage from "@/pages/VentasListPage";
 import VentaFormPage from "@/pages/VentaFormPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
