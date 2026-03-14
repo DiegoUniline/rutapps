@@ -330,6 +330,7 @@ export default function EntregasPage() {
                       <TableCell className="font-mono text-[11px] font-bold py-2">{e.folio}</TableCell>
                       <TableCell className="text-[12px] font-medium py-2">{e.clientes?.nombre ?? '—'}</TableCell>
                       <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(e.fecha)}</TableCell>
+                      <TableCell className="text-[12px] font-medium py-2">{e.fecha_entrega ? fmtDate(e.fecha_entrega) : '—'}</TableCell>
                       <TableCell className="text-center py-2">
                         {e.status === 'confirmado' ? (
                           <Badge variant="outline" className="text-[10px] border-warning text-warning">
