@@ -54,11 +54,13 @@ function AppRoutes() {
       <Route path="/ruta" element={<MobileLayout />}>
         <Route index element={<RutaDashboard />} />
         <Route path="ventas" element={<RutaVentas />} />
+        <Route path="cobros" element={<RutaCobros />} />
         <Route path="clientes" element={<RutaClientes />} />
         <Route path="stock" element={<RutaStock />} />
         <Route path="gastos" element={<RutaGastos />} />
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
+      <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
 
       {/* Desktop ERP */}
       <Route path="*" element={
