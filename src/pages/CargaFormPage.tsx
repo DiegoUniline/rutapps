@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Truck, Search, ClipboardList } from 'lucide-react';
+import { fmtDate } from '@/lib/utils';
 import { useCarga, useSaveCarga, useSaveCargaLineas, useUpdateCargaStatus, useDeleteCarga } from '@/hooks/useCargas';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
