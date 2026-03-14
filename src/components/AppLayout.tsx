@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Tarifas', icon: Tag, path: '/tarifas' },
   { label: 'Clientes', icon: Users, path: '/clientes' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ventas' },
+  { label: 'Cargas', icon: Truck, path: '/cargas' },
   { label: 'Facturación', icon: FileText, path: '/facturacion' },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
 ];
