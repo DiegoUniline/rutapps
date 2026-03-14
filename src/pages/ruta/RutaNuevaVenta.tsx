@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -17,15 +17,25 @@ interface CartItem {
   iva_pct: number;
 }
 
-type Step = 'cliente' | 'productos' | 'resumen';
+interface CuentaPendiente {
+  id: string;
+  folio: string | null;
+  fecha: string;
+  total: number;
+  saldo_pendiente: number;
+  montoAplicar: number; // how much to pay on this one
+}
+
+type Step = 'cliente' | 'productos' | 'resumen' | 'pago';
 
 const STEP_LABELS: Record<Step, string> = {
   cliente: 'Cliente',
   productos: 'Productos',
   resumen: 'Confirmar',
+  pago: 'Pago',
 };
 
-const STEPS: Step[] = ['cliente', 'productos', 'resumen'];
+const STEPS: Step[] = ['cliente', 'productos', 'resumen', 'pago'];
 
 export default function RutaNuevaVenta() {
   const navigate = useNavigate();
@@ -44,6 +54,11 @@ export default function RutaNuevaVenta() {
   const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
   const [notas, setNotas] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
+  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo');
+  const [montoRecibido, setMontoRecibido] = useState('');
+  const [referenciaPago, setReferenciaPago] = useState('');
+  const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
+  const [pagarCuentasAnteriores, setPagarCuentasAnteriores] = useState(false);
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
@@ -61,21 +76,27 @@ export default function RutaNuevaVenta() {
     },
   });
 
-  // Fetch saldo pendiente (ventas a crédito no canceladas) for selected client
-  const { data: saldoPendiente } = useQuery({
-    queryKey: ['ruta-saldo-cliente', clienteId],
+  // Fetch pending balances for selected client
+  const { data: ventasPendientes } = useQuery({
+    queryKey: ['ruta-cuentas-pendientes', clienteId],
     enabled: !!clienteId,
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('total')
+        .select('id, folio, fecha, total, saldo_pendiente')
         .eq('cliente_id', clienteId!)
         .eq('condicion_pago', 'credito')
-        .in('status', ['confirmado', 'entregado', 'facturado']);
-      const total = (data ?? []).reduce((sum, v) => sum + (v.total ?? 0), 0);
-      return total;
+        .gt('saldo_pendiente', 0)
+        .in('status', ['confirmado', 'entregado', 'facturado'])
+        .order('fecha', { ascending: true });
+      return data ?? [];
     },
   });
+
+  const saldoPendienteTotal = useMemo(() =>
+    (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
+    [ventasPendientes]
+  );
 
   const { data: productos } = useQuery({
     queryKey: ['ruta-productos-venta', empresa?.id],
@@ -144,14 +165,51 @@ export default function RutaNuevaVenta() {
     return { subtotal, iva, total: subtotal + iva, items: cart.reduce((s, c) => s + c.cantidad, 0) };
   }, [cart]);
 
-  const creditoDisponible = clienteCredito ? clienteCredito.limite - (saldoPendiente ?? 0) : 0;
+  const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
+
+  // Total to apply to past accounts
+  const totalAplicarCuentas = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
+  // Grand total to collect (current sale if contado + past accounts)
+  const totalACobrar = (condicionPago === 'contado' ? totals.total : 0) + totalAplicarCuentas;
+
+  const montoRecibidoNum = parseFloat(montoRecibido) || 0;
+  const cambio = montoRecibidoNum > totalACobrar ? montoRecibidoNum - totalACobrar : 0;
+
+  // Initialize cuentas pendientes when entering payment step
+  const initCuentasPendientes = () => {
+    if (ventasPendientes && ventasPendientes.length > 0) {
+      setCuentasPendientes(ventasPendientes.map(v => ({
+        id: v.id,
+        folio: v.folio,
+        fecha: v.fecha,
+        total: v.total ?? 0,
+        saldo_pendiente: v.saldo_pendiente ?? 0,
+        montoAplicar: 0,
+      })));
+    } else {
+      setCuentasPendientes([]);
+    }
+  };
+
+  const liquidarTodas = () => {
+    setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: c.saldo_pendiente })));
+    setPagarCuentasAnteriores(true);
+  };
+
+  const updateCuentaMonto = (id: string, monto: number) => {
+    setCuentasPendientes(prev => prev.map(c =>
+      c.id === id ? { ...c, montoAplicar: Math.min(Math.max(0, monto), c.saldo_pendiente) } : c
+    ));
+  };
 
   const handleSave = async () => {
     if (!empresa || !user) return;
     setSaving(true);
     try {
       const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+
+      // 1. Create the sale
       const { data: venta, error: ventaErr } = await supabase.from('ventas').insert({
         empresa_id: profile!.empresa_id,
         cliente_id: clienteId,
@@ -170,6 +228,7 @@ export default function RutaNuevaVenta() {
       }).select('id').single();
       if (ventaErr) throw ventaErr;
 
+      // 2. Create sale lines
       const lineas = cart.map(item => ({
         venta_id: venta.id,
         producto_id: item.producto_id,
@@ -184,14 +243,49 @@ export default function RutaNuevaVenta() {
         descuento_pct: 0,
         total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
       }));
-
       const { error: lineasErr } = await supabase.from('venta_lineas').insert(lineas);
       if (lineasErr) throw lineasErr;
+
+      // 3. If there's money to collect (contado or past accounts), create cobro
+      if (totalACobrar > 0 && clienteId) {
+        const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
+          empresa_id: profile!.empresa_id,
+          cliente_id: clienteId,
+          user_id: user.id,
+          monto: totalACobrar,
+          metodo_pago: metodoPago,
+          referencia: referenciaPago || null,
+        }).select('id').single();
+        if (cobroErr) throw cobroErr;
+
+        const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
+
+        // Apply to current sale if contado
+        if (condicionPago === 'contado') {
+          aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: totals.total });
+        }
+
+        // Apply to past accounts
+        for (const cuenta of cuentasPendientes) {
+          if (cuenta.montoAplicar > 0) {
+            aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar });
+            // Update saldo_pendiente on old sale
+            const nuevoSaldo = cuenta.saldo_pendiente - cuenta.montoAplicar;
+            await supabase.from('ventas').update({ saldo_pendiente: nuevoSaldo }).eq('id', cuenta.id);
+          }
+        }
+
+        if (aplicaciones.length > 0) {
+          const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones);
+          if (appErr) throw appErr;
+        }
+      }
 
       toast.success('¡Venta registrada!');
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       navigate('/ruta/ventas');
     } catch (err: any) {
       toast.error(err.message);
@@ -206,6 +300,13 @@ export default function RutaNuevaVenta() {
     if (currentStepIdx === 0) navigate('/ruta/ventas');
     else setStep(STEPS[currentStepIdx - 1]);
   };
+
+  const goToPayment = () => {
+    initCuentasPendientes();
+    setStep('pago');
+  };
+
+  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -250,7 +351,6 @@ export default function RutaNuevaVenta() {
           </div>
 
           <div className="flex-1 overflow-auto px-3 pb-4">
-            {/* Skip client */}
             <button
               onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteCredito(null); setCondicionPago('contado'); setStep('productos'); }}
               className="w-full mb-1.5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 bg-accent/40 border border-dashed border-primary/25 active:scale-[0.98] transition-transform text-left"
@@ -266,28 +366,32 @@ export default function RutaNuevaVenta() {
             </button>
 
             <div className="space-y-[3px]">
-              {filteredClientes?.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteCredito({ credito: c.credito ?? false, limite: c.limite_credito ?? 0, dias: c.dias_credito ?? 0 }); setCondicionPago('contado'); setStep('productos'); }}
-                  className={`w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left ${
-                    clienteId === c.id
-                      ? 'bg-primary/8 ring-1.5 ring-primary/40'
-                      : 'bg-card hover:bg-accent/30'
-                  }`}
-                >
-                  <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
-                    clienteId === c.id ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'
-                  }`}>
-                    <span className="text-[11px] font-bold">{c.nombre.charAt(0)}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12.5px] font-medium text-foreground truncate">{c.nombre}</p>
-                    {c.codigo && <p className="text-[10.5px] text-muted-foreground">{c.codigo}</p>}
-                  </div>
-                  {clienteId === c.id && <Check className="h-4 w-4 text-primary shrink-0" />}
-                </button>
-              ))}
+              {filteredClientes?.map(c => {
+                const hasDebt = false; // will show in payment step
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteCredito({ credito: c.credito ?? false, limite: c.limite_credito ?? 0, dias: c.dias_credito ?? 0 }); setCondicionPago('contado'); setStep('productos'); }}
+                    className={`w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left ${
+                      clienteId === c.id
+                        ? 'bg-primary/8 ring-1.5 ring-primary/40'
+                        : 'bg-card hover:bg-accent/30'
+                    }`}
+                  >
+                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${
+                      clienteId === c.id ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'
+                    }`}>
+                      <span className="text-[11px] font-bold">{c.nombre.charAt(0)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12.5px] font-medium text-foreground truncate">{c.nombre}</p>
+                      {c.codigo && <p className="text-[10.5px] text-muted-foreground">{c.codigo}</p>}
+                    </div>
+                    {c.credito && <span className="text-[9px] bg-accent text-muted-foreground px-1.5 py-0.5 rounded font-medium">Crédito</span>}
+                    {clienteId === c.id && <Check className="h-4 w-4 text-primary shrink-0" />}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -296,7 +400,6 @@ export default function RutaNuevaVenta() {
       {/* ─── STEP 2: Productos ─── */}
       {step === 'productos' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Client chip */}
           <div className="px-3 pt-2 pb-1 flex items-center gap-1.5">
             <div className="inline-flex items-center gap-1 bg-accent/60 rounded-md px-2 py-0.5">
               <span className="text-[10px] text-muted-foreground">Cliente:</span>
@@ -338,7 +441,7 @@ export default function RutaNuevaVenta() {
                       <div className="flex items-center gap-1.5 mt-px">
                         <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
                         <span className="text-[10px] text-muted-foreground">·</span>
-                        <span className={`text-[10px] font-medium ${stock > 0 ? 'text-success' : 'text-destructive'}`}>
+                        <span className={`text-[10px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                           {stock} {(p.unidades as any)?.abreviatura || 'pz'}
                         </span>
                         {overStock && <span className="text-[9px] text-destructive font-medium">⚠ excede</span>}
@@ -395,7 +498,7 @@ export default function RutaNuevaVenta() {
 
           {/* Floating cart bar */}
           {cart.length > 0 && (
-            <div className="fixed bottom-14 left-0 right-0 z-30 px-3 pb-2 safe-area-bottom">
+            <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
               <button
                 onClick={() => setStep('resumen')}
                 className="w-full bg-primary text-primary-foreground rounded-xl py-3 flex items-center justify-between px-4 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
@@ -404,17 +507,111 @@ export default function RutaNuevaVenta() {
                   <ShoppingCart className="h-4 w-4 opacity-80" />
                   <span className="text-[13px] font-medium">{totals.items} {totals.items === 1 ? 'producto' : 'productos'}</span>
                 </div>
-                <span className="text-[14px] font-bold">${totals.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                <span className="text-[14px] font-bold">${fmt(totals.total)}</span>
               </button>
             </div>
           )}
         </div>
       )}
 
-      {/* ─── STEP 3: Resumen ─── */}
+      {/* ─── STEP 3: Confirmar Productos ─── */}
       {step === 'resumen' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto px-3 pt-2.5 pb-20 space-y-2.5">
+          <div className="flex-1 overflow-auto px-3 pt-2.5 pb-24 space-y-2.5">
+
+            {/* Client info small */}
+            <div className="flex items-center gap-2 bg-card rounded-lg px-3 py-2.5">
+              <div className="w-7 h-7 rounded-md bg-accent flex items-center justify-center shrink-0">
+                <span className="text-[10px] font-bold text-foreground">{clienteNombre.charAt(0)}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-foreground truncate">{clienteNombre}</p>
+              </div>
+              <button onClick={() => setStep('cliente')} className="text-[10.5px] text-primary font-medium">Cambiar</button>
+            </div>
+
+            {/* Products list */}
+            <section className="bg-card rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Productos ({totals.items})
+                </p>
+                <button onClick={() => setStep('productos')} className="text-[10.5px] text-primary font-medium">Editar</button>
+              </div>
+              <div className="space-y-1">
+                {cart.map(item => {
+                  const lineTotal = item.precio_unitario * item.cantidad;
+                  return (
+                    <div key={item.producto_id} className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
+                        <p className="text-[10.5px] text-muted-foreground">
+                          {item.cantidad} × ${fmt(item.precio_unitario)} / {item.unidad}
+                        </p>
+                      </div>
+                      <span className="text-[12.5px] font-semibold text-foreground shrink-0 tabular-nums">
+                        ${fmt(lineTotal)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Totals */}
+            <section className="bg-card rounded-lg p-3">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[12px]">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-medium text-foreground tabular-nums">${fmt(totals.subtotal)}</span>
+                </div>
+                {totals.iva > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-muted-foreground">IVA</span>
+                    <span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60">
+                <span className="text-[13px] font-semibold text-foreground">Total</span>
+                <span className="text-[18px] font-bold text-primary tabular-nums">${fmt(totals.total)}</span>
+              </div>
+            </section>
+
+            {/* Pending accounts alert */}
+            {saldoPendienteTotal > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-amber-600 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                      Este cliente tiene ${fmt(saldoPendienteTotal)} en cuentas pendientes
+                    </p>
+                    <p className="text-[10px] text-amber-600 dark:text-amber-400">Podrás aplicar pagos en el siguiente paso</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Continue to payment */}
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
+            <button
+              onClick={goToPayment}
+              disabled={cart.length === 0}
+              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
+            >
+              <Banknote className="h-4 w-4" />
+              Continuar al pago
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── STEP 4: Pago ─── */}
+      {step === 'pago' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto px-3 pt-2.5 pb-24 space-y-2.5">
 
             {/* Tipo de operación */}
             <section className="bg-card rounded-lg p-3">
@@ -434,39 +631,25 @@ export default function RutaNuevaVenta() {
                   </button>
                 ))}
               </div>
-
-              {/* Entrega context */}
-              <div className={`mt-2.5 rounded-md px-2.5 py-2 flex items-start gap-2 ${
-                entregaInmediata ? 'bg-success/8' : 'bg-accent/50'
-              }`}>
-                {entregaInmediata ? (
-                  <>
-                    <Package className="h-3.5 w-3.5 text-success mt-px shrink-0" />
-                    <p className="text-[11px] text-foreground leading-snug">Entrega inmediata · Descuenta stock a bordo</p>
-                  </>
-                ) : (
-                  <>
-                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground mt-px shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-[11px] text-muted-foreground leading-snug mb-1.5">Pedido · No descuenta stock</p>
-                      <input
-                        type="date"
-                        className="w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-                        value={fechaEntrega}
-                        onChange={e => setFechaEntrega(e.target.value)}
-                        placeholder="Fecha de entrega"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+              {!entregaInmediata && (
+                <div className="mt-2.5 rounded-md px-2.5 py-2 flex items-start gap-2 bg-accent/50">
+                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground mt-px shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-[11px] text-muted-foreground leading-snug mb-1.5">Fecha de entrega</p>
+                    <input
+                      type="date"
+                      className="w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                      value={fechaEntrega}
+                      onChange={e => setFechaEntrega(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </section>
 
-            {/* Condición de pago + Cliente */}
+            {/* Condición de pago */}
             <section className="bg-card rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2.5">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</p>
-              </div>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
               <div className="flex gap-1.5">
                 {([
                   ['contado', 'Contado'],
@@ -493,67 +676,159 @@ export default function RutaNuevaVenta() {
                   excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'
                 }`}>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Límite de crédito</span>
-                    <span className="font-medium text-foreground">${clienteCredito.limite.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-muted-foreground">Límite</span>
+                    <span className="font-medium text-foreground">${fmt(clienteCredito.limite)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Saldo pendiente</span>
-                    <span className="font-medium text-foreground">${(saldoPendiente ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium text-foreground">${fmt(saldoPendienteTotal)}</span>
                   </div>
                   <div className="flex justify-between border-t border-border/40 pt-1">
                     <span className="text-muted-foreground">Disponible</span>
-                    <span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-success'}`}>
-                      ${creditoDisponible.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                    <span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-green-600'}`}>
+                      ${fmt(creditoDisponible)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Días de crédito</span>
-                    <span className="font-medium text-foreground">{clienteCredito.dias} días</span>
-                  </div>
                   {excedeCredito && (
-                    <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total de la venta excede el crédito disponible</p>
+                    <p className="text-[10px] text-destructive font-medium mt-1">⚠ El total excede el crédito disponible</p>
                   )}
                 </div>
               )}
-
-              <div className="mt-3 pt-3 border-t border-border/60 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center shrink-0">
-                  <span className="text-[9px] font-bold text-foreground">{clienteNombre.charAt(0)}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11.5px] font-medium text-foreground truncate">{clienteNombre}</p>
-                </div>
-                <button onClick={() => setStep('cliente')} className="text-[10.5px] text-primary font-medium">Cambiar</button>
-              </div>
             </section>
 
-            {/* Productos en carrito */}
-            <section className="bg-card rounded-lg p-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Productos ({totals.items})
-                </p>
-                <button onClick={() => setStep('productos')} className="text-[10.5px] text-primary font-medium">Editar</button>
-              </div>
-              <div className="space-y-1.5">
-                {cart.map(item => {
-                  const lineTotal = item.precio_unitario * item.cantidad;
-                  return (
-                    <div key={item.producto_id} className="flex items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
-                        <p className="text-[10.5px] text-muted-foreground">
-                          {item.cantidad} × ${item.precio_unitario.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                        </p>
+            {/* ─── Past pending accounts ─── */}
+            {cuentasPendientes.length > 0 && (
+              <section className="bg-card rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Cuentas pendientes ({cuentasPendientes.length})
+                  </p>
+                  <button
+                    onClick={liquidarTodas}
+                    className="text-[10.5px] text-primary font-semibold"
+                  >
+                    Liquidar todas
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  {cuentasPendientes.map(cuenta => (
+                    <div key={cuenta.id} className="rounded-md border border-border/60 p-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div>
+                          <span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span>
+                          <span className="text-[10px] text-muted-foreground ml-2">{cuenta.fecha}</span>
+                        </div>
+                        <span className="text-[11px] font-medium text-destructive">Debe: ${fmt(cuenta.saldo_pendiente)}</span>
                       </div>
-                      <span className="text-[12.5px] font-semibold text-foreground shrink-0 tabular-nums">
-                        ${lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => updateCuentaMonto(cuenta.id, cuenta.saldo_pendiente)}
+                          className={`text-[10px] px-2 py-1 rounded font-medium transition-all ${
+                            cuenta.montoAplicar === cuenta.saldo_pendiente
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-accent/60 text-foreground'
+                          }`}
+                        >
+                          Liquidar
+                        </button>
+                        <div className="flex-1 relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">$</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            className="w-full bg-accent/40 rounded-md pl-5 pr-2 py-1.5 text-[12px] text-foreground font-medium focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={cuenta.montoAplicar || ''}
+                            placeholder="0.00"
+                            onChange={e => updateCuentaMonto(cuenta.id, parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        {cuenta.montoAplicar > 0 && (
+                          <button
+                            onClick={() => updateCuentaMonto(cuenta.id, 0)}
+                            className="text-[10px] text-destructive font-medium"
+                          >
+                            Quitar
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </section>
+                  ))}
+                </div>
+
+                {totalAplicarCuentas > 0 && (
+                  <div className="mt-2 pt-2 border-t border-border/60 flex justify-between">
+                    <span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span>
+                    <span className="text-[12px] font-bold text-foreground">${fmt(totalAplicarCuentas)}</span>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* ─── Payment method (if there's anything to collect) ─── */}
+            {totalACobrar > 0 && (
+              <section className="bg-card rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Método de pago</p>
+                <div className="flex gap-1.5">
+                  {([
+                    ['efectivo', 'Efectivo', Wallet],
+                    ['transferencia', 'Transfer.', Banknote],
+                    ['tarjeta', 'Tarjeta', CreditCard],
+                  ] as const).map(([val, label, Icon]) => (
+                    <button
+                      key={val}
+                      onClick={() => setMetodoPago(val as typeof metodoPago)}
+                      className={`flex-1 py-2.5 rounded-md text-[11px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 ${
+                        metodoPago === val
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'bg-accent/60 text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Amount received (cash) */}
+                {metodoPago === 'efectivo' && (
+                  <div className="mt-2.5 space-y-1.5">
+                    <label className="text-[10px] text-muted-foreground font-medium">Monto recibido</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={montoRecibido}
+                        placeholder={fmt(totalACobrar)}
+                        onChange={e => setMontoRecibido(e.target.value)}
+                      />
+                    </div>
+                    {cambio > 0 && (
+                      <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2">
+                        <span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
+                        <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">${fmt(cambio)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Reference (transfer/card) */}
+                {metodoPago !== 'efectivo' && (
+                  <div className="mt-2.5">
+                    <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
+                    <input
+                      type="text"
+                      className="w-full mt-1 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                      value={referenciaPago}
+                      placeholder="No. de referencia o autorización"
+                      onChange={e => setReferenciaPago(e.target.value)}
+                    />
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Notas */}
             <section className="bg-card rounded-lg p-3">
@@ -567,36 +842,49 @@ export default function RutaNuevaVenta() {
               />
             </section>
 
-            {/* Totales */}
+            {/* Grand total summary */}
             <section className="bg-card rounded-lg p-3">
               <div className="space-y-1">
                 <div className="flex justify-between text-[12px]">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-medium text-foreground tabular-nums">${totals.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-muted-foreground">Venta actual</span>
+                  <span className="font-medium text-foreground tabular-nums">${fmt(totals.total)}</span>
                 </div>
-                {totals.iva > 0 && (
+                {condicionPago === 'credito' && (
+                  <div className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground italic">→ Se deja a crédito</span>
+                    <span className="text-muted-foreground italic">$0.00 hoy</span>
+                  </div>
+                )}
+                {totalAplicarCuentas > 0 && (
                   <div className="flex justify-between text-[12px]">
-                    <span className="text-muted-foreground">IVA</span>
-                    <span className="font-medium text-foreground tabular-nums">${totals.iva.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-muted-foreground">Cuentas anteriores</span>
+                    <span className="font-medium text-foreground tabular-nums">${fmt(totalAplicarCuentas)}</span>
                   </div>
                 )}
               </div>
-              <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60">
-                <span className="text-[13px] font-semibold text-foreground">Total</span>
-                <span className="text-[18px] font-bold text-primary tabular-nums">${totals.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-              </div>
+              {totalACobrar > 0 && (
+                <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60">
+                  <span className="text-[13px] font-semibold text-foreground">Total a cobrar</span>
+                  <span className="text-[20px] font-bold text-primary tabular-nums">${fmt(totalACobrar)}</span>
+                </div>
+              )}
+              {totalACobrar === 0 && condicionPago === 'credito' && (
+                <div className="mt-2 pt-2 border-t border-border/60">
+                  <p className="text-[12px] text-muted-foreground text-center">No hay cobro por ahora — se registra a crédito</p>
+                </div>
+              )}
             </section>
           </div>
 
           {/* Confirm button */}
-          <div className="fixed bottom-14 left-0 right-0 z-30 px-3 pb-2 safe-area-bottom">
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
             <button
               onClick={handleSave}
               disabled={saving || cart.length === 0 || excedeCredito}
-              className="w-full bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-1.5"
+              className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"
             >
               <Check className="h-4 w-4" />
-              {saving ? 'Guardando...' : tipoVenta === 'venta_directa' ? 'Confirmar venta' : 'Registrar pedido'}
+              {saving ? 'Guardando...' : totalACobrar > 0 ? `Confirmar y cobrar $${fmt(totalACobrar)}` : 'Confirmar venta a crédito'}
             </button>
           </div>
         </div>
