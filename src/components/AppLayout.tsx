@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Package, Tag, Users, ShoppingCart, FileText, BarChart3,
+  Package, Tag, Users, ShoppingCart, FileText, BarChart3, Truck,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
