@@ -35,6 +35,7 @@ export default function RutaNuevaVenta() {
   const [step, setStep] = useState<Step>('cliente');
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNombre, setClienteNombre] = useState('');
+  const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchCliente, setSearchCliente] = useState('');
   const [searchProducto, setSearchProducto] = useState('');
