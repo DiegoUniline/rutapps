@@ -54,6 +54,14 @@ function useVendedoresList() {
 
 function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
   const printRef = useRef<HTMLDivElement>(null);
+  const { data: empresaConfig } = useQuery({
+    queryKey: ['empresa-config', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('empresas').select('*').eq('id', empresa!.id).single();
+      return data;
+    },
+  });
 
   const handlePrint = () => {
     const content = printRef.current;
