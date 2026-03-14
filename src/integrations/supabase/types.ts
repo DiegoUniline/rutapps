@@ -90,38 +90,58 @@ export type Database = {
       }
       cargas: {
         Row: {
+          almacen_id: string | null
           created_at: string
           empresa_id: string
           fecha: string
           id: string
           notas: string | null
+          repartidor_id: string | null
           status: Database["public"]["Enums"]["status_carga"]
           vendedor_id: string | null
         }
         Insert: {
+          almacen_id?: string | null
           created_at?: string
           empresa_id: string
           fecha?: string
           id?: string
           notas?: string | null
+          repartidor_id?: string | null
           status?: Database["public"]["Enums"]["status_carga"]
           vendedor_id?: string | null
         }
         Update: {
+          almacen_id?: string | null
           created_at?: string
           empresa_id?: string
           fecha?: string
           id?: string
           notas?: string | null
+          repartidor_id?: string | null
           status?: Database["public"]["Enums"]["status_carga"]
           vendedor_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "cargas_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cargas_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cargas_repartidor_id_fkey"
+            columns: ["repartidor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
             referencedColumns: ["id"]
           },
           {
@@ -1349,6 +1369,7 @@ export type Database = {
           ieps_total: number | null
           iva_total: number | null
           notas: string | null
+          pedido_origen_id: string | null
           saldo_pendiente: number | null
           status: Database["public"]["Enums"]["status_venta"]
           subtotal: number | null
@@ -1372,6 +1393,7 @@ export type Database = {
           ieps_total?: number | null
           iva_total?: number | null
           notas?: string | null
+          pedido_origen_id?: string | null
           saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
           subtotal?: number | null
@@ -1395,6 +1417,7 @@ export type Database = {
           ieps_total?: number | null
           iva_total?: number | null
           notas?: string | null
+          pedido_origen_id?: string | null
           saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
           subtotal?: number | null
@@ -1423,6 +1446,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ventas_pedido_origen_id_fkey"
+            columns: ["pedido_origen_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
           {

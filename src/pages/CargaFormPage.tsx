@@ -31,6 +31,8 @@ export default function CargaFormPage() {
   const deleteCarga = useDeleteCarga();
 
   const [vendedorId, setVendedorId] = useState('');
+  const [repartidorId, setRepartidorId] = useState('');
+  const [almacenId, setAlmacenId] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [notas, setNotas] = useState('');
   const [lineas, setLineas] = useState<CargaLinea[]>([]);
@@ -55,9 +57,20 @@ export default function CargaFormPage() {
     },
   });
 
+  const { data: almacenes } = useQuery({
+    queryKey: ['almacenes-carga', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return data ?? [];
+    },
+  });
+
   useEffect(() => {
     if (carga && !isNew) {
       setVendedorId(carga.vendedor_id ?? '');
+      setRepartidorId((carga as any).repartidor_id ?? '');
+      setAlmacenId((carga as any).almacen_id ?? '');
       setFecha(carga.fecha);
       setNotas(carga.notas ?? '');
       setLineas((carga.carga_lineas ?? []).map((l: any) => ({
@@ -95,6 +108,8 @@ export default function CargaFormPage() {
       const saved = await saveCarga.mutateAsync({
         id: isNew ? undefined : id,
         vendedor_id: vendedorId,
+        repartidor_id: repartidorId || null,
+        almacen_id: almacenId || null,
         fecha,
         notas: notas || null,
       });
@@ -171,7 +186,7 @@ export default function CargaFormPage() {
       )}
 
       {/* Form fields */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
           <label className="text-sm font-medium text-foreground">Vendedor *</label>
           <select
@@ -182,6 +197,30 @@ export default function CargaFormPage() {
           >
             <option value="">Seleccionar...</option>
             {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground">Repartidor</label>
+          <select
+            className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+            value={repartidorId}
+            onChange={e => setRepartidorId(e.target.value)}
+            disabled={!isEditable && !isNew}
+          >
+            <option value="">Mismo vendedor</option>
+            {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground">Almacén origen</label>
+          <select
+            className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
+            value={almacenId}
+            onChange={e => setAlmacenId(e.target.value)}
+            disabled={!isEditable && !isNew}
+          >
+            <option value="">Sin asignar</option>
+            {almacenes?.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
           </select>
         </div>
         <div>

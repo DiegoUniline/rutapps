@@ -18,6 +18,8 @@ import VentaFormPage from "@/pages/VentaFormPage";
 import CargasListPage from "@/pages/CargasListPage";
 import CargaFormPage from "@/pages/CargaFormPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import DemandaPage from "@/pages/DemandaPage";
+import InventarioPage from "@/pages/InventarioPage";
 import NotFound from "@/pages/NotFound";
 import RutaDashboard from "@/pages/ruta/RutaDashboard";
 import RutaVentas from "@/pages/ruta/RutaVentas";
@@ -83,6 +85,8 @@ function AppRoutes() {
             <Route path="/clientes/:id" element={<ClienteFormPage />} />
             <Route path="/ventas" element={<VentasListPage />} />
             <Route path="/ventas/:id" element={<VentaFormPage />} />
+            <Route path="/demanda" element={<DemandaPage />} />
+            <Route path="/inventario" element={<InventarioPage />} />
             <Route path="/cargas" element={<CargasListPage />} />
             <Route path="/cargas/:id" element={<CargaFormPage />} />
             <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />

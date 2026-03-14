@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Package, Tag, Users, ShoppingCart, FileText, BarChart3, Truck,
-  LogOut, ChevronDown, PanelLeftClose, PanelLeft
+  LogOut, ChevronDown, PanelLeftClose, PanelLeft, ClipboardList, Warehouse
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +34,8 @@ const navItems: NavItem[] = [
   { label: 'Tarifas', icon: Tag, path: '/tarifas' },
   { label: 'Clientes', icon: Users, path: '/clientes' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ventas' },
+  { label: 'Demanda', icon: ClipboardList, path: '/demanda' },
+  { label: 'Inventario', icon: Warehouse, path: '/inventario' },
   { label: 'Cargas', icon: Truck, path: '/cargas' },
   { label: 'Facturación', icon: FileText, path: '/facturacion' },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
@@ -118,6 +120,7 @@ function Breadcrumb() {
     productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
     ventas: 'Ventas', cargas: 'Cargas', facturacion: 'Facturación',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
+    demanda: 'Demanda', inventario: 'Inventario',
   };
 
   if (segments.length <= 1) return null;
