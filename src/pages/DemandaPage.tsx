@@ -172,14 +172,15 @@ export default function DemandaPage() {
 
       const total = lineas.reduce((s: number, l: any) => s + l.total, 0);
 
-      // Create delivery
+      // Create delivery with assigned vendedor (editable)
+      const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
       const { data: venta, error } = await supabase.from('ventas').insert({
         empresa_id: empresa!.id,
         tipo: 'venta_directa',
         status: 'entregado',
         condicion_pago: pedido.condicion_pago,
         cliente_id: pedido.cliente_id,
-        vendedor_id: pedido.vendedor_id,
+        vendedor_id: assignedVendedor,
         pedido_origen_id: pedido.id,
         subtotal: total,
         total,
