@@ -591,7 +591,7 @@ export default function RutaNuevaVenta() {
           <div className="fixed bottom-14 left-0 right-0 z-30 px-3 pb-2 safe-area-bottom">
             <button
               onClick={handleSave}
-              disabled={saving || cart.length === 0}
+              disabled={saving || cart.length === 0 || excedeCredito}
               className="w-full bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-1.5"
             >
               <Check className="h-4 w-4" />
