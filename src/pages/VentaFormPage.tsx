@@ -518,7 +518,7 @@ export default function VentaFormPage() {
 
                   {/* Totals */}
                   <div className="flex justify-end pt-2">
-                    <div className="w-72 bg-secondary/50 rounded-md p-3 space-y-1.5 text-[13px]">
+                    <div className="w-72 bg-accent rounded-md p-3 space-y-1.5 text-[13px]">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
                         <span>${totals.subtotal.toFixed(2)}</span>
