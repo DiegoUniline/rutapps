@@ -44,7 +44,7 @@ export default function RutaVentas() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-[20px] font-bold text-foreground">Ventas</h1>
           <button
-            onClick={() => navigate('/ventas/nuevo')}
+            onClick={() => navigate('/ruta/ventas/nueva')}
             className="bg-primary text-primary-foreground rounded-xl px-4 py-2 text-[13px] font-semibold flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             <Plus className="h-4 w-4" /> Nueva
