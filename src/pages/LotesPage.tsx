@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 function useLotes(search: string) {
@@ -184,8 +185,8 @@ export default function LotesPage() {
                   <TableCell className="font-medium text-[12px]">{(l.productos as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground">{(l.almacenes as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-center font-medium">{l.cantidad}</TableCell>
-                  <TableCell className="text-[12px]">{l.fecha_produccion ?? '—'}</TableCell>
-                  <TableCell className="text-[12px]">{l.fecha_caducidad ?? '—'}</TableCell>
+                  <TableCell className="text-[12px]">{fmtDate(l.fecha_produccion)}</TableCell>
+                  <TableCell className="text-[12px]">{fmtDate(l.fecha_caducidad)}</TableCell>
                   <TableCell className="text-center">
                     {vencido ? (
                       <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="h-3 w-3 mr-1" />Vencido</Badge>

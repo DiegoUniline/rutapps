@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Truck, Search, ClipboardList } from 'lucide-react';
+import { fmtDate } from '@/lib/utils';
 import { useCarga, useSaveCarga, useSaveCargaLineas, useUpdateCargaStatus, useDeleteCarga } from '@/hooks/useCargas';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -238,7 +239,7 @@ export default function CargaFormPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5" /> {isNew ? 'Nueva carga' : `Carga — ${fecha}`}
+            <Truck className="h-5 w-5" /> {isNew ? 'Nueva carga' : `Carga — ${fmtDate(fecha)}`}
           </h1>
         </div>
         {!isNew && (

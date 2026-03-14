@@ -4,6 +4,7 @@ import { Plus, Search, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { fmtDate } from '@/lib/utils';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ export default function RutaVentas() {
               <p className="text-[12px] text-muted-foreground truncate mt-0.5">
                 {(v.clientes as any)?.nombre ?? 'Sin cliente'}
               </p>
-              <p className="text-[11px] text-muted-foreground">{v.fecha}</p>
+              <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)}</p>
             </div>
             <div className="text-right shrink-0">
               <p className="text-[15px] font-bold text-foreground">$ {(v.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>

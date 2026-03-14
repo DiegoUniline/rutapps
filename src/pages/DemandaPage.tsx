@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 
 // Pedidos confirmados that need fulfillment
 function useDemanda() {
@@ -234,7 +234,7 @@ export default function DemandaPage() {
                     <TableCell className="font-mono text-[11px] font-bold py-2">{pedido.folio}</TableCell>
                     <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
                     <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.fecha}</TableCell>
+                    <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
                     <TableCell className="text-center py-2">
                       <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
                     </TableCell>

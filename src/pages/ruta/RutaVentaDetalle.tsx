@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 
 const statusColors: Record<string, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -375,7 +375,7 @@ export default function RutaVentaDetalle() {
               <TicketRow label="Folio" value={ticketData.folio} />
               <TicketRow label="Cliente" value={clienteNombre} />
               <TicketRow label="Método" value={ticketData.metodo === 'efectivo' ? 'Efectivo' : ticketData.metodo === 'transferencia' ? 'Transferencia' : 'Tarjeta'} />
-              <TicketRow label="Fecha" value={ticketData.fecha} />
+              <TicketRow label="Fecha" value={fmtDate(ticketData.fecha)} />
               {cuentasPendientes.filter(c => c.montoAplicar > 0).length > 0 && (
                 <div className="border-t border-border pt-3">
                   <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-1.5">Aplicado a cuentas anteriores</p>
@@ -701,7 +701,7 @@ export default function RutaVentaDetalle() {
                     <div className="flex items-center justify-between mb-1.5">
                       <div>
                         <span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span>
-                        <span className="text-[10px] text-muted-foreground ml-2">{cuenta.fecha}</span>
+                        <span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span>
                       </div>
                       <span className="text-[11px] font-medium text-destructive">Debe: ${fmt(cuenta.saldo_pendiente)}</span>
                     </div>
@@ -839,8 +839,8 @@ export default function RutaVentaDetalle() {
 
         <div className="bg-card border border-border rounded-xl divide-y divide-border">
           <InfoRow icon={User} label="Cliente" value={clienteNombre} />
-          <InfoRow icon={Calendar} label="Fecha" value={venta.fecha} />
-          {venta.fecha_entrega && <InfoRow icon={Calendar} label="Entrega" value={venta.fecha_entrega} />}
+          <InfoRow icon={Calendar} label="Fecha" value={fmtDate(venta.fecha)} />
+          {venta.fecha_entrega && <InfoRow icon={Calendar} label="Entrega" value={fmtDate(venta.fecha_entrega)} />}
           <InfoRow icon={Banknote} label="Pago" value={venta.condicion_pago} />
           <InfoRow icon={FileText} label="Vendedor" value={vendedorNombre} />
         </div>

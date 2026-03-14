@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
@@ -137,7 +138,7 @@ export default function GastosDesktopPage() {
           <TableBody>
             {gastos?.map(g => (
               <TableRow key={g.id}>
-                <TableCell className="text-[12px]">{g.fecha}</TableCell>
+                <TableCell className="text-[12px]">{fmtDate(g.fecha)}</TableCell>
                 <TableCell className="font-medium text-[12px]">{g.concepto}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(g.vendedores as any)?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground truncate max-w-[200px]">{g.notas ?? '—'}</TableCell>

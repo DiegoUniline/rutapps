@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { fmtDate } from '@/lib/utils';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
@@ -72,7 +73,7 @@ export default function CargasListPage() {
                 const totalItems = (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0);
                 return (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/almacen/cargas/${c.id}`)}>
-                    <TableCell className="font-medium">{c.fecha}</TableCell>
+                    <TableCell className="font-medium">{fmtDate(c.fecha)}</TableCell>
                     <TableCell>{(c.vendedores as any)?.nombre ?? '—'}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1 text-muted-foreground">
