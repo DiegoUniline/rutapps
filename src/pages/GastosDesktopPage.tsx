@@ -138,7 +138,7 @@ export default function GastosDesktopPage() {
           <TableBody>
             {gastos?.map(g => (
               <TableRow key={g.id}>
-                <TableCell className="text-[12px]">{g.fecha}</TableCell>
+                <TableCell className="text-[12px]">{fmtDate(g.fecha)}</TableCell>
                 <TableCell className="font-medium text-[12px]">{g.concepto}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(g.vendedores as any)?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground truncate max-w-[200px]">{g.notas ?? '—'}</TableCell>

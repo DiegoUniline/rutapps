@@ -78,7 +78,7 @@ export default function RutaMiCarga() {
           <Truck className="h-5 w-5 text-primary" /> Mi carga
         </h1>
         <p className="text-[12px] text-muted-foreground mt-0.5">
-          {carga.fecha} · {carga.status === 'pendiente' ? 'Pendiente' : 'En ruta'}
+          {fmtDate(carga.fecha)} · {carga.status === 'pendiente' ? 'Pendiente' : 'En ruta'}
         </p>
       </div>
 

@@ -81,7 +81,7 @@ export default function CuentasPagarPage() {
                 <TableCell className="font-mono text-[11px]">{c.folio ?? c.id.slice(0, 8)}</TableCell>
                 <TableCell className="font-medium text-[12px]">{(c.proveedores as any)?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(c.almacenes as any)?.nombre ?? '—'}</TableCell>
-                <TableCell className="text-[12px]">{c.fecha}</TableCell>
+                <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
                 <TableCell className="text-center">
                   <Badge variant={c.status === 'recibida' ? 'default' : 'outline'} className="text-[10px]">
                     {c.status === 'recibida' ? 'Recibida' : 'Confirmada'}

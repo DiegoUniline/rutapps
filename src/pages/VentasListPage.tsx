@@ -137,7 +137,7 @@ export default function VentasListPage() {
                       <td className="py-2 px-3">{v.clientes?.nombre ?? '—'}</td>
                       <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
                       <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
-                      <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{v.fecha}</td>
+                      <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
                       <td className="py-2 px-3 text-right font-medium">${v.total?.toFixed(2)}</td>
                       <td className="py-2 px-3 text-center">
                         <StatusChip status={v.status} />

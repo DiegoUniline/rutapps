@@ -145,7 +145,7 @@ export default function CobranzaPage() {
               <TableBody>
                 {cobros?.map(c => (
                   <TableRow key={c.id}>
-                    <TableCell className="text-[12px]">{c.fecha}</TableCell>
+                    <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
                     <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
                     <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
                     <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
