@@ -187,8 +187,19 @@ export default function CargaFormPage() {
   const handleStatusChange = async (newStatus: string) => {
     if (!id || isNew) return;
     try {
+      // When sending to route, deduct stock from warehouse
+      if (newStatus === 'en_ruta' && lineas.length > 0) {
+        for (const l of lineas) {
+          const { error } = await supabase.rpc('deduct_stock' as any, {} as any);
+          // Use direct update instead - decrement producto cantidad
+          await supabase
+            .from('productos')
+            .update({ cantidad: Math.max(0, l.stock_actual - l.cantidad_cargada) } as any)
+            .eq('id', l.producto_id);
+        }
+      }
       await updateStatus.mutateAsync({ id, status: newStatus });
-      toast.success(`Status: ${newStatus}`);
+      toast.success(newStatus === 'en_ruta' ? 'Carga enviada a ruta — stock descontado del almacén' : `Status: ${newStatus}`);
     } catch (err: any) {
       toast.error(err.message);
     }
