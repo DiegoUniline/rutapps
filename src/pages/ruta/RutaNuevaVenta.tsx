@@ -59,11 +59,13 @@ const MOTIVOS: { value: DevolucionItem['motivo']; label: string }[] = [
 
 export default function RutaNuevaVenta() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlClienteId = searchParams.get('clienteId');
   const { empresa, user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>('cliente');
-  const [clienteId, setClienteId] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>(urlClienteId ? 'devoluciones' : 'cliente');
+  const [clienteId, setClienteId] = useState<string | null>(urlClienteId);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
