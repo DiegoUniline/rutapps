@@ -230,7 +230,7 @@ export default function CargaFormPage() {
   if (!isNew && isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
 
   return (
-    <div className="p-6 space-y-5 max-w-4xl">
+    <div className="p-6 space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate('/almacen/cargas')}>
@@ -335,17 +335,31 @@ export default function CargaFormPage() {
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar producto..." className="pl-8" value={searchProd} onChange={e => setSearchProd(e.target.value)} autoFocus />
             </div>
-            <div className="max-h-48 overflow-auto space-y-1">
-              {filteredProducts?.slice(0, 20).map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => addProduct(p)}
-                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent text-sm flex justify-between"
-                >
-                  <span>{p.codigo} — {p.nombre}</span>
-                  <span className="text-muted-foreground">Stock: {p.cantidad ?? 0}</span>
-                </button>
-              ))}
+            <div className="max-h-64 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[11px]">Código</TableHead>
+                    <TableHead className="text-[11px]">Producto</TableHead>
+                    <TableHead className="text-[11px] text-right w-20">Stock</TableHead>
+                    <TableHead className="text-[11px] text-right w-20">Precio</TableHead>
+                    <TableHead className="w-16"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts?.slice(0, 30).map(p => (
+                    <TableRow key={p.id} className="cursor-pointer hover:bg-accent/50" onClick={() => addProduct(p)}>
+                      <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{p.codigo}</TableCell>
+                      <TableCell className="text-[12px] py-1.5">{p.nombre}</TableCell>
+                      <TableCell className="text-right text-[12px] py-1.5">{p.cantidad ?? 0}</TableCell>
+                      <TableCell className="text-right text-[12px] py-1.5">$ {(p.precio_principal ?? 0).toFixed(2)}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Button size="sm" variant="ghost" className="h-6 text-[11px] text-primary">+ Agregar</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
@@ -354,46 +368,53 @@ export default function CargaFormPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Producto</TableHead>
-                <TableHead className="w-24">Stock</TableHead>
-                <TableHead className="w-32">Cantidad</TableHead>
-                {!isNew && <TableHead className="w-24">Devuelto</TableHead>}
-                {!isNew && <TableHead className="w-24">Vendido</TableHead>}
-                {(isEditable || isNew) && <TableHead className="w-12"></TableHead>}
+                <TableHead className="text-[11px]">Código</TableHead>
+                <TableHead className="text-[11px]">Producto</TableHead>
+                <TableHead className="text-[11px] text-right w-24">Stock almacén</TableHead>
+                <TableHead className="text-[11px] w-28">Cant. a cargar</TableHead>
+                {!isNew && <TableHead className="text-[11px] text-right w-20">Vendido</TableHead>}
+                {!isNew && <TableHead className="text-[11px] text-right w-20">Devuelto</TableHead>}
+                {!isNew && <TableHead className="text-[11px] text-right w-20">En mano</TableHead>}
+                {(isEditable || isNew) && <TableHead className="w-10"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {lineas.length === 0 && (
                 <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sin productos</TableCell></TableRow>
               )}
-              {lineas.map((l, idx) => (
-                <TableRow key={l.producto_id}>
-                  <TableCell className="text-muted-foreground text-xs">{l.codigo}</TableCell>
-                  <TableCell className="font-medium">{l.nombre}</TableCell>
-                  <TableCell className="text-muted-foreground">{l.stock_actual}</TableCell>
-                  <TableCell>
-                    {(isEditable || isNew) ? (
-                      <Input
-                        type="number"
-                        className="w-24"
-                        value={l.cantidad_cargada}
-                        onChange={e => updateQty(idx, parseFloat(e.target.value) || 0)}
-                        min={0}
-                      />
-                    ) : l.cantidad_cargada}
-                  </TableCell>
-                  {!isNew && <TableCell>{(carga?.carga_lineas as any)?.[idx]?.cantidad_devuelta ?? 0}</TableCell>}
-                  {!isNew && <TableCell>{(carga?.carga_lineas as any)?.[idx]?.cantidad_vendida ?? 0}</TableCell>}
-                  {(isEditable || isNew) && (
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeLine(idx)}>
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </Button>
+              {lineas.map((l, idx) => {
+                const vendido = (carga?.carga_lineas as any)?.[idx]?.cantidad_vendida ?? 0;
+                const devuelto = (carga?.carga_lineas as any)?.[idx]?.cantidad_devuelta ?? 0;
+                const enMano = l.cantidad_cargada - vendido - devuelto;
+                return (
+                  <TableRow key={l.producto_id}>
+                    <TableCell className="text-muted-foreground text-[11px] font-mono py-1.5">{l.codigo}</TableCell>
+                    <TableCell className="text-[12px] font-medium py-1.5">{l.nombre}</TableCell>
+                    <TableCell className="text-right text-[12px] text-muted-foreground py-1.5">{l.stock_actual}</TableCell>
+                    <TableCell className="py-1.5">
+                      {(isEditable || isNew) ? (
+                        <Input
+                          type="number"
+                          className="w-24 h-7 text-[12px]"
+                          value={l.cantidad_cargada}
+                          onChange={e => updateQty(idx, parseFloat(e.target.value) || 0)}
+                          min={0}
+                        />
+                      ) : <span className="font-medium">{l.cantidad_cargada}</span>}
                     </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                    {!isNew && <TableCell className="text-right text-[12px] py-1.5">{vendido}</TableCell>}
+                    {!isNew && <TableCell className="text-right text-[12px] py-1.5">{devuelto}</TableCell>}
+                    {!isNew && <TableCell className="text-right text-[12px] font-semibold py-1.5">{enMano}</TableCell>}
+                    {(isEditable || isNew) && (
+                      <TableCell className="py-1.5">
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeLine(idx)}>
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
