@@ -414,8 +414,7 @@ export default function CargaFormPage() {
                     )}
                   </TableRow>
                 );
-              })}
-              ))}
+              })
             </TableBody>
           </Table>
         </div>
