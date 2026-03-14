@@ -172,6 +172,7 @@ export interface Venta {
   iva_total: number;
   ieps_total: number;
   total: number;
+  saldo_pendiente?: number;
   created_at: string;
   // joined
   clientes?: { nombre: string };

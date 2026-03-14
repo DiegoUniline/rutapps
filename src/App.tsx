@@ -25,6 +25,7 @@ import RutaGastos from "@/pages/ruta/RutaGastos";
 import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta";
 import RutaCobros from "@/pages/ruta/RutaCobros";
 import RutaCobrar from "@/pages/ruta/RutaCobrar";
+import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ function AppRoutes() {
         <Route path="gastos" element={<RutaGastos />} />
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
+      <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
 
       {/* Desktop ERP */}
