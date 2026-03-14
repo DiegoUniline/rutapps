@@ -316,8 +316,9 @@ export default function CargaFormPage() {
                 </Button>
               )}
               <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
-            </Button>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
+              </Button>
+            </div>
           )}
         </div>
 
