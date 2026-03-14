@@ -89,7 +89,15 @@ export default function RutaClientes() {
       <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-2 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-[20px] font-bold text-foreground">Clientes</h1>
-          <Badge variant="secondary" className="text-[11px]">{filtered.length} clientes</Badge>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/ruta/mapa')}
+              className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
+            >
+              <MapPinned className="h-4 w-4" />
+            </button>
+            <Badge variant="secondary" className="text-[11px]">{filtered.length}</Badge>
+          </div>
         </div>
 
         {/* Mode toggle */}
