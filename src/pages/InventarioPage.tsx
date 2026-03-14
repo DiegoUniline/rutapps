@@ -256,7 +256,7 @@ export default function InventarioPage() {
                     )}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {c.almacen && `Almacén: ${c.almacen} · `}{c.fecha} · {c.status === 'en_ruta' ? 'En ruta' : 'Pendiente'}
+                    {c.almacen && `Almacén: ${c.almacen} · `}{fmtDate(c.fecha)} · {c.status === 'en_ruta' ? 'En ruta' : 'Pendiente'}
                   </p>
                 </div>
                 <div className="text-right">
