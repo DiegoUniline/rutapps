@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -59,11 +59,13 @@ const MOTIVOS: { value: DevolucionItem['motivo']; label: string }[] = [
 
 export default function RutaNuevaVenta() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlClienteId = searchParams.get('clienteId');
   const { empresa, user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>('cliente');
-  const [clienteId, setClienteId] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>(urlClienteId ? 'devoluciones' : 'cliente');
+  const [clienteId, setClienteId] = useState<string | null>(urlClienteId);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -99,6 +101,21 @@ export default function RutaNuevaVenta() {
       return data ?? [];
     },
   });
+
+  // Auto-select client from URL param
+  useEffect(() => {
+    if (urlClienteId && clientes) {
+      const c = clientes.find(cl => cl.id === urlClienteId);
+      if (c) {
+        setClienteNombre(c.nombre);
+        setClienteCredito({
+          credito: c.credito ?? false,
+          limite: c.limite_credito ?? 0,
+          dias: c.dias_credito ?? 0,
+        });
+      }
+    }
+  }, [urlClienteId, clientes]);
 
   const { data: ventasPendientes } = useQuery({
     queryKey: ['ruta-cuentas-pendientes', clienteId],
