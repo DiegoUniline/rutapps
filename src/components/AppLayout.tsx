@@ -120,6 +120,7 @@ function Breadcrumb() {
     productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
     ventas: 'Ventas', cargas: 'Cargas', facturacion: 'Facturación',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
+    demanda: 'Demanda', inventario: 'Inventario',
   };
 
   if (segments.length <= 1) return null;
