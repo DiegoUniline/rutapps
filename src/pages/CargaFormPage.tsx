@@ -308,7 +308,14 @@ export default function CargaFormPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-foreground">Productos a cargar</h2>
           {(isEditable || isNew) && (
-            <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
+            <div className="flex gap-2">
+              {vendedorId && (
+                <Button size="sm" variant="outline" onClick={loadFromPedidos} disabled={loadingPedidos || !pedidosVendedor?.length}>
+                  <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                  Cargar desde pedidos {pedidosVendedor?.length ? `(${pedidosVendedor.length})` : ''}
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => setShowSearch(!showSearch)}>
               <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
             </Button>
           )}
