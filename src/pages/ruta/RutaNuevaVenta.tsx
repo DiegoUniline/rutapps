@@ -251,7 +251,7 @@ export default function RutaNuevaVenta() {
           <div className="flex-1 overflow-auto px-3 pb-4">
             {/* Skip client */}
             <button
-              onClick={() => { setClienteId(null); setClienteNombre('Público general'); setStep('productos'); }}
+              onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteCredito(null); setCondicionPago('contado'); setStep('productos'); }}
               className="w-full mb-1.5 rounded-lg px-3 py-2.5 flex items-center gap-2.5 bg-accent/40 border border-dashed border-primary/25 active:scale-[0.98] transition-transform text-left"
             >
               <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
