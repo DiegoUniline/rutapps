@@ -162,6 +162,45 @@ export type Database = {
           },
         ]
       }
+      cliente_pedido_sugerido: {
+        Row: {
+          cantidad: number
+          cliente_id: string
+          created_at: string
+          id: string
+          producto_id: string
+        }
+        Insert: {
+          cantidad?: number
+          cliente_id: string
+          created_at?: string
+          id?: string
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          cliente_id?: string
+          created_at?: string
+          id?: string
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_pedido_sugerido_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_pedido_sugerido_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clientes: {
         Row: {
           cobrador_id: string | null
