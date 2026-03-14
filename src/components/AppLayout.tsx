@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Package, Tag, Users, ShoppingCart, FileText, BarChart3, Truck,
-  LogOut, ChevronDown, PanelLeftClose, PanelLeft
+  LogOut, ChevronDown, PanelLeftClose, PanelLeft, ClipboardList, Warehouse
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
