@@ -84,7 +84,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? "bg-sidebar-accent text-primary-foreground"
+            ? "bg-primary/10 text-primary font-semibold"
             : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
@@ -103,7 +103,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
           "w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? "text-primary-foreground/90"
+            ? "text-primary font-semibold"
             : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
@@ -130,7 +130,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
                 className={cn(
                   "block px-2.5 py-1.5 rounded-md text-[12px] transition-all",
                   childActive
-                    ? "bg-sidebar-accent/20 text-primary-foreground font-semibold"
+                    ? "bg-primary/10 text-primary font-semibold"
                     : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover"
                 )}
               >
@@ -189,7 +189,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-background">
       <aside
         className={cn(
-          "h-screen sticky top-0 flex flex-col bg-sidebar transition-all duration-200 shrink-0",
+          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
           collapsed ? "w-[52px]" : "w-56"
         )}
       >
@@ -198,9 +198,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           collapsed ? "justify-center px-2" : "px-4"
         )}>
           {collapsed ? (
-            <span className="text-[18px] font-black text-primary-foreground">R</span>
+            <span className="text-[18px] font-black text-primary">R</span>
           ) : (
-            <span className="text-[18px] font-black text-primary-foreground tracking-tight">Rutapp</span>
+            <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
           )}
         </div>
 
