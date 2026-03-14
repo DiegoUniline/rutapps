@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
+import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, ChevronRight, Search, ClipboardList, Warehouse, AlertTriangle } from 'lucide-react';
+import { Truck, Check, ChevronRight, Search, ClipboardList, Warehouse, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 
