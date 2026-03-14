@@ -432,38 +432,10 @@ export default function ProductoFormPage() {
                       onChange={v => set('precio_principal', +v)}
                       format={v => `$ ${(v ?? 0).toFixed(2)}`}
                     />
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Impuestos venta</span>
-                      <div className="flex gap-1.5 flex-wrap items-center">
-                        {form.tiene_iva && (
-                          <OdooBadge
-                            label={`IVA ${tasasIva?.find(t => t.id === form.tasa_iva_id)?.porcentaje ?? 0}%`}
-                            onRemove={() => { set('tiene_iva', false); set('tasa_iva_id', null); }}
-                          />
-                        )}
-                        {!form.tiene_iva && (
-                          <span className="text-[12px] text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => set('tiene_iva', true)}>+ Agregar</span>
-                        )}
-                      </div>
-                    </div>
                     <OdooField label="Costo" value={form.costo} type="number" teal help
                       onChange={v => set('costo', +v)}
                       format={v => `$ ${(v ?? 0).toFixed(2)}`}
                     />
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Impuestos compra</span>
-                      <div className="flex gap-1.5 flex-wrap items-center">
-                        {form.tiene_ieps && (
-                          <OdooBadge
-                            label={`IEPS ${tasasIeps?.find(t => t.id === form.tasa_ieps_id)?.porcentaje ?? 0}%`}
-                            onRemove={() => { set('tiene_ieps', false); set('tasa_ieps_id', null); }}
-                          />
-                        )}
-                        {!form.tiene_ieps && (
-                          <span className="text-[12px] text-muted-foreground cursor-pointer hover:text-foreground" onClick={() => set('tiene_ieps', true)}>+ Agregar</span>
-                        )}
-                      </div>
-                    </div>
                     <OdooField label="Proveedor" value={form.proveedor_id} type="select"
                       options={proveedores?.map(p => ({ value: p.id, label: p.nombre })) ?? []}
                       onChange={v => set('proveedor_id', v || null)}
