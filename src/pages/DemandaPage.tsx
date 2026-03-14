@@ -235,13 +235,26 @@ export default function DemandaPage() {
     (p.folio ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
+  // Fetch vendedores for assignment
+  const { data: vendedoresList } = useQuery({
+    queryKey: ['vendedores-list', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return data ?? [];
+    },
+  });
+
   const initSurtido = (pedido: any) => {
-    // Initialize with 0 — user fills or uses "Surtir todo"
     const newQtys: Record<string, number> = {};
     for (const l of pedido.venta_lineas) {
       newQtys[`${pedido.id}-${l.producto_id}`] = 0;
     }
     setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
+    // Auto-assign vendedor from client's vendedor (already on pedido)
+    if (!vendedorEntrega[pedido.id]) {
+      setVendedorEntrega(prev => ({ ...prev, [pedido.id]: pedido.vendedor_id ?? null }));
+    }
     setExpandedId(pedido.id);
   };
 
