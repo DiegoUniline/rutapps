@@ -120,12 +120,12 @@
     --input: 220 14% 20%;
     --ring: 228 60% 65%;
 
-    --sidebar: 225 30% 10%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-border: 225 20% 16%;
-    --sidebar-hover: 225 25% 15%;
+    --sidebar: 220 14% 12%;
+    --sidebar-foreground: 220 10% 75%;
+    --sidebar-border: 220 14% 18%;
+    --sidebar-hover: 220 14% 16%;
     --sidebar-accent: 228 60% 65%;
-    --sidebar-muted: 225 15% 40%;
+    --sidebar-muted: 220 10% 50%;
 
     --chart-1: 228 60% 65%;
     --chart-2: 260 45% 62%;

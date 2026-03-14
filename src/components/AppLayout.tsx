@@ -189,7 +189,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-background">
       <aside
         className={cn(
-          "h-screen sticky top-0 flex flex-col bg-sidebar transition-all duration-200 shrink-0",
+          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
           collapsed ? "w-[52px]" : "w-56"
         )}
       >
