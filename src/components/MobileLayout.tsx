@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { Home, ShoppingCart, Users, Truck, Banknote, Package } from 'lucide-react';
+import { UnilineFooter } from '@/components/UnilineFooter';
 import { cn } from '@/lib/utils';
 
 const tabs = [
@@ -16,6 +17,7 @@ export default function MobileLayout() {
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16">
         <Outlet />
+        <UnilineFooter />
       </main>
 
       {/* Bottom navigation */}

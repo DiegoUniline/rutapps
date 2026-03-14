@@ -712,19 +712,55 @@ export type Database = {
       }
       empresas: {
         Row: {
+          ciudad: string | null
+          colonia: string | null
+          cp: string | null
           created_at: string
+          direccion: string | null
+          email: string | null
+          estado: string | null
           id: string
+          logo_url: string | null
           nombre: string
+          notas_ticket: string | null
+          razon_social: string | null
+          regimen_fiscal: string | null
+          rfc: string | null
+          telefono: string | null
         }
         Insert: {
+          ciudad?: string | null
+          colonia?: string | null
+          cp?: string | null
           created_at?: string
+          direccion?: string | null
+          email?: string | null
+          estado?: string | null
           id?: string
+          logo_url?: string | null
           nombre: string
+          notas_ticket?: string | null
+          razon_social?: string | null
+          regimen_fiscal?: string | null
+          rfc?: string | null
+          telefono?: string | null
         }
         Update: {
+          ciudad?: string | null
+          colonia?: string | null
+          cp?: string | null
           created_at?: string
+          direccion?: string | null
+          email?: string | null
+          estado?: string | null
           id?: string
+          logo_url?: string | null
           nombre?: string
+          notas_ticket?: string | null
+          razon_social?: string | null
+          regimen_fiscal?: string | null
+          rfc?: string | null
+          telefono?: string | null
         }
         Relationships: []
       }

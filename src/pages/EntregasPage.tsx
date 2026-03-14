@@ -54,6 +54,14 @@ function useVendedoresList() {
 
 function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
   const printRef = useRef<HTMLDivElement>(null);
+  const { data: empresaConfig } = useQuery({
+    queryKey: ['empresa-config', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('empresas').select('*').eq('id', empresa!.id).single();
+      return data;
+    },
+  });
 
   const handlePrint = () => {
     const content = printRef.current;
@@ -105,11 +113,19 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
       {/* Hidden printable content */}
       <div ref={printRef} className="hidden">
         <div className="header">
-          <div>
-            <div className="company">{empresa?.nombre ?? 'Mi Empresa'}</div>
-            <div className="doc-title">Documento de entrega</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {(empresaConfig as any)?.logo_url && (
+              <img src={(empresaConfig as any).logo_url} alt="Logo" style={{ height: '48px', objectFit: 'contain' }} />
+            )}
+            <div>
+              <div className="company">{empresaConfig?.nombre ?? empresa?.nombre ?? 'Mi Empresa'}</div>
+              {(empresaConfig as any)?.direccion && <div style={{ fontSize: '10px', color: '#888' }}>{(empresaConfig as any).direccion}{(empresaConfig as any).colonia ? `, ${(empresaConfig as any).colonia}` : ''}{(empresaConfig as any).ciudad ? `, ${(empresaConfig as any).ciudad}` : ''}</div>}
+              {(empresaConfig as any)?.rfc && <div style={{ fontSize: '10px', color: '#888' }}>RFC: {(empresaConfig as any).rfc}</div>}
+              {(empresaConfig as any)?.telefono && <div style={{ fontSize: '10px', color: '#888' }}>Tel: {(empresaConfig as any).telefono}</div>}
+            </div>
           </div>
           <div style={{ textAlign: 'right' }}>
+            <div className="doc-title">Documento de entrega</div>
             <div className="folio">{entrega.folio}</div>
             <div style={{ fontSize: '12px', color: '#666' }}>{fmtDate(entrega.fecha)}</div>
             <span className={`status-badge ${entrega.status === 'confirmado' ? 'status-pending' : 'status-done'}`}>
@@ -173,6 +189,16 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
         <div className="footer">
           <div><div className="sign-line">Entregó</div></div>
           <div><div className="sign-line">Recibió</div></div>
+        </div>
+
+        {(empresaConfig as any)?.notas_ticket && (
+          <div style={{ marginTop: '24px', padding: '8px 12px', background: '#f9f9f9', borderRadius: '4px', fontSize: '10px', color: '#888', textAlign: 'center' }}>
+            {(empresaConfig as any).notas_ticket}
+          </div>
+        )}
+
+        <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#bbb' }}>
+          Elaborado por Uniline — Innovación en la nube
         </div>
       </div>
     </div>

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { UnilineFooter } from '@/components/UnilineFooter';
 import {
   Package, Tag, Users, ShoppingCart, FileText, BarChart3, Truck,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, ClipboardList, Warehouse,
-  Banknote, Receipt, MapPin, DollarSign, CreditCard, TrendingDown, Layers
+  Banknote, Receipt, MapPin, DollarSign, CreditCard, TrendingDown, Layers, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -70,6 +71,7 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
+  { label: 'Configuración', icon: Settings, path: '/configuracion' },
 ];
 
 function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
@@ -159,6 +161,7 @@ function Breadcrumb() {
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
+    configuracion: 'Configuración',
   };
 
   if (segments.length <= 1) return null;
@@ -244,6 +247,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto">
           {children}
         </main>
+        <UnilineFooter />
       </div>
     </div>
   );
