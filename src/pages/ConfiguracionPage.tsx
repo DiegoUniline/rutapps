@@ -2,11 +2,23 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings, Upload, Save, Building2, Receipt, FileText } from 'lucide-react';
+import { Settings, Upload, Save, Building2, Receipt, FileText, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+const DEFAULT_CAMPOS: Record<string, boolean> = {
+  logo: true, nombre: true, razon_social: true, rfc: true,
+  direccion: true, telefono: true, notas_ticket: true, firmas: true,
+};
+
+const CAMPO_LABELS: Record<string, string> = {
+  logo: 'Logo', nombre: 'Nombre comercial', razon_social: 'Razón social',
+  rfc: 'RFC', direccion: 'Dirección', telefono: 'Teléfono',
+  notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
+};
 
 function useEmpresaConfig() {
   const { empresa } = useAuth();
@@ -23,19 +35,25 @@ function useEmpresaConfig() {
 
 /* ─── Live Preview Components ─── */
 
-function TicketPreview({ form, logoPreview }: { form: Record<string, string>; logoPreview: string | null }) {
+interface PreviewProps {
+  form: Record<string, string>;
+  logoPreview: string | null;
+  campos: Record<string, boolean>;
+}
+
+function TicketPreview({ form, logoPreview, campos }: PreviewProps) {
   const nombre = form.nombre || 'Mi Empresa';
   const dir = [form.direccion, form.colonia, form.ciudad].filter(Boolean).join(', ');
 
   return (
     <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width: '280px', fontFamily: "'Courier New', monospace" }}>
       <div className="px-4 pt-4 pb-2 text-center">
-        {logoPreview && <img src={logoPreview} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />}
-        <div className="font-bold text-[13px]">{nombre}</div>
-        {form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
-        {form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
-        {dir && <div className="text-[9px] text-gray-500">{dir}</div>}
-        {form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
+        {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />}
+        {campos.nombre && <div className="font-bold text-[13px]">{nombre}</div>}
+        {campos.razon_social && form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
+        {campos.rfc && form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
+        {campos.direccion && dir && <div className="text-[9px] text-gray-500">{dir}</div>}
+        {campos.telefono && form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
       </div>
       <div className="border-t border-dashed border-gray-300 mx-3" />
       <div className="px-4 py-2">
@@ -70,7 +88,7 @@ function TicketPreview({ form, logoPreview }: { form: Record<string, string>; lo
         <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>$ 82.40</span></div>
         <div className="flex justify-between text-[12px] font-bold border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
       </div>
-      {form.notas_ticket && (
+      {campos.notas_ticket && form.notas_ticket && (
         <>
           <div className="border-t border-dashed border-gray-300 mx-3" />
           <div className="px-4 py-2 text-center text-[9px] text-gray-500">{form.notas_ticket}</div>
@@ -84,7 +102,7 @@ function TicketPreview({ form, logoPreview }: { form: Record<string, string>; lo
   );
 }
 
-function NotaVentaPreview({ form, logoPreview }: { form: Record<string, string>; logoPreview: string | null }) {
+function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
   const nombre = form.nombre || 'Mi Empresa';
   const dir = [form.direccion, form.colonia, form.ciudad, form.estado].filter(Boolean).join(', ');
 
@@ -93,13 +111,13 @@ function NotaVentaPreview({ form, logoPreview }: { form: Record<string, string>;
       {/* Header */}
       <div className="p-4 border-b-2 border-gray-200 flex justify-between items-start">
         <div className="flex items-center gap-3">
-          {logoPreview && <img src={logoPreview} alt="Logo" className="h-10 object-contain" />}
+          {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 object-contain" />}
           <div>
-            <div className="font-bold text-[14px]">{nombre}</div>
-            {form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
-            {form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
-            {dir && <div className="text-[9px] text-gray-500 max-w-[200px]">{dir} {form.cp ? `C.P. ${form.cp}` : ''}</div>}
-            {form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
+            {campos.nombre && <div className="font-bold text-[14px]">{nombre}</div>}
+            {campos.razon_social && form.razon_social && <div className="text-[9px] text-gray-500">{form.razon_social}</div>}
+            {campos.rfc && form.rfc && <div className="text-[9px] text-gray-500">RFC: {form.rfc}</div>}
+            {campos.direccion && dir && <div className="text-[9px] text-gray-500 max-w-[200px]">{dir} {form.cp ? `C.P. ${form.cp}` : ''}</div>}
+            {campos.telefono && form.telefono && <div className="text-[9px] text-gray-500">Tel: {form.telefono}</div>}
           </div>
         </div>
         <div className="text-right">
@@ -163,12 +181,14 @@ function NotaVentaPreview({ form, logoPreview }: { form: Record<string, string>;
       </div>
 
       {/* Signatures */}
-      <div className="grid grid-cols-2 gap-8 px-6 pb-2 pt-4">
-        <div className="border-t border-gray-400 pt-1 text-center text-[9px] text-gray-400">Entregó</div>
-        <div className="border-t border-gray-400 pt-1 text-center text-[9px] text-gray-400">Recibió</div>
-      </div>
+      {campos.firmas && (
+        <div className="grid grid-cols-2 gap-8 px-6 pb-2 pt-4">
+          <div className="border-t border-gray-400 pt-1 text-center text-[9px] text-gray-400">Entregó</div>
+          <div className="border-t border-gray-400 pt-1 text-center text-[9px] text-gray-400">Recibió</div>
+        </div>
+      )}
 
-      {form.notas_ticket && (
+      {campos.notas_ticket && form.notas_ticket && (
         <div className="mx-3 my-2 p-2 bg-gray-50 rounded text-[9px] text-gray-500 text-center">{form.notas_ticket}</div>
       )}
 
@@ -189,6 +209,7 @@ export default function ConfiguracionPage() {
   const [previewTab, setPreviewTab] = useState<'ticket' | 'nota'>('ticket');
 
   const [form, setForm] = useState<Record<string, string>>({});
+  const [campos, setCampos] = useState<Record<string, boolean>>(DEFAULT_CAMPOS);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -209,6 +230,9 @@ export default function ConfiguracionPage() {
       notas_ticket: (config as any).notas_ticket ?? '',
     });
     if ((config as any).logo_url) setLogoPreview((config as any).logo_url);
+    if ((config as any).ticket_campos) {
+      setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
+    }
     setInitialized(true);
   }
 
@@ -235,6 +259,7 @@ export default function ConfiguracionPage() {
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
+        ticket_campos: campos,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -294,6 +319,26 @@ export default function ConfiguracionPage() {
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
               <p className="text-[11px] text-muted-foreground mt-2">PNG o JPG, máximo 2MB</p>
             </div>
+          </div>
+        </div>
+
+        {/* Campos visibles */}
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Eye className="h-4 w-4" /> Campos visibles en ticket / nota
+          </h3>
+          <p className="text-[11px] text-muted-foreground mb-3">Elige qué información aparece en tus documentos impresos.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(CAMPO_LABELS).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors">
+                <Switch
+                  checked={campos[key] ?? true}
+                  onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
+                  className="scale-75"
+                />
+                <span className="text-[12px] text-foreground">{label}</span>
+              </label>
+            ))}
           </div>
         </div>
 
@@ -369,9 +414,9 @@ export default function ConfiguracionPage() {
 
         <div className="flex justify-center p-4 bg-muted/30 rounded-lg border border-border min-h-[500px]">
           {previewTab === 'ticket' ? (
-            <TicketPreview form={form} logoPreview={logoPreview} />
+            <TicketPreview form={form} logoPreview={logoPreview} campos={campos} />
           ) : (
-            <NotaVentaPreview form={form} logoPreview={logoPreview} />
+            <NotaVentaPreview form={form} logoPreview={logoPreview} campos={campos} />
           )}
         </div>
       </div>
