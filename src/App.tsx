@@ -120,6 +120,7 @@ function AppRoutes() {
             <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
             {/* Reportes */}
             <Route path="/reportes" element={<ReportesPage />} />
+            <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppLayout>
