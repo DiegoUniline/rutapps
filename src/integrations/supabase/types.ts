@@ -482,6 +482,121 @@ export type Database = {
           },
         ]
       }
+      compra_lineas: {
+        Row: {
+          cantidad: number
+          compra_id: string
+          created_at: string
+          id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal: number | null
+          total: number | null
+        }
+        Insert: {
+          cantidad?: number
+          compra_id: string
+          created_at?: string
+          id?: string
+          precio_unitario?: number
+          producto_id: string
+          subtotal?: number | null
+          total?: number | null
+        }
+        Update: {
+          cantidad?: number
+          compra_id?: string
+          created_at?: string
+          id?: string
+          precio_unitario?: number
+          producto_id?: string
+          subtotal?: number | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compra_lineas_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compra_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras: {
+        Row: {
+          almacen_id: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          folio: string | null
+          id: string
+          iva_total: number | null
+          notas: string | null
+          proveedor_id: string | null
+          status: string
+          subtotal: number | null
+          total: number | null
+        }
+        Insert: {
+          almacen_id?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          iva_total?: number | null
+          notas?: string | null
+          proveedor_id?: string | null
+          status?: string
+          subtotal?: number | null
+          total?: number | null
+        }
+        Update: {
+          almacen_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          iva_total?: number | null
+          notas?: string | null
+          proveedor_id?: string | null
+          status?: string
+          subtotal?: number | null
+          total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devolucion_lineas: {
         Row: {
           cantidad: number
@@ -721,6 +836,67 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      producto_lotes: {
+        Row: {
+          almacen_id: string | null
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          fecha_caducidad: string | null
+          fecha_produccion: string | null
+          id: string
+          lote: string
+          notas: string | null
+          producto_id: string
+        }
+        Insert: {
+          almacen_id?: string | null
+          cantidad?: number
+          created_at?: string
+          empresa_id: string
+          fecha_caducidad?: string | null
+          fecha_produccion?: string | null
+          id?: string
+          lote: string
+          notas?: string | null
+          producto_id: string
+        }
+        Update: {
+          almacen_id?: string | null
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          fecha_caducidad?: string | null
+          fecha_produccion?: string | null
+          id?: string
+          lote?: string
+          notas?: string | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_lotes_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_lotes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_lotes_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
             referencedColumns: ["id"]
           },
         ]

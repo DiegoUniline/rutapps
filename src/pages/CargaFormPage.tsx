@@ -119,7 +119,7 @@ export default function CargaFormPage() {
         lineas: lineas.map(l => ({ producto_id: l.producto_id, cantidad_cargada: l.cantidad_cargada })),
       });
       toast.success(isNew ? 'Carga creada' : 'Carga actualizada');
-      navigate(`/cargas/${cargaId}`);
+      navigate(`/almacen/cargas/${cargaId}`);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -141,7 +141,7 @@ export default function CargaFormPage() {
     try {
       await deleteCarga.mutateAsync(id);
       toast.success('Carga eliminada');
-      navigate('/cargas');
+      navigate('/almacen/cargas');
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -156,7 +156,7 @@ export default function CargaFormPage() {
     <div className="p-6 space-y-5 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/cargas')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate('/almacen/cargas')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
@@ -317,7 +317,7 @@ export default function CargaFormPage() {
       {/* Save */}
       {(isEditable || isNew) && (
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={() => navigate('/cargas')}>Cancelar</Button>
+          <Button variant="outline" onClick={() => navigate('/almacen/cargas')}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saveCarga.isPending}>
             <Save className="h-4 w-4 mr-1" /> {isNew ? 'Crear carga' : 'Guardar'}
           </Button>

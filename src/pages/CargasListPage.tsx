@@ -32,7 +32,7 @@ export default function CargasListPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Gestiona las cargas de producto para cada ruta</p>
         </div>
-        <Button onClick={() => navigate('/cargas/nuevo')} size="sm">
+        <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
           <Plus className="h-4 w-4 mr-1" /> Nueva carga
         </Button>
       </div>
@@ -71,7 +71,7 @@ export default function CargasListPage() {
                 const sc = statusConfig[c.status] ?? statusConfig.pendiente;
                 const totalItems = (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0);
                 return (
-                  <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/cargas/${c.id}`)}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/almacen/cargas/${c.id}`)}>
                     <TableCell className="font-medium">{c.fecha}</TableCell>
                     <TableCell>{(c.vendedores as any)?.nombre ?? '—'}</TableCell>
                     <TableCell>
