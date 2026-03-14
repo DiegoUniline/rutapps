@@ -85,6 +85,8 @@ function AppRoutes() {
             <Route path="/clientes/:id" element={<ClienteFormPage />} />
             <Route path="/ventas" element={<VentasListPage />} />
             <Route path="/ventas/:id" element={<VentaFormPage />} />
+            <Route path="/demanda" element={<DemandaPage />} />
+            <Route path="/inventario" element={<InventarioPage />} />
             <Route path="/cargas" element={<CargasListPage />} />
             <Route path="/cargas/:id" element={<CargaFormPage />} />
             <Route path="/rutas" element={<PlaceholderPage title="Rutas" />} />

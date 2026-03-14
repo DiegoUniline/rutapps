@@ -31,6 +31,8 @@ export default function CargaFormPage() {
   const deleteCarga = useDeleteCarga();
 
   const [vendedorId, setVendedorId] = useState('');
+  const [repartidorId, setRepartidorId] = useState('');
+  const [almacenId, setAlmacenId] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [notas, setNotas] = useState('');
   const [lineas, setLineas] = useState<CargaLinea[]>([]);
