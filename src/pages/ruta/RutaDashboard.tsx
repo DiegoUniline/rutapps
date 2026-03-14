@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Receipt, TrendingUp, MapPin } from 'lucide-react';
+import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPin } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -13,19 +13,23 @@ function useTodayStats() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const eid = empresa!.id;
-      const [ventas, clientes, gastos] = await Promise.all([
+      const [ventas, clientes, gastos, cobros] = await Promise.all([
         supabase.from('ventas').select('id, total, status').eq('empresa_id', eid).eq('fecha', today),
         supabase.from('clientes').select('id').eq('empresa_id', eid).eq('status', 'activo'),
         supabase.from('gastos').select('id, monto').eq('empresa_id', eid).eq('fecha', today),
+        supabase.from('cobros').select('id, monto').eq('empresa_id', eid).eq('fecha', today),
       ]);
       const ventasData = ventas.data ?? [];
       const gastosData = gastos.data ?? [];
+      const cobrosData = cobros.data ?? [];
       return {
         ventasHoy: ventasData.length,
         totalVentas: ventasData.reduce((s, v) => s + (v.total ?? 0), 0),
         clientesActivos: (clientes.data ?? []).length,
         gastosHoy: gastosData.reduce((s, g) => s + (g.monto ?? 0), 0),
         numGastos: gastosData.length,
+        cobrosHoy: cobrosData.reduce((s, c) => s + (c.monto ?? 0), 0),
+        numCobros: cobrosData.length,
       };
     },
   });
@@ -60,13 +64,13 @@ const cards = [
     sub: () => 'Productos cargados',
   },
   {
-    key: 'gastos',
-    label: 'Gastos de hoy',
-    icon: Receipt,
-    color: 'bg-destructive/10 text-destructive',
-    path: '/ruta/gastos',
-    stat: (s: any) => `${s.numGastos} gastos`,
-    sub: (s: any) => `$ ${s.gastosHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+    key: 'cobros',
+    label: 'Cobros de hoy',
+    icon: Banknote,
+    color: 'bg-success/10 text-success',
+    path: '/ruta/cobros',
+    stat: (s: any) => `${s.numCobros} cobros`,
+    sub: (s: any) => `$ ${s.cobrosHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
   },
 ];
 

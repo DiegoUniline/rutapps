@@ -240,6 +240,99 @@ export type Database = {
           },
         ]
       }
+      cobro_aplicaciones: {
+        Row: {
+          cobro_id: string
+          created_at: string
+          id: string
+          monto_aplicado: number
+          venta_id: string
+        }
+        Insert: {
+          cobro_id: string
+          created_at?: string
+          id?: string
+          monto_aplicado?: number
+          venta_id: string
+        }
+        Update: {
+          cobro_id?: string
+          created_at?: string
+          id?: string
+          monto_aplicado?: number
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobro_aplicaciones_cobro_id_fkey"
+            columns: ["cobro_id"]
+            isOneToOne: false
+            referencedRelation: "cobros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobro_aplicaciones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cobros: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          metodo_pago: string
+          monto: number
+          notas: string | null
+          referencia: string | null
+          user_id: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string
+          monto?: number
+          notas?: string | null
+          referencia?: string | null
+          user_id: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string
+          monto?: number
+          notas?: string | null
+          referencia?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobros_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobros_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           created_at: string
@@ -1014,6 +1107,7 @@ export type Database = {
           ieps_total: number | null
           iva_total: number | null
           notas: string | null
+          saldo_pendiente: number | null
           status: Database["public"]["Enums"]["status_venta"]
           subtotal: number | null
           tarifa_id: string | null
@@ -1036,6 +1130,7 @@ export type Database = {
           ieps_total?: number | null
           iva_total?: number | null
           notas?: string | null
+          saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
           subtotal?: number | null
           tarifa_id?: string | null
@@ -1058,6 +1153,7 @@ export type Database = {
           ieps_total?: number | null
           iva_total?: number | null
           notas?: string | null
+          saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
           subtotal?: number | null
           tarifa_id?: string | null

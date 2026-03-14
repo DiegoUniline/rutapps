@@ -166,6 +166,7 @@ export default function RutaNuevaVenta() {
         ieps_total: 0,
         descuento_total: 0,
         total: totals.total,
+        saldo_pendiente: condicionPago === 'credito' ? totals.total : 0,
       }).select('id').single();
       if (ventaErr) throw ventaErr;
 
