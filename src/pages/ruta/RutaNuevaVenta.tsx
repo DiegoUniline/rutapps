@@ -136,6 +136,7 @@ export default function RutaNuevaVenta() {
         tipo: tipoVenta,
         condicion_pago: condicionPago,
         entrega_inmediata: entregaInmediata,
+        fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: tipoVenta === 'venta_directa' ? 'confirmado' as const : 'borrador' as const,
         notas: notas || null,
         subtotal: totals.subtotal,
