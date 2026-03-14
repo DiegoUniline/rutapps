@@ -32,7 +32,7 @@ export default function CargasListPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Gestiona las cargas de producto para cada ruta</p>
         </div>
-        <Button onClick={() => navigate('/cargas/nuevo')} size="sm">
+        <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
           <Plus className="h-4 w-4 mr-1" /> Nueva carga
         </Button>
       </div>
