@@ -234,7 +234,7 @@ export default function VentaFormPage() {
   };
 
   if (!isNew && isLoading) {
-    return <div className="p-4 bg-secondary/50 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
+    return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
   }
 
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
