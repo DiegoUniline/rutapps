@@ -25,6 +25,7 @@ import RutaGastos from "@/pages/ruta/RutaGastos";
 import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta";
 import RutaCobros from "@/pages/ruta/RutaCobros";
 import RutaCobrar from "@/pages/ruta/RutaCobrar";
+import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
 
 const queryClient = new QueryClient();
 
