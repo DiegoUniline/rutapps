@@ -53,11 +53,27 @@ export default function RutaNuevaVenta() {
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
-        .select('id, codigo, nombre, telefono')
+        .select('id, codigo, nombre, telefono, credito, limite_credito, dias_credito')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
       return data ?? [];
+    },
+  });
+
+  // Fetch saldo pendiente (ventas a crédito no canceladas) for selected client
+  const { data: saldoPendiente } = useQuery({
+    queryKey: ['ruta-saldo-cliente', clienteId],
+    enabled: !!clienteId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ventas')
+        .select('total')
+        .eq('cliente_id', clienteId!)
+        .eq('condicion_pago', 'credito')
+        .in('status', ['confirmado', 'entregado', 'facturado']);
+      const total = (data ?? []).reduce((sum, v) => sum + (v.total ?? 0), 0);
+      return total;
     },
   });
 
