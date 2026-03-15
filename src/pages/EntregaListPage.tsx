@@ -70,20 +70,6 @@ export default function EntregaListPage() {
     [filtered]
   );
 
-  // Determine what bulk actions are available based on selected statuses
-  const selectedStatuses = useMemo(() => {
-    const statuses = new Set<string>();
-    selectedEntregas.forEach((e: any) => statuses.add(e.status));
-    return statuses;
-  }, [selectedEntregas]);
-
-  const allSurtido = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'surtido');
-  const allAsignado = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'asignado');
-  const allBorrador = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'borrador');
-  const hasBorrador = selectedStatuses.has('borrador');
-  const hasSurtido = selectedStatuses.has('surtido');
-  const hasAsignado = selectedStatuses.has('asignado');
-
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -101,6 +87,17 @@ export default function EntregaListPage() {
   };
 
   const selectedEntregas = filtered.filter((e: any) => selectedIds.has(e.id));
+
+  // Determine what bulk actions are available based on selected statuses
+  const selectedStatuses = useMemo(() => {
+    const statuses = new Set<string>();
+    selectedEntregas.forEach((e: any) => statuses.add(e.status));
+    return statuses;
+  }, [selectedEntregas]);
+
+  const allSurtido = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'surtido');
+  const allAsignado = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'asignado');
+  const hasBorrador = selectedStatuses.has('borrador');
 
   // Bulk surtir + asignar
   const surtirAsignarMut = useMutation({
