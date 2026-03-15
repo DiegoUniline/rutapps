@@ -174,7 +174,7 @@ export async function sendBillingTicketWhatsApp(params: {
     // 2. Convert to PNG
     const dataUrl = await toPng(container.firstElementChild as HTMLElement, {
       cacheBust: true,
-      pixelRatio: 3,
+      pixelRatio: 2,
       backgroundColor: '#ffffff',
       style: { opacity: '1' },
     });

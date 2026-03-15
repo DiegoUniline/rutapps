@@ -199,7 +199,7 @@ async function generateTicketPng(tpl: TemplateConfig, vars: TicketVars): Promise
     const wasmReady = await ensureWasm();
     if (!wasmReady) return null;
 
-    const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: 720 } });
+    const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: 640 } });
     const pngData = resvg.render();
     return pngData.asPng();
   } catch (err) {
