@@ -17,8 +17,11 @@ interface CartItem {
   precio_unitario: number;
   cantidad: number;
   unidad: string;
+  unidad_id?: string;
   tiene_iva: boolean;
   iva_pct: number;
+  tiene_ieps: boolean;
+  ieps_pct: number;
   es_cambio?: boolean; // free replacement
 }
 
