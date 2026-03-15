@@ -171,7 +171,7 @@ function AppRoutes() {
                 {/* Legacy redirects */}
                 <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas/nuevo" replace />} />
-                <Route path="/entregas/:id" element={<Navigate to="/logistica/entregas/:id" replace />} />
+                <Route path="/entregas/:id" element={<EntregaFormPage />} />
                 <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
