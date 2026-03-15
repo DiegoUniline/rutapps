@@ -342,7 +342,7 @@ export default function InventarioPage() {
       )}
 
       {/* Rutas view */}
-      {view === 'rutas' && data && (
+      {view === 'rutas' && data && !selectedRuta && (
         <div className="space-y-3">
           {data.cargas.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
@@ -351,24 +351,33 @@ export default function InventarioPage() {
             </div>
           )}
           {data.cargas.map(c => (
-            <div key={c.id} className="bg-card border border-border rounded-lg p-4">
+            <div
+              key={c.id}
+              className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/40 transition-colors"
+              onClick={() => setSelectedRuta(c)}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
                     <Truck className="h-4 w-4 inline mr-1" />
                     {c.vendedor}
                     {c.repartidor && c.repartidor !== c.vendedor && (
-                      <span className="text-muted-foreground font-normal"> · Repartidor: {c.repartidor}</span>
+                      <span className="text-muted-foreground font-normal"> · Rep: {c.repartidor}</span>
                     )}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {c.almacen && `Almacén: ${c.almacen} · `}{fmtDate(c.fecha)} · {c.status === 'en_ruta' ? 'En ruta' : c.status === 'cargado' ? 'Cargado (entrega)' : 'Pendiente'}
+                    {c.almacen && `Almacén: ${c.almacen} · `}{fmtDate(c.fecha)} ·{' '}
+                    <Badge variant="secondary" className="text-[10px] py-0">
+                      {c.status === 'en_ruta' ? 'En ruta' : c.status === 'cargado' ? 'Cargado' : 'Pendiente'}
+                    </Badge>
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{c.totalUnidades} uds abordo</p>
-                  <p className="text-sm font-bold text-foreground">Costo: $ {fmt(c.valorCosto)}</p>
-                  <p className="text-[12px] text-success font-medium">Venta: $ {fmt(c.valorVenta)}</p>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">{c.totalUnidades} uds abordo</p>
+                    <p className="text-sm font-bold text-foreground">$ {fmt(c.valorCosto)}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
             </div>
@@ -386,6 +395,11 @@ export default function InventarioPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Ruta detail view */}
+      {view === 'rutas' && selectedRuta && (
+        <RutaDetail ruta={selectedRuta} onBack={() => setSelectedRuta(null)} />
       )}
     </div>
   );
