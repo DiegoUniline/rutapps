@@ -286,10 +286,13 @@ Deno.serve(async (req) => {
     if (action === "send_invoice_notification") {
       const { channel, customer_email, amount, hosted_url, description, invoice_id } = body;
 
+      let notifStatus = "sent";
+      let errorDetalle: string | null = null;
+      let mensaje = "";
+
       if (channel === "whatsapp") {
-        // Find phone from profiles matching email
-        const { data: userData } = await supabase.auth.admin.listUsers();
-        const matchUser = userData?.users?.find((u: any) => u.email === customer_email);
+        const { data: allUsersData } = await supabase.auth.admin.listUsers();
+        const matchUser = allUsersData?.users?.find((u: any) => u.email === customer_email);
         if (!matchUser) throw new Error("Usuario no encontrado con ese email");
 
         const { data: profile } = await supabase
@@ -299,27 +302,49 @@ Deno.serve(async (req) => {
           .maybeSingle();
         if (!profile?.telefono) throw new Error("El cliente no tiene teléfono registrado");
 
-        // Get admin whatsapp token from the config
         const { data: waConfig } = await supabase
           .from("whatsapp_config")
           .select("api_token")
           .eq("empresa_id", profile.empresa_id)
           .maybeSingle();
 
-        // Fallback: try super admin's stored token
         const waToken = waConfig?.api_token || Deno.env.get("ADMIN_WHATSAPP_TOKEN");
         if (!waToken) throw new Error("Token de WhatsApp no configurado");
 
         const amountFmt = `$${(amount / 100).toLocaleString("es-MX")} MXN`;
-        const msg = `📋 *Factura Rutapp*\n\n${description || "Suscripción Rutapp"}\nMonto: ${amountFmt}\n\n💳 Paga aquí:\n${hosted_url}\n\nGracias por tu preferencia 🙌`;
+        mensaje = `📋 *Factura Rutapp*\n\n${description || "Suscripción Rutapp"}\nMonto: ${amountFmt}\n\n💳 Paga aquí:\n${hosted_url}\n\nGracias por tu preferencia 🙌`;
 
         const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
-        const apiRes = await fetch(WHATSAPI_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": waToken },
-          body: JSON.stringify({ action: "send-text", phone, message: msg }),
+        try {
+          const apiRes = await fetch(WHATSAPI_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-token": waToken },
+            body: JSON.stringify({ action: "send-text", phone, message: mensaje }),
+          });
+          if (!apiRes.ok) {
+            notifStatus = "error";
+            errorDetalle = `HTTP ${apiRes.status}`;
+          }
+        } catch (e: any) {
+          notifStatus = "error";
+          errorDetalle = e.message;
+        }
+
+        // Log notification
+        await supabase.from("billing_notifications").insert({
+          customer_email,
+          customer_phone: phone,
+          channel: "whatsapp",
+          tipo: "factura",
+          mensaje,
+          stripe_invoice_id: invoice_id || null,
+          stripe_invoice_url: hosted_url || null,
+          monto_centavos: amount || 0,
+          status: notifStatus,
+          error_detalle: errorDetalle,
         });
-        if (!apiRes.ok) throw new Error("Error enviando WhatsApp");
+
+        if (notifStatus === "error") throw new Error(errorDetalle || "Error enviando WhatsApp");
 
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -327,16 +352,105 @@ Deno.serve(async (req) => {
       }
 
       if (channel === "email") {
-        // Use Stripe to send the invoice
         if (invoice_id) {
-          await stripe.invoices.sendInvoice(invoice_id);
+          try {
+            await stripe.invoices.sendInvoice(invoice_id);
+          } catch (e: any) {
+            notifStatus = "error";
+            errorDetalle = e.message;
+          }
         }
+        mensaje = `Factura enviada por correo a ${customer_email}`;
+
+        await supabase.from("billing_notifications").insert({
+          customer_email,
+          channel: "email",
+          tipo: "factura",
+          mensaje,
+          stripe_invoice_id: invoice_id || null,
+          stripe_invoice_url: hosted_url || null,
+          monto_centavos: amount || 0,
+          status: notifStatus,
+          error_detalle: errorDetalle,
+        });
+
+        if (notifStatus === "error") throw new Error(errorDetalle || "Error enviando email");
+
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       throw new Error("Channel no válido");
+    }
+
+    // ─── Resend a notification ───
+    if (action === "resend_notification") {
+      const { channel, customer_email, customer_phone, mensaje, stripe_invoice_id, stripe_invoice_url, monto_centavos, tipo } = body;
+
+      let notifStatus = "sent";
+      let errorDetalle: string | null = null;
+
+      if (channel === "whatsapp") {
+        if (!customer_phone) throw new Error("Sin teléfono para reenviar");
+
+        // Get whatsapp token
+        const { data: waConfig } = await supabase
+          .from("whatsapp_config")
+          .select("api_token")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        const waToken = waConfig?.api_token;
+        if (!waToken) throw new Error("Token de WhatsApp no configurado");
+
+        try {
+          const apiRes = await fetch(WHATSAPI_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-token": waToken },
+            body: JSON.stringify({ action: "send-text", phone: customer_phone, message: mensaje }),
+          });
+          if (!apiRes.ok) {
+            notifStatus = "error";
+            errorDetalle = `HTTP ${apiRes.status}`;
+          }
+        } catch (e: any) {
+          notifStatus = "error";
+          errorDetalle = e.message;
+        }
+      } else if (channel === "email") {
+        if (stripe_invoice_id) {
+          try {
+            await stripe.invoices.sendInvoice(stripe_invoice_id);
+          } catch (e: any) {
+            notifStatus = "error";
+            errorDetalle = e.message;
+          }
+        } else {
+          notifStatus = "error";
+          errorDetalle = "Sin invoice_id para reenviar por email";
+        }
+      }
+
+      // Log the resend
+      await supabase.from("billing_notifications").insert({
+        customer_email,
+        customer_phone: customer_phone || null,
+        channel,
+        tipo: tipo || "recordatorio",
+        mensaje: mensaje || null,
+        stripe_invoice_id: stripe_invoice_id || null,
+        stripe_invoice_url: stripe_invoice_url || null,
+        monto_centavos: monto_centavos || 0,
+        status: notifStatus,
+        error_detalle: errorDetalle,
+      });
+
+      if (notifStatus === "error") throw new Error(errorDetalle || "Error al reenviar");
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // ─── Save WhatsApp token ───

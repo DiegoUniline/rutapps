@@ -214,6 +214,51 @@ export type Database = {
           },
         ]
       }
+      billing_notifications: {
+        Row: {
+          channel: string
+          created_at: string
+          customer_email: string
+          customer_phone: string | null
+          error_detalle: string | null
+          id: string
+          mensaje: string | null
+          monto_centavos: number | null
+          status: string
+          stripe_invoice_id: string | null
+          stripe_invoice_url: string | null
+          tipo: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          customer_email: string
+          customer_phone?: string | null
+          error_detalle?: string | null
+          id?: string
+          mensaje?: string | null
+          monto_centavos?: number | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_invoice_url?: string | null
+          tipo?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          customer_email?: string
+          customer_phone?: string | null
+          error_detalle?: string | null
+          id?: string
+          mensaje?: string | null
+          monto_centavos?: number | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_invoice_url?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       carga_lineas: {
         Row: {
           cantidad_cargada: number

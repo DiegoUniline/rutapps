@@ -78,11 +78,23 @@ Deno.serve(async (req) => {
             const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
             const msg = `🔔 *Aviso de cobro Rutapp*\n\nHola ${profile.nombre || ""},\n\nMañana *1 de ${getMonthName()}* se realizará tu cobro automático de *${amountFmt}* por ${sub.max_usuarios} usuario(s).\n\nSi necesitas actualizar tu método de pago, entra a:\n${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "")}/facturacion\n\n¡Gracias por confiar en Rutapp! 🚀`;
 
-            await fetch(WHATSAPI_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-token": waToken },
-              body: JSON.stringify({ action: "send-text", phone, message: msg }),
-            }).catch((e) => console.error("WhatsApp pre-charge error:", e));
+            let wStatus = "sent";
+            try {
+              const wRes = await fetch(WHATSAPI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-api-token": waToken },
+                body: JSON.stringify({ action: "send-text", phone, message: msg }),
+              });
+              if (!wRes.ok) wStatus = "error";
+            } catch (e) {
+              wStatus = "error";
+              console.error("WhatsApp pre-charge error:", e);
+            }
+            await supabase.from("billing_notifications").insert({
+              customer_email: email, customer_phone: phone, channel: "whatsapp",
+              tipo: "pre_cobro", mensaje: msg, monto_centavos: amount * 100,
+              status: wStatus,
+            }).catch(() => {});
           }
 
           // Stripe sends email automatically when invoice is created
@@ -149,11 +161,20 @@ Deno.serve(async (req) => {
             const amountFmt = `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`;
             const msg = `✅ *Pago exitoso — Rutapp*\n\nHola ${profile.nombre || ""},\n\nTu pago de *${amountFmt}* se procesó correctamente.\n\nTu suscripción está activa hasta el *1 de ${getNextMonthName()}*.\n\n¡Gracias! 🎉`;
 
-            await fetch(WHATSAPI_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-token": waToken },
-              body: JSON.stringify({ action: "send-text", phone, message: msg }),
-            }).catch((e) => console.error("WhatsApp confirm error:", e));
+            let wStatus = "sent";
+            try {
+              const wRes = await fetch(WHATSAPI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-api-token": waToken },
+                body: JSON.stringify({ action: "send-text", phone, message: msg }),
+              });
+              if (!wRes.ok) wStatus = "error";
+            } catch (e) { wStatus = "error"; }
+            await supabase.from("billing_notifications").insert({
+              customer_email: customerEmail, customer_phone: phone, channel: "whatsapp",
+              tipo: "cobro_exitoso", mensaje: msg, monto_centavos: inv.amount_paid,
+              status: wStatus,
+            }).catch(() => {});
           }
 
           results.push({ email: customerEmail, action: "payment_confirmed", status: "ok" });
@@ -168,11 +189,21 @@ Deno.serve(async (req) => {
             const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
             const msg = `⚠️ *Cobro fallido — Rutapp*\n\nHola ${profile.nombre || ""},\n\nNo pudimos procesar tu pago. Tienes *${GRACE_DAYS} días* para actualizar tu método de pago o pagar manualmente.\n\n💳 Paga aquí:\n${inv.hosted_invoice_url || "https://rutapps.lovable.app/facturacion"}\n\nSi no regularizas, tu acceso será suspendido.`;
 
-            await fetch(WHATSAPI_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-token": waToken },
-              body: JSON.stringify({ action: "send-text", phone, message: msg }),
-            }).catch((e) => console.error("WhatsApp failure error:", e));
+            let wStatus = "sent";
+            try {
+              const wRes = await fetch(WHATSAPI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-api-token": waToken },
+                body: JSON.stringify({ action: "send-text", phone, message: msg }),
+              });
+              if (!wRes.ok) wStatus = "error";
+            } catch (e) { wStatus = "error"; }
+            await supabase.from("billing_notifications").insert({
+              customer_email: customerEmail, customer_phone: phone, channel: "whatsapp",
+              tipo: "cobro_fallido", mensaje: msg,
+              stripe_invoice_url: inv.hosted_invoice_url || null,
+              monto_centavos: inv.amount_due, status: wStatus,
+            }).catch(() => {});
           }
 
           results.push({ email: customerEmail, action: "payment_failed", status: "notified" });
@@ -209,11 +240,22 @@ Deno.serve(async (req) => {
         const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
         const msg = `🔴 *Cuenta suspendida — Rutapp*\n\nHola ${profile.nombre || ""},\n\nTu cuenta ha sido suspendida por falta de pago.\n\nPara reactivar tu acceso, realiza tu pago en:\nhttps://rutapps.lovable.app/facturacion\n\nSi tienes dudas, contáctanos.`;
 
-        await fetch(WHATSAPI_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": waToken },
-          body: JSON.stringify({ action: "send-text", phone, message: msg }),
-        }).catch((e) => console.error("WhatsApp suspend error:", e));
+        let wStatus = "sent";
+        try {
+          const wRes = await fetch(WHATSAPI_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-token": waToken },
+            body: JSON.stringify({ action: "send-text", phone, message: msg }),
+          });
+          if (!wRes.ok) wStatus = "error";
+        } catch (e) { wStatus = "error"; }
+
+        const { data: suspProfile } = await supabase.auth.admin.getUserById(profile.user_id);
+        await supabase.from("billing_notifications").insert({
+          customer_email: suspProfile?.user?.email || "desconocido",
+          customer_phone: phone, channel: "whatsapp",
+          tipo: "suspension", mensaje: msg, status: wStatus,
+        }).catch(() => {});
       }
 
       results.push({ sub_id: sub.id, action: "suspended" });
