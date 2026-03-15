@@ -1,8 +1,22 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Venta, VentaLinea } from '@/types';
 
 export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string) {
+  const qc = useQueryClient();
+
+  // Realtime: auto-refresh when any row changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('ventas-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, () => {
+        qc.invalidateQueries({ queryKey: ['ventas'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
+
   return useQuery({
     queryKey: ['ventas', search, statusFilter, tipoFilter],
     queryFn: async () => {
