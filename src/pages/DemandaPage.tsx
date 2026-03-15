@@ -313,7 +313,7 @@ export default function DemandaPage() {
 
       {/* Create entregas dialog */}
       <Dialog open={showCrearDialog} onOpenChange={setShowCrearDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg" onPointerDownOutside={e => e.preventDefault()} onInteractOutside={e => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-4 w-4" />
