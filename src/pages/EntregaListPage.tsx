@@ -261,19 +261,28 @@ export default function EntregaListPage() {
         </h1>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-5 gap-3">
+      {/* Status Tabs */}
+      <div className="flex border-b border-border gap-0 overflow-x-auto">
         {[
-          { label: 'Total', value: counts.total },
-          { label: 'Borrador', value: counts.borrador },
-          { label: 'Surtido', value: counts.surtido },
-          { label: 'Asignado', value: counts.asignado },
-          { label: 'Hecho', value: counts.hecho },
-        ].map(k => (
-          <div key={k.label} className="bg-card border border-border rounded-lg p-4">
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{k.label}</p>
-            <p className="text-2xl font-bold text-foreground">{k.value}</p>
-          </div>
+          { key: 'todos', label: 'Todos', count: counts.total },
+          { key: 'borrador', label: 'Borrador', count: counts.borrador },
+          { key: 'surtido', label: 'Surtidos', count: counts.surtido },
+          { key: 'asignado', label: 'Asignados', count: counts.asignado },
+          { key: 'cargado', label: 'Cargados', count: entregas?.filter(e => (e as any).status === 'cargado').length ?? 0 },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(tab.key)}
+            className={cn(
+              "px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
+              statusFilter === tab.key
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+            )}
+          >
+            {tab.label}
+            <span className="ml-1.5 text-xs text-muted-foreground">({tab.count})</span>
+          </button>
         ))}
       </div>
 
@@ -290,24 +299,6 @@ export default function EntregaListPage() {
             value={vendedorFilter}
             onChange={setVendedorFilter}
             placeholder="Vendedor..."
-          />
-        </div>
-        <div className="min-w-[150px]">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Status</label>
-          <SearchableSelect
-            options={[
-              { value: 'todos', label: 'Todos' },
-              { value: 'borrador', label: 'Borrador' },
-              { value: 'surtido', label: 'Surtido' },
-              { value: 'asignado', label: 'Asignado' },
-              { value: 'cargado', label: 'Cargado' },
-              { value: 'en_ruta', label: 'En ruta' },
-              { value: 'hecho', label: 'Hecho' },
-              { value: 'cancelado', label: 'Cancelado' },
-            ]}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            placeholder="Status..."
           />
         </div>
 
