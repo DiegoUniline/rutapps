@@ -6,6 +6,7 @@ import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { Button } from '@/components/ui/button';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
