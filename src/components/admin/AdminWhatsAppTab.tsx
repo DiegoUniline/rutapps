@@ -91,7 +91,6 @@ export default function AdminWhatsAppTab() {
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [sendingTest, setSendingTest] = useState<string | null>(null);
   const [sendingAll, setSendingAll] = useState(false);
-  const ticketRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     loadConfig();
