@@ -161,11 +161,20 @@ Deno.serve(async (req) => {
             const amountFmt = `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`;
             const msg = `✅ *Pago exitoso — Rutapp*\n\nHola ${profile.nombre || ""},\n\nTu pago de *${amountFmt}* se procesó correctamente.\n\nTu suscripción está activa hasta el *1 de ${getNextMonthName()}*.\n\n¡Gracias! 🎉`;
 
-            await fetch(WHATSAPI_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-token": waToken },
-              body: JSON.stringify({ action: "send-text", phone, message: msg }),
-            }).catch((e) => console.error("WhatsApp confirm error:", e));
+            let wStatus = "sent";
+            try {
+              const wRes = await fetch(WHATSAPI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-api-token": waToken },
+                body: JSON.stringify({ action: "send-text", phone, message: msg }),
+              });
+              if (!wRes.ok) wStatus = "error";
+            } catch (e) { wStatus = "error"; }
+            await supabase.from("billing_notifications").insert({
+              customer_email: customerEmail, customer_phone: phone, channel: "whatsapp",
+              tipo: "cobro_exitoso", mensaje: msg, monto_centavos: inv.amount_paid,
+              status: wStatus,
+            }).catch(() => {});
           }
 
           results.push({ email: customerEmail, action: "payment_confirmed", status: "ok" });
