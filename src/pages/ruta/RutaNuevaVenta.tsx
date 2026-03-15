@@ -186,8 +186,11 @@ export default function RutaNuevaVenta() {
       precio_unitario: ps.productos.precio_principal ?? 0,
       cantidad: ps.cantidad,
       unidad: (ps.productos.unidades as any)?.abreviatura || 'pz',
+      unidad_id: ps.productos.unidad_venta_id ?? undefined,
       tiene_iva: ps.productos.tiene_iva ?? false,
-      iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? 16) : 0,
+      iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0,
+      tiene_ieps: ps.productos.tiene_ieps ?? false,
+      ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0,
     }));
     setCart(newCart);
   };
