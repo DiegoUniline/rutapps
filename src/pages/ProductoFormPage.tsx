@@ -5,7 +5,7 @@ import { Save, X, Trash2, Star, Camera } from 'lucide-react';
 import { calcTax } from '@/lib/taxUtils';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
-import { OdooField, OdooSection, OdooBadge } from '@/components/OdooFormField';
+import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
@@ -140,7 +140,6 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
               </button>
             </div>
             <div className="p-5 space-y-4">
-              {/* Row 1: Producto + Precio mínimo */}
               <div className="grid grid-cols-2 gap-x-8">
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Producto</span>
@@ -152,8 +151,6 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
                     onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
                 </div>
               </div>
-
-              {/* Row 2: Tipo de precio + Lista de precios */}
               <div className="grid grid-cols-2 gap-x-8">
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Tipo de precio</span>
@@ -177,8 +174,6 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
                   />
                 </div>
               </div>
-
-              {/* Row 3: Dynamic field based on type */}
               <div className="grid grid-cols-2 gap-x-8">
                 {newRule.tipo_calculo === 'precio_fijo' && (
                   <div className="odoo-field-row">
@@ -266,6 +261,13 @@ export default function ProductoFormPage() {
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
 
+  // Auto-select all almacenes for new products
+  useEffect(() => {
+    if (isNew && almacenes && almacenes.length > 0 && (form.almacenes ?? []).length === 0) {
+      setForm(prev => ({ ...prev, almacenes: almacenes.map(a => a.id) }));
+    }
+  }, [isNew, almacenes]);
+
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
@@ -303,7 +305,6 @@ export default function ProductoFormPage() {
     }
   };
 
-  // Lookup helpers
   const findName = (list: { id: string; nombre: string }[] | undefined, id: string | undefined) =>
     list?.find(i => i.id === id)?.nombre ?? '';
   const findUnit = (list: { id: string; nombre: string; abreviatura?: string }[] | undefined, id: string | undefined) => {
@@ -325,11 +326,12 @@ export default function ProductoFormPage() {
         <Link to="/productos" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Producto</Link>
       </div>
 
-      {/* Star + Title row + image */}
-      <div className="flex items-start gap-4 mb-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform">
+      {/* ── Header: Name + Actions + Image ── */}
+      <div className="flex items-start gap-4 mb-1">
+        <div className="flex-1 min-w-0">
+          {/* Row 1: Star + Name + Save/Discard/Delete */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform shrink-0">
               <Star className={`h-5 w-5 ${starred ? 'fill-warning' : ''}`} />
             </button>
             {isNew || editingName ? (
@@ -338,30 +340,46 @@ export default function ProductoFormPage() {
                 type="text"
                 value={form.nombre ?? ''}
                 onChange={e => set('nombre', e.target.value)}
-                onBlur={() => setEditingName(false)}
+                onBlur={() => { if (!isNew) setEditingName(false); }}
+                onKeyDown={e => { if (e.key === 'Enter') { e.currentTarget.blur(); } }}
                 placeholder="Nombre del producto"
-                autoFocus={isNew}
-                className="text-[22px] font-bold text-foreground leading-tight bg-transparent border-b border-primary/40 focus:border-primary outline-none w-full max-w-md placeholder:text-muted-foreground/50"
+                autoFocus
+                className="text-[22px] font-bold text-foreground leading-tight bg-transparent border-b border-primary/40 focus:border-primary outline-none flex-1 min-w-[180px] max-w-md placeholder:text-muted-foreground/50"
               />
             ) : (
               <h1
-                className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors"
+                className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate"
                 onClick={() => setEditingName(true)}
               >
                 {form.nombre || 'Producto'}
               </h1>
             )}
+
+            {/* Action buttons inline with name */}
+            <div className="flex items-center gap-1.5 ml-auto shrink-0">
+              <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
+                <Save className="h-3.5 w-3.5" /> Guardar
+              </button>
+              <button onClick={() => navigate('/productos')} className="btn-odoo-secondary">
+                <X className="h-3.5 w-3.5" /> Descartar
+              </button>
+              {!isNew && (
+                <button onClick={handleDelete} className="btn-odoo-secondary text-destructive hover:text-destructive">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Module checkboxes */}
-          <div className="odoo-module-checks mb-2">
+          <div className="odoo-module-checks mt-1.5 mb-1">
             <label className="odoo-module-check">
               <input type="checkbox" checked={!!form.se_puede_vender} onChange={e => set('se_puede_vender', e.target.checked)} />
-              Ventas
+              Puede ser vendido
             </label>
             <label className="odoo-module-check">
               <input type="checkbox" checked={!!form.se_puede_comprar} onChange={e => set('se_puede_comprar', e.target.checked)} />
-              Compras
+              Puede ser comprado
             </label>
             <label className="odoo-module-check">
               <input type="checkbox" checked={!!form.se_puede_inventariar} onChange={e => set('se_puede_inventariar', e.target.checked)} />
@@ -377,125 +395,91 @@ export default function ProductoFormPage() {
         {/* Image */}
         <div className="hidden sm:block shrink-0">
           {form.imagen_url ? (
-            <img src={form.imagen_url} alt="" className="w-[120px] h-[120px] rounded object-cover border border-border" />
+            <img src={form.imagen_url} alt="" className="w-[100px] h-[100px] rounded object-cover border border-border" />
           ) : (
-            <div className="odoo-image-placeholder">
-              <Camera className="h-8 w-8 text-muted-foreground/40" />
+            <div className="w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-muted/30 cursor-pointer hover:border-primary/40 transition-colors">
+              <Camera className="h-7 w-7 text-muted-foreground/40" />
             </div>
           )}
         </div>
       </div>
 
-      {/* Action buttons + statusbar */}
-      <div className="flex items-center gap-2 mb-3">
-        <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
-          <Save className="h-3.5 w-3.5" /> Guardar
-        </button>
-        <button onClick={() => navigate('/productos')} className="btn-odoo-secondary">
-          <X className="h-3.5 w-3.5" /> Descartar
-        </button>
-        {!isNew && (
-          <button onClick={handleDelete} className="btn-odoo-secondary text-destructive hover:text-destructive">
-            <Trash2 className="h-3.5 w-3.5" /> Eliminar
-          </button>
-        )}
-        <div className="ml-auto">
-          <OdooStatusbar
-            steps={statusSteps}
-            current={form.status ?? 'borrador'}
-            onStepClick={key => set('status', key)}
-          />
-        </div>
+      {/* Statusbar */}
+      <div className="flex items-center mb-3">
+        <OdooStatusbar
+          steps={statusSteps}
+          current={form.status ?? 'borrador'}
+          onStepClick={key => set('status', key)}
+        />
       </div>
 
-      {/* Form body — tabs contain everything like Odoo */}
-      <div className="bg-card border border-border rounded px-4 pb-4 pt-1">
+      {/* ── Form body ── */}
+      <div className="bg-card border border-border rounded px-4 pb-4 pt-3">
+        {/* General info fields ABOVE tabs (like Odoo screenshot) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 mb-4 pb-4 border-b border-border">
+          {/* Left column */}
+          <div>
+            <OdooField label="Código" value={form.codigo} help onChange={v => set('codigo', v)} alwaysEdit={isNew} />
+            <OdooField label="Clave alterna" value={form.clave_alterna} onChange={v => set('clave_alterna', v)} />
+            <OdooField label="Marca" value={form.marca_id} type="select"
+              options={marcas?.map(m => ({ value: m.id, label: m.nombre })) ?? []}
+              onChange={v => set('marca_id', v || null)}
+              format={() => findName(marcas, form.marca_id ?? undefined)}
+            />
+            <OdooField label="Clasificación" value={form.clasificacion_id} type="select"
+              options={clasificaciones?.map(c => ({ value: c.id, label: c.nombre })) ?? []}
+              onChange={v => set('clasificacion_id', v || null)}
+              format={() => findName(clasificaciones, form.clasificacion_id ?? undefined)}
+            />
+            <OdooField label="Unid. venta" value={form.unidad_venta_id} type="select"
+              options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []}
+              onChange={v => set('unidad_venta_id', v || null)}
+              format={() => findUnit(unidades, form.unidad_venta_id ?? undefined)}
+            />
+            <OdooField label="Unid. compra" value={form.unidad_compra_id} type="select"
+              options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []}
+              onChange={v => set('unidad_compra_id', v || null)}
+              format={() => findUnit(unidades, form.unidad_compra_id ?? undefined)}
+            />
+          </div>
+          {/* Right column */}
+          <div>
+            <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
+              onChange={v => set('precio_principal', +v)}
+              format={v => `$ ${(v ?? 0).toFixed(2)}`}
+            />
+            <OdooField label="Costo" value={form.costo} type="number" teal help
+              onChange={v => set('costo', +v)}
+              format={v => `$ ${(v ?? 0).toFixed(2)}`}
+            />
+            <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
+              options={[
+                { value: 'manual', label: 'Manual' },
+                { value: 'ultimo', label: 'Último costo de compra' },
+                { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' },
+                { value: 'promedio', label: 'Promedio' },
+                { value: 'estandar', label: 'Estándar' },
+                { value: 'ultimo_compra', label: 'Último costo (compra directa)' },
+              ]}
+              onChange={v => set('calculo_costo', v)}
+              format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
+            />
+            <OdooField label="Lista" value={form.lista_id} type="select"
+              options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []}
+              onChange={v => set('lista_id', v || null)}
+              format={() => findName(listas, form.lista_id ?? undefined)}
+            />
+            <OdooField label="Factor conv." value={form.factor_conversion} type="number" teal
+              onChange={v => set('factor_conversion', +v)} format={v => (v ?? 1).toString()} />
+            <OdooField label="Min / Max stock" value={`${form.min ?? 0} / ${form.max ?? 0}`}
+              format={() => `${form.min ?? 0} / ${form.max ?? 0}`}
+              onChange={() => {}} />
+          </div>
+        </div>
+
+        {/* Tabs below general info */}
         <OdooTabs
           tabs={[
-            {
-              key: 'general',
-              label: 'Información General',
-              content: (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-                  {/* Left column */}
-                  <div>
-                    <OdooField label="Código" value={form.codigo} help onChange={v => set('codigo', v)} alwaysEdit={isNew} />
-                    <OdooField label="Clave Alterna" value={form.clave_alterna} onChange={v => set('clave_alterna', v)} />
-                    <OdooField label="Marca" value={form.marca_id} type="select"
-                      options={marcas?.map(m => ({ value: m.id, label: m.nombre })) ?? []}
-                      onChange={v => set('marca_id', v || null)}
-                      format={() => findName(marcas, form.marca_id ?? undefined)}
-                    />
-                    <OdooField label="Clasificación" value={form.clasificacion_id} type="select"
-                      options={clasificaciones?.map(c => ({ value: c.id, label: c.nombre })) ?? []}
-                      onChange={v => set('clasificacion_id', v || null)}
-                      format={() => findName(clasificaciones, form.clasificacion_id ?? undefined)}
-                    />
-                    <OdooField label="Cálculo Costo" value={form.calculo_costo} type="select" help
-                      options={[
-                        { value: 'manual', label: 'Manual' },
-                        { value: 'ultimo', label: 'Último costo de compra' },
-                        { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' },
-                        { value: 'promedio', label: 'Promedio' },
-                        { value: 'estandar', label: 'Estándar' },
-                        { value: 'ultimo_compra', label: 'Último costo (compra directa)' },
-                      ]}
-                      onChange={v => set('calculo_costo', v)}
-                      format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
-                    />
-                    <OdooField label="Min Stock" value={form.min} type="number" teal
-                      onChange={v => set('min', +v)} format={v => (v ?? 0).toString()} />
-                    <OdooField label="Max Stock" value={form.max} type="number" teal
-                      onChange={v => set('max', +v)} format={v => (v ?? 0).toString()} />
-                  </div>
-                  {/* Right column */}
-                  <div>
-                    <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
-                      onChange={v => set('precio_principal', +v)}
-                      format={v => `$ ${(v ?? 0).toFixed(2)}`}
-                    />
-                    <OdooField label="Costo" value={form.costo} type="number" teal help
-                      onChange={v => set('costo', +v)}
-                      format={v => `$ ${(v ?? 0).toFixed(2)}`}
-                    />
-                    <OdooField label="Proveedor" value={form.proveedor_id} type="select"
-                      options={proveedores?.map(p => ({ value: p.id, label: p.nombre })) ?? []}
-                      onChange={v => set('proveedor_id', v || null)}
-                      format={() => findName(proveedores, form.proveedor_id ?? undefined)}
-                    />
-                    <OdooField label="Lista" value={form.lista_id} type="select"
-                      options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []}
-                      onChange={v => set('lista_id', v || null)}
-                      format={() => findName(listas, form.lista_id ?? undefined)}
-                    />
-                    <OdooField label="Unid. Compra" value={form.unidad_compra_id} type="select"
-                      options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []}
-                      onChange={v => set('unidad_compra_id', v || null)}
-                      format={() => findUnit(unidades, form.unidad_compra_id ?? undefined)}
-                    />
-                    <OdooField label="Unid. Venta" value={form.unidad_venta_id} type="select"
-                      options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []}
-                      onChange={v => set('unidad_venta_id', v || null)}
-                      format={() => findUnit(unidades, form.unidad_venta_id ?? undefined)}
-                    />
-                    <OdooField label="Factor Conv." value={form.factor_conversion} type="number" teal
-                      onChange={v => set('factor_conversion', +v)} format={v => (v ?? 1).toString()} />
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Vender sin Stock</span>
-                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!form.vender_sin_stock} onChange={e => set('vender_sin_stock', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
-                      </label>
-                    </div>
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">Manejar Lotes</span>
-                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!form.manejar_lotes} onChange={e => set('manejar_lotes', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              ),
-            },
             {
               key: 'precios',
               label: 'Precios',
@@ -619,14 +603,14 @@ export default function ProductoFormPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
                   <div>
                     <div className="odoo-field-row">
-                      <span className="odoo-field-label">Maneja Comisión</span>
+                      <span className="odoo-field-label">Maneja comisión</span>
                       <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
                         <input type="checkbox" checked={!!form.tiene_comision} onChange={e => set('tiene_comision', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
                       </label>
                     </div>
                     {form.tiene_comision && (
                       <>
-                        <OdooField label="Tipo Comisión" value={form.tipo_comision} type="select"
+                        <OdooField label="Tipo comisión" value={form.tipo_comision} type="select"
                           options={[{ value: 'porcentaje', label: 'Porcentaje' }, { value: 'monto_fijo', label: 'Monto Fijo' }]}
                           onChange={v => set('tipo_comision', v)}
                           format={() => comisionLabels[form.tipo_comision ?? 'porcentaje'] ?? ''} />
@@ -644,17 +628,83 @@ export default function ProductoFormPage() {
               label: 'Almacenes',
               content: (
                 <div className="space-y-1.5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => set('almacenes', almacenes?.map(a => a.id) ?? [])}
+                      className="text-[12px] text-primary hover:underline"
+                    >
+                      Seleccionar todos
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => set('almacenes', [])}
+                      className="text-[12px] text-muted-foreground hover:underline"
+                    >
+                      Ninguno
+                    </button>
+                  </div>
                   {almacenes?.length === 0 ? (
                     <p className="text-[12px] text-muted-foreground py-4">No hay almacenes configurados.</p>
                   ) : (
-                    almacenes?.map(a => (
-                      <label key={a.id} className="odoo-module-check">
-                        <input type="checkbox" checked={form.almacenes?.includes(a.id) ?? false}
-                          onChange={e => { const c = form.almacenes ?? []; set('almacenes', e.target.checked ? [...c, a.id] : c.filter(x => x !== a.id)); }} />
-                        {a.nombre}
-                      </label>
-                    ))
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                      {almacenes?.map(a => (
+                        <label key={a.id} className="odoo-module-check">
+                          <input type="checkbox" checked={form.almacenes?.includes(a.id) ?? false}
+                            onChange={e => { const c = form.almacenes ?? []; set('almacenes', e.target.checked ? [...c, a.id] : c.filter(x => x !== a.id)); }} />
+                          {a.nombre}
+                        </label>
+                      ))}
+                    </div>
                   )}
+                </div>
+              ),
+            },
+            {
+              key: 'inventario',
+              label: 'Inventario',
+              content: (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
+                  <div>
+                    <OdooField label="Min stock" value={form.min} type="number" teal
+                      onChange={v => set('min', +v)} format={v => (v ?? 0).toString()} />
+                    <OdooField label="Max stock" value={form.max} type="number" teal
+                      onChange={v => set('max', +v)} format={v => (v ?? 0).toString()} />
+                  </div>
+                  <div>
+                    <div className="odoo-field-row">
+                      <span className="odoo-field-label">Vender sin stock</span>
+                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
+                        <input type="checkbox" checked={!!form.vender_sin_stock} onChange={e => set('vender_sin_stock', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
+                      </label>
+                    </div>
+                    <div className="odoo-field-row">
+                      <span className="odoo-field-label">Manejar lotes</span>
+                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
+                        <input type="checkbox" checked={!!form.manejar_lotes} onChange={e => set('manejar_lotes', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'proveedores',
+              label: 'Proveedores',
+              content: (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
+                  <div>
+                    <OdooField label="Proveedor principal" value={form.proveedor_id} type="select"
+                      options={proveedores?.map(p => ({ value: p.id, label: p.nombre })) ?? []}
+                      onChange={v => set('proveedor_id', v || null)}
+                      format={() => findName(proveedores, form.proveedor_id ?? undefined)}
+                    />
+                  </div>
+                  <div>
+                    <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">
+                      💡 Asigna el proveedor principal de este producto para facilitar las compras y el rastreo de costos.
+                    </div>
+                  </div>
                 </div>
               ),
             },
