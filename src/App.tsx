@@ -41,6 +41,7 @@ const UsuariosPage = lazy(() => import("@/pages/UsuariosPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
