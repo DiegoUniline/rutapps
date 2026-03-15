@@ -377,6 +377,81 @@ export default function RutaVentaDetalle() {
     }
   };
 
+  // ─── Handle WhatsApp send ───
+  const handleWhatsAppSend = async () => {
+    if (!waPhone.trim() || !venta) return;
+    setSendingWA(true);
+    try {
+      const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
+      const result = await sendReceiptWhatsApp({
+        data: {
+          empresa: { nombre: empresa?.nombre ?? '', telefono: empresa?.telefono ?? undefined, direccion: empresa?.direccion ?? undefined, logo_url: empresa?.logo_url ?? undefined },
+          folio: venta.folio ?? 'Sin folio',
+          fecha: fmtDate(venta.fecha),
+          clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente',
+          tipo: 'pedido_confirmado',
+          lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({
+            nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+            cantidad: l.cantidad, precio: l.precio_unitario, total: l.total ?? 0,
+          })),
+          subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0, ieps: venta.ieps_total ?? 0, total: venta.total ?? 0,
+          condicionPago: venta.condicion_pago,
+        },
+        empresaId: empresa?.id ?? '',
+        phone: waPhone,
+        referencia_id: venta.id,
+      });
+      if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); }
+      else toast.error(result.error || 'Error al enviar');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSendingWA(false); }
+  };
+
+  // ─── Handle PDF download ───
+  const handleDownloadPDF = async () => {
+    if (!venta) return;
+    const { buildReceiptHTML } = await import('@/lib/whatsappReceipt');
+    // We'll generate a PNG ticket and download it
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.innerHTML = buildTicketHTML();
+    document.body.appendChild(container);
+    try {
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+      const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${venta.folio ?? 'ticket'}.png`;
+      a.click();
+      toast.success('Ticket descargado');
+    } catch { toast.error('Error generando imagen'); }
+    finally { document.body.removeChild(container); }
+  };
+
+  const buildTicketHTML = () => {
+    if (!venta) return '';
+    const ls = ((venta as any).venta_lineas ?? []).map((l: any) =>
+      `<tr><td style="padding:2px 0;font-size:11px">${l.productos?.nombre ?? l.descripcion ?? '—'}</td><td style="text-align:right;font-size:11px">${l.cantidad}</td><td style="text-align:right;font-size:11px">$${(l.precio_unitario ?? 0).toFixed(2)}</td><td style="text-align:right;font-size:11px;font-weight:600">$${(l.total ?? 0).toFixed(2)}</td></tr>`
+    ).join('');
+    return `<div style="width:380px;padding:16px;font-family:'Courier New',monospace;background:#fff;color:#000">
+      <div style="text-align:center"><div style="font-size:14px;font-weight:bold">${empresa?.nombre ?? ''}</div></div>
+      <div style="text-align:center;margin:10px 0;padding:4px 8px;background:#2563eb;color:#fff;border-radius:4px;font-size:12px;font-weight:bold">TICKET DE VENTA</div>
+      <div style="border-top:1px dashed #999;padding:6px 0;font-size:11px">
+        <div style="display:flex;justify-content:space-between"><span>Folio:</span><span style="font-weight:bold">${venta.folio ?? '—'}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Fecha:</span><span>${fmtDate(venta.fecha)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Cliente:</span><span>${(venta as any).clientes?.nombre ?? '—'}</span></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px dashed #ccc"><th style="text-align:left;font-size:10px;color:#666">Producto</th><th style="text-align:right;font-size:10px;color:#666">Cant</th><th style="text-align:right;font-size:10px;color:#666">P.U.</th><th style="text-align:right;font-size:10px;color:#666">Total</th></tr></thead><tbody>${ls}</tbody></table>
+      <div style="border-top:1px dashed #999;margin-top:6px;padding-top:6px;font-size:11px">
+        <div style="display:flex;justify-content:space-between"><span>Subtotal:</span><span>$${(venta.subtotal ?? 0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>IVA:</span><span>$${(venta.iva_total ?? 0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:bold;margin-top:4px;border-top:2px solid #000;padding-top:4px"><span>TOTAL:</span><span>$${(venta.total ?? 0).toFixed(2)}</span></div>
+      </div>
+    </div>`;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
