@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera } from 'lucide-react';
@@ -261,6 +261,8 @@ export default function ProductoFormPage() {
   const [form, setForm] = useState<Partial<Producto>>(defaultProduct);
   const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
   const [starred, setStarred] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
 
@@ -330,9 +332,25 @@ export default function ProductoFormPage() {
             <button onClick={() => setStarred(!starred)} className="text-warning hover:scale-110 transition-transform">
               <Star className={`h-5 w-5 ${starred ? 'fill-warning' : ''}`} />
             </button>
-            <h1 className="text-[22px] font-bold text-foreground leading-tight">
-              {isNew ? 'Nuevo Producto' : form.nombre || 'Producto'}
-            </h1>
+            {isNew || editingName ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={form.nombre ?? ''}
+                onChange={e => set('nombre', e.target.value)}
+                onBlur={() => setEditingName(false)}
+                placeholder="Nombre del producto"
+                autoFocus={isNew}
+                className="text-[22px] font-bold text-foreground leading-tight bg-transparent border-b border-primary/40 focus:border-primary outline-none w-full max-w-md placeholder:text-muted-foreground/50"
+              />
+            ) : (
+              <h1
+                className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors"
+                onClick={() => setEditingName(true)}
+              >
+                {form.nombre || 'Producto'}
+              </h1>
+            )}
           </div>
 
           {/* Module checkboxes */}
