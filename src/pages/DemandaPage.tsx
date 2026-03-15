@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import SearchableSelect from '@/components/SearchableSelect';
+import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
