@@ -22,7 +22,7 @@ const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', '
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtMoney = (n: number) => '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered';
+type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered' | 'en_ruta';
 
 interface ClientVisit {
   id: string;
@@ -134,13 +134,15 @@ function MonitorContent() {
       });
     });
 
-    const deliveredClients = new Map<string, any>();
+    const entregasByClient = new Map<string, any>();
     (entregasHoy ?? []).forEach((e: any) => {
-      if (e.cliente_id && e.clientes) {
-        const prev = deliveredClients.get(e.cliente_id);
-        deliveredClients.set(e.cliente_id, {
-          ...e.clientes,
+      if (e.cliente_id) {
+        const prev = entregasByClient.get(e.cliente_id);
+        const clientInfo = e.clientes || prev?.clientInfo;
+        entregasByClient.set(e.cliente_id, {
+          clientInfo,
           isDelivered: (prev?.isDelivered || false) || e.status === 'hecho',
+          hasEntrega: true,
           entregaFolio: e.folio,
           entregaStatus: e.status,
           vendedor_ruta_id: e.vendedor_ruta_id || e.vendedor_id,
@@ -148,14 +150,18 @@ function MonitorContent() {
       }
     });
 
+    const getEntregaStatus = (entrega: any, sale: any): VisitStatus => {
+      if (sale) return 'sold';
+      if (entrega?.isDelivered) return 'delivered';
+      if (entrega?.hasEntrega) return 'en_ruta';
+      return 'pending';
+    };
+
     // Start with scheduled clients
     const clientMap = new Map<string, ClientVisit>();
     (clientesHoy ?? []).forEach((c: any) => {
       const sale = salesByClient.get(c.id);
-      const entrega = deliveredClients.get(c.id);
-      let status: VisitStatus = 'pending';
-      if (sale) status = 'sold';
-      else if (entrega?.isDelivered) status = 'delivered';
+      const entrega = entregasByClient.get(c.id);
 
       clientMap.set(c.id, {
         id: c.id,
@@ -168,38 +174,32 @@ function MonitorContent() {
         gps_lng: c.gps_lng,
         vendedor_id: c.vendedor_id,
         vendedorNombre: c.vendedores?.nombre,
-        status,
+        status: getEntregaStatus(entrega, sale),
         ventaTotal: sale?.total,
         entregaFolio: entrega?.entregaFolio,
       });
     });
 
     // Add clients from entregas that aren't already scheduled
-    deliveredClients.forEach((info, clienteId) => {
-      if (!clientMap.has(clienteId)) {
+    entregasByClient.forEach((info, clienteId) => {
+      if (!clientMap.has(clienteId) && info.clientInfo) {
         const sale = salesByClient.get(clienteId);
+        const ci = info.clientInfo;
         clientMap.set(clienteId, {
           id: clienteId,
-          nombre: info.nombre,
-          codigo: info.codigo,
-          direccion: info.direccion,
-          colonia: info.colonia,
-          telefono: info.telefono,
-          gps_lat: info.gps_lat,
-          gps_lng: info.gps_lng,
-          vendedor_id: info.vendedor_id,
-          vendedorNombre: info.vendedores?.nombre,
-          status: sale ? 'sold' : info.isDelivered ? 'delivered' : 'pending',
+          nombre: ci.nombre,
+          codigo: ci.codigo,
+          direccion: ci.direccion,
+          colonia: ci.colonia,
+          telefono: ci.telefono,
+          gps_lat: ci.gps_lat,
+          gps_lng: ci.gps_lng,
+          vendedor_id: ci.vendedor_id,
+          vendedorNombre: ci.vendedores?.nombre,
+          status: getEntregaStatus(info, sale),
           ventaTotal: sale?.total,
           entregaFolio: info.entregaFolio,
         });
-      }
-    });
-
-    // Add clients from ventas that aren't already in the map
-    (ventasHoy ?? []).forEach((v: any) => {
-      if (v.cliente_id && !clientMap.has(v.cliente_id)) {
-        // We don't have client details from ventas query, skip (they'd need GPS)
       }
     });
 
@@ -261,6 +261,7 @@ function MonitorContent() {
     switch (s) {
       case 'sold': return '#22c55e';
       case 'delivered': return '#3b82f6';
+      case 'en_ruta': return '#f59e0b';
       case 'pending': return '#ef4444';
       default: return '#94a3b8';
     }
@@ -270,6 +271,7 @@ function MonitorContent() {
     switch (s) {
       case 'sold': return 'Vendido';
       case 'delivered': return 'Entregado';
+      case 'en_ruta': return 'En ruta';
       case 'pending': return 'Pendiente';
       default: return '—';
     }
@@ -389,7 +391,7 @@ function MonitorContent() {
                       scale: 10,
                     }}
                     label={{
-                      text: c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•',
+                      text: c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : c.status === 'en_ruta' ? '🚛' : '•',
                       color: '#fff',
                       fontSize: '10px',
                       fontWeight: '700',
@@ -435,6 +437,7 @@ function MonitorContent() {
               <div className="flex items-center gap-4 text-[11px]">
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Vendido</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Entregado</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> En ruta</span>
                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-destructive" /> Pendiente</span>
               </div>
             </div>
@@ -581,6 +584,7 @@ function MonitorContent() {
                               style={{ backgroundColor: statusColor(v.status) + '15', color: statusColor(v.status) }}>
                               {v.status === 'sold' && <CheckCircle2 className="h-3 w-3" />}
                               {v.status === 'delivered' && <Truck className="h-3 w-3" />}
+                              {v.status === 'en_ruta' && <Navigation className="h-3 w-3" />}
                               {v.status === 'pending' && <Clock className="h-3 w-3" />}
                               {statusLabel(v.status)}
                             </span>
