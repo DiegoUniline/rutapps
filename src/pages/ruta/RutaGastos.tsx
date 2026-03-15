@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 export default function RutaGastos() {
