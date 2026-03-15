@@ -966,17 +966,22 @@ export default function RutaNuevaVenta() {
           <div className="flex-1 overflow-auto px-3 space-y-[3px] pb-20">
             {filteredProductos?.map(p => {
               const inCart = getItemInCart(p.id);
-              const stock = p.cantidad ?? 0;
+              const maxQty = getMaxQty(p.id);
+              const stockLabel = tipoVenta === 'venta_directa'
+                ? `${maxQty} a bordo`
+                : `${p.cantidad ?? 0} en almacén`;
+              const stockOk = tipoVenta === 'pedido' || maxQty > 0;
+              const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty;
               return (
                 <div key={p.id} className={`rounded-lg px-3 py-2 transition-all ${inCart ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
                   <div className="flex items-center gap-2.5">
-                    <div className="flex-1 min-w-0" onClick={() => !inCart && addToCart(p)}>
+                    <div className="flex-1 min-w-0" onClick={() => !inCart && stockOk && addToCart(p)}>
                       <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                       <div className="flex items-center gap-1.5 mt-px">
                         <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
                         <span className="text-[10px] text-muted-foreground">·</span>
-                        <span className={`text-[10px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                          {stock} {(p.unidades as any)?.abreviatura || 'pz'}
+                        <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>
+                          {stockLabel}
                         </span>
                       </div>
                       <p className="text-[13px] font-bold text-foreground mt-px">
@@ -993,9 +998,16 @@ export default function RutaNuevaVenta() {
                         <input type="number" inputMode="numeric"
                           className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                           value={inCart.cantidad}
-                          onChange={e => { const val = parseInt(e.target.value); if (!isNaN(val) && val > 0) setCart(prev => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: val } : c)); }}
+                          onChange={e => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val > 0) {
+                              const capped = tipoVenta === 'venta_directa' ? Math.min(val, maxQty) : val;
+                              setCart(prev => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: capped } : c));
+                            }
+                          }}
                           onFocus={e => e.target.select()} />
-                        <button onClick={() => addToCart(p)} className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-90 transition-transform">
+                        <button onClick={() => addToCart(p)} disabled={!!atMax}
+                          className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}>
                           <Plus className="h-3 w-3" />
                         </button>
                       </div>
@@ -1005,6 +1017,9 @@ export default function RutaNuevaVenta() {
                       </button>
                     )}
                   </div>
+                  {atMax && (
+                    <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1">Máximo a bordo alcanzado</p>
+                  )}
                 </div>
               );
             })}
