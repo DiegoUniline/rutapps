@@ -269,11 +269,12 @@ export default function TarifaFormPage() {
                   <div className="overflow-x-auto border border-border rounded">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-table-border">
+                         <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-right">Valor</th>
+                          <th className="th-odoo text-right">Comisión %</th>
                           <th className="th-odoo text-right">Precio mín</th>
                           <th className="th-odoo text-left">Redondeo</th>
                           <th className="th-odoo w-8"></th>
