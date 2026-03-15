@@ -259,7 +259,9 @@ export default function RutaVentaDetalle() {
       setCuentasPendientes([]);
     }
     setMetodoPago('efectivo');
-    setMontoRecibido('');
+    // Default monto recibido to total a cobrar
+    const saldo = venta?.saldo_pendiente ?? 0;
+    setMontoRecibido(saldo > 0 ? saldo.toString() : '');
     setReferenciaPago('');
     setView('cobrar');
   };
