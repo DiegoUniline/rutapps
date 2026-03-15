@@ -30,22 +30,24 @@ function useDemanda() {
         .order('fecha', { ascending: true });
       if (error) throw error;
 
+      // Get delivered quantities from entregas + entrega_lineas (only 'hecho' entregas count)
       const pedidoIds = (pedidos ?? []).map(p => p.id);
-      let entregas: any[] = [];
+      let entregasData: any[] = [];
       if (pedidoIds.length > 0) {
         const { data } = await supabase
-          .from('ventas')
-          .select('pedido_origen_id, venta_lineas(producto_id, cantidad)')
-          .in('pedido_origen_id', pedidoIds);
-        entregas = data ?? [];
+          .from('entregas')
+          .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
+          .in('pedido_id', pedidoIds)
+          .eq('status', 'hecho');
+        entregasData = data ?? [];
       }
 
       const deliveryMap: Record<string, Record<string, number>> = {};
-      for (const e of entregas) {
-        if (!e.pedido_origen_id) continue;
-        if (!deliveryMap[e.pedido_origen_id]) deliveryMap[e.pedido_origen_id] = {};
-        for (const l of (e.venta_lineas ?? [])) {
-          deliveryMap[e.pedido_origen_id][l.producto_id] = (deliveryMap[e.pedido_origen_id][l.producto_id] ?? 0) + l.cantidad;
+      for (const e of entregasData) {
+        if (!e.pedido_id) continue;
+        if (!deliveryMap[e.pedido_id]) deliveryMap[e.pedido_id] = {};
+        for (const l of (e.entrega_lineas ?? [])) {
+          deliveryMap[e.pedido_id][l.producto_id] = (deliveryMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
         }
       }
 
