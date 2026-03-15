@@ -174,8 +174,13 @@ function NavegacionContent() {
     setActiveStopId(stop.id);
     setCurrentStepIdx(0);
     setPanelOpen(true);
-    mapRef.current?.panTo({ lat: stop.gps_lat, lng: stop.gps_lng });
-    mapRef.current?.setZoom(14);
+    // Fit bounds between user location and destination for a comfortable zoom
+    if (mapRef.current) {
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend({ lat: stop.gps_lat, lng: stop.gps_lng });
+      if (userLocation) bounds.extend(userLocation);
+      mapRef.current.fitBounds(bounds, { top: 140, bottom: 200, left: 40, right: 40 });
+    }
   };
 
   const stopNavigation = () => {
