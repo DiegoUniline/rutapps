@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const googleApiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
+    const googleApiKey = Deno.env.get("GOOGLE_ROUTES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
 
     if (!googleApiKey) {
       return new Response(
