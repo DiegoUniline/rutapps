@@ -133,6 +133,7 @@ export default function TarifaFormPage() {
         descuento_max: newLinea.descuento_max,
         margen_pct: newLinea.margen_pct,
         descuento_pct: newLinea.descuento_pct,
+        comision_pct: newLinea.comision_pct,
         redondeo: newLinea.redondeo,
         notas: newLinea.notas || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
