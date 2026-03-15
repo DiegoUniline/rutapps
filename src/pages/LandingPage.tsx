@@ -283,7 +283,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link to="/login" className={cn(
+                <Link to="/signup" className={cn(
                   "block w-full text-center py-3.5 rounded-xl text-sm font-bold transition-all",
                   plan.popular
                     ? "text-white shadow-lg shadow-indigo-500/25 hover:opacity-90"
