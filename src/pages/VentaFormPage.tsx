@@ -323,8 +323,7 @@ export default function VentaFormPage() {
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
-  const productoOptions = (productosList ?? []).map((p: any) => ({ value: p.id, label: `${p.codigo} · ${p.nombre}` }));
-  const unidadOptions = (unidadesList ?? []).map(u => ({ value: u.id, label: u.nombre }));
+  const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
   const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
 
   const steps = form.entrega_inmediata ? VENTA_STEPS_INMEDIATA : VENTA_STEPS_FULL;
