@@ -380,7 +380,7 @@ export default function DemandaPage() {
                         <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center text-[12px] font-bold text-warning py-2">{pedido.totalPendiente}</TableCell>
+                    <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                     <TableCell className="py-2">
                       <ChevronRight className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
                     </TableCell>
