@@ -441,6 +441,17 @@ export default function AjustesInventarioPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`ajuste-inventario-${new Date().toISOString().slice(0, 10)}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone=""
+        caption="Ajuste de inventario"
+        tipo="ajuste"
+      />
     </div>
   );
 }
