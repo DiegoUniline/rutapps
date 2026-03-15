@@ -165,12 +165,12 @@ function AppRoutes() {
                 <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/logistica/pedidos" element={<DemandaPage />} />
                 <Route path="/logistica/entregas" element={<EntregaListPage />} />
-                <Route path="/logistica/entregas/nuevo" element={<EntregaFormPage />} />
+                <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
                 <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
                 {/* Legacy redirects */}
                 <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
-                <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas/nuevo" replace />} />
+                <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/entregas/:id" element={<EntregaFormPage />} />
                 <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />

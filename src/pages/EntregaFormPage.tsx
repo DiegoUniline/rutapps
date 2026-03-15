@@ -179,38 +179,6 @@ export default function EntregaFormPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  // New entrega creation
-  const handleCreateManual = async () => {
-    if (!form.cliente_id || !empresa?.id) { toast.error('Selecciona un cliente'); return; }
-    const validLineas = lineas.filter(l => l.producto_id && Number(l.cantidad_pedida) > 0);
-    if (validLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
-
-    try {
-      const { data: ent, error } = await supabase.from('entregas').insert({
-        empresa_id: empresa.id,
-        vendedor_id: form.vendedor_id ?? null,
-        cliente_id: form.cliente_id,
-        almacen_id: form.almacen_id ?? null,
-        status: 'borrador',
-      } as any).select('id').single();
-      if (error) throw error;
-
-      const { error: lErr } = await supabase.from('entrega_lineas').insert(
-        validLineas.map((l: any) => ({
-          entrega_id: ent.id,
-          producto_id: l.producto_id,
-          unidad_id: l.unidad_id ?? null,
-          cantidad_pedida: Number(l.cantidad_pedida),
-          cantidad_entregada: 0,
-          hecho: false,
-        }))
-      );
-      if (lErr) throw lErr;
-
-      toast.success('Entrega creada');
-      navigate(`/logistica/entregas/${ent.id}`, { replace: true });
-    } catch (e: any) { toast.error(e.message); }
-  };
 
   const updateLineaLocal = (idx: number, field: string, val: any) => {
     setLineas(prev => {
