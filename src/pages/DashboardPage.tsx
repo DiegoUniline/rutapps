@@ -180,8 +180,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Custom dates */}
-          <OdooDatePicker value={dateRange.from} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: d })); setActivePreset(-1); }}} />
-          <OdooDatePicker value={dateRange.to} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: d })); setActivePreset(-1); }}} />
+          <OdooDatePicker value={format(dateRange.from, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, from: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
+          <OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
 
           {/* Vendedor filter */}
           <select value={vendedorId} onChange={e => setVendedorId(e.target.value)}

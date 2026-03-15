@@ -190,7 +190,7 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
         .select('vendedor_id, total, vendedores(nombre)')
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelada')
+        .neq('status', 'cancelado' as any)
         .not('vendedor_id', 'is', null);
       if (error) throw error;
 
