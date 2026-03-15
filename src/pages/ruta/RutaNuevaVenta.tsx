@@ -3,8 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { queueOperation } from '@/lib/syncQueue';
+import { getOfflineTable } from '@/lib/offlineDb';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 interface CartItem {
