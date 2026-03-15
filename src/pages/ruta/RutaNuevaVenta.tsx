@@ -17,8 +17,11 @@ interface CartItem {
   precio_unitario: number;
   cantidad: number;
   unidad: string;
+  unidad_id?: string;
   tiene_iva: boolean;
   iva_pct: number;
+  tiene_ieps: boolean;
+  ieps_pct: number;
   es_cambio?: boolean; // free replacement
 }
 
@@ -65,7 +68,7 @@ export default function RutaNuevaVenta() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlClienteId = searchParams.get('clienteId');
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>(urlClienteId ? 'devoluciones' : 'cliente');
@@ -147,7 +150,7 @@ export default function RutaNuevaVenta() {
     queryFn: async () => {
       const { data } = await supabase
         .from('cliente_pedido_sugerido')
-        .select('*, productos(id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje))')
+        .select('*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, tasa_iva_id, tasa_ieps_id, unidad_venta_id, unidades:unidad_venta_id(id, nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje), tasas_ieps:tasa_ieps_id(porcentaje))')
         .eq('cliente_id', clienteId!);
       return data ?? [];
     },
@@ -183,8 +186,11 @@ export default function RutaNuevaVenta() {
       precio_unitario: ps.productos.precio_principal ?? 0,
       cantidad: ps.cantidad,
       unidad: (ps.productos.unidades as any)?.abreviatura || 'pz',
+      unidad_id: ps.productos.unidad_venta_id ?? undefined,
       tiene_iva: ps.productos.tiene_iva ?? false,
-      iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? 16) : 0,
+      iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0,
+      tiene_ieps: ps.productos.tiene_ieps ?? false,
+      ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0,
     }));
     setCart(newCart);
   };
@@ -200,9 +206,12 @@ export default function RutaNuevaVenta() {
         nombre: p.nombre,
         precio_unitario: esCambio ? 0 : (p.precio_principal ?? 0),
         cantidad: 1,
-        unidad: (p.unidades as any)?.abreviatura || (p.unidades as any)?.nombre || 'pz',
+        unidad: p.unidad_venta_id ? ((productos?.find(pr => pr.id === p.id) as any)?.abreviatura || 'pz') : 'pz',
+        unidad_id: p.unidad_venta_id ?? undefined,
         tiene_iva: esCambio ? false : (p.tiene_iva ?? false),
-        iva_pct: esCambio ? 0 : (p.tiene_iva ? ((p.tasas_iva as any)?.porcentaje ?? 16) : 0),
+        iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0),
+        tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false),
+        ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0),
         es_cambio: esCambio,
       }]);
     }
@@ -278,8 +287,11 @@ export default function RutaNuevaVenta() {
         precio_unitario: ps.productos.precio_principal ?? 0,
         cantidad: ps.cantidad,
         unidad: (ps.productos.unidades as any)?.abreviatura || 'pz',
+        unidad_id: ps.productos.unidad_venta_id ?? undefined,
         tiene_iva: ps.productos.tiene_iva ?? false,
-        iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? 16) : 0,
+        iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0,
+        tiene_ieps: ps.productos.tiene_ieps ?? false,
+        ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0,
       }));
     }
 
@@ -294,8 +306,8 @@ export default function RutaNuevaVenta() {
           newCart.push({
             producto_id: p.id, codigo: p.codigo, nombre: p.nombre,
             precio_unitario: 0, cantidad: d.cantidad,
-            unidad: (p.unidades as any)?.abreviatura || 'pz',
-            tiene_iva: false, iva_pct: 0, es_cambio: true,
+            unidad: 'pz',
+            tiene_iva: false, iva_pct: 0, tiene_ieps: false, ieps_pct: 0, es_cambio: true,
           });
         }
       }
@@ -306,15 +318,17 @@ export default function RutaNuevaVenta() {
   };
 
   const totals = useMemo(() => {
-    let subtotal = 0, iva = 0, items = 0;
+    let subtotal = 0, iva = 0, ieps = 0, items = 0;
     cart.forEach(item => {
-      if (item.es_cambio) { items += item.cantidad; return; } // don't charge
+      if (item.es_cambio) { items += item.cantidad; return; }
       const lineaSub = item.precio_unitario * item.cantidad;
       subtotal += lineaSub;
-      if (item.tiene_iva) iva += lineaSub * (item.iva_pct / 100);
+      const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0;
+      ieps += lineIeps;
+      if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100);
       items += item.cantidad;
     });
-    return { subtotal, iva, total: subtotal + iva, items };
+    return { subtotal, iva, ieps, total: subtotal + ieps + iva, items };
   }, [cart]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
@@ -371,12 +385,16 @@ export default function RutaNuevaVenta() {
       }
 
       // 2. Create sale
+      const selectedCliente = clientes?.find(c => c.id === clienteId);
+      const tarifaId = selectedCliente?.tarifa_id || null;
+      const almacenId = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: 'borrador', notas: notas || null,
-        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: 0, descuento_total: 0,
+        tarifa_id: tarifaId, almacen_id: almacenId,
+        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: 0,
         total: totals.total, saldo_pendiente: totals.total,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
@@ -384,14 +402,17 @@ export default function RutaNuevaVenta() {
 
       // 3. Insert lines
       for (const item of cart) {
+        const lineSub = item.precio_unitario * item.cantidad;
+        const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+        const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
         await queueOperation('venta_lineas', 'insert', {
           id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id,
           descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario,
-          subtotal: item.precio_unitario * item.cantidad,
-          iva_pct: item.iva_pct,
-          iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
-          ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
-          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          unidad_id: item.unidad_id || null,
+          subtotal: lineSub,
+          iva_pct: item.iva_pct, iva_monto: lineIva,
+          ieps_pct: item.ieps_pct, ieps_monto: lineIeps, descuento_pct: 0,
+          total: lineSub + lineIeps + lineIva,
           notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
           created_at: new Date().toISOString(),
         });
@@ -431,13 +452,17 @@ export default function RutaNuevaVenta() {
       }
 
       // 2. Create the sale
+      const selectedCliente2 = clientes?.find(c => c.id === clienteId);
+      const tarifaId2 = selectedCliente2?.tarifa_id || null;
+      const almacenId2 = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: tipoVenta === 'venta_directa' ? 'confirmado' : 'borrador',
         notas: notas || null, subtotal: totals.subtotal, iva_total: totals.iva,
-        ieps_total: 0, descuento_total: 0, total: totals.total,
+        tarifa_id: tarifaId2, almacen_id: almacenId2,
+        ieps_total: totals.ieps, descuento_total: 0, total: totals.total,
         saldo_pendiente: condicionPago === 'credito' ? totals.total : 0,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
@@ -445,14 +470,17 @@ export default function RutaNuevaVenta() {
 
       // 3. Insert lines
       for (const item of cart) {
+        const lineSub = item.precio_unitario * item.cantidad;
+        const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+        const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
         await queueOperation('venta_lineas', 'insert', {
           id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id,
           descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario,
-          subtotal: item.precio_unitario * item.cantidad,
-          iva_pct: item.iva_pct,
-          iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
-          ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
-          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          unidad_id: item.unidad_id || null,
+          subtotal: lineSub,
+          iva_pct: item.iva_pct, iva_monto: lineIva,
+          ieps_pct: item.ieps_pct, ieps_monto: lineIeps, descuento_pct: 0,
+          total: lineSub + lineIeps + lineIva,
           notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
           created_at: new Date().toISOString(),
         });
@@ -558,13 +586,18 @@ export default function RutaNuevaVenta() {
         folio={ticketInfo.folio}
         fecha={ticketInfo.fecha}
         clienteNombre={clienteNombre}
-        lineas={cart.map(item => ({
-          nombre: item.nombre,
-          cantidad: item.cantidad,
-          precio: item.precio_unitario,
-          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
-          esCambio: item.es_cambio,
-        }))}
+        lineas={cart.map(item => {
+          const lineSub = item.precio_unitario * item.cantidad;
+          const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+          const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
+          return {
+            nombre: item.nombre,
+            cantidad: item.cantidad,
+            precio: item.precio_unitario,
+            total: lineSub + lineIeps + lineIva,
+            esCambio: item.es_cambio,
+          };
+        })}
         subtotal={totals.subtotal}
         iva={totals.iva}
         total={totals.total}
