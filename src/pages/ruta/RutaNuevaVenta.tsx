@@ -1309,9 +1309,11 @@ export default function RutaNuevaVenta() {
                   <span className="text-[20px] font-bold text-primary tabular-nums">${fmt(totalACobrar)}</span>
                 </div>
               )}
-              {totalACobrar === 0 && condicionPago === 'credito' && (
+              {totalACobrar === 0 && (condicionPago === 'credito' || condicionPago === 'por_definir') && (
                 <div className="mt-2 pt-2 border-t border-border/60">
-                  <p className="text-[12px] text-muted-foreground text-center">No hay cobro por ahora — se registra a crédito</p>
+                  <p className="text-[12px] text-muted-foreground text-center">
+                    {condicionPago === 'credito' ? 'No hay cobro por ahora — se registra a crédito' : 'No hay cobro por ahora — pago por definir'}
+                  </p>
                 </div>
               )}
             </section>
