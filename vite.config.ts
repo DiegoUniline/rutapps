@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { VitePWA } from "vite-plugin-pwa";
 
-// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -12,7 +12,78 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [
+    react(),
+    mode === "development" && componentTagger(),
+    VitePWA({
+      registerType: "autoUpdate",
+      workbox: {
+        // Don't cache HTML — always fetch fresh from network
+        navigateFallback: null,
+        navigateFallbackDenylist: [/^\/~oauth/],
+        runtimeCaching: [
+          {
+            // HTML pages: network first, no cache
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              expiration: { maxEntries: 10, maxAgeSeconds: 0 },
+              networkTimeoutSeconds: 3,
+            },
+          },
+          {
+            // JS/CSS assets: cache first (they have hashes in filenames)
+            urlPattern: /\.(?:js|css)$/,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'static-assets',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+            },
+          },
+          {
+            // Images: cache first
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+          {
+            // Fonts
+            urlPattern: /\.(?:woff|woff2|ttf|otf|eot)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+          {
+            // Supabase API calls: network only
+            urlPattern: /supabase\.co/,
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
+      manifest: {
+        name: "Rutapp – Venta en Ruta",
+        short_name: "Rutapp",
+        description: "Sistema de venta en ruta para vendedores móviles",
+        theme_color: "#1a1a2e",
+        background_color: "#1a1a2e",
+        display: "standalone",
+        orientation: "portrait",
+        start_url: "/ruta",
+        scope: "/",
+        icons: [
+          { src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+          { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
+          { src: "/pwa-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+      },
+    }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
