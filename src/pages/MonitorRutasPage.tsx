@@ -1,22 +1,23 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, MarkerF, InfoWindow } from '@react-google-maps/api';
-import SearchableSelect from '@/components/SearchableSelect';
 import {
   Activity, Users, MapPin, CheckCircle2, XCircle, Clock, Truck,
-  ShoppingCart, TrendingUp, Eye, BarChart3, Package, Navigation
+  ShoppingCart, TrendingUp, Eye, BarChart3, Package, Navigation, CalendarIcon, Filter
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIA_HOY_IDX = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-const DIA_HOY = DIAS[DIA_HOY_IDX];
-const DIA_HOY_LABEL = DIA_HOY.charAt(0).toUpperCase() + DIA_HOY.slice(1);
-const TODAY = new Date().toISOString().split('T')[0];
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtMoney = (n: number) => '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -42,10 +43,22 @@ interface ClientVisit {
 function MonitorContent() {
   const { empresa } = useAuth();
   const { isLoaded } = useGoogleMaps();
-  const [vendedorFilter, setVendedorFilter] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [vendedorFilters, setVendedorFilters] = useState<string[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientVisit | null>(null);
   const [view, setView] = useState<'map' | 'table'>('map');
   const mapRef = useRef<google.maps.Map | null>(null);
+
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const dayIdx = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1;
+  const diaVisita = DIAS[dayIdx];
+  const diaLabel = diaVisita.charAt(0).toUpperCase() + diaVisita.slice(1);
+
+  const toggleVendedor = (id: string) => {
+    setVendedorFilters(prev =>
+      prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+    );
+  };
 
   // Vendedores
   const { data: vendedores } = useQuery({
@@ -56,9 +69,9 @@ function MonitorContent() {
     },
   });
 
-  // Clients scheduled for today
+  // Clients scheduled for selected day
   const { data: clientesHoy } = useQuery({
-    queryKey: ['monitor-clientes-hoy', empresa?.id],
+    queryKey: ['monitor-clientes-hoy', empresa?.id, diaVisita],
     enabled: !!empresa?.id,
     refetchInterval: 30000,
     queryFn: async () => {
@@ -69,43 +82,43 @@ function MonitorContent() {
         .eq('status', 'activo')
         .order('orden', { ascending: true });
       return (data ?? []).filter((c: any) =>
-        c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY)
+        c.dia_visita?.some((d: string) => d.toLowerCase() === diaVisita)
       );
     },
   });
 
-  // Today's sales
+  // Sales for selected date
   const { data: ventasHoy } = useQuery({
-    queryKey: ['monitor-ventas-hoy', TODAY],
+    queryKey: ['monitor-ventas-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
         .select('id, cliente_id, vendedor_id, total, status, tipo')
-        .eq('fecha', TODAY);
+        .eq('fecha', dateStr);
       return data ?? [];
     },
   });
 
-  // Today's entregas
+  // Entregas for selected date
   const { data: entregasHoy } = useQuery({
-    queryKey: ['monitor-entregas-hoy', TODAY],
+    queryKey: ['monitor-entregas-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
         .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio')
-        .eq('fecha', TODAY);
+        .eq('fecha', dateStr);
       return data ?? [];
     },
   });
 
-  // Today's cobros
+  // Cobros for selected date
   const { data: cobrosHoy } = useQuery({
-    queryKey: ['monitor-cobros-hoy', TODAY],
+    queryKey: ['monitor-cobros-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', TODAY);
+      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', dateStr);
       return data ?? [];
     },
   });
@@ -151,9 +164,9 @@ function MonitorContent() {
   }, [clientesHoy, ventasHoy, entregasHoy]);
 
   const filtered = useMemo(() => {
-    if (!vendedorFilter) return visits;
-    return visits.filter(v => v.vendedor_id === vendedorFilter);
-  }, [visits, vendedorFilter]);
+    if (vendedorFilters.length === 0) return visits;
+    return visits.filter(v => v.vendedor_id && vendedorFilters.includes(v.vendedor_id));
+  }, [visits, vendedorFilters]);
 
   const withGps = useMemo(() => filtered.filter(v => v.gps_lat && v.gps_lng), [filtered]);
 
