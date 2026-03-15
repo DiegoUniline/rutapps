@@ -52,21 +52,41 @@ export function useEntrega(id?: string) {
   });
 }
 
-export function useEntregaByPedido(pedidoId?: string) {
+export function useEntregasByPedido(pedidoId?: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['entrega-by-pedido', pedidoId],
+    queryKey: ['entregas-by-pedido', pedidoId],
     enabled: !!pedidoId && !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entregas')
-        .select('id, folio, status')
+        .select('id, folio, status, entrega_lineas(producto_id, cantidad_entregada, hecho)')
         .eq('pedido_id', pedidoId!)
-        .maybeSingle();
+        .order('created_at', { ascending: true });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
   });
+}
+
+/** Calculate remaining quantities for a pedido based on existing entregas */
+export function calcRemainingQty(
+  lineas: { producto_id: string; cantidad: number }[],
+  entregas: { entrega_lineas: { producto_id: string; cantidad_entregada: number }[] }[]
+) {
+  const delivered: Record<string, number> = {};
+  for (const e of entregas) {
+    for (const l of (e.entrega_lineas ?? [])) {
+      delivered[l.producto_id] = (delivered[l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+    }
+  }
+  return lineas
+    .map(l => ({
+      ...l,
+      cantidad_entregada_total: delivered[l.producto_id] ?? 0,
+      cantidad_pendiente: Math.max(0, Number(l.cantidad) - (delivered[l.producto_id] ?? 0)),
+    }))
+    .filter(l => l.cantidad_pendiente > 0);
 }
 
 export function useCrearEntrega() {
