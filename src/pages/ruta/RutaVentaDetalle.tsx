@@ -1001,7 +1001,7 @@ export default function RutaVentaDetalle() {
             <Download className="h-4 w-4 text-muted-foreground" />
           </button>
           {/* Estado de cuenta */}
-          <button onClick={() => setView('estado_cuenta')}
+          <button onClick={handleEstadoCuenta}
             className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Estado de cuenta">
             <Receipt className="h-4 w-4 text-muted-foreground" />
           </button>
