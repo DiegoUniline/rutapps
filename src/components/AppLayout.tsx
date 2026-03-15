@@ -71,8 +71,6 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Compras', path: '/almacen/compras' },
-      { label: 'Cargas', path: '/almacen/cargas' },
-      { label: 'Descargas de ruta', path: '/almacen/descargas' },
       { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
