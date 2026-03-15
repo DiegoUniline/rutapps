@@ -267,17 +267,19 @@ export default function EntregaListPage() {
               <TableHead className="text-[11px]">Pedido origen</TableHead>
               <TableHead className="text-[11px]">Cliente</TableHead>
               <TableHead className="text-[11px]">Vendedor</TableHead>
+              <TableHead className="text-[11px]">Almacén origen</TableHead>
+              <TableHead className="text-[11px]">Ruta asignada</TableHead>
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px] text-center">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && (
-              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
             )}
             {!isLoading && (entregas ?? []).length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No hay entregas
                 </TableCell>
@@ -318,6 +320,14 @@ export default function EntregaListPage() {
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
                   >{e.vendedores?.nombre ?? '—'}</TableCell>
+                  <TableCell
+                    className="text-[12px] text-muted-foreground py-2"
+                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
+                  >{e.almacenes?.nombre ?? '—'}</TableCell>
+                  <TableCell
+                    className="text-[12px] text-muted-foreground py-2"
+                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
+                  >{e.vendedor_ruta?.nombre ?? '—'}</TableCell>
                   <TableCell
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
