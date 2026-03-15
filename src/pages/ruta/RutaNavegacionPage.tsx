@@ -157,7 +157,7 @@ function NavegacionContent() {
           setDirections(result);
           // Zoom in to user location at street level (like Google Maps nav)
           if (mapRef.current && userLocation) {
-            mapRef.current.panTo(userLocation);
+            mapRef.current.setCenter(userLocation);
             mapRef.current.setZoom(17);
           }
         } else {
@@ -185,8 +185,8 @@ function NavegacionContent() {
     setPanelOpen(true);
     // Initial center on user while directions load
     if (mapRef.current && userLocation) {
-      mapRef.current.panTo(userLocation);
-      mapRef.current.setZoom(15);
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(17);
     }
   };
 
@@ -253,10 +253,8 @@ function NavegacionContent() {
   // Keep camera centered on user's blue dot while navigating (Google Maps-like)
   useEffect(() => {
     if (!navigatingTo || !userLocation || !mapRef.current) return;
-    mapRef.current.panTo(userLocation);
-    if ((mapRef.current.getZoom() ?? 0) < 17) {
-      mapRef.current.setZoom(17);
-    }
+    mapRef.current.setCenter(userLocation);
+    mapRef.current.setZoom(17);
   }, [navigatingTo, userLocation?.lat, userLocation?.lng]);
 
   if (totalCount === 0) {
@@ -282,8 +280,8 @@ function NavegacionContent() {
       {isLoaded && (
         <GoogleMap
           onLoad={onMapLoad}
-          center={stops[0] ? { lat: stops[0].gps_lat, lng: stops[0].gps_lng } : undefined}
-          zoom={13}
+          center={navigatingTo && userLocation ? userLocation : (stops[0] ? { lat: stops[0].gps_lat, lng: stops[0].gps_lng } : undefined)}
+          zoom={navigatingTo && userLocation ? 17 : 13}
           mapContainerStyle={{ width: '100%', height: '100%' }}
           options={{
             disableDefaultUI: true,
