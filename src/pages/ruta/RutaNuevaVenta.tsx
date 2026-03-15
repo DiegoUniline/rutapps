@@ -45,9 +45,10 @@ interface CuentaPendiente {
   montoAplicar: number;
 }
 
-type Step = 'cliente' | 'devoluciones' | 'productos' | 'resumen' | 'pago';
+type Step = 'tipo' | 'cliente' | 'devoluciones' | 'productos' | 'resumen' | 'pago';
 
 const STEP_LABELS: Record<Step, string> = {
+  tipo: 'Tipo',
   cliente: 'Cliente',
   devoluciones: 'Devol.',
   productos: 'Pedido',
@@ -55,7 +56,7 @@ const STEP_LABELS: Record<Step, string> = {
   pago: 'Pago',
 };
 
-const STEPS: Step[] = ['cliente', 'devoluciones', 'productos', 'resumen', 'pago'];
+const STEPS: Step[] = ['tipo', 'cliente', 'devoluciones', 'productos', 'resumen', 'pago'];
 
 const MOTIVOS: { value: DevolucionItem['motivo']; label: string }[] = [
   { value: 'no_vendido', label: 'No vendido' },
@@ -72,7 +73,7 @@ export default function RutaNuevaVenta() {
   const { empresa, user, profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>(urlClienteId ? 'devoluciones' : 'cliente');
+  const [step, setStep] = useState<Step>('tipo');
   const [clienteId, setClienteId] = useState<string | null>(urlClienteId);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
@@ -96,6 +97,27 @@ export default function RutaNuevaVenta() {
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
 
   const entregaInmediata = tipoVenta === 'venta_directa';
+
+  // Load carga data for stock-aboard (venta directa)
+  const { data: cargasRaw } = useOfflineQuery('cargas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id, orderBy: 'fecha', ascending: false });
+  const activeCarga = useMemo(() => {
+    if (!cargasRaw || !profile) return null;
+    const vendId = profile.vendedor_id || profile.id;
+    return cargasRaw.find((c: any) => c.vendedor_id === vendId && ['pendiente', 'en_ruta'].includes(c.status)) ?? null;
+  }, [cargasRaw, profile]);
+
+  const { data: cargaLineasRaw } = useOfflineQuery('carga_lineas', { carga_id: activeCarga?.id }, { enabled: !!activeCarga?.id });
+
+  // Map producto_id → stock aboard (cargada - vendida - devuelta)
+  const stockAbordo = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!cargaLineasRaw) return map;
+    (cargaLineasRaw as any[]).forEach(l => {
+      const disponible = (l.cantidad_cargada ?? 0) - (l.cantidad_vendida ?? 0) - (l.cantidad_devuelta ?? 0);
+      map.set(l.producto_id, Math.max(0, disponible));
+    });
+    return map;
+  }, [cargaLineasRaw]);
 
   // Promotions engine
   const { data: promocionesActivas } = usePromocionesActivas();
@@ -165,7 +187,16 @@ export default function RutaNuevaVenta() {
     c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
   );
 
-  const filteredProductos = productos?.filter(p =>
+  // For venta_directa: only products in carga with stock > 0
+  // For pedido: all products
+  const productosDisponibles = useMemo(() => {
+    if (!productos) return [];
+    if (tipoVenta === 'pedido') return productos;
+    // Venta directa: only products in active carga with available stock
+    return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
+  }, [productos, tipoVenta, stockAbordo]);
+
+  const filteredProductos = productosDisponibles?.filter(p =>
     !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) ||
     p.codigo.toLowerCase().includes(searchProducto.toLowerCase())
   );
@@ -199,11 +230,20 @@ export default function RutaNuevaVenta() {
     setCart(newCart);
   };
 
+  const getMaxQty = (productoId: string) => {
+    if (tipoVenta === 'pedido') return Infinity;
+    return stockAbordo.get(productoId) ?? 0;
+  };
+
   const addToCart = (p: any, esCambio = false) => {
+    const maxQty = esCambio ? Infinity : getMaxQty(p.id);
     const existing = cart.find(c => c.producto_id === p.id && c.es_cambio === esCambio);
     if (existing) {
-      setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: c.cantidad + 1 } : c));
+      const newQty = Math.min(existing.cantidad + 1, maxQty);
+      if (newQty <= existing.cantidad) { toast.error('Stock a bordo insuficiente'); return; }
+      setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: newQty } : c));
     } else {
+      if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
       setCart([...cart, {
         producto_id: p.id,
         codigo: p.codigo,
@@ -225,6 +265,8 @@ export default function RutaNuevaVenta() {
     setCart(prev => prev.map(c => {
       if (c.producto_id !== productoId || c.es_cambio !== esCambio) return c;
       const newQty = c.cantidad + delta;
+      const maxQty = esCambio ? Infinity : getMaxQty(productoId);
+      if (newQty > maxQty) return c;
       return newQty > 0 ? { ...c, cantidad: newQty } : c;
     }));
   };
@@ -662,6 +704,46 @@ export default function RutaNuevaVenta() {
         </div>
       </header>
 
+      {/* ─── STEP 0: Tipo ─── */}
+      {step === 'tipo' && (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
+          <div className="text-center">
+            <h2 className="text-[18px] font-bold text-foreground mb-1">¿Qué tipo de operación?</h2>
+            <p className="text-[12px] text-muted-foreground">Elige antes de continuar</p>
+          </div>
+          <div className="w-full max-w-xs space-y-3">
+            <button
+              onClick={() => { setTipoVenta('venta_directa'); setStep(urlClienteId ? 'devoluciones' : 'cliente'); }}
+              className="w-full rounded-xl border-2 border-primary bg-primary/5 p-4 text-left active:scale-[0.98] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-foreground">Venta inmediata</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Entrega ahora · Solo productos con stock a bordo</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => { setTipoVenta('pedido'); setStep(urlClienteId ? 'devoluciones' : 'cliente'); }}
+              className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-primary/40"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                  <Package className="h-5 w-5 text-foreground" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-foreground">Pedido</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Se entrega después · Todos los productos disponibles</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ─── STEP 1: Cliente ─── */}
       {step === 'cliente' && (
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -884,17 +966,22 @@ export default function RutaNuevaVenta() {
           <div className="flex-1 overflow-auto px-3 space-y-[3px] pb-20">
             {filteredProductos?.map(p => {
               const inCart = getItemInCart(p.id);
-              const stock = p.cantidad ?? 0;
+              const maxQty = getMaxQty(p.id);
+              const stockLabel = tipoVenta === 'venta_directa'
+                ? `${maxQty} a bordo`
+                : `${p.cantidad ?? 0} en almacén`;
+              const stockOk = tipoVenta === 'pedido' || maxQty > 0;
+              const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty;
               return (
                 <div key={p.id} className={`rounded-lg px-3 py-2 transition-all ${inCart ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'}`}>
                   <div className="flex items-center gap-2.5">
-                    <div className="flex-1 min-w-0" onClick={() => !inCart && addToCart(p)}>
+                    <div className="flex-1 min-w-0" onClick={() => !inCart && stockOk && addToCart(p)}>
                       <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                       <div className="flex items-center gap-1.5 mt-px">
                         <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
                         <span className="text-[10px] text-muted-foreground">·</span>
-                        <span className={`text-[10px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                          {stock} {(p.unidades as any)?.abreviatura || 'pz'}
+                        <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>
+                          {stockLabel}
                         </span>
                       </div>
                       <p className="text-[13px] font-bold text-foreground mt-px">
@@ -911,9 +998,16 @@ export default function RutaNuevaVenta() {
                         <input type="number" inputMode="numeric"
                           className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                           value={inCart.cantidad}
-                          onChange={e => { const val = parseInt(e.target.value); if (!isNaN(val) && val > 0) setCart(prev => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: val } : c)); }}
+                          onChange={e => {
+                            const val = parseInt(e.target.value);
+                            if (!isNaN(val) && val > 0) {
+                              const capped = tipoVenta === 'venta_directa' ? Math.min(val, maxQty) : val;
+                              setCart(prev => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: capped } : c));
+                            }
+                          }}
                           onFocus={e => e.target.select()} />
-                        <button onClick={() => addToCart(p)} className="w-7 h-7 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-90 transition-transform">
+                        <button onClick={() => addToCart(p)} disabled={!!atMax}
+                          className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}>
                           <Plus className="h-3 w-3" />
                         </button>
                       </div>
@@ -923,6 +1017,9 @@ export default function RutaNuevaVenta() {
                       </button>
                     )}
                   </div>
+                  {atMax && (
+                    <p className="text-[9px] text-amber-600 dark:text-amber-400 mt-1">Máximo a bordo alcanzado</p>
+                  )}
                 </div>
               );
             })}
@@ -1087,16 +1184,12 @@ export default function RutaNuevaVenta() {
       {step === 'pago' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto px-3 pt-2.5 pb-24 space-y-2.5">
-            {/* Tipo de operación */}
+            {/* Tipo de operación (read-only, selected in step 1) */}
             <section className="bg-card rounded-lg p-3">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tipo de operación</p>
-              <div className="flex gap-1.5">
-                {([['venta_directa', 'Venta directa'], ['pedido', 'Pedido']] as const).map(([val, label]) => (
-                  <button key={val} onClick={() => setTipoVenta(val)}
-                    className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${tipoVenta === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
-                    {label}
-                  </button>
-                ))}
+              <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-md px-3 py-1.5 text-[12px] font-semibold">
+                {tipoVenta === 'venta_directa' ? <ShoppingCart className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+                {tipoVenta === 'venta_directa' ? 'Venta inmediata' : 'Pedido'}
               </div>
               {!entregaInmediata && (
                 <div className="mt-2.5 rounded-md px-2.5 py-2 flex items-start gap-2 bg-accent/50">
