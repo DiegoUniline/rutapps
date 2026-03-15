@@ -94,6 +94,8 @@ export default function TarifaFormPage() {
   const [showAddRow, setShowAddRow] = useState(false);
   const [newLinea, setNewLinea] = useState({ ...EMPTY_LINEA });
   const [editingName, setEditingName] = useState(false);
+  const [editingLineaId, setEditingLineaId] = useState<string | null>(null);
+  const [editLinea, setEditLinea] = useState({ ...EMPTY_LINEA });
 
   useEffect(() => { if (existing) { setForm(existing); setOriginalForm(existing); } }, [existing]);
 
