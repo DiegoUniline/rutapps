@@ -456,7 +456,7 @@ export default function RutaVentaDetalle() {
   if (view === 'ticket' && ticketData) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
           <button onClick={() => navigate('/ruta/ventas')} className="p-1 -ml-1">
             <X className="h-5 w-5 text-foreground" />
           </button>
@@ -521,7 +521,7 @@ export default function RutaVentaDetalle() {
   if (view === 'editar') {
     return (
       <div className="flex flex-col h-screen bg-background">
-        <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border">
+        <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
           <div className="flex items-center gap-2 px-3 h-12">
             <button onClick={() => setView('detalle')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
               <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
@@ -628,7 +628,7 @@ export default function RutaVentaDetalle() {
           {/* Full-screen product picker overlay */}
           {showProductSearch && (
             <div className="fixed inset-0 z-50 bg-background flex flex-col">
-              <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border">
+              <header className="sticky top-0 z-10 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
                 <div className="flex items-center gap-2 px-3 h-12">
                   <button onClick={() => { setShowProductSearch(false); setSearchProducto(''); }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all">
                     <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
@@ -773,7 +773,7 @@ export default function RutaVentaDetalle() {
   if (view === 'cobrar') {
     return (
       <div className="flex flex-col h-screen bg-background">
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
           <button onClick={() => setView('detalle')} className="p-1 -ml-1">
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
@@ -981,7 +981,7 @@ export default function RutaVentaDetalle() {
   // ═══════════════════════════════════════
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-2">
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
         <button onClick={() => navigate(-1)} className="p-1 -ml-1">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
