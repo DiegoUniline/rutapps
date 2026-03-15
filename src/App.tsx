@@ -21,6 +21,7 @@ const ClienteFormPage = lazy(() => import("@/pages/ClienteFormPage"));
 const VentasListPage = lazy(() => import("@/pages/VentasListPage"));
 const VentaFormPage = lazy(() => import("@/pages/VentaFormPage"));
 const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
+const PedidoPendienteDetailPage = lazy(() => import("@/pages/PedidoPendienteDetailPage"));
 const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
@@ -164,6 +165,7 @@ function AppRoutes() {
                 <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/logistica/pedidos" element={<DemandaPage />} />
+                <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
                 <Route path="/logistica/entregas" element={<EntregaListPage />} />
                 <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
