@@ -38,7 +38,7 @@ function emptyVenta(): Partial<Venta> {
   return {
     tipo: 'pedido',
     status: 'borrador',
-    condicion_pago: 'contado',
+    condicion_pago: 'por_definir',
     fecha: new Date().toISOString().slice(0, 10),
     entrega_inmediata: false,
     subtotal: 0, descuento_total: 0, iva_total: 0, ieps_total: 0, total: 0,
@@ -635,13 +635,13 @@ export default function VentaFormPage() {
                 ) : (
                   <div className="flex gap-1">
                     <button
-                      onClick={() => set('tipo', 'pedido')}
+                      onClick={() => { set('tipo', 'pedido'); set('condicion_pago', 'por_definir'); }}
                       className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
                         form.tipo === 'pedido' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
                       )}
                     >Pedido</button>
                     <button
-                      onClick={() => set('tipo', 'venta_directa')}
+                      onClick={() => { set('tipo', 'venta_directa'); set('condicion_pago', 'contado'); }}
                       className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
                         form.tipo === 'venta_directa' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
                       )}
