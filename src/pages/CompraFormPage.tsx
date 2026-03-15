@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Plus, X, CreditCard } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
@@ -310,27 +311,29 @@ export default function CompraFormPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <label className="label-odoo">Proveedor</label>
-            <select
-              className="input-odoo w-full"
-              value={form.proveedor_id ?? ''}
-              onChange={e => updateField('proveedor_id', e.target.value || null)}
-              disabled={!isEditable}
-            >
-              <option value="">Seleccionar...</option>
-              {proveedoresList?.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
+            {isEditable ? (
+              <SearchableSelect
+                options={(proveedoresList ?? []).map(p => ({ value: p.id, label: p.nombre }))}
+                value={form.proveedor_id ?? ''}
+                onChange={val => updateField('proveedor_id', val || null)}
+                placeholder="Buscar proveedor..."
+              />
+            ) : (
+              <div className="text-[13px] py-1.5 px-1 text-foreground">{proveedoresList?.find(p => p.id === form.proveedor_id)?.nombre || '—'}</div>
+            )}
           </div>
           <div>
             <label className="label-odoo">Almacén destino</label>
-            <select
-              className="input-odoo w-full"
-              value={form.almacen_id ?? ''}
-              onChange={e => updateField('almacen_id', e.target.value || null)}
-              disabled={!isEditable}
-            >
-              <option value="">Seleccionar...</option>
-              {almacenesList?.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            {isEditable ? (
+              <SearchableSelect
+                options={(almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }))}
+                value={form.almacen_id ?? ''}
+                onChange={val => updateField('almacen_id', val || null)}
+                placeholder="Buscar almacén..."
+              />
+            ) : (
+              <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenesList?.find(a => a.id === form.almacen_id)?.nombre || '—'}</div>
+            )}
           </div>
           <div>
             <label className="label-odoo">Fecha</label>
@@ -341,15 +344,16 @@ export default function CompraFormPage() {
           </div>
           <div>
             <label className="label-odoo">Condición de pago</label>
-            <select
-              className="input-odoo w-full"
-              value={form.condicion_pago ?? 'contado'}
-              onChange={e => updateField('condicion_pago', e.target.value)}
-              disabled={!isEditable}
-            >
-              <option value="contado">Contado</option>
-              <option value="credito">Crédito</option>
-            </select>
+            {isEditable ? (
+              <SearchableSelect
+                options={[{ value: 'contado', label: 'Contado' }, { value: 'credito', label: 'Crédito' }]}
+                value={form.condicion_pago ?? 'contado'}
+                onChange={val => updateField('condicion_pago', val)}
+                placeholder="Seleccionar..."
+              />
+            ) : (
+              <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{form.condicion_pago}</div>
+            )}
           </div>
         </div>
 

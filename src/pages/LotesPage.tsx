@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -133,16 +134,20 @@ export default function LotesPage() {
         <div className="bg-card border border-border rounded-lg p-4 space-y-3">
           <h3 className="text-sm font-semibold">Nuevo lote</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background" value={form.producto_id} onChange={e => setForm({ ...form, producto_id: e.target.value })}>
-              <option value="">Producto *</option>
-              {productos?.map(p => <option key={p.id} value={p.id}>{p.codigo} — {p.nombre}</option>)}
-            </select>
+            <SearchableSelect
+              options={(productos ?? []).map(p => ({ value: p.id, label: `${p.codigo} — ${p.nombre}` }))}
+              value={form.producto_id}
+              onChange={val => setForm({ ...form, producto_id: val })}
+              placeholder="Buscar producto..."
+            />
             <Input placeholder="# Lote *" value={form.lote} onChange={e => setForm({ ...form, lote: e.target.value })} />
             <Input type="number" placeholder="Cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: e.target.value })} />
-            <select className="border border-input rounded-md px-3 py-2 text-sm bg-background" value={form.almacen_id} onChange={e => setForm({ ...form, almacen_id: e.target.value })}>
-              <option value="">Almacén</option>
-              {almacenes?.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            <SearchableSelect
+              options={(almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }))}
+              value={form.almacen_id}
+              onChange={val => setForm({ ...form, almacen_id: val })}
+              placeholder="Almacén"
+            />
             <Input type="date" placeholder="Producción" value={form.fecha_produccion} onChange={e => setForm({ ...form, fecha_produccion: e.target.value })} />
             <Input type="date" placeholder="Caducidad" value={form.fecha_caducidad} onChange={e => setForm({ ...form, fecha_caducidad: e.target.value })} />
             <Input placeholder="Notas" value={form.notas} onChange={e => setForm({ ...form, notas: e.target.value })} className="col-span-2" />

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -132,10 +133,12 @@ export default function ReporteEntregasPage() {
       <div className="flex flex-wrap items-end gap-3 print:hidden">
         <div>
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Ruta</label>
-          <select className="border border-input rounded-md px-3 py-2 text-sm bg-background min-w-[180px]" value={vendedorId} onChange={e => setVendedorId(e.target.value)}>
-            <option value="todos">Todas las rutas</option>
-            {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-          </select>
+          <SearchableSelect
+            options={[{ value: 'todos', label: 'Todas las rutas' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+            value={vendedorId}
+            onChange={setVendedorId}
+            placeholder="Buscar ruta..."
+          />
         </div>
         <div>
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Desde</label>

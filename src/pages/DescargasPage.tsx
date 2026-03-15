@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useDescargasListDesktop, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
@@ -817,14 +818,12 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
                   </td>
                   <td className="py-2 px-1">
                     {l.diferencia !== 0 ? (
-                      <select
+                      <SearchableSelect
+                        options={MOTIVOS}
                         value={l.motivo || ''}
-                        onChange={e => updateLinea(idx, 'motivo', e.target.value || null)}
-                        className="input-odoo text-[11px] h-7 w-full"
-                      >
-                        <option value="">Motivo...</option>
-                        {MOTIVOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                      </select>
+                        onChange={val => updateLinea(idx, 'motivo', val || null)}
+                        placeholder="Motivo..."
+                      />
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="py-2 px-1">

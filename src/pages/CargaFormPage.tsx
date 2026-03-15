@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Truck, Search, ClipboardList } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';
@@ -267,39 +268,36 @@ export default function CargaFormPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
           <label className="text-sm font-medium text-foreground">Vendedor *</label>
-          <select
-            className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
-            value={vendedorId}
-            onChange={e => setVendedorId(e.target.value)}
-            disabled={!isEditable && !isNew}
-          >
-            <option value="">Seleccionar...</option>
-            {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-          </select>
+          <div className="mt-1">
+            <SearchableSelect
+              options={(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))}
+              value={vendedorId}
+              onChange={setVendedorId}
+              placeholder="Buscar vendedor..."
+            />
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium text-foreground">Repartidor</label>
-          <select
-            className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
-            value={repartidorId}
-            onChange={e => setRepartidorId(e.target.value)}
-            disabled={!isEditable && !isNew}
-          >
-            <option value="">Mismo vendedor</option>
-            {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-          </select>
+          <div className="mt-1">
+            <SearchableSelect
+              options={(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))}
+              value={repartidorId}
+              onChange={setRepartidorId}
+              placeholder="Mismo vendedor"
+            />
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium text-foreground">Almacén origen</label>
-          <select
-            className="mt-1 w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
-            value={almacenId}
-            onChange={e => setAlmacenId(e.target.value)}
-            disabled={!isEditable && !isNew}
-          >
-            <option value="">Sin asignar</option>
-            {almacenes?.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-          </select>
+          <div className="mt-1">
+            <SearchableSelect
+              options={(almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }))}
+              value={almacenId}
+              onChange={setAlmacenId}
+              placeholder="Sin asignar"
+            />
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium text-foreground">Fecha</label>

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface InlineEditCellProps {
   value: string | number | null | undefined;
@@ -132,17 +133,21 @@ export function InlineEditCell({
 
   if (type === 'select' && options) {
     return (
-      <select
-        ref={inputRef as any}
-        className={cn('inline-edit-input', invalid && 'inline-edit-invalid', inputClassName)}
+      <SearchableSelect
+        options={options}
         value={draft}
-        onChange={e => { setDraft(e.target.value); }}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-      >
-        <option value="">{placeholder || 'Seleccionar'}</option>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+        onChange={val => {
+          onSave(val);
+          setEditing(false);
+          setInvalid(false);
+        }}
+        onClose={() => {
+          setEditing(false);
+          setInvalid(false);
+        }}
+        placeholder={placeholder || 'Buscar...'}
+        autoOpen
+      />
     );
   }
 

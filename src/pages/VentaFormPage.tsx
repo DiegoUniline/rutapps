@@ -7,6 +7,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
@@ -440,15 +441,16 @@ export default function VentaFormPage() {
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
                 ) : (
-                  <select className="input-odoo" value={form.cliente_id ?? ''} onChange={e => {
-                    const cId = e.target.value;
-                    set('cliente_id', cId);
-                    const c = clientesList?.find(cl => cl.id === cId);
-                    if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
-                  }}>
-                    <option value="">Seleccionar cliente</option>
-                    {clienteOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={clienteOptions}
+                    value={form.cliente_id ?? ''}
+                    onChange={cId => {
+                      set('cliente_id', cId);
+                      const c = clientesList?.find(cl => cl.id === cId);
+                      if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
+                    }}
+                    placeholder="Buscar cliente..."
+                  />
                 )}
               </div>
               <div>
@@ -517,10 +519,12 @@ export default function VentaFormPage() {
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
                 ) : (
-                  <select className="input-odoo" value={form.tarifa_id ?? ''} onChange={e => set('tarifa_id', e.target.value || null)}>
-                    <option value="">Sin tarifa</option>
-                    {tarifaOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={tarifaOptions}
+                    value={form.tarifa_id ?? ''}
+                    onChange={val => set('tarifa_id', val || null)}
+                    placeholder="Buscar tarifa..."
+                  />
                 )}
               </div>
               <div>
@@ -528,10 +532,12 @@ export default function VentaFormPage() {
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenesList?.find(a => a.id === form.almacen_id)?.nombre || 'Sin almacén'}</div>
                 ) : (
-                  <select className="input-odoo" value={form.almacen_id ?? ''} onChange={e => set('almacen_id', e.target.value || null)}>
-                    <option value="">Sin almacén</option>
-                    {almacenOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={almacenOptions}
+                    value={form.almacen_id ?? ''}
+                    onChange={val => set('almacen_id', val || null)}
+                    placeholder="Buscar almacén..."
+                  />
                 )}
               </div>
               {/* Saldo info for confirmed+ sales */}

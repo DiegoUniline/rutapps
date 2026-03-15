@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera } from 'lucide-react';
 import { calcTax } from '@/lib/taxUtils';
@@ -168,11 +169,12 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
                 </div>
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Lista de precios</span>
-                  <select className="input-odoo py-1 text-[13px] w-full" value={newRule.tarifa_id}
-                    onChange={e => setNewRule(p => ({ ...p, tarifa_id: e.target.value }))}>
-                    <option value="">Seleccionar...</option>
-                    {tarifasDisp?.map((t: any) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={(tarifasDisp ?? []).map((t: any) => ({ value: t.id, label: t.nombre }))}
+                    value={newRule.tarifa_id}
+                    onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
+                    placeholder="Buscar lista..."
+                  />
                 </div>
               </div>
 

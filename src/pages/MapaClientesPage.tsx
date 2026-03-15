@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { GoogleMap, Marker, InfoWindow, Polyline, MarkerClusterer } from '@react-google-maps/api';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -348,28 +349,38 @@ export default function MapaClientesPage() {
 
         {showFilters && (
           <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border">
-            <select value={zonaFilter} onChange={e => setZonaFilter(e.target.value)}
-              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[120px]">
-              <option value="">Todas las zonas</option>
-              {zonas?.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-            </select>
-            <select value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}
-              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[120px]">
-              <option value="">Todos vendedores</option>
-              {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
-            <select value={diaFilter} onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
-              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[120px]">
-              <option value="">Todos los días</option>
-              {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[100px]">
-              <option value="">Todo status</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-              <option value="suspendido">Suspendido</option>
-            </select>
+            <div className="min-w-[130px]">
+              <SearchableSelect
+                options={[{ value: '', label: 'Todas las zonas' }, ...(zonas ?? []).map(z => ({ value: z.id, label: z.nombre }))]}
+                value={zonaFilter}
+                onChange={setZonaFilter}
+                placeholder="Zona..."
+              />
+            </div>
+            <div className="min-w-[130px]">
+              <SearchableSelect
+                options={[{ value: '', label: 'Todos vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+                value={vendedorFilter}
+                onChange={setVendedorFilter}
+                placeholder="Vendedor..."
+              />
+            </div>
+            <div className="min-w-[130px]">
+              <SearchableSelect
+                options={[{ value: '', label: 'Todos los días' }, ...DIAS.map(d => ({ value: d, label: d }))]}
+                value={diaFilter}
+                onChange={val => { setDiaFilter(val); setRouteResult(null); }}
+                placeholder="Día..."
+              />
+            </div>
+            <div className="min-w-[110px]">
+              <SearchableSelect
+                options={[{ value: '', label: 'Todo status' }, { value: 'activo', label: 'Activo' }, { value: 'inactivo', label: 'Inactivo' }, { value: 'suspendido', label: 'Suspendido' }]}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="Status..."
+              />
+            </div>
             {activeFiltersCount > 0 && (
               <button onClick={() => { setZonaFilter(''); setVendedorFilter(''); setDiaFilter(''); setStatusFilter(''); }}
                 className="flex items-center gap-1 text-[10px] text-destructive hover:underline py-1">

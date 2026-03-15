@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useClientes, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
@@ -178,21 +179,23 @@ export default function RutasMapPage() {
             <Route className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold text-foreground">Optimización de rutas</h1>
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 min-w-[150px]">
             <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Día</label>
-            <select value={diaFilter} onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
-              className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[130px]">
-              <option value="">Todos los días</option>
-              {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
-            </select>
+            <SearchableSelect
+              options={[{ value: '', label: 'Todos los días' }, ...DIAS.map(d => ({ value: d, label: d }))]}
+              value={diaFilter}
+              onChange={val => { setDiaFilter(val); setRouteResult(null); }}
+              placeholder="Día..."
+            />
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-0.5 min-w-[150px]">
             <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Vendedor</label>
-            <select value={vendedorFilter} onChange={e => { setVendedorFilter(e.target.value); setRouteResult(null); }}
-              className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-              <option value="">Todos</option>
-              {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
+            <SearchableSelect
+              options={[{ value: '', label: 'Todos' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+              value={vendedorFilter}
+              onChange={val => { setVendedorFilter(val); setRouteResult(null); }}
+              placeholder="Vendedor..."
+            />
           </div>
           <button
             onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Haz click en el mapa para establecer el punto de partida'); }}
