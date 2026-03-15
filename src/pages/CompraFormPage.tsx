@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Switch } from '@/components/ui/switch';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
@@ -31,12 +32,45 @@ interface CompraLinea {
   precio_unitario: number;
   subtotal: number;
   total: number;
+  // Extended fields (not persisted to compra_lineas, used for UI)
+  _tiene_iva: boolean;
+  _iva_pct: number;
+  _tiene_ieps: boolean;
+  _ieps_pct: number;
+  _ieps_tipo: string;
+  _unidad_compra: string;
+  _factor_conversion: number;
+  _piezas_total: number;
   // joined
   productos?: { id: string; codigo: string; nombre: string; costo: number };
 }
 
 function emptyLine(): Partial<CompraLinea> {
-  return { cantidad: 1, precio_unitario: 0, subtotal: 0, total: 0 };
+  return { cantidad: 1, precio_unitario: 0, subtotal: 0, total: 0, _tiene_iva: false, _iva_pct: 16, _tiene_ieps: false, _ieps_pct: 0, _ieps_tipo: 'porcentaje', _unidad_compra: '', _factor_conversion: 1, _piezas_total: 1 };
+}
+
+function calcLineTotals(line: Partial<CompraLinea>) {
+  const cant = Number(line.cantidad) || 0;
+  const precio = Number(line.precio_unitario) || 0;
+  const base = cant * precio;
+
+  let iepsAmount = 0;
+  if (line._tiene_ieps) {
+    if (line._ieps_tipo === 'cuota') {
+      iepsAmount = cant * (Number(line._ieps_pct) || 0);
+    } else {
+      iepsAmount = base * ((Number(line._ieps_pct) || 0) / 100);
+    }
+  }
+
+  const baseConIeps = base + iepsAmount;
+  const ivaAmount = line._tiene_iva ? baseConIeps * ((Number(line._iva_pct) || 0) / 100) : 0;
+
+  line.subtotal = base;
+  line.total = base + iepsAmount + ivaAmount;
+  line._piezas_total = cant * (Number(line._factor_conversion) || 1);
+
+  return line;
 }
 
 function useCompra(id?: string) {
@@ -97,14 +131,29 @@ export default function CompraFormPage() {
 
   // Load existing
   useEffect(() => {
-    if (existingCompra) {
+    if (existingCompra && productosList) {
       const { compra_lineas, proveedores, almacenes, ...rest } = existingCompra as any;
       setForm(rest);
       if (compra_lineas && compra_lineas.length > 0) {
-        setLineas(compra_lineas);
+        // Enrich lines with product tax/unit info
+        const enrichedLines = compra_lineas.map((cl: any) => {
+          const prod = productosList.find((p: any) => p.id === cl.producto_id);
+          return {
+            ...cl,
+            _tiene_iva: prod?.tiene_iva ?? false,
+            _iva_pct: prod?.iva_pct ?? 16,
+            _tiene_ieps: prod?.tiene_ieps ?? false,
+            _ieps_pct: prod?.ieps_pct ?? 0,
+            _ieps_tipo: prod?.ieps_tipo ?? 'porcentaje',
+            _unidad_compra: (prod as any)?.unidades_compra?.abreviatura ?? (prod as any)?.unidades_venta?.abreviatura ?? 'pz',
+            _factor_conversion: prod?.factor_conversion ?? 1,
+            _piezas_total: (cl.cantidad ?? 1) * (prod?.factor_conversion ?? 1),
+          };
+        });
+        setLineas(enrichedLines);
       }
     }
-  }, [existingCompra]);
+  }, [existingCompra, productosList]);
 
   // Recalc totals
   const totals = useMemo(() => {
@@ -125,19 +174,21 @@ export default function CompraFormPage() {
       const line = { ...next[idx], [key]: val };
 
       if (key === 'producto_id' && productosList) {
-        const p = productosList.find(x => x.id === val);
+        const p = productosList.find((x: any) => x.id === val) as any;
         if (p) {
           line.precio_unitario = p.costo ?? 0;
           line.productos = { id: p.id, codigo: p.codigo, nombre: p.nombre, costo: p.costo ?? 0 };
+          line._tiene_iva = p.tiene_iva ?? false;
+          line._iva_pct = p.iva_pct ?? 16;
+          line._tiene_ieps = p.tiene_ieps ?? false;
+          line._ieps_pct = p.ieps_pct ?? 0;
+          line._ieps_tipo = p.ieps_tipo ?? 'porcentaje';
+          line._unidad_compra = p.unidades_compra?.abreviatura ?? p.unidades_venta?.abreviatura ?? 'pz';
+          line._factor_conversion = p.factor_conversion ?? 1;
         }
       }
 
-      // Recalc line
-      const cant = Number(line.cantidad) || 0;
-      const precio = Number(line.precio_unitario) || 0;
-      line.subtotal = cant * precio;
-      line.total = line.subtotal; // simplified, no IVA on purchases for now
-
+      calcLineTotals(line);
       next[idx] = line;
       return next;
     });
@@ -184,7 +235,6 @@ export default function CompraFormPage() {
         const { empresa_id, ...updateData } = compraData;
         const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId);
         if (error) throw error;
-        // Delete old lines and re-insert
         await supabase.from('compra_lineas').delete().eq('compra_id', compraId);
       }
 
@@ -386,65 +436,129 @@ export default function CompraFormPage() {
                     <thead>
                       <tr className="border-b border-table-border">
                         <th className="th-odoo text-left w-12">#</th>
-                        <th className="th-odoo text-left">Producto</th>
-                        <th className="th-odoo text-right w-24">Cantidad</th>
+                        <th className="th-odoo text-left min-w-[200px]">Producto</th>
+                        <th className="th-odoo text-center w-20">Ud. compra</th>
+                        <th className="th-odoo text-right w-20">Cantidad</th>
+                        <th className="th-odoo text-center w-16">Factor</th>
+                        <th className="th-odoo text-right w-20">Piezas</th>
                         <th className="th-odoo text-right w-28">Costo unit.</th>
-                        <th className="th-odoo text-right w-28">Subtotal</th>
+                        <th className="th-odoo text-center w-16">IVA</th>
+                        <th className="th-odoo text-center w-16">IEPS</th>
+                        <th className="th-odoo text-right w-28">Total</th>
                         {isEditable && <th className="th-odoo w-10"></th>}
                       </tr>
                     </thead>
                     <tbody>
-                      {lineas.map((line, idx) => (
-                        <tr key={idx} className="border-b border-table-border">
-                          <td className="py-1.5 px-3 text-muted-foreground text-xs">{idx + 1}</td>
-                          <td className="py-1.5 px-3">
-                            {isEditable ? (
-                              <select
-                                className="input-odoo w-full text-xs"
-                                value={line.producto_id ?? ''}
-                                onChange={e => updateLinea(idx, 'producto_id', e.target.value)}
-                              >
-                                <option value="">Seleccionar producto...</option>
-                                {productosList?.map(p => (
-                                  <option key={p.id} value={p.id}>[{p.codigo}] {p.nombre}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <span className="text-xs">{line.productos?.nombre ?? '—'}</span>
-                            )}
-                          </td>
-                          <td className="py-1.5 px-3">
-                            <input
-                              type="number"
-                              className="input-odoo w-full text-right text-xs"
-                              value={line.cantidad ?? 1}
-                              onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))}
-                              disabled={!isEditable}
-                              min={0}
-                            />
-                          </td>
-                          <td className="py-1.5 px-3">
-                            <input
-                              type="number"
-                              className="input-odoo w-full text-right text-xs"
-                              value={line.precio_unitario ?? 0}
-                              onChange={e => updateLinea(idx, 'precio_unitario', Number(e.target.value))}
-                              disabled={!isEditable}
-                              step="0.01"
-                            />
-                          </td>
-                          <td className="py-1.5 px-3 text-right font-medium text-xs">
-                            $ {fmt(line.subtotal ?? 0)}
-                          </td>
-                          {isEditable && (
+                      {lineas.map((line, idx) => {
+                        const iepsLabel = line._tiene_ieps
+                          ? (line._ieps_tipo === 'cuota' ? `$${line._ieps_pct}` : `${line._ieps_pct}%`)
+                          : '';
+                        return (
+                          <tr key={idx} className="border-b border-table-border">
+                            <td className="py-1.5 px-3 text-muted-foreground text-xs">{idx + 1}</td>
                             <td className="py-1.5 px-3">
-                              <button onClick={() => removeLine(idx)} className="text-destructive hover:text-destructive/80">
-                                <X className="h-3.5 w-3.5" />
-                              </button>
+                              {isEditable ? (
+                                <select
+                                  className="input-odoo w-full text-xs"
+                                  value={line.producto_id ?? ''}
+                                  onChange={e => updateLinea(idx, 'producto_id', e.target.value)}
+                                >
+                                  <option value="">Seleccionar producto...</option>
+                                  {(productosList as any[])?.map(p => (
+                                    <option key={p.id} value={p.id}>[{p.codigo}] {p.nombre}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-xs">{line.productos?.nombre ?? '—'}</span>
+                              )}
                             </td>
-                          )}
-                        </tr>
-                      ))}
+                            {/* Unidad de compra */}
+                            <td className="py-1.5 px-3 text-center text-xs text-muted-foreground">
+                              {line._unidad_compra || 'pz'}
+                            </td>
+                            {/* Cantidad */}
+                            <td className="py-1.5 px-3">
+                              <input
+                                type="number"
+                                className="input-odoo w-full text-right text-xs"
+                                value={line.cantidad ?? 1}
+                                onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))}
+                                disabled={!isEditable}
+                                min={0}
+                              />
+                            </td>
+                            {/* Factor conversión */}
+                            <td className="py-1.5 px-3 text-center">
+                              {isEditable ? (
+                                <input
+                                  type="number"
+                                  className="input-odoo w-full text-center text-xs"
+                                  value={line._factor_conversion ?? 1}
+                                  onChange={e => updateLinea(idx, '_factor_conversion', Number(e.target.value))}
+                                  min={1}
+                                  step={1}
+                                />
+                              ) : (
+                                <span className="text-xs">{line._factor_conversion ?? 1}</span>
+                              )}
+                            </td>
+                            {/* Piezas */}
+                            <td className="py-1.5 px-3 text-right text-xs font-medium text-foreground">
+                              {((line.cantidad ?? 1) * (line._factor_conversion ?? 1)).toLocaleString('es-MX')}
+                            </td>
+                            {/* Costo unit */}
+                            <td className="py-1.5 px-3">
+                              <input
+                                type="number"
+                                className="input-odoo w-full text-right text-xs"
+                                value={line.precio_unitario ?? 0}
+                                onChange={e => updateLinea(idx, 'precio_unitario', Number(e.target.value))}
+                                disabled={!isEditable}
+                                step="0.01"
+                              />
+                            </td>
+                            {/* IVA toggle */}
+                            <td className="py-1.5 px-3 text-center">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Switch
+                                  checked={line._tiene_iva ?? false}
+                                  onCheckedChange={v => updateLinea(idx, '_tiene_iva', v)}
+                                  disabled={!isEditable}
+                                  className="scale-75"
+                                />
+                                {line._tiene_iva && (
+                                  <span className="text-[10px] text-muted-foreground">{line._iva_pct}%</span>
+                                )}
+                              </div>
+                            </td>
+                            {/* IEPS toggle */}
+                            <td className="py-1.5 px-3 text-center">
+                              <div className="flex flex-col items-center gap-0.5">
+                                <Switch
+                                  checked={line._tiene_ieps ?? false}
+                                  onCheckedChange={v => updateLinea(idx, '_tiene_ieps', v)}
+                                  disabled={!isEditable}
+                                  className="scale-75"
+                                />
+                                {line._tiene_ieps && (
+                                  <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>
+                                )}
+                              </div>
+                            </td>
+                            {/* Total */}
+                            <td className="py-1.5 px-3 text-right font-medium text-xs">
+                              $ {fmt(line.total ?? 0)}
+                            </td>
+                            {isEditable && (
+                              <td className="py-1.5 px-3">
+                                <button onClick={() => removeLine(idx)} className="text-destructive hover:text-destructive/80">
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -524,7 +638,7 @@ export default function CompraFormPage() {
             <span className="font-medium">$ {fmt(totals.subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">IVA</span>
+            <span className="text-muted-foreground">Impuestos</span>
             <span className="font-medium">$ {fmt(totals.iva_total)}</span>
           </div>
           <div className="border-t border-border pt-2 flex justify-between text-base">
@@ -607,7 +721,6 @@ function PagoCompraDialog({
       } as any);
       if (pagoError) throw pagoError;
 
-      // Update saldo
       const nuevoSaldo = Math.max(0, saldoPendiente - monto);
       const updates: any = { saldo_pendiente: nuevoSaldo };
       if (nuevoSaldo === 0) updates.status = 'pagada';

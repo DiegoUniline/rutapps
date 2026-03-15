@@ -64,7 +64,6 @@ export default function TraspasoFormPage() {
         .eq('id', id!)
         .single();
       if (error) throw error;
-      // Fetch lines
       const { data: lines } = await supabase
         .from('traspaso_lineas')
         .select('*')
@@ -92,7 +91,8 @@ export default function TraspasoFormPage() {
     },
   });
 
-  const { data: productosList } = useQuery({
+  // Fetch ALL products (for display on existing traspasos)
+  const { data: allProductos } = useQuery({
     queryKey: ['productos-select', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
@@ -100,6 +100,48 @@ export default function TraspasoFormPage() {
       return data ?? [];
     },
   });
+
+  // Fetch stock_camion for ruta origin
+  const { data: stockCamion } = useQuery({
+    queryKey: ['stock-camion-vendedor', vendedorOrigenId],
+    enabled: tipo === 'ruta_almacen' && !!vendedorOrigenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('stock_camion')
+        .select('producto_id, cantidad_actual')
+        .eq('vendedor_id', vendedorOrigenId)
+        .gt('cantidad_actual', 0);
+      return data ?? [];
+    },
+  });
+
+  // Filtered product list: only those with stock > 0 from the selected origin
+  const productosList = useMemo(() => {
+    if (!allProductos) return [];
+    if (readOnly) return allProductos; // show all for read-only view
+
+    if (tipo === 'ruta_almacen') {
+      // Only products that have stock_camion > 0 for the selected vendedor
+      if (!stockCamion || !vendedorOrigenId) return [];
+      const scMap = new Map(stockCamion.map(s => [s.producto_id, s.cantidad_actual]));
+      return allProductos
+        .filter(p => (scMap.get(p.id) ?? 0) > 0)
+        .map(p => ({ ...p, cantidad: scMap.get(p.id) ?? 0 }));
+    }
+
+    // almacen_almacen or almacen_ruta: filter by productos.cantidad > 0
+    return allProductos.filter(p => (p.cantidad ?? 0) > 0);
+  }, [allProductos, stockCamion, tipo, vendedorOrigenId, readOnly]);
+
+  // Max stock map for validation
+  const maxStockMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (tipo === 'ruta_almacen' && stockCamion) {
+      stockCamion.forEach(s => map.set(s.producto_id, s.cantidad_actual));
+    } else if (allProductos) {
+      allProductos.forEach(p => map.set(p.id, p.cantidad ?? 0));
+    }
+    return map;
+  }, [allProductos, stockCamion, tipo]);
 
   const almacenOpts = (almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
@@ -171,7 +213,13 @@ export default function TraspasoFormPage() {
     if (readOnly) return;
     setLineas(prev => {
       const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
+      const line = { ...next[idx], [field]: val };
+      // Cap quantity at max stock
+      if (field === 'cantidad' && line.producto_id) {
+        const maxStock = maxStockMap.get(line.producto_id) ?? 0;
+        if (val > maxStock) line.cantidad = maxStock;
+      }
+      next[idx] = line;
       return next;
     });
     setDirty(true);
@@ -196,6 +244,15 @@ export default function TraspasoFormPage() {
     mutationFn: async () => {
       const validLines = lineas.filter(l => l.producto_id && l.cantidad > 0);
       if (validLines.length === 0) throw new Error('Agrega al menos un producto');
+
+      // Validate stock before saving
+      for (const l of validLines) {
+        const maxStock = maxStockMap.get(l.producto_id) ?? 0;
+        if (l.cantidad > maxStock) {
+          const prod = allProductos?.find(p => p.id === l.producto_id);
+          throw new Error(`"${prod?.nombre}" excede stock disponible (${maxStock})`);
+        }
+      }
 
       const insert: any = {
         empresa_id: empresa!.id,
@@ -233,14 +290,12 @@ export default function TraspasoFormPage() {
         if (lErr) throw lErr;
         return traspaso;
       } else {
-        // Update existing
         const { error } = await supabase
           .from('traspasos')
           .update(insert as any)
           .eq('id', id!);
         if (error) throw error;
 
-        // Delete old lines and re-insert
         await supabase.from('traspaso_lineas').delete().eq('traspaso_id', id!);
         const { error: lErr } = await supabase.from('traspaso_lineas').insert(
           validLines.map(l => ({ traspaso_id: id!, producto_id: l.producto_id, cantidad: l.cantidad }))
@@ -296,6 +351,10 @@ export default function TraspasoFormPage() {
             .limit(1)
             .single();
           if (sc) {
+            if (l.cantidad > sc.cantidad_actual) {
+              const { data: p } = await supabase.from('productos').select('nombre').eq('id', l.producto_id).single();
+              throw new Error(`Stock insuficiente en ruta para "${p?.nombre}". Disponible: ${sc.cantidad_actual}`);
+            }
             await supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - l.cantidad) } as any).eq('id', sc.id);
           }
           await supabase.from('movimientos_inventario').insert({
@@ -507,20 +566,23 @@ export default function TraspasoFormPage() {
                       <tr className="border-b border-table-border text-left">
                         <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
                         <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Stock actual</th>
+                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
                         <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Cantidad</th>
                         <th className="py-2 px-2 w-8"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {lineas.map((l, idx) => {
-                        const prod = productosList?.find(p => p.id === l.producto_id);
+                        const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
+                        const maxStock = l.producto_id ? (maxStockMap.get(l.producto_id) ?? 0) : 0;
                         const isEmpty = !l.producto_id;
                         const isLast = idx === lineas.length - 1;
+                        const overMax = !isEmpty && l.cantidad > maxStock;
                         return (
                           <tr key={idx} className={cn(
                             "border-b border-table-border transition-colors group",
-                            isEmpty ? "bg-transparent" : "hover:bg-table-hover"
+                            isEmpty ? "bg-transparent" : "hover:bg-table-hover",
+                            overMax && "bg-destructive/5"
                           )}>
                             <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
                             <td className="py-1 px-2">
@@ -538,8 +600,8 @@ export default function TraspasoFormPage() {
                                 />
                               )}
                             </td>
-                            <td className="py-1 px-2 text-right text-muted-foreground tabular-nums">
-                              {prod ? prod.cantidad ?? 0 : ''}
+                            <td className={cn("py-1 px-2 text-right tabular-nums", overMax ? "text-destructive font-semibold" : "text-muted-foreground")}>
+                              {!isEmpty ? maxStock : ''}
                             </td>
                             <td className="py-1 px-2 text-right">
                               {readOnly ? (
@@ -549,10 +611,14 @@ export default function TraspasoFormPage() {
                                   ref={el => setCellRef(idx, 1, el)}
                                   type="number"
                                   min={1}
+                                  max={maxStock || undefined}
                                   value={l.cantidad || ''}
                                   onChange={e => updateLine(idx, 'cantidad', Number(e.target.value))}
                                   onKeyDown={e => handleCellKeyDown(e, idx, 1)}
-                                  className="w-full text-right bg-transparent border-0 border-b border-transparent focus:border-primary outline-none py-1 text-[13px] tabular-nums"
+                                  className={cn(
+                                    "w-full text-right bg-transparent border-0 border-b border-transparent focus:border-primary outline-none py-1 text-[13px] tabular-nums",
+                                    overMax && "text-destructive"
+                                  )}
                                 />
                               )}
                             </td>
