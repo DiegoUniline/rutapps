@@ -123,7 +123,7 @@ function buildTicketElement(tpl: TemplateConfig, vars: TicketVars) {
       tpl.tipo === "pre_cobro" ? "¡Gracias por confiar en Rutapp! 🚀" : "¡Gracias por tu pago! 🎉"
     ) : null;
 
-  return e("div", { style: { display: "flex", flexDirection: "column", width: 360, fontFamily: "Inter", background: "#fff", borderRadius: 12, overflow: "hidden" } },
+  return e("div", { style: { display: "flex", flexDirection: "column", width: 320, fontFamily: "Inter", background: "#fff", borderRadius: 12, overflow: "hidden" } },
     // Header
     e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", background: theme.accent, padding: "18px 20px" } },
       e("span", { style: { fontSize: 28 } }, tpl.emoji),
@@ -192,14 +192,14 @@ async function generateTicketPng(tpl: TemplateConfig, vars: TicketVars): Promise
     const element = buildTicketElement(tpl, vars);
 
     const svg = await satori(element, {
-      width: 360,
+      width: 320,
       fonts: [{ name: "Inter", data: font, weight: 400, style: "normal" as const }],
     });
 
     const wasmReady = await ensureWasm();
     if (!wasmReady) return null;
 
-    const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: 720 } });
+    const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: 640 } });
     const pngData = resvg.render();
     return pngData.asPng();
   } catch (err) {

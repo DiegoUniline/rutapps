@@ -90,6 +90,7 @@ export default function AdminWhatsAppTab() {
   const [templates, setTemplates] = useState<TemplateData[]>([]);
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [sendingTest, setSendingTest] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const ticketRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -207,6 +208,36 @@ export default function AdminWhatsAppTab() {
     }
   }
 
+  async function sendAllTestTickets() {
+    if (!testPhone) { toast.error('Ingresa un número de teléfono arriba primero'); return; }
+    if (!savedToken) { toast.error('Configura el token de WhatsApp primero'); return; }
+    setSendingAll(true);
+    const tipos = templates.map(t => t.tipo);
+    let sent = 0;
+    for (const tipo of tipos) {
+      try {
+        const tpl = templates.find(t => t.tipo === tipo);
+        if (!tpl) continue;
+        const sampleData = getSampleData(tipo, tpl.campos, tpl.emoji, tpl.encabezado);
+        const result = await sendBillingTicketWhatsApp({
+          data: sampleData,
+          phone: testPhone,
+          waToken: savedToken,
+          customerEmail: 'test@rutapps.lovable.app',
+          textCaption: `${tpl.emoji} ${tpl.encabezado} (PRUEBA)`,
+        });
+        if (result.success) sent++;
+        else toast.error(`Error en ${TEMPLATE_META[tipo]?.label}: ${result.error}`);
+        // Small delay between sends
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (err: any) {
+        toast.error(`Error en ${TEMPLATE_META[tipo]?.label}: ${err.message}`);
+      }
+    }
+    toast.success(`${sent} de ${tipos.length} tickets enviados`);
+    setSendingAll(false);
+  }
+
   function toggleCampo(tipo: string, campo: string) {
     setTemplates(prev => prev.map(t => t.tipo === tipo ? { ...t, campos: { ...t.campos, [campo]: !t.campos[campo] } } : t));
   }
@@ -278,12 +309,16 @@ export default function AdminWhatsAppTab() {
           <div className="border-t border-border pt-4 space-y-3">
             <label className="text-sm font-medium">Teléfono de prueba</label>
             <div className="flex gap-2">
-              <Input placeholder="Número (ej: 5212345678900)" value={testPhone} onChange={e => setTestPhone(e.target.value)} />
+              <Input placeholder="Número (ej: 523171035768)" value={testPhone} onChange={e => setTestPhone(e.target.value)} />
               <Button variant="outline" onClick={sendTestMessage} disabled={testing || !savedToken}>
                 {testing ? 'Enviando...' : 'Enviar texto'}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Ingresa el número aquí y luego prueba cualquier ticket abajo.</p>
+            <Button className="w-full" onClick={sendAllTestTickets} disabled={sendingAll || !savedToken || !testPhone}>
+              <Send className="h-4 w-4 mr-1.5" />
+              {sendingAll ? 'Enviando los 4 tickets...' : 'Enviar los 4 tickets de prueba'}
+            </Button>
+            <p className="text-xs text-muted-foreground">Envía los 4 tipos de ticket como imagen al número de arriba.</p>
           </div>
         </CardContent>
       </Card>
@@ -398,12 +433,12 @@ export default function AdminWhatsAppTab() {
                               style={{ background: 'linear-gradient(180deg, #ece5dd 0%, #d9d2c5 100%)' }}
                             >
                               {/* Message bubble */}
-                              <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-[300px] self-start">
+                              <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-[310px] self-start">
                                 {/* Rendered HTML ticket */}
                                 <div
                                   ref={(el) => { ticketRefs.current[t.tipo] = el; }}
                                   dangerouslySetInnerHTML={{ __html: ticketHtml }}
-                                  className="[&>div]:!shadow-none [&>div]:!rounded-none"
+                                  className="[&>div]:!shadow-none [&>div]:!rounded-none [&>div]:!w-full [&>div]:!max-w-full"
                                 />
                                 {/* Caption */}
                                 <div className="px-3 py-1.5 border-t border-gray-100">
