@@ -113,6 +113,7 @@ export default function VentasListPage() {
               <Plus className="h-3.5 w-3.5" /> Nueva venta
             </button>
           </div>
+        </div>
 
         <div className="bg-card border border-border rounded overflow-x-auto">
           {isLoading ? (
