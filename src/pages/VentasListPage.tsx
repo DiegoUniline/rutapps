@@ -94,10 +94,25 @@ export default function VentasListPage() {
               <option value="venta_directa">Venta directa</option>
             </select>
           </OdooFilterBar>
-          <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
-            <Plus className="h-3.5 w-3.5" /> Nueva venta
-          </button>
-        </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <ExportButton
+              onExcel={() => exportToExcel({
+                fileName: 'Ventas', title: 'Reporte de Ventas',
+                columns: VENTAS_COLUMNS,
+                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                totals: { total: ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0, saldo_pendiente: ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0 },
+              })}
+              onPDF={() => exportToPDF({
+                fileName: 'Ventas', title: 'Reporte de Ventas',
+                columns: VENTAS_COLUMNS,
+                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                totals: { total: ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0, saldo_pendiente: ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0 },
+              })}
+            />
+            <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
+              <Plus className="h-3.5 w-3.5" /> Nueva venta
+            </button>
+          </div>
 
         <div className="bg-card border border-border rounded overflow-x-auto">
           {isLoading ? (
