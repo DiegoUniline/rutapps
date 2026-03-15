@@ -316,7 +316,7 @@ function NavegacionContent() {
                 }}
                 icon={{
                   path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : '#6366f1',
+                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : stop.tipo === 'entrega' ? '#f59e0b' : '#6366f1',
                   fillOpacity: isCompleted ? 0.5 : 1,
                   strokeColor: '#ffffff',
                   strokeWeight: 2,
