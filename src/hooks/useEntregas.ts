@@ -13,7 +13,7 @@ export function useEntregasList(search?: string, vendedorFilter?: string, status
     queryFn: async () => {
       let q = supabase
         .from('entregas')
-        .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores(nombre), ventas!entregas_pedido_id_fkey(folio)')
+        .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores!entregas_vendedor_id_fkey(nombre), ventas!entregas_pedido_id_fkey(folio)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
 
@@ -36,7 +36,7 @@ export function useEntrega(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entregas')
-        .select('*, clientes(nombre), vendedores(nombre), almacenes(nombre), ventas!entregas_pedido_id_fkey(folio, total, condicion_pago)')
+        .select('*, clientes(nombre), vendedores!entregas_vendedor_id_fkey(nombre), almacenes(nombre), ventas!entregas_pedido_id_fkey(folio, total, condicion_pago)')
         .eq('id', id!)
         .single();
       if (error) throw error;
