@@ -279,12 +279,13 @@ export default function RutaNuevaVenta() {
 
   // Devolucion helpers
   const addDevolucion = (p: any) => {
-    if (devoluciones.find(d => d.producto_id === p.id)) return;
+    if (devoluciones.find(d => d.producto_id === p.id)) {
+      updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1);
+      return;
+    }
     setDevoluciones(prev => [...prev, {
       producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: 'no_vendido',
     }]);
-    setShowDevSearch(false);
-    setSearchDevProducto('');
   };
 
   const updateDevQty = (productoId: string, qty: number) => {
