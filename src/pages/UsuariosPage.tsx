@@ -28,6 +28,7 @@ interface AuthUser { id: string; email: string; }
 
 export default function UsuariosPage() {
   const { empresa } = useAuth();
+  const subscription = useSubscription();
   const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
   const [roles, setRoles] = useState<Role[]>([]);
   const [permisos, setPermisos] = useState<RolePermiso[]>([]);
