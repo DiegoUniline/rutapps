@@ -45,7 +45,7 @@ export async function downloadAllData(empresaId: string): Promise<void> {
       const tablesWithEmpresa = [
         'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
         'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
-        'tasas_iva', 'descarga_ruta', 'promociones',
+        'tasas_iva', 'descarga_ruta', 'promociones', 'entregas',
       ];
 
       if (tablesWithEmpresa.includes(table)) {
