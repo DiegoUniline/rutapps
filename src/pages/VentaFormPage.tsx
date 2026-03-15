@@ -532,10 +532,12 @@ export default function VentaFormPage() {
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenesList?.find(a => a.id === form.almacen_id)?.nombre || 'Sin almacén'}</div>
                 ) : (
-                  <select className="input-odoo" value={form.almacen_id ?? ''} onChange={e => set('almacen_id', e.target.value || null)}>
-                    <option value="">Sin almacén</option>
-                    {almacenOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={almacenOptions}
+                    value={form.almacen_id ?? ''}
+                    onChange={val => set('almacen_id', val || null)}
+                    placeholder="Buscar almacén..."
+                  />
                 )}
               </div>
               {/* Saldo info for confirmed+ sales */}
