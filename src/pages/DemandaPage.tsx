@@ -1,21 +1,24 @@
 import React, { useState, useMemo } from 'react';
-import { format } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Check, ChevronRight, Search, ClipboardList, Warehouse, AlertTriangle, CalendarIcon } from 'lucide-react';
+import { Truck, Check, Search, ClipboardList, Package, Warehouse } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import SearchableSelect from '@/components/SearchableSelect';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 
 // ─── Data hooks ────────────────────────────────────────────
 
-function useDemanda() {
+function usePedidosPendientes() {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['demanda', empresa?.id],
@@ -30,21 +33,21 @@ function useDemanda() {
         .order('fecha', { ascending: true });
       if (error) throw error;
 
-      // Get delivered quantities from entregas + entrega_lineas (only 'hecho' entregas count)
+      // Get delivered quantities from entregas
       const pedidoIds = (pedidos ?? []).map(p => p.id);
       let entregasData: any[] = [];
       if (pedidoIds.length > 0) {
         const { data } = await supabase
           .from('entregas')
           .select('pedido_id, status, entrega_lineas(producto_id, cantidad_entregada)')
-          .in('pedido_id', pedidoIds)
-          .eq('status', 'hecho');
+          .in('pedido_id', pedidoIds);
         entregasData = data ?? [];
       }
 
+      // Only count entregas that are NOT cancelado
       const deliveryMap: Record<string, Record<string, number>> = {};
       for (const e of entregasData) {
-        if (!e.pedido_id) continue;
+        if (!e.pedido_id || e.status === 'cancelado') continue;
         if (!deliveryMap[e.pedido_id]) deliveryMap[e.pedido_id] = {};
         for (const l of (e.entrega_lineas ?? [])) {
           deliveryMap[e.pedido_id][l.producto_id] = (deliveryMap[e.pedido_id][l.producto_id] ?? 0) + Number(l.cantidad_entregada);
@@ -73,154 +76,29 @@ function useDemanda() {
   });
 }
 
-function useOrigenes() {
-  const { empresa } = useAuth();
-  return useQuery({
-    queryKey: ['origenes-surtido', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const eid = empresa!.id;
-      // Almacenes
-      const { data: almacenes } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', eid).order('nombre');
-      // Products with warehouse stock
-      const { data: productos } = await supabase.from('productos').select('id, cantidad').eq('empresa_id', eid).eq('status', 'activo');
-      const stockAlmacen: Record<string, number> = {};
-      for (const p of (productos ?? [])) { stockAlmacen[p.id] = p.cantidad ?? 0; }
-
-      // Active cargas with lines
-      const { data: cargas } = await supabase
-        .from('cargas')
-        .select('id, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
-        .eq('empresa_id', eid)
-        .in('status', ['en_ruta', 'pendiente'] as any)
-        .order('fecha', { ascending: false });
-
-      const rutaOrigenes = (cargas ?? []).map(c => {
-        const stockMap: Record<string, number> = {};
-        for (const cl of (c.carga_lineas ?? [])) {
-          stockMap[cl.producto_id] = Math.max(0, cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta);
-        }
-        return {
-          id: `ruta-${c.id}`,
-          cargaId: c.id,
-          label: `Ruta: ${(c.vendedores as any)?.nombre ?? '—'} (${fmtDate(c.fecha)})`,
-          type: 'ruta' as const,
-          stock: stockMap,
-        };
-      });
-
-      const almacenOrigen = {
-        id: 'almacen',
-        cargaId: null as string | null,
-        label: (almacenes ?? []).length === 1 ? `Almacén: ${almacenes![0].nombre}` : 'Almacén general',
-        type: 'almacen' as const,
-        stock: stockAlmacen,
-      };
-
-      return { origenes: [almacenOrigen, ...rutaOrigenes] };
-    },
-  });
-}
-
 // ─── Component ────────────────────────────────────────────
 
 export default function DemandaPage() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
-  const { data: pedidos, isLoading } = useDemanda();
-  const { data: origenesData } = useOrigenes();
+  const navigate = useNavigate();
+  const { data: pedidos, isLoading } = usePedidosPendientes();
   const [search, setSearch] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [surtidoCantidades, setSurtidoCantidades] = useState<Record<string, number>>({});
-  const [origenId, setOrigenId] = useState<string>('almacen');
-  const [vendedorEntrega, setVendedorEntrega] = useState<Record<string, string | null>>({});
-  const [fechaEntrega, setFechaEntrega] = useState<Record<string, Date>>({});
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showCrearDialog, setShowCrearDialog] = useState(false);
+  const [almacenId, setAlmacenId] = useState('');
+  const [vendedorRutaId, setVendedorRutaId] = useState('');
 
-  const origenes = origenesData?.origenes ?? [];
-  const origenActual = origenes.find(o => o.id === origenId) ?? origenes[0];
-
-  const getStockOrigen = (productoId: string) => origenActual?.stock[productoId] ?? 0;
-
-  const generarEntrega = useMutation({
-    mutationFn: async (pedido: any) => {
-      if (!origenActual) throw new Error('Selecciona un origen');
-
-      const lineas = pedido.venta_lineas
-        .filter((l: any) => {
-          const key = `${pedido.id}-${l.producto_id}`;
-          return (surtidoCantidades[key] ?? 0) > 0;
-        })
-        .map((l: any) => {
-          const key = `${pedido.id}-${l.producto_id}`;
-          const qty = surtidoCantidades[key] ?? 0;
-          return {
-            producto_id: l.producto_id,
-            unidad_id: l.unidad_id ?? null,
-            cantidad_pedida: qty,
-            cantidad_entregada: qty,
-            hecho: false,
-          };
-        });
-
-      if (lineas.length === 0) throw new Error('Selecciona al menos un producto a surtir');
-
-      // Validate stock
-      for (const l of lineas) {
-        const disponible = getStockOrigen(l.producto_id);
-        if (l.cantidad_pedida > disponible) {
-          const prod = pedido.venta_lineas.find((vl: any) => vl.producto_id === l.producto_id);
-          throw new Error(`Stock insuficiente para ${prod?.productos?.nombre ?? 'producto'}: disponible ${disponible}, solicitado ${l.cantidad_pedida}`);
-        }
-      }
-
-      const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
-      if (!assignedVendedor) throw new Error('Asigna un vendedor/ruta antes de generar la entrega');
-
-      // Create entrega record with almacen origin
-      const almacenId = origenActual.type === 'almacen' && origenActual.id !== 'almacen'
-        ? origenActual.id : null;
-      const { data: entrega, error } = await supabase.from('entregas').insert({
-        empresa_id: empresa!.id,
-        pedido_id: pedido.id,
-        vendedor_id: assignedVendedor,
-        cliente_id: pedido.cliente_id,
-        almacen_id: almacenId,
-        status: 'borrador',
-      } as any).select('id, folio').single();
-      if (error) throw error;
-
-      // Insert entrega_lineas
-      const { error: lErr } = await supabase.from('entrega_lineas').insert(
-        lineas.map((l: any) => ({
-          entrega_id: entrega.id,
-          producto_id: l.producto_id,
-          unidad_id: l.unidad_id,
-          cantidad_pedida: l.cantidad_pedida,
-          cantidad_entregada: l.cantidad_entregada,
-          hecho: false,
-        }))
-      );
-      if (lErr) throw lErr;
-
-      return entrega;
+  // Fetch almacenes + vendedores
+  const { data: almacenesList } = useQuery({
+    queryKey: ['almacenes', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return data ?? [];
     },
-    onSuccess: () => {
-      toast.success('Entrega creada — ve a Entregas para validar y descontar stock');
-      qc.invalidateQueries({ queryKey: ['demanda'] });
-      qc.invalidateQueries({ queryKey: ['entregas-list'] });
-      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
-      setSurtidoCantidades({});
-      setExpandedId(null);
-    },
-    onError: (err: any) => toast.error(err.message),
   });
 
-  const filtered = pedidos?.filter(p =>
-    !search || (p.clientes?.nombre ?? '').toLowerCase().includes(search.toLowerCase()) ||
-    (p.folio ?? '').toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Fetch vendedores for assignment
   const { data: vendedoresList } = useQuery({
     queryKey: ['vendedores-list', empresa?.id],
     enabled: !!empresa?.id,
@@ -230,42 +108,110 @@ export default function DemandaPage() {
     },
   });
 
-  const initSurtido = (pedido: any) => {
-    const newQtys: Record<string, number> = {};
-    for (const l of pedido.venta_lineas) {
-      newQtys[`${pedido.id}-${l.producto_id}`] = 0;
-    }
-    setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
-    // Auto-assign vendedor from client's vendedor (already on pedido)
-    if (!vendedorEntrega[pedido.id]) {
-      setVendedorEntrega(prev => ({ ...prev, [pedido.id]: pedido.vendedor_id ?? null }));
-    }
-    setExpandedId(pedido.id);
+  const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
+  const vendedorOptions = (vendedoresList ?? []).map(v => ({ value: v.id, label: v.nombre }));
+
+  const filtered = useMemo(() =>
+    pedidos?.filter(p =>
+      !search || (p.clientes?.nombre ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (p.folio ?? '').toLowerCase().includes(search.toLowerCase())
+    ) ?? [],
+    [pedidos, search]
+  );
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   };
 
-  const surtirTodo = (pedido: any) => {
-    const newQtys: Record<string, number> = {};
-    for (const l of pedido.venta_lineas) {
-      const pendiente = Math.max(0, l.cantidad_pendiente);
-      const disponible = getStockOrigen(l.producto_id);
-      newQtys[`${pedido.id}-${l.producto_id}`] = Math.min(pendiente, disponible);
+  const toggleAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(p => p.id)));
     }
-    setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
   };
+
+  const selectedPedidos = filtered.filter(p => selectedIds.has(p.id));
+
+  // Bulk create entregas mutation
+  const crearEntregasMut = useMutation({
+    mutationFn: async () => {
+      if (selectedPedidos.length === 0) throw new Error('Selecciona al menos un pedido');
+
+      const createdIds: string[] = [];
+
+      for (const pedido of selectedPedidos) {
+        const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
+        if (pendientes.length === 0) continue;
+
+        // Create entrega
+        const { data: entrega, error } = await supabase.from('entregas').insert({
+          empresa_id: empresa!.id,
+          pedido_id: pedido.id,
+          vendedor_id: pedido.vendedor_id ?? null,
+          cliente_id: pedido.cliente_id,
+          almacen_id: almacenId || null,
+          vendedor_ruta_id: vendedorRutaId || null,
+          status: 'borrador',
+        } as any).select('id, folio').single();
+        if (error) throw error;
+
+        // Create lines with pending quantities
+        const { error: lErr } = await supabase.from('entrega_lineas').insert(
+          pendientes.map((l: any) => ({
+            entrega_id: entrega.id,
+            producto_id: l.producto_id,
+            unidad_id: l.unidad_id ?? null,
+            cantidad_pedida: Math.max(0, l.cantidad_pendiente),
+            cantidad_entregada: 0,
+            hecho: false,
+          }))
+        );
+        if (lErr) throw lErr;
+
+        createdIds.push(entrega.id);
+      }
+
+      return createdIds;
+    },
+    onSuccess: (ids) => {
+      toast.success(`${ids.length} entrega(s) creada(s)`);
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
+      setSelectedIds(new Set());
+      setShowCrearDialog(false);
+      // If single, navigate to it
+      if (ids.length === 1) {
+        navigate(`/logistica/entregas/${ids[0]}`);
+      }
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
 
   // Totals
-  const totalPedidos = filtered?.length ?? 0;
-  const totalLineasPendientes = filtered?.reduce((s, p) => s + p.totalPendiente, 0) ?? 0;
-  const totalValorPendiente = filtered?.reduce((s, p) => {
+  const totalPedidos = filtered.length;
+  const totalLineasPendientes = filtered.reduce((s, p) => s + p.totalPendiente, 0);
+  const totalValorPendiente = filtered.reduce((s, p) => {
     return s + p.venta_lineas.reduce((ls: number, l: any) => ls + Math.max(0, l.cantidad_pendiente) * l.precio_unitario, 0);
-  }, 0) ?? 0;
+  }, 0);
 
   return (
     <div className="p-4 space-y-4 min-h-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <ClipboardList className="h-5 w-5" /> Pedidos pendientes
         </h1>
+        {selectedIds.size > 0 && (
+          <Button onClick={() => setShowCrearDialog(true)} size="sm">
+            <Package className="h-3.5 w-3.5" />
+            Crear {selectedIds.size} entrega{selectedIds.size > 1 ? 's' : ''}
+          </Button>
+        )}
       </div>
 
       {/* Summary cards */}
@@ -284,26 +230,15 @@ export default function DemandaPage() {
         </div>
       </div>
 
-      {/* Search + Origin selector */}
+      {/* Search */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por folio o cliente..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div>
-          <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">
-            <Warehouse className="h-3 w-3 inline mr-1" />Surtir desde
-          </label>
-          <select
-            className="border border-input rounded-md px-3 py-2 text-sm bg-background min-w-[220px]"
-            value={origenId}
-            onChange={e => setOrigenId(e.target.value)}
-          >
-            {origenes.map(o => (
-              <option key={o.id} value={o.id}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+        {selectedIds.size > 0 && (
+          <p className="text-sm text-muted-foreground">{selectedIds.size} seleccionado{selectedIds.size > 1 ? 's' : ''}</p>
+        )}
       </div>
 
       {isLoading && <p className="text-muted-foreground">Cargando...</p>}
@@ -313,6 +248,12 @@ export default function DemandaPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                  onCheckedChange={toggleAll}
+                />
+              </TableHead>
               <TableHead className="text-[11px]">Folio</TableHead>
               <TableHead className="text-[11px]">Cliente</TableHead>
               <TableHead className="text-[11px]">Vendedor</TableHead>
@@ -321,11 +262,10 @@ export default function DemandaPage() {
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
               <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
-              <TableHead className="w-8"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!isLoading && filtered?.length === 0 && (
+            {!isLoading && filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                   <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -333,212 +273,112 @@ export default function DemandaPage() {
                 </TableCell>
               </TableRow>
             )}
-            {filtered?.map(pedido => {
-              const isExpanded = expandedId === pedido.id;
+            {filtered.map(pedido => {
+              const isSelected = selectedIds.has(pedido.id);
               return (
-                <React.Fragment key={pedido.id}>
-                  <TableRow
-                    className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isExpanded && "bg-accent/30")}
-                    onClick={() => isExpanded ? setExpandedId(null) : initSurtido(pedido)}
-                  >
-                    <TableCell className="font-mono text-[11px] font-bold py-2">{pedido.folio}</TableCell>
-                    <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
-                    <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
-                    <TableCell className="text-center py-2">
-                      <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-[12px] font-medium py-2">$ {pedido.total?.toFixed(2)}</TableCell>
-                    <TableCell className="py-2">
-                      <div className="flex items-center gap-2 justify-center">
-                        <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
-                        </div>
-                        <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
+                <TableRow
+                  key={pedido.id}
+                  className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5")}
+                  onClick={() => toggleSelect(pedido.id)}
+                >
+                  <TableCell className="py-2" onClick={e => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(pedido.id)}
+                    />
+                  </TableCell>
+                  <TableCell className="font-mono text-[11px] font-bold py-2">{pedido.folio}</TableCell>
+                  <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
+                  <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
+                  <TableCell className="text-center py-2">
+                    <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right text-[12px] font-medium py-2">$ {pedido.total?.toFixed(2)}</TableCell>
+                  <TableCell className="py-2">
+                    <div className="flex items-center gap-2 justify-center">
+                      <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pedido.pctEntregado}%` }} />
                       </div>
-                    </TableCell>
-                    <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
-                    <TableCell className="py-2">
-                      <ChevronRight className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
-                    </TableCell>
-                  </TableRow>
-
-                  {isExpanded && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="p-0 bg-muted/30">
-                        <div className="px-6 py-3">
-                          {/* Origin + route assignment */}
-                          <div className="flex items-center gap-4 mb-2 flex-wrap">
-                            <div className="flex items-center gap-2">
-                              <Warehouse className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-[11px] text-muted-foreground">
-                                Surtiendo desde: <strong className="text-foreground">{origenActual?.label}</strong>
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-[11px] text-muted-foreground">Ruta/Vendedor:</span>
-                              <select
-                                className="border border-input rounded px-2 py-0.5 text-[11px] bg-background min-w-[150px]"
-                                value={vendedorEntrega[pedido.id] ?? ''}
-                                onClick={e => e.stopPropagation()}
-                                onChange={e => {
-                                  e.stopPropagation();
-                                  setVendedorEntrega(prev => ({ ...prev, [pedido.id]: e.target.value || null }));
-                                }}
-                              >
-                                <option value="">— Sin asignar —</option>
-                                {vendedoresList?.map(v => (
-                                  <option key={v.id} value={v.id}>{v.nombre}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span className="text-[11px] text-muted-foreground">Fecha entrega:</span>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 text-[11px] px-2"
-                                    onClick={e => e.stopPropagation()}
-                                  >
-                                    <CalendarIcon className="h-3 w-3 mr-1" />
-                                    {fechaEntrega[pedido.id]
-                                      ? format(fechaEntrega[pedido.id], 'dd/MM/yyyy')
-                                      : format(new Date(), 'dd/MM/yyyy')}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={fechaEntrega[pedido.id] ?? new Date()}
-                                    onSelect={d => {
-                                      if (d) setFechaEntrega(prev => ({ ...prev, [pedido.id]: d }));
-                                    }}
-                                    className={cn("p-3 pointer-events-auto")}
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                          </div>
-
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="text-[11px]">Código</TableHead>
-                                <TableHead className="text-[11px]">Producto</TableHead>
-                                <TableHead className="text-[11px] w-20 text-right">Demanda</TableHead>
-                                <TableHead className="text-[11px] w-20 text-right">Entregado</TableHead>
-                                <TableHead className="text-[11px] w-20 text-right">Pendiente</TableHead>
-                                <TableHead className="text-[11px] w-20 text-right">Disponible</TableHead>
-                                <TableHead className="text-[11px] w-28 text-center">A surtir</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {pedido.venta_lineas.map((l: any) => {
-                                const key = `${pedido.id}-${l.producto_id}`;
-                                const pendiente = Math.max(0, l.cantidad_pendiente);
-                                const disponible = getStockOrigen(l.producto_id);
-                                const aSurtir = surtidoCantidades[key] ?? 0;
-                                const sinStock = disponible <= 0 && pendiente > 0;
-                                const excede = aSurtir > disponible;
-                                const unidad = l.productos?.unidades?.abreviatura ?? '';
-                                return (
-                                  <TableRow key={l.id} className={cn(sinStock && "bg-destructive/5")}>
-                                    <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{l.productos?.codigo}</TableCell>
-                                    <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? l.descripcion}</TableCell>
-                                    <TableCell className="text-right text-[12px] py-1.5">{l.cantidad} {unidad}</TableCell>
-                                    <TableCell className="text-right text-[12px] text-muted-foreground py-1.5">{l.cantidad_entregada} {unidad}</TableCell>
-                                    <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-destructive" : "text-muted-foreground")}>
-                                      {pendiente} {unidad}
-                                    </TableCell>
-                                    <TableCell className={cn("text-right text-[12px] py-1.5", sinStock ? "text-destructive font-bold" : "text-muted-foreground")}>
-                                      {disponible} {unidad}
-                                      {sinStock && <AlertTriangle className="h-3 w-3 inline ml-1 text-destructive" />}
-                                    </TableCell>
-                                    <TableCell className="text-center py-1.5">
-                                      {pendiente > 0 ? (
-                                        <div>
-                                          <Input
-                                            type="number"
-                                            className={cn(
-                                              "w-20 mx-auto text-center h-7 text-[12px]",
-                                              excede && "border-destructive text-destructive"
-                                            )}
-                                            min={0}
-                                            max={Math.min(pendiente, disponible)}
-                                            value={aSurtir}
-                                            onClick={e => e.stopPropagation()}
-                                            onChange={e => {
-                                              const val = parseFloat(e.target.value) || 0;
-                                              setSurtidoCantidades(prev => ({
-                                                ...prev,
-                                                [key]: Math.min(pendiente, Math.max(0, val)),
-                                              }));
-                                            }}
-                                          />
-                                          {excede && <p className="text-[9px] text-destructive mt-0.5">Excede stock</p>}
-                                        </div>
-                                      ) : (
-                                        <Check className="h-4 w-4 text-success mx-auto" />
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
-
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  surtirTodo(pedido);
-                                }}
-                              >
-                                Surtir todo (disponible)
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  const newQtys: Record<string, number> = {};
-                                  for (const l of pedido.venta_lineas) {
-                                    newQtys[`${pedido.id}-${l.producto_id}`] = 0;
-                                  }
-                                  setSurtidoCantidades(prev => ({ ...prev, ...newQtys }));
-                                }}
-                              >
-                                Limpiar
-                              </Button>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={e => {
-                                e.stopPropagation();
-                                generarEntrega.mutate(pedido);
-                              }}
-                              disabled={generarEntrega.isPending}
-                            >
-                              <Truck className="h-3.5 w-3.5 mr-1" /> Crear entrega
-                            </Button>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
+                      <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
+                </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </div>
+
+      {/* Create entregas dialog */}
+      <Dialog open={showCrearDialog} onOpenChange={setShowCrearDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Crear {selectedPedidos.length} entrega{selectedPedidos.length > 1 ? 's' : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se creará una entrega por cada pedido seleccionado con las cantidades pendientes. Después podrás surtir línea a línea desde la entrega.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="label-odoo">Almacén origen (por defecto)</label>
+                <SearchableSelect
+                  options={almacenOptions}
+                  value={almacenId}
+                  onChange={setAlmacenId}
+                  placeholder="Seleccionar almacén..."
+                />
+              </div>
+              <div>
+                <label className="label-odoo">Repartidor / Vendedor de ruta</label>
+                <SearchableSelect
+                  options={vendedorOptions}
+                  value={vendedorRutaId}
+                  onChange={setVendedorRutaId}
+                  placeholder="Opcional — asignar después"
+                />
+              </div>
+            </div>
+
+            {/* Preview of selected pedidos */}
+            <div className="border border-border rounded-md max-h-48 overflow-y-auto">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="px-3 py-1.5 text-left text-muted-foreground font-medium">Folio</th>
+                    <th className="px-3 py-1.5 text-left text-muted-foreground font-medium">Cliente</th>
+                    <th className="px-3 py-1.5 text-right text-muted-foreground font-medium">Líneas pend.</th>
+                    <th className="px-3 py-1.5 text-right text-muted-foreground font-medium">Uds pend.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedPedidos.map(p => (
+                    <tr key={p.id} className="border-b border-border/50">
+                      <td className="px-3 py-1.5 font-mono font-bold">{p.folio}</td>
+                      <td className="px-3 py-1.5">{p.clientes?.nombre ?? '—'}</td>
+                      <td className="px-3 py-1.5 text-right">{p.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0).length}</td>
+                      <td className="px-3 py-1.5 text-right font-medium">{p.totalPendiente}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCrearDialog(false)}>Cancelar</Button>
+            <Button onClick={() => crearEntregasMut.mutate()} disabled={crearEntregasMut.isPending}>
+              <Truck className="h-3.5 w-3.5" />
+              Crear entrega{selectedPedidos.length > 1 ? 's' : ''}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
