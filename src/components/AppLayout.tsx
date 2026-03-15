@@ -202,6 +202,7 @@ function Breadcrumb() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { empresa, profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="min-h-screen flex bg-background">
