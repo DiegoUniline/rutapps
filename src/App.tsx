@@ -191,6 +191,9 @@ function AppRoutes() {
                 <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
                 <Route path="/almacen/lotes" element={<LotesPage />} />
                 <Route path="/almacen/descargas" element={<DescargasPage />} />
+                <Route path="/almacen/traspasos" element={<TraspasosPage />} />
+                <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
+                <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
                 <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
                 <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
                 <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
