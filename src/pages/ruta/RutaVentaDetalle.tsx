@@ -940,93 +940,67 @@ export default function RutaVentaDetalle() {
   }
 
   // ═══════════════════════════════════════
-  // ─── ESTADO DE CUENTA VIEW ───
+  // ─── HELPER: Generate estado de cuenta PDF ───
   // ═══════════════════════════════════════
-  if (view === 'estado_cuenta') {
-    const ecVentas = estadoCuentaData?.ventas ?? [];
-    const ecCobros = estadoCuentaData?.cobros ?? [];
-    const totalVendido = ecVentas.reduce((s, v) => s + (v.total ?? 0), 0);
-    const totalPendiente = ecVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
-    const totalCobrado = ecCobros.reduce((s, c) => s + (c.monto ?? 0), 0);
+  const handleEstadoCuenta = async () => {
+    if (!empresa || !clienteData) { toast.error('Cargando datos...'); return; }
+    try {
+      // Fetch data inline
+      const [ventasRes, cobrosRes] = await Promise.all([
+        supabase.from('ventas')
+          .select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago')
+          .eq('cliente_id', clienteId!)
+          .eq('empresa_id', empresa.id)
+          .neq('status', 'cancelado')
+          .order('fecha', { ascending: false })
+          .limit(200),
+        supabase.from('cobros')
+          .select('id, fecha, monto, metodo_pago, referencia')
+          .eq('cliente_id', clienteId!)
+          .eq('empresa_id', empresa.id)
+          .order('fecha', { ascending: false })
+          .limit(200),
+      ]);
 
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setView('detalle')} className="p-1 -ml-1">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[16px] font-bold text-foreground truncate">Estado de cuenta</h1>
-            <p className="text-[11px] text-muted-foreground truncate">{clienteNombre}</p>
-          </div>
-        </div>
+      const blob = generarEstadoCuentaPdf({
+        empresa: {
+          nombre: empresa.nombre,
+          razon_social: empresa.razon_social ?? undefined,
+          rfc: empresa.rfc ?? undefined,
+          direccion: empresa.direccion ?? undefined,
+          telefono: empresa.telefono ?? undefined,
+          email: empresa.email ?? undefined,
+          logo_url: empresa.logo_url ?? undefined,
+        },
+        cliente: {
+          nombre: clienteData.nombre,
+          telefono: clienteData.telefono ?? undefined,
+          credito: clienteData.credito ?? false,
+          limite_credito: clienteData.limite_credito ?? 0,
+          dias_credito: clienteData.dias_credito ?? 0,
+        },
+        ventas: (ventasRes.data ?? []).map(v => ({
+          folio: v.folio ?? '—',
+          fecha: v.fecha,
+          total: v.total ?? 0,
+          saldo_pendiente: v.saldo_pendiente ?? 0,
+          status: v.status,
+          condicion_pago: v.condicion_pago,
+        })),
+        cobros: (cobrosRes.data ?? []).map(c => ({
+          fecha: c.fecha,
+          monto: c.monto ?? 0,
+          metodo_pago: c.metodo_pago,
+          referencia: c.referencia ?? undefined,
+        })),
+      });
 
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-          {/* Summary cards */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-card border border-border rounded-lg p-3 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase">Vendido</p>
-              <p className="text-[14px] font-bold text-foreground">$ {fmt(totalVendido)}</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase">Cobrado</p>
-              <p className="text-[14px] font-bold text-green-600 dark:text-green-400">$ {fmt(totalCobrado)}</p>
-            </div>
-            <div className="bg-card border border-border rounded-lg p-3 text-center">
-              <p className="text-[10px] text-muted-foreground uppercase">Pendiente</p>
-              <p className="text-[14px] font-bold text-destructive">$ {fmt(totalPendiente)}</p>
-            </div>
-          </div>
-
-          {/* Ventas */}
-          <div>
-            <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5">
-              <FileText className="h-4 w-4 text-muted-foreground" /> Ventas ({ecVentas.length})
-            </h2>
-            <div className="bg-card border border-border rounded-xl divide-y divide-border">
-              {ecVentas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin ventas</p>}
-              {ecVentas.map((v: any) => (
-                <div key={v.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[12px] font-mono font-medium text-foreground">{v.folio ?? '—'}</span>
-                      <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-medium', statusColors[v.status] ?? '')}>{v.status}</span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)} · {v.condicion_pago}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[12px] font-bold text-foreground">$ {fmt(v.total ?? 0)}</p>
-                    {(v.saldo_pendiente ?? 0) > 0 && (
-                      <p className="text-[10px] text-destructive font-medium">Debe: $ {fmt(v.saldo_pendiente)}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Cobros / Pagos */}
-          <div>
-            <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5">
-              <Banknote className="h-4 w-4 text-muted-foreground" /> Pagos ({ecCobros.length})
-            </h2>
-            <div className="bg-card border border-border rounded-xl divide-y divide-border">
-              {ecCobros.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin pagos registrados</p>}
-              {ecCobros.map((c: any) => (
-                <div key={c.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-medium text-foreground capitalize">{c.metodo_pago}</p>
-                    <p className="text-[11px] text-muted-foreground">{fmtDate(c.fecha)}{c.referencia ? ` · Ref: ${c.referencia}` : ''}</p>
-                  </div>
-                  <p className="text-[13px] font-bold text-green-600 dark:text-green-400 shrink-0">$ {fmt(c.monto ?? 0)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+      setEcPdfBlob(blob);
+      setShowEcPreview(true);
+    } catch (err: any) {
+      toast.error('Error generando estado de cuenta');
+    }
+  };
 
   // ═══════════════════════════════════════
   // ─── DETALLE VIEW (default) ───
