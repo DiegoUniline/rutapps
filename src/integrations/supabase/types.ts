@@ -1024,6 +1024,41 @@ export type Database = {
           },
         ]
       }
+      optimizacion_rutas_log: {
+        Row: {
+          clientes_count: number
+          created_at: string
+          dia_filtro: string | null
+          empresa_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          clientes_count?: number
+          created_at?: string
+          dia_filtro?: string | null
+          empresa_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          clientes_count?: number
+          created_at?: string
+          dia_filtro?: string | null
+          empresa_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optimizacion_rutas_log_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pago_compras: {
         Row: {
           compra_id: string

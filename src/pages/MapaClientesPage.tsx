@@ -1,11 +1,15 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Search, Filter, MapPin, Phone, Navigation, ShoppingCart, X, Layers, Users } from 'lucide-react';
+import { Search, Filter, MapPin, X, Users, Route, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 
 // Fix leaflet default icons
@@ -58,6 +62,7 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
 }
 
 export default function MapaClientesPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
@@ -65,6 +70,21 @@ export default function MapaClientesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeResult, setOptimizeResult] = useState<{ duration?: string; distance_meters?: number } | null>(null);
+
+  // Check if user is admin
+  const { data: isAdmin } = useQuery({
+    queryKey: ['is-admin', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role_id, roles(nombre, es_sistema)')
+        .eq('user_id', user!.id);
+      return data?.some((ur: any) => ur.roles?.es_sistema === true || ur.roles?.nombre?.toLowerCase() === 'admin') ?? false;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: clientes, isLoading } = useClientes(search, statusFilter || undefined);
   const { data: zonas } = useZonas();
@@ -91,6 +111,55 @@ export default function MapaClientesPage() {
     : [23.6345, -102.5528]; // Mexico center
 
   const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFilter].filter(Boolean).length;
+
+  const handleOptimize = async () => {
+    if (withGps.length < 2) {
+      toast.error('Se necesitan al menos 2 clientes con GPS');
+      return;
+    }
+    setOptimizing(true);
+    setOptimizeResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) { toast.error('Sesión no válida'); return; }
+
+      const waypoints = withGps.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng }));
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ waypoints, dia_filtro: diaFilter || null }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        toast.error(result.error || 'Error al optimizar');
+        return;
+      }
+
+      // Reorder clientes based on optimized order
+      const orderMap = new Map<string, number>();
+      (result.optimized_order as string[]).forEach((id: string, idx: number) => orderMap.set(id, idx));
+
+      // Update orden in DB for each client
+      const updates = result.optimized_order.map((id: string, idx: number) =>
+        supabase.from('clientes').update({ orden: idx + 1 }).eq('id', id)
+      );
+      await Promise.all(updates);
+
+      setOptimizeResult({ duration: result.duration, distance_meters: result.distance_meters });
+      toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al optimizar ruta');
+    } finally {
+      setOptimizing(false);
+    }
+  };
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
@@ -129,6 +198,30 @@ export default function MapaClientesPage() {
             )}
           </button>
 
+          {/* Optimize route button - admin only */}
+          {isAdmin && withGps.length >= 2 && (
+            <button
+              onClick={handleOptimize}
+              disabled={optimizing}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all",
+                optimizeResult
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
+                optimizing && "opacity-70"
+              )}
+            >
+              {optimizing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : optimizeResult ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Route className="h-4 w-4" />
+              )}
+              {optimizing ? 'Optimizando...' : optimizeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
+            </button>
+          )}
+
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-primary" />
@@ -138,6 +231,11 @@ export default function MapaClientesPage() {
               <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
               {withoutGps.length} sin GPS
             </span>
+            {optimizeResult?.distance_meters && (
+              <span className="text-emerald-600 font-medium">
+                {(optimizeResult.distance_meters / 1000).toFixed(1)} km
+              </span>
+            )}
           </div>
         </div>
 
