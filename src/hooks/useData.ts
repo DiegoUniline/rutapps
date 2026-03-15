@@ -2,18 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 
-// Productos
-export function useProductos(search?: string, statusFilter?: string) {
+const CATALOG_STALE = 5 * 60 * 1000; // 5 min for catalogs
+
+// Productos with pagination
+export function useProductos(search?: string, statusFilter?: string, page = 0, pageSize = 25) {
   return useQuery({
-    queryKey: ['productos', search, statusFilter],
+    queryKey: ['productos', search, statusFilter, page],
     queryFn: async () => {
-      let q = supabase.from('productos').select('*, marcas(nombre)').order('created_at', { ascending: false });
+      const from = page * pageSize;
+      let q = supabase.from('productos')
+        .select('id, codigo, nombre, precio_principal, cantidad, status, marca_id, marcas(nombre)', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      const { data, error } = await q;
+      const { data, error, count } = await q;
       if (error) throw error;
-      return data as Producto[];
+      return { data: data as Producto[], count: count ?? 0, page, pageSize };
     },
+    staleTime: CATALOG_STALE,
   });
 }
 
@@ -21,11 +28,14 @@ export function useProducto(id?: string) {
   return useQuery({
     queryKey: ['producto', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('productos').select('*, marcas(nombre)').eq('id', id!).single();
+      const { data, error } = await supabase.from('productos')
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, marca_id, clasificacion_id, proveedor_id, lista_id, unidad_venta_id, unidad_compra_id, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, imagen_url, se_puede_vender, se_puede_comprar, se_puede_inventariar, vender_sin_stock, min, max, es_combo, manejar_lotes, factor_conversion, codigo_sat, udem_sat_id, clave_alterna, permitir_descuento, monto_maximo, tiene_comision, tipo_comision, pct_comision, almacenes, calculo_costo, marcas(nombre)')
+        .eq('id', id!).single();
       if (error) throw error;
       return data as Producto;
     },
     enabled: !!id,
+    staleTime: CATALOG_STALE,
   });
 }
 
@@ -35,12 +45,12 @@ export function useSaveProducto() {
     mutationFn: async (producto: Partial<Producto> & { id?: string }) => {
       const { id, marcas, ...rest } = producto as any;
       if (id) {
-        const { data, error } = await supabase.from('productos').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('productos').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('productos').insert({ ...rest, empresa_id: profile!.empresa_id }).select().single();
+        const { data, error } = await supabase.from('productos').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -65,10 +75,13 @@ export function useTarifas() {
   return useQuery({
     queryKey: ['tarifas'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas').select('*, tarifa_lineas(id)').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('tarifas')
+        .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, tarifa_lineas(id)')
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data as (Tarifa & { tarifa_lineas: { id: string }[] })[];
     },
+    staleTime: CATALOG_STALE,
   });
 }
 
@@ -76,11 +89,14 @@ export function useTarifa(id?: string) {
   return useQuery({
     queryKey: ['tarifa', id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas').select('*, tarifa_lineas(*)').eq('id', id!).single();
+      const { data, error } = await supabase.from('tarifas')
+        .select('id, nombre, tipo, activa, descripcion, moneda, vigencia_inicio, vigencia_fin, tarifa_lineas(id, aplica_a, tipo_calculo, precio, descuento_pct, margen_pct, precio_minimo, descuento_max, redondeo, producto_ids, clasificacion_ids, notas)')
+        .eq('id', id!).single();
       if (error) throw error;
       return data as Tarifa;
     },
     enabled: !!id,
+    staleTime: CATALOG_STALE,
   });
 }
 
@@ -90,12 +106,12 @@ export function useSaveTarifa() {
     mutationFn: async (tarifa: Partial<Tarifa> & { id?: string }) => {
       const { id, tarifa_lineas, ...rest } = tarifa as any;
       if (id) {
-        const { data, error } = await supabase.from('tarifas').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('tarifas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: profile!.empresa_id }).select().single();
+        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -110,11 +126,11 @@ export function useSaveTarifaLinea() {
     mutationFn: async (linea: Partial<TarifaLinea> & { id?: string }) => {
       const { id, productos, ...rest } = linea as any;
       if (id) {
-        const { data, error } = await supabase.from('tarifa_lineas').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('tarifa_lineas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('tarifa_lineas').insert(rest).select().single();
+        const { data, error } = await supabase.from('tarifa_lineas').insert(rest).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -140,49 +156,51 @@ export function useDeleteTarifaLinea() {
   });
 }
 
-// Catalogos
+// Catalogs — all with 5 min staleTime and explicit columns
 export function useMarcas() {
-  return useQuery({ queryKey: ['marcas'], queryFn: async () => { const { data } = await supabase.from('marcas').select('*').order('nombre'); return data as Marca[]; }});
+  return useQuery({ queryKey: ['marcas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').order('nombre'); return data as Marca[]; }});
 }
 export function useProveedores() {
-  return useQuery({ queryKey: ['proveedores'], queryFn: async () => { const { data } = await supabase.from('proveedores').select('*').order('nombre'); return data as Proveedor[]; }});
+  return useQuery({ queryKey: ['proveedores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre').order('nombre'); return data as Proveedor[]; }});
 }
 export function useClasificaciones() {
-  return useQuery({ queryKey: ['clasificaciones'], queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('*').order('nombre'); return data as Clasificacion[]; }});
+  return useQuery({ queryKey: ['clasificaciones'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').order('nombre'); return data as Clasificacion[]; }});
 }
 export function useListas() {
-  return useQuery({ queryKey: ['listas'], queryFn: async () => { const { data } = await supabase.from('listas').select('*').order('nombre'); return data as Lista[]; }});
+  return useQuery({ queryKey: ['listas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').order('nombre'); return data as Lista[]; }});
 }
 export function useUnidades() {
-  return useQuery({ queryKey: ['unidades'], queryFn: async () => { const { data } = await supabase.from('unidades').select('*').order('nombre'); return data as Unidad[]; }});
+  return useQuery({ queryKey: ['unidades'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').order('nombre'); return data as Unidad[]; }});
 }
 export function useTasasIva() {
-  return useQuery({ queryKey: ['tasas_iva'], queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('*').order('nombre'); return data as TasaIva[]; }});
+  return useQuery({ queryKey: ['tasas_iva'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('id, nombre, porcentaje').order('nombre'); return data as TasaIva[]; }});
 }
 export function useTasasIeps() {
-  return useQuery({ queryKey: ['tasas_ieps'], queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('*').order('nombre'); return data as TasaIeps[]; }});
+  return useQuery({ queryKey: ['tasas_ieps'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').order('nombre'); return data as TasaIeps[]; }});
 }
 export function useAlmacenes() {
-  return useQuery({ queryKey: ['almacenes'], queryFn: async () => { const { data } = await supabase.from('almacenes').select('*').order('nombre'); return data as Almacen[]; }});
+  return useQuery({ queryKey: ['almacenes'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('almacenes').select('id, nombre').order('nombre'); return data as Almacen[]; }});
 }
 export function useUnidadesSat() {
-  return useQuery({ queryKey: ['unidades_sat'], queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('*').order('nombre'); return data as UnidadSat[]; }});
+  return useQuery({ queryKey: ['unidades_sat'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('id, clave, nombre').order('nombre'); return data as UnidadSat[]; }});
 }
 export function useProductosForSelect() {
   return useQuery({
     queryKey: ['productos-select'],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, costo, unidad_venta_id, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos').order('nombre');
-      return data as { id: string; codigo: string; nombre: string; precio_principal: number; costo: number; unidad_venta_id: string | null; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; iva_pct: number; ieps_pct: number; ieps_tipo: string; costo_incluye_impuestos: boolean }[];
+      const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, costo, unidad_venta_id, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos').eq('status', 'activo').order('nombre');
+      return data ?? [];
     },
   });
 }
 export function useTarifasForSelect() {
   return useQuery({
     queryKey: ['tarifas-select'],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').order('nombre');
-      return data as { id: string; nombre: string; tipo: string; activa: boolean }[];
+      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').eq('activa', true).order('nombre');
+      return data ?? [];
     },
   });
 }
@@ -190,6 +208,7 @@ export function useTarifasForSelect() {
 export function useTarifaLineasForProducto(productoId?: string, clasificacionId?: string | null) {
   return useQuery({
     queryKey: ['tarifa-lineas-producto', productoId, clasificacionId],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
       const filters: string[] = ['aplica_a.eq.todos'];
       if (productoId) filters.push(`producto_ids.cs.{${productoId}}`);
@@ -197,7 +216,7 @@ export function useTarifaLineasForProducto(productoId?: string, clasificacionId?
 
       const { data, error } = await supabase
         .from('tarifa_lineas')
-        .select('*, tarifas(id, nombre, activa)')
+        .select('id, aplica_a, tipo_calculo, precio, descuento_pct, margen_pct, precio_minimo, descuento_max, producto_ids, clasificacion_ids, tarifa_id, tarifas(id, nombre, activa)')
         .or(filters.join(','));
       if (error) throw error;
       return data as (TarifaLinea & { tarifas: { id: string; nombre: string; activa: boolean } })[];

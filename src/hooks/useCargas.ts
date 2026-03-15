@@ -1,19 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export function useCargas(search?: string, statusFilter?: string) {
+const CATALOG_STALE = 5 * 60 * 1000;
+
+export function useCargas(search?: string, statusFilter?: string, page = 0, pageSize = 25) {
   return useQuery({
-    queryKey: ['cargas', search, statusFilter],
+    queryKey: ['cargas', search, statusFilter, page],
     queryFn: async () => {
+      const from = page * pageSize;
       let q = supabase
         .from('cargas')
-        .select('*, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
-        .order('fecha', { ascending: false });
-      if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))', { count: 'exact' })
+        .order('fecha', { ascending: false })
+        .range(from, from + pageSize - 1);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      const { data, error } = await q;
+      const { data, error, count } = await q;
       if (error) throw error;
-      return data;
+      return { data: data ?? [], count: count ?? 0, page, pageSize };
     },
   });
 }
@@ -24,7 +27,7 @@ export function useCarga(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('*, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
+        .select('id, fecha, status, vendedor_id, almacen_id, repartidor_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(id, codigo, nombre, precio_principal, cantidad))')
         .eq('id', id!)
         .single();
       if (error) throw error;
@@ -40,7 +43,7 @@ export function useCargaActiva(vendedorId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('*, carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, carga_lineas(id, producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('vendedor_id', vendedorId!)
         .in('status', ['pendiente', 'en_ruta'])
         .order('fecha', { ascending: false })
@@ -50,6 +53,7 @@ export function useCargaActiva(vendedorId?: string) {
       return data;
     },
     enabled: !!vendedorId,
+    staleTime: 30 * 1000,
   });
 }
 
@@ -59,12 +63,12 @@ export function useSaveCarga() {
     mutationFn: async (carga: any) => {
       const { id, vendedores, carga_lineas, ...rest } = carga;
       if (id) {
-        const { data, error } = await supabase.from('cargas').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('cargas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: profile!.empresa_id }).select().single();
+        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -81,7 +85,6 @@ export function useSaveCargaLineas() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ cargaId, lineas }: { cargaId: string; lineas: { producto_id: string; cantidad_cargada: number }[] }) => {
-      // Delete existing lines and re-insert
       await supabase.from('carga_lineas').delete().eq('carga_id', cargaId);
       if (lineas.length > 0) {
         const { error } = await supabase.from('carga_lineas').insert(

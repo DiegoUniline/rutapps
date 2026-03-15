@@ -64,7 +64,16 @@ const RutaDescarga = lazy(() => import("@/pages/ruta/RutaDescarga"));
 const RutaMapaPage = lazy(() => import("@/pages/ruta/RutaMapaPage"));
 const RutaPerfil = lazy(() => import("@/pages/ruta/RutaPerfil"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000, // 30s default for daily data
+      gcTime: 10 * 60 * 1000, // 10 min garbage collection
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 function PageLoader() {
   return (
