@@ -282,6 +282,7 @@ export default function TarifaFormPage() {
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
                           <th className="th-odoo text-left">Cálculo</th>
+                          <th className="th-odoo text-left">Base</th>
                           <th className="th-odoo text-right">Valor</th>
                           <th className="th-odoo text-right">Comisión %</th>
                           <th className="th-odoo text-right">Precio mín</th>
