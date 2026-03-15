@@ -279,7 +279,7 @@ export default function DemandaPage() {
                 <TableRow
                   key={pedido.id}
                   className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5")}
-                  onClick={() => toggleSelect(pedido.id)}
+                  onClick={() => navigate(`/ventas/${pedido.id}`)}
                 >
                   <TableCell className="py-2" onClick={e => e.stopPropagation()}>
                     <Checkbox
@@ -287,7 +287,7 @@ export default function DemandaPage() {
                       onCheckedChange={() => toggleSelect(pedido.id)}
                     />
                   </TableCell>
-                  <TableCell className="font-mono text-[11px] font-bold py-2">{pedido.folio}</TableCell>
+                  <TableCell className="font-mono text-[11px] font-bold text-primary py-2">{pedido.folio}</TableCell>
                   <TableCell className="text-[12px] font-medium py-2">{pedido.clientes?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{pedido.vendedores?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{fmtDate(pedido.fecha)}</TableCell>
