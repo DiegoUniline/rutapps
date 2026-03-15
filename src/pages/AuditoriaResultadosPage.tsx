@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn, fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { generarAuditoriaPdf } from '@/lib/auditoriaPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'secondary' },
@@ -30,13 +32,49 @@ interface AjusteSelection {
 
 export default function AuditoriaResultadosPage() {
   const { id } = useParams<{ id: string }>();
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const isMobile = useIsMobile();
   const [showAprobar, setShowAprobar] = useState(false);
   const [ajustes, setAjustes] = useState<AjusteSelection>({});
   const [motivoGlobal, setMotivoGlobal] = useState('');
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  const handleGenerarPdf = () => {
+    if (!auditoria || !lineas) return;
+    const blob = generarAuditoriaPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      auditoria: {
+        nombre: auditoria.nombre,
+        fecha: auditoria.fecha,
+        status: auditoria.status,
+        notas: auditoria.notas,
+        notas_supervisor: auditoria.notas_supervisor,
+        fecha_aprobacion: auditoria.fecha_aprobacion,
+      },
+      almacen: almacenNombre,
+      responsable: profile?.nombre,
+      lineas: lineas.map((l: any) => ({
+        codigo: l.productos?.codigo ?? '',
+        nombre: l.productos?.nombre ?? '',
+        cantidad_esperada: l.cantidad_esperada,
+        cantidad_real: l.cantidad_real,
+        diferencia: l.diferencia,
+        ajustado: l.ajustado,
+        notas: l.notas,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
@@ -191,6 +229,9 @@ export default function AuditoriaResultadosPage() {
               Almacén: {almacenNombre} · {fmtDate(auditoria?.fecha)}
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+            <FileText className="h-4 w-4 mr-1" /> PDF
+          </Button>
           <Badge variant={badge?.variant}>{badge?.label}</Badge>
         </div>
 
@@ -390,6 +431,18 @@ export default function AuditoriaResultadosPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`auditoria-${auditoria?.nombre ?? 'doc'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone=""
+        caption={`Auditoría ${auditoria?.nombre}`}
+        tipo="auditoria"
+        referencia_id={id}
+      />
     </div>
   );
 }

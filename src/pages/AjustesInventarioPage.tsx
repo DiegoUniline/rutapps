@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle } from 'lucide-react';
+import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAlmacenes } from '@/hooks/useData';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 
 interface ProductRow {
   id: string;
@@ -37,6 +39,38 @@ export default function AjustesInventarioPage() {
   const [resetMotivo, setResetMotivo] = useState('Reinicio general de stock');
   const [resetting, setResetting] = useState(false);
   const [tab, setTab] = useState<'ajuste' | 'historial'>('ajuste');
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  const handleGenerarPdf = () => {
+    if (changedRows.length === 0 && rows.length === 0) return;
+    const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre;
+    const dataRows = changedRows.length > 0 ? changedRows : rows;
+    const blob = generarAjusteInventarioPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      ajuste: {
+        fecha: new Date().toISOString().slice(0, 10),
+        motivo,
+        almacen: almacenNombre,
+        responsable: profile?.nombre,
+      },
+      lineas: dataRows.map(r => ({
+        codigo: r.codigo,
+        nombre: r.nombre,
+        cantidad_anterior: r.cantidadSistema,
+        cantidad_nueva: r.cantidadReal ?? r.cantidadSistema,
+        diferencia: (r.cantidadReal ?? r.cantidadSistema) - r.cantidadSistema,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   // Load products for selected almacen
   const { data: productos, isLoading: loadingProducts } = useQuery({
@@ -206,6 +240,11 @@ export default function AjustesInventarioPage() {
           <Settings2 className="h-5 w-5" /> Ajustes de inventario
         </h1>
         <div className="flex gap-2">
+          {rows.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setTab(tab === 'ajuste' ? 'historial' : 'ajuste')}>
             {tab === 'ajuste' ? 'Ver historial' : 'Volver a ajuste'}
           </Button>
@@ -402,6 +441,17 @@ export default function AjustesInventarioPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`ajuste-inventario-${new Date().toISOString().slice(0, 10)}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone=""
+        caption="Ajuste de inventario"
+        tipo="ajuste"
+      />
     </div>
   );
 }

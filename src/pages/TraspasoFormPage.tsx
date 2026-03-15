@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, Plus, Check } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Check, FileText } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import { generarTraspasoPdf } from '@/lib/traspasoPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +52,40 @@ export default function TraspasoFormPage() {
   const [folio, setFolio] = useState('');
   const [lineas, setLineas] = useState<LineaForm[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  const handleGenerarPdf = () => {
+    const blob = generarTraspasoPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      traspaso: {
+        folio: folio || 'Nuevo',
+        fecha: new Date().toISOString().slice(0, 10),
+        status,
+        tipo,
+        notas: notas || undefined,
+      },
+      origen: origenLabel || '—',
+      destino: destinoLabel || '—',
+      responsable: profile?.nombre,
+      lineas: lineas.filter(l => l.producto_id).map(l => {
+        const prod = allProductos?.find(p => p.id === l.producto_id);
+        return {
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          cantidad: l.cantidad,
+        };
+      }),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   const readOnly = !isNew && status !== 'borrador';
 
@@ -451,6 +487,11 @@ export default function TraspasoFormPage() {
               <Save className="h-3.5 w-3.5" /> Guardar
             </button>
           )}
+          {!isNew && (
+            <button onClick={handleGenerarPdf} className="btn-odoo-secondary">
+              <FileText className="h-3.5 w-3.5" /> PDF
+            </button>
+          )}
           {!isNew && status === 'borrador' && (
             <button onClick={handleDelete} className="btn-odoo-secondary text-destructive !px-2">
               <Trash2 className="h-3.5 w-3.5" />
@@ -665,6 +706,18 @@ export default function TraspasoFormPage() {
           ]} />
         </div>
       </div>
+
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`traspaso-${folio || 'doc'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone=""
+        caption={`Traspaso ${folio}`}
+        tipo="traspaso"
+        referencia_id={id}
+      />
     </div>
   );
 }
