@@ -35,6 +35,7 @@ export default function EntregaListPage() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
+  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
 
