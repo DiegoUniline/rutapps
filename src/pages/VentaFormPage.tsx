@@ -584,15 +584,13 @@ export default function VentaFormPage() {
             <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
           )}
           {!readOnly && !isNew && (
-            <button onClick={handleSave} disabled={saveVenta.isPending} className="btn-odoo-secondary">
+            <button onClick={() => handleSave()} disabled={saveVenta.isPending} className="btn-odoo-secondary">
               <Save className="h-3.5 w-3.5" /> Guardar
             </button>
           )}
           {isNew && (
             <button
-              onClick={async () => {
-                await handleSave();
-              }}
+              onClick={() => handleSave(true)}
               disabled={saveVenta.isPending}
               className="btn-odoo-primary"
             >
