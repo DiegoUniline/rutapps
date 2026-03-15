@@ -1622,6 +1622,54 @@ export type Database = {
           },
         ]
       }
+      pago_comisiones: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          fecha_corte: string
+          id: string
+          notas: string | null
+          total_comisiones: number
+          user_id: string
+          vendedor_id: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          fecha_corte: string
+          id?: string
+          notas?: string | null
+          total_comisiones?: number
+          user_id: string
+          vendedor_id: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          fecha_corte?: string
+          id?: string
+          notas?: string | null
+          total_comisiones?: number
+          user_id?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pago_comisiones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_comisiones_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pago_compras: {
         Row: {
           compra_id: string
@@ -2518,6 +2566,7 @@ export type Database = {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
           clasificacion_ids: string[]
+          comision_pct: number
           created_at: string
           descuento_max: number | null
           descuento_pct: number | null
@@ -2534,6 +2583,7 @@ export type Database = {
         Insert: {
           aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
           clasificacion_ids?: string[]
+          comision_pct?: number
           created_at?: string
           descuento_max?: number | null
           descuento_pct?: number | null
@@ -2550,6 +2600,7 @@ export type Database = {
         Update: {
           aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
           clasificacion_ids?: string[]
+          comision_pct?: number
           created_at?: string
           descuento_max?: number | null
           descuento_pct?: number | null
@@ -2914,6 +2965,97 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venta_comisiones: {
+        Row: {
+          comision_monto: number
+          comision_pct: number
+          created_at: string
+          empresa_id: string
+          fecha_venta: string
+          id: string
+          monto_venta: number
+          pagada: boolean
+          pago_comision_id: string | null
+          producto_id: string | null
+          vendedor_id: string
+          venta_id: string
+          venta_linea_id: string
+        }
+        Insert: {
+          comision_monto?: number
+          comision_pct?: number
+          created_at?: string
+          empresa_id: string
+          fecha_venta?: string
+          id?: string
+          monto_venta?: number
+          pagada?: boolean
+          pago_comision_id?: string | null
+          producto_id?: string | null
+          vendedor_id: string
+          venta_id: string
+          venta_linea_id: string
+        }
+        Update: {
+          comision_monto?: number
+          comision_pct?: number
+          created_at?: string
+          empresa_id?: string
+          fecha_venta?: string
+          id?: string
+          monto_venta?: number
+          pagada?: boolean
+          pago_comision_id?: string | null
+          producto_id?: string | null
+          vendedor_id?: string
+          venta_id?: string
+          venta_linea_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_comisiones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_comisiones_pago_fkey"
+            columns: ["pago_comision_id"]
+            isOneToOne: false
+            referencedRelation: "pago_comisiones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_comisiones_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_comisiones_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_comisiones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_comisiones_venta_linea_id_fkey"
+            columns: ["venta_linea_id"]
+            isOneToOne: false
+            referencedRelation: "venta_lineas"
             referencedColumns: ["id"]
           },
         ]

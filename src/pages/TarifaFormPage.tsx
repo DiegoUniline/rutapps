@@ -36,6 +36,7 @@ const EMPTY_LINEA = {
   descuento_max: 0,
   margen_pct: 0,
   descuento_pct: 0,
+  comision_pct: 0,
   redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
 };
@@ -132,6 +133,7 @@ export default function TarifaFormPage() {
         descuento_max: newLinea.descuento_max,
         margen_pct: newLinea.margen_pct,
         descuento_pct: newLinea.descuento_pct,
+        comision_pct: newLinea.comision_pct,
         redondeo: newLinea.redondeo,
         notas: newLinea.notas || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
@@ -267,11 +269,12 @@ export default function TarifaFormPage() {
                   <div className="overflow-x-auto border border-border rounded">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-table-border">
+                         <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-right">Valor</th>
+                          <th className="th-odoo text-right">Comisión %</th>
                           <th className="th-odoo text-right">Precio mín</th>
                           <th className="th-odoo text-left">Redondeo</th>
                           <th className="th-odoo w-8"></th>
@@ -294,6 +297,7 @@ export default function TarifaFormPage() {
                             </td>
                             <td className="py-1.5 px-3 text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">{getCalculoDisplay(l)}</td>
+                            <td className="py-1.5 px-3 text-right font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</td>
                             <td className="py-1.5 px-3 text-xs text-muted-foreground">{REDONDEO_LABELS[(l as any).redondeo] || '—'}</td>
                             <td className="py-1.5 px-3 text-center">
@@ -304,7 +308,7 @@ export default function TarifaFormPage() {
                           </tr>
                         ))}
                         {sortedLineas.length === 0 && !showAddRow && (
-                          <tr><td colSpan={7} className="py-6 text-center text-[12px] text-muted-foreground">
+                          <tr><td colSpan={8} className="py-6 text-center text-[12px] text-muted-foreground">
                             Sin reglas de precio. Haz clic en "Agregar un precio" para empezar.
                           </td></tr>
                         )}
@@ -342,6 +346,10 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">{getValueField()}</td>
                               <td className="py-2 px-3">
+                                <input type="number" className="input-odoo text-right text-xs w-full" placeholder="%"
+                                  value={newLinea.comision_pct || ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
+                              </td>
+                              <td className="py-2 px-3">
                                 <input type="number" className="input-odoo text-right text-xs w-full" placeholder="$ 0"
                                   value={newLinea.precio_minimo || ''} onChange={e => setNewLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
                               </td>
@@ -357,7 +365,7 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3"></td>
                             </tr>
                             <tr className="bg-primary/5">
-                              <td colSpan={7} className="py-2 px-3">
+                              <td colSpan={8} className="py-2 px-3">
                                 <div className="flex items-center gap-2">
                                   <button onClick={handleAddLinea} disabled={saveLinea.isPending} className="btn-odoo-primary text-[12px] py-1 px-3">
                                     <Plus className="h-3 w-3" /> Agregar

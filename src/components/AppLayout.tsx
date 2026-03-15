@@ -87,6 +87,7 @@ const navItems: NavItem[] = [
       { label: 'Cuentas por cobrar', path: '/finanzas/por-cobrar' },
       { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
       { label: 'Gastos', path: '/finanzas/gastos' },
+      { label: 'Comisiones', path: '/finanzas/comisiones' },
     ],
   },
   {
