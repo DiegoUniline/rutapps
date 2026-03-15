@@ -98,6 +98,27 @@ export default function RutaNuevaVenta() {
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
+  // Load carga data for stock-aboard (venta directa)
+  const { data: cargasRaw } = useOfflineQuery('cargas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id, orderBy: 'fecha', ascending: false });
+  const activeCarga = useMemo(() => {
+    if (!cargasRaw || !profile) return null;
+    const vendId = profile.vendedor_id || profile.id;
+    return cargasRaw.find((c: any) => c.vendedor_id === vendId && ['pendiente', 'en_ruta'].includes(c.status)) ?? null;
+  }, [cargasRaw, profile]);
+
+  const { data: cargaLineasRaw } = useOfflineQuery('carga_lineas', { carga_id: activeCarga?.id }, { enabled: !!activeCarga?.id });
+
+  // Map producto_id → stock aboard (cargada - vendida - devuelta)
+  const stockAbordo = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!cargaLineasRaw) return map;
+    (cargaLineasRaw as any[]).forEach(l => {
+      const disponible = (l.cantidad_cargada ?? 0) - (l.cantidad_vendida ?? 0) - (l.cantidad_devuelta ?? 0);
+      map.set(l.producto_id, Math.max(0, disponible));
+    });
+    return map;
+  }, [cargaLineasRaw]);
+
   // Promotions engine
   const { data: promocionesActivas } = usePromocionesActivas();
 
