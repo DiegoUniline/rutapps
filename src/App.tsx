@@ -35,6 +35,7 @@ const CuentasPagarPage = lazy(() => import("@/pages/CuentasPagarPage"));
 const GastosDesktopPage = lazy(() => import("@/pages/GastosDesktopPage"));
 const ReportesPage = lazy(() => import("@/pages/ReportesPage"));
 const ConfiguracionPage = lazy(() => import("@/pages/ConfiguracionPage"));
+const UsuariosPage = lazy(() => import("@/pages/UsuariosPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
