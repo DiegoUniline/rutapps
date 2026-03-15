@@ -649,17 +649,17 @@ export default function VentaFormPage() {
                               <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">
                                 {isEmpty ? '' : (unidadLabel || '—')}
                               </td>
-                              {/* Precio — editable inline */}
+                              {/* Precio — editable inline, currency format */}
                               <td className="py-1 px-2">
                                 {readOnly ? (
-                                  <span className="text-[12px] block text-right">${price.toFixed(2)}</span>
+                                  <span className="text-[12px] block text-right">${price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 ) : isEmpty ? (
                                   <span></span>
                                 ) : (
                                   <input
                                     ref={el => setCellRef(idx, 2, el)}
                                     type="number"
-                                    inputMode="numeric"
+                                    inputMode="decimal"
                                     className="inline-edit-input text-[12px] text-right !py-1 w-full"
                                     value={l.precio_unitario ?? ''}
                                     onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
@@ -669,16 +669,79 @@ export default function VentaFormPage() {
                                   />
                                 )}
                               </td>
-                              {/* Impuestos column — desktop only, read-only badges */}
+                              {/* Impuestos column — clickable to toggle */}
                               <td className="py-1.5 px-2 text-center hidden md:table-cell">
-                                {isEmpty ? '' : impuestosLabel ? (
-                                  <span className="inline-flex flex-wrap gap-1 justify-center">
-                                    {impuestosLabel.split(', ').map((t, i) => (
-                                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground font-medium">{t}</span>
-                                    ))}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground text-[11px]">—</span>
+                                {isEmpty ? '' : (
+                                  <div className="inline-flex flex-wrap gap-1 justify-center">
+                                    {/* IVA toggle */}
+                                    <button
+                                      type="button"
+                                      disabled={readOnly}
+                                      onClick={() => {
+                                        if (readOnly) return;
+                                        const currentIva = Number(l.iva_pct) || 0;
+                                        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                                        const defaultIva = prod?.tiene_iva ? Number(prod.iva_pct ?? 16) : 16;
+                                        const newIva = currentIva > 0 ? 0 : defaultIva;
+                                        updateLine(idx, 'iva_pct', newIva);
+                                        // Update label
+                                        const newIeps = Number(l.ieps_pct) || 0;
+                                        const taxes: string[] = [];
+                                        if (newIva > 0) taxes.push(`IVA ${newIva}%`);
+                                        if (newIeps > 0) taxes.push(`IEPS ${newIeps}%`);
+                                        setLineas(prev => {
+                                          const next = [...prev];
+                                          (next[idx] as any).impuestos_label = taxes.join(', ');
+                                          return next;
+                                        });
+                                      }}
+                                      className={cn(
+                                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
+                                        Number(l.iva_pct) > 0
+                                          ? "bg-accent text-accent-foreground"
+                                          : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                      )}
+                                      title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}
+                                    >
+                                      IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
+                                    </button>
+                                    {/* IEPS toggle — only show if product originally had IEPS */}
+                                    {(Number(l.ieps_pct) > 0 || (lineData.impuestos_label || '').includes('IEPS')) && (
+                                      <button
+                                        type="button"
+                                        disabled={readOnly}
+                                        onClick={() => {
+                                          if (readOnly) return;
+                                          const currentIeps = Number(l.ieps_pct) || 0;
+                                          const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                                          const defaultIeps = prod?.tiene_ieps ? Number(prod.ieps_pct ?? 0) : 0;
+                                          const newIeps = currentIeps > 0 ? 0 : defaultIeps;
+                                          updateLine(idx, 'ieps_pct', newIeps);
+                                          const newIva = Number(l.iva_pct) || 0;
+                                          const taxes: string[] = [];
+                                          if (newIva > 0) taxes.push(`IVA ${newIva}%`);
+                                          if (newIeps > 0) taxes.push(`IEPS ${newIeps}%`);
+                                          setLineas(prev => {
+                                            const next = [...prev];
+                                            (next[idx] as any).impuestos_label = taxes.join(', ');
+                                            return next;
+                                          });
+                                        }}
+                                        className={cn(
+                                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
+                                          Number(l.ieps_pct) > 0
+                                            ? "bg-accent text-accent-foreground"
+                                            : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                        )}
+                                        title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}
+                                      >
+                                        IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
+                                      </button>
+                                    )}
+                                    {Number(l.iva_pct) === 0 && Number(l.ieps_pct) === 0 && !(lineData.impuestos_label || '').includes('IEPS') && (
+                                      <span className="text-muted-foreground text-[11px]">—</span>
+                                    )}
+                                  </div>
                                 )}
                               </td>
                               {/* Descuento % */}
@@ -689,7 +752,7 @@ export default function VentaFormPage() {
                                   <input
                                     ref={el => setCellRef(idx, 3, el)}
                                     type="number"
-                                    inputMode="numeric"
+                                    inputMode="decimal"
                                     className="inline-edit-input text-[12px] text-right !py-1 w-full"
                                     value={l.descuento_pct ?? ''}
                                     onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
@@ -703,9 +766,9 @@ export default function VentaFormPage() {
                               <td className="py-1.5 px-2 text-right font-medium">
                                 {isEmpty ? '' : (
                                   <div>
-                                    <span>${lineTotal.toFixed(2)}</span>
+                                    <span>${lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     {(iva > 0 || ieps > 0) && (
-                                      <span className="block text-[10px] text-muted-foreground font-normal">sin imp: ${base.toFixed(2)}</span>
+                                      <span className="block text-[10px] text-muted-foreground font-normal">sin imp: ${base.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     )}
                                   </div>
                                 )}
