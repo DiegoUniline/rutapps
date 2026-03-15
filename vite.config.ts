@@ -21,14 +21,18 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        // Don't cache HTML — always fetch fresh from network
-        navigateFallback: null,
-        navigateFallbackDenylist: [/^\/~oauth/],
+        // Serve cached app shell when offline
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/~oauth/, /^\/api/],
         runtimeCaching: [
           {
-            // HTML pages: always from network, never cache
+            // HTML pages: try network first, fall back to cache (offline support)
             urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkOnly',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-pages',
+              networkTimeoutSeconds: 3,
+            },
           },
           {
             // JS/CSS assets: cache first (they have hashes in filenames)
