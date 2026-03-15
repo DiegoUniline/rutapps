@@ -507,7 +507,7 @@ function MonitorContent() {
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-border flex items-center gap-2">
                   <Eye className="h-4 w-4 text-primary" />
-                  <h2 className="text-sm font-bold text-foreground">Detalle de visitas — {DIA_HOY_LABEL}</h2>
+                  <h2 className="text-sm font-bold text-foreground">Detalle de visitas — {diaLabel}</h2>
                   <Badge variant="secondary" className="ml-auto text-[10px]">{filtered.length} clientes</Badge>
                 </div>
                 <div className="overflow-x-auto max-h-[50vh]">
