@@ -332,7 +332,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('*, vendedores(nombre)')
+        .select('*, vendedores!cargas_vendedor_id_fkey(nombre)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['en_ruta', 'completada'])
         .order('fecha', { ascending: false });

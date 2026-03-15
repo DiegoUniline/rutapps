@@ -28,7 +28,7 @@ function useInventarioData() {
       // Active cargas (en_ruta) with their lines
       const { data: cargas } = await supabase
         .from('cargas')
-        .select('id, vendedor_id, vendedores(nombre), repartidor:repartidor_id(nombre), almacen:almacen_id(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
+        .select('id, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), repartidor:repartidor_id(nombre), almacen:almacen_id(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
         .eq('empresa_id', eid)
         .in('status', ['en_ruta', 'pendiente'] as any)
         .order('fecha', { ascending: false });
