@@ -150,14 +150,18 @@ function MonitorContent() {
       }
     });
 
+    const getEntregaStatus = (entrega: any, sale: any): VisitStatus => {
+      if (sale) return 'sold';
+      if (entrega?.isDelivered) return 'delivered';
+      if (entrega?.hasEntrega) return 'en_ruta';
+      return 'pending';
+    };
+
     // Start with scheduled clients
     const clientMap = new Map<string, ClientVisit>();
     (clientesHoy ?? []).forEach((c: any) => {
       const sale = salesByClient.get(c.id);
-      const entrega = deliveredClients.get(c.id);
-      let status: VisitStatus = 'pending';
-      if (sale) status = 'sold';
-      else if (entrega?.isDelivered) status = 'delivered';
+      const entrega = entregasByClient.get(c.id);
 
       clientMap.set(c.id, {
         id: c.id,
@@ -170,38 +174,32 @@ function MonitorContent() {
         gps_lng: c.gps_lng,
         vendedor_id: c.vendedor_id,
         vendedorNombre: c.vendedores?.nombre,
-        status,
+        status: getEntregaStatus(entrega, sale),
         ventaTotal: sale?.total,
         entregaFolio: entrega?.entregaFolio,
       });
     });
 
     // Add clients from entregas that aren't already scheduled
-    deliveredClients.forEach((info, clienteId) => {
-      if (!clientMap.has(clienteId)) {
+    entregasByClient.forEach((info, clienteId) => {
+      if (!clientMap.has(clienteId) && info.clientInfo) {
         const sale = salesByClient.get(clienteId);
+        const ci = info.clientInfo;
         clientMap.set(clienteId, {
           id: clienteId,
-          nombre: info.nombre,
-          codigo: info.codigo,
-          direccion: info.direccion,
-          colonia: info.colonia,
-          telefono: info.telefono,
-          gps_lat: info.gps_lat,
-          gps_lng: info.gps_lng,
-          vendedor_id: info.vendedor_id,
-          vendedorNombre: info.vendedores?.nombre,
-          status: sale ? 'sold' : info.isDelivered ? 'delivered' : 'pending',
+          nombre: ci.nombre,
+          codigo: ci.codigo,
+          direccion: ci.direccion,
+          colonia: ci.colonia,
+          telefono: ci.telefono,
+          gps_lat: ci.gps_lat,
+          gps_lng: ci.gps_lng,
+          vendedor_id: ci.vendedor_id,
+          vendedorNombre: ci.vendedores?.nombre,
+          status: getEntregaStatus(info, sale),
           ventaTotal: sale?.total,
           entregaFolio: info.entregaFolio,
         });
-      }
-    });
-
-    // Add clients from ventas that aren't already in the map
-    (ventasHoy ?? []).forEach((v: any) => {
-      if (v.cliente_id && !clientMap.has(v.cliente_id)) {
-        // We don't have client details from ventas query, skip (they'd need GPS)
       }
     });
 
