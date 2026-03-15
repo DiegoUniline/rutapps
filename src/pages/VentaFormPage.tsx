@@ -77,6 +77,9 @@ export default function VentaFormPage() {
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
 
+  // Entrega integration for pedidos
+  const { data: entregaExistente } = useEntregaByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
+
   // Payments state
   const [showPagoForm, setShowPagoForm] = useState(false);
   const [pagoMonto, setPagoMonto] = useState('');
