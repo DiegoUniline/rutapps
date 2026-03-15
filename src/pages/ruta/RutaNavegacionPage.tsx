@@ -503,12 +503,19 @@ function NavegacionContent() {
                       "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
                       isCompleted
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                        : "bg-primary/10 text-primary"
+                        : stop.tipo === 'entrega' ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
                     )}>
-                      {isCompleted ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+                      {isCompleted ? <Check className="h-3.5 w-3.5" /> : stop.tipo === 'entrega' ? <Truck className="h-3.5 w-3.5" /> : idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      {stop.folio && <p className="text-[10px] font-mono text-muted-foreground">{stop.folio}</p>}
+                      <div className="flex items-center gap-1.5">
+                        {stop.folio && <span className="text-[10px] font-mono text-muted-foreground">{stop.folio}</span>}
+                        <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                          stop.tipo === 'entrega' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
+                        )}>
+                          {stop.tipo === 'entrega' ? 'Entrega' : 'Visita'}
+                        </span>
+                      </div>
                       <p className={cn("text-sm font-medium truncate", isCompleted ? "line-through text-muted-foreground" : "text-foreground")}>
                         {stop.nombre}
                       </p>
