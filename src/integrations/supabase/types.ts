@@ -1930,6 +1930,138 @@ export type Database = {
           },
         ]
       }
+      whatsapp_config: {
+        Row: {
+          activo: boolean
+          api_token: string
+          api_url: string
+          aviso_dia_antes: boolean
+          aviso_vencido: boolean
+          created_at: string | null
+          empresa_id: string
+          enviar_recibo_pago: boolean
+          id: string
+          instance_name: string
+        }
+        Insert: {
+          activo?: boolean
+          api_token?: string
+          api_url?: string
+          aviso_dia_antes?: boolean
+          aviso_vencido?: boolean
+          created_at?: string | null
+          empresa_id: string
+          enviar_recibo_pago?: boolean
+          id?: string
+          instance_name?: string
+        }
+        Update: {
+          activo?: boolean
+          api_token?: string
+          api_url?: string
+          aviso_dia_antes?: boolean
+          aviso_vencido?: boolean
+          created_at?: string | null
+          empresa_id?: string
+          enviar_recibo_pago?: boolean
+          id?: string
+          instance_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_config_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_log: {
+        Row: {
+          created_at: string | null
+          empresa_id: string
+          error_detalle: string | null
+          id: string
+          imagen_url: string | null
+          mensaje: string | null
+          referencia_id: string | null
+          status: string
+          telefono: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          empresa_id: string
+          error_detalle?: string | null
+          id?: string
+          imagen_url?: string | null
+          mensaje?: string | null
+          referencia_id?: string | null
+          status?: string
+          telefono: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          empresa_id?: string
+          error_detalle?: string | null
+          id?: string
+          imagen_url?: string | null
+          mensaje?: string | null
+          referencia_id?: string | null
+          status?: string
+          telefono?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_log_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          activo: boolean
+          created_at: string | null
+          empresa_id: string
+          id: string
+          mensaje: string
+          nombre: string
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          mensaje?: string
+          nombre?: string
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          mensaje?: string
+          nombre?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zonas: {
         Row: {
           created_at: string
