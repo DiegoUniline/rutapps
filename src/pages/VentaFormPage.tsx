@@ -1247,6 +1247,18 @@ export default function VentaFormPage() {
           ]} />
         </div>
       </div>
+      {/* PDF Preview Modal */}
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`${form.folio ?? 'pedido'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''}
+        caption={`Documento ${form.folio}`}
+        tipo="pedido"
+        referencia_id={form.id}
+      />
     </div>
   );
 }
