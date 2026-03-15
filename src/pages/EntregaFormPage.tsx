@@ -21,6 +21,8 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
+import { generarEntregaPdf } from '@/lib/entregaPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
