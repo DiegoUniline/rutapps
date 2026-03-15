@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,18 +27,25 @@ const navItems: NavItem[] = [
     path: '/ventas',
     children: [
       { label: 'Todas las ventas', path: '/ventas' },
-      { label: 'Punto de venta', path: '/pos' },
+      { label: 'Surtido', path: '/ventas/surtido' },
       { label: 'Entregas', path: '/ventas/entregas' },
       { label: 'Reporte entregas', path: '/ventas/reporte-entregas' },
-      { label: 'Demanda', path: '/ventas/demanda' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
       { label: 'Promociones', path: '/ventas/promociones' },
+      { label: 'Punto de venta', path: '/pos' },
+    ],
+  },
+  { label: 'Clientes', icon: Users, path: '/clientes' },
+  {
+    label: 'Logística',
+    icon: MapPin,
+    path: '/logistica',
+    children: [
       { label: 'Rutas', path: '/ventas/rutas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },
     ],
   },
-  { label: 'Clientes', icon: Users, path: '/clientes' },
   {
     label: 'Catálogo',
     icon: Package,
