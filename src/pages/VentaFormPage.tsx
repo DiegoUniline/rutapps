@@ -40,10 +40,11 @@ function emptyVenta(): Partial<Venta> {
   };
 }
 
-function emptyLine(): Partial<VentaLinea> {
+function emptyLine(): Partial<VentaLinea> & { unidad_label?: string; impuestos_label?: string } {
   return {
     cantidad: 1, precio_unitario: 0, descuento_pct: 0,
     iva_pct: 0, ieps_pct: 0, subtotal: 0, iva_monto: 0, ieps_monto: 0, total: 0,
+    unidad_label: '', impuestos_label: '',
   };
 }
 
