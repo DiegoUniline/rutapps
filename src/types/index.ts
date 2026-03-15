@@ -48,6 +48,7 @@ export interface Producto {
   tasa_ieps_id?: string;
   iva_pct: number;
   ieps_pct: number;
+  ieps_tipo: 'porcentaje' | 'cuota';
   costo_incluye_impuestos: boolean;
   calculo_costo: CalculoCosto;
   codigo_sat?: string;

@@ -228,7 +228,7 @@ const defaultProduct: Partial<Producto> = {
   pct_comision: 0, status: 'borrador', almacenes: [], tiene_iva: false,
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
-  iva_pct: 16, ieps_pct: 0, costo_incluye_impuestos: false,
+  iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje', costo_incluye_impuestos: false,
 };
 
 const statusSteps = [
@@ -523,26 +523,54 @@ export default function ProductoFormPage() {
                         </button>
                       ))}
                     </div>
-                    <OdooField label="IEPS %" value={form.ieps_pct ?? 0} type="number" teal
-                      onChange={v => set('ieps_pct', +v)}
-                      format={v => `${v ?? 0}%`}
-                    />
-                    <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
-                      {[0, 8, 25, 53].map(rate => (
-                        <button
-                          key={rate}
-                          type="button"
-                          onClick={() => set('ieps_pct', rate)}
-                          className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
-                            form.ieps_pct === rate
-                              ? 'bg-primary text-primary-foreground border-primary'
-                              : 'border-border text-muted-foreground hover:border-primary/50'
-                          }`}
-                        >
-                          {rate}%
-                        </button>
-                      ))}
+
+                    <div className="odoo-field-row">
+                      <span className="odoo-field-label">Tipo IEPS</span>
+                      <div className="flex gap-2 pt-[2px]">
+                        {(['porcentaje', 'cuota'] as const).map(t => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => set('ieps_tipo', t)}
+                            className={`text-[11px] px-3 py-1 rounded border transition-colors ${
+                              (form.ieps_tipo || 'porcentaje') === t
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-border text-muted-foreground hover:border-primary/50'
+                            }`}
+                          >
+                            {t === 'porcentaje' ? '% Porcentaje' : '$ Cuota fija'}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
+                    <OdooField
+                      label={(form.ieps_tipo || 'porcentaje') === 'cuota' ? 'IEPS cuota $' : 'IEPS %'}
+                      value={form.ieps_pct ?? 0}
+                      type="number"
+                      teal
+                      onChange={v => set('ieps_pct', +v)}
+                      format={v => (form.ieps_tipo || 'porcentaje') === 'cuota' ? `$ ${v ?? 0}` : `${v ?? 0}%`}
+                    />
+                    {(form.ieps_tipo || 'porcentaje') === 'porcentaje' && (
+                      <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
+                        {[0, 8, 25, 53].map(rate => (
+                          <button
+                            key={rate}
+                            type="button"
+                            onClick={() => set('ieps_pct', rate)}
+                            className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                              form.ieps_pct === rate
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'border-border text-muted-foreground hover:border-primary/50'
+                            }`}
+                          >
+                            {rate}%
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="odoo-field-row">
                       <span className="odoo-field-label">Costo incluye impuestos</span>
                       <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
@@ -552,13 +580,13 @@ export default function ProductoFormPage() {
                     {form.costo_incluye_impuestos && (form.costo ?? 0) > 0 && (
                       <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
                         {(() => {
-                          const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, incluye_impuestos: true });
+                          const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, ieps_tipo: (form.ieps_tipo as any) || 'porcentaje', incluye_impuestos: true });
                           return <>Costo neto: <strong>$ {t.precio_neto.toFixed(2)}</strong> + IEPS: $ {t.ieps_monto.toFixed(2)} + IVA: $ {t.iva_monto.toFixed(2)}</>;
                         })()}
                       </div>
                     )}
                     <div className="mt-2 bg-accent/30 border border-accent/50 rounded px-3 py-2 text-[11px] text-muted-foreground">
-                      💡 El IVA se calcula sobre el precio + IEPS (estándar fiscal mexicano).
+                      💡 El IVA se calcula sobre el precio + IEPS (estándar fiscal mexicano). IEPS puede ser porcentaje o cuota fija por unidad.
                     </div>
                   </div>
                 </div>

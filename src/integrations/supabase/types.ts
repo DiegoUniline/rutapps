@@ -1195,6 +1195,7 @@ export type Database = {
           factor_conversion: number | null
           id: string
           ieps_pct: number
+          ieps_tipo: string
           imagen_url: string | null
           iva_pct: number
           lista_id: string | null
@@ -1241,6 +1242,7 @@ export type Database = {
           factor_conversion?: number | null
           id?: string
           ieps_pct?: number
+          ieps_tipo?: string
           imagen_url?: string | null
           iva_pct?: number
           lista_id?: string | null
@@ -1287,6 +1289,7 @@ export type Database = {
           factor_conversion?: number | null
           id?: string
           ieps_pct?: number
+          ieps_tipo?: string
           imagen_url?: string | null
           iva_pct?: number
           lista_id?: string | null
