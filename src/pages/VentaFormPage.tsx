@@ -7,6 +7,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
