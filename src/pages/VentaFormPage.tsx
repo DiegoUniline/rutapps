@@ -143,6 +143,20 @@ export default function VentaFormPage() {
     const ivaPct = producto.tiene_iva ? Number(producto.iva_pct ?? 16) : 0;
     const iepsPct = producto.tiene_ieps ? Number(producto.ieps_pct ?? 0) : 0;
     const unidadId = producto.unidad_venta_id || producto.unidad_compra_id || null;
+
+    // Build display labels from joined data
+    const unidadData = (producto as any).unidades_venta;
+    const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
+
+    // Build impuestos label
+    const taxes: string[] = [];
+    if (producto.tiene_iva) taxes.push(`IVA ${ivaPct}%`);
+    if (producto.tiene_ieps) {
+      if (producto.ieps_tipo === 'cuota') taxes.push(`IEPS cuota`);
+      else taxes.push(`IEPS ${iepsPct}%`);
+    }
+    const impuestosLabel = taxes.join(', ');
+
     setLineas(prev => {
       const next = [...prev];
       next[idx] = {
@@ -153,7 +167,9 @@ export default function VentaFormPage() {
         unidad_id: unidadId,
         iva_pct: ivaPct,
         ieps_pct: iepsPct,
-      };
+        unidad_label: unidadLabel,
+        impuestos_label: impuestosLabel,
+      } as any;
       return next;
     });
     setDirty(true);
