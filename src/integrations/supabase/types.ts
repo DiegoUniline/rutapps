@@ -90,6 +90,7 @@ export type Database = {
       }
       cargas: {
         Row: {
+          almacen_destino_id: string | null
           almacen_id: string | null
           created_at: string
           empresa_id: string
@@ -101,6 +102,7 @@ export type Database = {
           vendedor_id: string | null
         }
         Insert: {
+          almacen_destino_id?: string | null
           almacen_id?: string | null
           created_at?: string
           empresa_id: string
@@ -112,6 +114,7 @@ export type Database = {
           vendedor_id?: string | null
         }
         Update: {
+          almacen_destino_id?: string | null
           almacen_id?: string | null
           created_at?: string
           empresa_id?: string
@@ -123,6 +126,13 @@ export type Database = {
           vendedor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cargas_almacen_destino_id_fkey"
+            columns: ["almacen_destino_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cargas_almacen_id_fkey"
             columns: ["almacen_id"]
