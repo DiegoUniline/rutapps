@@ -123,7 +123,7 @@ function buildTicketElement(tpl: TemplateConfig, vars: TicketVars) {
       tpl.tipo === "pre_cobro" ? "¡Gracias por confiar en Rutapp! 🚀" : "¡Gracias por tu pago! 🎉"
     ) : null;
 
-  return e("div", { style: { display: "flex", flexDirection: "column", width: 360, fontFamily: "Inter", background: "#fff", borderRadius: 12, overflow: "hidden" } },
+  return e("div", { style: { display: "flex", flexDirection: "column", width: 320, fontFamily: "Inter", background: "#fff", borderRadius: 12, overflow: "hidden" } },
     // Header
     e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", background: theme.accent, padding: "18px 20px" } },
       e("span", { style: { fontSize: 28 } }, tpl.emoji),
