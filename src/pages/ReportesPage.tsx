@@ -10,6 +10,7 @@ import { ReporteEntregas } from '@/components/reportes/ReporteEntregas';
 import { ReporteCargas } from '@/components/reportes/ReporteCargas';
 import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
+import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 
