@@ -198,6 +198,46 @@ export default function EntregaFormPage() {
     });
   };
 
+  const handleGenerarEntregaPdf = () => {
+    const blob = generarEntregaPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      entrega: {
+        folio: form.folio ?? '',
+        fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+        status: form.status ?? 'borrador',
+        notas: form.notas,
+        fecha_asignacion: form.fecha_asignacion,
+        fecha_carga: form.fecha_carga,
+        validado_at: form.validado_at,
+      },
+      cliente: form.clientes?.nombre ?? clientesList?.find(c => c.id === form.cliente_id)?.nombre,
+      vendedor: vendedores?.find(v => v.id === form.vendedor_id)?.nombre,
+      repartidor: form.vendedor_ruta_id ? vendedores?.find(v => v.id === form.vendedor_ruta_id)?.nombre : undefined,
+      almacen: form.almacenes?.nombre ?? almacenesList?.find(a => a.id === form.almacen_id)?.nombre,
+      pedidoFolio: (form as any).ventas?.folio,
+      lineas: lineas.map((l: any) => {
+        const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          unidad: l.unidades?.abreviatura || (prod as any)?.unidades_venta?.abreviatura || '',
+          cantidad_pedida: Number(l.cantidad_pedida) || 0,
+          cantidad_entregada: Number(l.cantidad_entregada) || 0,
+          almacen_origen: l.almacenes?.nombre ?? almacenesList?.find((a: any) => a.id === l.almacen_origen_id)?.nombre ?? '',
+          hecho: !!l.hecho,
+        };
+      }),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
+
   const addLine = () => {
     setLineas(prev => [...prev, { producto_id: '', cantidad_pedida: 0, cantidad_entregada: 0, hecho: false }]);
   };
