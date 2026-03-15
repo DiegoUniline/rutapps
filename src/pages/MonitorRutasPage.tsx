@@ -100,14 +100,14 @@ function MonitorContent() {
     },
   });
 
-  // Entregas for selected date
+  // Entregas for selected date (with client GPS)
   const { data: entregasHoy } = useQuery({
     queryKey: ['monitor-entregas-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
-        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio')
+        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, clientes(id, nombre, codigo, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, vendedores(nombre))')
         .eq('fecha', dateStr);
       return data ?? [];
     },
@@ -123,7 +123,7 @@ function MonitorContent() {
     },
   });
 
-  // Build visit statuses
+  // Build visit statuses — include scheduled clients + entregas/ventas clients
   const visits: ClientVisit[] = useMemo(() => {
     const salesByClient = new Map<string, { total: number; vendedor_id: string }>();
     (ventasHoy ?? []).forEach((v: any) => {
@@ -134,19 +134,30 @@ function MonitorContent() {
       });
     });
 
-    const deliveredClients = new Set<string>();
+    const deliveredClients = new Map<string, any>();
     (entregasHoy ?? []).forEach((e: any) => {
-      if (e.status === 'hecho') deliveredClients.add(e.cliente_id);
+      if (e.cliente_id && e.clientes) {
+        const prev = deliveredClients.get(e.cliente_id);
+        deliveredClients.set(e.cliente_id, {
+          ...e.clientes,
+          isDelivered: (prev?.isDelivered || false) || e.status === 'hecho',
+          entregaFolio: e.folio,
+          entregaStatus: e.status,
+          vendedor_ruta_id: e.vendedor_ruta_id || e.vendedor_id,
+        });
+      }
     });
 
-    return (clientesHoy ?? []).map((c: any) => {
+    // Start with scheduled clients
+    const clientMap = new Map<string, ClientVisit>();
+    (clientesHoy ?? []).forEach((c: any) => {
       const sale = salesByClient.get(c.id);
-      const delivered = deliveredClients.has(c.id);
+      const entrega = deliveredClients.get(c.id);
       let status: VisitStatus = 'pending';
       if (sale) status = 'sold';
-      else if (delivered) status = 'delivered';
+      else if (entrega?.isDelivered) status = 'delivered';
 
-      return {
+      clientMap.set(c.id, {
         id: c.id,
         nombre: c.nombre,
         codigo: c.codigo,
@@ -159,8 +170,40 @@ function MonitorContent() {
         vendedorNombre: c.vendedores?.nombre,
         status,
         ventaTotal: sale?.total,
-      };
+        entregaFolio: entrega?.entregaFolio,
+      });
     });
+
+    // Add clients from entregas that aren't already scheduled
+    deliveredClients.forEach((info, clienteId) => {
+      if (!clientMap.has(clienteId)) {
+        const sale = salesByClient.get(clienteId);
+        clientMap.set(clienteId, {
+          id: clienteId,
+          nombre: info.nombre,
+          codigo: info.codigo,
+          direccion: info.direccion,
+          colonia: info.colonia,
+          telefono: info.telefono,
+          gps_lat: info.gps_lat,
+          gps_lng: info.gps_lng,
+          vendedor_id: info.vendedor_id,
+          vendedorNombre: info.vendedores?.nombre,
+          status: sale ? 'sold' : info.isDelivered ? 'delivered' : 'pending',
+          ventaTotal: sale?.total,
+          entregaFolio: info.entregaFolio,
+        });
+      }
+    });
+
+    // Add clients from ventas that aren't already in the map
+    (ventasHoy ?? []).forEach((v: any) => {
+      if (v.cliente_id && !clientMap.has(v.cliente_id)) {
+        // We don't have client details from ventas query, skip (they'd need GPS)
+      }
+    });
+
+    return Array.from(clientMap.values());
   }, [clientesHoy, ventasHoy, entregasHoy]);
 
   const filtered = useMemo(() => {
