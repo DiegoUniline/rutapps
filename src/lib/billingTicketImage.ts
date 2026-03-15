@@ -83,7 +83,7 @@ export function buildBillingTicketHTML(data: BillingTicketData): string {
     : '';
 
   return `
-    <div style="width:360px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+    <div style="width:320px;max-width:320px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
       <!-- Header -->
       <div style="background:${theme.accent};padding:18px 20px;text-align:center">
         <div style="font-size:28px;margin-bottom:4px">${data.emoji}</div>

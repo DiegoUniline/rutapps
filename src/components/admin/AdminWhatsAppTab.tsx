@@ -398,12 +398,12 @@ export default function AdminWhatsAppTab() {
                               style={{ background: 'linear-gradient(180deg, #ece5dd 0%, #d9d2c5 100%)' }}
                             >
                               {/* Message bubble */}
-                              <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-[300px] self-start">
+                              <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-[310px] self-start">
                                 {/* Rendered HTML ticket */}
                                 <div
                                   ref={(el) => { ticketRefs.current[t.tipo] = el; }}
                                   dangerouslySetInnerHTML={{ __html: ticketHtml }}
-                                  className="[&>div]:!shadow-none [&>div]:!rounded-none"
+                                  className="[&>div]:!shadow-none [&>div]:!rounded-none [&>div]:!w-full [&>div]:!max-w-full"
                                 />
                                 {/* Caption */}
                                 <div className="px-3 py-1.5 border-t border-gray-100">
