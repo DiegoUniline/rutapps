@@ -299,7 +299,7 @@ export default function DemandaPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Unidades por surtir</p>
-          <p className="text-2xl font-bold text-warning">{totalLineasPendientes}</p>
+          <p className="text-2xl font-bold text-foreground">{totalLineasPendientes}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Valor pendiente</p>
