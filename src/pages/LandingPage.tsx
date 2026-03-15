@@ -94,7 +94,7 @@ export default function LandingPage() {
               Diseñado para distribuidoras y empresas con venta en ruta.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-              <Link to="/login" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
+              <Link to="/signup" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
                 style={{ background: 'hsl(230, 55%, 52%)' }}>
                 Comenzar ahora <ArrowRight className="h-5 w-5" />
               </Link>
