@@ -41,18 +41,25 @@ function useInventarioData() {
         .gt('cantidad_actual', 0);
 
       // Build route stock map: producto_id -> qty on route
+      // AND per-route breakdown: rutaId -> { vendedor, stockByProduct }
       const rutaStock: Record<string, number> = {};
       const cargaDetails: any[] = [];
+      const rutaBreakdown: Record<string, { vendedor: string; stockByProduct: Record<string, number> }> = {};
 
       for (const c of (cargas ?? [])) {
         let cargaTotal = 0;
         let cargaValorCosto = 0;
         let cargaValorVenta = 0;
+        const rutaKey = c.vendedor_id ?? c.id;
+        const vendedorNombre = (c.vendedores as any)?.nombre ?? '—';
+        if (!rutaBreakdown[rutaKey]) rutaBreakdown[rutaKey] = { vendedor: vendedorNombre, stockByProduct: {} };
+
         for (const cl of (c.carga_lineas ?? [])) {
           const enRuta = cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta;
-          rutaStock[cl.producto_id] = (rutaStock[cl.producto_id] ?? 0) + Math.max(0, enRuta);
-          const prod = (productos ?? []).find(p => p.id === cl.producto_id);
           const qty = Math.max(0, enRuta);
+          rutaStock[cl.producto_id] = (rutaStock[cl.producto_id] ?? 0) + qty;
+          rutaBreakdown[rutaKey].stockByProduct[cl.producto_id] = (rutaBreakdown[rutaKey].stockByProduct[cl.producto_id] ?? 0) + qty;
+          const prod = (productos ?? []).find(p => p.id === cl.producto_id);
           cargaTotal += qty;
           cargaValorCosto += qty * (prod?.costo ?? 0);
           cargaValorVenta += qty * (prod?.precio_principal ?? 0);
@@ -60,7 +67,7 @@ function useInventarioData() {
         cargaDetails.push({
           id: c.id,
           origen: 'carga',
-          vendedor: (c.vendedores as any)?.nombre ?? '—',
+          vendedor: vendedorNombre,
           repartidor: (c.repartidor as any)?.nombre,
           almacen: (c.almacen as any)?.nombre,
           fecha: c.fecha,
@@ -79,13 +86,17 @@ function useInventarioData() {
           scByVendedor[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', items: [] };
         }
         scByVendedor[vid].items!.push(sc);
-        rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + Math.max(0, sc.cantidad_actual);
+        const qty = Math.max(0, sc.cantidad_actual);
+        rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + qty;
+        // Per-route breakdown
+        if (!rutaBreakdown[vid]) rutaBreakdown[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', stockByProduct: {} };
+        rutaBreakdown[vid].stockByProduct[sc.producto_id] = (rutaBreakdown[vid].stockByProduct[sc.producto_id] ?? 0) + qty;
       }
 
       // Add stock_camion groups as route cards (avoid duplicating cargas vendedores)
       const cargaVendedorIds = new Set((cargas ?? []).map(c => c.vendedor_id));
       for (const [vid, group] of Object.entries(scByVendedor)) {
-        if (cargaVendedorIds.has(vid)) continue; // already counted via cargas
+        if (cargaVendedorIds.has(vid)) continue;
         let total = 0, valCosto = 0, valVenta = 0;
         for (const sc of group.items ?? []) {
           const qty = Math.max(0, sc.cantidad_actual);
@@ -107,6 +118,11 @@ function useInventarioData() {
           valorVenta: valVenta,
         });
       }
+
+      // Build sorted list of routes for columns
+      const rutas = Object.entries(rutaBreakdown)
+        .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
+        .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
       // Products with enriched data
       const productosEnriquecidos = (productos ?? []).map(p => {
