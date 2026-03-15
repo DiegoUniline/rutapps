@@ -7,6 +7,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// RutApp Stripe product IDs
+const RUTAPP_PRODUCT_IDS = new Set([
+  "prod_U9a56wjBGbKv4B", // Mensual
+  "prod_U9a6TsdjaGp99L", // Semestral
+  "prod_U9a7Ap6nbM6kPV", // Anual
+]);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -41,10 +48,22 @@ Deno.serve(async (req) => {
     const customerId = customers.data[0].id;
     const invoices = await stripe.invoices.list({
       customer: customerId,
-      limit: 20,
+      limit: 50,
+      expand: ["data.lines.data.price"],
     });
 
-    const mapped = invoices.data.map((inv) => ({
+    // Filter: only invoices that contain at least one line item with a RutApp product
+    const rutappInvoices = invoices.data.filter((inv) => {
+      if (!inv.lines?.data?.length) return false;
+      return inv.lines.data.some((line) => {
+        const productId = typeof line.price?.product === "string"
+          ? line.price.product
+          : line.price?.product?.id;
+        return productId && RUTAPP_PRODUCT_IDS.has(productId);
+      });
+    });
+
+    const mapped = rutappInvoices.map((inv) => ({
       id: inv.id,
       number: inv.number,
       status: inv.status,

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -231,6 +232,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { isSuperAdmin } = useSubscription();
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -255,6 +257,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {navItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
+          {isSuperAdmin && (
+            <Link
+              to="/super-admin"
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mt-2 border-t border-sidebar-border/30 pt-3",
+                collapsed ? "justify-center px-2" : "",
+                "text-amber-500 hover:bg-sidebar-hover"
+              )}
+              title={collapsed ? 'Panel Master' : undefined}
+            >
+              <Shield className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Panel Master</span>}
+            </Link>
+          )}
         </nav>
 
         <div className="border-t border-sidebar-border/30 p-2.5">

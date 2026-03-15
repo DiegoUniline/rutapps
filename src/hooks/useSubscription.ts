@@ -24,7 +24,7 @@ export function useSubscription(): SubscriptionState {
   });
 
   useEffect(() => {
-    if (!user || !empresa?.id) {
+    if (!user) {
       setState(s => ({ ...s, loading: false }));
       return;
     }
@@ -32,7 +32,7 @@ export function useSubscription(): SubscriptionState {
   }, [user, empresa?.id]);
 
   async function check() {
-    // Check if super admin first
+    // Check if super admin first — does NOT require empresa
     const { data: sa } = await supabase
       .from('super_admins')
       .select('id')
@@ -41,6 +41,12 @@ export function useSubscription(): SubscriptionState {
 
     if (sa) {
       setState({ loading: false, status: 'active', daysLeft: 999, isBlocked: false, isSuperAdmin: true, maxUsuarios: 999 });
+      return;
+    }
+
+    // For subscription check, we need empresa
+    if (!empresa?.id) {
+      setState(s => ({ ...s, loading: false }));
       return;
     }
 
