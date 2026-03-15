@@ -232,6 +232,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { isSuperAdmin } = useSubscription();
 
   return (
     <div className="min-h-screen flex bg-background">
