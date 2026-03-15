@@ -163,7 +163,11 @@ function AppRoutes() {
                 <Route path="/ventas" element={<VentasListPage />} />
                 <Route path="/ventas/surtido" element={<DemandaPage />} />
                 <Route path="/ventas/demanda" element={<Navigate to="/ventas/surtido" replace />} />
-                <Route path="/ventas/entregas" element={<EntregasPage />} />
+                <Route path="/entregas" element={<EntregaListPage />} />
+                <Route path="/entregas/nuevo" element={<EntregaFormPage />} />
+                <Route path="/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
+                <Route path="/entregas/:id" element={<EntregaFormPage />} />
+                <Route path="/ventas/entregas" element={<Navigate to="/entregas" replace />} />
                 <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
                 <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
                 <Route path="/ventas/cobranza" element={<CobranzaPage />} />
