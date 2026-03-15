@@ -56,6 +56,8 @@ const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage")
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
+const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
+const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
