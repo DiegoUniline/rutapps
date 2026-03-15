@@ -359,39 +359,50 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const sinMotivo = lineas.filter(l => l.diferencia !== 0 && !l.motivo);
-      if (sinMotivo.length > 0) throw new Error('Todas las diferencias necesitan un motivo');
+      if (selectedCargaId) {
+        const sinMotivo = lineas.filter(l => l.diferencia !== 0 && !l.motivo);
+        if (sinMotivo.length > 0) throw new Error('Todas las diferencias necesitan un motivo');
+      }
 
       const efectivoReal = efectivoEntregado !== '' ? Number(efectivoEntregado) : efectivoEsperado;
 
+      const insertData: any = {
+        empresa_id: empresa!.id,
+        user_id: user!.id,
+        efectivo_esperado: efectivoEsperado,
+        efectivo_entregado: efectivoReal,
+        diferencia_efectivo: efectivoReal - efectivoEsperado,
+        notas: notas || null,
+      };
+
+      if (selectedCargaId) {
+        insertData.carga_id = selectedCargaId;
+        insertData.vendedor_id = (selectedCarga as any)?.vendedor_id ?? null;
+      }
+
+      if (fechaInicio) insertData.fecha_inicio = fechaInicio;
+      if (fechaFin) insertData.fecha_fin = fechaFin;
+
       const { data: descarga, error } = await supabase
         .from('descarga_ruta')
-        .insert({
-          empresa_id: empresa!.id,
-          carga_id: selectedCargaId!,
-          vendedor_id: (selectedCarga as any)?.vendedor_id ?? null,
-          user_id: user!.id,
-          efectivo_esperado: efectivoEsperado,
-          efectivo_entregado: efectivoReal,
-          diferencia_efectivo: efectivoReal - efectivoEsperado,
-          notas: notas || null,
-        } as any)
+        .insert(insertData)
         .select()
         .single();
       if (error) throw error;
 
-      const lineItems = lineas.map(l => ({
-        descarga_id: descarga.id,
-        producto_id: l.producto_id,
-        cantidad_esperada: l.cantidad_esperada,
-        cantidad_real: l.cantidad_real,
-        diferencia: l.diferencia,
-        motivo: l.diferencia !== 0 ? l.motivo : null,
-        notas: l.notas || null,
-      }));
-
-      const { error: lErr } = await supabase.from('descarga_ruta_lineas').insert(lineItems as any);
-      if (lErr) throw lErr;
+      if (lineas.length > 0) {
+        const lineItems = lineas.map(l => ({
+          descarga_id: descarga.id,
+          producto_id: l.producto_id,
+          cantidad_esperada: l.cantidad_esperada,
+          cantidad_real: l.cantidad_real,
+          diferencia: l.diferencia,
+          motivo: l.diferencia !== 0 ? l.motivo : null,
+          notas: l.notas || null,
+        }));
+        const { error: lErr } = await supabase.from('descarga_ruta_lineas').insert(lineItems as any);
+        if (lErr) throw lErr;
+      }
     },
     onSuccess: () => {
       toast.success(hayDiferencias ? 'Descarga enviada para aprobación' : 'Descarga completada');
