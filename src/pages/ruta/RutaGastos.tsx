@@ -1,53 +1,46 @@
 import { useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 export default function RutaGastos() {
   const { empresa, user } = useAuth();
-  const queryClient = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
+  const { mutate: offlineMutate, isPending: savePending } = useOfflineMutation();
 
-  const { data: gastos, isLoading } = useQuery({
-    queryKey: ['ruta-gastos', empresa?.id, today],
+  const { data: gastos, isLoading, refetch } = useOfflineQuery('gastos', {
+    empresa_id: empresa?.id,
+    fecha: today,
+  }, {
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('gastos')
-        .select('*')
-        .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
-        .order('created_at', { ascending: false });
-      return data ?? [];
-    },
+    orderBy: 'created_at',
+    ascending: false,
   });
 
-  const saveMut = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from('gastos').insert({
-        empresa_id: empresa!.id,
-        user_id: user!.id,
+  const handleSaveGasto = async () => {
+    if (!concepto || !monto || !empresa || !user) return;
+    try {
+      await offlineMutate('gastos', 'insert', {
+        empresa_id: empresa.id,
+        user_id: user.id,
         concepto,
         monto: +monto,
         fecha: today,
+        created_at: new Date().toISOString(),
       });
-      if (error) throw error;
-    },
-    onSuccess: () => {
       toast.success('Gasto registrado');
-      queryClient.invalidateQueries({ queryKey: ['ruta-gastos'] });
-      queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
+      refetch();
       setShowForm(false);
       setConcepto('');
       setMonto('');
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const totalHoy = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
 
@@ -134,11 +127,11 @@ export default function RutaGastos() {
               />
             </div>
             <button
-              onClick={() => saveMut.mutate()}
-              disabled={!concepto || !monto || saveMut.isPending}
+              onClick={handleSaveGasto}
+              disabled={!concepto || !monto || savePending}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
             >
-              {saveMut.isPending ? 'Guardando...' : 'Guardar gasto'}
+              {savePending ? 'Guardando...' : 'Guardar gasto'}
             </button>
           </div>
         </div>
