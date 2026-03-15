@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X } from 'lucide-react';
+import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,20 @@ import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+/** Pick an icon for a maneuver instruction */
+function ManeuverIcon({ maneuver }: { maneuver?: string }) {
+  if (!maneuver) return <ArrowUp className="h-7 w-7" />;
+  if (maneuver.includes('left')) return <CornerUpLeft className="h-7 w-7" />;
+  if (maneuver.includes('right')) return <CornerUpRight className="h-7 w-7" />;
+  if (maneuver.includes('uturn') || maneuver.includes('u-turn')) return <RotateCw className="h-7 w-7" />;
+  return <ArrowUp className="h-7 w-7" />;
+}
+
+/** Strip HTML tags from directions instructions */
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, '');
+}
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -38,6 +52,7 @@ function NavegacionContent() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
 
@@ -148,8 +163,8 @@ function NavegacionContent() {
   const startNavigation = (stop: Stop) => {
     setNavigatingTo(stop.id);
     setActiveStopId(stop.id);
+    setCurrentStepIdx(0);
     setPanelOpen(true);
-    // Zoom to stop
     mapRef.current?.panTo({ lat: stop.gps_lat, lng: stop.gps_lng });
     mapRef.current?.setZoom(14);
   };
@@ -157,7 +172,7 @@ function NavegacionContent() {
   const stopNavigation = () => {
     setNavigatingTo(null);
     setDirections(null);
-    // Reset to show all
+    setCurrentStepIdx(0);
     if (mapRef.current && stops.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
@@ -194,6 +209,27 @@ function NavegacionContent() {
   };
 
   const leg = directions?.routes?.[0]?.legs?.[0];
+  const steps = leg?.steps ?? [];
+  const currentStep = steps[currentStepIdx];
+  const nextStep = steps[currentStepIdx + 1];
+
+  // Auto-advance step based on user proximity
+  useEffect(() => {
+    if (!userLocation || steps.length === 0) return;
+    // Find closest upcoming step
+    for (let i = currentStepIdx; i < steps.length; i++) {
+      const endLat = steps[i].end_location.lat();
+      const endLng = steps[i].end_location.lng();
+      const dist = Math.sqrt(
+        Math.pow((userLocation.lat - endLat) * 111000, 2) +
+        Math.pow((userLocation.lng - endLng) * 111000 * Math.cos(userLocation.lat * Math.PI / 180), 2)
+      );
+      if (dist < 30 && i > currentStepIdx) {
+        setCurrentStepIdx(i);
+        break;
+      }
+    }
+  }, [userLocation, steps, currentStepIdx]);
 
   if (totalCount === 0) {
     return (
@@ -293,58 +329,89 @@ function NavegacionContent() {
         </GoogleMap>
       )}
 
-      {/* TOP BAR — floating over map */}
+      {/* TOP BAR */}
       <div className="absolute top-0 left-0 right-0 z-10 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
-          <button onClick={() => navigate(-1)} className="p-1 -ml-0.5">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
-          <div className="flex-1 min-w-0">
-            {navigatingStop ? (
-              <>
-                <p className="text-[13px] font-bold text-foreground truncate">{navigatingStop.nombre}</p>
-                {leg && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {leg.duration?.text} · {leg.distance?.text}
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-[13px] font-bold text-foreground">
-                  {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+        {navigatingStop && currentStep ? (
+          /* TURN-BY-TURN NAVIGATION BAR */
+          <div className="mx-3 space-y-2">
+            {/* Main instruction */}
+            <div className="bg-primary text-primary-foreground rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg">
+              <ManeuverIcon maneuver={(currentStep as any).maneuver} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold leading-tight">
+                  {stripHtml(currentStep.instructions)}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {completedCount}/{totalCount} completadas
+                <p className="text-[12px] opacity-80 mt-0.5">
+                  {currentStep.distance?.text} · {currentStep.duration?.text}
                 </p>
-              </>
-            )}
+              </div>
+              <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Next step preview + ETA */}
+            <div className="mx-1 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm">
+              {nextStep && (
+                <p className="text-[11px] text-muted-foreground flex-1 truncate">
+                  Después: {stripHtml(nextStep.instructions)}
+                </p>
+              )}
+              {leg && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Navigation className="h-3 w-3 text-primary" />
+                  <span className="text-[12px] font-semibold text-foreground">{leg.duration?.text}</span>
+                  <span className="text-[11px] text-muted-foreground">{leg.distance?.text}</span>
+                </div>
+              )}
+            </div>
           </div>
-          {navigatingStop && (
-            <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-              <X className="h-4 w-4 text-foreground" />
+        ) : navigatingStop ? (
+          /* Navigating but no steps yet (loading) */
+          <div className="mx-3 bg-primary text-primary-foreground rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg">
+            <Navigation className="h-7 w-7 animate-pulse" />
+            <div className="flex-1">
+              <p className="text-[15px] font-bold">{navigatingStop.nombre}</p>
+              <p className="text-[12px] opacity-80">Calculando ruta...</p>
+            </div>
+            <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
+              <X className="h-4 w-4" />
             </button>
-          )}
-          {/* Progress dots */}
-          <div className="flex gap-0.5">
-            {stops.slice(0, 12).map((s, i) => (
-              <div
-                key={s.id}
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  completedIds.has(s.id)
-                    ? "bg-emerald-500"
-                    : navigatingTo === s.id
-                      ? "bg-red-500"
-                      : "bg-muted-foreground/30"
-                )}
-              />
-            ))}
-            {stops.length > 12 && (
-              <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
-            )}
           </div>
-        </div>
+        ) : (
+          /* Default: overview bar */
+          <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
+            <button onClick={() => navigate(-1)} className="p-1 -ml-0.5">
+              <ArrowLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold text-foreground">
+                {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {completedCount}/{totalCount} completadas
+              </p>
+            </div>
+            <div className="flex gap-0.5">
+              {stops.slice(0, 12).map((s) => (
+                <div
+                  key={s.id}
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    completedIds.has(s.id)
+                      ? "bg-emerald-500"
+                      : navigatingTo === s.id
+                        ? "bg-destructive"
+                        : "bg-muted-foreground/30"
+                  )}
+                />
+              ))}
+              {stops.length > 12 && (
+                <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* NAVIGATION ACTION BAR — when navigating, shown at bottom */}
