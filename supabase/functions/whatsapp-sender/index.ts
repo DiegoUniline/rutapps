@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -27,7 +29,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 1. Get WhatsApp config
+    // 1. Get WhatsApp config (only need api_token now)
     const { data: config, error: cfgErr } = await supabaseAdmin
       .from("whatsapp_config")
       .select("*")
@@ -48,63 +50,49 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { api_url, api_token, instance_name } = config;
-    if (!api_url || !api_token || !instance_name) {
+    const { api_token } = config;
+    if (!api_token) {
       return new Response(
-        JSON.stringify({ error: "Configuración de WhatsApp incompleta" }),
+        JSON.stringify({ error: "Falta el API Token de WhatsApp" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Normalize phone: remove spaces, dashes, add country code if needed
+    // Normalize phone: remove spaces, dashes
     const normalizedPhone = phone.replace(/[\s\-\(\)]/g, "");
 
-    let apiResponse: Response;
+    // 2. Build request body based on action
+    let body: Record<string, unknown>;
+
+    switch (action) {
+      case "send-text":
+        body = { action: "send-text", phone: normalizedPhone, message: message || "" };
+        break;
+      case "send-image":
+        body = { action: "send-image", phone: normalizedPhone, url, caption: caption || "" };
+        break;
+      case "send-file":
+        body = { action: "send-file", phone: normalizedPhone, url, fileName: fileName || "documento.pdf" };
+        break;
+      default:
+        return new Response(
+          JSON.stringify({ error: `Acción no soportada: ${action}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
     let status = "sent";
     let errorDetalle: string | null = null;
 
     try {
-      switch (action) {
-        case "send-text": {
-          apiResponse = await fetch(`${api_url}/message/sendText/${instance_name}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", apikey: api_token },
-            body: JSON.stringify({ number: normalizedPhone, text: message }),
-          });
-          break;
-        }
-        case "send-image": {
-          apiResponse = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", apikey: api_token },
-            body: JSON.stringify({
-              number: normalizedPhone,
-              mediatype: "image",
-              media: url,
-              caption: caption || "",
-            }),
-          });
-          break;
-        }
-        case "send-file": {
-          apiResponse = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", apikey: api_token },
-            body: JSON.stringify({
-              number: normalizedPhone,
-              mediatype: "document",
-              media: url,
-              fileName: fileName || "documento.pdf",
-            }),
-          });
-          break;
-        }
-        default:
-          return new Response(
-            JSON.stringify({ error: `Acción no soportada: ${action}` }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-      }
+      const apiResponse = await fetch(WHATSAPI_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-token": api_token,
+        },
+        body: JSON.stringify(body),
+      });
 
       if (!apiResponse.ok) {
         const errBody = await apiResponse.text();
@@ -116,7 +104,7 @@ Deno.serve(async (req) => {
       errorDetalle = fetchErr instanceof Error ? fetchErr.message : "Error de conexión";
     }
 
-    // 2. Log the message
+    // 3. Log the message
     await supabaseAdmin.from("whatsapp_log").insert({
       empresa_id,
       telefono: normalizedPhone,
