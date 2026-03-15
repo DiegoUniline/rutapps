@@ -183,7 +183,7 @@ export default function EntregaFormPage() {
       {/* Header */}
       <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/entregas')} className="btn-odoo-secondary !px-2.5">
+          <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
           <div className="min-w-0">
