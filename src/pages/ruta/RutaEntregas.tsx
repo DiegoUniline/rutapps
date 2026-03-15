@@ -9,6 +9,7 @@ import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function RutaEntregas() {
+  const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const vendedorId = profile?.vendedor_id;
   const { mutate: offlineMutate, isPending } = useOfflineMutation();
