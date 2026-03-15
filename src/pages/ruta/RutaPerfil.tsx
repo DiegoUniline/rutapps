@@ -107,6 +107,25 @@ export default function RutaPerfil() {
           </button>
         </div>
 
+        {/* Install app */}
+        {canInstall && (
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <button
+              onClick={async () => {
+                const accepted = await install();
+                if (accepted) toast.success('¡App instalada!');
+              }}
+              className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-muted/50 transition-colors"
+            >
+              <Download className="h-5 w-5 text-primary" />
+              <div className="flex-1 text-left">
+                <span className="text-[14px] font-medium text-foreground block">Instalar Rutapp</span>
+                <span className="text-[11px] text-muted-foreground">Agregar a tu pantalla de inicio</span>
+              </div>
+            </button>
+          </div>
+        )}
+
         {/* Sign out */}
         <button
           onClick={handleSignOut}
