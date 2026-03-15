@@ -19,7 +19,34 @@ export default function RutaClientes() {
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [modo, setModo] = useState<'visitas' | 'todos'>('visitas');
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
+  const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
+
+  const captureGps = useCallback(async (cliente: any) => {
+    if (!navigator.geolocation) {
+      toast.error('Tu navegador no soporta GPS');
+      return;
+    }
+    setCapturingGpsId(cliente.id);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        await offlineMutate('clientes', 'update', {
+          ...cliente,
+          gps_lat: latitude,
+          gps_lng: longitude,
+        });
+        refetch();
+        setCapturingGpsId(null);
+        toast.success(`GPS guardado para ${cliente.nombre}`);
+      },
+      (err) => {
+        setCapturingGpsId(null);
+        toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }, [offlineMutate]);
 
   const { data: clientes, isLoading, refetch } = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
