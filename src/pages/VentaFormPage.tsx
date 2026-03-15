@@ -70,6 +70,11 @@ export default function VentaFormPage() {
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
 
+  // Entrega integration for pedidos
+  const isPedidoConfirmado = !isNew && form.tipo === 'pedido' && form.status === 'confirmado';
+  const { data: entregaExistente } = useEntregaByPedido(isPedidoConfirmado || (!isNew && form.tipo === 'pedido') ? form.id : undefined);
+  const crearEntrega = useCrearEntrega();
+
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
