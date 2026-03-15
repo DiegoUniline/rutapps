@@ -172,7 +172,7 @@ function NavegacionContent() {
   const stopNavigation = () => {
     setNavigatingTo(null);
     setDirections(null);
-    // Reset to show all
+    setCurrentStepIdx(0);
     if (mapRef.current && stops.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
