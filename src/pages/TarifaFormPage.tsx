@@ -357,6 +357,13 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">{getValueField()}</td>
                               <td className="py-2 px-3">
+                                <select className="input-odoo text-xs w-full" value={newLinea.base_precio}
+                                  onChange={e => setNewLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
+                                  <option value="sin_impuestos">Sin impuestos</option>
+                                  <option value="con_impuestos">Con impuestos</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3">
                                 <input type="number" className="input-odoo text-right text-xs w-full" placeholder="%"
                                   value={newLinea.comision_pct || ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
                               </td>
