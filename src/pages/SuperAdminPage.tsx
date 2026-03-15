@@ -10,6 +10,7 @@ import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
 import AdminInvoicesTab from '@/components/admin/AdminInvoicesTab';
 import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
+import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
