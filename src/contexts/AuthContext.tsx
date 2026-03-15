@@ -44,19 +44,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // 1. Set up listener FIRST (non-blocking — no awaits inside callback)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    let initialised = false;
+
+    // 1. Set up listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignore events that just refresh the token — user is still logged in
+      if (event === 'TOKEN_REFRESHED') return;
+
+      // Only sign out when the user explicitly signs out
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        setEmpresa(null);
+        setLoading(false);
+        return;
+      }
+
       const u = session?.user ?? null;
       setUser(u);
-      // Fire-and-forget: load profile data without blocking
       loadUserData(u).finally(() => setLoading(false));
+      initialised = true;
     });
 
     // 2. Then restore session from storage
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      loadUserData(u).finally(() => setLoading(false));
+      if (!initialised) {
+        const u = session?.user ?? null;
+        setUser(u);
+        loadUserData(u).finally(() => setLoading(false));
+      }
     });
 
     return () => subscription.unsubscribe();
