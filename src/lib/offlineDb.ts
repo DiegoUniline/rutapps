@@ -38,13 +38,15 @@ class OfflineDatabase extends Dexie {
   descarga_ruta!: Table;
   descarga_ruta_lineas!: Table;
   promociones!: Table;
+  entregas!: Table;
+  entrega_lineas!: Table;
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
   cacheTimestamps!: Table<CacheTimestamp, string>;
 
   constructor() {
     super('UnilineOffline');
-    this.version(2).stores({
+    this.version(3).stores({
       clientes: 'id, empresa_id, vendedor_id, status, nombre',
       productos: 'id, empresa_id, codigo, nombre, status',
       vendedores: 'id, empresa_id',
@@ -65,6 +67,8 @@ class OfflineDatabase extends Dexie {
       descarga_ruta: 'id, empresa_id, carga_id',
       descarga_ruta_lineas: 'id, descarga_id',
       promociones: 'id, empresa_id, activa',
+      entregas: 'id, empresa_id, vendedor_ruta_id, status, pedido_id',
+      entrega_lineas: 'id, entrega_id, producto_id',
       syncQueue: '++id, table, createdAt',
       cacheTimestamps: 'table',
     });
