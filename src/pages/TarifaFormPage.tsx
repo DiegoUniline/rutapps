@@ -36,6 +36,7 @@ const EMPTY_LINEA = {
   descuento_max: 0,
   margen_pct: 0,
   descuento_pct: 0,
+  comision_pct: 0,
   redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
 };
