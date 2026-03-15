@@ -348,6 +348,28 @@
   }
 }
 
+  /* Inline edit cells — global pattern */
+  .inline-edit-cell {
+    @apply text-[13px] min-h-[24px] px-1.5 py-0.5 rounded-md block;
+    cursor: text;
+  }
+  .inline-edit-idle {
+    @apply hover:bg-accent transition-colors;
+  }
+  .inline-edit-readonly {
+    cursor: default;
+  }
+  .inline-edit-input {
+    @apply w-full border border-input rounded-md px-1.5 py-0.5 text-[13px]
+           bg-card focus:outline-none focus:ring-2 focus:ring-ring/30 focus:border-primary
+           transition-all;
+    background-color: hsl(var(--accent));
+  }
+  .inline-edit-invalid {
+    @apply border-destructive focus:ring-destructive/30;
+  }
+}
+
 /* Safe area for mobile bottom nav */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
