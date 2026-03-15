@@ -7,7 +7,7 @@ export function useDevoluciones(search?: string) {
     queryFn: async () => {
       let q = supabase
         .from('devoluciones')
-        .select('*, vendedores(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos(codigo, nombre))')
+        .select('id, fecha, tipo, notas, vendedor_id, cliente_id, user_id, vendedores(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos(codigo, nombre))')
         .order('fecha', { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
@@ -38,20 +38,23 @@ export function useSaveDevolucion() {
         if (linErr) throw linErr;
       }
 
-      // Update carga_lineas if linked to a carga
-      if (devolucion.carga_id) {
-        for (const l of lineas) {
-          const { data: cl } = await supabase
-            .from('carga_lineas')
-            .select('id, cantidad_devuelta')
-            .eq('carga_id', devolucion.carga_id)
-            .eq('producto_id', l.producto_id)
-            .maybeSingle();
-          if (cl) {
-            await supabase.from('carga_lineas').update({
-              cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + l.cantidad,
+      // Bulk update carga_lineas if linked to a carga
+      if (devolucion.carga_id && lineas.length > 0) {
+        const prodIds = lineas.map(l => l.producto_id);
+        const { data: cls } = await supabase
+          .from('carga_lineas')
+          .select('id, producto_id, cantidad_devuelta')
+          .eq('carga_id', devolucion.carga_id)
+          .in('producto_id', prodIds);
+
+        if (cls && cls.length > 0) {
+          const updates = cls.map(cl => {
+            const linea = lineas.find(l => l.producto_id === cl.producto_id);
+            return supabase.from('carga_lineas').update({
+              cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + (linea?.cantidad ?? 0),
             }).eq('id', cl.id);
-          }
+          });
+          await Promise.all(updates);
         }
       }
 

@@ -8,9 +8,9 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('*, clientes(nombre), vendedores(nombre)')
+        .select('id, folio, fecha, total, subtotal, iva_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
         .order('created_at', { ascending: false });
-      if (search) q = q.or(`folio.ilike.%${search}%,clientes.nombre.ilike.%${search}%`);
+      if (search) q = q.or(`folio.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as any);
       const { data, error } = await q;
@@ -42,12 +42,12 @@ export function useSaveVenta() {
     mutationFn: async (venta: Partial<Venta> & { id?: string }) => {
       const { id, clientes, vendedores, tarifas, almacenes, venta_lineas, ...rest } = venta as any;
       if (id) {
-        const { data, error } = await supabase.from('ventas').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('ventas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('ventas').insert({ ...rest, empresa_id: profile!.empresa_id }).select().single();
+        const { data, error } = await supabase.from('ventas').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -65,18 +65,16 @@ export function useSaveVentaLinea() {
     mutationFn: async (linea: Partial<VentaLinea> & { id?: string }) => {
       const { id, productos, unidades, ...rest } = linea as any;
       if (id) {
-        const { data, error } = await supabase.from('venta_lineas').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('venta_lineas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('venta_lineas').insert(rest).select().single();
+        const { data, error } = await supabase.from('venta_lineas').insert(rest).select('id').single();
         if (error) throw error;
         return data;
       }
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['venta'] });
-    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['venta'] }),
   });
 }
 

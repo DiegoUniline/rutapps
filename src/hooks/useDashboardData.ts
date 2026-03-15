@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, format } from 'date-fns';
 
 export type DateRange = { from: Date; to: Date };
 
-function fmt(d: Date) { return format(d, 'yyyy-MM-dd'); }
+function fmt(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export function useDashboardVentas(range: DateRange, vendedorId?: string) {
   return useQuery({
@@ -82,7 +86,8 @@ export function useDashboardCartera() {
         .eq('condicion_pago', 'credito')
         .gt('saldo_pendiente', 0)
         .neq('status', 'cancelado' as any)
-        .order('fecha', { ascending: true });
+        .order('fecha', { ascending: true })
+        .limit(500);
       if (error) throw error;
       return data ?? [];
     },
@@ -92,6 +97,7 @@ export function useDashboardCartera() {
 export function useDashboardStock() {
   return useQuery({
     queryKey: ['dashboard-stock'],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('productos')
@@ -110,7 +116,6 @@ export function useDashboardTopProductos(range: DateRange) {
   return useQuery({
     queryKey: ['dashboard-top-productos', fmt(range.from), fmt(range.to)],
     queryFn: async () => {
-      // Get venta_lineas joined with ventas for date filter
       const { data, error } = await supabase
         .from('venta_lineas')
         .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status)')
@@ -119,7 +124,6 @@ export function useDashboardTopProductos(range: DateRange) {
         .neq('ventas.status', 'cancelado' as any);
       if (error) throw error;
 
-      // Aggregate by product
       const map = new Map<string, { qty: number; total: number }>();
       (data ?? []).forEach((l: any) => {
         const existing = map.get(l.producto_id) ?? { qty: 0, total: 0 };
@@ -128,8 +132,7 @@ export function useDashboardTopProductos(range: DateRange) {
         map.set(l.producto_id, existing);
       });
 
-      // Get product names
-      const ids = [...map.keys()].slice(0, 10);
+      const ids = [...map.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 10).map(([id]) => id);
       if (ids.length === 0) return [];
       const { data: prods } = await supabase
         .from('productos')
@@ -142,8 +145,7 @@ export function useDashboardTopProductos(range: DateRange) {
           const agg = map.get(id)!;
           return { id, nombre: prod?.nombre ?? 'N/A', codigo: prod?.codigo ?? '', qty: agg.qty, total: agg.total };
         })
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 10);
+        .sort((a, b) => b.total - a.total);
     },
   });
 }
@@ -162,13 +164,11 @@ export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) 
       const { data, error } = await q;
       if (error) throw error;
 
-      // Group by date
       const map = new Map<string, number>();
       (data ?? []).forEach(v => {
         map.set(v.fecha, (map.get(v.fecha) ?? 0) + Number(v.total ?? 0));
       });
 
-      // Fill missing days
       const result: { date: string; total: number }[] = [];
       const d = new Date(range.from);
       while (d <= range.to) {

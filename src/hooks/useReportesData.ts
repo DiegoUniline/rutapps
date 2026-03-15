@@ -7,6 +7,7 @@ export function useReportesData(desde: string, hasta: string) {
   return useQuery({
     queryKey: ['reportes-full', empresa?.id, desde, hasta],
     enabled: !!empresa?.id,
+    staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async () => {
       const eid = empresa!.id;
 
@@ -38,7 +39,6 @@ export function useReportesData(desde: string, hasta: string) {
       const totalGastos = gastos.reduce((s, g) => s + (g.monto ?? 0), 0);
       const totalPendiente = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
-      // Daily ventas
       const dailyMap: Record<string, number> = {};
       for (const v of ventas) { dailyMap[v.fecha] = (dailyMap[v.fecha] ?? 0) + (v.total ?? 0); }
       const dailyVentas = Object.entries(dailyMap).sort().map(([fecha, total]) => ({ fecha, total }));
@@ -81,7 +81,6 @@ export function useReportesData(desde: string, hasta: string) {
         return s + ((prod?.costo ?? 0) * (l.cantidad ?? 0));
       }, 0);
 
-      // Gastos por concepto
       const gastosPorConcepto: Record<string, number> = {};
       for (const g of gastos) {
         gastosPorConcepto[g.concepto] = (gastosPorConcepto[g.concepto] ?? 0) + (g.monto ?? 0);
@@ -135,7 +134,6 @@ export function useReportesData(desde: string, hasta: string) {
         totalPiezas: (d.devolucion_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad ?? 0), 0),
       }));
 
-      // Devoluciones por motivo
       const devPorMotivo: Record<string, number> = {};
       for (const d of devoluciones) {
         for (const l of ((d as any).devolucion_lineas ?? [])) {
@@ -144,26 +142,18 @@ export function useReportesData(desde: string, hasta: string) {
       }
 
       return {
-        // resumen
         totalVentas, totalCobros, totalGastos, totalPendiente,
         numVentas: ventas.length, numCobros: cobros.length,
         utilidad: totalVentas - totalGastos, dailyVentas,
-        // por producto
         ventasPorProducto,
-        // por cliente
         ventasPorCliente,
-        // vendedores
         topVendedores,
-        // utilidad
         costoTotal, gastosDesglose,
         utilidadBruta: totalVentas - costoTotal,
         utilidadNeta: totalVentas - costoTotal - totalGastos,
-        // entregas
         entregas, entregasPorRuta: Object.values(entregasPorRuta),
         totalEntregas: entregas.length,
-        // cargas
         cargasData,
-        // devoluciones
         devData, devPorMotivo,
         totalDevoluciones: devoluciones.length,
       };

@@ -7,7 +7,7 @@ export function useCargas(search?: string, statusFilter?: string) {
     queryFn: async () => {
       let q = supabase
         .from('cargas')
-        .select('*, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
         .order('fecha', { ascending: false });
       if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
@@ -24,7 +24,7 @@ export function useCarga(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('*, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
+        .select('id, fecha, status, vendedor_id, almacen_id, repartidor_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
         .eq('id', id!)
         .single();
       if (error) throw error;
@@ -37,10 +37,11 @@ export function useCarga(id?: string) {
 export function useCargaActiva(vendedorId?: string) {
   return useQuery({
     queryKey: ['carga-activa', vendedorId],
+    staleTime: 30 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('*, carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('vendedor_id', vendedorId!)
         .in('status', ['pendiente', 'en_ruta'])
         .order('fecha', { ascending: false })
@@ -59,12 +60,12 @@ export function useSaveCarga() {
     mutationFn: async (carga: any) => {
       const { id, vendedores, carga_lineas, ...rest } = carga;
       if (id) {
-        const { data, error } = await supabase.from('cargas').update(rest).eq('id', id).select().single();
+        const { data, error } = await supabase.from('cargas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: profile!.empresa_id }).select().single();
+        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -81,7 +82,6 @@ export function useSaveCargaLineas() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ cargaId, lineas }: { cargaId: string; lineas: { producto_id: string; cantidad_cargada: number }[] }) => {
-      // Delete existing lines and re-insert
       await supabase.from('carga_lineas').delete().eq('carga_id', cargaId);
       if (lineas.length > 0) {
         const { error } = await supabase.from('carga_lineas').insert(
