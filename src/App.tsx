@@ -55,6 +55,7 @@ const RutaDevolucion = lazy(() => import("@/pages/ruta/RutaDevolucion"));
 const RutaEntregas = lazy(() => import("@/pages/ruta/RutaEntregas"));
 const RutaDescarga = lazy(() => import("@/pages/ruta/RutaDescarga"));
 const RutaMapaPage = lazy(() => import("@/pages/ruta/RutaMapaPage"));
+const RutaPerfil = lazy(() => import("@/pages/ruta/RutaPerfil"));
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,7 @@ function AppRoutes() {
           <Route path="stock" element={<RutaStock />} />
           <Route path="gastos" element={<RutaGastos />} />
           <Route path="entregas" element={<RutaEntregas />} />
+          <Route path="perfil" element={<RutaPerfil />} />
         </Route>
         <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
         <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
