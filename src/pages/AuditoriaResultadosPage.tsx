@@ -229,6 +229,9 @@ export default function AuditoriaResultadosPage() {
               Almacén: {almacenNombre} · {fmtDate(auditoria?.fecha)}
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+            <FileText className="h-4 w-4 mr-1" /> PDF
+          </Button>
           <Badge variant={badge?.variant}>{badge?.label}</Badge>
         </div>
 
