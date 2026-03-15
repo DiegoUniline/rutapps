@@ -370,6 +370,51 @@ export default function VentaFormPage() {
     if (newStatus === 'cancelado' && !confirm('¿Cancelar esta venta?')) return;
     setForm(prev => ({ ...prev, status: newStatus }));
     await saveVenta.mutateAsync({ id: form.id, status: newStatus } as any);
+
+    // Generate commissions when confirming
+    if (newStatus === 'confirmado' && form.vendedor_id && form.tarifa_id) {
+      try {
+        // Fetch tarifa_lineas with comision_pct for this tarifa
+        const { data: tarifaLineas } = await supabase
+          .from('tarifa_lineas')
+          .select('comision_pct, aplica_a, producto_ids, clasificacion_ids')
+          .eq('tarifa_id', form.tarifa_id);
+
+        if (tarifaLineas && tarifaLineas.length > 0) {
+          const comisionRows = lineas
+            .filter(l => l.id && l.producto_id && l.total && l.total > 0)
+            .map(l => {
+              // Find matching tarifa linea for this product
+              const match = tarifaLineas.find(tl => {
+                if (tl.aplica_a === 'todos') return true;
+                if (tl.aplica_a === 'producto' && tl.producto_ids?.includes(l.producto_id!)) return true;
+                return false;
+              });
+              const comPct = match?.comision_pct ?? 0;
+              if (comPct <= 0) return null;
+              return {
+                empresa_id: empresa!.id,
+                venta_id: form.id!,
+                venta_linea_id: l.id!,
+                vendedor_id: form.vendedor_id!,
+                producto_id: l.producto_id!,
+                monto_venta: l.total!,
+                comision_pct: comPct,
+                comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100,
+                fecha_venta: form.fecha || new Date().toISOString().slice(0, 10),
+              };
+            })
+            .filter(Boolean);
+
+          if (comisionRows.length > 0) {
+            await supabase.from('venta_comisiones').insert(comisionRows as any);
+          }
+        }
+      } catch (err) {
+        console.error('Error generating commissions', err);
+      }
+    }
+
     toast.success(`Estado: ${newStatus}`);
   };
 
