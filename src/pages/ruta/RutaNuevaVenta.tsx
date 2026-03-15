@@ -45,9 +45,10 @@ interface CuentaPendiente {
   montoAplicar: number;
 }
 
-type Step = 'cliente' | 'devoluciones' | 'productos' | 'resumen' | 'pago';
+type Step = 'tipo' | 'cliente' | 'devoluciones' | 'productos' | 'resumen' | 'pago';
 
 const STEP_LABELS: Record<Step, string> = {
+  tipo: 'Tipo',
   cliente: 'Cliente',
   devoluciones: 'Devol.',
   productos: 'Pedido',
@@ -55,7 +56,7 @@ const STEP_LABELS: Record<Step, string> = {
   pago: 'Pago',
 };
 
-const STEPS: Step[] = ['cliente', 'devoluciones', 'productos', 'resumen', 'pago'];
+const STEPS: Step[] = ['tipo', 'cliente', 'devoluciones', 'productos', 'resumen', 'pago'];
 
 const MOTIVOS: { value: DevolucionItem['motivo']; label: string }[] = [
   { value: 'no_vendido', label: 'No vendido' },
