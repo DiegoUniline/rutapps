@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 export default function RutaPerfil() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [showChangePass, setShowChangePass] = useState(false);
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
