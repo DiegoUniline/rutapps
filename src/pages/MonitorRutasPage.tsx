@@ -75,7 +75,8 @@ function MonitorContent() {
   const { data: clientesHoy } = useQuery({
     queryKey: ['monitor-clientes-hoy', empresa?.id, diaVisita],
     enabled: !!empresa?.id,
-    refetchInterval: 30000,
+    staleTime: 60 * 1000,
+    refetchInterval: 60000,
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
