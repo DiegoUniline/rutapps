@@ -417,6 +417,7 @@ export default function ProductoFormPage() {
       if (unidades && unidades.length > 0 && !prev.unidad_venta_id) {
         const pieza = unidades.find(u => u.nombre.toLowerCase() === 'pieza') ?? unidades[0];
         updates.unidad_venta_id = pieza.id;
+        updates.unidad_compra_id = pieza.id;
       }
       if (listas && listas.length > 0 && !prev.lista_id) {
         const general = listas.find(l => l.nombre.toLowerCase().includes('general')) ?? listas[0];
