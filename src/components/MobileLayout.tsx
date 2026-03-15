@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle } from 'lucide-react';
+import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle, Moon, Sun } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
+import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 
 const tabs = [
