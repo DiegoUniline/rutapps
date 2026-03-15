@@ -25,6 +25,7 @@ import CargasListPage from "@/pages/CargasListPage";
 import CargaFormPage from "@/pages/CargaFormPage";
 import AlmacenesPage from "@/pages/AlmacenesPage";
 import ComprasPage from "@/pages/ComprasPage";
+import CompraFormPage from "@/pages/CompraFormPage";
 import LotesPage from "@/pages/LotesPage";
 import CuentasCobrarPage from "@/pages/CuentasCobrarPage";
 import CuentasPagarPage from "@/pages/CuentasPagarPage";
@@ -118,6 +119,7 @@ function AppRoutes() {
             <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
             <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
             <Route path="/almacen/compras" element={<ComprasPage />} />
+            <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
             <Route path="/almacen/lotes" element={<LotesPage />} />
             <Route path="/almacen/descargas" element={<DescargasPage />} />
             {/* Finanzas module */}
