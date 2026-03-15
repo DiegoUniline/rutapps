@@ -82,7 +82,9 @@ export default function CargasListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
-                <TableHead>Vendedor</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead>Destino</TableHead>
+                <TableHead>Responsable</TableHead>
                 <TableHead>Productos</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -90,14 +92,18 @@ export default function CargasListPage() {
             </TableHeader>
             <TableBody>
               {(!cargas || cargas.length === 0) && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell></TableRow>
               )}
               {cargas?.map((c: any) => {
                 const sc = statusConfig[c.status] ?? statusConfig.pendiente;
                 const totalItems = (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0);
+                const origen = (c as any).almacen_origen?.nombre ?? '—';
+                const destino = (c as any).almacen_destino?.nombre ?? '—';
                 return (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/almacen/cargas/${c.id}`)}>
                     <TableCell className="font-medium">{fmtDate(c.fecha)}</TableCell>
+                    <TableCell className="text-[13px]">{origen}</TableCell>
+                    <TableCell className="text-[13px]">{destino}</TableCell>
                     <TableCell>{(c.vendedores as any)?.nombre ?? '—'}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1 text-muted-foreground">
@@ -108,6 +114,7 @@ export default function CargasListPage() {
                     <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
                   </TableRow>
                 );
+              })}
               })}
             </TableBody>
           </Table>

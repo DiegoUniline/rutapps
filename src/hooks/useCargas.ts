@@ -24,7 +24,7 @@ export function useCarga(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('id, fecha, status, vendedor_id, almacen_id, repartidor_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
+        .select('id, fecha, status, vendedor_id, almacen_id, almacen_destino_id, repartidor_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), almacen_origen:almacen_id(nombre), almacen_destino:almacen_destino_id(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
         .eq('id', id!)
         .single();
       if (error) throw error;
