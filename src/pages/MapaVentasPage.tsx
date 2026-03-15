@@ -291,22 +291,23 @@ export default function MapaVentasPage() {
 
         {showFilters && (
           <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 min-w-[160px]">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Vendedor</label>
-              <select value={vendedorFilter} onChange={e => { setVendedorFilter(e.target.value); setRouteResult(null); }}
-                className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-                <option value="">Todos</option>
-                {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
+              <SearchableSelect
+                options={[{ value: '', label: 'Todos' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+                value={vendedorFilter}
+                onChange={val => { setVendedorFilter(val); setRouteResult(null); }}
+                placeholder="Vendedor..."
+              />
             </div>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 min-w-[160px]">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Tipo</label>
-              <select value={tipoFilter} onChange={e => { setTipoFilter(e.target.value); setRouteResult(null); }}
-                className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-                <option value="">Todos</option>
-                <option value="pedido">Pedido</option>
-                <option value="venta_directa">Venta directa</option>
-              </select>
+              <SearchableSelect
+                options={[{ value: '', label: 'Todos' }, { value: 'pedido', label: 'Pedido' }, { value: 'venta_directa', label: 'Venta directa' }]}
+                value={tipoFilter}
+                onChange={val => { setTipoFilter(val); setRouteResult(null); }}
+                placeholder="Tipo..."
+              />
             </div>
             {activeFiltersCount > 0 && (
               <button onClick={() => { setVendedorFilter(''); setTipoFilter(''); }}
