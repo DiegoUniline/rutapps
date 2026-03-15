@@ -1154,11 +1154,11 @@ export default function RutaNuevaVenta() {
             )}
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom space-y-1.5">
             <div className="flex gap-2">
-              <button onClick={handleSaveOnly} disabled={saving || cart.length === 0}
-                className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold disabled:opacity-40 active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
-                <Save className="h-4 w-4" /> Guardar
+              <button onClick={() => { setCart([]); setDevoluciones([]); setStep('tipo'); navigate('/ruta'); }}
+                className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+                Cancelar
               </button>
               <button onClick={goToPayment} disabled={cart.length === 0}
                 className="flex-[2] bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5">
