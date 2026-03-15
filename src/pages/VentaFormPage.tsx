@@ -519,10 +519,12 @@ export default function VentaFormPage() {
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
                 ) : (
-                  <select className="input-odoo" value={form.tarifa_id ?? ''} onChange={e => set('tarifa_id', e.target.value || null)}>
-                    <option value="">Sin tarifa</option>
-                    {tarifaOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <SearchableSelect
+                    options={tarifaOptions}
+                    value={form.tarifa_id ?? ''}
+                    onChange={val => set('tarifa_id', val || null)}
+                    placeholder="Buscar tarifa..."
+                  />
                 )}
               </div>
               <div>
