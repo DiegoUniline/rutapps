@@ -206,6 +206,21 @@ export default function RutaClientes() {
               </div>
 
               <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => captureGps(c)}
+                  disabled={capturingGpsId === c.id}
+                  className={cn(
+                    "w-11 h-11 rounded-xl flex items-center justify-center active:scale-90 transition-transform",
+                    c.gps_lat && c.gps_lng
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                  )}
+                  title={c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
+                >
+                  {capturingGpsId === c.id
+                    ? <Loader2 className="h-5 w-5 animate-spin" />
+                    : <Crosshair className="h-5 w-5" />}
+                </button>
                 {c.gps_lat && c.gps_lng && (
                   <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
                     className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
@@ -214,7 +229,7 @@ export default function RutaClientes() {
                 )}
                 {c.telefono && (
                   <a href={`tel:${c.telefono}`}
-                    className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 active:scale-90 transition-transform">
+                    className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform">
                     <Phone className="h-5 w-5" />
                   </a>
                 )}
