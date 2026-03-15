@@ -102,12 +102,21 @@ export default function VentaFormPage() {
   useEffect(() => {
     if (existingVenta) {
       setForm(existingVenta);
-      const existingLines = existingVenta.venta_lineas ?? [];
+      const existingLines = (existingVenta.venta_lineas ?? []).map((l: any) => {
+        // Enrich with display labels from productosList
+        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        const unidadData = prod ? (prod as any).unidades_venta : null;
+        const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
+        const taxes: string[] = [];
+        if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
+        if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
+        return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
+      });
       setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
     } else if (isNew) {
       setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
     }
-  }, [existingVenta, isNew, profile]);
+  }, [existingVenta, isNew, profile, productosList]);
 
   // Fetch pagos (cobro_aplicaciones) for this venta
   const { data: pagosData } = useQuery({
