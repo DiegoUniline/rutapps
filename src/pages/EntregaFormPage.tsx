@@ -217,9 +217,6 @@ export default function EntregaFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {isNew && (
-            <Button onClick={handleCreateManual} size="sm">Crear</Button>
-          )}
           {/* Surtir todo — only in borrador when lines exist */}
           {!isNew && isBorrador && lineas.length > 0 && !allLinesDone && (
             <Button onClick={handleSurtirTodo} size="sm" variant="default" disabled={surtirTodoMut.isPending}>
