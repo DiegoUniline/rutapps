@@ -232,17 +232,54 @@ function MonitorContent() {
             <Activity className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold text-foreground">Monitor de productividad</h1>
           </div>
-          <Badge variant="secondary" className="text-[11px]">{DIA_HOY_LABEL}</Badge>
+          <Badge variant="secondary" className="text-[11px]">{diaLabel}</Badge>
 
-          <div className="flex flex-col gap-0.5 min-w-[160px]">
-            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Vendedor</label>
-            <SearchableSelect
-              options={[{ value: '', label: 'Todos' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
-              value={vendedorFilter}
-              onChange={setVendedorFilter}
-              placeholder="Vendedor..."
-            />
-          </div>
+          {/* Date picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {format(selectedDate, "dd MMM yyyy", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Vendedor multi-select */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <Filter className="h-3.5 w-3.5" />
+                {vendedorFilters.length === 0 ? 'Todos los vendedores' : `${vendedorFilters.length} vendedor(es)`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2 pointer-events-auto" align="start">
+              <div className="space-y-1 max-h-60 overflow-auto">
+                {(vendedores ?? []).map(v => (
+                  <label key={v.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-xs">
+                    <Checkbox
+                      checked={vendedorFilters.includes(v.id)}
+                      onCheckedChange={() => toggleVendedor(v.id)}
+                    />
+                    <span className="truncate">{v.nombre}</span>
+                  </label>
+                ))}
+              </div>
+              {vendedorFilters.length > 0 && (
+                <Button variant="ghost" size="sm" className="w-full mt-1 text-xs h-7" onClick={() => setVendedorFilters([])}>
+                  Limpiar filtros
+                </Button>
+              )}
+            </PopoverContent>
+          </Popover>
 
           <div className="flex items-center gap-1 ml-auto">
             <button onClick={() => setView('map')} className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors", view === 'map' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
