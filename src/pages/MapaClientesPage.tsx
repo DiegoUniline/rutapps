@@ -54,15 +54,18 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
   icon: any; label: string; value: string | number; sub?: string; color: string;
 }) {
   return (
-    <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl px-4 py-3 shadow-sm min-w-[140px]">
-      <div className="flex items-center gap-2 mb-1">
-        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", color)}>
-          <Icon className="h-3.5 w-3.5 text-white" />
+    <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl px-2.5 py-2 md:px-4 md:py-3 shadow-sm min-w-0 md:min-w-[140px]">
+      <div className="flex items-center gap-1.5 md:gap-2 md:mb-1">
+        <div className={cn("w-5 h-5 md:w-7 md:h-7 rounded-md md:rounded-lg flex items-center justify-center shrink-0", color)}>
+          <Icon className="h-2.5 w-2.5 md:h-3.5 md:w-3.5 text-white" />
         </div>
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{label}</span>
+        <div className="flex flex-col md:flex-col">
+          <span className="text-[8px] md:text-[10px] uppercase tracking-wider font-semibold text-muted-foreground leading-tight">{label}</span>
+          <div className="text-sm md:text-xl font-bold text-foreground leading-tight">{value}</div>
+        </div>
       </div>
-      <div className="text-xl font-bold text-foreground leading-tight">{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+      <div className="hidden md:block text-xl font-bold text-foreground leading-tight">{value}</div>
+      {sub && <div className="hidden md:block text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
