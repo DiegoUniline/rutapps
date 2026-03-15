@@ -260,7 +260,7 @@ function MonitorContent() {
       <div className="flex-1 flex overflow-hidden">
         {view === 'map' ? (
           /* MAP VIEW */
-          <div className="flex-1 relative">
+          <div className="flex-1 relative" style={{ minHeight: 300 }}>
             {isLoaded ? (
               <GoogleMap
                 onLoad={onMapLoad}
