@@ -519,6 +519,15 @@ export default function VentaFormPage() {
           {!isNew && form.status === 'borrador' && (
             <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
+          {isNew && (
+            <button
+              onClick={async () => { await handleSave(); }}
+              disabled={saveVenta.isPending}
+              className="btn-odoo-secondary"
+            >
+              <Save className="h-3.5 w-3.5" /> Guardar borrador
+            </button>
+          )}
           {/* Entrega button for pedidos — 1:N partial deliveries */}
           {canCreateEntrega && (
             <button

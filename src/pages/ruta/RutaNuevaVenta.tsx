@@ -1323,7 +1323,7 @@ export default function RutaNuevaVenta() {
             <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito}
               className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
               <Check className="h-4 w-4" />
-              {saving ? 'Guardando...' : totalACobrar > 0 ? `Confirmar y cobrar $${fmt(totalACobrar)}` : 'Confirmar venta a crédito'}
+              {saving ? 'Guardando...' : totalACobrar > 0 ? `Confirmar y cobrar $${fmt(totalACobrar)}` : 'Confirmar venta'}
             </button>
           </div>
         </div>
