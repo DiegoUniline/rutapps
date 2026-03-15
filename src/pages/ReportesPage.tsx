@@ -175,6 +175,7 @@ export default function ReportesPage() {
     { key: 'cargas', label: 'Cargas', icon: BoxIcon },
     { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw },
     { key: 'utilidad', label: 'Utilidad', icon: DollarSign },
+    { key: 'promociones', label: 'Promociones', icon: TrendingUp },
   ];
 
   const handleExport = (format: 'excel' | 'pdf') => {
