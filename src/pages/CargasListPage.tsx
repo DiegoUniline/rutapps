@@ -14,7 +14,9 @@ import { fmtDate } from '@/lib/utils';
 
 const CARGAS_COLUMNS: ExportColumn[] = [
   { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
-  { key: 'vendedor_nombre', header: 'Vendedor', width: 25 },
+  { key: 'origen', header: 'Origen', width: 20 },
+  { key: 'destino', header: 'Destino', width: 20 },
+  { key: 'vendedor_nombre', header: 'Responsable', width: 25 },
   { key: 'status', header: 'Estado', width: 12 },
 ];
 
