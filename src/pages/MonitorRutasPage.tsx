@@ -196,14 +196,23 @@ function MonitorContent() {
     return Array.from(map.entries()).map(([id, d]) => ({ id, ...d }));
   }, [visits]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    if (withGps.length > 0) {
+  // Auto-zoom to fit markers when filter changes
+  const fitBounds = useCallback(() => {
+    if (mapRef.current && withGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       withGps.forEach(c => bounds.extend({ lat: c.gps_lat!, lng: c.gps_lng! }));
-      map.fitBounds(bounds, 60);
+      mapRef.current.fitBounds(bounds, 60);
     }
   }, [withGps]);
+
+  useEffect(() => {
+    fitBounds();
+  }, [fitBounds]);
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    fitBounds();
+  }, [fitBounds]);
 
   const statusColor = (s: VisitStatus) => {
     switch (s) {
