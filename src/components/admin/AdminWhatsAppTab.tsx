@@ -208,6 +208,36 @@ export default function AdminWhatsAppTab() {
     }
   }
 
+  async function sendAllTestTickets() {
+    if (!testPhone) { toast.error('Ingresa un número de teléfono arriba primero'); return; }
+    if (!savedToken) { toast.error('Configura el token de WhatsApp primero'); return; }
+    setSendingAll(true);
+    const tipos = templates.map(t => t.tipo);
+    let sent = 0;
+    for (const tipo of tipos) {
+      try {
+        const tpl = templates.find(t => t.tipo === tipo);
+        if (!tpl) continue;
+        const sampleData = getSampleData(tipo, tpl.campos, tpl.emoji, tpl.encabezado);
+        const result = await sendBillingTicketWhatsApp({
+          data: sampleData,
+          phone: testPhone,
+          waToken: savedToken,
+          customerEmail: 'test@rutapps.lovable.app',
+          textCaption: `${tpl.emoji} ${tpl.encabezado} (PRUEBA)`,
+        });
+        if (result.success) sent++;
+        else toast.error(`Error en ${TEMPLATE_META[tipo]?.label}: ${result.error}`);
+        // Small delay between sends
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (err: any) {
+        toast.error(`Error en ${TEMPLATE_META[tipo]?.label}: ${err.message}`);
+      }
+    }
+    toast.success(`${sent} de ${tipos.length} tickets enviados`);
+    setSendingAll(false);
+  }
+
   function toggleCampo(tipo: string, campo: string) {
     setTemplates(prev => prev.map(t => t.tipo === tipo ? { ...t, campos: { ...t.campos, [campo]: !t.campos[campo] } } : t));
   }
