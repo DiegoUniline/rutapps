@@ -653,7 +653,7 @@ export default function RutaNuevaVenta() {
   if (ticketInfo) {
     return (
       <TicketVenta
-        empresa={{ nombre: empresa?.nombre ?? '', telefono: empresa?.telefono, direccion: empresa?.direccion }}
+        empresa={{ nombre: empresa?.nombre ?? '', telefono: empresa?.telefono, direccion: empresa?.direccion, logo_url: empresa?.logo_url, rfc: empresa?.rfc }}
         folio={ticketInfo.folio}
         fecha={ticketInfo.fecha}
         clienteNombre={clienteNombre}
@@ -671,6 +671,7 @@ export default function RutaNuevaVenta() {
         })}
         subtotal={totals.subtotal}
         iva={totals.iva}
+        ieps={totals.ieps}
         total={totals.total}
         condicionPago={condicionPago}
         metodoPago={metodoPago}
