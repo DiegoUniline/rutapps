@@ -1209,6 +1209,103 @@ export type Database = {
           },
         ]
       }
+      movimientos_inventario: {
+        Row: {
+          almacen_destino_id: string | null
+          almacen_origen_id: string | null
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          notas: string | null
+          producto_id: string
+          referencia_id: string | null
+          referencia_tipo: string | null
+          tipo: Database["public"]["Enums"]["tipo_movimiento"]
+          unidad_id: string | null
+          user_id: string | null
+          vendedor_destino_id: string | null
+        }
+        Insert: {
+          almacen_destino_id?: string | null
+          almacen_origen_id?: string | null
+          cantidad?: number
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          producto_id: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo: Database["public"]["Enums"]["tipo_movimiento"]
+          unidad_id?: string | null
+          user_id?: string | null
+          vendedor_destino_id?: string | null
+        }
+        Update: {
+          almacen_destino_id?: string | null
+          almacen_origen_id?: string | null
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string
+          referencia_id?: string | null
+          referencia_tipo?: string | null
+          tipo?: Database["public"]["Enums"]["tipo_movimiento"]
+          unidad_id?: string | null
+          user_id?: string | null
+          vendedor_destino_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_inventario_almacen_destino_id_fkey"
+            columns: ["almacen_destino_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_almacen_origen_id_fkey"
+            columns: ["almacen_origen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimientos_inventario_vendedor_destino_id_fkey"
+            columns: ["vendedor_destino_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       optimizacion_rutas_log: {
         Row: {
           clientes_count: number
@@ -2658,6 +2755,7 @@ export type Database = {
       tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
       tipo_devolucion: "almacen" | "tienda"
+      tipo_movimiento: "entrada" | "salida" | "transferencia"
       tipo_promocion:
         | "descuento_porcentaje"
         | "descuento_monto"
@@ -2835,6 +2933,7 @@ export const Constants = {
       tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
       tipo_devolucion: ["almacen", "tienda"],
+      tipo_movimiento: ["entrada", "salida", "transferencia"],
       tipo_promocion: [
         "descuento_porcentaje",
         "descuento_monto",
