@@ -309,12 +309,16 @@ export default function AdminWhatsAppTab() {
           <div className="border-t border-border pt-4 space-y-3">
             <label className="text-sm font-medium">Teléfono de prueba</label>
             <div className="flex gap-2">
-              <Input placeholder="Número (ej: 5212345678900)" value={testPhone} onChange={e => setTestPhone(e.target.value)} />
+              <Input placeholder="Número (ej: 523171035768)" value={testPhone} onChange={e => setTestPhone(e.target.value)} />
               <Button variant="outline" onClick={sendTestMessage} disabled={testing || !savedToken}>
                 {testing ? 'Enviando...' : 'Enviar texto'}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Ingresa el número aquí y luego prueba cualquier ticket abajo.</p>
+            <Button className="w-full" onClick={sendAllTestTickets} disabled={sendingAll || !savedToken || !testPhone}>
+              <Send className="h-4 w-4 mr-1.5" />
+              {sendingAll ? 'Enviando los 4 tickets...' : 'Enviar los 4 tickets de prueba'}
+            </Button>
+            <p className="text-xs text-muted-foreground">Envía los 4 tipos de ticket como imagen al número de arriba.</p>
           </div>
         </CardContent>
       </Card>
