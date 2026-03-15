@@ -19,6 +19,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
   {
     label: 'Ventas',
     icon: ShoppingCart,
