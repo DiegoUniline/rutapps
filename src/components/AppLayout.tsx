@@ -167,7 +167,7 @@ function Breadcrumb() {
   const segments = location.pathname.split('/').filter(Boolean);
 
   const labels: Record<string, string> = {
-    productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes',
+    productos: 'Productos', tarifas: 'Tarifas', clientes: 'Clientes', dashboard: 'Dashboard',
     ventas: 'Ventas', almacen: 'Almacén', finanzas: 'Finanzas',
     reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
     demanda: 'Demanda', entregas: 'Entregas', 'reporte-entregas': 'Reporte entregas',
