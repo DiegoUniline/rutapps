@@ -157,7 +157,7 @@ function NavegacionContent() {
           setDirections(result);
           // Zoom in to user location at street level (like Google Maps nav)
           if (mapRef.current && userLocation) {
-            mapRef.current.panTo(userLocation);
+            mapRef.current.setCenter(userLocation);
             mapRef.current.setZoom(17);
           }
         } else {
