@@ -458,16 +458,15 @@ export default function CompraFormPage() {
                             <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                             <td className="py-1.5 px-2">
                               {isEditable ? (
-                                <select
-                                  className="input-odoo w-full text-xs"
+                                <SearchableSelect
+                                  options={(productosList as any[])?.map(p => ({
+                                    value: p.id,
+                                    label: `[${p.codigo}] ${p.nombre}`,
+                                  })) ?? []}
                                   value={line.producto_id ?? ''}
-                                  onChange={e => updateLinea(idx, 'producto_id', e.target.value)}
-                                >
-                                  <option value="">Seleccionar...</option>
-                                  {(productosList as any[])?.map(p => (
-                                    <option key={p.id} value={p.id}>[{p.codigo}] {p.nombre}</option>
-                                  ))}
-                                </select>
+                                  onChange={val => updateLinea(idx, 'producto_id', val)}
+                                  placeholder="Buscar producto..."
+                                />
                               ) : (
                                 <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${line.productos.nombre}` : '—'}</span>
                               )}
