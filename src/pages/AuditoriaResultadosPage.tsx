@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal, ClipboardCheck } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
