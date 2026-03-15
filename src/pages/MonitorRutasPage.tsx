@@ -134,13 +134,15 @@ function MonitorContent() {
       });
     });
 
-    const deliveredClients = new Map<string, any>();
+    const entregasByClient = new Map<string, any>();
     (entregasHoy ?? []).forEach((e: any) => {
-      if (e.cliente_id && e.clientes) {
-        const prev = deliveredClients.get(e.cliente_id);
-        deliveredClients.set(e.cliente_id, {
-          ...e.clientes,
+      if (e.cliente_id) {
+        const prev = entregasByClient.get(e.cliente_id);
+        const clientInfo = e.clientes || prev?.clientInfo;
+        entregasByClient.set(e.cliente_id, {
+          clientInfo,
           isDelivered: (prev?.isDelivered || false) || e.status === 'hecho',
+          hasEntrega: true,
           entregaFolio: e.folio,
           entregaStatus: e.status,
           vendedor_ruta_id: e.vendedor_ruta_id || e.vendedor_id,
