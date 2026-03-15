@@ -6,6 +6,7 @@ import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import ProductSearchInput from '@/components/ProductSearchInput';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
 import { useProductosForSelect, useUnidades, useAlmacenes, useTarifasForSelect, useTasasIva, useTasasIeps } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
@@ -46,8 +47,8 @@ function emptyLine(): Partial<VentaLinea> {
   };
 }
 
-// Editable columns in order for Tab navigation
-const EDITABLE_COLS = ['producto', 'unidad', 'cantidad', 'precio', 'descuento', 'iva', 'ieps'] as const;
+// Editable columns: producto(0), cantidad(1), descuento(2)
+const COL_COUNT = 3;
 
 export default function VentaFormPage() {
   const { id } = useParams();
