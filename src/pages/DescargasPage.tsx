@@ -41,21 +41,26 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
 
-  // Fetch vendor's sales for the day
+  // Fetch vendor's sales for the day or date range
+  const fInicio = descarga.fecha_inicio || descarga.fecha;
+  const fFin = descarga.fecha_fin || descarga.fecha;
   const { data: ventasDia } = useQuery({
-    queryKey: ['descarga-ventas-dia', descarga.vendedor_id, descarga.fecha],
+    queryKey: ['descarga-ventas-dia', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('ventas')
         .select('id, folio, total, condicion_pago, clientes(nombre)')
-        .eq('vendedor_id', descarga.vendedor_id!)
-        .eq('fecha', descarga.fecha)
+        .eq('empresa_id', descarga.empresa_id)
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin)
         .neq('status', 'cancelado')
         .order('created_at', { ascending: true });
+      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!descarga.vendedor_id,
+    enabled: true,
   });
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
@@ -105,7 +110,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <PackageCheck className="h-5 w-5" /> Revisión de liquidación
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {(descarga as any).vendedores?.nombre ?? 'Vendedor'} — {descarga.fecha}
+              {(descarga as any).vendedores?.nombre ?? 'Sin vendedor asignado'} — {
+                descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
+                  ? `${descarga.fecha_inicio} al ${descarga.fecha_fin}`
+                  : descarga.fecha
+              }
+              {!descarga.carga_id && ' (sin carga)'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -312,6 +322,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const [lineas, setLineas] = useState<DescargaLinea[]>([]);
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
   const [notas, setNotas] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
 
   // Fetch cargas en_ruta / completada
   const { data: cargas } = useQuery({
@@ -331,13 +343,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 
   const { lineas: lineasBase, efectivoEsperado, ventasContado, gastosTotal } = useDescargaCalculos(selectedCargaId);
 
+  const lineasBaseJson = JSON.stringify(lineasBase.map(l => l.producto_id));
   useEffect(() => {
     if (lineasBase.length > 0) {
       setLineas(lineasBase);
     } else {
       setLineas([]);
     }
-  }, [lineasBase]);
+  }, [lineasBaseJson]);
 
   const updateLinea = (idx: number, field: keyof DescargaLinea, value: any) => {
     setLineas(prev => prev.map((l, i) => {
@@ -357,39 +370,50 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const sinMotivo = lineas.filter(l => l.diferencia !== 0 && !l.motivo);
-      if (sinMotivo.length > 0) throw new Error('Todas las diferencias necesitan un motivo');
+      if (selectedCargaId) {
+        const sinMotivo = lineas.filter(l => l.diferencia !== 0 && !l.motivo);
+        if (sinMotivo.length > 0) throw new Error('Todas las diferencias necesitan un motivo');
+      }
 
       const efectivoReal = efectivoEntregado !== '' ? Number(efectivoEntregado) : efectivoEsperado;
 
+      const insertData: any = {
+        empresa_id: empresa!.id,
+        user_id: user!.id,
+        efectivo_esperado: efectivoEsperado,
+        efectivo_entregado: efectivoReal,
+        diferencia_efectivo: efectivoReal - efectivoEsperado,
+        notas: notas || null,
+      };
+
+      if (selectedCargaId) {
+        insertData.carga_id = selectedCargaId;
+        insertData.vendedor_id = (selectedCarga as any)?.vendedor_id ?? null;
+      }
+
+      if (fechaInicio) insertData.fecha_inicio = fechaInicio;
+      if (fechaFin) insertData.fecha_fin = fechaFin;
+
       const { data: descarga, error } = await supabase
         .from('descarga_ruta')
-        .insert({
-          empresa_id: empresa!.id,
-          carga_id: selectedCargaId!,
-          vendedor_id: (selectedCarga as any)?.vendedor_id ?? null,
-          user_id: user!.id,
-          efectivo_esperado: efectivoEsperado,
-          efectivo_entregado: efectivoReal,
-          diferencia_efectivo: efectivoReal - efectivoEsperado,
-          notas: notas || null,
-        } as any)
+        .insert(insertData)
         .select()
         .single();
       if (error) throw error;
 
-      const lineItems = lineas.map(l => ({
-        descarga_id: descarga.id,
-        producto_id: l.producto_id,
-        cantidad_esperada: l.cantidad_esperada,
-        cantidad_real: l.cantidad_real,
-        diferencia: l.diferencia,
-        motivo: l.diferencia !== 0 ? l.motivo : null,
-        notas: l.notas || null,
-      }));
-
-      const { error: lErr } = await supabase.from('descarga_ruta_lineas').insert(lineItems as any);
-      if (lErr) throw lErr;
+      if (lineas.length > 0) {
+        const lineItems = lineas.map(l => ({
+          descarga_id: descarga.id,
+          producto_id: l.producto_id,
+          cantidad_esperada: l.cantidad_esperada,
+          cantidad_real: l.cantidad_real,
+          diferencia: l.diferencia,
+          motivo: l.diferencia !== 0 ? l.motivo : null,
+          notas: l.notas || null,
+        }));
+        const { error: lErr } = await supabase.from('descarga_ruta_lineas').insert(lineItems as any);
+        if (lErr) throw lErr;
+      }
     },
     onSuccess: () => {
       toast.success(hayDiferencias ? 'Descarga enviada para aprobación' : 'Descarga completada');
@@ -408,17 +432,22 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         <h2 className="text-lg font-bold text-foreground">Nueva descarga de ruta</h2>
       </div>
 
-      {/* Step 1: Select carga */}
+      {/* Step 1: Select carga (optional) */}
       <div className="bg-card border border-border rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">1. Selecciona la carga</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3">1. Selecciona la carga (opcional)</h3>
+        <p className="text-xs text-muted-foreground mb-3">Si no hay carga o solo liquidas efectivo, puedes dejarlo sin seleccionar.</p>
         {!cargas || cargas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay cargas activas (en ruta o completadas)</p>
+          <p className="text-sm text-muted-foreground">No hay cargas activas</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {cargas.map((c: any) => (
               <button
                 key={c.id}
-                onClick={() => { setSelectedCargaId(c.id); setLineas([]); setEfectivoEntregado(''); }}
+                onClick={() => {
+                  setSelectedCargaId(prev => prev === c.id ? null : c.id);
+                  setLineas([]);
+                  setEfectivoEntregado('');
+                }}
                 className={cn(
                   "border rounded-lg p-3 text-left transition-colors",
                   selectedCargaId === c.id
@@ -434,140 +463,156 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
+      {/* Date range (optional) */}
+      <div className="bg-card border border-border rounded-lg p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Periodo (opcional)</h3>
+        <p className="text-xs text-muted-foreground mb-3">Para liquidaciones semanales o por rango de fechas.</p>
+        <div className="grid grid-cols-2 gap-3 max-w-sm">
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Desde</label>
+            <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Hasta</label>
+            <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Cash reconciliation — always visible */}
+      <div className="bg-card border border-border rounded-lg p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
+        </h3>
+        {selectedCargaId && (
+          <div className="grid grid-cols-3 gap-3 text-[12px]">
+            <div className="bg-muted/50 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Ventas contado</div>
+              <div className="font-bold text-foreground">${ventasContado.toFixed(2)}</div>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Gastos</div>
+              <div className="font-bold text-destructive">-${gastosTotal.toFixed(2)}</div>
+            </div>
+            <div className="bg-primary/5 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Esperado</div>
+              <div className="font-bold text-primary">${efectivoEsperado.toFixed(2)}</div>
+            </div>
+          </div>
+        )}
+        <div className="max-w-xs">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Efectivo entregado</label>
+          <Input
+            type="number"
+            value={efectivoEntregado}
+            onChange={e => setEfectivoEntregado(e.target.value)}
+            placeholder={selectedCargaId ? efectivoEsperado.toFixed(2) : '0.00'}
+          />
+        </div>
+        {diferenciaEfectivo !== 0 && (
+          <div className={cn(
+            "flex items-center gap-2 p-2 rounded-md text-[12px] font-semibold max-w-xs",
+            diferenciaEfectivo > 0 ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive"
+          )}>
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${diferenciaEfectivo.toFixed(2)}
+          </div>
+        )}
+      </div>
+
+      {/* Product reconciliation — only when carga selected */}
       {selectedCargaId && lineas.length > 0 && (
-        <>
-          {/* Cash reconciliation */}
-          <div className="bg-card border border-border rounded-lg p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
-            </h3>
-            <div className="grid grid-cols-3 gap-3 text-[12px]">
-              <div className="bg-muted/50 rounded-md p-3 text-center">
-                <div className="text-muted-foreground">Ventas contado</div>
-                <div className="font-bold text-foreground">${ventasContado.toFixed(2)}</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3 text-center">
-                <div className="text-muted-foreground">Gastos</div>
-                <div className="font-bold text-destructive">-${gastosTotal.toFixed(2)}</div>
-              </div>
-              <div className="bg-primary/5 rounded-md p-3 text-center">
-                <div className="text-muted-foreground">Esperado</div>
-                <div className="font-bold text-primary">${efectivoEsperado.toFixed(2)}</div>
-              </div>
-            </div>
-            <div className="max-w-xs">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Efectivo entregado</label>
-              <Input
-                type="number"
-                value={efectivoEntregado}
-                onChange={e => setEfectivoEntregado(e.target.value)}
-                placeholder={efectivoEsperado.toFixed(2)}
-              />
-            </div>
-            {diferenciaEfectivo !== 0 && (
-              <div className={cn(
-                "flex items-center gap-2 p-2 rounded-md text-[12px] font-semibold max-w-xs",
-                diferenciaEfectivo > 0 ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive"
-              )}>
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${diferenciaEfectivo.toFixed(2)}
-              </div>
-            )}
-          </div>
-
-          {/* Product reconciliation */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <PackageCheck className="h-4 w-4" /> 3. Cuadre de productos
-            </h3>
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2 px-2">Producto</th>
-                  <th className="text-center py-2 px-1 w-16">Cargado</th>
-                  <th className="text-center py-2 px-1 w-16">Vendido</th>
-                  <th className="text-center py-2 px-1 w-16">Devuelto</th>
-                  <th className="text-center py-2 px-1 w-16">Esperado</th>
-                  <th className="text-center py-2 px-1 w-20">Real</th>
-                  <th className="text-center py-2 px-1 w-14">Dif.</th>
-                  <th className="text-left py-2 px-1 w-32">Motivo</th>
-                  <th className="text-left py-2 px-1">Notas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineas.map((l, idx) => (
-                  <tr key={l.producto_id} className={cn("border-b border-border/50", l.diferencia !== 0 && "bg-amber-50/50")}>
-                    <td className="py-2 px-2">
-                      <div className="font-medium text-foreground">{l.producto_nombre}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">{l.producto_codigo}</div>
-                    </td>
-                    <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_cargada}</td>
-                    <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_vendida}</td>
-                    <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_devuelta}</td>
-                    <td className="py-2 px-1 text-center font-semibold">{l.cantidad_esperada}</td>
-                    <td className="py-2 px-1">
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <PackageCheck className="h-4 w-4" /> 3. Cuadre de productos
+          </h3>
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                <th className="text-left py-2 px-2">Producto</th>
+                <th className="text-center py-2 px-1 w-16">Cargado</th>
+                <th className="text-center py-2 px-1 w-16">Vendido</th>
+                <th className="text-center py-2 px-1 w-16">Devuelto</th>
+                <th className="text-center py-2 px-1 w-16">Esperado</th>
+                <th className="text-center py-2 px-1 w-20">Real</th>
+                <th className="text-center py-2 px-1 w-14">Dif.</th>
+                <th className="text-left py-2 px-1 w-32">Motivo</th>
+                <th className="text-left py-2 px-1">Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineas.map((l, idx) => (
+                <tr key={l.producto_id} className={cn("border-b border-border/50", l.diferencia !== 0 && "bg-amber-50/50")}>
+                  <td className="py-2 px-2">
+                    <div className="font-medium text-foreground">{l.producto_nombre}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono">{l.producto_codigo}</div>
+                  </td>
+                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_cargada}</td>
+                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_vendida}</td>
+                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_devuelta}</td>
+                  <td className="py-2 px-1 text-center font-semibold">{l.cantidad_esperada}</td>
+                  <td className="py-2 px-1">
+                    <Input
+                      type="number"
+                      value={l.cantidad_real}
+                      onChange={e => updateLinea(idx, 'cantidad_real', Number(e.target.value) || 0)}
+                      className="h-7 text-[12px] text-center w-16 mx-auto"
+                    />
+                  </td>
+                  <td className={cn(
+                    "py-2 px-1 text-center font-bold",
+                    l.diferencia > 0 ? "text-green-600" : l.diferencia < 0 ? "text-destructive" : ""
+                  )}>
+                    {l.diferencia > 0 ? '+' : ''}{l.diferencia}
+                  </td>
+                  <td className="py-2 px-1">
+                    {l.diferencia !== 0 ? (
+                      <select
+                        value={l.motivo || ''}
+                        onChange={e => updateLinea(idx, 'motivo', e.target.value || null)}
+                        className="input-odoo text-[11px] h-7 w-full"
+                      >
+                        <option value="">Motivo...</option>
+                        {MOTIVOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                      </select>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="py-2 px-1">
+                    {l.diferencia !== 0 ? (
                       <Input
-                        type="number"
-                        value={l.cantidad_real}
-                        onChange={e => updateLinea(idx, 'cantidad_real', Number(e.target.value) || 0)}
-                        className="h-7 text-[12px] text-center w-16 mx-auto"
+                        value={l.notas || ''}
+                        onChange={e => updateLinea(idx, 'notas', e.target.value)}
+                        placeholder="Detalle..."
+                        className="h-7 text-[11px]"
                       />
-                    </td>
-                    <td className={cn(
-                      "py-2 px-1 text-center font-bold",
-                      l.diferencia > 0 ? "text-green-600" : l.diferencia < 0 ? "text-destructive" : ""
-                    )}>
-                      {l.diferencia > 0 ? '+' : ''}{l.diferencia}
-                    </td>
-                    <td className="py-2 px-1">
-                      {l.diferencia !== 0 ? (
-                        <select
-                          value={l.motivo || ''}
-                          onChange={e => updateLinea(idx, 'motivo', e.target.value || null)}
-                          className="input-odoo text-[11px] h-7 w-full"
-                        >
-                          <option value="">Motivo...</option>
-                          {MOTIVOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </select>
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="py-2 px-1">
-                      {l.diferencia !== 0 ? (
-                        <Input
-                          value={l.notas || ''}
-                          onChange={e => updateLinea(idx, 'notas', e.target.value)}
-                          placeholder="Detalle..."
-                          className="h-7 text-[11px]"
-                        />
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Notes & submit */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas generales</label>
-            <textarea
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              placeholder="Observaciones sobre la descarga..."
-              className="input-odoo min-h-[60px] text-[13px] w-full"
-            />
-          </div>
-
-          <Button
-            onClick={() => submitMutation.mutate()}
-            disabled={submitMutation.isPending}
-            className="w-full sm:w-auto"
-          >
-            <PackageCheck className="h-4 w-4 mr-2" />
-            {hayDiferencias ? 'Enviar para aprobación' : 'Completar descarga'}
-          </Button>
-        </>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+
+      {/* Notes & submit */}
+      <div className="bg-card border border-border rounded-lg p-5">
+        <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas generales</label>
+        <textarea
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          placeholder="Observaciones sobre la descarga..."
+          className="input-odoo min-h-[60px] text-[13px] w-full"
+        />
+      </div>
+
+      <Button
+        onClick={() => submitMutation.mutate()}
+        disabled={submitMutation.isPending || efectivoEntregado === ''}
+        className="w-full sm:w-auto"
+      >
+        <PackageCheck className="h-4 w-4 mr-2" />
+        {hayDiferencias ? 'Enviar para aprobación' : 'Completar descarga'}
+      </Button>
     </div>
   );
 }
@@ -636,9 +681,10 @@ export default function DescargasPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-muted/50 text-[11px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2.5 px-4">Fecha</th>
+                <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
                 <th className="text-left py-2.5 px-4">Vendedor</th>
-                <th className="text-right py-2.5 px-4">Efectivo esperado</th>
+                <th className="text-left py-2.5 px-4">Tipo</th>
+                <th className="text-right py-2.5 px-4">Esperado</th>
                 <th className="text-right py-2.5 px-4">Entregado</th>
                 <th className="text-right py-2.5 px-4">Diferencia</th>
                 <th className="text-center py-2.5 px-4">Status</th>
@@ -649,10 +695,17 @@ export default function DescargasPage() {
               {filtered.map((d: any) => {
                 const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
                 const dif = Number(d.diferencia_efectivo);
+                const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+                const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
                 return (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 px-4">{d.fecha}</td>
+                    <td className="py-2.5 px-4">
+                      {hasRange ? `${d.fecha_inicio} → ${d.fecha_fin}` : d.fecha}
+                    </td>
                     <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
+                    <td className="py-2.5 px-4">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-medium">{tipoLabel}</span>
+                    </td>
                     <td className="py-2.5 px-4 text-right">${Number(d.efectivo_esperado).toFixed(2)}</td>
                     <td className="py-2.5 px-4 text-right font-semibold">${Number(d.efectivo_entregado).toFixed(2)}</td>
                     <td className={cn(
