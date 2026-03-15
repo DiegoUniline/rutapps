@@ -15,8 +15,9 @@ export default function RutaGastos() {
   const { data: gastos, isLoading, refetch } = useOfflineQuery('gastos', {
     empresa_id: empresa?.id,
     fecha: today,
+    user_id: user?.id,
   }, {
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && !!user?.id,
     orderBy: 'created_at',
     ascending: false,
   });

@@ -13,14 +13,15 @@ const METODO_ICONS: Record<string, any> = {
 
 export default function RutaCobros() {
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, user } = useAuth();
 
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: cobros } = useOfflineQuery('cobros', {
     empresa_id: empresa?.id,
+    user_id: user?.id,
   }, {
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && !!user?.id,
     orderBy: 'created_at',
     ascending: false,
   });

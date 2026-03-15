@@ -5,11 +5,12 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function AlertasVendedor() {
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
+  const vendedorId = profile?.vendedor_id;
 
-  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id });
-  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
 
   // Saldos pendientes
   const ventasCredito = (ventas ?? []).filter((v: any) => v.condicion_pago === 'credito' && (v.saldo_pendiente ?? 0) > 0 && ['confirmado', 'entregado', 'facturado'].includes(v.status));
