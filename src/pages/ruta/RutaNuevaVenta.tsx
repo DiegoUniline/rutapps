@@ -93,19 +93,10 @@ export default function RutaNuevaVenta() {
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
-  const { data: clientes } = useQuery({
-    queryKey: ['ruta-clientes-venta', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, codigo, nombre, telefono, credito, limite_credito, dias_credito')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('nombre');
-      return data ?? [];
-    },
-  });
+  const { data: clientes } = useOfflineQuery('clientes', {
+    empresa_id: empresa?.id,
+    status: 'activo',
+  }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
   // Auto-select client from URL param
   useEffect(() => {
