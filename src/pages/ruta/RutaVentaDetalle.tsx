@@ -936,11 +936,100 @@ export default function RutaVentaDetalle() {
   }
 
   // ═══════════════════════════════════════
+  // ─── ESTADO DE CUENTA VIEW ───
+  // ═══════════════════════════════════════
+  if (view === 'estado_cuenta') {
+    const ecVentas = estadoCuentaData?.ventas ?? [];
+    const ecCobros = estadoCuentaData?.cobros ?? [];
+    const totalVendido = ecVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalPendiente = ecVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+    const totalCobrado = ecCobros.reduce((s, c) => s + (c.monto ?? 0), 0);
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setView('detalle')} className="p-1 -ml-1">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[16px] font-bold text-foreground truncate">Estado de cuenta</h1>
+            <p className="text-[11px] text-muted-foreground truncate">{clienteNombre}</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Vendido</p>
+              <p className="text-[14px] font-bold text-foreground">$ {fmt(totalVendido)}</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Cobrado</p>
+              <p className="text-[14px] font-bold text-green-600 dark:text-green-400">$ {fmt(totalCobrado)}</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Pendiente</p>
+              <p className="text-[14px] font-bold text-destructive">$ {fmt(totalPendiente)}</p>
+            </div>
+          </div>
+
+          {/* Ventas */}
+          <div>
+            <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <FileText className="h-4 w-4 text-muted-foreground" /> Ventas ({ecVentas.length})
+            </h2>
+            <div className="bg-card border border-border rounded-xl divide-y divide-border">
+              {ecVentas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin ventas</p>}
+              {ecVentas.map((v: any) => (
+                <div key={v.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-mono font-medium text-foreground">{v.folio ?? '—'}</span>
+                      <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-medium', statusColors[v.status] ?? '')}>{v.status}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)} · {v.condicion_pago}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[12px] font-bold text-foreground">$ {fmt(v.total ?? 0)}</p>
+                    {(v.saldo_pendiente ?? 0) > 0 && (
+                      <p className="text-[10px] text-destructive font-medium">Debe: $ {fmt(v.saldo_pendiente)}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cobros / Pagos */}
+          <div>
+            <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <Banknote className="h-4 w-4 text-muted-foreground" /> Pagos ({ecCobros.length})
+            </h2>
+            <div className="bg-card border border-border rounded-xl divide-y divide-border">
+              {ecCobros.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin pagos registrados</p>}
+              {ecCobros.map((c: any) => (
+                <div key={c.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-medium text-foreground capitalize">{c.metodo_pago}</p>
+                    <p className="text-[11px] text-muted-foreground">{fmtDate(c.fecha)}{c.referencia ? ` · Ref: ${c.referencia}` : ''}</p>
+                  </div>
+                  <p className="text-[13px] font-bold text-green-600 dark:text-green-400 shrink-0">$ {fmt(c.monto ?? 0)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════
   // ─── DETALLE VIEW (default) ───
   // ═══════════════════════════════════════
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-2">
         <button onClick={() => navigate(-1)} className="p-1 -ml-1">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
@@ -948,16 +1037,61 @@ export default function RutaVentaDetalle() {
           <h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1>
           <p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p>
         </div>
-        {/* Edit button - only for borrador */}
-        {venta.status === 'borrador' && (
-          <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-0.5">
+          {/* WhatsApp */}
+          <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }}
+            className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Enviar por WhatsApp">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
           </button>
-        )}
-        <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium', statusColors[venta.status] ?? '')}>
+          {/* Download */}
+          <button onClick={handleDownloadPDF}
+            className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Descargar ticket">
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {/* Estado de cuenta */}
+          <button onClick={() => setView('estado_cuenta')}
+            className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Estado de cuenta">
+            <Receipt className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {/* Edit button - only for borrador */}
+          {venta.status === 'borrador' && (
+            <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Editar">
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[venta.status] ?? '')}>
           {venta.status}
         </span>
       </div>
+
+      {/* WhatsApp Dialog */}
+      {showWADialog && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowWADialog(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground">Enviar por WhatsApp</h3>
+              <button onClick={() => setShowWADialog(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground font-medium">Número de WhatsApp</label>
+              <input type="tel" inputMode="tel"
+                className="w-full bg-accent/40 rounded-lg px-3 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                value={waPhone} placeholder="521234567890" onChange={e => setWaPhone(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">Incluye código de país (ej: 52 para México)</p>
+            </div>
+            <div className="bg-accent/30 rounded-lg p-3">
+              <p className="text-[11px] text-muted-foreground mb-1">Se enviará:</p>
+              <p className="text-[12px] text-foreground font-medium">Ticket de venta {venta.folio} por $ {fmt(venta.total ?? 0)}</p>
+            </div>
+            <button onClick={handleWhatsAppSend} disabled={sendingWA || !waPhone.trim()}
+              className="w-full bg-[#25D366] hover:bg-[#25D366]/90 text-white rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-40">
+              {sendingWA ? 'Enviando...' : <><MessageCircle className="h-4 w-4" /> Enviar</>}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 space-y-4 pb-28">
         <div className="bg-card border border-border rounded-xl p-4 text-center">
