@@ -172,8 +172,8 @@ export function useProductosForSelect() {
   return useQuery({
     queryKey: ['productos-select'],
     queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, costo, unidad_venta_id, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, costo_incluye_impuestos').order('nombre');
-      return data as { id: string; codigo: string; nombre: string; precio_principal: number; costo: number; unidad_venta_id: string | null; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; iva_pct: number; ieps_pct: number; costo_incluye_impuestos: boolean }[];
+      const { data } = await supabase.from('productos').select('id, codigo, nombre, precio_principal, costo, unidad_venta_id, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos').order('nombre');
+      return data as { id: string; codigo: string; nombre: string; precio_principal: number; costo: number; unidad_venta_id: string | null; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; iva_pct: number; ieps_pct: number; ieps_tipo: string; costo_incluye_impuestos: boolean }[];
     },
   });
 }
