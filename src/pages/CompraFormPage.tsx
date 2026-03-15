@@ -514,9 +514,10 @@ export default function CompraFormPage() {
                                     e.preventDefault();
                                     addLine();
                                     setTimeout(() => {
-                                      const selects = document.querySelectorAll<HTMLSelectElement>('table tbody tr td select');
-                                      const last = selects[selects.length - 1];
-                                      last?.focus();
+                                      const rows = document.querySelectorAll('table tbody tr');
+                                      const lastRow = rows[rows.length - 1];
+                                      const trigger = lastRow?.querySelector<HTMLDivElement>('.inline-edit-input');
+                                      trigger?.click();
                                     }, 50);
                                   }
                                 }}
