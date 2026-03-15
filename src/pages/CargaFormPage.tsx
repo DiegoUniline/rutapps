@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, Truck, Search, ClipboardList } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';

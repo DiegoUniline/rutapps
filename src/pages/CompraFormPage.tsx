@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Trash2, Plus, X, CreditCard } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
