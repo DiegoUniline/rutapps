@@ -53,7 +53,16 @@ export default function ResetPasswordPage() {
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <label className="label-odoo">Nueva contraseña</label>
-              <input type="password" className="input-odoo" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+              <div className="relative">
+                <input type={showPassword ? "text" : "password"} className="input-odoo pr-10" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <button type="submit" className="btn-odoo-primary w-full justify-center" disabled={loading}>
               {loading ? 'Guardando...' : 'Guardar contraseña'}
