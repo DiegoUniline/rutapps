@@ -21,6 +21,7 @@ const ClienteFormPage = lazy(() => import("@/pages/ClienteFormPage"));
 const VentasListPage = lazy(() => import("@/pages/VentasListPage"));
 const VentaFormPage = lazy(() => import("@/pages/VentaFormPage"));
 const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
+const PedidoPendienteDetailPage = lazy(() => import("@/pages/PedidoPendienteDetailPage"));
 const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
