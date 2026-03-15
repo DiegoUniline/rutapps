@@ -102,8 +102,9 @@ function PageLoader() {
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const subscription = useSubscription();
 
-  if (loading) {
+  if (loading || subscription.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground text-sm">Cargando...</div>
@@ -123,6 +124,41 @@ function AppRoutes() {
       </Suspense>
     );
   }
+
+  // Super admin always has access
+  if (subscription.isSuperAdmin) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/super-admin" element={<SuperAdminPage />} />
+          {renderAuthenticatedRoutes()}
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  // Blocked users
+  if (subscription.isBlocked) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="*" element={<SubscriptionBlockedPage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  return (
+    <>
+      <SubscriptionBanner />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {renderAuthenticatedRoutes()}
+        </Routes>
+      </Suspense>
+    </>
+  );
+}
 
   return (
     <Suspense fallback={<PageLoader />}>
