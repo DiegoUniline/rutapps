@@ -72,16 +72,10 @@ export function useZonas() {
   return useQuery({ queryKey: ['zonas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('zonas').select('id, nombre').order('nombre'); return data as Zona[]; }});
 }
 export function useVendedores() {
-  return useQuery({ queryKey: ['vendedores-profiles'], staleTime: CATALOG_STALE, queryFn: async () => {
-    const { data } = await supabase.from('profiles').select('id, nombre, user_id').eq('estado', 'activo').order('nombre');
-    return (data ?? []).map(p => ({ id: p.id, nombre: p.nombre ?? 'Sin nombre' })) as Vendedor[];
-  }});
+  return useQuery({ queryKey: ['vendedores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('vendedores').select('id, nombre').order('nombre'); return data as Vendedor[]; }});
 }
 export function useCobradores() {
-  return useQuery({ queryKey: ['cobradores-profiles'], staleTime: CATALOG_STALE, queryFn: async () => {
-    const { data } = await supabase.from('profiles').select('id, nombre, user_id').eq('estado', 'activo').order('nombre');
-    return (data ?? []).map(p => ({ id: p.id, nombre: p.nombre ?? 'Sin nombre' })) as Cobrador[];
-  }});
+  return useQuery({ queryKey: ['cobradores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').order('nombre'); return data as Cobrador[]; }});
 }
 
 // Pedido sugerido per client
