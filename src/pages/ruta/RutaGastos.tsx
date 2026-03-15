@@ -127,11 +127,11 @@ export default function RutaGastos() {
               />
             </div>
             <button
-              onClick={() => saveMut.mutate()}
-              disabled={!concepto || !monto || saveMut.isPending}
+              onClick={handleSaveGasto}
+              disabled={!concepto || !monto || savePending}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-semibold disabled:opacity-50 active:scale-[0.98] transition-transform"
             >
-              {saveMut.isPending ? 'Guardando...' : 'Guardar gasto'}
+              {savePending ? 'Guardando...' : 'Guardar gasto'}
             </button>
           </div>
         </div>
