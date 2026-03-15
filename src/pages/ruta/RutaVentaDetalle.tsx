@@ -67,13 +67,40 @@ export default function RutaVentaDetalle() {
 
   const clienteId = (venta as any)?.cliente_id;
 
-  // Fetch client credit info
+  // Fetch client info including phone
   const { data: clienteData } = useQuery({
     queryKey: ['ruta-cliente-detalle', clienteId],
     enabled: !!clienteId,
     queryFn: async () => {
-      const { data } = await supabase.from('clientes').select('id, nombre, credito, limite_credito, dias_credito').eq('id', clienteId!).single();
+      const { data } = await supabase.from('clientes').select('id, nombre, telefono, credito, limite_credito, dias_credito').eq('id', clienteId!).single();
       return data;
+    },
+  });
+
+  // Fetch estado de cuenta data
+  const { data: estadoCuentaData } = useQuery({
+    queryKey: ['estado-cuenta', clienteId],
+    enabled: !!clienteId && view === 'estado_cuenta',
+    queryFn: async () => {
+      const [ventasRes, cobrosRes] = await Promise.all([
+        supabase.from('ventas')
+          .select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago')
+          .eq('cliente_id', clienteId!)
+          .eq('empresa_id', empresa!.id)
+          .neq('status', 'cancelado')
+          .order('fecha', { ascending: false })
+          .limit(100),
+        supabase.from('cobros')
+          .select('id, fecha, monto, metodo_pago, referencia')
+          .eq('cliente_id', clienteId!)
+          .eq('empresa_id', empresa!.id)
+          .order('fecha', { ascending: false })
+          .limit(100),
+      ]);
+      return {
+        ventas: ventasRes.data ?? [],
+        cobros: cobrosRes.data ?? [],
+      };
     },
   });
 
