@@ -9,7 +9,7 @@ export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const [search, setSearch] = useState('');
-  const vendedorId = profile?.vendedor_id;
+  const vendedorId = profile?.vendedor_id || profile?.id;
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
     empresa_id: empresa?.id,

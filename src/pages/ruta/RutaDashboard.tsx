@@ -7,7 +7,7 @@ export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user } = useAuth();
   const today = new Date().toISOString().slice(0, 10);
-  const vendedorId = profile?.vendedor_id;
+  const vendedorId = profile?.vendedor_id || profile?.id;
 
   const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
