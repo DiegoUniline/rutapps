@@ -187,7 +187,16 @@ export default function RutaNuevaVenta() {
     c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
   );
 
-  const filteredProductos = productos?.filter(p =>
+  // For venta_directa: only products in carga with stock > 0
+  // For pedido: all products
+  const productosDisponibles = useMemo(() => {
+    if (!productos) return [];
+    if (tipoVenta === 'pedido') return productos;
+    // Venta directa: only products in active carga with available stock
+    return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
+  }, [productos, tipoVenta, stockAbordo]);
+
+  const filteredProductos = productosDisponibles?.filter(p =>
     !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) ||
     p.codigo.toLowerCase().includes(searchProducto.toLowerCase())
   );
