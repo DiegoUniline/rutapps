@@ -165,7 +165,9 @@ export default function CargaFormPage() {
   };
 
   const handleSave = async () => {
-    if (!vendedorId) { toast.error('Selecciona un vendedor'); return; }
+    if (!almacenId) { toast.error('Selecciona almacén origen'); return; }
+    if (!almacenDestinoId) { toast.error('Selecciona almacén destino'); return; }
+    if (!vendedorId) { toast.error('Selecciona un responsable'); return; }
     if (lineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
     try {
       const saved = await saveCarga.mutateAsync({
@@ -173,6 +175,7 @@ export default function CargaFormPage() {
         vendedor_id: vendedorId,
         repartidor_id: repartidorId || null,
         almacen_id: almacenId || null,
+        almacen_destino_id: almacenDestinoId || null,
         fecha,
         notas: notas || null,
       });
