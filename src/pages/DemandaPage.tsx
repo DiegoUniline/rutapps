@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import SearchableSelect from '@/components/SearchableSelect';
+import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -328,7 +328,7 @@ export default function DemandaPage() {
             <div className="space-y-3">
               <div>
                 <label className="label-odoo">Almacén origen (por defecto)</label>
-                <SearchableSelect
+                <ModalSelect
                   options={almacenOptions}
                   value={almacenId}
                   onChange={setAlmacenId}
@@ -337,7 +337,7 @@ export default function DemandaPage() {
               </div>
               <div>
                 <label className="label-odoo">Repartidor / Vendedor de ruta</label>
-                <SearchableSelect
+                <ModalSelect
                   options={vendedorOptions}
                   value={vendedorRutaId}
                   onChange={setVendedorRutaId}
