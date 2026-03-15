@@ -48,6 +48,9 @@ const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
+const TraspasosPage = lazy(() => import("@/pages/TraspasosPage"));
+const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage"));
+const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 
