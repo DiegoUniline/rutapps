@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
