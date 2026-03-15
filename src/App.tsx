@@ -55,6 +55,8 @@ const TraspasosListPage = lazy(() => import("@/pages/TraspasosListPage"));
 const TraspasoFormPage = lazy(() => import("@/pages/TraspasoFormPage"));
 const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage"));
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
+const AuditoriaConteoPage = lazy(() => import("@/pages/AuditoriaConteoPage"));
+const AuditoriaResultadosPage = lazy(() => import("@/pages/AuditoriaResultadosPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
@@ -239,6 +241,8 @@ function renderAuthenticatedRoutes() {
               <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
               <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
               <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
+              <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
+              <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
               <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
               <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
               <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
