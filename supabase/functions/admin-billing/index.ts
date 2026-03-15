@@ -24,17 +24,17 @@ function getProductId(product: unknown): string | null {
   return null;
 }
 
-function isRutappSubscription(sub: Stripe.Subscription): boolean {
-  return sub.items.data.some((item) => {
-    const productId = getProductId(item.price?.product);
+function isRutappSubscription(sub: any): boolean {
+  return (sub?.items?.data || []).some((item: any) => {
+    const productId = getProductId(item?.price?.product);
     return productId ? RUTAPP_PRODUCT_IDS.has(productId) : false;
   });
 }
 
-function isRutappInvoice(inv: Stripe.Invoice): boolean {
-  if (!inv.lines?.data?.length) return false;
-  return inv.lines.data.some((line) => {
-    const productId = getProductId(line.price?.product);
+function isRutappInvoice(inv: any): boolean {
+  if (!inv?.lines?.data?.length) return false;
+  return inv.lines.data.some((line: any) => {
+    const productId = getProductId(line?.price?.product);
     return productId ? RUTAPP_PRODUCT_IDS.has(productId) : false;
   });
 }
