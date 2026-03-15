@@ -39,6 +39,42 @@ export default function AuditoriaResultadosPage() {
   const [showAprobar, setShowAprobar] = useState(false);
   const [ajustes, setAjustes] = useState<AjusteSelection>({});
   const [motivoGlobal, setMotivoGlobal] = useState('');
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  const handleGenerarPdf = () => {
+    if (!auditoria || !lineas) return;
+    const blob = generarAuditoriaPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      auditoria: {
+        nombre: auditoria.nombre,
+        fecha: auditoria.fecha,
+        status: auditoria.status,
+        notas: auditoria.notas,
+        notas_supervisor: auditoria.notas_supervisor,
+        fecha_aprobacion: auditoria.fecha_aprobacion,
+      },
+      almacen: almacenNombre,
+      responsable: profile?.nombre,
+      lineas: lineas.map((l: any) => ({
+        codigo: l.productos?.codigo ?? '',
+        nombre: l.productos?.nombre ?? '',
+        cantidad_esperada: l.cantidad_esperada,
+        cantidad_real: l.cantidad_real,
+        diferencia: l.diferencia,
+        ajustado: l.ajustado,
+        notas: l.notas,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
