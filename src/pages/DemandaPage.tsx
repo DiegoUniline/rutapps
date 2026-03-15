@@ -299,7 +299,7 @@ export default function DemandaPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Unidades por surtir</p>
-          <p className="text-2xl font-bold text-warning">{totalLineasPendientes}</p>
+          <p className="text-2xl font-bold text-foreground">{totalLineasPendientes}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Valor pendiente</p>
@@ -380,7 +380,7 @@ export default function DemandaPage() {
                         <span className="text-[11px] text-muted-foreground w-8">{pedido.pctEntregado}%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center text-[12px] font-bold text-warning py-2">{pedido.totalPendiente}</TableCell>
+                    <TableCell className="text-center text-[12px] font-bold text-foreground py-2">{pedido.totalPendiente}</TableCell>
                     <TableCell className="py-2">
                       <ChevronRight className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
                     </TableCell>
@@ -473,8 +473,8 @@ export default function DemandaPage() {
                                     <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{l.productos?.codigo}</TableCell>
                                     <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? l.descripcion}</TableCell>
                                     <TableCell className="text-right text-[12px] py-1.5">{l.cantidad} {unidad}</TableCell>
-                                    <TableCell className="text-right text-[12px] text-success py-1.5">{l.cantidad_entregada} {unidad}</TableCell>
-                                    <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-warning" : "text-success")}>
+                                    <TableCell className="text-right text-[12px] text-muted-foreground py-1.5">{l.cantidad_entregada} {unidad}</TableCell>
+                                    <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-destructive" : "text-muted-foreground")}>
                                       {pendiente} {unidad}
                                     </TableCell>
                                     <TableCell className={cn("text-right text-[12px] py-1.5", sinStock ? "text-destructive font-bold" : "text-muted-foreground")}>
