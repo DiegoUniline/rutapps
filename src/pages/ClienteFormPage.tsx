@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, Trash2, Star, Camera, Plus, Minus, Search, X } from 'lucide-react';
+import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2 } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
@@ -44,6 +44,7 @@ export default function ClienteFormPage() {
   const [form, setForm] = useState<Partial<Cliente>>(defaultCliente);
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
   const [starred, setStarred] = useState(false);
+  const [capturingGps, setCapturingGps] = useState(false);
 
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
@@ -97,6 +98,27 @@ export default function ClienteFormPage() {
       toast.success('Cliente eliminado');
       navigate('/clientes');
     } catch (err: any) { toast.error(err.message); }
+  };
+
+  const captureGps = () => {
+    if (!navigator.geolocation) {
+      toast.error('Tu navegador no soporta GPS');
+      return;
+    }
+    setCapturingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setForm(prev => ({ ...prev, gps_lat: latitude, gps_lng: longitude }));
+        setCapturingGps(false);
+        toast.success('Ubicación GPS capturada');
+      },
+      (err) => {
+        setCapturingGps(false);
+        toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
   };
 
   const toggleDia = (dia: string) => {
@@ -212,8 +234,30 @@ export default function ClienteFormPage() {
               <div className="space-y-1">
                 <OdooField label="Dirección" value={form.direccion} onChange={v => set('direccion', v)} />
                 <OdooField label="Colonia" value={form.colonia} onChange={v => set('colonia', v)} />
-                <OdooField label="GPS Lat" value={form.gps_lat} onChange={v => set('gps_lat', v ? +v : null)} type="number" />
-                <OdooField label="GPS Lng" value={form.gps_lng} onChange={v => set('gps_lng', v ? +v : null)} type="number" />
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Ubicación GPS</span>
+                  <div className="flex items-center gap-2 flex-1">
+                    {form.gps_lat && form.gps_lng ? (
+                      <span className="text-[11px] text-muted-foreground">
+                        {form.gps_lat.toFixed(6)}, {form.gps_lng.toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">Sin ubicación</span>
+                    )}
+                    <button
+                      onClick={captureGps}
+                      disabled={capturingGps}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60"
+                    >
+                      {capturingGps ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Crosshair className="h-3.5 w-3.5" />
+                      )}
+                      {form.gps_lat && form.gps_lng ? 'Actualizar GPS' : 'Capturar GPS'}
+                    </button>
+                  </div>
+                </div>
                 <OdooField label="Zona" value={form.zona_id} onChange={v => set('zona_id', v || null)} type="select"
                   options={zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? []} />
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
