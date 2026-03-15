@@ -101,7 +101,7 @@ export default function RutaClientes() {
         {modo === 'visitas' && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             {DIAS.map(d => {
-              const count = (clientes ?? []).filter((c: any) => c.dia_visita?.includes(d)).length;
+              const count = (clientes ?? []).filter((c: any) => c.dia_visita?.some((dv: string) => dv.toLowerCase() === d.toLowerCase())).length;
               return (
                 <button
                   key={d}
