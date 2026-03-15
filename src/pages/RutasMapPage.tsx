@@ -32,7 +32,7 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
 
 export default function RutasMapPage() {
   const { user } = useAuth();
-  const { apiKey, loading: loadingKey } = useGoogleMapsKey();
+  const { isLoaded } = useGoogleMaps();
   const [diaFilter, setDiaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -46,11 +46,6 @@ export default function RutasMapPage() {
   } | null>(null);
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: apiKey ?? '',
-    id: 'google-map-rutas',
-  });
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
