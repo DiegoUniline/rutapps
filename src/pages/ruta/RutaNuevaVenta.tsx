@@ -402,14 +402,17 @@ export default function RutaNuevaVenta() {
 
       // 3. Insert lines
       for (const item of cart) {
+        const lineSub = item.precio_unitario * item.cantidad;
+        const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+        const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
         await queueOperation('venta_lineas', 'insert', {
           id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id,
           descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario,
-          subtotal: item.precio_unitario * item.cantidad,
-          iva_pct: item.iva_pct,
-          iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
-          ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
-          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          unidad_id: item.unidad_id || null,
+          subtotal: lineSub,
+          iva_pct: item.iva_pct, iva_monto: lineIva,
+          ieps_pct: item.ieps_pct, ieps_monto: lineIeps, descuento_pct: 0,
+          total: lineSub + lineIeps + lineIva,
           notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
           created_at: new Date().toISOString(),
         });
