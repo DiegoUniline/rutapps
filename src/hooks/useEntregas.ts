@@ -201,8 +201,8 @@ export function useSurtirTodo() {
         } as any);
       }
 
-      // Update entrega status to surtido
-      await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', entregaId);
+      // Update entrega status to surtido + almacen
+      await supabase.from('entregas').update({ status: 'surtido', almacen_id: almacenDefaultId } as any).eq('id', entregaId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entrega'] });
