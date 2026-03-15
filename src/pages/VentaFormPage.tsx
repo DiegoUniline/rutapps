@@ -755,7 +755,10 @@ export default function VentaFormPage() {
                                   <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</span>
                                 ) : (
                                   <ProductSearchInput
-                                    products={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
+                                    products={(productosList ?? []).filter((p: any) => {
+                                      const usedIds = lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean);
+                                      return !usedIds.includes(p.id);
+                                    }).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
                                     value={l.producto_id ?? ''}
                                     displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
                                     onSelect={pid => handleProductSelect(idx, pid)}
