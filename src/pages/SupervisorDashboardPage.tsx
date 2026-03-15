@@ -70,7 +70,7 @@ export default function SupervisorDashboardPage() {
       const { data } = await supabase
         .from('cargas')
         .select('id, vendedor_id, status, fecha, vendedores(nombre)')
-        .in('status', ['cargado', 'en_ruta'])
+        .in('status', ['en_ruta', 'pendiente'] as any)
         .order('fecha', { ascending: false });
       return data ?? [];
     },
