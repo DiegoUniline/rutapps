@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { MessageCircle, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, Bell, CreditCard, XCircle, Ban, Send } from 'lucide-react';
-import { buildBillingTicketHTML, sendBillingTicketWhatsApp, type BillingTicketData, type BillingTicketType } from '@/lib/billingTicketImage';
+import { buildBillingTextMessage, sendBillingTicketWhatsApp, type BillingTicketData, type BillingTicketType } from '@/lib/billingTicketImage';
 
 /* ─── Field labels per template type ─── */
 const FIELD_LABELS: Record<string, Record<string, string>> = {
