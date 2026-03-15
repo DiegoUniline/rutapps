@@ -510,6 +510,17 @@ export default function CompraFormPage() {
                                 onChange={e => updateLinea(idx, 'precio_unitario', Number(e.target.value))}
                                 disabled={!isEditable}
                                 step="0.01"
+                                onKeyDown={e => {
+                                  if (e.key === 'Tab' && !e.shiftKey && idx === lineas.length - 1 && isEditable) {
+                                    e.preventDefault();
+                                    addLine();
+                                    setTimeout(() => {
+                                      const selects = document.querySelectorAll<HTMLSelectElement>('table tbody tr td select');
+                                      const last = selects[selects.length - 1];
+                                      last?.focus();
+                                    }, 50);
+                                  }
+                                }}
                               />
                             </td>
                             {/* IVA toggle */}
