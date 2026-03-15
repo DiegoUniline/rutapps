@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap } from 'lucide-react';
+import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
