@@ -393,18 +393,19 @@ export default function MapaClientesPage() {
           </div>
         )}
 
-        {/* Floating KPI cards */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-          <KpiCard icon={MapPin} label="Con GPS" value={withGps.length}
+        {/* Floating KPI cards — horizontal bottom on mobile, vertical left on desktop */}
+        <div className="absolute bottom-14 left-2 right-2 md:bottom-auto md:right-auto md:top-3 md:left-3 z-10
+          flex flex-row md:flex-col gap-1.5 md:gap-2 overflow-x-auto md:overflow-visible">
+          <KpiCard icon={MapPin} label="GPS" value={withGps.length}
             sub={`${withoutGps.length} sin GPS`} color="bg-primary" />
           <KpiCard icon={Users} label="Hoy" value={todayClients.length}
             sub={`${DIA_HOY}`} color="bg-[hsl(var(--chart-4))]" />
           <KpiCard icon={CheckCircle2} label="Visitados" value={visitedCount}
-            sub={todayClients.length > 0 ? `${Math.round((visitedCount / todayClients.length) * 100)}% cobertura` : '—'}
+            sub={todayClients.length > 0 ? `${Math.round((visitedCount / todayClients.length) * 100)}%` : '—'}
             color="bg-[hsl(var(--success))]" />
           {routeResult && (
             <>
-              <KpiCard icon={TrendingUp} label="Distancia" value={`${(routeResult.distance_meters / 1000).toFixed(1)} km`}
+              <KpiCard icon={TrendingUp} label="Dist." value={`${(routeResult.distance_meters / 1000).toFixed(1)}km`}
                 color="bg-[hsl(var(--chart-1))]" />
               <KpiCard icon={Clock} label="Tiempo" value={formatDuration(routeResult.duration)}
                 color="bg-[hsl(var(--chart-2))]" />
