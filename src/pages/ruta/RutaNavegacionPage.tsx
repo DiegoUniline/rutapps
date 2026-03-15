@@ -409,7 +409,7 @@ function NavegacionContent() {
         ) : (
           /* Default: overview bar */
           <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
-            <button onClick={() => navigate(-1)} className="p-1 -ml-0.5">
+            <button onClick={() => navigate('/ruta')} className="p-1 -ml-0.5">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
             <div className="flex-1 min-w-0">
