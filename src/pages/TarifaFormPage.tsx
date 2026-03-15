@@ -277,6 +277,7 @@ export default function TarifaFormPage() {
                                 <td className="py-1.5 px-3 text-xs">{CALCULO_LABELS[l.tipo_calculo]}</td>
                                 <td className="py-1.5 px-3 text-right font-mono text-odoo-teal">{getCalculoDisplay(l)}</td>
                                 <td className="py-1.5 px-3 text-right font-mono">${l.precio_minimo.toFixed(2)}</td>
+                                <td className="py-1.5 px-3 text-xs">{REDONDEO_LABELS[(l as any).redondeo] || 'Sin redondeo'}</td>
                                 <td className="py-1.5 px-3 text-muted-foreground text-xs">{l.notas ?? '—'}</td>
                                 <td className="py-1.5 px-3 text-center">
                                   <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
