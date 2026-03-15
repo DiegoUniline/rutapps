@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MODULOS = [
@@ -27,6 +28,7 @@ interface AuthUser { id: string; email: string; }
 
 export default function UsuariosPage() {
   const { empresa } = useAuth();
+  const subscription = useSubscription();
   const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
   const [roles, setRoles] = useState<Role[]>([]);
   const [permisos, setPermisos] = useState<RolePermiso[]>([]);
@@ -155,9 +157,16 @@ export default function UsuariosPage() {
   };
 
   // ── Create user ──
+  const activeUsers = profiles.filter(p => p.estado === 'activo').length;
+  const availableSlots = subscription.maxUsuarios - activeUsers;
+
   const createUser = async () => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
     if (newUser.password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (availableSlots <= 0) {
+      toast.error(`Ya alcanzaste el límite de ${subscription.maxUsuarios} usuarios de tu plan. Actualiza tu suscripción para agregar más.`);
+      return;
+    }
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
@@ -212,8 +221,29 @@ export default function UsuariosPage() {
 
       {tab === 'usuarios' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
-            <button onClick={() => setShowNewUser(true)} className="btn-odoo-primary text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">
+                <Users className="h-3.5 w-3.5 inline mr-1" />
+                {activeUsers} / {subscription.maxUsuarios} usuarios activos
+              </span>
+              {availableSlots <= 0 && (
+                <span className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Límite alcanzado
+                </span>
+              )}
+              {availableSlots > 0 && availableSlots <= 2 && (
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  {availableSlots} lugar{availableSlots !== 1 ? 'es' : ''} disponible{availableSlots !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowNewUser(true)}
+              disabled={availableSlots <= 0}
+              className={cn("btn-odoo-primary text-xs", availableSlots <= 0 && "opacity-50 cursor-not-allowed")}
+            >
               <UserPlus className="h-3.5 w-3.5 mr-1" /> Nuevo usuario
             </button>
           </div>
