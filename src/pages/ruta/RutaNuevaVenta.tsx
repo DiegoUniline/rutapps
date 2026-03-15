@@ -73,7 +73,7 @@ export default function RutaNuevaVenta() {
   const { empresa, user, profile } = useAuth();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<Step>(urlClienteId ? 'devoluciones' : 'cliente');
+  const [step, setStep] = useState<Step>('tipo');
   const [clienteId, setClienteId] = useState<string | null>(urlClienteId);
   const [clienteNombre, setClienteNombre] = useState('');
   const [clienteCredito, setClienteCredito] = useState<{ credito: boolean; limite: number; dias: number } | null>(null);
