@@ -372,7 +372,7 @@ export default function EntregaListPage() {
                 </TableCell>
               </TableRow>
             )}
-            {(entregas ?? []).map((e: any) => {
+            {filtered.map((e: any) => {
               const badge = STATUS_BADGE[e.status] ?? STATUS_BADGE.borrador;
               const canSelect = selectableIds.has(e.id);
               return (
