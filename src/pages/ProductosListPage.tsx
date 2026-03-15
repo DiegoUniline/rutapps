@@ -6,9 +6,20 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductos } from '@/hooks/useData';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
+
+const PRODUCTOS_COLUMNS: ExportColumn[] = [
+  { key: 'codigo', header: 'Código', width: 12 },
+  { key: 'nombre', header: 'Nombre', width: 30 },
+  { key: 'precio_principal', header: 'Precio', format: 'currency', width: 14 },
+  { key: 'costo', header: 'Costo', format: 'currency', width: 14 },
+  { key: 'cantidad', header: 'Stock', format: 'number', width: 10 },
+  { key: 'status', header: 'Estado', width: 10 },
+];
 
 const PAGE_SIZE = 80;
 

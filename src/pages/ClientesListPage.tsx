@@ -70,9 +70,23 @@ function ClientesTable() {
             <option value="suspendido">Suspendido</option>
           </select>
         </OdooFilterBar>
-        <button onClick={() => navigate('/clientes/nuevo')} className="btn-odoo-primary shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Nuevo
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ExportButton
+            onExcel={() => exportToExcel({
+              fileName: 'Clientes', title: 'Catálogo de Clientes',
+              columns: CLIENTES_COLUMNS,
+              data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+            })}
+            onPDF={() => exportToPDF({
+              fileName: 'Clientes', title: 'Catálogo de Clientes',
+              columns: CLIENTES_COLUMNS,
+              data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+            })}
+          />
+          <button onClick={() => navigate('/clientes/nuevo')} className="btn-odoo-primary shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Nuevo
+          </button>
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded overflow-x-auto">
