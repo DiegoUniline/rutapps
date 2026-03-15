@@ -62,16 +62,17 @@ function ClientesTable() {
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar por nombre o código..."
         >
-          <select
+          <SearchableSelect
+            options={[
+              { value: 'todos', label: 'Todos' },
+              { value: 'activo', label: 'Activo' },
+              { value: 'inactivo', label: 'Inactivo' },
+              { value: 'suspendido', label: 'Suspendido' },
+            ]}
             value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="input-odoo w-auto min-w-[120px]"
-          >
-            <option value="todos">Todos</option>
-            <option value="activo">Activo</option>
-            <option value="inactivo">Inactivo</option>
-            <option value="suspendido">Suspendido</option>
-          </select>
+            onChange={val => { setStatusFilter(val); setPage(1); }}
+            placeholder="Estado..."
+          />
         </OdooFilterBar>
         <div className="flex items-center gap-2 shrink-0">
           <ExportButton

@@ -73,27 +73,29 @@ export default function VentasListPage() {
             onSearchChange={val => { setSearch(val); setPage(1); }}
             placeholder="Buscar por folio o cliente..."
           >
-            <select
+            <SearchableSelect
+              options={[
+                { value: 'todos', label: 'Todos los estados' },
+                { value: 'borrador', label: 'Borrador' },
+                { value: 'confirmado', label: 'Confirmado' },
+                { value: 'entregado', label: 'Entregado' },
+                { value: 'facturado', label: 'Facturado' },
+                { value: 'cancelado', label: 'Cancelado' },
+              ]}
               value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-              className="input-odoo w-auto min-w-[120px]"
-            >
-              <option value="todos">Todos los estados</option>
-              <option value="borrador">Borrador</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="entregado">Entregado</option>
-              <option value="facturado">Facturado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-            <select
+              onChange={val => { setStatusFilter(val); setPage(1); }}
+              placeholder="Estado..."
+            />
+            <SearchableSelect
+              options={[
+                { value: 'todos', label: 'Todos los tipos' },
+                { value: 'pedido', label: 'Pedido' },
+                { value: 'venta_directa', label: 'Venta directa' },
+              ]}
               value={tipoFilter}
-              onChange={e => { setTipoFilter(e.target.value); setPage(1); }}
-              className="input-odoo w-auto min-w-[120px]"
-            >
-              <option value="todos">Todos los tipos</option>
-              <option value="pedido">Pedido</option>
-              <option value="venta_directa">Venta directa</option>
-            </select>
+              onChange={val => { setTipoFilter(val); setPage(1); }}
+              placeholder="Tipo..."
+            />
           </OdooFilterBar>
           <div className="flex items-center gap-2 shrink-0">
             <ExportButton
