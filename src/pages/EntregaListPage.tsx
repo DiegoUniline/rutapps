@@ -151,11 +151,12 @@ export default function EntregaListPage() {
           if (vendedorRutaId) {
             await supabase.from('entregas').update({
               status: 'asignado',
+              almacen_id: almacenId,
               vendedor_ruta_id: vendedorRutaId,
               fecha_asignacion: new Date().toISOString(),
             } as any).eq('id', eid);
           } else {
-            await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', eid);
+            await supabase.from('entregas').update({ status: 'surtido', almacen_id: almacenId } as any).eq('id', eid);
           }
         }
 
