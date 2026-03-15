@@ -317,7 +317,7 @@ export default function DemandaPage() {
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px] text-center">Cond. pago</TableHead>
               <TableHead className="text-[11px] text-right">Total</TableHead>
-              <TableHead className="text-[11px] text-center w-28">Surtido</TableHead>
+              <TableHead className="text-[11px] text-center w-28">Entregado</TableHead>
               <TableHead className="text-[11px] text-center w-20">Pendiente</TableHead>
               <TableHead className="w-8"></TableHead>
             </TableRow>
