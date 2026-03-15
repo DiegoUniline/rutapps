@@ -1013,6 +1013,22 @@ export default function RutaNuevaVenta() {
               </div>
             </section>
 
+            {/* Promotions applied */}
+            {promoResults.length > 0 && (
+              <section className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Tag className="h-3 w-3" /> Promociones aplicadas
+                </p>
+                {promoResults.map((r, i) => (
+                  <div key={i} className="flex justify-between text-[11px] py-0.5">
+                    <span className="text-emerald-700 dark:text-emerald-300 truncate flex-1 mr-2">{r.descripcion}</span>
+                    {r.descuento > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">-${fmt(r.descuento)}</span>}
+                    {r.cantidad_gratis && r.cantidad_gratis > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">{r.cantidad_gratis}x gratis</span>}
+                  </div>
+                ))}
+              </section>
+            )}
+
             {/* Totals */}
             <section className="bg-card rounded-lg p-3">
               <div className="space-y-1">
@@ -1024,6 +1040,12 @@ export default function RutaNuevaVenta() {
                   <div className="flex justify-between text-[12px]">
                     <span className="text-muted-foreground">IVA</span>
                     <span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span>
+                  </div>
+                )}
+                {totals.descuento > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(totals.descuento)}</span>
                   </div>
                 )}
               </div>
