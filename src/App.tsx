@@ -23,6 +23,8 @@ const EntregasPage = lazy(() => import("@/pages/EntregasPage"));
 const ReporteEntregasPage = lazy(() => import("@/pages/ReporteEntregasPage"));
 const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
 const RutasMapPage = lazy(() => import("@/pages/RutasMapPage"));
+const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
+const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
 const CargasListPage = lazy(() => import("@/pages/CargasListPage"));
 const CargaFormPage = lazy(() => import("@/pages/CargaFormPage"));
@@ -129,6 +131,8 @@ function AppRoutes() {
                 <Route path="/ventas/reporte-entregas" element={<ReporteEntregasPage />} />
                 <Route path="/ventas/cobranza" element={<CobranzaPage />} />
                 <Route path="/ventas/rutas" element={<RutasMapPage />} />
+                <Route path="/ventas/mapa-clientes" element={<MapaClientesPage />} />
+                <Route path="/ventas/mapa-ventas" element={<MapaVentasPage />} />
                 <Route path="/ventas/:id" element={<VentaFormPage />} />
                 <Route path="/almacen/inventario" element={<InventarioPage />} />
                 <Route path="/almacen/cargas" element={<CargasListPage />} />
