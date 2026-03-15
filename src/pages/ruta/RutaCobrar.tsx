@@ -230,7 +230,7 @@ export default function RutaCobrar() {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 px-4 h-14">
           <button onClick={goBack} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all">
             <ArrowLeft className="h-5 w-5 text-foreground" />
