@@ -409,10 +409,10 @@ function MonitorContent() {
                   return (
                     <button
                       key={vs.id}
-                      onClick={() => setVendedorFilter(vendedorFilter === vs.id ? '' : vs.id)}
+                      onClick={() => toggleVendedor(vs.id)}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2.5 w-full text-left border-b border-border/30 last:border-0 transition-colors",
-                        vendedorFilter === vs.id ? "bg-primary/5" : "hover:bg-muted/50"
+                        vendedorFilters.includes(vs.id) ? "bg-primary/5" : "hover:bg-muted/50"
                       )}
                     >
                       <div className="min-w-0 flex-1">
