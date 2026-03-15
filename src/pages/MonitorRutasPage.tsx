@@ -140,12 +140,18 @@ function MonitorContent() {
       if (e.cliente_id) {
         const prev = entregasByClient.get(e.cliente_id);
         const clientInfo = e.clientes || prev?.clientInfo;
+        // Keep highest priority: hecho > cargado > asignado > surtido > borrador
+        const prevDelivered = prev?.isDelivered || false;
+        const isDelivered = prevDelivered || e.status === 'hecho';
+        // Use orden_entrega from the most relevant entrega
+        const ordenEntrega = e.orden_entrega ?? prev?.ordenEntrega ?? 0;
         entregasByClient.set(e.cliente_id, {
           clientInfo,
-          isDelivered: (prev?.isDelivered || false) || e.status === 'hecho',
+          isDelivered: isDelivered,
           hasEntrega: true,
           entregaFolio: e.folio,
           entregaStatus: e.status,
+          ordenEntrega,
           vendedor_ruta_id: e.vendedor_ruta_id || e.vendedor_id,
         });
       }
