@@ -252,8 +252,16 @@ export default function TarifaFormPage() {
             <OdooField label="Moneda" value={form.moneda} onChange={v => set('moneda', v)} />
           </div>
           <div>
-            <OdooField label="Vigencia inicio" value={form.vigencia_inicio} onChange={v => set('vigencia_inicio', v)} placeholder="AAAA-MM-DD" />
-            <OdooField label="Vigencia fin" value={form.vigencia_fin} onChange={v => set('vigencia_fin', v)} placeholder="AAAA-MM-DD" />
+            <OdooField label="Vigencia inicio" value={form.vigencia_inicio} type="custom"
+              format={() => form.vigencia_inicio ? new Date(form.vigencia_inicio + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+            >
+              <OdooDatePicker value={form.vigencia_inicio} onChange={v => set('vigencia_inicio', v)} placeholder="Seleccionar fecha" />
+            </OdooField>
+            <OdooField label="Vigencia fin" value={form.vigencia_fin} type="custom"
+              format={() => form.vigencia_fin ? new Date(form.vigencia_fin + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
+            >
+              <OdooDatePicker value={form.vigencia_fin} onChange={v => set('vigencia_fin', v)} placeholder="Seleccionar fecha" />
+            </OdooField>
           </div>
         </div>
 
