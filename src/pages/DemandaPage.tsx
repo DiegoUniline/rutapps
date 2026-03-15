@@ -262,7 +262,7 @@ export default function DemandaPage() {
     <div className="p-4 space-y-4 min-h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <ClipboardList className="h-5 w-5" /> Surtido de pedidos
+          <ClipboardList className="h-5 w-5" /> Pedidos pendientes
         </h1>
       </div>
 
