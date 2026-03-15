@@ -339,7 +339,7 @@ export default function LandingPage() {
             <p className="text-indigo-100 text-lg mb-8 max-w-xl mx-auto">
               Únete a cientos de distribuidoras que ya optimizaron su operación con Rutapp.
             </p>
-            <Link to="/login"
+            <Link to="/signup"
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-base font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all"
               style={{ color: 'hsl(230, 55%, 48%)' }}>
               Crear cuenta gratis <ArrowRight className="h-5 w-5" />
