@@ -48,6 +48,9 @@ const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
+const TraspasosPage = lazy(() => import("@/pages/TraspasosPage"));
+const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage"));
+const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 
@@ -188,6 +191,9 @@ function AppRoutes() {
                 <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
                 <Route path="/almacen/lotes" element={<LotesPage />} />
                 <Route path="/almacen/descargas" element={<DescargasPage />} />
+                <Route path="/almacen/traspasos" element={<TraspasosPage />} />
+                <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
+                <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
                 <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
                 <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
                 <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />

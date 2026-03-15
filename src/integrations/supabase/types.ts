@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      ajustes_inventario: {
+        Row: {
+          almacen_id: string | null
+          cantidad_anterior: number
+          cantidad_nueva: number
+          created_at: string
+          diferencia: number
+          empresa_id: string
+          fecha: string
+          id: string
+          motivo: string | null
+          producto_id: string
+          user_id: string
+        }
+        Insert: {
+          almacen_id?: string | null
+          cantidad_anterior?: number
+          cantidad_nueva?: number
+          created_at?: string
+          diferencia?: number
+          empresa_id: string
+          fecha?: string
+          id?: string
+          motivo?: string | null
+          producto_id: string
+          user_id: string
+        }
+        Update: {
+          almacen_id?: string | null
+          cantidad_anterior?: number
+          cantidad_nueva?: number
+          created_at?: string
+          diferencia?: number
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          motivo?: string | null
+          producto_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ajustes_inventario_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_inventario_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajustes_inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       almacenes: {
         Row: {
           created_at: string
@@ -36,6 +100,113 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "almacenes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auditoria_lineas: {
+        Row: {
+          ajustado: boolean
+          auditoria_id: string
+          cantidad_esperada: number
+          cantidad_real: number | null
+          created_at: string
+          diferencia: number
+          id: string
+          notas: string | null
+          producto_id: string
+        }
+        Insert: {
+          ajustado?: boolean
+          auditoria_id: string
+          cantidad_esperada?: number
+          cantidad_real?: number | null
+          created_at?: string
+          diferencia?: number
+          id?: string
+          notas?: string | null
+          producto_id: string
+        }
+        Update: {
+          ajustado?: boolean
+          auditoria_id?: string
+          cantidad_esperada?: number
+          cantidad_real?: number | null
+          created_at?: string
+          diferencia?: number
+          id?: string
+          notas?: string | null
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditoria_lineas_auditoria_id_fkey"
+            columns: ["auditoria_id"]
+            isOneToOne: false
+            referencedRelation: "auditorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auditoria_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      auditorias: {
+        Row: {
+          aprobado_por: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          fecha_aprobacion: string | null
+          filtro_tipo: string
+          filtro_valor: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          notas_supervisor: string | null
+          status: Database["public"]["Enums"]["status_auditoria"]
+          user_id: string
+        }
+        Insert: {
+          aprobado_por?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          fecha_aprobacion?: string | null
+          filtro_tipo?: string
+          filtro_valor?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          notas_supervisor?: string | null
+          status?: Database["public"]["Enums"]["status_auditoria"]
+          user_id: string
+        }
+        Update: {
+          aprobado_por?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          fecha_aprobacion?: string | null
+          filtro_tipo?: string
+          filtro_valor?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          notas_supervisor?: string | null
+          status?: Database["public"]["Enums"]["status_auditoria"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditorias_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
@@ -2264,6 +2435,129 @@ export type Database = {
           },
         ]
       }
+      traspaso_lineas: {
+        Row: {
+          cantidad: number
+          created_at: string
+          id: string
+          producto_id: string
+          traspaso_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          producto_id: string
+          traspaso_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          producto_id?: string
+          traspaso_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traspaso_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspaso_lineas_traspaso_id_fkey"
+            columns: ["traspaso_id"]
+            isOneToOne: false
+            referencedRelation: "traspasos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traspasos: {
+        Row: {
+          almacen_destino_id: string | null
+          almacen_origen_id: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          folio: string | null
+          id: string
+          notas: string | null
+          status: Database["public"]["Enums"]["status_traspaso"]
+          tipo: Database["public"]["Enums"]["tipo_traspaso"]
+          user_id: string
+          vendedor_destino_id: string | null
+          vendedor_origen_id: string | null
+        }
+        Insert: {
+          almacen_destino_id?: string | null
+          almacen_origen_id?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          notas?: string | null
+          status?: Database["public"]["Enums"]["status_traspaso"]
+          tipo?: Database["public"]["Enums"]["tipo_traspaso"]
+          user_id: string
+          vendedor_destino_id?: string | null
+          vendedor_origen_id?: string | null
+        }
+        Update: {
+          almacen_destino_id?: string | null
+          almacen_origen_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          notas?: string | null
+          status?: Database["public"]["Enums"]["status_traspaso"]
+          tipo?: Database["public"]["Enums"]["tipo_traspaso"]
+          user_id?: string
+          vendedor_destino_id?: string | null
+          vendedor_origen_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traspasos_almacen_destino_id_fkey"
+            columns: ["almacen_destino_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspasos_almacen_origen_id_fkey"
+            columns: ["almacen_origen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspasos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspasos_vendedor_destino_id_fkey"
+            columns: ["vendedor_destino_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "traspasos_vendedor_origen_id_fkey"
+            columns: ["vendedor_origen_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unidades: {
         Row: {
           abreviatura: string | null
@@ -2770,6 +3064,12 @@ export type Database = {
         | "faltante"
         | "sobrante"
         | "otro"
+      status_auditoria:
+        | "pendiente"
+        | "en_proceso"
+        | "por_aprobar"
+        | "aprobada"
+        | "rechazada"
       status_carga: "pendiente" | "en_ruta" | "completada" | "cancelada"
       status_cliente: "activo" | "inactivo" | "suspendido"
       status_descarga: "pendiente" | "aprobada" | "rechazada"
@@ -2783,6 +3083,7 @@ export type Database = {
         | "hecho"
         | "cancelado"
       status_producto: "activo" | "inactivo" | "borrador"
+      status_traspaso: "borrador" | "confirmado" | "cancelado"
       status_venta:
         | "borrador"
         | "confirmado"
@@ -2800,6 +3101,7 @@ export type Database = {
         | "precio_especial"
         | "volumen"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
+      tipo_traspaso: "almacen_almacen" | "almacen_ruta" | "ruta_almacen"
       tipo_venta: "pedido" | "venta_directa"
     }
     CompositeTypes: {
@@ -2955,6 +3257,13 @@ export const Constants = {
         "sobrante",
         "otro",
       ],
+      status_auditoria: [
+        "pendiente",
+        "en_proceso",
+        "por_aprobar",
+        "aprobada",
+        "rechazada",
+      ],
       status_carga: ["pendiente", "en_ruta", "completada", "cancelada"],
       status_cliente: ["activo", "inactivo", "suspendido"],
       status_descarga: ["pendiente", "aprobada", "rechazada"],
@@ -2969,6 +3278,7 @@ export const Constants = {
         "cancelado",
       ],
       status_producto: ["activo", "inactivo", "borrador"],
+      status_traspaso: ["borrador", "confirmado", "cancelado"],
       status_venta: [
         "borrador",
         "confirmado",
@@ -2988,6 +3298,7 @@ export const Constants = {
         "volumen",
       ],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],
+      tipo_traspaso: ["almacen_almacen", "almacen_ruta", "ruta_almacen"],
       tipo_venta: ["pedido", "venta_directa"],
     },
   },
