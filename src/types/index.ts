@@ -74,6 +74,8 @@ export interface Tarifa {
   tarifa_lineas?: TarifaLinea[];
 }
 
+export type RedondeoTarifa = 'ninguno' | 'arriba' | 'abajo' | 'cercano';
+
 export interface TarifaLinea {
   id: string;
   tarifa_id: string;
@@ -86,6 +88,7 @@ export interface TarifaLinea {
   descuento_max: number;
   margen_pct: number;
   descuento_pct: number;
+  redondeo: RedondeoTarifa;
   notas?: string;
   created_at: string;
 }

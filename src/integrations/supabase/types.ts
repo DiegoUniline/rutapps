@@ -1468,6 +1468,7 @@ export type Database = {
           precio: number
           precio_minimo: number | null
           producto_ids: string[]
+          redondeo: string
           tarifa_id: string
           tipo_calculo: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
@@ -1483,6 +1484,7 @@ export type Database = {
           precio?: number
           precio_minimo?: number | null
           producto_ids?: string[]
+          redondeo?: string
           tarifa_id: string
           tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
@@ -1498,6 +1500,7 @@ export type Database = {
           precio?: number
           precio_minimo?: number | null
           producto_ids?: string[]
+          redondeo?: string
           tarifa_id?: string
           tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }

@@ -6,7 +6,7 @@ import { OdooField } from '@/components/OdooFormField';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones } from '@/hooks/useData';
 import { toast } from 'sonner';
-import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa } from '@/types';
+import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
@@ -20,6 +20,13 @@ const CALCULO_LABELS: Record<TipoCalculoTarifa, string> = {
   precio_fijo: 'Precio fijo',
 };
 
+const REDONDEO_LABELS: Record<string, string> = {
+  ninguno: 'Sin redondeo',
+  arriba: '↑ Hacia arriba',
+  abajo: '↓ Hacia abajo',
+  cercano: '≈ Al más cercano',
+};
+
 const EMPTY_LINEA = {
   producto_ids: [] as string[],
   clasificacion_ids: [] as string[],
@@ -30,6 +37,7 @@ const EMPTY_LINEA = {
   descuento_max: 0,
   margen_pct: 0,
   descuento_pct: 0,
+  redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
 };
 
@@ -123,6 +131,7 @@ export default function TarifaFormPage() {
         descuento_max: newLinea.descuento_max,
         margen_pct: newLinea.margen_pct,
         descuento_pct: newLinea.descuento_pct,
+        redondeo: newLinea.redondeo,
         notas: newLinea.notas || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
         clasificacion_ids: newLinea.aplica_a === 'categoria' ? newLinea.clasificacion_ids : [],
@@ -241,10 +250,11 @@ export default function TarifaFormPage() {
                               <th className="th-odoo text-left" style={{width:'90px'}}>Prioridad</th>
                               <th className="th-odoo text-left" style={{width:'120px'}}>Aplica a</th>
                               <th className="th-odoo text-left">Productos / Categorías</th>
-                              <th className="th-odoo text-left" style={{width:'160px'}}>Tipo Cálculo</th>
-                              <th className="th-odoo text-right" style={{width:'140px'}}>Valor</th>
-                              <th className="th-odoo text-right" style={{width:'90px'}}>Precio Mín</th>
-                              <th className="th-odoo text-left" style={{width:'120px'}}>Notas</th>
+                              <th className="th-odoo text-left" style={{width:'150px'}}>Tipo Cálculo</th>
+                              <th className="th-odoo text-right" style={{width:'120px'}}>Valor</th>
+                              <th className="th-odoo text-right" style={{width:'80px'}}>Precio Mín</th>
+                              <th className="th-odoo text-left" style={{width:'110px'}}>Redondeo</th>
+                              <th className="th-odoo text-left" style={{width:'100px'}}>Notas</th>
                               <th className="th-odoo" style={{width:'36px'}}></th>
                             </tr>
                           </thead>
@@ -267,6 +277,7 @@ export default function TarifaFormPage() {
                                 <td className="py-1.5 px-3 text-xs">{CALCULO_LABELS[l.tipo_calculo]}</td>
                                 <td className="py-1.5 px-3 text-right font-mono text-odoo-teal">{getCalculoDisplay(l)}</td>
                                 <td className="py-1.5 px-3 text-right font-mono">${l.precio_minimo.toFixed(2)}</td>
+                                <td className="py-1.5 px-3 text-xs">{REDONDEO_LABELS[(l as any).redondeo] || 'Sin redondeo'}</td>
                                 <td className="py-1.5 px-3 text-muted-foreground text-xs">{l.notas ?? '—'}</td>
                                 <td className="py-1.5 px-3 text-center">
                                   <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
@@ -326,6 +337,15 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">
                                 <input type="number" className="input-odoo text-right text-xs" placeholder="Mín" value={newLinea.precio_minimo} onChange={e => setNewLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
+                              </td>
+                              <td className="py-2 px-3">
+                                <select className="input-odoo text-xs" value={newLinea.redondeo}
+                                  onChange={e => setNewLinea(p => ({ ...p, redondeo: e.target.value as RedondeoTarifa }))}>
+                                  <option value="ninguno">Sin redondeo</option>
+                                  <option value="arriba">↑ Hacia arriba</option>
+                                  <option value="abajo">↓ Hacia abajo</option>
+                                  <option value="cercano">≈ Al más cercano</option>
+                                </select>
                               </td>
                               <td className="py-2 px-3">
                                 <input className="input-odoo text-xs" placeholder="Notas" value={newLinea.notas} onChange={e => setNewLinea(p => ({ ...p, notas: e.target.value }))} />
