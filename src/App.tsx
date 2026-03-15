@@ -119,6 +119,7 @@ function AppRoutes() {
             <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
             <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
             <Route path="/almacen/compras" element={<ComprasPage />} />
+            <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
             <Route path="/almacen/lotes" element={<LotesPage />} />
             <Route path="/almacen/descargas" element={<DescargasPage />} />
             {/* Finanzas module */}
