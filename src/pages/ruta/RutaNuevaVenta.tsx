@@ -385,12 +385,16 @@ export default function RutaNuevaVenta() {
       }
 
       // 2. Create sale
+      const selectedCliente = clientes?.find(c => c.id === clienteId);
+      const tarifaId = selectedCliente?.tarifa_id || null;
+      const almacenId = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: 'borrador', notas: notas || null,
-        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: 0, descuento_total: 0,
+        tarifa_id: tarifaId, almacen_id: almacenId,
+        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: 0,
         total: totals.total, saldo_pendiente: totals.total,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
