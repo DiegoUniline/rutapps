@@ -38,7 +38,7 @@ interface EditLinea {
   iva_pct: number;
 }
 
-type View = 'detalle' | 'editar' | 'cobrar' | 'ticket';
+type View = 'detalle' | 'editar' | 'cobrar' | 'ticket' | 'estado_cuenta';
 
 export default function RutaVentaDetalle() {
   const { id } = useParams();
