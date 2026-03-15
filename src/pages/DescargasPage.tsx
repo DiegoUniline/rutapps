@@ -110,7 +110,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <PackageCheck className="h-5 w-5" /> Revisión de liquidación
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {(descarga as any).vendedores?.nombre ?? 'Vendedor'} — {descarga.fecha}
+              {(descarga as any).vendedores?.nombre ?? 'Sin vendedor asignado'} — {
+                descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
+                  ? `${descarga.fecha_inicio} al ${descarga.fecha_fin}`
+                  : descarga.fecha
+              }
+              {!descarga.carga_id && ' (sin carga)'}
             </p>
           </div>
           <div className="flex items-center gap-2">
