@@ -39,9 +39,9 @@ export default function CargasListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5" /> Cargas
+            <Truck className="h-5 w-5" /> Cargas / Traspasos
           </h1>
-          <p className="text-sm text-muted-foreground">Gestiona las cargas de producto para cada ruta</p>
+          <p className="text-sm text-muted-foreground">Transfiere producto entre almacenes y camionetas</p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButton
