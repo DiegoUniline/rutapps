@@ -163,8 +163,8 @@ function NavegacionContent() {
   const startNavigation = (stop: Stop) => {
     setNavigatingTo(stop.id);
     setActiveStopId(stop.id);
+    setCurrentStepIdx(0);
     setPanelOpen(true);
-    // Zoom to stop
     mapRef.current?.panTo({ lat: stop.gps_lat, lng: stop.gps_lng });
     mapRef.current?.setZoom(14);
   };
