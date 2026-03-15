@@ -131,8 +131,8 @@ Deno.serve(async (req) => {
       );
 
       const mapped = customerRecords
-        .filter((c): c is Stripe.Customer => !("deleted" in c))
-        .map((c) => ({
+        .filter((c: any) => !c?.deleted)
+        .map((c: any) => ({
           id: c.id,
           email: c.email,
           name: c.name,
