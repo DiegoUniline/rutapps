@@ -364,7 +364,7 @@ export default function EntregaListPage() {
             {isLoading && (
               <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
             )}
-            {!isLoading && (entregas ?? []).length === 0 && (
+            {!isLoading && filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
