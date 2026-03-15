@@ -185,8 +185,8 @@ function NavegacionContent() {
     setPanelOpen(true);
     // Initial center on user while directions load
     if (mapRef.current && userLocation) {
-      mapRef.current.panTo(userLocation);
-      mapRef.current.setZoom(15);
+      mapRef.current.setCenter(userLocation);
+      mapRef.current.setZoom(17);
     }
   };
 
