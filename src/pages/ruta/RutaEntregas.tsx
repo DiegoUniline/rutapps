@@ -67,7 +67,7 @@ export default function RutaEntregas() {
             size="sm"
             variant="outline"
             className="ml-auto rounded-xl gap-1.5 text-[11px]"
-            onClick={() => navigate('/ruta/navegacion?modo=entregas')}
+            onClick={() => navigate('/ruta/navegacion')}
           >
             <Navigation className="h-3.5 w-3.5" /> Navegar
           </Button>

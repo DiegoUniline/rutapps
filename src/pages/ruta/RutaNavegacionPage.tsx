@@ -38,12 +38,13 @@ interface Stop {
   gps_lng: number;
   folio?: string;
   tipo: 'cliente' | 'entrega';
+  orden: number;
+  entregaRef?: any;
 }
 
 function NavegacionContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const mode = (searchParams.get('modo') as 'clientes' | 'entregas') || 'clientes';
   const { empresa, profile } = useAuth();
   const { isLoaded } = useGoogleMaps();
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
@@ -55,6 +56,7 @@ function NavegacionContent() {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
+  const vendedorId = profile?.vendedor_id;
 
   // Watch user location
   useEffect(() => {
@@ -67,10 +69,10 @@ function NavegacionContent() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Fetch clients
+  // Fetch clients for today
   const { data: clientesData } = useQuery({
     queryKey: ['nav-clientes', empresa?.id],
-    enabled: !!empresa?.id && mode === 'clientes',
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
@@ -85,45 +87,52 @@ function NavegacionContent() {
   });
 
   // Fetch entregas
-  const vendedorId = profile?.vendedor_id;
   const { data: allEntregas, refetch: refetchEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
-  }, { enabled: !!empresa?.id && mode === 'entregas', orderBy: 'orden_entrega' });
+  }, { enabled: !!empresa?.id, orderBy: 'orden_entrega' });
 
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, {
-    enabled: !!empresa?.id && mode === 'entregas',
+    enabled: !!empresa?.id,
   });
 
   const clienteMap = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c])), [clientes]);
 
+  // Build unified stops: clients + entregas merged, avoiding duplicates (same client GPS)
   const stops: Stop[] = useMemo(() => {
-    if (mode === 'clientes') {
-      return (clientesData ?? []).map(c => ({
-        id: c.id, nombre: c.nombre,
-        direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
-        telefono: c.telefono ?? undefined,
-        gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
-      }));
-    } else {
-      return (allEntregas ?? [])
-        .filter((e: any) =>
-          (e.status === 'cargado' || e.status === 'en_ruta') &&
-          (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
-        )
-        .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
-        .map((e: any) => {
-          const cliente = clienteMap.get(e.cliente_id);
-          return {
-            id: e.id, nombre: cliente?.nombre ?? 'Sin cliente',
-            direccion: cliente?.direccion ?? undefined, colonia: cliente?.colonia ?? undefined,
-            telefono: cliente?.telefono ?? undefined,
-            gps_lat: cliente?.gps_lat ?? 0, gps_lng: cliente?.gps_lng ?? 0,
-            folio: e.folio, tipo: 'entrega' as const,
-          };
-        })
-        .filter(s => s.gps_lat !== 0 && s.gps_lng !== 0);
-    }
-  }, [mode, clientesData, allEntregas, vendedorId, clienteMap]);
+    const clientStops: Stop[] = (clientesData ?? []).map((c, i) => ({
+      id: `cli-${c.id}`, nombre: c.nombre,
+      direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
+      telefono: c.telefono ?? undefined,
+      gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
+      orden: c.orden ?? i,
+    }));
+
+    const entregaStops: Stop[] = (allEntregas ?? [])
+      .filter((e: any) =>
+        (e.status === 'cargado' || e.status === 'en_ruta') &&
+        (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
+      )
+      .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
+      .map((e: any) => {
+        const cliente = clienteMap.get(e.cliente_id);
+        return {
+          id: `ent-${e.id}`, nombre: cliente?.nombre ?? 'Sin cliente',
+          direccion: cliente?.direccion ?? undefined, colonia: cliente?.colonia ?? undefined,
+          telefono: cliente?.telefono ?? undefined,
+          gps_lat: cliente?.gps_lat ?? 0, gps_lng: cliente?.gps_lng ?? 0,
+          folio: e.folio, tipo: 'entrega' as const,
+          orden: e.orden_entrega ?? 999,
+          entregaRef: e,
+        };
+      })
+      .filter(s => s.gps_lat !== 0 && s.gps_lng !== 0);
+
+    // Merge: entregas first (priority), then client visits
+    const all = [...entregaStops, ...clientStops];
+    // Sort by orden
+    all.sort((a, b) => a.orden - b.orden);
+    return all;
+  }, [clientesData, allEntregas, vendedorId, clienteMap]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
@@ -182,17 +191,14 @@ function NavegacionContent() {
   };
 
   const handleVisited = async (stop: Stop) => {
-    if (mode === 'entregas') {
-      const entrega = (allEntregas ?? []).find((e: any) => e.id === stop.id) as any;
-      if (entrega) {
-        await offlineMutate('entregas', 'update', {
-          ...entrega, status: 'hecho', validado_at: new Date().toISOString(),
-        });
-        refetchEntregas();
-      }
+    if (stop.tipo === 'entrega' && stop.entregaRef) {
+      await offlineMutate('entregas', 'update', {
+        ...stop.entregaRef, status: 'hecho', validado_at: new Date().toISOString(),
+      });
+      refetchEntregas();
     }
     setCompletedIds(prev => new Set([...prev, stop.id]));
-    toast.success(mode === 'entregas' ? '¡Entregado!' : '¡Visitado!');
+    toast.success(stop.tipo === 'entrega' ? '¡Entregado!' : '¡Visitado!');
     stopNavigation();
 
     // Auto-navigate to next
@@ -205,7 +211,8 @@ function NavegacionContent() {
 
   const handleSaleAndVisit = (stop: Stop) => {
     setCompletedIds(prev => new Set([...prev, stop.id]));
-    navigate(`/ruta/ventas/nueva?clienteId=${stop.id}`);
+    const realClientId = stop.id.replace('cli-', '');
+    navigate(`/ruta/ventas/nueva?clienteId=${realClientId}`);
   };
 
   const leg = directions?.routes?.[0]?.legs?.[0];
@@ -309,7 +316,7 @@ function NavegacionContent() {
                 }}
                 icon={{
                   path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : '#6366f1',
+                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : stop.tipo === 'entrega' ? '#f59e0b' : '#6366f1',
                   fillOpacity: isCompleted ? 0.5 : 1,
                   strokeColor: '#ffffff',
                   strokeWeight: 2,
@@ -386,7 +393,7 @@ function NavegacionContent() {
             </button>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-bold text-foreground">
-                {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+                Mi ruta
               </p>
               <p className="text-[11px] text-muted-foreground">
                 {completedCount}/{totalCount} completadas
@@ -443,7 +450,7 @@ function NavegacionContent() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {mode === 'clientes' ? (
+              {navigatingStop.tipo === 'cliente' ? (
                 <>
                   <Button onClick={() => handleSaleAndVisit(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
                     <ShoppingCart className="h-4 w-4" /> Vender
@@ -496,12 +503,19 @@ function NavegacionContent() {
                       "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
                       isCompleted
                         ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                        : "bg-primary/10 text-primary"
+                        : stop.tipo === 'entrega' ? "bg-amber-500/15 text-amber-600" : "bg-primary/10 text-primary"
                     )}>
-                      {isCompleted ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+                      {isCompleted ? <Check className="h-3.5 w-3.5" /> : stop.tipo === 'entrega' ? <Truck className="h-3.5 w-3.5" /> : idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      {stop.folio && <p className="text-[10px] font-mono text-muted-foreground">{stop.folio}</p>}
+                      <div className="flex items-center gap-1.5">
+                        {stop.folio && <span className="text-[10px] font-mono text-muted-foreground">{stop.folio}</span>}
+                        <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-medium",
+                          stop.tipo === 'entrega' ? "bg-amber-500/10 text-amber-600" : "bg-primary/10 text-primary"
+                        )}>
+                          {stop.tipo === 'entrega' ? 'Entrega' : 'Visita'}
+                        </span>
+                      </div>
                       <p className={cn("text-sm font-medium truncate", isCompleted ? "line-through text-muted-foreground" : "text-foreground")}>
                         {stop.nombre}
                       </p>
