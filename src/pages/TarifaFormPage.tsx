@@ -38,6 +38,7 @@ const EMPTY_LINEA = {
   margen_pct: 0,
   descuento_pct: 0,
   comision_pct: 0,
+  base_precio: 'sin_impuestos' as 'sin_impuestos' | 'con_impuestos',
   redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
 };
