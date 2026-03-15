@@ -157,9 +157,16 @@ export default function UsuariosPage() {
   };
 
   // ── Create user ──
+  const activeUsers = profiles.filter(p => p.estado === 'activo').length;
+  const availableSlots = subscription.maxUsuarios - activeUsers;
+
   const createUser = async () => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
     if (newUser.password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (availableSlots <= 0) {
+      toast.error(`Ya alcanzaste el límite de ${subscription.maxUsuarios} usuarios de tu plan. Actualiza tu suscripción para agregar más.`);
+      return;
+    }
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
