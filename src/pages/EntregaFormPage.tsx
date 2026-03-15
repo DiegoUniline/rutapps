@@ -160,7 +160,7 @@ export default function EntregaFormPage() {
       if (lErr) throw lErr;
 
       toast.success('Entrega creada');
-      navigate(`/entregas/${ent.id}`, { replace: true });
+      navigate(`/logistica/entregas/${ent.id}`, { replace: true });
     } catch (e: any) {
       toast.error(e.message);
     }
