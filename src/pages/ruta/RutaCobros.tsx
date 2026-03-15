@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Banknote, Building2, CreditCard, Wallet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 
 const METODO_ICONS: Record<string, any> = {
   efectivo: Banknote,
@@ -15,27 +14,24 @@ const METODO_ICONS: Record<string, any> = {
 export default function RutaCobros() {
   const navigate = useNavigate();
   const { empresa } = useAuth();
-  const [search, setSearch] = useState('');
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: cobros } = useQuery({
-    queryKey: ['ruta-cobros', empresa?.id, today],
+  const { data: cobros } = useOfflineQuery('cobros', {
+    empresa_id: empresa?.id,
+  }, {
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('cobros')
-        .select('id, monto, fecha, metodo_pago, created_at, clientes:cliente_id(nombre, codigo)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .limit(100);
-      return data ?? [];
-    },
+    orderBy: 'created_at',
+    ascending: false,
   });
 
-  const todayCobros = cobros?.filter(c => c.fecha === today) ?? [];
-  const olderCobros = cobros?.filter(c => c.fecha !== today) ?? [];
-  const totalHoy = todayCobros.reduce((s, c) => s + (c.monto ?? 0), 0);
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
+
+  const recentCobros = (cobros ?? []).slice(0, 100);
+  const todayCobros = recentCobros.filter((c: any) => c.fecha === today);
+  const olderCobros = recentCobros.filter((c: any) => c.fecha !== today);
+  const totalHoy = todayCobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
 
   const formatDate = (d: string) => {
     const date = new Date(d + 'T12:00:00');
@@ -44,7 +40,7 @@ export default function RutaCobros() {
 
   const renderCobro = (c: any) => {
     const Icon = METODO_ICONS[c.metodo_pago] || Wallet;
-    const clienteNombre = (c.clientes as any)?.nombre ?? 'Sin cliente';
+    const clienteNombre = clienteMap.get(c.cliente_id) ?? 'Sin cliente';
     return (
       <div key={c.id} className="rounded-lg px-3 py-2.5 bg-card flex items-center gap-2.5">
         <div className="w-8 h-8 rounded-md bg-success/10 flex items-center justify-center shrink-0">
@@ -63,7 +59,6 @@ export default function RutaCobros() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="px-3 pt-3 pb-2 space-y-2">
         <div className="flex items-center justify-between">
           <h1 className="text-[17px] font-bold text-foreground">Cobros</h1>
@@ -76,7 +71,6 @@ export default function RutaCobros() {
           </button>
         </div>
 
-        {/* Today summary */}
         {todayCobros.length > 0 && (
           <div className="bg-success/8 rounded-lg p-3 flex items-center justify-between">
             <div>
@@ -99,13 +93,13 @@ export default function RutaCobros() {
         {olderCobros.length > 0 && (
           <>
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 py-1.5 mt-2">Anteriores</p>
-            {olderCobros.map(c => (
+            {olderCobros.map((c: any) => (
               <div key={c.id} className="rounded-lg px-3 py-2.5 bg-card flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center shrink-0">
                   {(() => { const Icon = METODO_ICONS[c.metodo_pago] || Wallet; return <Icon className="h-4 w-4 text-muted-foreground" />; })()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12.5px] font-medium text-foreground truncate">{(c.clientes as any)?.nombre ?? 'Sin cliente'}</p>
+                  <p className="text-[12.5px] font-medium text-foreground truncate">{clienteMap.get(c.cliente_id) ?? 'Sin cliente'}</p>
                   <p className="text-[10.5px] text-muted-foreground">{formatDate(c.fecha)} · {c.metodo_pago}</p>
                 </div>
                 <p className="text-[13px] font-semibold text-foreground shrink-0 tabular-nums">
@@ -116,7 +110,7 @@ export default function RutaCobros() {
           </>
         )}
 
-        {cobros?.length === 0 && (
+        {recentCobros.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-2">
             <Banknote className="h-10 w-10 text-muted-foreground/30" />
             <p className="text-[13px] text-muted-foreground">No hay cobros registrados</p>

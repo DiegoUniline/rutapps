@@ -1,84 +1,53 @@
-import { AlertTriangle, Clock, Package, Users } from 'lucide-react';
+import { AlertTriangle, Clock, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function AlertasVendedor() {
   const { empresa } = useAuth();
 
-  const { data: alertas } = useQuery({
-    queryKey: ['ruta-alertas', empresa?.id],
-    enabled: !!empresa?.id,
-    refetchInterval: 5 * 60 * 1000, // every 5 min
-    queryFn: async () => {
-      const eid = empresa!.id;
-      const [saldosVencidos, stockBajo, clientesSinVisita] = await Promise.all([
-        // Clientes con saldo pendiente > 0 on crédito
-        supabase.from('ventas')
-          .select('cliente_id, saldo_pendiente, clientes(nombre)')
-          .eq('empresa_id', eid)
-          .eq('condicion_pago', 'credito')
-          .gt('saldo_pendiente', 0)
-          .in('status', ['confirmado', 'entregado', 'facturado']),
-        // Products with low stock (cantidad <= min and min > 0)
-        supabase.from('productos')
-          .select('id, nombre, cantidad, min')
-          .eq('empresa_id', eid)
-          .eq('status', 'activo')
-          .gt('min', 0),
-        // Clients with today's visit day but no sale today
-        supabase.from('clientes')
-          .select('id, nombre')
-          .eq('empresa_id', eid)
-          .eq('status', 'activo'),
-      ]);
+  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id });
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
-      // Process saldos vencidos - group by client
-      const saldosMap = new Map<string, { nombre: string; total: number }>();
-      (saldosVencidos.data ?? []).forEach((v: any) => {
-        const cid = v.cliente_id;
-        const existing = saldosMap.get(cid);
-        if (existing) {
-          existing.total += v.saldo_pendiente ?? 0;
-        } else {
-          saldosMap.set(cid, { nombre: v.clientes?.nombre ?? '—', total: v.saldo_pendiente ?? 0 });
-        }
-      });
-      const saldos = Array.from(saldosMap.values()).sort((a, b) => b.total - a.total);
+  // Saldos pendientes
+  const ventasCredito = (ventas ?? []).filter((v: any) => v.condicion_pago === 'credito' && (v.saldo_pendiente ?? 0) > 0 && ['confirmado', 'entregado', 'facturado'].includes(v.status));
+  const saldosMap = new Map<string, { nombre: string; total: number }>();
+  const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-      // Process stock bajo
-      const lowStock = (stockBajo.data ?? []).filter((p: any) => (p.cantidad ?? 0) <= (p.min ?? 0));
-
-      return {
-        saldosPendientes: saldos,
-        totalPendiente: saldos.reduce((s, x) => s + x.total, 0),
-        stockBajo: lowStock.slice(0, 5),
-        numStockBajo: lowStock.length,
-      };
-    },
+  ventasCredito.forEach((v: any) => {
+    const cid = v.cliente_id;
+    const existing = saldosMap.get(cid);
+    if (existing) {
+      existing.total += v.saldo_pendiente ?? 0;
+    } else {
+      saldosMap.set(cid, { nombre: clienteMap.get(cid) ?? '—', total: v.saldo_pendiente ?? 0 });
+    }
   });
+  const saldos = Array.from(saldosMap.values()).sort((a, b) => b.total - a.total);
+  const totalPendiente = saldos.reduce((s, x) => s + x.total, 0);
 
-  if (!alertas) return null;
+  // Stock bajo
+  const lowStock = (productos ?? []).filter((p: any) => (p.min ?? 0) > 0 && (p.cantidad ?? 0) <= (p.min ?? 0));
 
   const items: { icon: any; color: string; text: string; detail: string }[] = [];
 
-  if (alertas.totalPendiente > 0) {
+  if (totalPendiente > 0) {
     items.push({
       icon: Clock,
       color: 'text-destructive bg-destructive/10',
-      text: `${alertas.saldosPendientes.length} clientes con saldo`,
-      detail: `$ ${fmt(alertas.totalPendiente)} por cobrar`,
+      text: `${saldos.length} clientes con saldo`,
+      detail: `$ ${fmt(totalPendiente)} por cobrar`,
     });
   }
 
-  if (alertas.numStockBajo > 0) {
+  if (lowStock.length > 0) {
     items.push({
       icon: Package,
       color: 'text-warning bg-warning/10',
-      text: `${alertas.numStockBajo} productos stock bajo`,
-      detail: alertas.stockBajo.map(p => p.nombre).join(', '),
+      text: `${lowStock.length} productos stock bajo`,
+      detail: lowStock.slice(0, 5).map((p: any) => p.nombre).join(', '),
     });
   }
 

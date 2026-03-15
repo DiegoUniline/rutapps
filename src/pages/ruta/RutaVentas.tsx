@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
 
 export default function RutaVentas() {
@@ -11,19 +10,22 @@ export default function RutaVentas() {
   const { empresa } = useAuth();
   const [search, setSearch] = useState('');
 
-  const { data: ventas, isLoading } = useQuery({
-    queryKey: ['ruta-ventas', empresa?.id],
+  const { data: ventas, isLoading } = useOfflineQuery('ventas', {
+    empresa_id: empresa?.id,
+  }, {
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, status, tipo, clientes(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-      return data ?? [];
-    },
+    orderBy: 'created_at',
+    ascending: false,
   });
+
+  // Enrich with client names from local cache
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
+
+  const enriched = (ventas ?? []).slice(0, 50).map((v: any) => ({
+    ...v,
+    _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
+  }));
 
   const statusColors: Record<string, string> = {
     borrador: 'bg-muted/20 text-muted-foreground',
@@ -33,14 +35,13 @@ export default function RutaVentas() {
     cancelado: 'bg-destructive/10 text-destructive',
   };
 
-  const filtered = ventas?.filter(v =>
+  const filtered = enriched.filter((v: any) =>
     !search || v.folio?.toLowerCase().includes(search.toLowerCase()) ||
-    (v.clientes as any)?.nombre?.toLowerCase().includes(search.toLowerCase())
+    v._clienteNombre?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-[20px] font-bold text-foreground">Ventas</h1>
@@ -63,10 +64,9 @@ export default function RutaVentas() {
         </div>
       </div>
 
-      {/* List */}
       <div className="flex-1 px-4 space-y-2 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
-        {filtered?.map(v => (
+        {filtered.map((v: any) => (
           <button
             key={v.id}
             onClick={() => navigate(`/ruta/ventas/${v.id}`)}
@@ -79,9 +79,7 @@ export default function RutaVentas() {
                   {v.status}
                 </span>
               </div>
-              <p className="text-[12px] text-muted-foreground truncate mt-0.5">
-                {(v.clientes as any)?.nombre ?? 'Sin cliente'}
-              </p>
+              <p className="text-[12px] text-muted-foreground truncate mt-0.5">{v._clienteNombre}</p>
               <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)}</p>
             </div>
             <div className="text-right shrink-0">
@@ -90,7 +88,7 @@ export default function RutaVentas() {
             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
           </button>
         ))}
-        {!isLoading && filtered?.length === 0 && (
+        {!isLoading && filtered.length === 0 && (
           <p className="text-center text-muted-foreground text-[13px] py-8">No hay ventas</p>
         )}
       </div>
