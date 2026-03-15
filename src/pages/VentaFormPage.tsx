@@ -330,7 +330,7 @@ export default function VentaFormPage() {
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
   }, [lineas]);
 
-  const handleSave = async () => {
+  const handleSave = async (autoConfirm = false) => {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     try {
@@ -352,7 +352,14 @@ export default function VentaFormPage() {
           subtotal: base, iva_monto: iva, ieps_monto: ieps, total: base + iva + ieps,
         } as any);
       }
-      toast.success('Venta guardada');
+      if (isNew && autoConfirm) {
+        // Set saldo_pendiente based on condicion_pago
+        const saldo = form.condicion_pago === 'contado' ? 0 : totals.total;
+        await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
+        toast.success('Venta confirmada');
+      } else {
+        toast.success('Venta guardada');
+      }
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
