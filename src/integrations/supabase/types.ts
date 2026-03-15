@@ -612,7 +612,7 @@ export type Database = {
       descarga_ruta: {
         Row: {
           aprobado_por: string | null
-          carga_id: string
+          carga_id: string | null
           created_at: string
           diferencia_efectivo: number
           efectivo_entregado: number
@@ -620,6 +620,8 @@ export type Database = {
           empresa_id: string
           fecha: string
           fecha_aprobacion: string | null
+          fecha_fin: string | null
+          fecha_inicio: string | null
           id: string
           notas: string | null
           notas_supervisor: string | null
@@ -629,7 +631,7 @@ export type Database = {
         }
         Insert: {
           aprobado_por?: string | null
-          carga_id: string
+          carga_id?: string | null
           created_at?: string
           diferencia_efectivo?: number
           efectivo_entregado?: number
@@ -637,6 +639,8 @@ export type Database = {
           empresa_id: string
           fecha?: string
           fecha_aprobacion?: string | null
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
           id?: string
           notas?: string | null
           notas_supervisor?: string | null
@@ -646,7 +650,7 @@ export type Database = {
         }
         Update: {
           aprobado_por?: string | null
-          carga_id?: string
+          carga_id?: string | null
           created_at?: string
           diferencia_efectivo?: number
           efectivo_entregado?: number
@@ -654,6 +658,8 @@ export type Database = {
           empresa_id?: string
           fecha?: string
           fecha_aprobacion?: string | null
+          fecha_fin?: string | null
+          fecha_inicio?: string | null
           id?: string
           notas?: string | null
           notas_supervisor?: string | null
