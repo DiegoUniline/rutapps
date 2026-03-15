@@ -671,6 +671,7 @@ export default function RutaNuevaVenta() {
         })}
         subtotal={totals.subtotal}
         iva={totals.iva}
+        ieps={totals.ieps}
         total={totals.total}
         condicionPago={condicionPago}
         metodoPago={metodoPago}
