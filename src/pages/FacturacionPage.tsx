@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { Receipt, ExternalLink, Download, AlertTriangle, LogOut, CreditCard } from 'lucide-react';
+import { Receipt, ExternalLink, Download, AlertTriangle, LogOut, CreditCard, UserPlus, Users, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -32,15 +34,28 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   uncollectible: { label: 'Incobrable', variant: 'outline' },
 };
 
+// Price per user per month depending on plan
+const PRICE_PER_USER = 300; // default MXN
+
 export default function FacturacionPage() {
-  const { signOut } = useAuth();
+  const { signOut, empresa } = useAuth();
   const subscription = useSubscription();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subData, setSubData] = useState<{ max_usuarios: number; status: string; plan_nombre: string } | null>(null);
+  const [showAddUsers, setShowAddUsers] = useState(false);
+  const [newQty, setNewQty] = useState(3);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadInvoices();
-  }, []);
+    loadAll();
+  }, [empresa?.id]);
+
+  async function loadAll() {
+    setLoading(true);
+    await Promise.all([loadInvoices(), loadSubscription()]);
+    setLoading(false);
+  }
 
   async function loadInvoices() {
     try {
@@ -49,13 +64,51 @@ export default function FacturacionPage() {
       setInvoices(data?.invoices || []);
     } catch (err) {
       console.error('Error loading invoices:', err);
+    }
+  }
+
+  async function loadSubscription() {
+    if (!empresa?.id) return;
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('max_usuarios, status, subscription_plans(nombre)')
+      .eq('empresa_id', empresa.id)
+      .maybeSingle();
+    if (data) {
+      setSubData({
+        max_usuarios: data.max_usuarios,
+        status: data.status,
+        plan_nombre: (data as any).subscription_plans?.nombre || 'Sin plan',
+      });
+      setNewQty(data.max_usuarios);
+    }
+  }
+
+  async function handleUpdateUsers() {
+    if (newQty < 3) {
+      toast.error('El mínimo son 3 usuarios');
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-subscription', {
+        body: { action: 'update_quantity', new_quantity: newQty },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Usuarios actualizados a ${newQty}`);
+      setShowAddUsers(false);
+      loadSubscription();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al actualizar');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   }
 
   const openInvoices = invoices.filter(i => i.status === 'open');
   const otherInvoices = invoices.filter(i => i.status !== 'open');
+  const monthlyCost = (subData?.max_usuarios || 3) * PRICE_PER_USER;
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,12 +121,12 @@ export default function FacturacionPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-foreground">Facturación</h1>
-              <p className="text-xs text-muted-foreground">Administra tus facturas y pagos</p>
+              <p className="text-xs text-muted-foreground">{empresa?.nombre || 'Mi empresa'}</p>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
             <LogOut className="h-4 w-4 mr-1.5" />
-            Cerrar sesión
+            Salir
           </Button>
         </div>
       </div>
@@ -86,9 +139,48 @@ export default function FacturacionPage() {
             <div>
               <p className="text-sm font-semibold text-destructive">Acceso suspendido</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Tu suscripción ha vencido. Paga tu factura pendiente para reactivar tu cuenta y acceder al sistema.
+                Tu suscripción ha vencido. Paga tu factura pendiente para reactivar tu cuenta.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Subscription summary + add users */}
+        {subData && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Plan actual</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold text-foreground">{subData.plan_nombre}</div>
+                <div className="text-sm text-muted-foreground mt-1">
+                  ${monthlyCost.toLocaleString('es-MX')} MXN / mes
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-muted-foreground">Usuarios contratados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xl font-bold text-foreground flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      {subData.max_usuarios}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      ${PRICE_PER_USER} MXN c/u
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => { setNewQty(subData.max_usuarios); setShowAddUsers(true); }}>
+                    <UserPlus className="h-4 w-4 mr-1.5" />
+                    Cambiar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
@@ -120,7 +212,7 @@ export default function FacturacionPage() {
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
               </div>
             ) : invoices.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No hay facturas disponibles.</p>
+              <p className="text-sm text-muted-foreground text-center py-8">No hay facturas aún.</p>
             ) : (
               <div className="space-y-2">
                 {otherInvoices.map(inv => (
@@ -134,6 +226,64 @@ export default function FacturacionPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add users dialog */}
+      <Dialog open={showAddUsers} onOpenChange={setShowAddUsers}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cambiar cantidad de usuarios</DialogTitle>
+            <DialogDescription>
+              Cada usuario cuesta ${PRICE_PER_USER} MXN/mes. Mínimo 3 usuarios.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-center gap-4">
+              <Button
+                variant="outline"
+                size="icon"
+                disabled={newQty <= 3}
+                onClick={() => setNewQty(q => Math.max(3, q - 1))}
+              >
+                <Minus className="h-4 w-4" />
+              </Button>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-foreground">{newQty}</div>
+                <div className="text-xs text-muted-foreground">usuarios</div>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setNewQty(q => q + 1)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="text-center text-sm text-muted-foreground">
+              Total mensual: <span className="font-bold text-foreground">${(newQty * PRICE_PER_USER).toLocaleString('es-MX')} MXN</span>
+            </div>
+            {newQty !== subData?.max_usuarios && (
+              <div className="text-center text-xs text-primary">
+                {newQty > (subData?.max_usuarios || 3)
+                  ? `+${newQty - (subData?.max_usuarios || 3)} usuarios extra — se prorrateará el cobro`
+                  : `Se reducirán ${(subData?.max_usuarios || 3) - newQty} usuarios`
+                }
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowAddUsers(false)}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1"
+                disabled={saving || newQty === subData?.max_usuarios}
+                onClick={handleUpdateUsers}
+              >
+                {saving ? 'Guardando...' : 'Confirmar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -167,14 +317,14 @@ function InvoiceRow({ invoice, highlight }: { invoice: Invoice; highlight?: bool
         )}
         {invoice.hosted_invoice_url && invoice.status !== 'open' && (
           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer" title="Ver factura">
+            <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer" title="Ver">
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </Button>
         )}
         {invoice.invoice_pdf && (
           <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <a href={invoice.invoice_pdf} target="_blank" rel="noopener noreferrer" title="Descargar PDF">
+            <a href={invoice.invoice_pdf} target="_blank" rel="noopener noreferrer" title="PDF">
               <Download className="h-3.5 w-3.5" />
             </a>
           </Button>
