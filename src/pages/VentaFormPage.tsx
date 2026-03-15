@@ -8,7 +8,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
-import { useProductosForSelect, useUnidades, useAlmacenes, useTarifasForSelect, useTasasIva, useTasasIeps } from '@/hooks/useData';
+import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
