@@ -36,7 +36,7 @@ export default function RutaClientes() {
     }
     if (modo === 'visitas') {
       if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
-      return c.dia_visita.includes(diaFiltro);
+      return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
     }
     return true;
   });
