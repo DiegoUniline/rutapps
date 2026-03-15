@@ -114,17 +114,30 @@ function useInventarioData() {
       for (const [vid, group] of Object.entries(scByVendedor)) {
         if (cargaVendedorIds.has(vid)) continue;
         let total = 0, valCosto = 0, valVenta = 0;
+        const lineasDetalle: any[] = [];
         for (const sc of group.items ?? []) {
           const qty = Math.max(0, sc.cantidad_actual);
           total += qty;
           const prod = (productos ?? []).find(p => p.id === sc.producto_id);
           valCosto += qty * (prod?.costo ?? 0);
           valVenta += qty * (prod?.precio_principal ?? 0);
+          lineasDetalle.push({
+            producto_id: sc.producto_id,
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cargado: sc.cantidad_inicial,
+            entregado: sc.cantidad_inicial - sc.cantidad_actual,
+            devuelto: 0,
+            abordo: qty,
+            costo: prod?.costo ?? 0,
+            precio: prod?.precio_principal ?? 0,
+          });
         }
         cargaDetails.push({
           id: `sc-${vid}`,
           origen: 'entrega',
           vendedor: group.vendedor,
+          vendedor_id: vid,
           repartidor: null,
           almacen: null,
           fecha: (group.items ?? [])[0]?.fecha,
@@ -132,6 +145,7 @@ function useInventarioData() {
           totalUnidades: total,
           valorCosto: valCosto,
           valorVenta: valVenta,
+          lineas: lineasDetalle,
         });
       }
 
