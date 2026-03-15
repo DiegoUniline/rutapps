@@ -54,7 +54,10 @@ export default function RutasMapPage() {
         .from('user_roles')
         .select('role_id, roles(nombre, es_sistema)')
         .eq('user_id', user!.id);
-      return data?.some((ur: any) => ur.roles?.es_sistema === true || ur.roles?.nombre?.toLowerCase() === 'admin') ?? false;
+      return data?.some((ur: any) => {
+        const roleName = ur.roles?.nombre?.toLowerCase?.() ?? '';
+        return ur.roles?.es_sistema === true || roleName.includes('admin');
+      }) ?? false;
     },
     enabled: !!user?.id,
   });
