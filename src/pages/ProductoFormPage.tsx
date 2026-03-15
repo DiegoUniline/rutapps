@@ -321,9 +321,25 @@ export default function ProductoFormPage() {
 
   return (
     <div className="p-4 min-h-full">
-      {/* Breadcrumb */}
-      <div className="mb-0.5">
+      {/* Breadcrumb + Status */}
+      <div className="flex items-center justify-between mb-0.5">
         <Link to="/productos" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Producto</Link>
+        <div className="flex items-center gap-1">
+          {['activo', 'inactivo', 'borrador'].map(s => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => set('status', s)}
+              className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                form.status === s
+                  ? 'bg-primary text-primary-foreground border-primary font-medium'
+                  : 'border-border text-muted-foreground hover:border-primary/40'
+              }`}
+            >
+              {s === 'activo' ? 'Activo' : s === 'inactivo' ? 'Inactivo' : 'Borrador'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Header: Name + Actions + Image ── */}
