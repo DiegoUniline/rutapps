@@ -84,7 +84,15 @@ const navItems: NavItem[] = [
       { label: 'Gastos', path: '/finanzas/gastos' },
     ],
   },
-  { label: 'Reportes', icon: BarChart3, path: '/reportes' },
+  {
+    label: 'Reportes',
+    icon: BarChart3,
+    path: '/reportes',
+    children: [
+      { label: 'Reportes generales', path: '/reportes' },
+      { label: 'Reporte entregas', path: '/reportes/entregas' },
+    ],
+  },
   {
     label: 'Configuración',
     icon: Settings,
