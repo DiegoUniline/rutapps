@@ -1,24 +1,34 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, Polyline, MarkerClusterer } from '@react-google-maps/api';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Search, Filter, MapPin, X, Users, Loader2, CheckCircle2, Navigation, Route, Info } from 'lucide-react';
+import {
+  Search, Filter, MapPin, X, Users, Loader2, CheckCircle2, Navigation,
+  Route, Info, Clock, TrendingUp, MapPinOff, Eye, EyeOff, ChevronDown, ChevronUp
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const DIA_HOY = new Date().toLocaleDateString('es-MX', { weekday: 'long' }).replace(/^\w/, c => c.toUpperCase());
+const DIA_HOY = (() => {
+  const d = new Date().toLocaleDateString('es-MX', { weekday: 'long' });
+  return d.charAt(0).toUpperCase() + d.slice(1);
+})();
 
-const COLORS: Record<string, string> = {
-  activo: '#22c55e',
-  inactivo: '#9ca3af',
-  suspendido: '#ef4444',
-  default: '#6366f1',
+// Color palette for each day
+const DIA_COLORS: Record<string, string> = {
+  Lunes: '#6366f1',      // indigo
+  Martes: '#f59e0b',     // amber
+  Miércoles: '#10b981',  // emerald
+  Jueves: '#ef4444',     // red
+  Viernes: '#8b5cf6',    // violet
+  Sábado: '#06b6d4',     // cyan
+  Domingo: '#f97316',    // orange
 };
 
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -37,6 +47,24 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
     points.push({ lat: lat / 1e5, lng: lng / 1e5 });
   }
   return points;
+}
+
+// KPI Card component
+function KpiCard({ icon: Icon, label, value, sub, color }: {
+  icon: any; label: string; value: string | number; sub?: string; color: string;
+}) {
+  return (
+    <div className="bg-card/95 backdrop-blur-sm border border-border rounded-xl px-4 py-3 shadow-sm min-w-[140px]">
+      <div className="flex items-center gap-2 mb-1">
+        <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", color)}>
+          <Icon className="h-3.5 w-3.5 text-white" />
+        </div>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{label}</span>
+      </div>
+      <div className="text-xl font-bold text-foreground leading-tight">{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+    </div>
+  );
 }
 
 export default function MapaClientesPage() {
@@ -58,6 +86,8 @@ export default function MapaClientesPage() {
     distance_meters: number;
     duration: string;
   } | null>(null);
+  const [showRoutePanel, setShowRoutePanel] = useState(true);
+  const [colorMode, setColorMode] = useState<'dia' | 'status' | 'visitado'>('dia');
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { data: isAdmin } = useQuery({
@@ -75,6 +105,20 @@ export default function MapaClientesPage() {
     enabled: !!user?.id,
   });
 
+  // Today's ventas to determine "visited" clients
+  const { data: ventasHoy } = useQuery({
+    queryKey: ['ventas-hoy'],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('ventas')
+        .select('cliente_id')
+        .eq('fecha', today)
+        .not('cliente_id', 'is', null);
+      return new Set((data ?? []).map((v: any) => v.cliente_id));
+    },
+  });
+
   const { data: clientes, isLoading } = useClientes(search, statusFilter || undefined);
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
@@ -90,11 +134,15 @@ export default function MapaClientesPage() {
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
   const withoutGps = useMemo(() => filtered.filter((c: any) => !c.gps_lat || !c.gps_lng), [filtered]);
 
+  const todayClients = useMemo(() => filtered.filter((c: any) => c.dia_visita?.includes(DIA_HOY)), [filtered]);
+  const visitedCount = useMemo(() => {
+    if (!ventasHoy) return 0;
+    return todayClients.filter((c: any) => ventasHoy.has(c.id)).length;
+  }, [todayClients, ventasHoy]);
+
   const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFilter].filter(Boolean).length;
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-  }, []);
+  const onMapLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
 
   useEffect(() => {
     if (mapRef.current && withGps.length > 0) {
@@ -133,7 +181,6 @@ export default function MapaClientesPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (!token) { toast.error('Sesión no válida'); return; }
-
       const waypoints = withGps.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng }));
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
@@ -141,21 +188,19 @@ export default function MapaClientesPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ origin: originPoint, waypoints, dia_filtro: diaFilter || null }),
       });
-
       const result = await res.json();
       if (!res.ok) { toast.error(result.error || 'Error al optimizar'); return; }
-
       const updates = result.optimized_order.map((id: string, idx: number) =>
         supabase.from('clientes').update({ orden: idx + 1 }).eq('id', id)
       );
       await Promise.all(updates);
-
       setRouteResult({
         orderedIds: result.optimized_order,
         polyline: result.polyline,
         distance_meters: result.distance_meters,
         duration: result.duration,
       });
+      setShowRoutePanel(true);
       toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
     } catch (err: any) {
       toast.error(err.message || 'Error al optimizar ruta');
@@ -173,23 +218,42 @@ export default function MapaClientesPage() {
     return h > 0 ? `${h}h ${m}min` : `${m} min`;
   };
 
+  const getMarkerColor = (cliente: any): string => {
+    if (colorMode === 'visitado') {
+      const visited = ventasHoy?.has(cliente.id);
+      return visited ? '#22c55e' : '#ef4444';
+    }
+    if (colorMode === 'dia') {
+      const dias: string[] = cliente.dia_visita ?? [];
+      if (diaFilter && dias.includes(diaFilter)) return DIA_COLORS[diaFilter] ?? '#6366f1';
+      const todayMatch = dias.includes(DIA_HOY);
+      if (todayMatch) return DIA_COLORS[DIA_HOY] ?? '#6366f1';
+      if (dias.length > 0) return DIA_COLORS[dias[0]] ?? '#6366f1';
+      return '#9ca3af';
+    }
+    // status
+    const s = cliente.status ?? 'activo';
+    if (s === 'activo') return '#22c55e';
+    if (s === 'suspendido') return '#ef4444';
+    return '#9ca3af';
+  };
+
   const getMarkerIcon = (cliente: any) => {
-    const status = cliente.status ?? 'activo';
-    const isToday = cliente.dia_visita?.includes(DIA_HOY);
-    const color = isToday ? COLORS.activo : COLORS[status] ?? COLORS.default;
+    const color = getMarkerColor(cliente);
+    const visited = ventasHoy?.has(cliente.id);
     return {
       path: google.maps.SymbolPath.CIRCLE,
       fillColor: color,
-      fillOpacity: 1,
+      fillOpacity: visited && colorMode === 'visitado' ? 1 : 0.85,
       strokeColor: '#fff',
-      strokeWeight: 2,
-      scale: 10,
+      strokeWeight: visited && colorMode === 'visitado' ? 3 : 2,
+      scale: visited && colorMode === 'visitado' ? 12 : 9,
     };
   };
 
   const createNumberedLabel = (): google.maps.Symbol => ({
     path: google.maps.SymbolPath.CIRCLE,
-    fillColor: '#6366f1',
+    fillColor: 'hsl(230, 55%, 52%)',
     fillOpacity: 1,
     strokeColor: '#fff',
     strokeWeight: 3,
@@ -197,122 +261,112 @@ export default function MapaClientesPage() {
     labelOrigin: new google.maps.Point(0, 0),
   });
 
+  // Cluster styles
+  const clusterStyles = [
+    { textColor: 'white', textSize: 12, width: 40, height: 40, url: '' },
+    { textColor: 'white', textSize: 13, width: 48, height: 48, url: '' },
+    { textColor: 'white', textSize: 14, width: 56, height: 56, url: '' },
+  ];
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
-      {/* Header */}
-      <div className="bg-card border-b border-border px-5 py-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold text-foreground">Mapa de clientes</h1>
+      {/* Compact header */}
+      <div className="bg-card border-b border-border px-4 py-2.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 shrink-0">
+            <MapPin className="h-4.5 w-4.5 text-primary" />
+            <h1 className="text-base font-bold text-foreground">Mapa de clientes</h1>
           </div>
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input type="text" placeholder="Buscar cliente..." value={search}
+
+          <div className="flex-1 max-w-xs relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input type="text" placeholder="Buscar..." value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
+
           <button onClick={() => setShowFilters(!showFilters)}
-            className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
-              showFilters || activeFiltersCount > 0 ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground hover:text-foreground")}>
-            <Filter className="h-4 w-4" />Filtros
-            {activeFiltersCount > 0 && <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">{activeFiltersCount}</Badge>}
+            className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+              showFilters || activeFiltersCount > 0 ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground")}>
+            <Filter className="h-3.5 w-3.5" />Filtros
+            {activeFiltersCount > 0 && <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{activeFiltersCount}</Badge>}
           </button>
 
-          {/* Optimize controls */}
-          <button
-            onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Haz click en el mapa para establecer el punto de partida'); }}
-            className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
-              settingOrigin ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
-                : originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                  : "bg-background border-border text-muted-foreground hover:text-foreground")}>
-            <Navigation className="h-4 w-4" />
-            {settingOrigin ? 'Click en el mapa...' : originPoint ? 'Punto establecido' : 'Punto de partida'}
-          </button>
-          {originPoint && !settingOrigin && (
-            <button onClick={() => { setOriginPoint(null); setRouteResult(null); }}
-              className="text-xs text-destructive hover:underline py-2">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {isAdmin && originPoint && withGps.length >= 2 && (
-            <button onClick={handleOptimize} disabled={optimizing}
-              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all",
-                routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                  : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
-                optimizing && "opacity-70")}>
-              {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : routeResult ? <CheckCircle2 className="h-4 w-4" /> : <Route className="h-4 w-4" />}
-              {optimizing ? 'Optimizando...' : routeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
-            </button>
-          )}
+          {/* Color mode toggle */}
+          <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden text-[10px] font-medium">
+            {(['dia', 'visitado', 'status'] as const).map(mode => (
+              <button key={mode} onClick={() => setColorMode(mode)}
+                className={cn("px-2.5 py-1.5 transition-colors capitalize",
+                  colorMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}>
+                {mode === 'dia' ? 'Día' : mode === 'visitado' ? 'Visita' : 'Status'}
+              </button>
+            ))}
+          </div>
 
-          <div className="flex items-center gap-3 text-xs text-muted-foreground ml-auto">
-            <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-primary" />{withGps.length} con GPS</span>
-            <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-muted-foreground/40" />{withoutGps.length} sin GPS</span>
-            {routeResult && (
-              <>
-                <span className="text-emerald-600 font-semibold">{(routeResult.distance_meters / 1000).toFixed(1)} km</span>
-                <span className="text-emerald-600">{formatDuration(routeResult.duration)}</span>
-              </>
+          {/* Route controls */}
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Click en el mapa para el punto de partida'); }}
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                settingOrigin ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
+                  : originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                    : "bg-background border-border text-muted-foreground")}>
+              <Navigation className="h-3.5 w-3.5" />
+              {settingOrigin ? 'Click mapa...' : originPoint ? '✓ Origen' : 'Origen'}
+            </button>
+            {originPoint && !settingOrigin && (
+              <button onClick={() => { setOriginPoint(null); setRouteResult(null); }} className="text-destructive p-1">
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {isAdmin && originPoint && withGps.length >= 2 && (
+              <button onClick={handleOptimize} disabled={optimizing}
+                className={cn("flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
+                  routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                    : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
+                  optimizing && "opacity-70")}>
+                {optimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : routeResult ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Route className="h-3.5 w-3.5" />}
+                {optimizing ? 'Optimizando...' : routeResult ? 'Optimizada' : 'Optimizar'}
+              </button>
             )}
           </div>
         </div>
 
         {showFilters && (
-          <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border">
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Zona</label>
-              <select value={zonaFilter} onChange={e => setZonaFilter(e.target.value)}
-                className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-                <option value="">Todas</option>
-                {zonas?.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Vendedor</label>
-              <select value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}
-                className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-                <option value="">Todos</option>
-                {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Día de visita</label>
-              <select value={diaFilter} onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
-                className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-                <option value="">Todos</option>
-                {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Status</label>
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
-                <option value="">Todos</option>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-                <option value="suspendido">Suspendido</option>
-              </select>
-            </div>
+          <div className="flex flex-wrap gap-2 mt-2 pt-2 border-t border-border">
+            <select value={zonaFilter} onChange={e => setZonaFilter(e.target.value)}
+              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[120px]">
+              <option value="">Todas las zonas</option>
+              {zonas?.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
+            </select>
+            <select value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}
+              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[120px]">
+              <option value="">Todos vendedores</option>
+              {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+            </select>
+            <select value={diaFilter} onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
+              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[120px]">
+              <option value="">Todos los días</option>
+              {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+              className="bg-background border border-border rounded-md px-2 py-1 text-xs min-w-[100px]">
+              <option value="">Todo status</option>
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+              <option value="suspendido">Suspendido</option>
+            </select>
             {activeFiltersCount > 0 && (
               <button onClick={() => { setZonaFilter(''); setVendedorFilter(''); setDiaFilter(''); setStatusFilter(''); }}
-                className="self-end flex items-center gap-1 text-xs text-destructive hover:underline py-1.5">
-                <X className="h-3 w-3" /> Limpiar filtros
+                className="flex items-center gap-1 text-[10px] text-destructive hover:underline py-1">
+                <X className="h-2.5 w-2.5" /> Limpiar
               </button>
             )}
           </div>
         )}
-
-        {!originPoint && !routeResult && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
-            <Info className="h-3.5 w-3.5 shrink-0" />
-            <span>Filtra por zona, vendedor o día, luego haz click en <strong>"Punto de partida"</strong> y selecciona en el mapa desde dónde iniciar. Después presiona <strong>"Optimizar ruta"</strong>.</span>
-          </div>
-        )}
       </div>
 
-      {/* Map */}
+      {/* Map area */}
       <div className="flex-1 relative">
         {(isLoading || !isLoaded) && (
           <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center">
@@ -321,9 +375,62 @@ export default function MapaClientesPage() {
         )}
         {settingOrigin && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
-            Haz click en el mapa para establecer el punto de partida
+            Click en el mapa para el punto de partida
           </div>
         )}
+
+        {/* Floating KPI cards */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
+          <KpiCard icon={MapPin} label="Con GPS" value={withGps.length}
+            sub={`${withoutGps.length} sin GPS`} color="bg-primary" />
+          <KpiCard icon={Users} label="Hoy" value={todayClients.length}
+            sub={`${DIA_HOY}`} color="bg-[hsl(var(--chart-4))]" />
+          <KpiCard icon={CheckCircle2} label="Visitados" value={visitedCount}
+            sub={todayClients.length > 0 ? `${Math.round((visitedCount / todayClients.length) * 100)}% cobertura` : '—'}
+            color="bg-[hsl(var(--success))]" />
+          {routeResult && (
+            <>
+              <KpiCard icon={TrendingUp} label="Distancia" value={`${(routeResult.distance_meters / 1000).toFixed(1)} km`}
+                color="bg-[hsl(var(--chart-1))]" />
+              <KpiCard icon={Clock} label="Tiempo" value={formatDuration(routeResult.duration)}
+                color="bg-[hsl(var(--chart-2))]" />
+            </>
+          )}
+        </div>
+
+        {/* Color legend */}
+        <div className="absolute bottom-3 left-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-sm">
+          {colorMode === 'dia' && (
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              {DIAS.map(d => (
+                <button key={d} onClick={() => setDiaFilter(diaFilter === d ? '' : d)}
+                  className={cn("flex items-center gap-1 text-[10px] transition-opacity",
+                    diaFilter && diaFilter !== d ? "opacity-40" : "opacity-100")}>
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: DIA_COLORS[d] }} />
+                  <span className={cn("font-medium", d === DIA_HOY && "underline")}>{d.slice(0, 3)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {colorMode === 'visitado' && (
+            <div className="flex gap-4">
+              <span className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-3 h-3 rounded-full bg-[#22c55e]" /><span className="font-medium">Visitado</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px]">
+                <div className="w-3 h-3 rounded-full bg-[#ef4444]" /><span className="font-medium">Pendiente</span>
+              </span>
+            </div>
+          )}
+          {colorMode === 'status' && (
+            <div className="flex gap-4">
+              <span className="flex items-center gap-1.5 text-[10px]"><div className="w-3 h-3 rounded-full bg-[#22c55e]" /><span className="font-medium">Activo</span></span>
+              <span className="flex items-center gap-1.5 text-[10px]"><div className="w-3 h-3 rounded-full bg-[#9ca3af]" /><span className="font-medium">Inactivo</span></span>
+              <span className="flex items-center gap-1.5 text-[10px]"><div className="w-3 h-3 rounded-full bg-[#ef4444]" /><span className="font-medium">Suspendido</span></span>
+            </div>
+          )}
+        </div>
+
         {isLoaded && (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
@@ -332,38 +439,31 @@ export default function MapaClientesPage() {
             onLoad={onMapLoad}
             onClick={handleMapClick}
             options={{
-              styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+              styles: [
+                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+                { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+              ],
               mapTypeControl: false,
               streetViewControl: false,
               fullscreenControl: true,
               draggableCursor: settingOrigin ? 'crosshair' : undefined,
             }}
           >
-            {/* Origin marker */}
+            {/* Origin */}
             {originPoint && (
               <Marker
                 position={originPoint}
-                icon={{
-                  path: google.maps.SymbolPath.CIRCLE,
-                  fillColor: '#059669',
-                  fillOpacity: 1,
-                  strokeColor: '#fff',
-                  strokeWeight: 3,
-                  scale: 14,
-                }}
+                icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: '#059669', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3, scale: 14 }}
                 label={{ text: '▶', color: '#fff', fontSize: '10px', fontWeight: '700' }}
               />
             )}
 
             {/* Route polyline */}
             {polylinePoints && (
-              <Polyline
-                path={polylinePoints}
-                options={{ strokeColor: '#6366f1', strokeWeight: 4, strokeOpacity: 0.8 }}
-              />
+              <Polyline path={polylinePoints} options={{ strokeColor: 'hsl(230, 55%, 52%)', strokeWeight: 4, strokeOpacity: 0.8 }} />
             )}
 
-            {/* Markers */}
+            {/* Markers with clustering when no route is active */}
             {orderedClients ? (
               orderedClients.map((c: any, idx: number) => (
                 <Marker
@@ -375,15 +475,28 @@ export default function MapaClientesPage() {
                 />
               ))
             ) : (
-              withGps.map((c: any) => (
-                <Marker
-                  key={c.id}
-                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                  icon={getMarkerIcon(c)}
-                  onClick={() => setSelectedCliente(c)}
-                  title={c.nombre}
-                />
-              ))
+              <MarkerClusterer
+                options={{
+                  maxZoom: 14,
+                  gridSize: 50,
+                  minimumClusterSize: 5,
+                }}
+              >
+                {(clusterer) => (
+                  <>
+                    {withGps.map((c: any) => (
+                      <Marker
+                        key={c.id}
+                        position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                        icon={getMarkerIcon(c)}
+                        onClick={() => setSelectedCliente(c)}
+                        title={c.nombre}
+                        clusterer={clusterer}
+                      />
+                    ))}
+                  </>
+                )}
+              </MarkerClusterer>
             )}
 
             {selectedCliente && (
@@ -391,21 +504,32 @@ export default function MapaClientesPage() {
                 position={{ lat: selectedCliente.gps_lat, lng: selectedCliente.gps_lng }}
                 onCloseClick={() => setSelectedCliente(null)}
               >
-                <div className="min-w-[200px] p-1">
-                  <div className="font-bold text-sm mb-1">{selectedCliente.nombre}</div>
+                <div className="min-w-[220px] p-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="font-bold text-sm flex-1">{selectedCliente.nombre}</div>
+                    {ventasHoy?.has(selectedCliente.id) ? (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Visitado</span>
+                    ) : selectedCliente.dia_visita?.includes(DIA_HOY) ? (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">Pendiente</span>
+                    ) : null}
+                  </div>
                   {selectedCliente.codigo && <div className="text-xs text-gray-500 font-mono mb-1">{selectedCliente.codigo}</div>}
                   {selectedCliente.direccion && <div className="text-xs text-gray-600 mb-2">{selectedCliente.direccion}{selectedCliente.colonia ? `, ${selectedCliente.colonia}` : ''}</div>}
+                  {selectedCliente.vendedores?.nombre && (
+                    <div className="text-[10px] text-gray-500 mb-1">🧑‍💼 {selectedCliente.vendedores.nombre}</div>
+                  )}
                   {selectedCliente.dia_visita?.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-2">
                       {selectedCliente.dia_visita.map((d: string) => (
-                        <span key={d} className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${d === DIA_HOY ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                        <span key={d} className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ backgroundColor: `${DIA_COLORS[d]}20`, color: DIA_COLORS[d] }}>
                           {d.slice(0, 3)}
                         </span>
                       ))}
                     </div>
                   )}
-                  <div className="flex gap-2 mt-1">
-                    <Link to={`/clientes/${selectedCliente.id}`} className="text-xs text-blue-600 hover:underline">Ver ficha</Link>
+                  <div className="flex gap-2 mt-1 pt-1 border-t border-gray-100">
+                    <Link to={`/clientes/${selectedCliente.id}`} className="text-xs text-blue-600 hover:underline font-medium">Ver ficha</Link>
                     {selectedCliente.telefono && <a href={`tel:${selectedCliente.telefono}`} className="text-xs text-green-600 hover:underline">Llamar</a>}
                     <a href={`https://www.google.com/maps/dir/?api=1&destination=${selectedCliente.gps_lat},${selectedCliente.gps_lng}`}
                       target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">Navegar</a>
@@ -418,33 +542,49 @@ export default function MapaClientesPage() {
 
         {/* Route order sidebar */}
         {orderedClients && orderedClients.length > 0 && (
-          <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-64 max-h-[60vh] flex flex-col">
-            <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
+          <div className={cn("absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-72 flex flex-col transition-all",
+            showRoutePanel ? "max-h-[65vh]" : "max-h-[42px]")}>
+            <button onClick={() => setShowRoutePanel(!showRoutePanel)}
+              className="px-3 py-2.5 border-b border-border flex items-center justify-between w-full hover:bg-accent/30 transition-colors rounded-t-xl">
               <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Route className="h-3.5 w-3.5 text-primary" />
                 Orden de visita
               </span>
-              <span className="text-[10px] text-muted-foreground">{orderedClients.length} paradas</span>
-            </div>
-            <div className="flex-1 overflow-auto">
-              {orderedClients.map((c: any, idx: number) => (
-                <div key={c.id} className="flex items-center gap-2 px-3 py-2 border-b border-border/30 last:border-0">
-                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold shrink-0">{idx + 1}</div>
-                  <div className="min-w-0">
-                    <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
-                    {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">{orderedClients.length} paradas</span>
+                {showRoutePanel ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+              </div>
+            </button>
+            {showRoutePanel && (
+              <div className="flex-1 overflow-auto">
+                {orderedClients.map((c: any, idx: number) => {
+                  const visited = ventasHoy?.has(c.id);
+                  return (
+                    <button key={c.id}
+                      onClick={() => { setSelectedCliente(c); mapRef.current?.panTo({ lat: c.gps_lat, lng: c.gps_lng }); }}
+                      className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border/30 last:border-0 w-full text-left hover:bg-accent/30 transition-colors">
+                      <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0",
+                        visited ? "bg-[hsl(var(--success))] text-white" : "bg-primary text-primary-foreground")}>
+                        {visited ? '✓' : idx + 1}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
+                        {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
+                      </div>
+                      {visited && <CheckCircle2 className="h-3.5 w-3.5 text-[hsl(var(--success))] shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Clients without GPS sidebar */}
+        {/* Without GPS sidebar (only when no route) */}
         {!orderedClients && withoutGps.length > 0 && (
-          <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-64 max-h-[60vh] flex flex-col">
-            <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
+          <div className="absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-64 max-h-[50vh] flex flex-col">
+            <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+              <MapPinOff className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs font-semibold text-foreground">Sin GPS ({withoutGps.length})</span>
             </div>
             <div className="flex-1 overflow-auto">
@@ -458,6 +598,16 @@ export default function MapaClientesPage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* First-time hint */}
+        {!originPoint && !routeResult && withGps.length > 0 && (
+          <div className="absolute bottom-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-sm max-w-[240px]">
+            <div className="flex items-start gap-2 text-[10px] text-muted-foreground">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
+              <span>Haz click en <strong>"Origen"</strong> y selecciona en el mapa, luego <strong>"Optimizar"</strong> para calcular la mejor ruta.</span>
             </div>
           </div>
         )}
