@@ -503,8 +503,8 @@ export default function ProductoFormPage() {
                     />
                   </div>
                   <div>
-                    <OdooField label="IVA %" value={(form as any).iva_pct ?? 16} type="number" teal
-                      onChange={v => set('iva_pct' as any, +v)}
+                    <OdooField label="IVA %" value={form.iva_pct ?? 16} type="number" teal
+                      onChange={v => set('iva_pct', +v)}
                       format={v => `${v ?? 16}%`}
                     />
                     <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
@@ -512,9 +512,9 @@ export default function ProductoFormPage() {
                         <button
                           key={rate}
                           type="button"
-                          onClick={() => set('iva_pct' as any, rate)}
+                          onClick={() => set('iva_pct', rate)}
                           className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
-                            (form as any).iva_pct === rate
+                            form.iva_pct === rate
                               ? 'bg-primary text-primary-foreground border-primary'
                               : 'border-border text-muted-foreground hover:border-primary/50'
                           }`}
@@ -523,8 +523,8 @@ export default function ProductoFormPage() {
                         </button>
                       ))}
                     </div>
-                    <OdooField label="IEPS %" value={(form as any).ieps_pct ?? 0} type="number" teal
-                      onChange={v => set('ieps_pct' as any, +v)}
+                    <OdooField label="IEPS %" value={form.ieps_pct ?? 0} type="number" teal
+                      onChange={v => set('ieps_pct', +v)}
                       format={v => `${v ?? 0}%`}
                     />
                     <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
@@ -532,9 +532,9 @@ export default function ProductoFormPage() {
                         <button
                           key={rate}
                           type="button"
-                          onClick={() => set('ieps_pct' as any, rate)}
+                          onClick={() => set('ieps_pct', rate)}
                           className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
-                            (form as any).ieps_pct === rate
+                            form.ieps_pct === rate
                               ? 'bg-primary text-primary-foreground border-primary'
                               : 'border-border text-muted-foreground hover:border-primary/50'
                           }`}
@@ -546,10 +546,10 @@ export default function ProductoFormPage() {
                     <div className="odoo-field-row">
                       <span className="odoo-field-label">Costo incluye impuestos</span>
                       <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!(form as any).costo_incluye_impuestos} onChange={e => set('costo_incluye_impuestos' as any, e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
+                        <input type="checkbox" checked={!!form.costo_incluye_impuestos} onChange={e => set('costo_incluye_impuestos', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
                       </label>
                     </div>
-                    {(form as any).costo_incluye_impuestos && (form.costo ?? 0) > 0 && (
+                    {form.costo_incluye_impuestos && (form.costo ?? 0) > 0 && (
                       <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
                         {(() => {
                           const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, incluye_impuestos: true });
