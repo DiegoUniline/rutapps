@@ -6,24 +6,19 @@ import { toast } from 'sonner';
 
 export default function RutaGastos() {
   const { empresa, user } = useAuth();
-  const queryClient = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');
+  const { mutate: offlineMutate, isPending: savePending } = useOfflineMutation();
 
-  const { data: gastos, isLoading } = useQuery({
-    queryKey: ['ruta-gastos', empresa?.id, today],
+  const { data: gastos, isLoading, refetch } = useOfflineQuery('gastos', {
+    empresa_id: empresa?.id,
+    fecha: today,
+  }, {
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('gastos')
-        .select('*')
-        .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
-        .order('created_at', { ascending: false });
-      return data ?? [];
-    },
+    orderBy: 'created_at',
+    ascending: false,
   });
 
   const saveMut = useMutation({
