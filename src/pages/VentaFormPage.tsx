@@ -511,6 +511,11 @@ export default function VentaFormPage() {
               ))}
             </div>
           )}
+          {!isNew && (
+            <button onClick={handleGenerarPdf} className="btn-odoo-secondary text-xs">
+              <FileText className="h-3.5 w-3.5" /> Documento
+            </button>
+          )}
           {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
           )}
