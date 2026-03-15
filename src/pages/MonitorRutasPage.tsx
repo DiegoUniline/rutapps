@@ -421,12 +421,19 @@ function MonitorContent() {
                   >
                     <div className="min-w-[200px] p-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor(selectedClient.status) }} />
+                        {selectedClient.ordenEntrega ? (
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: statusColor(selectedClient.status) }}>
+                            {selectedClient.ordenEntrega}
+                          </span>
+                        ) : (
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor(selectedClient.status) }} />
+                        )}
                         <span className="font-bold text-sm">{selectedClient.nombre}</span>
                       </div>
                       {selectedClient.codigo && <p className="text-xs text-gray-500 font-mono">{selectedClient.codigo}</p>}
                       {selectedClient.direccion && <p className="text-xs text-gray-600">{selectedClient.direccion}</p>}
                       <p className="text-xs font-medium">Vendedor: {selectedClient.vendedorNombre ?? '—'}</p>
+                      {selectedClient.entregaFolio && <p className="text-xs text-gray-500">Entrega: {selectedClient.entregaFolio}</p>}
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={{ backgroundColor: statusColor(selectedClient.status) + '20', color: statusColor(selectedClient.status) }}>
