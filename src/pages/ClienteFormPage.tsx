@@ -234,8 +234,30 @@ export default function ClienteFormPage() {
               <div className="space-y-1">
                 <OdooField label="Dirección" value={form.direccion} onChange={v => set('direccion', v)} />
                 <OdooField label="Colonia" value={form.colonia} onChange={v => set('colonia', v)} />
-                <OdooField label="GPS Lat" value={form.gps_lat} onChange={v => set('gps_lat', v ? +v : null)} type="number" />
-                <OdooField label="GPS Lng" value={form.gps_lng} onChange={v => set('gps_lng', v ? +v : null)} type="number" />
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Ubicación GPS</span>
+                  <div className="flex items-center gap-2 flex-1">
+                    {form.gps_lat && form.gps_lng ? (
+                      <span className="text-[11px] text-muted-foreground">
+                        {form.gps_lat.toFixed(6)}, {form.gps_lng.toFixed(6)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">Sin ubicación</span>
+                    )}
+                    <button
+                      onClick={captureGps}
+                      disabled={capturingGps}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60"
+                    >
+                      {capturingGps ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Crosshair className="h-3.5 w-3.5" />
+                      )}
+                      {form.gps_lat && form.gps_lng ? 'Actualizar GPS' : 'Capturar GPS'}
+                    </button>
+                  </div>
+                </div>
                 <OdooField label="Zona" value={form.zona_id} onChange={v => set('zona_id', v || null)} type="select"
                   options={zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? []} />
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
