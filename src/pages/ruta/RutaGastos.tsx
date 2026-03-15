@@ -21,27 +21,26 @@ export default function RutaGastos() {
     ascending: false,
   });
 
-  const saveMut = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from('gastos').insert({
-        empresa_id: empresa!.id,
-        user_id: user!.id,
+  const handleSaveGasto = async () => {
+    if (!concepto || !monto || !empresa || !user) return;
+    try {
+      await offlineMutate('gastos', 'insert', {
+        empresa_id: empresa.id,
+        user_id: user.id,
         concepto,
         monto: +monto,
         fecha: today,
+        created_at: new Date().toISOString(),
       });
-      if (error) throw error;
-    },
-    onSuccess: () => {
       toast.success('Gasto registrado');
-      queryClient.invalidateQueries({ queryKey: ['ruta-gastos'] });
-      queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
+      refetch();
       setShowForm(false);
       setConcepto('');
       setMonto('');
-    },
-    onError: (err: any) => toast.error(err.message),
-  });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   const totalHoy = gastos?.reduce((s, g) => s + (g.monto ?? 0), 0) ?? 0;
 
