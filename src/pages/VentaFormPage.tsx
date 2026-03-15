@@ -576,9 +576,20 @@ export default function VentaFormPage() {
           {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && (
             <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
           )}
-          {!readOnly && (
-            <button onClick={handleSave} disabled={saveVenta.isPending} className="btn-odoo-primary">
+          {!readOnly && !isNew && (
+            <button onClick={handleSave} disabled={saveVenta.isPending} className="btn-odoo-secondary">
               <Save className="h-3.5 w-3.5" /> Guardar
+            </button>
+          )}
+          {isNew && (
+            <button
+              onClick={async () => {
+                await handleSave();
+              }}
+              disabled={saveVenta.isPending}
+              className="btn-odoo-primary"
+            >
+              <Check className="h-3.5 w-3.5" /> Guardar y confirmar
             </button>
           )}
           {!isNew && form.status !== 'cancelado' && (
