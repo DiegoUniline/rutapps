@@ -306,6 +306,7 @@ export default function TarifaFormPage() {
                               </div>
                             </td>
                             <td className="py-1.5 px-3 text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</td>
+                            <td className="py-1.5 px-3 text-xs text-muted-foreground">{(l as any).base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">{getCalculoDisplay(l)}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</td>
