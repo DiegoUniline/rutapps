@@ -299,20 +299,23 @@ export default function EntregasPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por folio..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <div>
+        <div className="min-w-[180px]">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Ruta</label>
-          <select className="border border-input rounded-md px-3 py-2 text-sm bg-background min-w-[180px]" value={vendedorFilter} onChange={e => setVendedorFilter(e.target.value)}>
-            <option value="todos">Todas las rutas</option>
-            {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-          </select>
+          <SearchableSelect
+            options={[{ value: 'todos', label: 'Todas las rutas' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+            value={vendedorFilter}
+            onChange={setVendedorFilter}
+            placeholder="Ruta..."
+          />
         </div>
-        <div>
+        <div className="min-w-[150px]">
           <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Status</label>
-          <select className="border border-input rounded-md px-3 py-2 text-sm bg-background min-w-[150px]" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="todos">Todos</option>
-            <option value="confirmado">Por entregar</option>
-            <option value="entregado">Entregadas</option>
-          </select>
+          <SearchableSelect
+            options={[{ value: 'todos', label: 'Todos' }, { value: 'confirmado', label: 'Por entregar' }, { value: 'entregado', label: 'Entregadas' }]}
+            value={statusFilter}
+            onChange={setStatusFilter}
+            placeholder="Status..."
+          />
         </div>
       </div>
 
