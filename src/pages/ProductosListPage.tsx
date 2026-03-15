@@ -30,6 +30,7 @@ function ProductosTable() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [importOpen, setImportOpen] = useState(false);
   const { data: productos, isLoading } = useProductos(search, statusFilter);
 
   const total = productos?.length ?? 0;
