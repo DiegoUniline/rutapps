@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import OdooFilterBar from '@/components/OdooFilterBar';
-import OdooPagination from '@/components/OdooPagination';
-import TableSkeleton from '@/components/TableSkeleton';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
+import { OdooPagination } from '@/components/OdooPagination';
+import { TableSkeleton } from '@/components/TableSkeleton';
 
 const TIPO_LABELS: Record<string, { label: string; icon: any; color: string }> = {
   descuento_porcentaje: { label: '% Descuento', icon: Percent, color: 'bg-primary/10 text-primary' },
