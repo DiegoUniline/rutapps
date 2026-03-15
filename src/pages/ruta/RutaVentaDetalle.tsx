@@ -751,9 +751,15 @@ export default function RutaVentaDetalle() {
                 <label className="text-[10px] text-muted-foreground font-medium">Monto recibido</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span>
-                  <input type="number" inputMode="decimal"
+                  <input type="number" inputMode="decimal" min="0"
                     className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    value={montoRecibido} placeholder={fmt(totalACobrar)} onChange={e => setMontoRecibido(e.target.value)}
+                    value={montoRecibido} placeholder={fmt(totalACobrar)}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value);
+                      if (e.target.value === '' || val >= 0) {
+                        setMontoRecibido(e.target.value);
+                      }
+                    }}
                   />
                 </div>
                 {cambio > 0 && (
