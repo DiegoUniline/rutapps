@@ -503,6 +503,62 @@ export default function EntregaListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Dialog: Asignar ruta ─── */}
+      <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Asignar ruta
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Selecciona el repartidor para <span className="font-bold text-foreground">{selectedIds.size}</span> entrega(s).
+            </p>
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">
+                Vendedor de ruta *
+              </label>
+              <ModalSelect
+                options={vendedorOptions}
+                value={vendedorRutaId}
+                onChange={setVendedorRutaId}
+                placeholder="Seleccionar repartidor..."
+              />
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
+              {selectedEntregas.map((e: any) => (
+                <div key={e.id} className="flex items-center justify-between text-[12px]">
+                  <span className="font-mono font-bold">{e.folio}</span>
+                  <span className="text-muted-foreground">{e.clientes?.nombre ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => { setShowAsignarDialog(false); }} disabled={bulkAsignarMut.isPending}>
+              Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => bulkAsignarMut.mutate({ cargarTambien: false })}
+              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+            >
+              <Package className="h-3.5 w-3.5 mr-1" />
+              {bulkAsignarMut.isPending ? 'Procesando...' : 'Asignar ruta'}
+            </Button>
+            <Button
+              onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
+              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+            >
+              <Zap className="h-3.5 w-3.5 mr-1" />
+              {bulkAsignarMut.isPending ? 'Procesando...' : 'Asignar y cargar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
