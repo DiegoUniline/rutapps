@@ -139,6 +139,7 @@ function AppRoutes() {
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/login" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/supervisor" element={<SupervisorDashboardPage />} />
                 <Route path="/productos" element={<ProductosListPage />} />
