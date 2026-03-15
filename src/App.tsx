@@ -32,8 +32,6 @@ const RutasMapPage = lazy(() => import("@/pages/RutasMapPage"));
 const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
 const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
-const CargasListPage = lazy(() => import("@/pages/CargasListPage"));
-const CargaFormPage = lazy(() => import("@/pages/CargaFormPage"));
 const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
 const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
 const CompraFormPage = lazy(() => import("@/pages/CompraFormPage"));
