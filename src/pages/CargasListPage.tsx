@@ -41,9 +41,23 @@ export default function CargasListPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Gestiona las cargas de producto para cada ruta</p>
         </div>
-        <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
-          <Plus className="h-4 w-4 mr-1" /> Nueva carga
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExcel={() => exportToExcel({
+              fileName: 'Cargas', title: 'Listado de Cargas',
+              columns: CARGAS_COLUMNS,
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+            })}
+            onPDF={() => exportToPDF({
+              fileName: 'Cargas', title: 'Listado de Cargas',
+              columns: CARGAS_COLUMNS,
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+            })}
+          />
+          <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
+            <Plus className="h-4 w-4 mr-1" /> Nueva carga
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2 items-center">
