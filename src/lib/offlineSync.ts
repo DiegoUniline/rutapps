@@ -25,6 +25,7 @@ const TABLES_TO_CACHE = [
   'tasas_iva',
   'descarga_ruta',
   'descarga_ruta_lineas',
+  'promociones',
 ] as const;
 
 // Some tables need special select queries (joins)
