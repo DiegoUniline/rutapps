@@ -150,8 +150,8 @@ export default function VentaFormPage() {
       const lineSubtotal = qty * price;
       const discountAmt = lineSubtotal * (desc / 100);
       const base = lineSubtotal - discountAmt;
-      const iva = base * ((Number(l.iva_pct) || 0) / 100);
       const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
+      const iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100); // IVA sobre (base + IEPS)
       subtotal += lineSubtotal;
       descuento_total += discountAmt;
       iva_total += iva;
