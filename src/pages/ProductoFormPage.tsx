@@ -420,14 +420,6 @@ export default function ProductoFormPage() {
         </div>
       </div>
 
-      {/* Statusbar */}
-      <div className="flex items-center mb-3">
-        <OdooStatusbar
-          steps={statusSteps}
-          current={form.status ?? 'borrador'}
-          onStepClick={key => set('status', key)}
-        />
-      </div>
 
       {/* ── Form body ── */}
       <div className="bg-card border border-border rounded px-4 pb-4 pt-3">
