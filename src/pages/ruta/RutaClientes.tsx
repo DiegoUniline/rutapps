@@ -165,37 +165,35 @@ export default function RutaClientes() {
         {isLoading && <p className="text-center text-muted-foreground text-sm py-8">Cargando...</p>}
 
         {filtered.map((c: any, idx: number) => (
-          <div key={c.id} className="bg-card border border-border rounded-2xl p-4 active:bg-muted/30 transition-colors">
-            <div className="flex items-start gap-3">
+          <div key={c.id} className="bg-card border border-border rounded-2xl p-3 active:bg-muted/30 transition-colors">
+            <div className="flex items-start gap-2.5">
               <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
                 <button onClick={() => moveItem(idx, 'up')} disabled={idx === 0}
-                  className={cn("p-1 rounded transition-colors", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
+                  className={cn("p-0.5 rounded transition-colors", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
                   <ChevronUp className="h-4 w-4" />
                 </button>
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold text-sm">{idx + 1}</span>
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <span className="text-primary font-bold text-xs">{idx + 1}</span>
                 </div>
                 <button onClick={() => moveItem(idx, 'down')} disabled={idx === filtered.length - 1}
-                  className={cn("p-1 rounded transition-colors", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
+                  className={cn("p-0.5 rounded transition-colors", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="flex-1 min-w-0">
-                <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-base font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
-                <div className="flex items-center gap-2 mt-0.5">
-                  {c.codigo && <span className="text-xs text-muted-foreground font-mono">{c.codigo}</span>}
-                </div>
+                <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-sm font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
+                {c.codigo && <span className="text-[11px] text-muted-foreground font-mono ml-1.5">{c.codigo}</span>}
                 {c.direccion && (
-                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1.5 truncate">
-                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
+                    <MapPin className="h-3 w-3 shrink-0" /> {c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
                   </p>
                 )}
                 {modo === 'todos' && c.dia_visita && c.dia_visita.length > 0 && (
-                  <div className="flex gap-1 mt-1.5 flex-wrap">
+                  <div className="flex gap-1 mt-1 flex-wrap">
                     {c.dia_visita.map((d: string) => (
                       <span key={d} className={cn(
-                        "text-[11px] px-2 py-0.5 rounded-full font-medium capitalize",
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize",
                         d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                       )}>
                         {d.slice(0, 3)}
@@ -203,40 +201,41 @@ export default function RutaClientes() {
                     ))}
                   </div>
                 )}
-              </div>
 
-              <div className="flex flex-col items-center gap-1.5 shrink-0">
-                <button
-                  onClick={() => captureGps(c)}
-                  disabled={capturingGpsId === c.id}
-                  className={cn(
-                    "w-11 h-11 rounded-xl flex items-center justify-center active:scale-90 transition-transform",
-                    c.gps_lat && c.gps_lng
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                  )}
-                  title={c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
-                >
-                  {capturingGpsId === c.id
-                    ? <Loader2 className="h-5 w-5 animate-spin" />
-                    : <Crosshair className="h-5 w-5" />}
-                </button>
-                {c.gps_lat && c.gps_lng && (
-                  <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
-                    className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
-                    <Navigation className="h-5 w-5" />
+                {/* Action buttons — horizontal row */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  <button
+                    onClick={() => captureGps(c)}
+                    disabled={capturingGpsId === c.id}
+                    className={cn(
+                      "h-9 w-9 rounded-lg flex items-center justify-center active:scale-90 transition-transform",
+                      c.gps_lat && c.gps_lng
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                    )}
+                    title={c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
+                  >
+                    {capturingGpsId === c.id
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Crosshair className="h-4 w-4" />}
                   </button>
-                )}
-                {c.telefono && (
-                  <a href={`tel:${c.telefono}`}
-                    className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform">
-                    <Phone className="h-5 w-5" />
-                  </a>
-                )}
-                <button onClick={() => navigate(`/ruta/ventas/nueva?clienteId=${c.id}`)}
-                  className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
-                  <ShoppingCart className="h-5 w-5" />
-                </button>
+                  {c.gps_lat && c.gps_lng && (
+                    <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
+                      className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
+                      <Navigation className="h-4 w-4" />
+                    </button>
+                  )}
+                  {c.telefono && (
+                    <a href={`tel:${c.telefono}`}
+                      className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform">
+                      <Phone className="h-4 w-4" />
+                    </a>
+                  )}
+                  <button onClick={() => navigate(`/ruta/ventas/nueva?clienteId=${c.id}`)}
+                    className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform ml-auto">
+                    <ShoppingCart className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
