@@ -1,12 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronRight, ChevronUp, ChevronDown, Calendar, Filter, GripVertical, Navigation, ShoppingCart, MapPinned, Info } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 
@@ -16,30 +14,21 @@ const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 export default function RutaClientes() {
   const navigate = useNavigate();
   const { empresa } = useAuth();
-  const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
-  const [showAllDays, setShowAllDays] = useState(false);
   const [modo, setModo] = useState<'visitas' | 'todos'>('visitas');
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
+  const { mutate: offlineMutate } = useOfflineMutation();
 
-  const { data: clientes, isLoading } = useQuery({
-    queryKey: ['ruta-clientes-full', empresa?.id],
+  const { data: clientes, isLoading, refetch } = useOfflineQuery('clientes', {
+    empresa_id: empresa?.id,
+    status: 'activo',
+  }, {
     enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, codigo, nombre, telefono, direccion, colonia, status, dia_visita, orden, gps_lat, gps_lng, zona_id, zonas(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('orden', { ascending: true })
-        .order('nombre', { ascending: true });
-      return data ?? [];
-    },
+    orderBy: 'orden',
   });
 
-  // Filter by mode and day
-  const filtered = (clientes ?? []).filter(c => {
+  const filtered = (clientes ?? []).filter((c: any) => {
     if (search) {
       const s = search.toLowerCase();
       if (!c.nombre.toLowerCase().includes(s) && !c.codigo?.toLowerCase().includes(s) && !c.direccion?.toLowerCase().includes(s))
@@ -52,32 +41,20 @@ export default function RutaClientes() {
     return true;
   });
 
-  // Reorder mutation
-  const reorderMutation = useMutation({
-    mutationFn: async ({ id, newOrden }: { id: string; newOrden: number }) => {
-      const { error } = await supabase.from('clientes').update({ orden: newOrden }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['ruta-clientes-full'] });
-    },
-  });
-
-  const moveItem = useCallback((idx: number, direction: 'up' | 'down') => {
+  const moveItem = useCallback(async (idx: number, direction: 'up' | 'down') => {
     if (!filtered) return;
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (targetIdx < 0 || targetIdx >= filtered.length) return;
 
-    const currentItem = filtered[idx];
-    const targetItem = filtered[targetIdx];
-
-    // Swap orders
+    const currentItem = filtered[idx] as any;
+    const targetItem = filtered[targetIdx] as any;
     const currentOrden = currentItem.orden ?? idx;
     const targetOrden = targetItem.orden ?? targetIdx;
 
-    reorderMutation.mutate({ id: currentItem.id, newOrden: targetOrden });
-    reorderMutation.mutate({ id: targetItem.id, newOrden: currentOrden });
-  }, [filtered, reorderMutation]);
+    await offlineMutate('clientes', 'update', { ...currentItem, orden: targetOrden });
+    await offlineMutate('clientes', 'update', { ...targetItem, orden: currentOrden });
+    refetch();
+  }, [filtered, offlineMutate, refetch]);
 
   const openMaps = (lat: number, lng: number, nombre: string) => {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(nombre)}`, '_blank');
@@ -85,7 +62,6 @@ export default function RutaClientes() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-2 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="text-[20px] font-bold text-foreground">Clientes</h1>
@@ -100,7 +76,6 @@ export default function RutaClientes() {
           </div>
         </div>
 
-        {/* Mode toggle */}
         <div className="flex gap-1 bg-muted rounded-xl p-1">
           <button
             onClick={() => setModo('visitas')}
@@ -123,20 +98,17 @@ export default function RutaClientes() {
           </button>
         </div>
 
-        {/* Day pills - only in visitas mode */}
         {modo === 'visitas' && (
           <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             {DIAS.map(d => {
-              const count = (clientes ?? []).filter(c => c.dia_visita?.includes(d)).length;
+              const count = (clientes ?? []).filter((c: any) => c.dia_visita?.includes(d)).length;
               return (
                 <button
                   key={d}
                   onClick={() => setDiaFiltro(d)}
                   className={cn(
                     "shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors capitalize",
-                    diaFiltro === d
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
+                    diaFiltro === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}
                 >
                   {d.slice(0, 3)}
@@ -147,7 +119,6 @@ export default function RutaClientes() {
           </div>
         )}
 
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
@@ -160,48 +131,32 @@ export default function RutaClientes() {
         </div>
       </div>
 
-      {/* Alertas */}
       <AlertasVendedor />
 
-      {/* List */}
       <div className="flex-1 overflow-auto px-4 space-y-2 pb-4 pt-2">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
 
-        {filtered.map((c, idx) => (
-          <div
-            key={c.id}
-            className="bg-card border border-border rounded-2xl p-3.5 active:bg-muted/30 transition-colors"
-          >
+        {filtered.map((c: any, idx: number) => (
+          <div key={c.id} className="bg-card border border-border rounded-2xl p-3.5 active:bg-muted/30 transition-colors">
             <div className="flex items-start gap-3">
-              {/* Order number + reorder */}
               <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
-                <button
-                  onClick={() => moveItem(idx, 'up')}
-                  disabled={idx === 0}
-                  className={cn("p-0.5 rounded transition-colors", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}
-                >
+                <button onClick={() => moveItem(idx, 'up')} disabled={idx === 0}
+                  className={cn("p-0.5 rounded transition-colors", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
                   <ChevronUp className="h-3.5 w-3.5" />
                 </button>
                 <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
                   <span className="text-primary font-bold text-[12px]">{idx + 1}</span>
                 </div>
-                <button
-                  onClick={() => moveItem(idx, 'down')}
-                  disabled={idx === filtered.length - 1}
-                  className={cn("p-0.5 rounded transition-colors", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}
-                >
+                <button onClick={() => moveItem(idx, 'down')} disabled={idx === filtered.length - 1}
+                  className={cn("p-0.5 rounded transition-colors", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
                   <ChevronDown className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-[14px] font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
                 <div className="flex items-center gap-2 mt-0.5">
                   {c.codigo && <span className="text-[10px] text-muted-foreground font-mono">{c.codigo}</span>}
-                  {(c as any).zonas?.nombre && (
-                    <span className="text-[10px] bg-accent/50 text-accent-foreground px-1.5 py-0.5 rounded">{(c as any).zonas.nombre}</span>
-                  )}
                 </div>
                 {c.direccion && (
                   <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1.5 truncate">
@@ -222,28 +177,21 @@ export default function RutaClientes() {
                 )}
               </div>
 
-              {/* Actions */}
               <div className="flex flex-col items-center gap-1.5 shrink-0">
                 {c.gps_lat && c.gps_lng && (
-                  <button
-                    onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
-                    className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
-                  >
+                  <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
+                    className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
                     <Navigation className="h-4 w-4" />
                   </button>
                 )}
                 {c.telefono && (
-                  <a
-                    href={`tel:${c.telefono}`}
-                    className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 active:scale-90 transition-transform"
-                  >
+                  <a href={`tel:${c.telefono}`}
+                    className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 active:scale-90 transition-transform">
                     <Phone className="h-4 w-4" />
                   </a>
                 )}
-                <button
-                  onClick={() => navigate(`/ruta/ventas/nueva?clienteId=${c.id}`)}
-                  className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
-                >
+                <button onClick={() => navigate(`/ruta/ventas/nueva?clienteId=${c.id}`)}
+                  className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
                   <ShoppingCart className="h-4 w-4" />
                 </button>
               </div>
@@ -255,21 +203,14 @@ export default function RutaClientes() {
           <div className="text-center py-12">
             <Calendar className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
             <p className="text-muted-foreground text-sm">
-              {modo === 'visitas'
-                ? `No hay visitas programadas para el ${diaFiltro}`
-                : 'No se encontraron clientes'}
+              {modo === 'visitas' ? `No hay visitas programadas para el ${diaFiltro}` : 'No se encontraron clientes'}
             </p>
           </div>
         )}
       </div>
 
-      {/* Historial modal */}
       {historialCliente && (
-        <ClienteHistorial
-          clienteId={historialCliente.id}
-          clienteNombre={historialCliente.nombre}
-          onClose={() => setHistorialCliente(null)}
-        />
+        <ClienteHistorial clienteId={historialCliente.id} clienteNombre={historialCliente.nombre} onClose={() => setHistorialCliente(null)} />
       )}
     </div>
   );

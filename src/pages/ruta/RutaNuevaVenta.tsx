@@ -3,8 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { queueOperation } from '@/lib/syncQueue';
+import { getOfflineTable } from '@/lib/offlineDb';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 interface CartItem {
@@ -90,19 +93,10 @@ export default function RutaNuevaVenta() {
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
-  const { data: clientes } = useQuery({
-    queryKey: ['ruta-clientes-venta', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, codigo, nombre, telefono, credito, limite_credito, dias_credito')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('nombre');
-      return data ?? [];
-    },
-  });
+  const { data: clientes } = useOfflineQuery('clientes', {
+    empresa_id: empresa?.id,
+    status: 'activo',
+  }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
   // Auto-select client from URL param
   useEffect(() => {
@@ -140,20 +134,11 @@ export default function RutaNuevaVenta() {
     [ventasPendientes]
   );
 
-  const { data: productos } = useQuery({
-    queryKey: ['ruta-productos-venta', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('productos')
-        .select('id, codigo, nombre, precio_principal, cantidad, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)')
-        .eq('empresa_id', empresa!.id)
-        .eq('se_puede_vender', true)
-        .eq('status', 'activo')
-        .order('nombre');
-      return data ?? [];
-    },
-  });
+  const { data: productos } = useOfflineQuery('productos', {
+    empresa_id: empresa?.id,
+    se_puede_vender: true,
+    status: 'activo',
+  }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
   // Pedido sugerido for selected client
   const { data: pedidoSugerido } = useQuery({
