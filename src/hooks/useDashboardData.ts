@@ -81,7 +81,7 @@ export function useDashboardCartera() {
         .select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), condicion_pago')
         .eq('condicion_pago', 'credito')
         .gt('saldo_pendiente', 0)
-        .neq('status', 'cancelada')
+        .neq('status', 'cancelado' as any)
         .order('fecha', { ascending: true });
       if (error) throw error;
       return data ?? [];

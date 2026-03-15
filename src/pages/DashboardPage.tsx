@@ -293,7 +293,8 @@ export default function DashboardPage() {
         {/* Low stock alerts */}
         <div className="bg-card border border-border rounded-xl p-4">
           <SectionTitle icon={AlertTriangle}>
-            Alertas de stock ({kpis.productosBajoMinimo})
+            {`Alertas de stock (${kpis.productosBajoMinimo})`}
+          </SectionTitle>
           </SectionTitle>
           {lowStockProducts.length > 0 ? (
             <div className="space-y-2">
