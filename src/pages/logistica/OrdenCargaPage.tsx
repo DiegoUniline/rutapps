@@ -81,7 +81,7 @@ export default function OrdenCargaPage() {
     setInitialized(true);
   }
 
-  const isConfirmed = carga?.status === 'confirmada' || carga?.status === 'en_ruta' || carga?.status === 'completada';
+  const isConfirmed = (carga?.status as string) === 'confirmada' || carga?.status === 'en_ruta' || carga?.status === 'completada';
 
   const handleUpdateSurtido = (pid: string, val: string) => {
     setSurtido(prev => ({ ...prev, [pid]: Number(val) || 0 }));

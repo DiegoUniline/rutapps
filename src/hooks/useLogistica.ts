@@ -132,7 +132,7 @@ export function useLogisticaKpis(fecha: string) {
       const entregados = (pedidos ?? []).filter(p => p.status === 'entregado').length;
 
       const cargasList = cargas ?? [];
-      const listos = cargasList.filter(c => c.status === 'confirmada' || c.status === 'completada').length;
+      const listos = cargasList.filter(c => (c.status as string) === 'confirmada' || c.status === 'completada').length;
       const enRuta = cargasList.filter(c => c.status === 'en_ruta').length;
 
       return {
