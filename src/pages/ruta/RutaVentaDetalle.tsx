@@ -81,32 +81,6 @@ export default function RutaVentaDetalle() {
     },
   });
 
-  // Fetch estado de cuenta data
-  const { data: estadoCuentaData } = useQuery({
-    queryKey: ['estado-cuenta', clienteId],
-    enabled: !!clienteId && view === 'estado_cuenta',
-    queryFn: async () => {
-      const [ventasRes, cobrosRes] = await Promise.all([
-        supabase.from('ventas')
-          .select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago')
-          .eq('cliente_id', clienteId!)
-          .eq('empresa_id', empresa!.id)
-          .neq('status', 'cancelado')
-          .order('fecha', { ascending: false })
-          .limit(100),
-        supabase.from('cobros')
-          .select('id, fecha, monto, metodo_pago, referencia')
-          .eq('cliente_id', clienteId!)
-          .eq('empresa_id', empresa!.id)
-          .order('fecha', { ascending: false })
-          .limit(100),
-      ]);
-      return {
-        ventas: ventasRes.data ?? [],
-        cobros: cobrosRes.data ?? [],
-      };
-    },
-  });
 
   // Fetch products for adding
   const { data: productos } = useQuery({
