@@ -86,10 +86,11 @@ export default function VentaFormPage() {
     if (existingVenta) {
       setForm(existingVenta);
       const existingLines = existingVenta.venta_lineas ?? [];
-      // Always ensure at least one blank line at the end
       setLineas([...existingLines, emptyLine()]);
+    } else if (isNew && profile?.vendedor_id) {
+      setForm(prev => ({ ...prev, vendedor_id: profile.vendedor_id }));
     }
-  }, [existingVenta]);
+  }, [existingVenta, isNew, profile]);
 
   const set = (field: string, val: any) => {
     setForm(prev => ({ ...prev, [field]: val }));
