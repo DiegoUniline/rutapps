@@ -20,6 +20,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
+  { label: 'Supervisor', icon: BarChart3, path: '/supervisor' },
   {
     label: 'Ventas',
     icon: ShoppingCart,
