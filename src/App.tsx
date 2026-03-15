@@ -183,8 +183,6 @@ function AppRoutes() {
                 <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
                 <Route path="/ventas/:id" element={<VentaFormPage />} />
                 <Route path="/almacen/inventario" element={<InventarioPage />} />
-                <Route path="/almacen/cargas" element={<CargasListPage />} />
-                <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
                 <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
                 <Route path="/almacen/compras" element={<ComprasPage />} />
                 <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
