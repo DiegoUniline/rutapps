@@ -56,9 +56,7 @@ const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
 // PedidosPendientesPage removed — consolidated into DemandaPage under /logistica/pedidos
-const AsignacionPage = lazy(() => import("@/pages/logistica/AsignacionPage"));
 const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
-const QuiebresPage = lazy(() => import("@/pages/logistica/QuiebresPage"));
 
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
