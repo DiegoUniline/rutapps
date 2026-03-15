@@ -130,6 +130,9 @@ function AppRoutes() {
         <Route path="/ruta/descarga" element={<RutaDescarga />} />
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
 
+        {/* Desktop POS — fullscreen, no AppLayout */}
+        <Route path="/pos" element={<PuntoVentaPage />} />
+
         {/* Desktop ERP */}
         <Route path="*" element={
           <AppLayout>
