@@ -38,9 +38,6 @@ export default function EntregaListPage() {
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Truck className="h-5 w-5" /> Entregas
         </h1>
-        <Button size="sm" onClick={() => navigate('/logistica/entregas/nuevo')}>
-          <Plus className="h-4 w-4 mr-1" /> Crear entrega manual
-        </Button>
       </div>
 
       {/* KPIs */}
