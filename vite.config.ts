@@ -21,19 +21,12 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         clientsClaim: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+        // Precache all built assets + index.html
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
         // Serve cached app shell when offline
-        navigateFallback: '/index.html',
+        navigateFallback: 'index.html',
         navigateFallbackDenylist: [/^\/~oauth/, /^\/api/],
         runtimeCaching: [
-          {
-            // HTML pages: try network first, fall back to cache (offline support)
-            urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'html-pages',
-              networkTimeoutSeconds: 3,
-            },
-          },
           {
             // JS/CSS assets: cache first (they have hashes in filenames)
             urlPattern: /\.(?:js|css)$/,
@@ -62,7 +55,7 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // Supabase API calls: network only
+            // Supabase API calls: network only (handled by offline queue)
             urlPattern: /supabase\.co/,
             handler: 'NetworkOnly',
           },
