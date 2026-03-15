@@ -77,17 +77,29 @@ export default function VentaFormPage() {
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
 
-  // Entrega integration for pedidos (1:N)
+  // Entrega integration for pedidos (1:N) — all entregas (not just hecho)
   const { data: entregasExistentes } = useEntregasByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
   const hayEntregas = (entregasExistentes ?? []).length > 0;
-  const entregasHechas = (entregasExistentes ?? []).filter(e => e.status === 'hecho');
+  // For remaining calculation, count all non-cancelled entregas
+  const entregasActivas = (entregasExistentes ?? []).filter(e => e.status !== 'cancelado');
   const remaining = useMemo(() => {
-    if (!lineas || !entregasHechas.length) return null;
+    if (!lineas || !entregasActivas.length) return null;
     const validLineas = lineas.filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, cantidad: Number(l.cantidad) }));
-    return calcRemainingQty(validLineas, entregasHechas as any);
-  }, [lineas, entregasHechas]);
+    return calcRemainingQty(validLineas, entregasActivas as any);
+  }, [lineas, entregasActivas]);
   const fullyDelivered = remaining !== null && remaining.length === 0;
-  const canCreateEntrega = !isNew && form.tipo === 'pedido' && form.status === 'confirmado' && !fullyDelivered;
+  const canCreateEntrega = !isNew && form.tipo === 'pedido' && (form.status === 'confirmado' || form.status === 'entregado') && !fullyDelivered;
+
+  // Build per-line delivery summary
+  const lineDeliverySummary = useMemo(() => {
+    const delivered: Record<string, number> = {};
+    for (const e of entregasActivas) {
+      for (const l of (e.entrega_lineas ?? [])) {
+        delivered[l.producto_id] = (delivered[l.producto_id] ?? 0) + Number(l.cantidad_entregada);
+      }
+    }
+    return delivered;
+  }, [entregasActivas]);
 
   // Payments state
   const [showPagoForm, setShowPagoForm] = useState(false);
