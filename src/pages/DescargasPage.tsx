@@ -33,7 +33,7 @@ const MOTIVOS = [
   { value: 'otro', label: 'Otro' },
 ];
 
-/* ─── Detail / Approve modal ─── */
+/* ─── Detail / Approve panel — Side by side: Vendor vs System ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
   const { user } = useAuth();
@@ -41,11 +41,39 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
 
+  // Fetch vendor's sales for the day
+  const { data: ventasDia } = useQuery({
+    queryKey: ['descarga-ventas-dia', descarga.vendedor_id, descarga.fecha],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ventas')
+        .select('id, folio, total, condicion_pago, clientes(nombre)')
+        .eq('vendedor_id', descarga.vendedor_id!)
+        .eq('fecha', descarga.fecha)
+        .neq('status', 'cancelado')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!descarga.vendedor_id,
+  });
+
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
   const isPendiente = descarga.status === 'pendiente';
 
+  const totalVentasContado = (ventasDia || [])
+    .filter((v: any) => v.condicion_pago === 'contado')
+    .reduce((sum: number, v: any) => sum + (Number(v.total) || 0), 0);
+  const totalVentasCredito = (ventasDia || [])
+    .filter((v: any) => v.condicion_pago === 'credito')
+    .reduce((sum: number, v: any) => sum + (Number(v.total) || 0), 0);
+  const totalVentasGeneral = (ventasDia || []).reduce((sum: number, v: any) => sum + (Number(v.total) || 0), 0);
+
   const aprobarMutation = useMutation({
     mutationFn: async (accion: 'aprobada' | 'rechazada') => {
+      if (accion === 'rechazada' && !notasSupervisor.trim()) {
+        throw new Error('Agrega una nota antes de rechazar');
+      }
       const { error } = await supabase
         .from('descarga_ruta')
         .update({
@@ -58,20 +86,23 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
       if (error) throw error;
     },
     onSuccess: (_, accion) => {
-      toast.success(accion === 'aprobada' ? 'Descarga aprobada' : 'Descarga rechazada');
+      toast.success(accion === 'aprobada' ? 'Liquidación aprobada' : 'Liquidación rechazada');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
   });
 
+  const dif = Number(descarga.diferencia_efectivo);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-lg max-w-2xl w-full max-h-[85vh] overflow-auto">
-        <div className="p-5 border-b border-border flex items-center justify-between">
+      <div className="bg-card border border-border rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+        {/* Header */}
+        <div className="p-5 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
           <div>
             <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <PackageCheck className="h-5 w-5" /> Descarga de ruta
+              <PackageCheck className="h-5 w-5" /> Revisión de liquidación
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {(descarga as any).vendedores?.nombre ?? 'Vendedor'} — {descarga.fecha}
@@ -90,114 +121,180 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           </div>
         </div>
 
-        {/* Cash */}
-        <div className="p-5 border-b border-border">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <DollarSign className="h-4 w-4" /> Cuadre de efectivo
-          </h3>
-          <div className="grid grid-cols-3 gap-3 text-[12px]">
-            <div className="bg-muted/50 rounded-md p-3 text-center">
-              <div className="text-muted-foreground">Esperado</div>
-              <div className="font-bold text-foreground text-[14px]">${Number(descarga.efectivo_esperado).toFixed(2)}</div>
+        {/* ─── Side by side: Vendor Declared vs System ─── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:divide-x divide-border">
+          {/* LEFT: Vendor declared */}
+          <div className="p-5 space-y-4">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">📋 Declarado por vendedor</h3>
+            <div className="space-y-2">
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="text-[10px] text-muted-foreground uppercase">Efectivo entregado</div>
+                <div className="text-lg font-bold text-foreground">${Number(descarga.efectivo_entregado).toFixed(2)}</div>
+              </div>
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="text-[10px] text-muted-foreground uppercase">Crédito declarado (referencia)</div>
+                <div className="text-lg font-bold text-foreground">${totalVentasCredito.toFixed(2)}</div>
+              </div>
             </div>
-            <div className="bg-muted/50 rounded-md p-3 text-center">
-              <div className="text-muted-foreground">Entregado</div>
-              <div className="font-bold text-foreground text-[14px]">${Number(descarga.efectivo_entregado).toFixed(2)}</div>
+            {/* Declared product returns */}
+            <div>
+              <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Productos devueltos (declarado)</div>
+              <div className="space-y-1">
+                {(lineas || []).map((l: any) => (
+                  <div key={l.id} className="flex items-center justify-between bg-muted/30 rounded px-3 py-1.5 text-[12px]">
+                    <span className="font-medium">{(l as any).productos?.nombre}</span>
+                    <span className="font-bold">{Number(l.cantidad_real)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className={cn(
-              "rounded-md p-3 text-center",
-              Number(descarga.diferencia_efectivo) !== 0
-                ? Number(descarga.diferencia_efectivo) > 0 ? "bg-green-50" : "bg-destructive/10"
-                : "bg-muted/50"
-            )}>
-              <div className="text-muted-foreground">Diferencia</div>
-              <div className={cn(
-                "font-bold text-[14px]",
-                Number(descarga.diferencia_efectivo) > 0 ? "text-green-600" : Number(descarga.diferencia_efectivo) < 0 ? "text-destructive" : "text-foreground"
-              )}>
-                {Number(descarga.diferencia_efectivo) > 0 ? '+' : ''}${Number(descarga.diferencia_efectivo).toFixed(2)}
+            {descarga.notas && (
+              <div>
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Observaciones vendedor</div>
+                <p className="text-[13px] text-foreground bg-muted/30 rounded p-3">{descarga.notas}</p>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT: System calculated */}
+          <div className="p-5 space-y-4">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">🖥️ Calculado por sistema</h3>
+            <div className="space-y-2">
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="text-[10px] text-muted-foreground uppercase">Efectivo esperado</div>
+                <div className="text-lg font-bold text-foreground">${Number(descarga.efectivo_esperado).toFixed(2)}</div>
+              </div>
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="text-[10px] text-muted-foreground uppercase">Ventas a crédito (sistema)</div>
+                <div className="text-lg font-bold text-foreground">${totalVentasCredito.toFixed(2)}</div>
+              </div>
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="text-[10px] text-muted-foreground uppercase">Total general ventas</div>
+                <div className="text-lg font-bold text-foreground">${totalVentasGeneral.toFixed(2)}</div>
+              </div>
+            </div>
+            {/* Expected product returns */}
+            <div>
+              <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Productos esperados vs declarados</div>
+              <div className="space-y-1">
+                {(lineas || []).map((l: any) => {
+                  const d = Number(l.diferencia);
+                  return (
+                    <div key={l.id} className={cn(
+                      "flex items-center justify-between rounded px-3 py-1.5 text-[12px]",
+                      d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/30"
+                    )}>
+                      <span className="font-medium">{(l as any).productos?.nombre}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-muted-foreground">Esp: {Number(l.cantidad_esperada)}</span>
+                        <span className="font-bold">Real: {Number(l.cantidad_real)}</span>
+                        {d !== 0 && (
+                          <span className={cn("font-bold", d > 0 ? "text-green-600" : "text-destructive")}>
+                            {d > 0 ? '+' : ''}{d}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Product lines */}
-        <div className="p-5 border-b border-border">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <PackageCheck className="h-4 w-4" /> Cuadre de productos
-            {conDiferencias.length > 0 && (
-              <span className="text-[11px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">
-                {conDiferencias.length} diferencia{conDiferencias.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </h3>
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2 px-1">Producto</th>
-                <th className="text-center py-2 px-1">Esperado</th>
-                <th className="text-center py-2 px-1">Real</th>
-                <th className="text-center py-2 px-1">Dif.</th>
-                <th className="text-left py-2 px-1">Motivo</th>
-                <th className="text-left py-2 px-1">Notas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(lineas || []).map((l: any) => (
-                <tr key={l.id} className={cn("border-b border-border/50", Number(l.diferencia) !== 0 && "bg-amber-50/50")}>
-                  <td className="py-2 px-1 font-medium text-foreground">
-                    <div>{(l as any).productos?.nombre}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">{(l as any).productos?.codigo}</div>
-                  </td>
-                  <td className="py-2 px-1 text-center">{Number(l.cantidad_esperada)}</td>
-                  <td className="py-2 px-1 text-center font-semibold">{Number(l.cantidad_real)}</td>
-                  <td className={cn(
-                    "py-2 px-1 text-center font-bold",
-                    Number(l.diferencia) > 0 ? "text-green-600" : Number(l.diferencia) < 0 ? "text-destructive" : ""
-                  )}>
-                    {Number(l.diferencia) > 0 ? '+' : ''}{Number(l.diferencia)}
-                  </td>
-                  <td className="py-2 px-1 text-muted-foreground">{l.motivo ? MOTIVO_LABELS[l.motivo] || l.motivo : '—'}</td>
-                  <td className="py-2 px-1 text-muted-foreground max-w-[120px] truncate">{l.notas || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* ─── Differences summary ─── */}
+        <div className="px-5 py-4 border-t border-border">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">⚖️ Resumen de diferencias</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className={cn(
+              "rounded-lg p-3 text-center",
+              dif > 0 ? "bg-green-50 border border-green-200" : dif < 0 ? "bg-destructive/5 border border-destructive/20" : "bg-muted/50"
+            )}>
+              <div className="text-[10px] text-muted-foreground uppercase">Diferencia efectivo</div>
+              <div className={cn("text-lg font-bold", dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : "text-foreground")}>
+                {dif > 0 ? '+' : ''}${dif.toFixed(2)}
+              </div>
+              <div className="text-[10px] text-muted-foreground">{dif > 0 ? 'Sobra' : dif < 0 ? 'Falta' : 'Cuadra'}</div>
+            </div>
+            <div className={cn(
+              "rounded-lg p-3 text-center",
+              conDiferencias.length > 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/50"
+            )}>
+              <div className="text-[10px] text-muted-foreground uppercase">Diferencias producto</div>
+              <div className={cn("text-lg font-bold", conDiferencias.length > 0 ? "text-amber-700" : "text-foreground")}>
+                {conDiferencias.length}
+              </div>
+              <div className="text-[10px] text-muted-foreground">{conDiferencias.length > 0 ? 'Con discrepancia' : 'Sin diferencias'}</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Pedidos del día</div>
+              <div className="text-lg font-bold text-foreground">{ventasDia?.length ?? 0}</div>
+              <div className="text-[10px] text-muted-foreground">${totalVentasGeneral.toFixed(2)} total</div>
+            </div>
+          </div>
         </div>
 
-        {descarga.notas && (
-          <div className="px-5 py-3 border-b border-border">
-            <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del vendedor</div>
-            <p className="text-[13px] text-foreground">{descarga.notas}</p>
+        {/* ─── Orders detail ─── */}
+        {ventasDia && ventasDia.length > 0 && (
+          <div className="px-5 py-4 border-t border-border">
+            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">📦 Pedidos del día</h3>
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Folio</th>
+                  <th className="text-left py-2">Cliente</th>
+                  <th className="text-left py-2">Forma pago</th>
+                  <th className="text-right py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ventasDia.map((v: any) => (
+                  <tr key={v.id} className="border-b border-border/50">
+                    <td className="py-1.5 font-mono text-foreground">{v.folio ?? '—'}</td>
+                    <td className="py-1.5">{v.clientes?.nombre ?? '—'}</td>
+                    <td className="py-1.5">
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+                        v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                      )}>
+                        {v.condicion_pago}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-right font-semibold">${Number(v.total).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
+        {/* ─── Admin actions ─── */}
         {isPendiente && (
-          <div className="p-5 space-y-3">
+          <div className="p-5 border-t border-border space-y-3">
             <div>
-              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas del supervisor</label>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas del administrador</label>
               <textarea
                 value={notasSupervisor}
                 onChange={e => setNotasSupervisor(e.target.value)}
-                placeholder="Observaciones..."
-                className="input-odoo min-h-[60px] text-[13px] w-full"
+                placeholder="Observaciones sobre esta liquidación..."
+                className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="flex gap-2">
               <Button onClick={() => aprobarMutation.mutate('aprobada')} disabled={aprobarMutation.isPending} className="flex-1">
-                <CheckCircle2 className="h-4 w-4 mr-1" /> Aprobar
+                <CheckCircle2 className="h-4 w-4 mr-1" /> Aprobar liquidación
               </Button>
               <Button variant="outline" onClick={() => aprobarMutation.mutate('rechazada')} disabled={aprobarMutation.isPending}
                 className="flex-1 border-destructive text-destructive hover:bg-destructive/10">
-                <XCircle className="h-4 w-4 mr-1" /> Rechazar
+                <XCircle className="h-4 w-4 mr-1" /> Rechazar con nota
               </Button>
             </div>
           </div>
         )}
 
         {descarga.notas_supervisor && !isPendiente && (
-          <div className="px-5 py-3">
-            <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del supervisor</div>
+          <div className="px-5 py-3 border-t border-border">
+            <div className="text-[11px] text-muted-foreground uppercase font-semibold mb-1">Notas del administrador</div>
             <p className="text-[13px] text-foreground">{descarga.notas_supervisor}</p>
           </div>
         )}
