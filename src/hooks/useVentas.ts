@@ -63,7 +63,7 @@ export function useSaveVentaLinea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (linea: Partial<VentaLinea> & { id?: string }) => {
-      const { id, productos, unidades, ...rest } = linea as any;
+      const { id, productos, unidades, unidad_label, impuestos_label, ...rest } = linea as any;
       if (id) {
         const { data, error } = await supabase.from('venta_lineas').update(rest).eq('id', id).select('id').single();
         if (error) throw error;
