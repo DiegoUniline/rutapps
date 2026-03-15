@@ -29,7 +29,6 @@ const navItems: NavItem[] = [
       { label: 'Todas las ventas', path: '/ventas' },
       { label: 'Surtido', path: '/ventas/surtido' },
       { label: 'Entregas', path: '/ventas/entregas' },
-      { label: 'Reporte entregas', path: '/ventas/reporte-entregas' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
       { label: 'Promociones', path: '/ventas/promociones' },
       { label: 'Punto de venta', path: '/pos' },
@@ -85,7 +84,15 @@ const navItems: NavItem[] = [
       { label: 'Gastos', path: '/finanzas/gastos' },
     ],
   },
-  { label: 'Reportes', icon: BarChart3, path: '/reportes' },
+  {
+    label: 'Reportes',
+    icon: BarChart3,
+    path: '/reportes',
+    children: [
+      { label: 'Reportes generales', path: '/reportes' },
+      { label: 'Reporte entregas', path: '/reportes/entregas' },
+    ],
+  },
   {
     label: 'Configuración',
     icon: Settings,
