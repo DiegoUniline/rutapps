@@ -1184,16 +1184,12 @@ export default function RutaNuevaVenta() {
       {step === 'pago' && (
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto px-3 pt-2.5 pb-24 space-y-2.5">
-            {/* Tipo de operación */}
+            {/* Tipo de operación (read-only, selected in step 1) */}
             <section className="bg-card rounded-lg p-3">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Tipo de operación</p>
-              <div className="flex gap-1.5">
-                {([['venta_directa', 'Venta directa'], ['pedido', 'Pedido']] as const).map(([val, label]) => (
-                  <button key={val} onClick={() => setTipoVenta(val)}
-                    className={`flex-1 py-2 rounded-md text-[12px] font-semibold transition-all active:scale-95 ${tipoVenta === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
-                    {label}
-                  </button>
-                ))}
+              <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-md px-3 py-1.5 text-[12px] font-semibold">
+                {tipoVenta === 'venta_directa' ? <ShoppingCart className="h-3.5 w-3.5" /> : <Package className="h-3.5 w-3.5" />}
+                {tipoVenta === 'venta_directa' ? 'Venta inmediata' : 'Pedido'}
               </div>
               {!entregaInmediata && (
                 <div className="mt-2.5 rounded-md px-2.5 py-2 flex items-start gap-2 bg-accent/50">
