@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import SearchableSelect from '@/components/SearchableSelect';
 
 interface InlineEditCellProps {
   value: string | number | null | undefined;
