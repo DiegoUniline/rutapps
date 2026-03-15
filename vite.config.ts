@@ -24,14 +24,9 @@ export default defineConfig(({ mode }) => ({
         navigateFallbackDenylist: [/^\/~oauth/],
         runtimeCaching: [
           {
-            // HTML pages: network first, no cache
+            // HTML pages: always from network, never cache
             urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'pages',
-              expiration: { maxEntries: 10, maxAgeSeconds: 0 },
-              networkTimeoutSeconds: 3,
-            },
+            handler: 'NetworkOnly',
           },
           {
             // JS/CSS assets: cache first (they have hashes in filenames)
