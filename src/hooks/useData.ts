@@ -16,7 +16,7 @@ export function useProductos(search?: string, statusFilter?: string) {
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       const { data, error } = await q;
       if (error) throw error;
-      return data as Producto[];
+      return data as any[];
     },
   });
 }
