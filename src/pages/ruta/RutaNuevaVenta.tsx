@@ -230,11 +230,20 @@ export default function RutaNuevaVenta() {
     setCart(newCart);
   };
 
+  const getMaxQty = (productoId: string) => {
+    if (tipoVenta === 'pedido') return Infinity;
+    return stockAbordo.get(productoId) ?? 0;
+  };
+
   const addToCart = (p: any, esCambio = false) => {
+    const maxQty = esCambio ? Infinity : getMaxQty(p.id);
     const existing = cart.find(c => c.producto_id === p.id && c.es_cambio === esCambio);
     if (existing) {
-      setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: c.cantidad + 1 } : c));
+      const newQty = Math.min(existing.cantidad + 1, maxQty);
+      if (newQty <= existing.cantidad) { toast.error('Stock a bordo insuficiente'); return; }
+      setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: newQty } : c));
     } else {
+      if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
       setCart([...cart, {
         producto_id: p.id,
         codigo: p.codigo,
@@ -256,6 +265,8 @@ export default function RutaNuevaVenta() {
     setCart(prev => prev.map(c => {
       if (c.producto_id !== productoId || c.es_cambio !== esCambio) return c;
       const newQty = c.cantidad + delta;
+      const maxQty = esCambio ? Infinity : getMaxQty(productoId);
+      if (newQty > maxQty) return c;
       return newQty > 0 ? { ...c, cantidad: newQty } : c;
     }));
   };
