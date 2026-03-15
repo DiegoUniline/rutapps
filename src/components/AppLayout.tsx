@@ -6,7 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
