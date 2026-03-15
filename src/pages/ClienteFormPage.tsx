@@ -230,10 +230,15 @@ export default function ClienteFormPage() {
                 <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Se asigna automáticamente" readOnly={!isNew} />
                 <OdooField label="Nombre" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
                 <OdooField label="Persona de Contacto" value={form.contacto} onChange={v => set('contacto', v)} />
-                <OdooField label="Teléfono" value={form.telefono} onChange={v => set('telefono', v)} placeholder="52 10 dígitos" onBlur={() => {
-                  const tel = (form.telefono ?? '').replace(/\D/g, '');
-                  if (tel.length === 10) set('telefono', '52' + tel);
-                }} />
+                <OdooField label="Teléfono" value={form.telefono} onChange={v => {
+                  const digits = v.replace(/\D/g, '');
+                  // Auto-prefix 52 when user types exactly 10 digits
+                  if (digits.length === 10 && !digits.startsWith('52')) {
+                    set('telefono', '52' + digits);
+                  } else {
+                    set('telefono', v);
+                  }
+                }} placeholder="5210dígitos" />
                 <OdooField label="Email" value={form.email} onChange={v => set('email', v)} />
                 <OdooField label="RFC" value={form.rfc} onChange={v => set('rfc', v)} />
               </div>
