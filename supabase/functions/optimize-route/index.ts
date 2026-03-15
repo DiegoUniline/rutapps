@@ -12,7 +12,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "No autorizado" }), {
@@ -36,7 +35,6 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verify user
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
@@ -64,12 +62,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get request body
-    const { waypoints, dia_filtro } = await req.json();
+    const { origin, waypoints, dia_filtro } = await req.json();
 
-    if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 2) {
+    if (!origin || !origin.lat || !origin.lng) {
       return new Response(
-        JSON.stringify({ error: "Se necesitan al menos 2 clientes con GPS" }),
+        JSON.stringify({ error: "Se necesita un punto de partida" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!waypoints || !Array.isArray(waypoints) || waypoints.length < 1) {
+      return new Response(
+        JSON.stringify({ error: "Se necesita al menos 1 cliente con GPS" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -96,32 +100,24 @@ Deno.serve(async (req) => {
       clientes_count: waypoints.length,
     });
 
-    // Call Google Routes API - Compute Routes with waypoint optimization
-    // Use the first waypoint as origin, last as destination, rest as intermediates
-    const origin = waypoints[0];
-    const destination = waypoints[waypoints.length - 1];
-    const intermediates = waypoints.slice(1, -1);
-
+    // Build Google Routes API request
+    // Origin = user-selected point, destination = same (round trip back)
+    // All client waypoints are intermediates to be optimized
     const routeRequest: any = {
       origin: {
-        location: {
-          latLng: { latitude: origin.lat, longitude: origin.lng },
-        },
+        location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
       },
       destination: {
-        location: {
-          latLng: { latitude: destination.lat, longitude: destination.lng },
-        },
+        location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
       },
       travelMode: "DRIVE",
       optimizeWaypointOrder: true,
+      routeModifiers: { avoidTolls: false, avoidHighways: false },
     };
 
-    if (intermediates.length > 0) {
-      routeRequest.intermediates = intermediates.map((wp: any) => ({
-        location: {
-          latLng: { latitude: wp.lat, longitude: wp.lng },
-        },
+    if (waypoints.length > 0) {
+      routeRequest.intermediates = waypoints.map((wp: any) => ({
+        location: { latLng: { latitude: wp.lat, longitude: wp.lng } },
       }));
     }
 
@@ -133,7 +129,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": googleApiKey,
           "X-Goog-FieldMask":
-            "routes.optimizedIntermediateWaypointIndex,routes.duration,routes.distanceMeters",
+            "routes.optimizedIntermediateWaypointIndex,routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
         },
         body: JSON.stringify(routeRequest),
       }
@@ -161,22 +157,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build optimized order: origin + reordered intermediates + destination
-    const optimizedIndexes = route.optimizedIntermediateWaypointIndex ?? [];
-    const optimizedOrder: number[] = [0]; // origin is first
-    for (const idx of optimizedIndexes) {
-      optimizedOrder.push(idx + 1); // +1 because intermediates start at index 1
-    }
-    optimizedOrder.push(waypoints.length - 1); // destination is last
-
-    // Map back to client IDs in optimized order
-    const optimizedWaypoints = optimizedOrder.map((idx) => waypoints[idx]);
+    // Build optimized order from intermediate indexes
+    const optimizedIndexes: number[] = route.optimizedIntermediateWaypointIndex ?? [];
+    const optimizedWaypoints = optimizedIndexes.map((idx: number) => waypoints[idx]);
 
     return new Response(
       JSON.stringify({
         optimized_order: optimizedWaypoints.map((wp: any) => wp.id),
         duration: route.duration,
         distance_meters: route.distanceMeters,
+        polyline: route.polyline?.encodedPolyline ?? null,
       }),
       {
         status: 200,
