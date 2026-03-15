@@ -157,7 +157,7 @@ export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) 
         .select('fecha, total')
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelada');
+        .neq('status', 'cancelado' as any);
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
       const { data, error } = await q;
       if (error) throw error;
