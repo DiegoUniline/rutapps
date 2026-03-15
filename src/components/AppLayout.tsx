@@ -176,6 +176,7 @@ function Breadcrumb() {
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
     configuracion: 'Configuración', descargas: 'Descargas de ruta',
     usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
+    'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
   };
 
   if (segments.length <= 1) return null;
