@@ -32,8 +32,6 @@ const RutasMapPage = lazy(() => import("@/pages/RutasMapPage"));
 const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
 const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
-const CargasListPage = lazy(() => import("@/pages/CargasListPage"));
-const CargaFormPage = lazy(() => import("@/pages/CargaFormPage"));
 const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
 const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
 const CompraFormPage = lazy(() => import("@/pages/CompraFormPage"));
@@ -185,8 +183,6 @@ function AppRoutes() {
                 <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
                 <Route path="/ventas/:id" element={<VentaFormPage />} />
                 <Route path="/almacen/inventario" element={<InventarioPage />} />
-                <Route path="/almacen/cargas" element={<CargasListPage />} />
-                <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
                 <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
                 <Route path="/almacen/compras" element={<ComprasPage />} />
                 <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
