@@ -410,7 +410,6 @@ export default function RutaVentaDetalle() {
   // ─── Handle PDF download ───
   const handleDownloadPDF = async () => {
     if (!venta) return;
-    const { buildReceiptHTML } = await import('@/lib/whatsappReceipt');
     // We'll generate a PNG ticket and download it
     const container = document.createElement('div');
     container.style.position = 'fixed';
