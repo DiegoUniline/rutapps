@@ -78,11 +78,23 @@ Deno.serve(async (req) => {
             const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
             const msg = `🔔 *Aviso de cobro Rutapp*\n\nHola ${profile.nombre || ""},\n\nMañana *1 de ${getMonthName()}* se realizará tu cobro automático de *${amountFmt}* por ${sub.max_usuarios} usuario(s).\n\nSi necesitas actualizar tu método de pago, entra a:\n${Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "")}/facturacion\n\n¡Gracias por confiar en Rutapp! 🚀`;
 
-            await fetch(WHATSAPI_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-token": waToken },
-              body: JSON.stringify({ action: "send-text", phone, message: msg }),
-            }).catch((e) => console.error("WhatsApp pre-charge error:", e));
+            let wStatus = "sent";
+            try {
+              const wRes = await fetch(WHATSAPI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-api-token": waToken },
+                body: JSON.stringify({ action: "send-text", phone, message: msg }),
+              });
+              if (!wRes.ok) wStatus = "error";
+            } catch (e) {
+              wStatus = "error";
+              console.error("WhatsApp pre-charge error:", e);
+            }
+            await supabase.from("billing_notifications").insert({
+              customer_email: email, customer_phone: phone, channel: "whatsapp",
+              tipo: "pre_cobro", mensaje: msg, monto_centavos: amount * 100,
+              status: wStatus,
+            }).catch(() => {});
           }
 
           // Stripe sends email automatically when invoice is created
