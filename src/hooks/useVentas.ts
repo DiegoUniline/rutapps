@@ -2,22 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Venta, VentaLinea } from '@/types';
 
-export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string, page = 0, pageSize = 25) {
+export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string) {
   return useQuery({
-    queryKey: ['ventas', search, statusFilter, tipoFilter, page],
+    queryKey: ['ventas', search, statusFilter, tipoFilter],
     queryFn: async () => {
-      const from = page * pageSize;
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(from, from + pageSize - 1);
+        .select('id, folio, fecha, total, subtotal, iva_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
+        .order('created_at', { ascending: false });
       if (search) q = q.or(`folio.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as any);
-      const { data, error, count } = await q;
+      const { data, error } = await q;
       if (error) throw error;
-      return { data: data as Venta[], count: count ?? 0, page, pageSize };
+      return data as Venta[];
     },
   });
 }
@@ -28,7 +26,7 @@ export function useVenta(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, fecha_entrega, total, subtotal, iva_total, ieps_total, descuento_total, saldo_pendiente, status, tipo, condicion_pago, notas, entrega_inmediata, vendedor_id, cliente_id, tarifa_id, almacen_id, pedido_origen_id, clientes(nombre), vendedores(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(id, producto_id, cantidad, precio_unitario, subtotal, iva_pct, iva_monto, ieps_pct, ieps_monto, descuento_pct, total, descripcion, notas, unidad_id, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, unidad_venta_id), unidades(nombre, abreviatura))')
+        .select('*, clientes(nombre), vendedores(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, unidad_venta_id), unidades(nombre, abreviatura))')
         .eq('id', id!)
         .single();
       if (error) throw error;

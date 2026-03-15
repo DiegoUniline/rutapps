@@ -62,7 +62,7 @@ export default function RutasMapPage() {
     enabled: !!user?.id,
   });
 
-  const { data: clientes, isLoading } = useClientesAll('', undefined);
+  const { data: clientes, isLoading } = useClientes('', undefined);
   const { data: vendedores } = useVendedores();
 
   const filtered = useMemo(() => {

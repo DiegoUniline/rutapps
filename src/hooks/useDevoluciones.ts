@@ -1,19 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export function useDevoluciones(search?: string, page = 0, pageSize = 25) {
+export function useDevoluciones(search?: string) {
   return useQuery({
-    queryKey: ['devoluciones', search, page],
+    queryKey: ['devoluciones', search],
     queryFn: async () => {
-      const from = page * pageSize;
       let q = supabase
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos(codigo, nombre))', { count: 'exact' })
-        .order('fecha', { ascending: false })
-        .range(from, from + pageSize - 1);
-      const { data, error, count } = await q;
+        .select('id, fecha, tipo, notas, vendedor_id, cliente_id, user_id, vendedores(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos(codigo, nombre))')
+        .order('fecha', { ascending: false });
+      const { data, error } = await q;
       if (error) throw error;
-      return { data: data ?? [], count: count ?? 0, page, pageSize };
+      return data;
     },
   });
 }

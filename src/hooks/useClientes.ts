@@ -4,37 +4,35 @@ import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
-export function useClientes(search?: string, statusFilter?: string, page = 0, pageSize = 25) {
+export function useClientes(search?: string, statusFilter?: string) {
   return useQuery({
-    queryKey: ['clientes', search, statusFilter, page],
+    queryKey: ['clientes', search, statusFilter],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const from = page * pageSize;
       let q = supabase.from('clientes')
-        .select('id, codigo, nombre, telefono, direccion, colonia, vendedor_id, zona_id, status, orden, credito, limite_credito, dia_visita, gps_lat, gps_lng, zonas(nombre), vendedores(nombre), tarifas(nombre)', { count: 'exact' })
-        .order('orden', { ascending: true })
-        .range(from, from + pageSize - 1);
+        .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
+        .order('orden', { ascending: true });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      const { data, error, count } = await q;
+      const { data, error } = await q;
       if (error) throw error;
-      return { data: data as Cliente[], count: count ?? 0, page, pageSize };
+      return data as Cliente[];
     },
-    staleTime: CATALOG_STALE,
   });
 }
 
 export function useCliente(id?: string) {
   return useQuery({
     queryKey: ['cliente', id],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data, error } = await supabase.from('clientes')
-        .select('id, codigo, nombre, rfc, telefono, email, contacto, direccion, colonia, notas, gps_lat, gps_lng, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, frecuencia, credito, limite_credito, dias_credito, dia_visita, orden, status, fecha_alta, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
+        .select('*, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
         .eq('id', id!).single();
       if (error) throw error;
       return data as Cliente;
     },
     enabled: !!id,
-    staleTime: CATALOG_STALE,
   });
 }
 
@@ -80,28 +78,11 @@ export function useCobradores() {
   return useQuery({ queryKey: ['cobradores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').order('nombre'); return data as Cobrador[]; }});
 }
 
-// All clients (for maps, selects, exports - no pagination)
-export function useClientesAll(search?: string, statusFilter?: string) {
-  return useQuery({
-    queryKey: ['clientes-all', search, statusFilter],
-    staleTime: CATALOG_STALE,
-    queryFn: async () => {
-      let q = supabase.from('clientes')
-        .select('id, codigo, nombre, telefono, direccion, colonia, vendedor_id, zona_id, status, orden, credito, limite_credito, dia_visita, gps_lat, gps_lng, tarifa_id, contacto, email, zonas(nombre), vendedores(nombre), tarifas(nombre)')
-        .order('orden', { ascending: true });
-      if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Cliente[];
-    },
-  });
-}
-
 // Pedido sugerido per client
 export function usePedidoSugerido(clienteId?: string) {
   return useQuery({
     queryKey: ['pedido-sugerido', clienteId],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cliente_pedido_sugerido')
@@ -112,7 +93,6 @@ export function usePedidoSugerido(clienteId?: string) {
       return data as { id: string; cliente_id: string; producto_id: string; cantidad: number; productos: { id: string; codigo: string; nombre: string; precio_principal: number } }[];
     },
     enabled: !!clienteId,
-    staleTime: CATALOG_STALE,
   });
 }
 

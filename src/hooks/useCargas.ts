@@ -1,22 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-const CATALOG_STALE = 5 * 60 * 1000;
-
-export function useCargas(search?: string, statusFilter?: string, page = 0, pageSize = 25) {
+export function useCargas(search?: string, statusFilter?: string) {
   return useQuery({
-    queryKey: ['cargas', search, statusFilter, page],
+    queryKey: ['cargas', search, statusFilter],
     queryFn: async () => {
-      const from = page * pageSize;
       let q = supabase
         .from('cargas')
-        .select('id, fecha, status, vendedor_id, almacen_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))', { count: 'exact' })
-        .order('fecha', { ascending: false })
-        .range(from, from + pageSize - 1);
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
+        .order('fecha', { ascending: false });
+      if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      const { data, error, count } = await q;
+      const { data, error } = await q;
       if (error) throw error;
-      return { data: data ?? [], count: count ?? 0, page, pageSize };
+      return data;
     },
   });
 }
@@ -27,7 +24,7 @@ export function useCarga(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('id, fecha, status, vendedor_id, almacen_id, repartidor_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(id, codigo, nombre, precio_principal, cantidad))')
+        .select('id, fecha, status, vendedor_id, almacen_id, repartidor_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
         .eq('id', id!)
         .single();
       if (error) throw error;
@@ -40,10 +37,11 @@ export function useCarga(id?: string) {
 export function useCargaActiva(vendedorId?: string) {
   return useQuery({
     queryKey: ['carga-activa', vendedorId],
+    staleTime: 30 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('id, fecha, status, vendedor_id, almacen_id, notas, carga_lineas(id, producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('id, fecha, status, vendedor_id, almacen_id, notas, carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('vendedor_id', vendedorId!)
         .in('status', ['pendiente', 'en_ruta'])
         .order('fecha', { ascending: false })
@@ -53,7 +51,6 @@ export function useCargaActiva(vendedorId?: string) {
       return data;
     },
     enabled: !!vendedorId,
-    staleTime: 30 * 1000,
   });
 }
 

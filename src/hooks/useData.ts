@@ -4,38 +4,33 @@ import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Li
 
 const CATALOG_STALE = 5 * 60 * 1000; // 5 min for catalogs
 
-// Productos with pagination
-export function useProductos(search?: string, statusFilter?: string, page = 0, pageSize = 25) {
+export function useProductos(search?: string, statusFilter?: string) {
   return useQuery({
-    queryKey: ['productos', search, statusFilter, page],
+    queryKey: ['productos', search, statusFilter],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const from = page * pageSize;
       let q = supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, cantidad, status, marca_id, marcas(nombre)', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(from, from + pageSize - 1);
+        .select('id, codigo, nombre, precio_principal, cantidad, status, imagen_url, tiene_iva, marca_id, marcas(nombre)')
+        .order('created_at', { ascending: false });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-      const { data, error, count } = await q;
+      const { data, error } = await q;
       if (error) throw error;
-      return { data: data as Producto[], count: count ?? 0, page, pageSize };
+      return data as Producto[];
     },
-    staleTime: CATALOG_STALE,
   });
 }
 
 export function useProducto(id?: string) {
   return useQuery({
     queryKey: ['producto', id],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, marca_id, clasificacion_id, proveedor_id, lista_id, unidad_venta_id, unidad_compra_id, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, imagen_url, se_puede_vender, se_puede_comprar, se_puede_inventariar, vender_sin_stock, min, max, es_combo, manejar_lotes, factor_conversion, codigo_sat, udem_sat_id, clave_alterna, permitir_descuento, monto_maximo, tiene_comision, tipo_comision, pct_comision, almacenes, calculo_costo, marcas(nombre)')
-        .eq('id', id!).single();
+      const { data, error } = await supabase.from('productos').select('*, marcas(nombre)').eq('id', id!).single();
       if (error) throw error;
       return data as Producto;
     },
     enabled: !!id,
-    staleTime: CATALOG_STALE,
   });
 }
 
@@ -74,29 +69,27 @@ export function useDeleteProducto() {
 export function useTarifas() {
   return useQuery({
     queryKey: ['tarifas'],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifas')
-        .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, tarifa_lineas(id)')
+        .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, created_at, tarifa_lineas(id)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as (Tarifa & { tarifa_lineas: { id: string }[] })[];
     },
-    staleTime: CATALOG_STALE,
   });
 }
 
 export function useTarifa(id?: string) {
   return useQuery({
     queryKey: ['tarifa', id],
+    staleTime: CATALOG_STALE,
     queryFn: async () => {
-      const { data, error } = await supabase.from('tarifas')
-        .select('id, nombre, tipo, activa, descripcion, moneda, vigencia_inicio, vigencia_fin, tarifa_lineas(id, aplica_a, tipo_calculo, precio, descuento_pct, margen_pct, precio_minimo, descuento_max, redondeo, producto_ids, clasificacion_ids, notas)')
-        .eq('id', id!).single();
+      const { data, error } = await supabase.from('tarifas').select('*, tarifa_lineas(*)').eq('id', id!).single();
       if (error) throw error;
       return data as Tarifa;
     },
     enabled: !!id,
-    staleTime: CATALOG_STALE,
   });
 }
 
@@ -216,7 +209,7 @@ export function useTarifaLineasForProducto(productoId?: string, clasificacionId?
 
       const { data, error } = await supabase
         .from('tarifa_lineas')
-        .select('id, aplica_a, tipo_calculo, precio, descuento_pct, margen_pct, precio_minimo, descuento_max, producto_ids, clasificacion_ids, tarifa_id, tarifas(id, nombre, activa)')
+        .select('*, tarifas(id, nombre, activa)')
         .or(filters.join(','));
       if (error) throw error;
       return data as (TarifaLinea & { tarifas: { id: string; nombre: string; activa: boolean } })[];
