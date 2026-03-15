@@ -227,6 +227,7 @@ const defaultProduct: Partial<Producto> = {
   pct_comision: 0, status: 'borrador', almacenes: [], tiene_iva: false,
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
+  iva_pct: 16, ieps_pct: 0, costo_incluye_impuestos: false,
 };
 
 const statusSteps = [
