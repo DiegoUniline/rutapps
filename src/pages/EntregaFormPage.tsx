@@ -1,27 +1,36 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Plus, Truck } from 'lucide-react';
+import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
-import { useEntrega, useValidarEntrega, useCancelarEntrega, useVendedoresList } from '@/hooks/useEntregas';
+import {
+  useEntrega, useSurtirLinea, useSurtirTodo,
+  useAsignarEntrega, useCargarEntrega, useAsignarYCargar,
+  useCancelarEntrega, useVendedoresList,
+  type StatusEntrega,
+} from '@/hooks/useEntregas';
 import { useProductosForSelect, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
-
-type StatusEntrega = 'borrador' | 'listo' | 'hecho' | 'cancelado';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 
 const STEPS: { key: StatusEntrega; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
-  { key: 'listo', label: 'Listo' },
-  { key: 'hecho', label: 'Hecho' },
+  { key: 'surtido', label: 'Surtido' },
+  { key: 'asignado', label: 'Asignado' },
+  { key: 'cargado', label: 'Cargado' },
+  { key: 'en_ruta', label: 'En ruta' },
+  { key: 'hecho', label: 'Entregado' },
 ];
 
 export default function EntregaFormPage() {
@@ -32,7 +41,11 @@ export default function EntregaFormPage() {
   const isNew = id === 'nuevo';
 
   const { data: entrega, isLoading } = useEntrega(isNew ? undefined : id);
-  const validarMut = useValidarEntrega();
+  const surtirLineaMut = useSurtirLinea();
+  const surtirTodoMut = useSurtirTodo();
+  const asignarMut = useAsignarEntrega();
+  const cargarMut = useCargarEntrega();
+  const asignarYCargarMut = useAsignarYCargar();
   const cancelarMut = useCancelarEntrega();
   const { data: vendedores } = useVendedoresList();
   const { data: productosList } = useProductosForSelect();
@@ -41,9 +54,14 @@ export default function EntregaFormPage() {
 
   const [lineas, setLineas] = useState<any[]>([]);
   const [form, setForm] = useState<any>({});
-  const [dirty, setDirty] = useState(false);
+  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
+  const [showExpressDialog, setShowExpressDialog] = useState(false);
+  const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
 
-  const readOnly = !isNew && form.status === 'hecho' || form.status === 'cancelado';
+  const readOnly = !isNew && (form.status === 'hecho' || form.status === 'cancelado' || form.status === 'cargado' || form.status === 'en_ruta');
+  const isSurtido = form.status === 'surtido';
+  const isAsignado = form.status === 'asignado';
+  const isBorrador = form.status === 'borrador';
 
   useEffect(() => {
     if (entrega) {
@@ -52,66 +70,104 @@ export default function EntregaFormPage() {
     }
   }, [entrega]);
 
-  const updateLinea = (idx: number, field: string, val: any) => {
-    if (readOnly) return;
-    setLineas(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], [field]: val };
-      // Auto-set hecho when cantidad_entregada equals cantidad_pedida
-      if (field === 'cantidad_entregada') {
-        next[idx].hecho = Number(val) >= Number(next[idx].cantidad_pedida);
-      }
-      return next;
-    });
-    setDirty(true);
+  const allLinesDone = lineas.length > 0 && lineas.every((l: any) => l.hecho);
+
+  // Surtir individual line
+  const handleSurtirLinea = async (idx: number) => {
+    const l = lineas[idx];
+    if (!l.id || !l.almacen_origen_id) {
+      toast.error('Selecciona el almacén origen');
+      return;
+    }
+    const cant = Number(l.cantidad_entregada) || Number(l.cantidad_pedida);
+    try {
+      await surtirLineaMut.mutateAsync({
+        lineaId: l.id,
+        productoId: l.producto_id,
+        almacenOrigenId: l.almacen_origen_id,
+        cantidadSurtida: cant,
+        entregaId: form.id,
+        empresaId: empresa!.id,
+      });
+      toast.success('Línea surtida');
+      // Update local state
+      setLineas(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], hecho: true, cantidad_entregada: cant };
+        return next;
+      });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   };
 
-  const handleStatusChange = async (newStatus: StatusEntrega) => {
-    if (!form.id) return;
-    // Only allow forward transitions
-    const order: StatusEntrega[] = ['borrador', 'listo', 'hecho'];
-    const currentIdx = order.indexOf(form.status);
-    const newIdx = order.indexOf(newStatus);
-    if (newIdx <= currentIdx) return;
-
-    if (newStatus === 'listo') {
-      // Save lineas and advance to listo
-      for (const l of lineas) {
-        if (l.id) {
-          await supabase.from('entrega_lineas').update({
-            cantidad_entregada: l.cantidad_entregada,
-            hecho: l.hecho,
-          }).eq('id', l.id);
-        }
-      }
-      await supabase.from('entregas').update({ status: 'listo' } as any).eq('id', form.id);
-      toast.success('Entrega marcada como lista');
-      qc.invalidateQueries({ queryKey: ['entrega', form.id] });
-      qc.invalidateQueries({ queryKey: ['entregas-list'] });
-      setForm((prev: any) => ({ ...prev, status: 'listo' }));
+  // Surtir all pending lines
+  const handleSurtirTodo = async () => {
+    const pendientes = lineas.filter((l: any) => !l.hecho);
+    const sinAlmacen = pendientes.filter((l: any) => !l.almacen_origen_id && !form.almacen_id);
+    if (sinAlmacen.length > 0) {
+      toast.error('Hay líneas sin almacén origen asignado');
       return;
     }
-
-    if (newStatus === 'hecho') {
-      // Validate
-      const items = lineas.map(l => ({
-        id: l.id,
-        producto_id: l.producto_id,
-        cantidad_entregada: Number(l.cantidad_entregada) || 0,
-        hecho: l.hecho ?? false,
-      }));
-
-      const hasPartial = items.some(l => l.cantidad_entregada > 0 && l.cantidad_entregada < Number(lineas.find(ll => ll.id === l.id)?.cantidad_pedida ?? 0));
-
-      try {
-        await validarMut.mutateAsync({ entregaId: form.id, lineas: items });
-        toast.success('Entrega validada — stock asignado al camión');
-        setForm((prev: any) => ({ ...prev, status: 'hecho' }));
-      } catch (e: any) {
-        toast.error(e.message);
-      }
-      return;
+    try {
+      await surtirTodoMut.mutateAsync({
+        entregaId: form.id,
+        lineas: pendientes.map((l: any) => ({
+          id: l.id,
+          producto_id: l.producto_id,
+          cantidad_pedida: Number(l.cantidad_pedida),
+          almacen_origen_id: l.almacen_origen_id || form.almacen_id,
+          hecho: l.hecho,
+        })),
+        empresaId: empresa!.id,
+        almacenDefaultId: form.almacen_id,
+      });
+      toast.success('Todas las líneas surtidas');
+      setForm((p: any) => ({ ...p, status: 'surtido' }));
+      setLineas(prev => prev.map(l => ({ ...l, hecho: true, cantidad_entregada: l.cantidad_pedida })));
+    } catch (e: any) {
+      toast.error(e.message);
     }
+  };
+
+  // Mark as surtido manually if all lines are done
+  const handleMarcarSurtido = async () => {
+    await supabase.from('entregas').update({ status: 'surtido' } as any).eq('id', form.id);
+    setForm((p: any) => ({ ...p, status: 'surtido' }));
+    qc.invalidateQueries({ queryKey: ['entrega'] });
+    qc.invalidateQueries({ queryKey: ['entregas-list'] });
+    toast.success('Entrega marcada como surtida');
+  };
+
+  // Assign to route
+  const handleAsignar = async () => {
+    if (!selectedVendedorRuta) { toast.error('Selecciona un repartidor'); return; }
+    try {
+      await asignarMut.mutateAsync({ entregaId: form.id, vendedorRutaId: selectedVendedorRuta });
+      toast.success('Entrega asignada a ruta');
+      setForm((p: any) => ({ ...p, status: 'asignado', vendedor_ruta_id: selectedVendedorRuta }));
+      setShowAsignarDialog(false);
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  // Load to truck
+  const handleCargar = async () => {
+    try {
+      await cargarMut.mutateAsync({ entregaId: form.id });
+      toast.success('Entrega cargada al camión');
+      setForm((p: any) => ({ ...p, status: 'cargado' }));
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  // Express: assign + load
+  const handleExpressAsignarCargar = async () => {
+    if (!selectedVendedorRuta) { toast.error('Selecciona un repartidor'); return; }
+    try {
+      await asignarYCargarMut.mutateAsync({ entregaId: form.id, vendedorRutaId: selectedVendedorRuta });
+      toast.success('Entrega asignada y cargada');
+      setForm((p: any) => ({ ...p, status: 'cargado', vendedor_ruta_id: selectedVendedorRuta }));
+      setShowExpressDialog(false);
+    } catch (e: any) { toast.error(e.message); }
   };
 
   const handleCancelar = async () => {
@@ -120,22 +176,14 @@ export default function EntregaFormPage() {
       await cancelarMut.mutateAsync(form.id);
       toast.success('Entrega cancelada');
       setForm((prev: any) => ({ ...prev, status: 'cancelado' }));
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    } catch (e: any) { toast.error(e.message); }
   };
 
   // New entrega creation
   const handleCreateManual = async () => {
-    if (!form.cliente_id || !empresa?.id) {
-      toast.error('Selecciona un cliente');
-      return;
-    }
+    if (!form.cliente_id || !empresa?.id) { toast.error('Selecciona un cliente'); return; }
     const validLineas = lineas.filter(l => l.producto_id && Number(l.cantidad_pedida) > 0);
-    if (validLineas.length === 0) {
-      toast.error('Agrega al menos un producto');
-      return;
-    }
+    if (validLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
 
     try {
       const { data: ent, error } = await supabase.from('entregas').insert({
@@ -153,7 +201,7 @@ export default function EntregaFormPage() {
           producto_id: l.producto_id,
           unidad_id: l.unidad_id ?? null,
           cantidad_pedida: Number(l.cantidad_pedida),
-          cantidad_entregada: Number(l.cantidad_pedida),
+          cantidad_entregada: 0,
           hecho: false,
         }))
       );
@@ -161,9 +209,15 @@ export default function EntregaFormPage() {
 
       toast.success('Entrega creada');
       navigate(`/logistica/entregas/${ent.id}`, { replace: true });
-    } catch (e: any) {
-      toast.error(e.message);
-    }
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const updateLineaLocal = (idx: number, field: string, val: any) => {
+    setLineas(prev => {
+      const next = [...prev];
+      next[idx] = { ...next[idx], [field]: val };
+      return next;
+    });
   };
 
   const addLine = () => {
@@ -194,20 +248,42 @@ export default function EntregaFormPage() {
             {form.clientes?.nombre && <p className="text-xs text-muted-foreground truncate">{form.clientes.nombre}</p>}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {isNew && (
-            <button onClick={handleCreateManual} className="btn-odoo-primary">Crear</button>
+            <Button onClick={handleCreateManual} size="sm">Crear</Button>
           )}
-          {!isNew && form.status === 'borrador' && (
-            <button onClick={() => handleStatusChange('listo')} className="btn-odoo-primary">Marcar listo</button>
+          {/* Surtir todo — only in borrador when lines exist */}
+          {!isNew && isBorrador && lineas.length > 0 && !allLinesDone && (
+            <Button onClick={handleSurtirTodo} size="sm" variant="default" disabled={surtirTodoMut.isPending}>
+              <PackageCheck className="h-3.5 w-3.5" /> Surtir todo
+            </Button>
           )}
-          {!isNew && (form.status === 'borrador' || form.status === 'listo') && (
-            <button onClick={() => handleStatusChange('hecho')} className="btn-odoo-primary">
-              <Check className="h-3.5 w-3.5" /> Validar entrega
-            </button>
+          {/* Mark surtido if all lines done but status still borrador */}
+          {!isNew && isBorrador && allLinesDone && (
+            <Button onClick={handleMarcarSurtido} size="sm">
+              <Check className="h-3.5 w-3.5" /> Marcar surtido
+            </Button>
           )}
-          {!isNew && form.status !== 'cancelado' && form.status !== 'hecho' && (
-            <button onClick={handleCancelar} className="btn-odoo-secondary text-destructive text-xs">Cancelar</button>
+          {/* Asignar — only when surtido */}
+          {!isNew && isSurtido && (
+            <>
+              <Button onClick={() => setShowAsignarDialog(true)} size="sm" variant="outline">
+                <Package className="h-3.5 w-3.5" /> Asignar ruta
+              </Button>
+              <Button onClick={() => setShowExpressDialog(true)} size="sm" variant="default">
+                <Zap className="h-3.5 w-3.5" /> Asignar y cargar
+              </Button>
+            </>
+          )}
+          {/* Cargar — only when asignado */}
+          {!isNew && isAsignado && (
+            <Button onClick={handleCargar} size="sm" disabled={cargarMut.isPending}>
+              <Truck className="h-3.5 w-3.5" /> Cargar camión
+            </Button>
+          )}
+          {/* Cancel */}
+          {!isNew && !readOnly && (
+            <Button onClick={handleCancelar} size="sm" variant="ghost" className="text-destructive text-xs">Cancelar</Button>
           )}
         </div>
       </div>
@@ -215,11 +291,7 @@ export default function EntregaFormPage() {
       {/* Statusbar */}
       {!isNew && (
         <div className="px-5 pt-3">
-          <OdooStatusbar
-            steps={STEPS}
-            current={form.status ?? 'borrador'}
-            onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusEntrega))}
-          />
+          <OdooStatusbar steps={STEPS} current={form.status ?? 'borrador'} />
         </div>
       )}
 
@@ -243,7 +315,7 @@ export default function EntregaFormPage() {
                 )}
               </div>
               <div>
-                <label className="label-odoo">Vendedor destino</label>
+                <label className="label-odoo">Vendedor</label>
                 {readOnly || !isNew ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{form.vendedores?.nombre ?? vendedores?.find(v => v.id === form.vendedor_id)?.nombre ?? '—'}</div>
                 ) : (
@@ -269,7 +341,7 @@ export default function EntregaFormPage() {
             </div>
             <div className="space-y-3">
               <div>
-                <label className="label-odoo">Almacén origen</label>
+                <label className="label-odoo">Almacén por defecto</label>
                 {readOnly || !isNew ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{form.almacenes?.nombre ?? almacenesList?.find(a => a.id === form.almacen_id)?.nombre ?? '—'}</div>
                 ) : (
@@ -280,10 +352,22 @@ export default function EntregaFormPage() {
                 <label className="label-odoo">Fecha</label>
                 <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha) || fmtDate(new Date().toISOString())}</div>
               </div>
-              {form.validado_at && (
+              {form.vendedor_ruta_id && (
                 <div>
-                  <label className="label-odoo">Validado</label>
-                  <div className="text-[11px] text-muted-foreground py-1.5 px-1">{new Date(form.validado_at).toLocaleString('es-MX')}</div>
+                  <label className="label-odoo">Repartidor asignado</label>
+                  <div className="text-[13px] py-1.5 px-1 text-foreground">{vendedores?.find(v => v.id === form.vendedor_ruta_id)?.nombre ?? '—'}</div>
+                </div>
+              )}
+              {form.fecha_asignacion && (
+                <div>
+                  <label className="label-odoo">Asignado</label>
+                  <div className="text-[11px] text-muted-foreground py-1.5 px-1">{new Date(form.fecha_asignacion).toLocaleString('es-MX')}</div>
+                </div>
+              )}
+              {form.fecha_carga && (
+                <div>
+                  <label className="label-odoo">Cargado</label>
+                  <div className="text-[11px] text-muted-foreground py-1.5 px-1">{new Date(form.fecha_carga).toLocaleString('es-MX')}</div>
                 </div>
               )}
             </div>
@@ -292,33 +376,34 @@ export default function EntregaFormPage() {
 
         {/* Lines table */}
         <div className="bg-card border border-border rounded-md">
-          <div className="p-4">
+          <div className="p-4 overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
                 <tr className="border-b border-table-border text-left">
                   <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
-                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center">Unidad</th>
-                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Cant. pedida</th>
-                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Cant. a entregar</th>
+                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[200px]">Producto</th>
+                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-36">Almacén origen</th>
+                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Stock</th>
+                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Pedida</th>
+                  <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Surtida</th>
                   <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-16 text-center">Hecho</th>
                   <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24"></th>
                 </tr>
               </thead>
               <tbody>
                 {lineas.map((l: any, idx: number) => {
-                  const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                  const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
+                  const stock = prod?.cantidad ?? 0;
                   const cantPedida = Number(l.cantidad_pedida) || 0;
                   const cantEntregada = Number(l.cantidad_entregada) || 0;
-                  const isPartial = cantEntregada > 0 && cantEntregada < cantPedida;
-                  const isSinStock = cantEntregada === 0 && cantPedida > 0;
-                  const unidad = l.unidades?.abreviatura || (prod as any)?.unidades_venta?.abreviatura || '';
+                  const unidad = l.unidades?.abreviatura || '';
+                  const almNombre = l.almacenes?.nombre;
 
                   return (
                     <tr key={l.id ?? idx} className={cn(
                       "border-b border-table-border transition-colors group",
-                      isPartial && "bg-warning/10",
-                      isSinStock && "bg-destructive/10"
+                      l.hecho && "bg-primary/5",
+                      !l.hecho && cantPedida > stock && "bg-destructive/5"
                     )}>
                       <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                       <td className="py-1 px-2">
@@ -339,11 +424,30 @@ export default function EntregaFormPage() {
                           />
                         ) : (
                           <span className="text-[12px]">
-                            {l.productos ? `${l.productos.codigo} · ${l.productos.nombre}` : prod ? `${prod.codigo} · ${prod.nombre}` : '—'}
+                            {prod ? `${prod.codigo} · ${prod.nombre}` : '—'}
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px]">{unidad || '—'}</td>
+                      {/* Almacén origen per line */}
+                      <td className="py-1 px-2">
+                        {l.hecho ? (
+                          <span className="text-[12px] text-muted-foreground">{almNombre ?? '—'}</span>
+                        ) : isBorrador || isNew ? (
+                          <SearchableSelect
+                            options={almacenOptions}
+                            value={l.almacen_origen_id ?? form.almacen_id ?? ''}
+                            onChange={v => updateLineaLocal(idx, 'almacen_origen_id', v)}
+                            placeholder="Origen..."
+                          />
+                        ) : (
+                          <span className="text-[12px] text-muted-foreground">{almNombre ?? '—'}</span>
+                        )}
+                      </td>
+                      <td className="py-1.5 px-2 text-right text-[12px]">
+                        <span className={cn(cantPedida > stock && !l.hecho ? 'text-destructive font-medium' : 'text-muted-foreground')}>
+                          {stock}
+                        </span>
+                      </td>
                       <td className="py-1.5 px-2 text-right text-[12px]">
                         {isNew && !l.id ? (
                           <input
@@ -355,43 +459,53 @@ export default function EntregaFormPage() {
                               const v = e.target.value;
                               setLineas(prev => {
                                 const next = [...prev];
-                                next[idx] = { ...next[idx], cantidad_pedida: v, cantidad_entregada: v };
+                                next[idx] = { ...next[idx], cantidad_pedida: v };
                                 return next;
                               });
                             }}
                             min="0"
                           />
-                        ) : (
-                          cantPedida
-                        )}
+                        ) : cantPedida}
                       </td>
-                      <td className="py-1 px-2">
-                        {readOnly ? (
-                          <span className="text-[12px] block text-right">{cantEntregada}</span>
-                        ) : (
+                      <td className="py-1.5 px-2 text-right text-[12px]">
+                        {l.hecho ? (
+                          <span className="font-medium text-primary">{cantEntregada}</span>
+                        ) : isBorrador ? (
                           <input
                             type="number"
                             inputMode="numeric"
                             className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                            value={l.cantidad_entregada ?? ''}
-                            onChange={e => updateLinea(idx, 'cantidad_entregada', e.target.value)}
+                            value={l.cantidad_entregada ?? l.cantidad_pedida ?? ''}
+                            onChange={e => updateLineaLocal(idx, 'cantidad_entregada', e.target.value)}
                             min="0"
                             max={cantPedida || undefined}
                           />
+                        ) : (
+                          <span>{cantEntregada}</span>
                         )}
                       </td>
                       <td className="py-1.5 px-2 text-center">
-                        <input
-                          type="checkbox"
-                          checked={!!l.hecho}
-                          disabled={readOnly}
-                          onChange={e => updateLinea(idx, 'hecho', e.target.checked)}
-                          className="rounded border-input h-4 w-4"
-                        />
+                        {l.hecho ? (
+                          <Check className="h-4 w-4 text-primary mx-auto" />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </td>
                       <td className="py-1.5 px-2">
-                        {isPartial && <Badge variant="outline" className="text-[10px] border-warning text-warning">Parcial</Badge>}
-                        {isSinStock && <Badge variant="destructive" className="text-[10px]">Sin stock</Badge>}
+                        {!l.hecho && isBorrador && l.id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-[11px] h-7"
+                            disabled={surtirLineaMut.isPending}
+                            onClick={() => handleSurtirLinea(idx)}
+                          >
+                            Surtir
+                          </Button>
+                        )}
+                        {l.hecho && (
+                          <Badge className="text-[10px] bg-primary/10 text-primary border-primary/20">Surtido</Badge>
+                        )}
                       </td>
                     </tr>
                   );
@@ -399,7 +513,7 @@ export default function EntregaFormPage() {
               </tbody>
             </table>
 
-            {(isNew || (!readOnly && (form.status === 'borrador'))) && (
+            {(isNew || isBorrador) && (
               <button onClick={addLine} className="btn-odoo-secondary text-xs mt-3">
                 <Plus className="h-3 w-3" /> Agregar producto
               </button>
@@ -407,6 +521,53 @@ export default function EntregaFormPage() {
           </div>
         </div>
       </div>
+
+      {/* Asignar ruta dialog */}
+      <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Asignar a ruta</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <label className="label-odoo">Repartidor / Vendedor</label>
+            <SearchableSelect
+              options={vendedorOptions}
+              value={selectedVendedorRuta}
+              onChange={setSelectedVendedorRuta}
+              placeholder="Seleccionar repartidor..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAsignarDialog(false)}>Cancelar</Button>
+            <Button onClick={handleAsignar} disabled={asignarMut.isPending}>Asignar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Express assign + load dialog */}
+      <Dialog open={showExpressDialog} onOpenChange={setShowExpressDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Zap className="h-4 w-4" /> Asignar y cargar</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Se asignará la ruta y se cargará directamente al camión (stock_camion).</p>
+          <div className="space-y-3 py-2">
+            <label className="label-odoo">Repartidor / Vendedor</label>
+            <SearchableSelect
+              options={vendedorOptions}
+              value={selectedVendedorRuta}
+              onChange={setSelectedVendedorRuta}
+              placeholder="Seleccionar repartidor..."
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExpressDialog(false)}>Cancelar</Button>
+            <Button onClick={handleExpressAsignarCargar} disabled={asignarYCargarMut.isPending}>
+              <Zap className="h-3.5 w-3.5" /> Asignar y cargar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
