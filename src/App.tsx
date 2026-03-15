@@ -41,6 +41,7 @@ const UsuariosPage = lazy(() => import("@/pages/UsuariosPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
+const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
@@ -118,7 +119,8 @@ function AppRoutes() {
           <AppLayout>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Navigate to="/ventas" replace />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/productos" element={<ProductosListPage />} />
                 <Route path="/productos/:id" element={<ProductoFormPage />} />
                 <Route path="/tarifas" element={<TarifasListPage />} />
