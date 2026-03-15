@@ -319,7 +319,7 @@ export default function TarifaFormPage() {
                           </tr>
                         ))}
                         {sortedLineas.length === 0 && !showAddRow && (
-                          <tr><td colSpan={8} className="py-6 text-center text-[12px] text-muted-foreground">
+                          <tr><td colSpan={9} className="py-6 text-center text-[12px] text-muted-foreground">
                             Sin reglas de precio. Haz clic en "Agregar un precio" para empezar.
                           </td></tr>
                         )}
