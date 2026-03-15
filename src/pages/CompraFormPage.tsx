@@ -485,8 +485,18 @@ export default function CompraFormPage() {
                                 min={0}
                               />
                             </td>
-                            <td className="py-1.5 px-2 text-center text-xs text-muted-foreground tabular-nums">
-                              {line._factor_conversion ?? 1}
+                            <td className="py-1.5 px-1">
+                              <input
+                                type="number"
+                                className="w-full text-center text-xs bg-transparent border border-border rounded px-1 py-0.5 tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+                                value={line._factor_conversion ?? 1}
+                                onChange={e => {
+                                  const val = Math.max(1, Number(e.target.value) || 1);
+                                  updateLine(i, { _factor_conversion: val } as any);
+                                }}
+                                disabled={!isEditable}
+                                min={1}
+                              />
                             </td>
                             <td className="py-1.5 px-2 text-right text-xs font-medium text-foreground tabular-nums">
                               {((line.cantidad ?? 1) * (line._factor_conversion ?? 1)).toLocaleString('es-MX')}
