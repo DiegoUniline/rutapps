@@ -219,3 +219,53 @@ export function useTarifaLineasForProducto(productoId?: string, clasificacionId?
     enabled: !!productoId,
   });
 }
+
+/* ── Producto Proveedores ── */
+export function useProductoProveedores(productoId?: string) {
+  return useQuery({
+    queryKey: ['producto_proveedores', productoId],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('producto_proveedores')
+        .select('id, producto_id, proveedor_id, es_principal, precio_compra, tiempo_entrega_dias, notas, proveedores(nombre)')
+        .eq('producto_id', productoId!)
+        .order('es_principal', { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!productoId,
+  });
+}
+
+export function useSaveProductoProveedor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: { id?: string; producto_id: string; proveedor_id: string; es_principal?: boolean; precio_compra?: number; tiempo_entrega_dias?: number; notas?: string }) => {
+      // If setting as principal, unset others first
+      if (row.es_principal) {
+        await supabase.from('producto_proveedores').update({ es_principal: false }).eq('producto_id', row.producto_id);
+      }
+      if (row.id) {
+        const { error } = await supabase.from('producto_proveedores').update(row).eq('id', row.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('producto_proveedores').insert(row);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', v.producto_id] }); },
+  });
+}
+
+export function useDeleteProductoProveedor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, producto_id }: { id: string; producto_id: string }) => {
+      const { error } = await supabase.from('producto_proveedores').delete().eq('id', id);
+      if (error) throw error;
+      return producto_id;
+    },
+    onSuccess: (productoId) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', productoId] }); },
+  });
+}
