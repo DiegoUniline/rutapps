@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Users, Truck, Banknote, Package, Monitor } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
+import OfflineBanner from '@/components/ruta/OfflineBanner';
 import { cn } from '@/lib/utils';
 
 const tabs = [
@@ -30,6 +31,8 @@ export default function MobileLayout() {
           <SyncCloudButton />
         </div>
       </header>
+
+      <OfflineBanner />
 
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16">

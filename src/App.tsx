@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -5,52 +6,63 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
-import LoginPage from "@/pages/LoginPage";
-import ResetPasswordPage from "@/pages/ResetPasswordPage";
-import ProductosListPage from "@/pages/ProductosListPage";
-import ProductoFormPage from "@/pages/ProductoFormPage";
-import TarifasListPage from "@/pages/TarifasListPage";
-import TarifaFormPage from "@/pages/TarifaFormPage";
-import ClientesListPage from "@/pages/ClientesListPage";
-import ClienteFormPage from "@/pages/ClienteFormPage";
-import VentasListPage from "@/pages/VentasListPage";
-import VentaFormPage from "@/pages/VentaFormPage";
-import DemandaPage from "@/pages/DemandaPage";
-import EntregasPage from "@/pages/EntregasPage";
-import ReporteEntregasPage from "@/pages/ReporteEntregasPage";
-import CobranzaPage from "@/pages/CobranzaPage";
-import RutasMapPage from "@/pages/RutasMapPage";
-import InventarioPage from "@/pages/InventarioPage";
-import CargasListPage from "@/pages/CargasListPage";
-import CargaFormPage from "@/pages/CargaFormPage";
-import AlmacenesPage from "@/pages/AlmacenesPage";
-import ComprasPage from "@/pages/ComprasPage";
-import CompraFormPage from "@/pages/CompraFormPage";
-import LotesPage from "@/pages/LotesPage";
-import CuentasCobrarPage from "@/pages/CuentasCobrarPage";
-import CuentasPagarPage from "@/pages/CuentasPagarPage";
-import GastosDesktopPage from "@/pages/GastosDesktopPage";
-import ReportesPage from "@/pages/ReportesPage";
-import ConfiguracionPage from "@/pages/ConfiguracionPage";
-import PlaceholderPage from "@/pages/PlaceholderPage";
-import NotFound from "@/pages/NotFound";
-import RutaDashboard from "@/pages/ruta/RutaDashboard";
-import RutaVentas from "@/pages/ruta/RutaVentas";
-import RutaClientes from "@/pages/ruta/RutaClientes";
-import RutaStock from "@/pages/ruta/RutaStock";
-import RutaGastos from "@/pages/ruta/RutaGastos";
-import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta";
-import RutaCobros from "@/pages/ruta/RutaCobros";
-import RutaCobrar from "@/pages/ruta/RutaCobrar";
-import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
-import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
-import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
-import RutaEntregas from "@/pages/ruta/RutaEntregas";
-import RutaDescarga from "@/pages/ruta/RutaDescarga";
-import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
-import DescargasPage from "@/pages/DescargasPage";
+
+// Lazy-loaded pages
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
+const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
+const ProductoFormPage = lazy(() => import("@/pages/ProductoFormPage"));
+const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
+const TarifaFormPage = lazy(() => import("@/pages/TarifaFormPage"));
+const ClientesListPage = lazy(() => import("@/pages/ClientesListPage"));
+const ClienteFormPage = lazy(() => import("@/pages/ClienteFormPage"));
+const VentasListPage = lazy(() => import("@/pages/VentasListPage"));
+const VentaFormPage = lazy(() => import("@/pages/VentaFormPage"));
+const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
+const EntregasPage = lazy(() => import("@/pages/EntregasPage"));
+const ReporteEntregasPage = lazy(() => import("@/pages/ReporteEntregasPage"));
+const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
+const RutasMapPage = lazy(() => import("@/pages/RutasMapPage"));
+const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
+const CargasListPage = lazy(() => import("@/pages/CargasListPage"));
+const CargaFormPage = lazy(() => import("@/pages/CargaFormPage"));
+const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
+const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
+const CompraFormPage = lazy(() => import("@/pages/CompraFormPage"));
+const LotesPage = lazy(() => import("@/pages/LotesPage"));
+const CuentasCobrarPage = lazy(() => import("@/pages/CuentasCobrarPage"));
+const CuentasPagarPage = lazy(() => import("@/pages/CuentasPagarPage"));
+const GastosDesktopPage = lazy(() => import("@/pages/GastosDesktopPage"));
+const ReportesPage = lazy(() => import("@/pages/ReportesPage"));
+const ConfiguracionPage = lazy(() => import("@/pages/ConfiguracionPage"));
+const NotFound = lazy(() => import("@/pages/NotFound"));
+const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
+
+// Mobile ruta pages
+const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
+const RutaVentas = lazy(() => import("@/pages/ruta/RutaVentas"));
+const RutaClientes = lazy(() => import("@/pages/ruta/RutaClientes"));
+const RutaStock = lazy(() => import("@/pages/ruta/RutaStock"));
+const RutaGastos = lazy(() => import("@/pages/ruta/RutaGastos"));
+const RutaNuevaVenta = lazy(() => import("@/pages/ruta/RutaNuevaVenta"));
+const RutaCobros = lazy(() => import("@/pages/ruta/RutaCobros"));
+const RutaCobrar = lazy(() => import("@/pages/ruta/RutaCobrar"));
+const RutaVentaDetalle = lazy(() => import("@/pages/ruta/RutaVentaDetalle"));
+const RutaMiCarga = lazy(() => import("@/pages/ruta/RutaMiCarga"));
+const RutaDevolucion = lazy(() => import("@/pages/ruta/RutaDevolucion"));
+const RutaEntregas = lazy(() => import("@/pages/ruta/RutaEntregas"));
+const RutaDescarga = lazy(() => import("@/pages/ruta/RutaDescarga"));
+const RutaMapaPage = lazy(() => import("@/pages/ruta/RutaMapaPage"));
 
 const queryClient = new QueryClient();
+
+function PageLoader() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center">
+      <div className="text-muted-foreground text-sm">Cargando...</div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -65,75 +77,75 @@ function AppRoutes() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="*" element={<LoginPage />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </Suspense>
     );
   }
 
   return (
-    <Routes>
-      {/* Mobile route sales module */}
-      <Route path="/ruta" element={<MobileLayout />}>
-        <Route index element={<RutaClientes />} />
-        <Route path="dashboard" element={<RutaDashboard />} />
-        <Route path="ventas" element={<RutaVentas />} />
-        <Route path="carga" element={<RutaMiCarga />} />
-        <Route path="cobros" element={<RutaCobros />} />
-        <Route path="stock" element={<RutaStock />} />
-        <Route path="gastos" element={<RutaGastos />} />
-        <Route path="entregas" element={<RutaEntregas />} />
-      </Route>
-      <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
-      <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
-      <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
-      <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
-      <Route path="/ruta/descarga" element={<RutaDescarga />} />
-      <Route path="/ruta/mapa" element={<RutaMapaPage />} />
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        {/* Mobile route sales module */}
+        <Route path="/ruta" element={<MobileLayout />}>
+          <Route index element={<RutaClientes />} />
+          <Route path="dashboard" element={<RutaDashboard />} />
+          <Route path="ventas" element={<RutaVentas />} />
+          <Route path="carga" element={<RutaMiCarga />} />
+          <Route path="cobros" element={<RutaCobros />} />
+          <Route path="stock" element={<RutaStock />} />
+          <Route path="gastos" element={<RutaGastos />} />
+          <Route path="entregas" element={<RutaEntregas />} />
+        </Route>
+        <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
+        <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
+        <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
+        <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
+        <Route path="/ruta/descarga" element={<RutaDescarga />} />
+        <Route path="/ruta/mapa" element={<RutaMapaPage />} />
 
-      {/* Desktop ERP */}
-      <Route path="*" element={
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Navigate to="/ventas" replace />} />
-            {/* Productos */}
-            <Route path="/productos" element={<ProductosListPage />} />
-            <Route path="/productos/:id" element={<ProductoFormPage />} />
-            <Route path="/tarifas" element={<TarifasListPage />} />
-            <Route path="/tarifas/:id" element={<TarifaFormPage />} />
-            {/* Clientes */}
-            <Route path="/clientes" element={<ClientesListPage />} />
-            <Route path="/clientes/:id" element={<ClienteFormPage />} />
-            {/* Ventas module */}
-            <Route path="/ventas" element={<VentasListPage />} />
-            <Route path="/ventas/demanda" element={<DemandaPage />} />
-            <Route path="/ventas/entregas" element={<EntregasPage />} />
-            <Route path="/ventas/reporte-entregas" element={<ReporteEntregasPage />} />
-            <Route path="/ventas/cobranza" element={<CobranzaPage />} />
-            <Route path="/ventas/rutas" element={<RutasMapPage />} />
-            <Route path="/ventas/:id" element={<VentaFormPage />} />
-            {/* Almacén module */}
-            <Route path="/almacen/inventario" element={<InventarioPage />} />
-            <Route path="/almacen/cargas" element={<CargasListPage />} />
-            <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
-            <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
-            <Route path="/almacen/compras" element={<ComprasPage />} />
-            <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
-            <Route path="/almacen/lotes" element={<LotesPage />} />
-            <Route path="/almacen/descargas" element={<DescargasPage />} />
-            {/* Finanzas module */}
-            <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
-            <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
-            <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
-            {/* Reportes */}
-            <Route path="/reportes" element={<ReportesPage />} />
-            <Route path="/configuracion" element={<ConfiguracionPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      } />
-    </Routes>
+        {/* Desktop ERP */}
+        <Route path="*" element={
+          <AppLayout>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/ventas" replace />} />
+                <Route path="/productos" element={<ProductosListPage />} />
+                <Route path="/productos/:id" element={<ProductoFormPage />} />
+                <Route path="/tarifas" element={<TarifasListPage />} />
+                <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+                <Route path="/clientes" element={<ClientesListPage />} />
+                <Route path="/clientes/:id" element={<ClienteFormPage />} />
+                <Route path="/ventas" element={<VentasListPage />} />
+                <Route path="/ventas/demanda" element={<DemandaPage />} />
+                <Route path="/ventas/entregas" element={<EntregasPage />} />
+                <Route path="/ventas/reporte-entregas" element={<ReporteEntregasPage />} />
+                <Route path="/ventas/cobranza" element={<CobranzaPage />} />
+                <Route path="/ventas/rutas" element={<RutasMapPage />} />
+                <Route path="/ventas/:id" element={<VentaFormPage />} />
+                <Route path="/almacen/inventario" element={<InventarioPage />} />
+                <Route path="/almacen/cargas" element={<CargasListPage />} />
+                <Route path="/almacen/cargas/:id" element={<CargaFormPage />} />
+                <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
+                <Route path="/almacen/compras" element={<ComprasPage />} />
+                <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
+                <Route path="/almacen/lotes" element={<LotesPage />} />
+                <Route path="/almacen/descargas" element={<DescargasPage />} />
+                <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
+                <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
+                <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
+                <Route path="/reportes" element={<ReportesPage />} />
+                <Route path="/configuracion" element={<ConfiguracionPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AppLayout>
+        } />
+      </Routes>
+    </Suspense>
   );
 }
 
