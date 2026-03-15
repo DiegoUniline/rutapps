@@ -1,26 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
-import { PackageCheck, DollarSign, ArrowLeft, Send, CheckCircle, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DollarSign, ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
-type TipoLiquidacion = 'carga' | 'solo_efectivo' | 'rango_fechas';
+const BILLETES = [
+  { label: '$1,000', value: 1000 },
+  { label: '$500', value: 500 },
+  { label: '$200', value: 200 },
+  { label: '$100', value: 100 },
+  { label: '$50', value: 50 },
+  { label: '$20', value: 20 },
+];
+
+const MONEDAS = [
+  { label: '$10', value: 10 },
+  { label: '$5', value: 5 },
+  { label: '$2', value: 2 },
+  { label: '$1', value: 1 },
+  { label: '$0.50', value: 0.5 },
+];
+
+const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function RutaDescarga() {
   const nav = useNavigate();
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
 
-  const [tipo, setTipo] = useState<TipoLiquidacion | null>(null);
-  const [fechaInicio, setFechaInicio] = useState(() => new Date().toISOString().slice(0, 10));
-  const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().slice(0, 10));
+  const [conteo, setConteo] = useState<Record<number, number>>({});
+  const [notas, setNotas] = useState('');
 
-  // Get active carga (optional)
+  // Get active carga
   const { data: cargaActiva } = useQuery({
     queryKey: ['mi-carga-activa-descarga'],
     queryFn: async () => {
@@ -53,76 +67,39 @@ export default function RutaDescarga() {
     enabled: !!cargaActiva?.id,
   });
 
-  // Calc data only when using carga type
-  const useCarga = tipo === 'carga' && !!cargaActiva?.id;
-  const { lineas: lineasBase, efectivoEsperado } = useDescargaCalculos(useCarga ? cargaActiva?.id ?? null : null);
+  // Calculate effective total from bill/coin counter
+  const totalEfectivo = useMemo(() => {
+    return Object.entries(conteo).reduce((sum, [denom, qty]) => sum + (Number(denom) * qty), 0);
+  }, [conteo]);
 
-  // For date range, get ventas in range
-  const { data: ventasRango } = useQuery({
-    queryKey: ['ventas-rango-liq', empresa?.id, fechaInicio, fechaFin],
-    enabled: tipo === 'rango_fechas' && !!empresa?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('total, condicion_pago')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fechaInicio)
-        .lte('fecha', fechaFin)
-        .neq('status', 'cancelado');
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const efectivoEsperadoRango = (ventasRango || [])
-    .filter(v => v.condicion_pago === 'contado')
-    .reduce((sum, v) => sum + (Number(v.total) || 0), 0);
-
-  const [lineas, setLineas] = useState<DescargaLinea[]>([]);
-  const [efectivoEntregado, setEfectivoEntregado] = useState('');
-  const [notas, setNotas] = useState('');
-
-  useEffect(() => {
-    if (useCarga && lineasBase.length > 0 && lineas.length === 0) {
-      setLineas(lineasBase.map(l => ({ ...l, cantidad_real: 0, diferencia: -l.cantidad_esperada })));
-    }
-  }, [lineasBase, useCarga]);
-
-  const updateCantidadReal = (idx: number, value: number) => {
-    setLineas(prev => prev.map((l, i) => {
-      if (i !== idx) return l;
-      return { ...l, cantidad_real: value, diferencia: value - l.cantidad_esperada };
-    }));
+  const updateConteo = (denom: number, delta: number) => {
+    setConteo(prev => {
+      const current = prev[denom] ?? 0;
+      const next = Math.max(0, current + delta);
+      return { ...prev, [denom]: next };
+    });
   };
 
-  const getEfectivoEsp = () => {
-    if (tipo === 'rango_fechas') return efectivoEsperadoRango;
-    if (tipo === 'carga') return efectivoEsperado;
-    return 0;
+  const setConteoValue = (denom: number, val: number) => {
+    setConteo(prev => ({ ...prev, [denom]: Math.max(0, val) }));
   };
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const efectivoReal = efectivoEntregado !== '' ? Number(efectivoEntregado) : 0;
-      const esp = getEfectivoEsp();
+      if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        efectivo_esperado: esp,
-        efectivo_entregado: efectivoReal,
-        diferencia_efectivo: efectivoReal - esp,
+        efectivo_esperado: 0, // blind: vendedor doesn't know expected
+        efectivo_entregado: totalEfectivo,
+        diferencia_efectivo: 0, // will be calculated by admin
         notas: notas || null,
       };
 
-      if (tipo === 'carga' && cargaActiva) {
+      if (cargaActiva) {
         insertData.carga_id = cargaActiva.id;
         insertData.vendedor_id = cargaActiva.vendedor_id;
-      }
-
-      if (tipo === 'rango_fechas') {
-        insertData.fecha_inicio = fechaInicio;
-        insertData.fecha_fin = fechaFin;
       }
 
       const { data: descarga, error } = await supabase
@@ -131,23 +108,6 @@ export default function RutaDescarga() {
         .select()
         .single();
       if (error) throw error;
-
-      // Only save product lines if there are any
-      if (lineas.length > 0) {
-        const lineItems = lineas.map(l => ({
-          descarga_id: descarga.id,
-          producto_id: l.producto_id,
-          cantidad_esperada: l.cantidad_esperada,
-          cantidad_real: l.cantidad_real,
-          diferencia: l.diferencia,
-          motivo: null,
-          notas: null,
-        }));
-        const { error: lErr } = await supabase
-          .from('descarga_ruta_lineas')
-          .insert(lineItems as any);
-        if (lErr) throw lErr;
-      }
     },
     onSuccess: () => {
       toast.success('Liquidación enviada');
@@ -157,192 +117,172 @@ export default function RutaDescarga() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Already submitted for this carga
-  if (tipo === 'carga' && existingDescarga) {
+  // Already submitted
+  if (existingDescarga) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <div className="bg-green-50 rounded-full p-4 mb-4">
-          <CheckCircle className="h-12 w-12 text-green-600" />
-        </div>
-        <h2 className="text-lg font-bold text-foreground mb-1">Liquidación de esta carga ya enviada ✓</h2>
-        <p className="text-sm text-muted-foreground mb-6">El administrador la revisará.</p>
-        <Button variant="outline" size="sm" onClick={() => setTipo(null)}>
-          Hacer otra liquidación
-        </Button>
-      </div>
-    );
-  }
-
-  // Step 0: Choose type
-  if (!tipo) {
-    return (
-      <div className="p-4 space-y-4 pb-24">
-        <div className="flex items-center gap-3">
-          <button onClick={() => nav('/ruta')} className="p-1.5 rounded-md hover:bg-muted">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-lg font-bold text-foreground">Liquidación</h1>
-            <p className="text-xs text-muted-foreground">¿Qué tipo de liquidación harás?</p>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          {cargaActiva && (
-            <button
-              onClick={() => setTipo('carga')}
-              className="w-full bg-card border border-border rounded-lg p-4 text-left hover:border-primary/50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <PackageCheck className="h-6 w-6 text-primary shrink-0" />
-                <div>
-                  <div className="text-sm font-semibold text-foreground">Descarga de carga</div>
-                  <div className="text-xs text-muted-foreground">Liquidar efectivo + devolver productos de la carga activa</div>
-                </div>
-              </div>
+      <div className="flex flex-col h-screen bg-background">
+        <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
+          <div className="flex items-center gap-2 px-3 h-12">
+            <button onClick={() => nav('/ruta')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
+              <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
             </button>
-          )}
-
-          <button
-            onClick={() => setTipo('solo_efectivo')}
-            className="w-full bg-card border border-border rounded-lg p-4 text-left hover:border-primary/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <DollarSign className="h-6 w-6 text-primary shrink-0" />
-              <div>
-                <div className="text-sm font-semibold text-foreground">Solo efectivo</div>
-                <div className="text-xs text-muted-foreground">Liquidar solo el efectivo del día, sin devolución de productos</div>
-              </div>
-            </div>
-          </button>
-
-          <button
-            onClick={() => setTipo('rango_fechas')}
-            className="w-full bg-card border border-border rounded-lg p-4 text-left hover:border-primary/50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <Calendar className="h-6 w-6 text-primary shrink-0" />
-              <div>
-                <div className="text-sm font-semibold text-foreground">Por rango de fechas</div>
-                <div className="text-xs text-muted-foreground">Liquidar un periodo (semanal, varios días, etc.)</div>
-              </div>
-            </div>
+            <span className="text-[15px] font-semibold text-foreground">Liquidación</span>
+          </div>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground mb-1">Liquidación enviada ✓</h2>
+          <p className="text-sm text-muted-foreground mb-6">El administrador la revisará y aprobará.</p>
+          <button onClick={() => nav('/ruta')} className="text-sm text-primary font-medium">
+            Volver al inicio
           </button>
         </div>
       </div>
     );
   }
 
-  const canSubmit = efectivoEntregado !== '' && !submitMutation.isPending;
+  const hasConteo = Object.values(conteo).some(v => v > 0);
 
   return (
-    <div className="p-4 space-y-4 pb-24">
+    <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <button onClick={() => setTipo(null)} className="p-1.5 rounded-md hover:bg-muted">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-lg font-bold text-foreground">Liquidación</h1>
-          <p className="text-xs text-muted-foreground">
-            {tipo === 'carga' && 'Descarga de carga — Declara lo que traes'}
-            {tipo === 'solo_efectivo' && 'Solo efectivo — Declara cuánto entregas'}
-            {tipo === 'rango_fechas' && 'Por periodo — Selecciona fechas'}
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
+        <div className="flex items-center gap-2 px-3 h-12">
+          <button onClick={() => nav('/ruta')} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
+            <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
+          </button>
+          <span className="text-[15px] font-semibold text-foreground flex-1 flex items-center gap-2">
+            <Banknote className="h-4 w-4 text-primary" /> Liquidación
+          </span>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-auto px-3 py-3 space-y-3 pb-24">
+        {/* Instructions */}
+        <div className="bg-primary/5 rounded-xl p-3 border border-primary/10">
+          <p className="text-[12px] font-semibold text-foreground mb-0.5">Conteo de efectivo</p>
+          <p className="text-[11px] text-muted-foreground">
+            Cuenta los billetes y monedas que tienes. Solo ingresa las cantidades reales.
           </p>
         </div>
-      </div>
 
-      {/* Date range selector */}
-      {tipo === 'rango_fechas' && (
-        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Calendar className="h-4 w-4" /> Periodo a liquidar
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Desde</label>
-              <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} className="h-10" />
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Hasta</label>
-              <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} className="h-10" />
-            </div>
-          </div>
+        {/* Running total */}
+        <div className="bg-card border border-border rounded-xl p-4 text-center">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total contado</p>
+          <p className="text-3xl font-bold text-foreground tabular-nums">
+            $ {fmt(totalEfectivo)}
+          </p>
         </div>
-      )}
 
-      {/* Cash section */}
-      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <DollarSign className="h-4 w-4" /> Efectivo entregado
-        </h3>
-        <p className="text-xs text-muted-foreground">¿Cuánto efectivo entregas?</p>
-        <Input
-          type="number"
-          inputMode="decimal"
-          value={efectivoEntregado}
-          onChange={e => setEfectivoEntregado(e.target.value)}
-          placeholder="0.00"
-          className="text-lg font-semibold h-12"
-        />
-      </div>
-
-      {/* Products — only for carga type */}
-      {tipo === 'carga' && (
-        <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <PackageCheck className="h-4 w-4" /> Productos devueltos
-          </h3>
-          <p className="text-xs text-muted-foreground">¿Cuántas unidades regresas de cada producto?</p>
-
-          <div className="space-y-2">
-            {lineas.map((l, idx) => (
-              <div key={l.producto_id} className="flex items-center gap-3 bg-muted/30 rounded-lg px-3 py-2.5">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">{l.producto_nombre}</div>
-                  <div className="text-[10px] text-muted-foreground font-mono">{l.producto_codigo}</div>
+        {/* Bills */}
+        <div className="bg-card border border-border rounded-xl p-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Billetes</p>
+          <div className="space-y-1.5">
+            {BILLETES.map(b => {
+              const qty = conteo[b.value] ?? 0;
+              const subtotal = qty * b.value;
+              return (
+                <div key={b.value} className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-foreground w-16">{b.label}</span>
+                  <div className="flex items-center gap-0.5 flex-1">
+                    <button
+                      onClick={() => updateConteo(b.value, -1)}
+                      disabled={qty === 0}
+                      className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
+                    >
+                      <Minus className="h-3.5 w-3.5 text-foreground" />
+                    </button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className="w-12 text-center text-[14px] font-bold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                      value={qty || ''}
+                      onChange={e => setConteoValue(b.value, parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                    <button
+                      onClick={() => updateConteo(b.value, 1)}
+                      className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center active:scale-90 transition-transform"
+                    >
+                      <Plus className="h-3.5 w-3.5 text-foreground" />
+                    </button>
+                  </div>
+                  <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
+                    {subtotal > 0 ? `$ ${fmt(subtotal)}` : '—'}
+                  </span>
                 </div>
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  value={l.cantidad_real || ''}
-                  onChange={e => updateCantidadReal(idx, Number(e.target.value) || 0)}
-                  placeholder="0"
-                  className="w-20 h-10 text-center text-sm font-semibold"
-                />
-              </div>
-            ))}
-            {lineas.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">
-                {cargaActiva ? 'Cargando productos...' : 'No hay carga activa'}
-              </p>
-            )}
+              );
+            })}
           </div>
         </div>
-      )}
 
-      {/* Notes */}
-      <div className="bg-card border border-border rounded-lg p-4">
-        <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Observaciones</label>
-        <textarea
-          value={notas}
-          onChange={e => setNotas(e.target.value)}
-          placeholder="Cualquier comentario sobre la liquidación..."
-          className="w-full border border-input bg-background rounded-md px-3 py-2 text-sm min-h-[60px] focus:outline-none focus:ring-2 focus:ring-ring"
-        />
+        {/* Coins */}
+        <div className="bg-card border border-border rounded-xl p-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Monedas</p>
+          <div className="space-y-1.5">
+            {MONEDAS.map(m => {
+              const qty = conteo[m.value] ?? 0;
+              const subtotal = qty * m.value;
+              return (
+                <div key={m.value} className="flex items-center gap-2">
+                  <span className="text-[13px] font-semibold text-foreground w-16">{m.label}</span>
+                  <div className="flex items-center gap-0.5 flex-1">
+                    <button
+                      onClick={() => updateConteo(m.value, -1)}
+                      disabled={qty === 0}
+                      className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
+                    >
+                      <Minus className="h-3.5 w-3.5 text-foreground" />
+                    </button>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      className="w-12 text-center text-[14px] font-bold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                      value={qty || ''}
+                      onChange={e => setConteoValue(m.value, parseInt(e.target.value) || 0)}
+                      placeholder="0"
+                    />
+                    <button
+                      onClick={() => updateConteo(m.value, 1)}
+                      className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center active:scale-90 transition-transform"
+                    >
+                      <Plus className="h-3.5 w-3.5 text-foreground" />
+                    </button>
+                  </div>
+                  <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
+                    {subtotal > 0 ? `$ ${fmt(subtotal)}` : '—'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="bg-card border border-border rounded-xl p-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Observaciones</p>
+          <textarea
+            className="w-full bg-accent/40 rounded-md px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none"
+            rows={2}
+            placeholder="Algún comentario..."
+            value={notas}
+            onChange={e => setNotas(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Submit */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
-        <Button
+      <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
+        <button
           onClick={() => submitMutation.mutate()}
-          disabled={!canSubmit}
-          className="w-full h-12 text-sm font-semibold"
+          disabled={!hasConteo || submitMutation.isPending}
+          className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
-          <Send className="h-4 w-4 mr-2" />
-          Enviar liquidación
-        </Button>
+          <Send className="h-4 w-4" />
+          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — $ ${fmt(totalEfectivo)}`}
+        </button>
       </div>
     </div>
   );
