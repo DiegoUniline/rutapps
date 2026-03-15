@@ -52,7 +52,7 @@ export default function LandingPage() {
           </div>
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">Iniciar sesión</Link>
-            <Link to="/login" className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-lg shadow-indigo-500/25"
+            <Link to="/signup" className="px-5 py-2.5 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 shadow-lg shadow-indigo-500/25"
               style={{ background: 'hsl(230, 55%, 52%)' }}>
               Probar gratis
             </Link>
@@ -94,7 +94,7 @@ export default function LandingPage() {
               Diseñado para distribuidoras y empresas con venta en ruta.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
-              <Link to="/login" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
+              <Link to="/signup" className="w-full sm:w-auto px-8 py-4 text-base font-bold text-white rounded-xl transition-all hover:opacity-90 shadow-xl shadow-indigo-500/30 flex items-center justify-center gap-2"
                 style={{ background: 'hsl(230, 55%, 52%)' }}>
                 Comenzar ahora <ArrowRight className="h-5 w-5" />
               </Link>
@@ -283,7 +283,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link to="/login" className={cn(
+                <Link to="/signup" className={cn(
                   "block w-full text-center py-3.5 rounded-xl text-sm font-bold transition-all",
                   plan.popular
                     ? "text-white shadow-lg shadow-indigo-500/25 hover:opacity-90"
@@ -339,7 +339,7 @@ export default function LandingPage() {
             <p className="text-indigo-100 text-lg mb-8 max-w-xl mx-auto">
               Únete a cientos de distribuidoras que ya optimizaron su operación con Rutapp.
             </p>
-            <Link to="/login"
+            <Link to="/signup"
               className="inline-flex items-center gap-2 px-8 py-4 bg-white text-base font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all"
               style={{ color: 'hsl(230, 55%, 48%)' }}>
               Crear cuenta gratis <ArrowRight className="h-5 w-5" />

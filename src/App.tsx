@@ -12,6 +12,7 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const SignupPage = lazy(() => import("@/pages/SignupPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
@@ -118,6 +119,7 @@ function AppRoutes() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
