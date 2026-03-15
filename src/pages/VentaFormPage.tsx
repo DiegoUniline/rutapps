@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save, Trash2, Plus, Banknote } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -11,6 +11,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
 import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
+import { useEntregaByPedido, useCrearEntrega } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
@@ -69,9 +70,15 @@ export default function VentaFormPage() {
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
 
+  // Entrega integration — moved after form state declaration below
+  const crearEntrega = useCrearEntrega();
+
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+
+  // Entrega integration for pedidos
+  const { data: entregaExistente } = useEntregaByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
 
   // Payments state
   const [showPagoForm, setShowPagoForm] = useState(false);
@@ -373,7 +380,40 @@ export default function VentaFormPage() {
           {!isNew && form.status === 'borrador' && (
             <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
-          {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && (
+          {/* Entrega button for pedidos */}
+          {!isNew && form.tipo === 'pedido' && form.status === 'confirmado' && !entregaExistente && (
+            <button
+              onClick={async () => {
+                const validLines = (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0);
+                if (validLines.length === 0) { toast.error('No hay líneas para crear entrega'); return; }
+                try {
+                  const result = await crearEntrega.mutateAsync({
+                    pedidoId: form.id,
+                    vendedorId: form.vendedor_id,
+                    clienteId: form.cliente_id,
+                    almacenId: form.almacen_id,
+                    lineas: validLines.map(l => ({
+                      producto_id: l.producto_id!,
+                      unidad_id: l.unidad_id,
+                      cantidad_pedida: Number(l.cantidad),
+                    })),
+                  });
+                  toast.success('Entrega creada');
+                  navigate(`/entregas/${result.id}`);
+                } catch (e: any) { toast.error(e.message); }
+              }}
+              disabled={crearEntrega.isPending}
+              className="btn-odoo-primary"
+            >
+              <Truck className="h-3.5 w-3.5" /> Crear entrega
+            </button>
+          )}
+          {!isNew && form.tipo === 'pedido' && entregaExistente && (
+            <button onClick={() => navigate(`/entregas/${entregaExistente.id}`)} className="btn-odoo-secondary">
+              <Truck className="h-3.5 w-3.5" /> Ver entrega ({entregaExistente.folio})
+            </button>
+          )}
+          {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
           )}
           {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && (

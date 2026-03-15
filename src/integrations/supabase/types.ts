@@ -958,6 +958,145 @@ export type Database = {
         }
         Relationships: []
       }
+      entrega_lineas: {
+        Row: {
+          cantidad_entregada: number
+          cantidad_pedida: number
+          created_at: string
+          entrega_id: string
+          hecho: boolean
+          id: string
+          producto_id: string
+          unidad_id: string | null
+        }
+        Insert: {
+          cantidad_entregada?: number
+          cantidad_pedida?: number
+          created_at?: string
+          entrega_id: string
+          hecho?: boolean
+          id?: string
+          producto_id: string
+          unidad_id?: string | null
+        }
+        Update: {
+          cantidad_entregada?: number
+          cantidad_pedida?: number
+          created_at?: string
+          entrega_id?: string
+          hecho?: boolean
+          id?: string
+          producto_id?: string
+          unidad_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entrega_lineas_entrega_id_fkey"
+            columns: ["entrega_id"]
+            isOneToOne: false
+            referencedRelation: "entregas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entrega_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entrega_lineas_unidad_id_fkey"
+            columns: ["unidad_id"]
+            isOneToOne: false
+            referencedRelation: "unidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entregas: {
+        Row: {
+          almacen_id: string | null
+          cliente_id: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          folio: string | null
+          id: string
+          notas: string | null
+          pedido_id: string | null
+          status: Database["public"]["Enums"]["status_entrega"]
+          validado_at: string | null
+          validado_por: string | null
+          vendedor_id: string | null
+        }
+        Insert: {
+          almacen_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          notas?: string | null
+          pedido_id?: string | null
+          status?: Database["public"]["Enums"]["status_entrega"]
+          validado_at?: string | null
+          validado_por?: string | null
+          vendedor_id?: string | null
+        }
+        Update: {
+          almacen_id?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          folio?: string | null
+          id?: string
+          notas?: string | null
+          pedido_id?: string | null
+          status?: Database["public"]["Enums"]["status_entrega"]
+          validado_at?: string | null
+          validado_por?: string | null
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gastos: {
         Row: {
           concepto: string
@@ -1774,6 +1913,61 @@ export type Database = {
           },
         ]
       }
+      stock_camion: {
+        Row: {
+          cantidad_actual: number
+          cantidad_inicial: number
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          producto_id: string
+          vendedor_id: string
+        }
+        Insert: {
+          cantidad_actual?: number
+          cantidad_inicial?: number
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          producto_id: string
+          vendedor_id: string
+        }
+        Update: {
+          cantidad_actual?: number
+          cantidad_inicial?: number
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          producto_id?: string
+          vendedor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_camion_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_camion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_camion_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tarifa_lineas: {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
@@ -2453,6 +2647,7 @@ export type Database = {
       status_carga: "pendiente" | "en_ruta" | "completada" | "cancelada"
       status_cliente: "activo" | "inactivo" | "suspendido"
       status_descarga: "pendiente" | "aprobada" | "rechazada"
+      status_entrega: "borrador" | "listo" | "hecho" | "cancelado"
       status_producto: "activo" | "inactivo" | "borrador"
       status_venta:
         | "borrador"
@@ -2628,6 +2823,7 @@ export const Constants = {
       status_carga: ["pendiente", "en_ruta", "completada", "cancelada"],
       status_cliente: ["activo", "inactivo", "suspendido"],
       status_descarga: ["pendiente", "aprobada", "rechazada"],
+      status_entrega: ["borrador", "listo", "hecho", "cancelado"],
       status_producto: ["activo", "inactivo", "borrador"],
       status_venta: [
         "borrador",
