@@ -17,12 +17,17 @@ export function useOfflineQuery<T = any>(
     enabled?: boolean;
   }
 ) {
-  const [data, setData] = useState<T[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const enabled = options?.enabled !== false;
+  const [data, setData] = useState<T[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(enabled);
 
   const loadData = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
 
     // 1. Read from IndexedDB immediately
     const localTable = getOfflineTable(table);
