@@ -97,6 +97,9 @@ export default function RutaNuevaVenta() {
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
+  // Promotions engine
+  const { data: promocionesActivas } = usePromocionesActivas();
+
   const { data: clientes } = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
     status: 'activo',
