@@ -2565,6 +2565,7 @@ export type Database = {
       tarifa_lineas: {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
+          base_precio: string
           clasificacion_ids: string[]
           comision_pct: number
           created_at: string
@@ -2582,6 +2583,7 @@ export type Database = {
         }
         Insert: {
           aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
+          base_precio?: string
           clasificacion_ids?: string[]
           comision_pct?: number
           created_at?: string
@@ -2599,6 +2601,7 @@ export type Database = {
         }
         Update: {
           aplica_a?: Database["public"]["Enums"]["aplica_a_tarifa"]
+          base_precio?: string
           clasificacion_ids?: string[]
           comision_pct?: number
           created_at?: string

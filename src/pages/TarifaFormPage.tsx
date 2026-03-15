@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Plus, Star } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
+import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
@@ -37,6 +38,7 @@ const EMPTY_LINEA = {
   margen_pct: 0,
   descuento_pct: 0,
   comision_pct: 0,
+  base_precio: 'sin_impuestos' as 'sin_impuestos' | 'con_impuestos',
   redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
 };
@@ -134,6 +136,7 @@ export default function TarifaFormPage() {
         margen_pct: newLinea.margen_pct,
         descuento_pct: newLinea.descuento_pct,
         comision_pct: newLinea.comision_pct,
+        base_precio: newLinea.base_precio,
         redondeo: newLinea.redondeo,
         notas: newLinea.notas || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
@@ -248,9 +251,15 @@ export default function TarifaFormPage() {
             />
             <OdooField label="Moneda" value={form.moneda} onChange={v => set('moneda', v)} />
           </div>
-          <div>
-            <OdooField label="Vigencia inicio" value={form.vigencia_inicio} onChange={v => set('vigencia_inicio', v)} placeholder="AAAA-MM-DD" />
-            <OdooField label="Vigencia fin" value={form.vigencia_fin} onChange={v => set('vigencia_fin', v)} placeholder="AAAA-MM-DD" />
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs text-muted-foreground font-medium">Vigencia inicio</label>
+              <OdooDatePicker value={form.vigencia_inicio} onChange={v => set('vigencia_inicio', v)} placeholder="Seleccionar fecha" />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground font-medium">Vigencia fin</label>
+              <OdooDatePicker value={form.vigencia_fin} onChange={v => set('vigencia_fin', v)} placeholder="Seleccionar fecha" />
+            </div>
           </div>
         </div>
 
@@ -273,6 +282,7 @@ export default function TarifaFormPage() {
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
                           <th className="th-odoo text-left">Cálculo</th>
+                          <th className="th-odoo text-left">Base</th>
                           <th className="th-odoo text-right">Valor</th>
                           <th className="th-odoo text-right">Comisión %</th>
                           <th className="th-odoo text-right">Precio mín</th>
@@ -296,6 +306,7 @@ export default function TarifaFormPage() {
                               </div>
                             </td>
                             <td className="py-1.5 px-3 text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</td>
+                            <td className="py-1.5 px-3 text-xs text-muted-foreground">{(l as any).base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">{getCalculoDisplay(l)}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</td>
@@ -308,7 +319,7 @@ export default function TarifaFormPage() {
                           </tr>
                         ))}
                         {sortedLineas.length === 0 && !showAddRow && (
-                          <tr><td colSpan={8} className="py-6 text-center text-[12px] text-muted-foreground">
+                          <tr><td colSpan={9} className="py-6 text-center text-[12px] text-muted-foreground">
                             Sin reglas de precio. Haz clic en "Agregar un precio" para empezar.
                           </td></tr>
                         )}
@@ -346,6 +357,13 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">{getValueField()}</td>
                               <td className="py-2 px-3">
+                                <select className="input-odoo text-xs w-full" value={newLinea.base_precio}
+                                  onChange={e => setNewLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
+                                  <option value="sin_impuestos">Sin impuestos</option>
+                                  <option value="con_impuestos">Con impuestos</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3">
                                 <input type="number" className="input-odoo text-right text-xs w-full" placeholder="%"
                                   value={newLinea.comision_pct || ''} onChange={e => setNewLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
                               </td>
@@ -365,7 +383,7 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3"></td>
                             </tr>
                             <tr className="bg-primary/5">
-                              <td colSpan={8} className="py-2 px-3">
+                              <td colSpan={9} className="py-2 px-3">
                                 <div className="flex items-center gap-2">
                                   <button onClick={handleAddLinea} disabled={saveLinea.isPending} className="btn-odoo-primary text-[12px] py-1 px-3">
                                     <Plus className="h-3 w-3" /> Agregar
