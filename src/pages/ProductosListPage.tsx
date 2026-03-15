@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
+import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
