@@ -259,7 +259,9 @@ export default function RutaVentaDetalle() {
       setCuentasPendientes([]);
     }
     setMetodoPago('efectivo');
-    setMontoRecibido('');
+    // Default monto recibido to total a cobrar
+    const saldo = venta?.saldo_pendiente ?? 0;
+    setMontoRecibido(saldo > 0 ? saldo.toString() : '');
     setReferenciaPago('');
     setView('cobrar');
   };
@@ -319,6 +321,24 @@ export default function RutaVentaDetalle() {
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Handle cancelar ───
+  const handleCancelar = async () => {
+    if (!venta || !confirm('¿Estás seguro de cancelar esta venta? Esta acción no se puede deshacer.')) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
+      if (error) throw error;
+      toast.success('Venta cancelada');
+      queryClient.invalidateQueries({ queryKey: ['venta', id] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -749,9 +769,15 @@ export default function RutaVentaDetalle() {
                 <label className="text-[10px] text-muted-foreground font-medium">Monto recibido</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span>
-                  <input type="number" inputMode="decimal"
+                  <input type="number" inputMode="decimal" min="0"
                     className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    value={montoRecibido} placeholder={fmt(totalACobrar)} onChange={e => setMontoRecibido(e.target.value)}
+                    value={montoRecibido} placeholder={fmt(totalACobrar)}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value);
+                      if (e.target.value === '' || val >= 0) {
+                        setMontoRecibido(e.target.value);
+                      }
+                    }}
                   />
                 </div>
                 {cambio > 0 && (
@@ -817,8 +843,8 @@ export default function RutaVentaDetalle() {
           <h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1>
           <p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p>
         </div>
-        {/* Edit button */}
-        {venta.status !== 'cancelado' && venta.status !== 'facturado' && (
+        {/* Edit button - only for borrador */}
+        {venta.status === 'borrador' && (
           <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all">
             <Pencil className="h-4 w-4 text-muted-foreground" />
           </button>
@@ -888,20 +914,26 @@ export default function RutaVentaDetalle() {
       </div>
 
       {/* Bottom actions */}
-      {(venta.saldo_pendiente ?? 0) > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent space-y-2">
+      <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent space-y-2">
+        {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && (
           <button onClick={initCobrar}
             className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-2">
             <Banknote className="h-5 w-5" /> Cobrar $ {fmt(venta.saldo_pendiente ?? 0)}
           </button>
-          {venta.status !== 'cancelado' && venta.status !== 'facturado' && (
-            <button onClick={initEditar}
-              className="w-full bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
-              <Pencil className="h-4 w-4" /> Editar venta
-            </button>
-          )}
-        </div>
-      )}
+        )}
+        {venta.status === 'borrador' && (
+          <button onClick={initEditar}
+            className="w-full bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+            <Pencil className="h-4 w-4" /> Editar venta
+          </button>
+        )}
+        {(venta.status === 'confirmado' || venta.status === 'entregado') && (
+          <button onClick={handleCancelar} disabled={saving}
+            className="w-full bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-40">
+            <X className="h-4 w-4" /> Cancelar venta
+          </button>
+        )}
+      </div>
     </div>
   );
 }
