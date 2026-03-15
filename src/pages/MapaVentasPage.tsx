@@ -211,13 +211,6 @@ export default function MapaVentasPage() {
 
   const activeFiltersCount = [vendedorFilter, tipoFilter].filter(Boolean).length;
 
-  if (loadingKey || !apiKey) {
-    return (
-      <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
