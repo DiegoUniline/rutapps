@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, MessageCircle, Download, Receipt } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import { useVenta } from '@/hooks/useVentas';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -37,7 +38,7 @@ interface EditLinea {
   iva_pct: number;
 }
 
-type View = 'detalle' | 'editar' | 'cobrar' | 'ticket';
+type View = 'detalle' | 'editar' | 'cobrar' | 'ticket' | 'estado_cuenta';
 
 export default function RutaVentaDetalle() {
   const { id } = useParams();
@@ -53,6 +54,9 @@ export default function RutaVentaDetalle() {
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [saving, setSaving] = useState(false);
   const [ticketData, setTicketData] = useState<{ monto: number; cambio: number; metodo: string; folio: string; fecha: string } | null>(null);
+  const [sendingWA, setSendingWA] = useState(false);
+  const [showWADialog, setShowWADialog] = useState(false);
+  const [waPhone, setWaPhone] = useState('');
 
   // Edit state
   const [editLineas, setEditLineas] = useState<EditLinea[]>([]);
@@ -63,13 +67,40 @@ export default function RutaVentaDetalle() {
 
   const clienteId = (venta as any)?.cliente_id;
 
-  // Fetch client credit info
+  // Fetch client info including phone
   const { data: clienteData } = useQuery({
     queryKey: ['ruta-cliente-detalle', clienteId],
     enabled: !!clienteId,
     queryFn: async () => {
-      const { data } = await supabase.from('clientes').select('id, nombre, credito, limite_credito, dias_credito').eq('id', clienteId!).single();
+      const { data } = await supabase.from('clientes').select('id, nombre, telefono, credito, limite_credito, dias_credito').eq('id', clienteId!).single();
       return data;
+    },
+  });
+
+  // Fetch estado de cuenta data
+  const { data: estadoCuentaData } = useQuery({
+    queryKey: ['estado-cuenta', clienteId],
+    enabled: !!clienteId && view === 'estado_cuenta',
+    queryFn: async () => {
+      const [ventasRes, cobrosRes] = await Promise.all([
+        supabase.from('ventas')
+          .select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago')
+          .eq('cliente_id', clienteId!)
+          .eq('empresa_id', empresa!.id)
+          .neq('status', 'cancelado')
+          .order('fecha', { ascending: false })
+          .limit(100),
+        supabase.from('cobros')
+          .select('id, fecha, monto, metodo_pago, referencia')
+          .eq('cliente_id', clienteId!)
+          .eq('empresa_id', empresa!.id)
+          .order('fecha', { ascending: false })
+          .limit(100),
+      ]);
+      return {
+        ventas: ventasRes.data ?? [],
+        cobros: cobrosRes.data ?? [],
+      };
     },
   });
 
@@ -344,6 +375,80 @@ export default function RutaVentaDetalle() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // ─── Handle WhatsApp send ───
+  const handleWhatsAppSend = async () => {
+    if (!waPhone.trim() || !venta) return;
+    setSendingWA(true);
+    try {
+      const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
+      const result = await sendReceiptWhatsApp({
+        data: {
+          empresa: { nombre: empresa?.nombre ?? '', telefono: empresa?.telefono ?? undefined, direccion: empresa?.direccion ?? undefined, logo_url: empresa?.logo_url ?? undefined },
+          folio: venta.folio ?? 'Sin folio',
+          fecha: fmtDate(venta.fecha),
+          clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente',
+          tipo: 'pedido_confirmado',
+          lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({
+            nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+            cantidad: l.cantidad, precio: l.precio_unitario, total: l.total ?? 0,
+          })),
+          subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0, ieps: venta.ieps_total ?? 0, total: venta.total ?? 0,
+          condicionPago: venta.condicion_pago,
+        },
+        empresaId: empresa?.id ?? '',
+        phone: waPhone,
+        referencia_id: venta.id,
+      });
+      if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); }
+      else toast.error(result.error || 'Error al enviar');
+    } catch (err: any) { toast.error(err.message); }
+    finally { setSendingWA(false); }
+  };
+
+  // ─── Handle PDF download ───
+  const handleDownloadPDF = async () => {
+    if (!venta) return;
+    // We'll generate a PNG ticket and download it
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.innerHTML = buildTicketHTML();
+    document.body.appendChild(container);
+    try {
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+      const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${venta.folio ?? 'ticket'}.png`;
+      a.click();
+      toast.success('Ticket descargado');
+    } catch { toast.error('Error generando imagen'); }
+    finally { document.body.removeChild(container); }
+  };
+
+  const buildTicketHTML = () => {
+    if (!venta) return '';
+    const ls = ((venta as any).venta_lineas ?? []).map((l: any) =>
+      `<tr><td style="padding:2px 0;font-size:11px">${l.productos?.nombre ?? l.descripcion ?? '—'}</td><td style="text-align:right;font-size:11px">${l.cantidad}</td><td style="text-align:right;font-size:11px">$${(l.precio_unitario ?? 0).toFixed(2)}</td><td style="text-align:right;font-size:11px;font-weight:600">$${(l.total ?? 0).toFixed(2)}</td></tr>`
+    ).join('');
+    return `<div style="width:380px;padding:16px;font-family:'Courier New',monospace;background:#fff;color:#000">
+      <div style="text-align:center"><div style="font-size:14px;font-weight:bold">${empresa?.nombre ?? ''}</div></div>
+      <div style="text-align:center;margin:10px 0;padding:4px 8px;background:#2563eb;color:#fff;border-radius:4px;font-size:12px;font-weight:bold">TICKET DE VENTA</div>
+      <div style="border-top:1px dashed #999;padding:6px 0;font-size:11px">
+        <div style="display:flex;justify-content:space-between"><span>Folio:</span><span style="font-weight:bold">${venta.folio ?? '—'}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Fecha:</span><span>${fmtDate(venta.fecha)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Cliente:</span><span>${(venta as any).clientes?.nombre ?? '—'}</span></div>
+      </div>
+      <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px dashed #ccc"><th style="text-align:left;font-size:10px;color:#666">Producto</th><th style="text-align:right;font-size:10px;color:#666">Cant</th><th style="text-align:right;font-size:10px;color:#666">P.U.</th><th style="text-align:right;font-size:10px;color:#666">Total</th></tr></thead><tbody>${ls}</tbody></table>
+      <div style="border-top:1px dashed #999;margin-top:6px;padding-top:6px;font-size:11px">
+        <div style="display:flex;justify-content:space-between"><span>Subtotal:</span><span>$${(venta.subtotal ?? 0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span>IVA:</span><span>$${(venta.iva_total ?? 0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:bold;margin-top:4px;border-top:2px solid #000;padding-top:4px"><span>TOTAL:</span><span>$${(venta.total ?? 0).toFixed(2)}</span></div>
+      </div>
+    </div>`;
   };
 
   if (isLoading) {
@@ -831,11 +936,100 @@ export default function RutaVentaDetalle() {
   }
 
   // ═══════════════════════════════════════
+  // ─── ESTADO DE CUENTA VIEW ───
+  // ═══════════════════════════════════════
+  if (view === 'estado_cuenta') {
+    const ecVentas = estadoCuentaData?.ventas ?? [];
+    const ecCobros = estadoCuentaData?.cobros ?? [];
+    const totalVendido = ecVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalPendiente = ecVentas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+    const totalCobrado = ecCobros.reduce((s, c) => s + (c.monto ?? 0), 0);
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setView('detalle')} className="p-1 -ml-1">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[16px] font-bold text-foreground truncate">Estado de cuenta</h1>
+            <p className="text-[11px] text-muted-foreground truncate">{clienteNombre}</p>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Vendido</p>
+              <p className="text-[14px] font-bold text-foreground">$ {fmt(totalVendido)}</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Cobrado</p>
+              <p className="text-[14px] font-bold text-green-600 dark:text-green-400">$ {fmt(totalCobrado)}</p>
+            </div>
+            <div className="bg-card border border-border rounded-lg p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase">Pendiente</p>
+              <p className="text-[14px] font-bold text-destructive">$ {fmt(totalPendiente)}</p>
+            </div>
+          </div>
+
+          {/* Ventas */}
+          <div>
+            <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <FileText className="h-4 w-4 text-muted-foreground" /> Ventas ({ecVentas.length})
+            </h2>
+            <div className="bg-card border border-border rounded-xl divide-y divide-border">
+              {ecVentas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin ventas</p>}
+              {ecVentas.map((v: any) => (
+                <div key={v.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-mono font-medium text-foreground">{v.folio ?? '—'}</span>
+                      <span className={cn('text-[9px] px-1.5 py-0.5 rounded-full font-medium', statusColors[v.status] ?? '')}>{v.status}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)} · {v.condicion_pago}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[12px] font-bold text-foreground">$ {fmt(v.total ?? 0)}</p>
+                    {(v.saldo_pendiente ?? 0) > 0 && (
+                      <p className="text-[10px] text-destructive font-medium">Debe: $ {fmt(v.saldo_pendiente)}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cobros / Pagos */}
+          <div>
+            <h2 className="text-[13px] font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <Banknote className="h-4 w-4 text-muted-foreground" /> Pagos ({ecCobros.length})
+            </h2>
+            <div className="bg-card border border-border rounded-xl divide-y divide-border">
+              {ecCobros.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin pagos registrados</p>}
+              {ecCobros.map((c: any) => (
+                <div key={c.id} className="px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-medium text-foreground capitalize">{c.metodo_pago}</p>
+                    <p className="text-[11px] text-muted-foreground">{fmtDate(c.fecha)}{c.referencia ? ` · Ref: ${c.referencia}` : ''}</p>
+                  </div>
+                  <p className="text-[13px] font-bold text-green-600 dark:text-green-400 shrink-0">$ {fmt(c.monto ?? 0)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════
   // ─── DETALLE VIEW (default) ───
   // ═══════════════════════════════════════
   return (
     <div className="min-h-screen bg-background">
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-2">
         <button onClick={() => navigate(-1)} className="p-1 -ml-1">
           <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
@@ -843,16 +1037,61 @@ export default function RutaVentaDetalle() {
           <h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1>
           <p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p>
         </div>
-        {/* Edit button - only for borrador */}
-        {venta.status === 'borrador' && (
-          <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all">
-            <Pencil className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-0.5">
+          {/* WhatsApp */}
+          <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }}
+            className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Enviar por WhatsApp">
+            <MessageCircle className="h-4 w-4 text-muted-foreground" />
           </button>
-        )}
-        <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium', statusColors[venta.status] ?? '')}>
+          {/* Download */}
+          <button onClick={handleDownloadPDF}
+            className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Descargar ticket">
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {/* Estado de cuenta */}
+          <button onClick={() => setView('estado_cuenta')}
+            className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Estado de cuenta">
+            <Receipt className="h-4 w-4 text-muted-foreground" />
+          </button>
+          {/* Edit button - only for borrador */}
+          {venta.status === 'borrador' && (
+            <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all" title="Editar">
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+        <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[venta.status] ?? '')}>
           {venta.status}
         </span>
       </div>
+
+      {/* WhatsApp Dialog */}
+      {showWADialog && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowWADialog(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground">Enviar por WhatsApp</h3>
+              <button onClick={() => setShowWADialog(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground font-medium">Número de WhatsApp</label>
+              <input type="tel" inputMode="tel"
+                className="w-full bg-accent/40 rounded-lg px-3 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                value={waPhone} placeholder="521234567890" onChange={e => setWaPhone(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">Incluye código de país (ej: 52 para México)</p>
+            </div>
+            <div className="bg-accent/30 rounded-lg p-3">
+              <p className="text-[11px] text-muted-foreground mb-1">Se enviará:</p>
+              <p className="text-[12px] text-foreground font-medium">Ticket de venta {venta.folio} por $ {fmt(venta.total ?? 0)}</p>
+            </div>
+            <button onClick={handleWhatsAppSend} disabled={sendingWA || !waPhone.trim()}
+              className="w-full bg-[#25D366] hover:bg-[#25D366]/90 text-white rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-40">
+              {sendingWA ? 'Enviando...' : <><MessageCircle className="h-4 w-4" /> Enviar</>}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 space-y-4 pb-28">
         <div className="bg-card border border-border rounded-xl p-4 text-center">
