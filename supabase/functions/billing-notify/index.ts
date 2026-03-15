@@ -240,11 +240,22 @@ Deno.serve(async (req) => {
         const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
         const msg = `🔴 *Cuenta suspendida — Rutapp*\n\nHola ${profile.nombre || ""},\n\nTu cuenta ha sido suspendida por falta de pago.\n\nPara reactivar tu acceso, realiza tu pago en:\nhttps://rutapps.lovable.app/facturacion\n\nSi tienes dudas, contáctanos.`;
 
-        await fetch(WHATSAPI_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": waToken },
-          body: JSON.stringify({ action: "send-text", phone, message: msg }),
-        }).catch((e) => console.error("WhatsApp suspend error:", e));
+        let wStatus = "sent";
+        try {
+          const wRes = await fetch(WHATSAPI_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-api-token": waToken },
+            body: JSON.stringify({ action: "send-text", phone, message: msg }),
+          });
+          if (!wRes.ok) wStatus = "error";
+        } catch (e) { wStatus = "error"; }
+
+        const { data: suspProfile } = await supabase.auth.admin.getUserById(profile.user_id);
+        await supabase.from("billing_notifications").insert({
+          customer_email: suspProfile?.user?.email || "desconocido",
+          customer_phone: phone, channel: "whatsapp",
+          tipo: "suspension", mensaje: msg, status: wStatus,
+        }).catch(() => {});
       }
 
       results.push({ sub_id: sub.id, action: "suspended" });
