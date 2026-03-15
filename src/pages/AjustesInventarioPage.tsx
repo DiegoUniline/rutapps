@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle } from 'lucide-react';
+import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAlmacenes } from '@/hooks/useData';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 
 interface ProductRow {
   id: string;
