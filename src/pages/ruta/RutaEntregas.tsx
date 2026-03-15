@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
-import { Truck, Check, Package, MapPin } from 'lucide-react';
+import { Truck, Check, Package, MapPin, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fmtDate } from '@/lib/utils';
