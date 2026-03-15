@@ -140,6 +140,7 @@ function AppRoutes() {
                 <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
                 <Route path="/reportes" element={<ReportesPage />} />
                 <Route path="/configuracion" element={<ConfiguracionPage />} />
+                <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
