@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom';
-import CatalogCRUD from '@/components/CatalogCRUD';
+import CatalogCRUD, { type CatalogColumn } from '@/components/CatalogCRUD';
 
-const CATALOGS: Record<string, { title: string; tableName: string; queryKey: string; columns: { key: string; label: string; type?: string }[] }> = {
+const CATALOGS: Record<string, { title: string; tableName: string; queryKey: string; columns: CatalogColumn[] }> = {
   marcas: { title: 'Marcas', tableName: 'marcas', queryKey: 'marcas', columns: [{ key: 'nombre', label: 'Nombre' }] },
   clasificaciones: { title: 'Clasificaciones', tableName: 'clasificaciones', queryKey: 'clasificaciones', columns: [{ key: 'nombre', label: 'Nombre' }] },
   proveedores: { title: 'Proveedores', tableName: 'proveedores', queryKey: 'proveedores', columns: [{ key: 'nombre', label: 'Nombre' }] },

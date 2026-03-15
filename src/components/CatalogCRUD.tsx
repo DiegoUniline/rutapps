@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 
-interface CatalogColumn {
+export interface CatalogColumn {
   key: string;
   label: string;
   type?: 'text' | 'number';
