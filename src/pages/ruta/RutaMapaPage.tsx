@@ -53,12 +53,20 @@ export default function RutaMapaPage() {
           <p className="text-[11px] text-muted-foreground capitalize">{DIA_HOY} · {clientes?.length ?? 0} clientes</p>
         </div>
         {clientes && clientes.length > 0 && (
-          <button
-            onClick={openGoogleMapsRoute}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-[12px] font-semibold active:scale-95 transition-transform"
-          >
-            <Navigation className="h-3.5 w-3.5" /> Navegar
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => navigate('/ruta/navegacion?modo=clientes')}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-[12px] font-semibold active:scale-95 transition-transform"
+            >
+              <Navigation className="h-3.5 w-3.5" /> Guiar
+            </button>
+            <button
+              onClick={openGoogleMapsRoute}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-card border border-border text-foreground text-[12px] font-semibold active:scale-95 transition-transform"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
       </header>
 

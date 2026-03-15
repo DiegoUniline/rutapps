@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
-import { Truck, Check, Package, MapPin } from 'lucide-react';
+import { Truck, Check, Package, MapPin, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function RutaEntregas() {
+  const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const vendedorId = profile?.vendedor_id;
   const { mutate: offlineMutate, isPending } = useOfflineMutation();
@@ -59,7 +61,17 @@ export default function RutaEntregas() {
       <div className="flex items-center gap-2">
         <Truck className="h-5 w-5 text-primary" />
         <h1 className="text-[18px] font-bold text-foreground">Por entregar</h1>
-        <Badge variant="secondary" className="ml-auto text-[11px]">{entregas.length} pendientes</Badge>
+        <Badge variant="secondary" className="text-[11px]">{entregas.length} pendientes</Badge>
+        {entregas.length > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto rounded-xl gap-1.5 text-[11px]"
+            onClick={() => navigate('/ruta/navegacion?modo=entregas')}
+          >
+            <Navigation className="h-3.5 w-3.5" /> Navegar
+          </Button>
+        )}
       </div>
 
       {entregas.length === 0 && (
