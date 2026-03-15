@@ -207,6 +207,7 @@ function MonitorContent() {
           status: getEntregaStatus(info, sale),
           ventaTotal: sale?.total,
           entregaFolio: info.entregaFolio,
+          ordenEntrega: info.ordenEntrega,
         });
       }
     });
