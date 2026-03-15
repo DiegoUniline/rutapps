@@ -295,7 +295,6 @@ export default function DashboardPage() {
           <SectionTitle icon={AlertTriangle}>
             {`Alertas de stock (${kpis.productosBajoMinimo})`}
           </SectionTitle>
-          </SectionTitle>
           {lowStockProducts.length > 0 ? (
             <div className="space-y-2">
               {lowStockProducts.map(p => (
