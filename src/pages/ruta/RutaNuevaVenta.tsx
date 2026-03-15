@@ -390,7 +390,7 @@ export default function RutaNuevaVenta() {
       const almacenId = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
-        vendedor_id: profile?.vendedor_id || null,
+        vendedor_id: profile?.vendedor_id || profile?.id || null,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: 'borrador', notas: notas || null,
