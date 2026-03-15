@@ -161,24 +161,27 @@ export default function VentaFormPage() {
     setDirty(true);
   };
 
-  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
-    if (e.key !== 'Tab') return;
-    e.preventDefault();
-    const isLastCol = colIdx >= EDITABLE_COLS.length - 1;
-    const isLastRow = rowIdx >= lineas.length - 1;
-    if (e.shiftKey) {
-      if (colIdx > 0) focusCell(rowIdx, colIdx - 1);
-      else if (rowIdx > 0) focusCell(rowIdx - 1, EDITABLE_COLS.length - 1);
-    } else {
-      if (!isLastCol) {
+  const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
+    if (dir === 'next') {
+      if (colIdx < COL_COUNT - 1) {
         focusCell(rowIdx, colIdx + 1);
-      } else if (isLastRow) {
+      } else if (rowIdx >= lineas.length - 1) {
         setLineas(prev => [...prev, emptyLine()]);
         setDirty(true);
         setTimeout(() => focusCell(rowIdx + 1, 0), 50);
       } else {
         focusCell(rowIdx + 1, 0);
       }
+    } else {
+      if (colIdx > 0) focusCell(rowIdx, colIdx - 1);
+      else if (rowIdx > 0) focusCell(rowIdx - 1, COL_COUNT - 1);
+    }
+  }, [lineas.length, focusCell]);
+
+  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      navigateCell(rowIdx, colIdx, e.shiftKey ? 'prev' : 'next');
     }
   };
 
