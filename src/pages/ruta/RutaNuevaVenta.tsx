@@ -68,7 +68,7 @@ export default function RutaNuevaVenta() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlClienteId = searchParams.get('clienteId');
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>(urlClienteId ? 'devoluciones' : 'cliente');
