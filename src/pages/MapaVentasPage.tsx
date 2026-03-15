@@ -74,7 +74,7 @@ export default function MapaVentasPage() {
         .order('fecha', { ascending: false });
 
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
-      if (tipoFilter) q = q.eq('tipo', tipoFilter);
+      if (tipoFilter) q = q.eq('tipo', tipoFilter as any);
 
       const { data, error } = await q;
       if (error) throw error;
