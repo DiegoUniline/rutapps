@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Plus, Star } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
+import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
