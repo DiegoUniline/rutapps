@@ -1,6 +1,9 @@
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
+const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
+
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -80,6 +83,8 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+    let body: any = {};
+    try { body = await req.json(); } catch (_) {}
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -231,6 +236,166 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
+    }
+
+    // ─── Create invoice manually ───
+    if (action === "create_invoice") {
+      const { email, amount, description, days_until_due } = body;
+      if (!email || !amount) throw new Error("email y amount requeridos");
+
+      // Find or create customer
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      let customerId: string;
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      } else {
+        const c = await stripe.customers.create({ email });
+        customerId = c.id;
+      }
+
+      const invoice = await stripe.invoices.create({
+        customer: customerId,
+        collection_method: "send_invoice",
+        days_until_due: days_until_due || 1,
+        auto_advance: true,
+      });
+
+      await stripe.invoiceItems.create({
+        customer: customerId,
+        invoice: invoice.id,
+        amount,
+        currency: "mxn",
+        description: description || "Suscripción Rutapp",
+      });
+
+      const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+
+      // Send invoice email automatically via Stripe
+      await stripe.invoices.sendInvoice(invoice.id);
+
+      return new Response(JSON.stringify({
+        invoice_id: finalizedInv.id,
+        hosted_url: finalizedInv.hosted_invoice_url,
+        status: finalizedInv.status,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Send invoice notification via WhatsApp or email ───
+    if (action === "send_invoice_notification") {
+      const { channel, customer_email, amount, hosted_url, description, invoice_id } = body;
+
+      if (channel === "whatsapp") {
+        // Find phone from profiles matching email
+        const { data: userData } = await supabase.auth.admin.listUsers();
+        const matchUser = userData?.users?.find((u: any) => u.email === customer_email);
+        if (!matchUser) throw new Error("Usuario no encontrado con ese email");
+
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("telefono, empresa_id")
+          .eq("user_id", matchUser.id)
+          .maybeSingle();
+        if (!profile?.telefono) throw new Error("El cliente no tiene teléfono registrado");
+
+        // Get admin whatsapp token from the config
+        const { data: waConfig } = await supabase
+          .from("whatsapp_config")
+          .select("api_token")
+          .eq("empresa_id", profile.empresa_id)
+          .maybeSingle();
+
+        // Fallback: try super admin's stored token
+        const waToken = waConfig?.api_token || Deno.env.get("ADMIN_WHATSAPP_TOKEN");
+        if (!waToken) throw new Error("Token de WhatsApp no configurado");
+
+        const amountFmt = `$${(amount / 100).toLocaleString("es-MX")} MXN`;
+        const msg = `📋 *Factura Rutapp*\n\n${description || "Suscripción Rutapp"}\nMonto: ${amountFmt}\n\n💳 Paga aquí:\n${hosted_url}\n\nGracias por tu preferencia 🙌`;
+
+        const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
+        const apiRes = await fetch(WHATSAPI_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-token": waToken },
+          body: JSON.stringify({ action: "send-text", phone, message: msg }),
+        });
+        if (!apiRes.ok) throw new Error("Error enviando WhatsApp");
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (channel === "email") {
+        // Use Stripe to send the invoice
+        if (invoice_id) {
+          await stripe.invoices.sendInvoice(invoice_id);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      throw new Error("Channel no válido");
+    }
+
+    // ─── Save WhatsApp token ───
+    if (action === "save_whatsapp_token") {
+      const { token: waToken } = body;
+      if (!waToken) throw new Error("Token requerido");
+
+      // Store in admin_settings table (we'll create it if needed)
+      // For now, store as an env var reference via a simple approach:
+      // Save to the first whatsapp_config entry or create one
+      const { data: existingConfigs } = await supabase
+        .from("whatsapp_config")
+        .select("id, empresa_id")
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      if (existingConfigs && existingConfigs.length > 0) {
+        await supabase
+          .from("whatsapp_config")
+          .update({ api_token: waToken, activo: true })
+          .eq("id", existingConfigs[0].id);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Test WhatsApp ───
+    if (action === "test_whatsapp") {
+      const { phone } = body;
+      if (!phone) throw new Error("phone requerido");
+
+      const { data: waConfig } = await supabase
+        .from("whatsapp_config")
+        .select("api_token")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      
+      const waToken = waConfig?.api_token;
+      if (!waToken) throw new Error("Token de WhatsApp no configurado");
+
+      const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+      const msg = "✅ *Prueba de Rutapp*\n\nEste es un mensaje de prueba del sistema de notificaciones de cobro de Rutapp.\n\n¡Todo funciona correctamente! 🎉";
+
+      const apiRes = await fetch(WHATSAPI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-token": waToken },
+        body: JSON.stringify({ action: "send-text", phone: cleanPhone, message: msg }),
+      });
+      if (!apiRes.ok) {
+        const errText = await apiRes.text();
+        throw new Error(`Error WhatsAPI: ${errText}`);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     throw new Error("Acción no válida");
