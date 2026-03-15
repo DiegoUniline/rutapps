@@ -8,37 +8,48 @@ import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function RutaEntregas() {
-  const { empresa, user } = useAuth();
+  const { empresa, profile } = useAuth();
+  const vendedorId = profile?.vendedor_id;
   const { mutate: offlineMutate, isPending } = useOfflineMutation();
 
-  const { data: ventas, refetch } = useOfflineQuery('ventas', {
+  // Query entregas assigned to this vendedor's route with status cargado or en_ruta
+  const { data: allEntregas, refetch } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
-    tipo: 'venta_directa',
-    status: 'confirmado',
   }, { enabled: !!empresa?.id, orderBy: 'fecha' });
 
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
-  const { data: ventaLineas } = useOfflineQuery('venta_lineas', {}, { enabled: !!empresa?.id });
+  const { data: entregaLineas } = useOfflineQuery('entrega_lineas', {}, { enabled: !!empresa?.id });
   const { data: productos } = useOfflineQuery('productos', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c]));
   const productoMap = new Map((productos ?? []).map((p: any) => [p.id, p]));
 
-  // Only entregas that have pedido_origen_id
-  const entregas = (ventas ?? []).filter((v: any) => v.pedido_origen_id).map((v: any) => {
-    const cliente = clienteMap.get(v.cliente_id);
-    const lineas = (ventaLineas ?? []).filter((l: any) => l.venta_id === v.id).map((l: any) => ({
-      ...l,
-      _productoNombre: productoMap.get(l.producto_id)?.nombre ?? '—',
-      _productoCodigo: productoMap.get(l.producto_id)?.codigo ?? '',
-    }));
-    return { ...v, _cliente: cliente, _lineas: lineas };
-  });
+  // Filter: entregas cargadas/en_ruta assigned to this vendedor
+  const entregas = (allEntregas ?? [])
+    .filter((e: any) =>
+      (e.status === 'cargado' || e.status === 'en_ruta') &&
+      (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
+    )
+    .map((e: any) => {
+      const cliente = clienteMap.get(e.cliente_id);
+      const lineas = (entregaLineas ?? [])
+        .filter((l: any) => l.entrega_id === e.id)
+        .map((l: any) => ({
+          ...l,
+          _productoNombre: productoMap.get(l.producto_id)?.nombre ?? '—',
+          _productoCodigo: productoMap.get(l.producto_id)?.codigo ?? '',
+        }));
+      return { ...e, _cliente: cliente, _lineas: lineas };
+    });
 
   const marcarEntregado = async (id: string) => {
-    const venta = (ventas ?? []).find((v: any) => v.id === id) as any;
-    if (!venta) return;
-    await offlineMutate('ventas', 'update', { ...venta, status: 'entregado' });
+    const entrega = (allEntregas ?? []).find((e: any) => e.id === id) as any;
+    if (!entrega) return;
+    await offlineMutate('entregas', 'update', {
+      ...entrega,
+      status: 'hecho',
+      validado_at: new Date().toISOString(),
+    });
     toast.success('¡Entrega completada!');
     refetch();
   };
@@ -66,7 +77,9 @@ export default function RutaEntregas() {
                 <p className="text-[11px] font-mono text-muted-foreground">{e.folio}</p>
                 <p className="text-[15px] font-semibold text-foreground">{e._cliente?.nombre ?? '—'}</p>
               </div>
-              <Badge variant="outline" className="text-[10px] border-warning text-warning shrink-0">Por entregar</Badge>
+              <Badge variant="outline" className="text-[10px] border-warning text-warning shrink-0">
+                {e.status === 'en_ruta' ? 'En ruta' : 'Cargado'}
+              </Badge>
             </div>
 
             {(e._cliente?.direccion || e._cliente?.colonia) && (
@@ -82,15 +95,12 @@ export default function RutaEntregas() {
               {e._lineas.map((l: any, i: number) => (
                 <div key={i} className="flex justify-between text-[12px]">
                   <span className="text-foreground">{l._productoNombre}</span>
-                  <span className="font-medium text-foreground">{l.cantidad}</span>
+                  <span className="font-medium text-foreground">{l.cantidad_entregada || l.cantidad_pedida}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[14px] font-bold text-foreground">
-                $ {(e.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </span>
+            <div className="flex items-center justify-end pt-1">
               <Button size="sm" className="rounded-xl" onClick={() => marcarEntregado(e.id)} disabled={isPending}>
                 <Check className="h-4 w-4 mr-1" /> Entregar
               </Button>

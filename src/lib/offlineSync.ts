@@ -26,6 +26,8 @@ const TABLES_TO_CACHE = [
   'descarga_ruta',
   'descarga_ruta_lineas',
   'promociones',
+  'entregas',
+  'entrega_lineas',
 ] as const;
 
 // Some tables need special select queries (joins)
@@ -43,7 +45,7 @@ export async function downloadAllData(empresaId: string): Promise<void> {
       const tablesWithEmpresa = [
         'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
         'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
-        'tasas_iva', 'descarga_ruta', 'promociones',
+        'tasas_iva', 'descarga_ruta', 'promociones', 'entregas',
       ];
 
       if (tablesWithEmpresa.includes(table)) {
@@ -55,7 +57,7 @@ export async function downloadAllData(empresaId: string): Promise<void> {
       }
 
       // Limit large tables to recent data
-      const recentTables = ['ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos', 'devoluciones', 'devolucion_lineas'];
+      const recentTables = ['ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos', 'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas'];
       if (recentTables.includes(table)) {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
