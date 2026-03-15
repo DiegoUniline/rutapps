@@ -389,23 +389,22 @@ export default function VentaFormPage() {
           {!isNew && form.status === 'borrador' && (
             <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
-          {/* Entrega button for pedidos */}
-          {!isNew && form.tipo === 'pedido' && form.status === 'confirmado' && !entregaExistente && (
+          {/* Entrega button for pedidos — 1:N partial deliveries */}
+          {canCreateEntrega && (
             <button
               onClick={async () => {
-                const validLines = (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0);
-                if (validLines.length === 0) { toast.error('No hay líneas para crear entrega'); return; }
+                // Use remaining quantities if there are previous entregas, otherwise full lines
+                const linesToUse = remaining && remaining.length > 0
+                  ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente }))
+                  : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad) }));
+                if (linesToUse.length === 0) { toast.error('No hay líneas pendientes para crear entrega'); return; }
                 try {
                   const result = await crearEntrega.mutateAsync({
                     pedidoId: form.id,
                     vendedorId: form.vendedor_id,
                     clienteId: form.cliente_id,
                     almacenId: form.almacen_id,
-                    lineas: validLines.map(l => ({
-                      producto_id: l.producto_id!,
-                      unidad_id: l.unidad_id,
-                      cantidad_pedida: Number(l.cantidad),
-                    })),
+                    lineas: linesToUse,
                   });
                   toast.success('Entrega creada');
                   navigate(`/entregas/${result.id}`);
@@ -414,13 +413,18 @@ export default function VentaFormPage() {
               disabled={crearEntrega.isPending}
               className="btn-odoo-primary"
             >
-              <Truck className="h-3.5 w-3.5" /> Crear entrega
+              <Truck className="h-3.5 w-3.5" /> Crear entrega{hayEntregas ? ' parcial' : ''}
             </button>
           )}
-          {!isNew && form.tipo === 'pedido' && entregaExistente && (
-            <button onClick={() => navigate(`/entregas/${entregaExistente.id}`)} className="btn-odoo-secondary">
-              <Truck className="h-3.5 w-3.5" /> Ver entrega ({entregaExistente.folio})
-            </button>
+          {/* Show existing entregas */}
+          {!isNew && form.tipo === 'pedido' && hayEntregas && (
+            <div className="flex items-center gap-1">
+              {(entregasExistentes ?? []).map(ent => (
+                <button key={ent.id} onClick={() => navigate(`/entregas/${ent.id}`)} className="btn-odoo-secondary text-[11px]">
+                  <Truck className="h-3 w-3" /> {ent.folio}
+                </button>
+              ))}
+            </div>
           )}
           {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
