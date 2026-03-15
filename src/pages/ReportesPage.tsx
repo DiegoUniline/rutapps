@@ -230,6 +230,7 @@ export default function ReportesPage() {
           {tab === 'cargas' && <ReporteCargas data={data} />}
           {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
           {tab === 'utilidad' && <ReporteUtilidad data={data} />}
+          {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
         </>
       )}
     </div>
