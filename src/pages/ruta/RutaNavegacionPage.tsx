@@ -329,58 +329,89 @@ function NavegacionContent() {
         </GoogleMap>
       )}
 
-      {/* TOP BAR — floating over map */}
+      {/* TOP BAR */}
       <div className="absolute top-0 left-0 right-0 z-10 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
-          <button onClick={() => navigate(-1)} className="p-1 -ml-0.5">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
-          <div className="flex-1 min-w-0">
-            {navigatingStop ? (
-              <>
-                <p className="text-[13px] font-bold text-foreground truncate">{navigatingStop.nombre}</p>
-                {leg && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {leg.duration?.text} · {leg.distance?.text}
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="text-[13px] font-bold text-foreground">
-                  {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+        {navigatingStop && currentStep ? (
+          /* TURN-BY-TURN NAVIGATION BAR */
+          <div className="mx-3 space-y-2">
+            {/* Main instruction */}
+            <div className="bg-primary text-primary-foreground rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg">
+              <ManeuverIcon maneuver={(currentStep as any).maneuver} />
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-bold leading-tight">
+                  {stripHtml(currentStep.instructions)}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {completedCount}/{totalCount} completadas
+                <p className="text-[12px] opacity-80 mt-0.5">
+                  {currentStep.distance?.text} · {currentStep.duration?.text}
                 </p>
-              </>
-            )}
+              </div>
+              <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center shrink-0">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Next step preview + ETA */}
+            <div className="mx-1 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm">
+              {nextStep && (
+                <p className="text-[11px] text-muted-foreground flex-1 truncate">
+                  Después: {stripHtml(nextStep.instructions)}
+                </p>
+              )}
+              {leg && (
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Navigation className="h-3 w-3 text-primary" />
+                  <span className="text-[12px] font-semibold text-foreground">{leg.duration?.text}</span>
+                  <span className="text-[11px] text-muted-foreground">{leg.distance?.text}</span>
+                </div>
+              )}
+            </div>
           </div>
-          {navigatingStop && (
-            <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-              <X className="h-4 w-4 text-foreground" />
+        ) : navigatingStop ? (
+          /* Navigating but no steps yet (loading) */
+          <div className="mx-3 bg-primary text-primary-foreground rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg">
+            <Navigation className="h-7 w-7 animate-pulse" />
+            <div className="flex-1">
+              <p className="text-[15px] font-bold">{navigatingStop.nombre}</p>
+              <p className="text-[12px] opacity-80">Calculando ruta...</p>
+            </div>
+            <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
+              <X className="h-4 w-4" />
             </button>
-          )}
-          {/* Progress dots */}
-          <div className="flex gap-0.5">
-            {stops.slice(0, 12).map((s, i) => (
-              <div
-                key={s.id}
-                className={cn(
-                  "w-2 h-2 rounded-full",
-                  completedIds.has(s.id)
-                    ? "bg-emerald-500"
-                    : navigatingTo === s.id
-                      ? "bg-red-500"
-                      : "bg-muted-foreground/30"
-                )}
-              />
-            ))}
-            {stops.length > 12 && (
-              <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
-            )}
           </div>
-        </div>
+        ) : (
+          /* Default: overview bar */
+          <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
+            <button onClick={() => navigate(-1)} className="p-1 -ml-0.5">
+              <ArrowLeft className="h-5 w-5 text-foreground" />
+            </button>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold text-foreground">
+                {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {completedCount}/{totalCount} completadas
+              </p>
+            </div>
+            <div className="flex gap-0.5">
+              {stops.slice(0, 12).map((s) => (
+                <div
+                  key={s.id}
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    completedIds.has(s.id)
+                      ? "bg-emerald-500"
+                      : navigatingTo === s.id
+                        ? "bg-destructive"
+                        : "bg-muted-foreground/30"
+                  )}
+                />
+              ))}
+              {stops.length > 12 && (
+                <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* NAVIGATION ACTION BAR — when navigating, shown at bottom */}
