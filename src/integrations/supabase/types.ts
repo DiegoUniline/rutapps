@@ -214,6 +214,42 @@ export type Database = {
           },
         ]
       }
+      billing_message_templates: {
+        Row: {
+          activo: boolean
+          campos: Json
+          created_at: string
+          emoji: string
+          encabezado: string | null
+          id: string
+          pie_mensaje: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          campos?: Json
+          created_at?: string
+          emoji?: string
+          encabezado?: string | null
+          id?: string
+          pie_mensaje?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          campos?: Json
+          created_at?: string
+          emoji?: string
+          encabezado?: string | null
+          id?: string
+          pie_mensaje?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_notifications: {
         Row: {
           channel: string
