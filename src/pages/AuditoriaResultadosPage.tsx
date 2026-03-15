@@ -431,6 +431,18 @@ export default function AuditoriaResultadosPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`auditoria-${auditoria?.nombre ?? 'doc'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone=""
+        caption={`Auditoría ${auditoria?.nombre}`}
+        tipo="auditoria"
+        referencia_id={id}
+      />
     </div>
   );
 }

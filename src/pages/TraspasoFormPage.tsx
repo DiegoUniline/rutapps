@@ -487,6 +487,11 @@ export default function TraspasoFormPage() {
               <Save className="h-3.5 w-3.5" /> Guardar
             </button>
           )}
+          {!isNew && (
+            <button onClick={handleGenerarPdf} className="btn-odoo-secondary">
+              <FileText className="h-3.5 w-3.5" /> PDF
+            </button>
+          )}
           {!isNew && status === 'borrador' && (
             <button onClick={handleDelete} className="btn-odoo-secondary text-destructive !px-2">
               <Trash2 className="h-3.5 w-3.5" />
