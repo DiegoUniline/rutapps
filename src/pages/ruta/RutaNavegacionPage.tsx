@@ -282,8 +282,8 @@ function NavegacionContent() {
       {isLoaded && (
         <GoogleMap
           onLoad={onMapLoad}
-          center={stops[0] ? { lat: stops[0].gps_lat, lng: stops[0].gps_lng } : undefined}
-          zoom={13}
+          center={navigatingTo && userLocation ? userLocation : (stops[0] ? { lat: stops[0].gps_lat, lng: stops[0].gps_lng } : undefined)}
+          zoom={navigatingTo && userLocation ? 17 : 13}
           mapContainerStyle={{ width: '100%', height: '100%' }}
           options={{
             disableDefaultUI: true,
