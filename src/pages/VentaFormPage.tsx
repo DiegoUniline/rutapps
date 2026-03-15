@@ -942,8 +942,8 @@ export default function VentaFormPage() {
                   )}
 
                   {saldoPendiente <= 0.01 && (pagosData ?? []).length > 0 && (
-                    <div className="text-green-600 text-sm font-medium flex items-center gap-2">
-                      <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                    <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                      <span className="inline-block w-2 h-2 rounded-full bg-primary" />
                       Venta pagada en su totalidad
                     </div>
                   )}
