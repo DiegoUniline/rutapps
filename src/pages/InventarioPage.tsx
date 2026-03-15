@@ -56,6 +56,7 @@ function useInventarioData() {
         const vendedorNombre = (c.vendedores as any)?.nombre ?? '—';
         if (!rutaBreakdown[rutaKey]) rutaBreakdown[rutaKey] = { vendedor: vendedorNombre, stockByProduct: {} };
 
+        const lineasDetalle: any[] = [];
         for (const cl of (c.carga_lineas ?? [])) {
           const enRuta = cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta;
           const qty = Math.max(0, enRuta);
@@ -65,11 +66,23 @@ function useInventarioData() {
           cargaTotal += qty;
           cargaValorCosto += qty * (prod?.costo ?? 0);
           cargaValorVenta += qty * (prod?.precio_principal ?? 0);
+          lineasDetalle.push({
+            producto_id: cl.producto_id,
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cargado: cl.cantidad_cargada,
+            entregado: cl.cantidad_vendida,
+            devuelto: cl.cantidad_devuelta,
+            abordo: qty,
+            costo: prod?.costo ?? 0,
+            precio: prod?.precio_principal ?? 0,
+          });
         }
         cargaDetails.push({
           id: c.id,
           origen: 'carga',
           vendedor: vendedorNombre,
+          vendedor_id: c.vendedor_id,
           repartidor: (c.repartidor as any)?.nombre,
           almacen: (c.almacen as any)?.nombre,
           fecha: c.fecha,
@@ -77,6 +90,7 @@ function useInventarioData() {
           totalUnidades: cargaTotal,
           valorCosto: cargaValorCosto,
           valorVenta: cargaValorVenta,
+          lineas: lineasDetalle,
         });
       }
 
