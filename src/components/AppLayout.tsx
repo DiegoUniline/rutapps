@@ -5,7 +5,7 @@ import { UnilineFooter } from '@/components/UnilineFooter';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings
+  DollarSign, Settings, Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
