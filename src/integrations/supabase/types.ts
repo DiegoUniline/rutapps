@@ -2275,6 +2275,8 @@ export type Database = {
           nombre: string
           periodo: string
           precio_por_usuario: number
+          stripe_price_id: string | null
+          stripe_product_id: string | null
         }
         Insert: {
           activo?: boolean
@@ -2285,6 +2287,8 @@ export type Database = {
           nombre: string
           periodo?: string
           precio_por_usuario?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
         }
         Update: {
           activo?: boolean
@@ -2295,6 +2299,8 @@ export type Database = {
           nombre?: string
           periodo?: string
           precio_por_usuario?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
         }
         Relationships: []
       }
