@@ -155,6 +155,51 @@ export default function TarifaFormPage() {
     try { await deleteLinea.mutateAsync(lineaId); refetch(); } catch (err: any) { toast.error(err.message); }
   };
 
+  const startEditLinea = (l: TarifaLinea) => {
+    setEditingLineaId(l.id);
+    setEditLinea({
+      producto_ids: l.producto_ids ?? [],
+      clasificacion_ids: l.clasificacion_ids ?? [],
+      aplica_a: l.aplica_a,
+      tipo_calculo: l.tipo_calculo,
+      precio: l.precio,
+      precio_minimo: l.precio_minimo,
+      descuento_max: (l as any).descuento_max ?? 0,
+      margen_pct: l.margen_pct,
+      descuento_pct: l.descuento_pct,
+      comision_pct: (l as any).comision_pct ?? 0,
+      base_precio: (l as any).base_precio ?? 'sin_impuestos',
+      redondeo: (l as any).redondeo ?? 'ninguno',
+      notas: (l as any).notas ?? '',
+    });
+  };
+
+  const handleSaveEditLinea = async () => {
+    if (!editingLineaId) return;
+    try {
+      await saveLinea.mutateAsync({
+        id: editingLineaId,
+        tarifa_id: id,
+        aplica_a: editLinea.aplica_a,
+        tipo_calculo: editLinea.tipo_calculo,
+        precio: editLinea.precio,
+        precio_minimo: editLinea.precio_minimo,
+        descuento_max: editLinea.descuento_max,
+        margen_pct: editLinea.margen_pct,
+        descuento_pct: editLinea.descuento_pct,
+        comision_pct: editLinea.comision_pct,
+        base_precio: editLinea.base_precio,
+        redondeo: editLinea.redondeo,
+        notas: editLinea.notas || null,
+        producto_ids: editLinea.aplica_a === 'producto' ? editLinea.producto_ids : [],
+        clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
+      } as any);
+      setEditingLineaId(null);
+      refetch();
+      toast.success('Regla actualizada');
+    } catch (err: any) { toast.error(err.message); }
+  };
+
   const lineas = (existing?.tarifa_lineas ?? []) as TarifaLinea[];
   const sortedLineas = [...lineas].sort((a, b) => {
     const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
