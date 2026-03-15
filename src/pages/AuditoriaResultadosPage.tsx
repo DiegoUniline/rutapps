@@ -32,7 +32,7 @@ interface AjusteSelection {
 
 export default function AuditoriaResultadosPage() {
   const { id } = useParams<{ id: string }>();
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const isMobile = useIsMobile();

@@ -706,6 +706,18 @@ export default function TraspasoFormPage() {
           ]} />
         </div>
       </div>
+
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`traspaso-${folio || 'doc'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone=""
+        caption={`Traspaso ${folio}`}
+        tipo="traspaso"
+        referencia_id={id}
+      />
     </div>
   );
 }
