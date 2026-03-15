@@ -199,6 +199,8 @@ function Breadcrumb() {
     configuracion: 'Configuración', descargas: 'Descargas de ruta',
     usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
     'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
+    logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
+    asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
   };
 
   if (segments.length <= 1) return null;
