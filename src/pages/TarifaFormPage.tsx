@@ -250,10 +250,11 @@ export default function TarifaFormPage() {
                               <th className="th-odoo text-left" style={{width:'90px'}}>Prioridad</th>
                               <th className="th-odoo text-left" style={{width:'120px'}}>Aplica a</th>
                               <th className="th-odoo text-left">Productos / Categorías</th>
-                              <th className="th-odoo text-left" style={{width:'160px'}}>Tipo Cálculo</th>
-                              <th className="th-odoo text-right" style={{width:'140px'}}>Valor</th>
-                              <th className="th-odoo text-right" style={{width:'90px'}}>Precio Mín</th>
-                              <th className="th-odoo text-left" style={{width:'120px'}}>Notas</th>
+                              <th className="th-odoo text-left" style={{width:'150px'}}>Tipo Cálculo</th>
+                              <th className="th-odoo text-right" style={{width:'120px'}}>Valor</th>
+                              <th className="th-odoo text-right" style={{width:'80px'}}>Precio Mín</th>
+                              <th className="th-odoo text-left" style={{width:'110px'}}>Redondeo</th>
+                              <th className="th-odoo text-left" style={{width:'100px'}}>Notas</th>
                               <th className="th-odoo" style={{width:'36px'}}></th>
                             </tr>
                           </thead>
