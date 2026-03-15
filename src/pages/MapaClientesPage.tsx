@@ -62,6 +62,7 @@ function FitBounds({ positions }: { positions: [number, number][] }) {
 }
 
 export default function MapaClientesPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
@@ -69,6 +70,21 @@ export default function MapaClientesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
+  const [optimizing, setOptimizing] = useState(false);
+  const [optimizeResult, setOptimizeResult] = useState<{ duration?: string; distance_meters?: number } | null>(null);
+
+  // Check if user is admin
+  const { data: isAdmin } = useQuery({
+    queryKey: ['is-admin', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role_id, roles(nombre, es_sistema)')
+        .eq('user_id', user!.id);
+      return data?.some((ur: any) => ur.roles?.es_sistema === true || ur.roles?.nombre?.toLowerCase() === 'admin') ?? false;
+    },
+    enabled: !!user?.id,
+  });
 
   const { data: clientes, isLoading } = useClientes(search, statusFilter || undefined);
   const { data: zonas } = useZonas();
