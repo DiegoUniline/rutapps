@@ -191,17 +191,14 @@ function NavegacionContent() {
   };
 
   const handleVisited = async (stop: Stop) => {
-    if (mode === 'entregas') {
-      const entrega = (allEntregas ?? []).find((e: any) => e.id === stop.id) as any;
-      if (entrega) {
-        await offlineMutate('entregas', 'update', {
-          ...entrega, status: 'hecho', validado_at: new Date().toISOString(),
-        });
-        refetchEntregas();
-      }
+    if (stop.tipo === 'entrega' && stop.entregaRef) {
+      await offlineMutate('entregas', 'update', {
+        ...stop.entregaRef, status: 'hecho', validado_at: new Date().toISOString(),
+      });
+      refetchEntregas();
     }
     setCompletedIds(prev => new Set([...prev, stop.id]));
-    toast.success(mode === 'entregas' ? '¡Entregado!' : '¡Visitado!');
+    toast.success(stop.tipo === 'entrega' ? '¡Entregado!' : '¡Visitado!');
     stopNavigation();
 
     // Auto-navigate to next
