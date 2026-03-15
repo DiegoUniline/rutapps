@@ -407,7 +407,7 @@ export default function VentaFormPage() {
                     lineas: linesToUse,
                   });
                   toast.success('Entrega creada');
-                  navigate(`/entregas/${result.id}`);
+                  navigate(`/logistica/entregas/${result.id}`);
                 } catch (e: any) { toast.error(e.message); }
               }}
               disabled={crearEntrega.isPending}
@@ -420,7 +420,7 @@ export default function VentaFormPage() {
           {!isNew && form.tipo === 'pedido' && hayEntregas && (
             <div className="flex items-center gap-1">
               {(entregasExistentes ?? []).map(ent => (
-                <button key={ent.id} onClick={() => navigate(`/entregas/${ent.id}`)} className="btn-odoo-secondary text-[11px]">
+                <button key={ent.id} onClick={() => navigate(`/logistica/entregas/${ent.id}`)} className="btn-odoo-secondary text-[11px]">
                   <Truck className="h-3 w-3" /> {ent.folio}
                 </button>
               ))}

@@ -88,7 +88,7 @@ export default function EntregaCamionPage() {
     <div className="p-4 space-y-4 min-h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/entregas')} className="btn-odoo-secondary !px-2.5">
+          <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
           <div>
@@ -154,7 +154,7 @@ export default function EntregaCamionPage() {
         {entregas.map((e: any) => (
           <div key={e.id}
             className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:bg-accent/50 transition-colors"
-            onClick={() => navigate(`/entregas/${e.id}`)}
+            onClick={() => navigate(`/logistica/entregas/${e.id}`)}
           >
             <div className="flex items-center justify-between">
               <div>

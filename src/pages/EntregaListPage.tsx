@@ -38,7 +38,7 @@ export default function EntregaListPage() {
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Truck className="h-5 w-5" /> Entregas
         </h1>
-        <Button size="sm" onClick={() => navigate('/entregas/nuevo')}>
+        <Button size="sm" onClick={() => navigate('/logistica/entregas/nuevo')}>
           <Plus className="h-4 w-4 mr-1" /> Crear entrega manual
         </Button>
       </div>
@@ -121,7 +121,7 @@ export default function EntregaListPage() {
                 <TableRow
                   key={e.id}
                   className="cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => navigate(`/entregas/${e.id}`)}
+                  onClick={() => navigate(`/logistica/entregas/${e.id}`)}
                 >
                   <TableCell className="font-mono text-[11px] font-bold py-2">{e.folio ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground py-2">{e.ventas?.folio ?? '—'}</TableCell>

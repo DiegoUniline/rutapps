@@ -176,13 +176,15 @@ export default function DemandaPage() {
       const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
       if (!assignedVendedor) throw new Error('Asigna un vendedor/ruta antes de generar la entrega');
 
-      // Create entrega record
+      // Create entrega record with almacen origin
+      const almacenId = origenActual.type === 'almacen' && origenActual.id !== 'almacen'
+        ? origenActual.id : null;
       const { data: entrega, error } = await supabase.from('entregas').insert({
         empresa_id: empresa!.id,
         pedido_id: pedido.id,
         vendedor_id: assignedVendedor,
         cliente_id: pedido.cliente_id,
-        almacen_id: origenActual.type === 'almacen' ? null : null,
+        almacen_id: almacenId,
         status: 'borrador',
       } as any).select('id, folio').single();
       if (error) throw error;

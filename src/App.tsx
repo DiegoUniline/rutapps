@@ -24,7 +24,7 @@ const DemandaPage = lazy(() => import("@/pages/DemandaPage"));
 const EntregaListPage = lazy(() => import("@/pages/EntregaListPage"));
 const EntregaFormPage = lazy(() => import("@/pages/EntregaFormPage"));
 const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
-const EntregasPage = lazy(() => import("@/pages/EntregasPage"));
+// EntregasPage removed — functionality consolidated into EntregaListPage under /logistica/entregas
 const ReporteEntregasPage = lazy(() => import("@/pages/ReporteEntregasPage"));
 const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
 const RutasMapPage = lazy(() => import("@/pages/RutasMapPage"));
@@ -54,7 +54,7 @@ const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
-const PedidosPendientesPage = lazy(() => import("@/pages/logistica/PedidosPendientesPage"));
+// PedidosPendientesPage removed — consolidated into DemandaPage under /logistica/pedidos
 const AsignacionPage = lazy(() => import("@/pages/logistica/AsignacionPage"));
 const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
 const QuiebresPage = lazy(() => import("@/pages/logistica/QuiebresPage"));
@@ -161,13 +161,19 @@ function AppRoutes() {
                 <Route path="/clientes" element={<ClientesListPage />} />
                 <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
                 <Route path="/ventas" element={<VentasListPage />} />
-                <Route path="/ventas/surtido" element={<DemandaPage />} />
-                <Route path="/ventas/demanda" element={<Navigate to="/ventas/surtido" replace />} />
-                <Route path="/entregas" element={<EntregaListPage />} />
-                <Route path="/entregas/nuevo" element={<EntregaFormPage />} />
-                <Route path="/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
+                <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
+                <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
+                <Route path="/logistica/pedidos" element={<DemandaPage />} />
+                <Route path="/logistica/entregas" element={<EntregaListPage />} />
+                <Route path="/logistica/entregas/nuevo" element={<EntregaFormPage />} />
+                <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
+                <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
+                {/* Legacy redirects */}
+                <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
+                <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas/nuevo" replace />} />
                 <Route path="/entregas/:id" element={<EntregaFormPage />} />
-                <Route path="/ventas/entregas" element={<Navigate to="/entregas" replace />} />
+                <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
+                <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
                 <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
                 <Route path="/ventas/cobranza" element={<CobranzaPage />} />
@@ -176,7 +182,6 @@ function AppRoutes() {
                 <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
                 <Route path="/ventas/promociones" element={<PromocionesPage />} />
                 <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
-                <Route path="/logistica/pedidos-pendientes" element={<PedidosPendientesPage />} />
                 <Route path="/logistica/asignacion" element={<AsignacionPage />} />
                 <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
                 <Route path="/logistica/quiebres" element={<QuiebresPage />} />
