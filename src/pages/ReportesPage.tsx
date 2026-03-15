@@ -14,7 +14,7 @@ import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
