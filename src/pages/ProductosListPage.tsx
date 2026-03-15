@@ -110,7 +110,7 @@ export default function ProductosListPage() {
                   <th className="th-odoo text-left hidden lg:table-cell">Clasificación</th>
                   <th className="th-odoo text-left hidden md:table-cell">Marca</th>
                   <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
-                  <th className="th-odoo text-left hidden xl:table-cell">Unidad</th>
+                  <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
                   <th className="th-odoo text-right">Precio</th>
                   <th className="th-odoo text-right hidden md:table-cell">Costo</th>
                   <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
