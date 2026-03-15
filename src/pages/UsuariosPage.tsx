@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MODULOS = [
@@ -39,6 +39,8 @@ interface ProfileUser {
   nombre: string | null;
   almacen_id: string | null;
   vendedor_id: string | null;
+  telefono: string | null;
+  estado: string;
 }
 
 interface UserRole {
@@ -77,6 +79,7 @@ export default function UsuariosPage() {
 
   // User edit
   const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ nombre: string; telefono: string; estado: string; almacen_id: string; vendedor_id: string; role_id: string }>({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', vendedor_id: '', role_id: '' });
 
   const load = useCallback(async () => {
     if (!empresa?.id) return;
@@ -84,7 +87,7 @@ export default function UsuariosPage() {
     const [r, p, pr, ur, a, v] = await Promise.all([
       supabase.from('roles').select('*').eq('empresa_id', empresa.id).order('nombre'),
       supabase.from('role_permisos').select('*'),
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id').eq('empresa_id', empresa.id),
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
       supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa.id),
@@ -151,24 +154,57 @@ export default function UsuariosPage() {
     load();
   };
 
-  // ── User role assignment ──
-  const setUserRole = async (userId: string, roleId: string) => {
-    // Remove existing roles for this user
-    const existing = userRoles.filter(ur => ur.user_id === userId);
-    for (const ur of existing) {
-      await supabase.from('user_roles').delete().eq('id', ur.id);
-    }
-    if (roleId) {
-      await supabase.from('user_roles').insert({ user_id: userId, role_id: roleId });
-    }
-    toast.success('Rol asignado');
-    load();
+  // ── User edit ──
+  const startEdit = (p: ProfileUser) => {
+    const userRole = userRoles.find(ur => ur.user_id === p.user_id);
+    setEditingUser(p.id);
+    setEditForm({
+      nombre: p.nombre || '',
+      telefono: p.telefono || '',
+      estado: p.estado || 'activo',
+      almacen_id: p.almacen_id || '',
+      vendedor_id: p.vendedor_id || '',
+      role_id: userRole?.role_id || '',
+    });
   };
 
-  const updateProfile = async (profileId: string, field: string, value: string | null) => {
-    await supabase.from('profiles').update({ [field]: value || null }).eq('id', profileId);
-    toast.success('Actualizado');
-    load();
+  const saveUser = async (p: ProfileUser) => {
+    try {
+      // Update profile
+      await supabase.from('profiles').update({
+        nombre: editForm.nombre || null,
+        telefono: editForm.telefono || null,
+        estado: editForm.estado,
+        almacen_id: editForm.almacen_id || null,
+        vendedor_id: editForm.vendedor_id || null,
+      }).eq('id', p.id);
+
+      // Update role
+      const existing = userRoles.filter(ur => ur.user_id === p.user_id);
+      for (const ur of existing) {
+        await supabase.from('user_roles').delete().eq('id', ur.id);
+      }
+      if (editForm.role_id) {
+        await supabase.from('user_roles').insert({ user_id: p.user_id, role_id: editForm.role_id });
+      }
+
+      toast.success('Usuario actualizado');
+      setEditingUser(null);
+      load();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const resetPassword = async (userId: string) => {
+    // We can't reset password from client-side without email, so we inform the user
+    toast.info('Para cambiar la contraseña, el usuario debe usar "¿Olvidaste tu contraseña?" en la pantalla de inicio de sesión.');
+  };
+
+  const estadoBadge = (estado: string) => {
+    switch (estado) {
+      case 'activo': return 'bg-success/10 text-success';
+      case 'baja': return 'bg-destructive/10 text-destructive';
+      default: return 'bg-muted/20 text-muted-foreground';
+    }
   };
 
   if (loading) return <div className="p-6 text-muted-foreground text-sm">Cargando...</div>;
@@ -192,15 +228,16 @@ export default function UsuariosPage() {
       </div>
 
       {tab === 'usuarios' && (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <div className="bg-card border border-border rounded-lg overflow-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-accent/50 border-b border-border">
-                <th className="text-left px-4 py-2.5 font-semibold text-foreground">Usuario</th>
+                <th className="text-left px-4 py-2.5 font-semibold text-foreground">Nombre</th>
+                <th className="text-left px-4 py-2.5 font-semibold text-foreground">Teléfono</th>
                 <th className="text-left px-4 py-2.5 font-semibold text-foreground">Rol</th>
                 <th className="text-left px-4 py-2.5 font-semibold text-foreground">Almacén</th>
-                <th className="text-left px-4 py-2.5 font-semibold text-foreground">Vendedor</th>
-                <th className="w-10"></th>
+                <th className="text-left px-4 py-2.5 font-semibold text-foreground">Estado</th>
+                <th className="w-24"></th>
               </tr>
             </thead>
             <tbody>
@@ -209,30 +246,35 @@ export default function UsuariosPage() {
                 const isEditing = editingUser === p.id;
                 return (
                   <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/30">
-                    <td className="px-4 py-2.5 font-medium text-foreground">{p.nombre || 'Sin nombre'}</td>
                     <td className="px-4 py-2.5">
                       {isEditing ? (
-                        <select
-                          className="input-odoo text-xs py-1"
-                          value={userRole?.role_id ?? ''}
-                          onChange={e => setUserRole(p.user_id, e.target.value)}
-                        >
+                        <input className="input-odoo text-xs py-1 w-full" value={editForm.nombre} onChange={e => setEditForm({ ...editForm, nombre: e.target.value })} placeholder="Nombre completo" />
+                      ) : (
+                        <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {isEditing ? (
+                        <input className="input-odoo text-xs py-1 w-full" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} placeholder="Teléfono" />
+                      ) : (
+                        <span className="text-xs text-muted-foreground">{p.telefono || '—'}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {isEditing ? (
+                        <select className="input-odoo text-xs py-1" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
                           <option value="">Sin rol</option>
                           {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                         </select>
                       ) : (
-                        <span className={cn("text-xs px-2 py-0.5 rounded-full", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
+                        <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
                           {userRole ? roles.find(r => r.id === userRole.role_id)?.nombre : 'Sin rol'}
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
                       {isEditing ? (
-                        <select
-                          className="input-odoo text-xs py-1"
-                          value={p.almacen_id ?? ''}
-                          onChange={e => updateProfile(p.id, 'almacen_id', e.target.value)}
-                        >
+                        <select className="input-odoo text-xs py-1" value={editForm.almacen_id} onChange={e => setEditForm({ ...editForm, almacen_id: e.target.value })}>
                           <option value="">Ninguno</option>
                           {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
                         </select>
@@ -242,31 +284,44 @@ export default function UsuariosPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       {isEditing ? (
-                        <select
-                          className="input-odoo text-xs py-1"
-                          value={p.vendedor_id ?? ''}
-                          onChange={e => updateProfile(p.id, 'vendedor_id', e.target.value)}
-                        >
-                          <option value="">Ninguno</option>
-                          {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                        <select className="input-odoo text-xs py-1" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
+                          <option value="activo">Activo</option>
+                          <option value="baja">Baja</option>
                         </select>
                       ) : (
-                        <span className="text-xs text-muted-foreground">{vendedores.find(v => v.id === p.vendedor_id)?.nombre || '—'}</span>
+                        <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium capitalize", estadoBadge(p.estado))}>
+                          {p.estado}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
-                      <button
-                        onClick={() => setEditingUser(isEditing ? null : p.id)}
-                        className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {isEditing ? (
+                          <>
+                            <button onClick={() => saveUser(p)} className="p-1 rounded hover:bg-success/10 text-success" title="Guardar">
+                              <Save className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => setEditingUser(null)} className="p-1 rounded hover:bg-accent text-muted-foreground" title="Cancelar">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => startEdit(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar">
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button onClick={() => resetPassword(p.user_id)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Restablecer contraseña">
+                              <KeyRound className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
               })}
               {profiles.length === 0 && (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground text-sm">No hay usuarios registrados</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">No hay usuarios registrados</td></tr>
               )}
             </tbody>
           </table>
