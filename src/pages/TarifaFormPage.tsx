@@ -339,6 +339,15 @@ export default function TarifaFormPage() {
                                 <input type="number" className="input-odoo text-right text-xs" placeholder="Mín" value={newLinea.precio_minimo} onChange={e => setNewLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
                               </td>
                               <td className="py-2 px-3">
+                                <select className="input-odoo text-xs" value={newLinea.redondeo}
+                                  onChange={e => setNewLinea(p => ({ ...p, redondeo: e.target.value as RedondeoTarifa }))}>
+                                  <option value="ninguno">Sin redondeo</option>
+                                  <option value="arriba">↑ Hacia arriba</option>
+                                  <option value="abajo">↓ Hacia abajo</option>
+                                  <option value="cercano">≈ Al más cercano</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3">
                                 <input className="input-odoo text-xs" placeholder="Notas" value={newLinea.notas} onChange={e => setNewLinea(p => ({ ...p, notas: e.target.value }))} />
                               </td>
                               <td className="py-2 px-3 text-center">
