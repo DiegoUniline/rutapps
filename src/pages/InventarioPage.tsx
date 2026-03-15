@@ -405,6 +405,112 @@ export default function InventarioPage() {
   );
 }
 
+function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
+  const lineas: any[] = ruta.lineas ?? [];
+  const totalCargado = lineas.reduce((s: number, l: any) => s + l.cargado, 0);
+  const totalEntregado = lineas.reduce((s: number, l: any) => s + l.entregado, 0);
+  const totalDevuelto = lineas.reduce((s: number, l: any) => s + l.devuelto, 0);
+  const totalAbordo = lineas.reduce((s: number, l: any) => s + l.abordo, 0);
+  const totalValorCosto = lineas.reduce((s: number, l: any) => s + l.abordo * l.costo, 0);
+  const totalValorVenta = lineas.reduce((s: number, l: any) => s + l.abordo * l.precio, 0);
+
+  return (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 -ml-2">
+        <ArrowLeft className="h-4 w-4" /> Volver a rutas
+      </Button>
+
+      <div className="bg-card border border-border rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-base font-semibold text-foreground flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" /> {ruta.vendedor}
+            </p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              {ruta.almacen && `Almacén: ${ruta.almacen} · `}{fmtDate(ruta.fecha)} ·{' '}
+              <Badge variant="secondary" className="text-[10px] py-0">
+                {ruta.status === 'en_ruta' ? 'En ruta' : ruta.status === 'cargado' ? 'Cargado' : 'Pendiente'}
+              </Badge>
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Cargado</p>
+            <p className="text-lg font-bold text-foreground">{totalCargado}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Entregado</p>
+            <p className="text-lg font-bold text-success">{totalEntregado}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Devuelto</p>
+            <p className="text-lg font-bold text-warning">{totalDevuelto}</p>
+          </div>
+          <div className="bg-primary/10 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-primary uppercase tracking-wide font-medium">Abordo</p>
+            <p className="text-lg font-bold text-primary">{totalAbordo}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-lg overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[11px]">Código</TableHead>
+              <TableHead className="text-[11px]">Producto</TableHead>
+              <TableHead className="text-[11px] text-center">Cargado</TableHead>
+              <TableHead className="text-[11px] text-center">Entregado</TableHead>
+              <TableHead className="text-[11px] text-center">Devuelto</TableHead>
+              <TableHead className="text-[11px] text-center font-bold">Abordo</TableHead>
+              <TableHead className="text-[11px] text-right">Valor costo</TableHead>
+              <TableHead className="text-[11px] text-right">Valor venta</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lineas.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  Sin productos en esta ruta
+                </TableCell>
+              </TableRow>
+            )}
+            {lineas.map((l: any, i: number) => (
+              <TableRow key={i}>
+                <TableCell className="font-mono text-[11px] text-muted-foreground">{l.codigo}</TableCell>
+                <TableCell className="text-[12px] font-medium">{l.nombre}</TableCell>
+                <TableCell className="text-center">{l.cargado}</TableCell>
+                <TableCell className={cn("text-center", l.entregado > 0 ? "text-success font-medium" : "text-muted-foreground")}>
+                  {l.entregado}
+                </TableCell>
+                <TableCell className={cn("text-center", l.devuelto > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
+                  {l.devuelto}
+                </TableCell>
+                <TableCell className="text-center font-bold text-primary">{l.abordo}</TableCell>
+                <TableCell className="text-right text-[12px]">$ {fmt(l.abordo * l.costo)}</TableCell>
+                <TableCell className="text-right text-[12px] text-success">$ {fmt(l.abordo * l.precio)}</TableCell>
+              </TableRow>
+            ))}
+            {lineas.length > 0 && (
+              <TableRow className="bg-muted/50 font-bold">
+                <TableCell colSpan={2}>Totales</TableCell>
+                <TableCell className="text-center">{totalCargado}</TableCell>
+                <TableCell className="text-center text-success">{totalEntregado}</TableCell>
+                <TableCell className="text-center text-warning">{totalDevuelto}</TableCell>
+                <TableCell className="text-center text-primary">{totalAbordo}</TableCell>
+                <TableCell className="text-right">$ {fmt(totalValorCosto)}</TableCell>
+                <TableCell className="text-right text-success">$ {fmt(totalValorVenta)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
 function SummaryCard({ icon: Icon, label, value, sub, color }: { icon: React.ElementType; label: string; value: string; sub: string; color: string }) {
   return (
     <div className="bg-card border border-border rounded-lg p-4">
