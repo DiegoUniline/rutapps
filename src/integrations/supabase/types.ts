@@ -88,6 +88,42 @@ export type Database = {
           },
         ]
       }
+      carga_pedidos: {
+        Row: {
+          carga_id: string
+          created_at: string
+          id: string
+          venta_id: string
+        }
+        Insert: {
+          carga_id: string
+          created_at?: string
+          id?: string
+          venta_id: string
+        }
+        Update: {
+          carga_id?: string
+          created_at?: string
+          id?: string
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carga_pedidos_carga_id_fkey"
+            columns: ["carga_id"]
+            isOneToOne: false
+            referencedRelation: "cargas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carga_pedidos_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cargas: {
         Row: {
           almacen_destino_id: string | null
