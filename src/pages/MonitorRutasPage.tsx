@@ -376,146 +376,246 @@ function MonitorContent() {
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {view === 'map' ? (
-          /* MAP VIEW */
-          <div className="flex-1 relative" style={{ minHeight: 300 }}>
-            {isLoaded ? (
-              <GoogleMap
-                onLoad={onMapLoad}
-                mapContainerStyle={{ width: '100%', height: '100%' }}
-                zoom={6}
-                center={{ lat: 23.6345, lng: -102.5528 }}
-                options={{
-                  disableDefaultUI: true,
-                  zoomControl: true,
-                  gestureHandling: 'greedy',
-                  styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
-                }}
-              >
-                {withGps.map(c => {
-                  const markerText = c.ordenEntrega && c.ordenEntrega > 0
-                    ? String(c.ordenEntrega)
-                    : c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•';
-                  return (
-                    <MarkerF
-                      key={c.id + c.status}
-                      position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
-                      icon={{
-                        path: google.maps.SymbolPath.CIRCLE,
-                        fillColor: statusColor(c.status),
-                        fillOpacity: 1,
-                        strokeColor: '#fff',
-                        strokeWeight: 2,
-                        scale: c.ordenEntrega && c.ordenEntrega > 0 ? 14 : 10,
-                      }}
-                      label={{
-                        text: markerText,
-                        color: '#fff',
-                        fontSize: c.ordenEntrega && c.ordenEntrega > 0 ? '11px' : '10px',
-                        fontWeight: '700',
-                      }}
-                      onClick={() => setSelectedClient(c)}
-                    />
-                  );
-                })}
+          <>
+            {/* Left panel with Tabs */}
+            <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col shrink-0">
+              <Tabs defaultValue="visitas" className="flex flex-col h-full">
+                <TabsList className="w-full rounded-none border-b border-border bg-muted/50 h-10 shrink-0">
+                  <TabsTrigger value="visitas" className="flex-1 text-xs gap-1.5 data-[state=active]:bg-background">
+                    <Eye className="h-3.5 w-3.5" /> Visitas
+                    <Badge variant="secondary" className="text-[9px] ml-1 px-1.5">{filtered.length}</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="entregas" className="flex-1 text-xs gap-1.5 data-[state=active]:bg-background">
+                    <Truck className="h-3.5 w-3.5" /> Entregas
+                    <Badge variant="secondary" className="text-[9px] ml-1 px-1.5">{(entregasHoy ?? []).length}</Badge>
+                  </TabsTrigger>
+                </TabsList>
 
-                {selectedClient && selectedClient.gps_lat && (
-                  <InfoWindow
-                    position={{ lat: selectedClient.gps_lat, lng: selectedClient.gps_lng! }}
-                    onCloseClick={() => setSelectedClient(null)}
-                  >
-                    <div className="min-w-[200px] p-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        {selectedClient.ordenEntrega ? (
-                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: statusColor(selectedClient.status) }}>
-                            {selectedClient.ordenEntrega}
-                          </span>
-                        ) : (
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor(selectedClient.status) }} />
+                {/* Visitas Tab */}
+                <TabsContent value="visitas" className="flex-1 m-0 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-card z-[1]">
+                        <tr className="bg-muted/50">
+                          <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</th>
+                          <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
+                          <th className="text-center px-2 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
+                          <th className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Venta</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((v, idx) => (
+                          <tr
+                            key={v.id}
+                            className={cn(
+                              "border-t border-border/30 hover:bg-muted/40 cursor-pointer transition-colors",
+                              selectedClient?.id === v.id && "bg-primary/5"
+                            )}
+                            onClick={() => setSelectedClient(v)}
+                          >
+                            <td className="px-3 py-2">
+                              {v.ordenEntrega && v.ordenEntrega > 0 ? (
+                                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-primary-foreground"
+                                  style={{ backgroundColor: statusColor(v.status) }}>
+                                  {v.ordenEntrega}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">{idx + 1}</span>
+                              )}
+                            </td>
+                            <td className="px-2 py-2">
+                              <p className="font-medium text-foreground truncate max-w-[140px]">{v.nombre}</p>
+                              <p className="text-[10px] text-muted-foreground truncate max-w-[140px]">{v.vendedorNombre ?? '—'}</p>
+                            </td>
+                            <td className="text-center px-2 py-2">
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                                style={{ backgroundColor: statusColor(v.status) + '15', color: statusColor(v.status) }}>
+                                {v.status === 'sold' && <CheckCircle2 className="h-2.5 w-2.5" />}
+                                {v.status === 'delivered' && <Truck className="h-2.5 w-2.5" />}
+                                {v.status === 'en_ruta' && <Navigation className="h-2.5 w-2.5" />}
+                                {v.status === 'pending' && <Clock className="h-2.5 w-2.5" />}
+                                {statusLabel(v.status)}
+                              </span>
+                            </td>
+                            <td className="text-right px-3 py-2 font-semibold text-xs" style={{ color: v.ventaTotal ? '#22c55e' : undefined }}>
+                              {v.ventaTotal ? fmtMoney(v.ventaTotal) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                        {filtered.length === 0 && (
+                          <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-xs">Sin visitas programadas</td></tr>
                         )}
-                        <span className="font-bold text-sm">{selectedClient.nombre}</span>
-                      </div>
-                      {selectedClient.codigo && <p className="text-xs text-gray-500 font-mono">{selectedClient.codigo}</p>}
-                      {selectedClient.direccion && <p className="text-xs text-gray-600">{selectedClient.direccion}</p>}
-                      <p className="text-xs font-medium">Vendedor: {selectedClient.vendedorNombre ?? '—'}</p>
-                      {selectedClient.entregaFolio && <p className="text-xs text-gray-500">Entrega: {selectedClient.entregaFolio}</p>}
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{ backgroundColor: statusColor(selectedClient.status) + '20', color: statusColor(selectedClient.status) }}>
-                          {statusLabel(selectedClient.status)}
-                        </span>
-                        {selectedClient.ventaTotal && (
-                          <span className="text-xs font-bold text-green-600">{fmtMoney(selectedClient.ventaTotal)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </InfoWindow>
-                )}
-              </GoogleMap>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-              </div>
-            )}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </TabsContent>
 
-            {/* Map legend */}
-            <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2.5 shadow-lg">
-              <div className="flex items-center gap-4 text-[11px]">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Vendido</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Entregado</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> En ruta</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-destructive" /> Pendiente</span>
-              </div>
+                {/* Entregas Tab */}
+                <TabsContent value="entregas" className="flex-1 m-0 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-card z-[1]">
+                        <tr className="bg-muted/50">
+                          <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</th>
+                          <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
+                          <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Folio</th>
+                          <th className="text-center px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(entregasHoy ?? []).map((e: any, idx: number) => {
+                          const cli = e.clientes;
+                          const isDone = e.status === 'hecho';
+                          const isEnRuta = ['cargado', 'asignado', 'surtido'].includes(e.status);
+                          return (
+                            <tr
+                              key={e.id}
+                              className="border-t border-border/30 hover:bg-muted/40 cursor-pointer transition-colors"
+                              onClick={() => {
+                                if (cli?.gps_lat) {
+                                  setSelectedClient({
+                                    id: cli.id,
+                                    nombre: cli.nombre,
+                                    codigo: cli.codigo,
+                                    direccion: cli.direccion,
+                                    gps_lat: cli.gps_lat,
+                                    gps_lng: cli.gps_lng,
+                                    vendedorNombre: cli.vendedores?.nombre,
+                                    status: isDone ? 'delivered' : isEnRuta ? 'en_ruta' : 'pending',
+                                    entregaFolio: e.folio,
+                                    ordenEntrega: e.orden_entrega,
+                                  });
+                                }
+                              }}
+                            >
+                              <td className="px-3 py-2">
+                                {e.orden_entrega ? (
+                                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-primary-foreground"
+                                    style={{ backgroundColor: isDone ? '#3b82f6' : isEnRuta ? '#f59e0b' : '#ef4444' }}>
+                                    {e.orden_entrega}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">{idx + 1}</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-2">
+                                <p className="font-medium text-foreground truncate max-w-[120px]">{cli?.nombre ?? '—'}</p>
+                                <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{cli?.direccion ?? ''}</p>
+                              </td>
+                              <td className="px-2 py-2 text-muted-foreground font-mono">{e.folio ?? '—'}</td>
+                              <td className="text-center px-3 py-2">
+                                <span className={cn(
+                                  "text-[10px] font-medium px-1.5 py-0.5 rounded-full",
+                                  isDone ? "bg-blue-500/15 text-blue-600" : isEnRuta ? "bg-amber-500/15 text-amber-600" : "bg-red-500/15 text-red-600"
+                                )}>
+                                  {isDone ? 'Entregado' : isEnRuta ? 'En ruta' : e.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {(entregasHoy ?? []).length === 0 && (
+                          <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-xs">Sin entregas</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
             </div>
 
-            {/* Vendedor sidebar */}
-            <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-72 max-h-[60vh] flex flex-col">
-              <div className="px-3 py-2.5 border-b border-border">
-                <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-primary" /> Vendedores
-                </span>
-              </div>
-              <div className="flex-1 overflow-auto">
-                {vendedorSummary.map(vs => {
-                  const rate = vs.scheduled > 0 ? Math.round((vs.visited / vs.scheduled) * 100) : 0;
-                  return (
-                    <button
-                      key={vs.id}
-                      onClick={() => toggleVendedor(vs.id)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2.5 w-full text-left border-b border-border/30 last:border-0 transition-colors",
-                        vendedorFilters.includes(vs.id) ? "bg-primary/5" : "hover:bg-muted/50"
-                      )}
+            {/* Map */}
+            <div className="flex-1 relative" style={{ minHeight: 300 }}>
+              {isLoaded ? (
+                <GoogleMap
+                  onLoad={onMapLoad}
+                  mapContainerStyle={{ width: '100%', height: '100%' }}
+                  zoom={6}
+                  center={{ lat: 23.6345, lng: -102.5528 }}
+                  options={{
+                    disableDefaultUI: true,
+                    zoomControl: true,
+                    gestureHandling: 'greedy',
+                    styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+                  }}
+                >
+                  {withGps.map(c => {
+                    const markerText = c.ordenEntrega && c.ordenEntrega > 0
+                      ? String(c.ordenEntrega)
+                      : c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•';
+                    return (
+                      <MarkerF
+                        key={c.id + c.status}
+                        position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
+                        icon={{
+                          path: google.maps.SymbolPath.CIRCLE,
+                          fillColor: statusColor(c.status),
+                          fillOpacity: 1,
+                          strokeColor: '#fff',
+                          strokeWeight: 2,
+                          scale: c.ordenEntrega && c.ordenEntrega > 0 ? 14 : 10,
+                        }}
+                        label={{
+                          text: markerText,
+                          color: '#fff',
+                          fontSize: c.ordenEntrega && c.ordenEntrega > 0 ? '11px' : '10px',
+                          fontWeight: '700',
+                        }}
+                        onClick={() => setSelectedClient(c)}
+                      />
+                    );
+                  })}
+
+                  {selectedClient && selectedClient.gps_lat && (
+                    <InfoWindow
+                      position={{ lat: selectedClient.gps_lat, lng: selectedClient.gps_lng! }}
+                      onCloseClick={() => setSelectedClient(null)}
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-foreground truncate">{vs.nombre}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground">{vs.visited}/{vs.scheduled} visitas</span>
-                          {vs.sold > 0 && <span className="text-[10px] text-emerald-600 font-medium">{vs.sold} ventas</span>}
+                      <div className="min-w-[200px] p-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          {selectedClient.ordenEntrega ? (
+                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: statusColor(selectedClient.status) }}>
+                              {selectedClient.ordenEntrega}
+                            </span>
+                          ) : (
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor(selectedClient.status) }} />
+                          )}
+                          <span className="font-bold text-sm">{selectedClient.nombre}</span>
+                        </div>
+                        {selectedClient.codigo && <p className="text-xs text-gray-500 font-mono">{selectedClient.codigo}</p>}
+                        {selectedClient.direccion && <p className="text-xs text-gray-600">{selectedClient.direccion}</p>}
+                        <p className="text-xs font-medium">Vendedor: {selectedClient.vendedorNombre ?? '—'}</p>
+                        {selectedClient.entregaFolio && <p className="text-xs text-gray-500">Entrega: {selectedClient.entregaFolio}</p>}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                            style={{ backgroundColor: statusColor(selectedClient.status) + '20', color: statusColor(selectedClient.status) }}>
+                            {statusLabel(selectedClient.status)}
+                          </span>
+                          {selectedClient.ventaTotal && (
+                            <span className="text-xs font-bold text-green-600">{fmtMoney(selectedClient.ventaTotal)}</span>
+                          )}
                         </div>
                       </div>
-                      <div className="shrink-0 flex flex-col items-end">
-                        <span className={cn(
-                          "text-xs font-bold",
-                          rate >= 80 ? "text-emerald-600" : rate >= 50 ? "text-amber-600" : "text-destructive"
-                        )}>{rate}%</span>
-                        {vs.salesTotal > 0 && <span className="text-[10px] text-muted-foreground">{fmtMoney(vs.salesTotal)}</span>}
-                      </div>
-                      {/* Mini progress */}
-                      <div className="w-12 h-1.5 rounded-full bg-muted shrink-0">
-                        <div className="h-full rounded-full transition-all" style={{
-                          width: `${rate}%`,
-                          backgroundColor: rate >= 80 ? '#22c55e' : rate >= 50 ? '#f59e0b' : '#ef4444'
-                        }} />
-                      </div>
-                    </button>
-                  );
-                })}
-                {vendedorSummary.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4">Sin vendedores activos</p>
-                )}
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
+              )}
+
+              {/* Map legend */}
+              <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2.5 shadow-lg">
+                <div className="flex items-center gap-4 text-[11px]">
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Vendido</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Entregado</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> En ruta</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-destructive" /> Pendiente</span>
+                </div>
               </div>
             </div>
-          </div>
+          </>
         ) : (
           /* TABLE VIEW */
           <div className="flex-1 overflow-auto">
