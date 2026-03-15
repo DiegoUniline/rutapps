@@ -46,6 +46,9 @@ export interface Producto {
   tiene_ieps: boolean;
   tasa_iva_id?: string;
   tasa_ieps_id?: string;
+  iva_pct: number;
+  ieps_pct: number;
+  costo_incluye_impuestos: boolean;
   calculo_costo: CalculoCosto;
   codigo_sat?: string;
   udem_sat_id?: string;

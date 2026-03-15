@@ -104,12 +104,8 @@ export default function VentaFormPage() {
         producto_id: productoId,
         precio_unitario: producto?.precio_principal ?? 0,
         unidad_id: producto?.unidad_venta_id ?? next[idx].unidad_id,
-        iva_pct: producto?.tiene_iva && producto.tasa_iva_id
-          ? (tasasIvaList?.find(t => t.id === producto.tasa_iva_id)?.porcentaje ?? 0)
-          : 0,
-        ieps_pct: producto?.tiene_ieps && producto.tasa_ieps_id
-          ? (tasasIepsList?.find(t => t.id === producto.tasa_ieps_id)?.porcentaje ?? 0)
-          : 0,
+        iva_pct: producto?.iva_pct ?? 0,
+        ieps_pct: producto?.ieps_pct ?? 0,
       };
       return next;
     });
@@ -154,8 +150,8 @@ export default function VentaFormPage() {
       const lineSubtotal = qty * price;
       const discountAmt = lineSubtotal * (desc / 100);
       const base = lineSubtotal - discountAmt;
-      const iva = base * ((Number(l.iva_pct) || 0) / 100);
       const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
+      const iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100); // IVA sobre (base + IEPS)
       subtotal += lineSubtotal;
       descuento_total += discountAmt;
       iva_total += iva;
@@ -180,8 +176,8 @@ export default function VentaFormPage() {
         const lineSubtotal = qty * price;
         const discountAmt = lineSubtotal * (desc / 100);
         const base = lineSubtotal - discountAmt;
-        const iva = base * ((Number(l.iva_pct) || 0) / 100);
         const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
+        const iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100); // IVA sobre (base + IEPS)
         await saveLinea.mutateAsync({
           ...l, venta_id: ventaId,
           subtotal: base, iva_monto: iva, ieps_monto: ieps, total: base + iva + ieps,

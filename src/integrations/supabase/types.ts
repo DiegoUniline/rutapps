@@ -1188,12 +1188,15 @@ export type Database = {
           contador: number | null
           contador_tarifas: number | null
           costo: number | null
+          costo_incluye_impuestos: boolean
           created_at: string
           empresa_id: string
           es_combo: boolean | null
           factor_conversion: number | null
           id: string
+          ieps_pct: number
           imagen_url: string | null
+          iva_pct: number
           lista_id: string | null
           manejar_lotes: boolean | null
           marca_id: string | null
@@ -1231,12 +1234,15 @@ export type Database = {
           contador?: number | null
           contador_tarifas?: number | null
           costo?: number | null
+          costo_incluye_impuestos?: boolean
           created_at?: string
           empresa_id: string
           es_combo?: boolean | null
           factor_conversion?: number | null
           id?: string
+          ieps_pct?: number
           imagen_url?: string | null
+          iva_pct?: number
           lista_id?: string | null
           manejar_lotes?: boolean | null
           marca_id?: string | null
@@ -1274,12 +1280,15 @@ export type Database = {
           contador?: number | null
           contador_tarifas?: number | null
           costo?: number | null
+          costo_incluye_impuestos?: boolean
           created_at?: string
           empresa_id?: string
           es_combo?: boolean | null
           factor_conversion?: number | null
           id?: string
+          ieps_pct?: number
           imagen_url?: string | null
+          iva_pct?: number
           lista_id?: string | null
           manejar_lotes?: boolean | null
           marca_id?: string | null

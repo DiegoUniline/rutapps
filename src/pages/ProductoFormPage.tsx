@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera } from 'lucide-react';
+import { calcTax } from '@/lib/taxUtils';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection, OdooBadge } from '@/components/OdooFormField';
@@ -227,6 +228,7 @@ const defaultProduct: Partial<Producto> = {
   pct_comision: 0, status: 'borrador', almacenes: [], tiene_iva: false,
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
+  iva_pct: 16, ieps_pct: 0, costo_incluye_impuestos: false,
 };
 
 const statusSteps = [
@@ -499,32 +501,65 @@ export default function ProductoFormPage() {
                       onChange={v => set('udem_sat_id', v || null)}
                       format={() => findSat(unidadesSat, form.udem_sat_id ?? undefined)}
                     />
+                  </div>
+                  <div>
+                    <OdooField label="IVA %" value={form.iva_pct ?? 16} type="number" teal
+                      onChange={v => set('iva_pct', +v)}
+                      format={v => `${v ?? 16}%`}
+                    />
+                    <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
+                      {[0, 8, 16].map(rate => (
+                        <button
+                          key={rate}
+                          type="button"
+                          onClick={() => set('iva_pct', rate)}
+                          className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                            form.iva_pct === rate
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'border-border text-muted-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          {rate}%
+                        </button>
+                      ))}
+                    </div>
+                    <OdooField label="IEPS %" value={form.ieps_pct ?? 0} type="number" teal
+                      onChange={v => set('ieps_pct', +v)}
+                      format={v => `${v ?? 0}%`}
+                    />
+                    <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
+                      {[0, 8, 25, 53].map(rate => (
+                        <button
+                          key={rate}
+                          type="button"
+                          onClick={() => set('ieps_pct', rate)}
+                          className={`text-[11px] px-2 py-0.5 rounded border transition-colors ${
+                            form.ieps_pct === rate
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'border-border text-muted-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          {rate}%
+                        </button>
+                      ))}
+                    </div>
                     <div className="odoo-field-row">
-                      <span className="odoo-field-label">IVA</span>
+                      <span className="odoo-field-label">Costo incluye impuestos</span>
                       <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!form.tiene_iva} onChange={e => set('tiene_iva', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
+                        <input type="checkbox" checked={!!form.costo_incluye_impuestos} onChange={e => set('costo_incluye_impuestos', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
                       </label>
                     </div>
-                    {form.tiene_iva && (
-                      <OdooField label="Tasa IVA" value={form.tasa_iva_id} type="select"
-                        options={tasasIva?.map(t => ({ value: t.id, label: `${t.nombre} (${t.porcentaje}%)` })) ?? []}
-                        onChange={v => set('tasa_iva_id', v || null)}
-                        format={() => { const t = tasasIva?.find(t => t.id === form.tasa_iva_id); return t ? `${t.nombre} (${t.porcentaje}%)` : ''; }}
-                      />
+                    {form.costo_incluye_impuestos && (form.costo ?? 0) > 0 && (
+                      <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
+                        {(() => {
+                          const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, incluye_impuestos: true });
+                          return <>Costo neto: <strong>$ {t.precio_neto.toFixed(2)}</strong> + IEPS: $ {t.ieps_monto.toFixed(2)} + IVA: $ {t.iva_monto.toFixed(2)}</>;
+                        })()}
+                      </div>
                     )}
-                    <div className="odoo-field-row">
-                      <span className="odoo-field-label">IEPS</span>
-                      <label className="flex items-center gap-2 cursor-pointer pt-[2px]">
-                        <input type="checkbox" checked={!!form.tiene_ieps} onChange={e => set('tiene_ieps', e.target.checked)} className="rounded border-input h-3.5 w-3.5" />
-                      </label>
+                    <div className="mt-2 bg-accent/30 border border-accent/50 rounded px-3 py-2 text-[11px] text-muted-foreground">
+                      💡 El IVA se calcula sobre el precio + IEPS (estándar fiscal mexicano).
                     </div>
-                    {form.tiene_ieps && (
-                      <OdooField label="Tasa IEPS" value={form.tasa_ieps_id} type="select"
-                        options={tasasIeps?.map(t => ({ value: t.id, label: `${t.nombre} (${t.porcentaje}%)` })) ?? []}
-                        onChange={v => set('tasa_ieps_id', v || null)}
-                        format={() => { const t = tasasIeps?.find(t => t.id === form.tasa_ieps_id); return t ? `${t.nombre} (${t.porcentaje}%)` : ''; }}
-                      />
-                    )}
                   </div>
                 </div>
               ),
