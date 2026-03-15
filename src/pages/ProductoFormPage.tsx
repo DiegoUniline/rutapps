@@ -556,14 +556,6 @@ export default function ProductoFormPage() {
               <input type="checkbox" checked={!!form.se_puede_comprar} onChange={e => set('se_puede_comprar', e.target.checked)} />
               Puede ser comprado
             </label>
-            <label className="odoo-module-check">
-              <input type="checkbox" checked={!!form.se_puede_inventariar} onChange={e => set('se_puede_inventariar', e.target.checked)} />
-              Inventario
-            </label>
-            <label className="odoo-module-check">
-              <input type="checkbox" checked={!!form.es_combo} onChange={e => set('es_combo', e.target.checked)} />
-              Combo
-            </label>
           </div>
         </div>
 
