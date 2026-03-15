@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn, fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { generarAuditoriaPdf } from '@/lib/auditoriaPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'secondary' },
