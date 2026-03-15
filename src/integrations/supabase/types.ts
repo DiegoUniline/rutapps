@@ -1747,6 +1747,54 @@ export type Database = {
           },
         ]
       }
+      producto_proveedores: {
+        Row: {
+          created_at: string
+          es_principal: boolean
+          id: string
+          notas: string | null
+          precio_compra: number | null
+          producto_id: string
+          proveedor_id: string
+          tiempo_entrega_dias: number | null
+        }
+        Insert: {
+          created_at?: string
+          es_principal?: boolean
+          id?: string
+          notas?: string | null
+          precio_compra?: number | null
+          producto_id: string
+          proveedor_id: string
+          tiempo_entrega_dias?: number | null
+        }
+        Update: {
+          created_at?: string
+          es_principal?: boolean
+          id?: string
+          notas?: string | null
+          precio_compra?: number | null
+          producto_id?: string
+          proveedor_id?: string
+          tiempo_entrega_dias?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_proveedores_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "producto_proveedores_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producto_tarifas: {
         Row: {
           id: string
