@@ -14,7 +14,9 @@ import { fmtDate } from '@/lib/utils';
 
 const CARGAS_COLUMNS: ExportColumn[] = [
   { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
-  { key: 'vendedor_nombre', header: 'Vendedor', width: 25 },
+  { key: 'origen', header: 'Origen', width: 20 },
+  { key: 'destino', header: 'Destino', width: 20 },
+  { key: 'vendedor_nombre', header: 'Responsable', width: 25 },
   { key: 'status', header: 'Estado', width: 12 },
 ];
 
@@ -37,21 +39,21 @@ export default function CargasListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5" /> Cargas
+            <Truck className="h-5 w-5" /> Cargas / Traspasos
           </h1>
-          <p className="text-sm text-muted-foreground">Gestiona las cargas de producto para cada ruta</p>
+          <p className="text-sm text-muted-foreground">Transfiere producto entre almacenes y camionetas</p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButton
             onExcel={() => exportToExcel({
-              fileName: 'Cargas', title: 'Listado de Cargas',
+              fileName: 'Cargas', title: 'Listado de Cargas / Traspasos',
               columns: CARGAS_COLUMNS,
-              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '', origen: c.almacen_origen?.nombre || '—', destino: c.almacen_destino?.nombre || '—' })),
             })}
             onPDF={() => exportToPDF({
-              fileName: 'Cargas', title: 'Listado de Cargas',
+              fileName: 'Cargas', title: 'Listado de Cargas / Traspasos',
               columns: CARGAS_COLUMNS,
-              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '', origen: c.almacen_origen?.nombre || '—', destino: c.almacen_destino?.nombre || '—' })),
             })}
           />
           <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
@@ -80,7 +82,9 @@ export default function CargasListPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Fecha</TableHead>
-                <TableHead>Vendedor</TableHead>
+                <TableHead>Origen</TableHead>
+                <TableHead>Destino</TableHead>
+                <TableHead>Responsable</TableHead>
                 <TableHead>Productos</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-10"></TableHead>
@@ -88,14 +92,18 @@ export default function CargasListPage() {
             </TableHeader>
             <TableBody>
               {(!cargas || cargas.length === 0) && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell></TableRow>
               )}
               {cargas?.map((c: any) => {
                 const sc = statusConfig[c.status] ?? statusConfig.pendiente;
                 const totalItems = (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0);
+                const origen = (c as any).almacen_origen?.nombre ?? '—';
+                const destino = (c as any).almacen_destino?.nombre ?? '—';
                 return (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/almacen/cargas/${c.id}`)}>
                     <TableCell className="font-medium">{fmtDate(c.fecha)}</TableCell>
+                    <TableCell className="text-[13px]">{origen}</TableCell>
+                    <TableCell className="text-[13px]">{destino}</TableCell>
                     <TableCell>{(c.vendedores as any)?.nombre ?? '—'}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1 text-muted-foreground">

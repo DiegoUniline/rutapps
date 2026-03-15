@@ -35,6 +35,7 @@ export default function CargaFormPage() {
   const [vendedorId, setVendedorId] = useState('');
   const [repartidorId, setRepartidorId] = useState('');
   const [almacenId, setAlmacenId] = useState('');
+  const [almacenDestinoId, setAlmacenDestinoId] = useState('');
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [notas, setNotas] = useState('');
   const [lineas, setLineas] = useState<CargaLinea[]>([]);
@@ -73,6 +74,7 @@ export default function CargaFormPage() {
       setVendedorId(carga.vendedor_id ?? '');
       setRepartidorId((carga as any).repartidor_id ?? '');
       setAlmacenId((carga as any).almacen_id ?? '');
+      setAlmacenDestinoId((carga as any).almacen_destino_id ?? '');
       setFecha(carga.fecha);
       setNotas(carga.notas ?? '');
       setLineas((carga.carga_lineas ?? []).map((l: any) => ({
@@ -163,7 +165,9 @@ export default function CargaFormPage() {
   };
 
   const handleSave = async () => {
-    if (!vendedorId) { toast.error('Selecciona un vendedor'); return; }
+    if (!almacenId) { toast.error('Selecciona almacén origen'); return; }
+    if (!almacenDestinoId) { toast.error('Selecciona almacén destino'); return; }
+    if (!vendedorId) { toast.error('Selecciona un responsable'); return; }
     if (lineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
     try {
       const saved = await saveCarga.mutateAsync({
@@ -171,6 +175,7 @@ export default function CargaFormPage() {
         vendedor_id: vendedorId,
         repartidor_id: repartidorId || null,
         almacen_id: almacenId || null,
+        almacen_destino_id: almacenDestinoId || null,
         fecha,
         notas: notas || null,
       });
@@ -240,7 +245,7 @@ export default function CargaFormPage() {
         </Button>
         <div className="flex-1">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Truck className="h-5 w-5" /> {isNew ? 'Nueva carga' : `Carga — ${fmtDate(fecha)}`}
+            <Truck className="h-5 w-5" /> {isNew ? 'Nueva carga / traspaso' : `Carga — ${fmtDate(fecha)}`}
           </h1>
         </div>
         {!isNew && (
@@ -265,40 +270,42 @@ export default function CargaFormPage() {
       )}
 
       {/* Form fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-          <label className="text-sm font-medium text-foreground">Vendedor *</label>
-          <div className="mt-1">
-            <SearchableSelect
-              options={(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))}
-              value={vendedorId}
-              onChange={setVendedorId}
-              placeholder="Buscar vendedor..."
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-foreground">Repartidor</label>
-          <div className="mt-1">
-            <SearchableSelect
-              options={(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))}
-              value={repartidorId}
-              onChange={setRepartidorId}
-              placeholder="Mismo vendedor"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-foreground">Almacén origen</label>
+          <label className="text-sm font-medium text-foreground">Almacén origen *</label>
           <div className="mt-1">
             <SearchableSelect
               options={(almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }))}
               value={almacenId}
               onChange={setAlmacenId}
-              placeholder="Sin asignar"
+              placeholder="¿De dónde sale?"
             />
           </div>
         </div>
+        <div>
+          <label className="text-sm font-medium text-foreground">Almacén destino *</label>
+          <div className="mt-1">
+            <SearchableSelect
+              options={(almacenes ?? []).filter(a => a.id !== almacenId).map(a => ({ value: a.id, label: a.nombre }))}
+              value={almacenDestinoId}
+              onChange={setAlmacenDestinoId}
+              placeholder="¿A dónde va?"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-foreground">Responsable *</label>
+          <div className="mt-1">
+            <SearchableSelect
+              options={(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))}
+              value={vendedorId}
+              onChange={setVendedorId}
+              placeholder="¿Quién lo lleva?"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="text-sm font-medium text-foreground">Fecha</label>
           <Input type="date" className="mt-1" value={fecha} onChange={e => setFecha(e.target.value)} disabled={!isEditable && !isNew} />
