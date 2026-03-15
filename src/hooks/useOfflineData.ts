@@ -66,7 +66,7 @@ export function useOfflineQuery<T = any>(
     // 2. If online, fetch fresh data from server and update cache
     if (navigator.onLine) {
       try {
-        let query = supabase.from(table).select(options?.select || '*');
+        let query = (supabase.from as any)(table).select(options?.select || '*');
 
         if (filters) {
           Object.entries(filters).forEach(([key, value]) => {

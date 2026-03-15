@@ -36,7 +36,7 @@ export async function downloadAllData(empresaId: string): Promise<void> {
   const promises = TABLES_TO_CACHE.map(async (table) => {
     try {
       const selectStr = SPECIAL_SELECTS[table] || '*';
-      let query = supabase.from(table).select(selectStr);
+      let query = (supabase.from as any)(table).select(selectStr);
 
       // Tables with empresa_id filter
       const tablesWithEmpresa = [

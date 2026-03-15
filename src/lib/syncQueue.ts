@@ -75,18 +75,18 @@ async function processItem(item: SyncQueueItem) {
 
   switch (operation) {
     case 'insert': {
-      const { error } = await supabase.from(table).upsert(cleanData as any);
+      const { error } = await (supabase.from as any)(table).upsert(cleanData);
       if (error) throw error;
       break;
     }
     case 'update': {
       const { [keyField]: _, ...updateData } = cleanData;
-      const { error } = await supabase.from(table).update(updateData as any).eq(keyField, keyValue);
+      const { error } = await (supabase.from as any)(table).update(updateData).eq(keyField, keyValue);
       if (error) throw error;
       break;
     }
     case 'delete': {
-      const { error } = await supabase.from(table).delete().eq(keyField, keyValue);
+      const { error } = await (supabase.from as any)(table).delete().eq(keyField, keyValue);
       if (error) throw error;
       break;
     }
