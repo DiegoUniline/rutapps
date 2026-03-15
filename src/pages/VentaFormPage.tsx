@@ -38,7 +38,7 @@ function emptyVenta(): Partial<Venta> {
   return {
     tipo: 'pedido',
     status: 'borrador',
-    condicion_pago: 'contado',
+    condicion_pago: 'por_definir',
     fecha: new Date().toISOString().slice(0, 10),
     entrega_inmediata: false,
     subtotal: 0, descuento_total: 0, iva_total: 0, ieps_total: 0, total: 0,

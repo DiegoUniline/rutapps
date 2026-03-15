@@ -728,7 +728,7 @@ export default function RutaNuevaVenta() {
               </div>
             </button>
             <button
-              onClick={() => { setTipoVenta('pedido'); setStep(urlClienteId ? 'devoluciones' : 'cliente'); }}
+              onClick={() => { setTipoVenta('pedido'); setCondicionPago('por_definir'); setStep(urlClienteId ? 'devoluciones' : 'cliente'); }}
               className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-primary/40"
             >
               <div className="flex items-center gap-3">
