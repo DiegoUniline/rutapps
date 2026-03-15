@@ -59,6 +59,7 @@ const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPa
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
+const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
@@ -139,12 +140,13 @@ function AppRoutes() {
     );
   }
 
-  // Blocked users
+  // Blocked users — only billing access
   if (subscription.isBlocked) {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="*" element={<SubscriptionBlockedPage />} />
+          <Route path="/facturacion" element={<FacturacionPage />} />
+          <Route path="*" element={<Navigate to="/facturacion" replace />} />
         </Routes>
       </Suspense>
     );
@@ -244,6 +246,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/configuracion" element={<ConfiguracionPage />} />
               <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
               <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
+              <Route path="/facturacion" element={<FacturacionPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
