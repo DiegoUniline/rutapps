@@ -158,9 +158,14 @@
     @apply border-border;
   }
   html {
-    font-size: 13px;
+    font-size: 16px;
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
+  }
+  @media (min-width: 768px) {
+    html {
+      font-size: 13px;
+    }
   }
   body {
     @apply bg-background text-foreground;
