@@ -28,6 +28,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 
 export default function ClienteFormPage() {
   const { id } = useParams();
+  const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
   const { data: existing } = useCliente(isNew ? undefined : id);
