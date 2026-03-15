@@ -542,18 +542,18 @@ export default function VentaFormPage() {
               </div>
               {/* Saldo info for confirmed+ sales */}
               {!isNew && form.status !== 'borrador' && (
-                <div className="bg-muted rounded-md p-3 space-y-1 text-[13px]">
+                <div className="bg-card border border-border rounded-md p-3 space-y-1 text-[13px]">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total</span>
                     <span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pagado</span>
-                    <span className="text-green-600 font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between border-t border-border pt-1">
                     <span className="font-medium">Saldo</span>
-                    <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-green-600")}>
+                    <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>
                       ${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
