@@ -135,16 +135,23 @@ export default function VentaFormPage() {
 
   const handleProductSelect = (idx: number, productoId: string) => {
     if (readOnly) return;
+    if (!productoId) {
+      updateLine(idx, 'producto_id', '');
+      return;
+    }
     const producto = productosList?.find((p: any) => p.id === productoId);
-    const ivaPct = producto?.tiene_iva ? (producto.iva_pct ?? 16) : 0;
-    const iepsPct = producto?.tiene_ieps ? (producto.ieps_pct ?? 0) : 0;
+    if (!producto) return;
+    const ivaPct = producto.tiene_iva ? Number(producto.iva_pct ?? 16) : 0;
+    const iepsPct = producto.tiene_ieps ? Number(producto.ieps_pct ?? 0) : 0;
+    console.log('[handleProductSelect]', { productoId, nombre: producto.nombre, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct, ivaPct, iepsPct, unidad_venta_id: producto.unidad_venta_id });
     setLineas(prev => {
       const next = [...prev];
       next[idx] = {
         ...next[idx],
         producto_id: productoId,
-        precio_unitario: producto?.precio_principal ?? 0,
-        unidad_id: producto?.unidad_venta_id ?? next[idx].unidad_id,
+        descripcion: producto.nombre,
+        precio_unitario: Number(producto.precio_principal) || 0,
+        unidad_id: producto.unidad_venta_id || next[idx].unidad_id || null,
         iva_pct: ivaPct,
         ieps_pct: iepsPct,
       };
