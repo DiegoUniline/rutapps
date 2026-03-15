@@ -44,6 +44,7 @@ const EDITABLE_COLS = ['producto', 'unidad', 'cantidad', 'precio', 'descuento', 
 export default function VentaFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const isNew = id === 'nuevo';
   const { data: existingVenta, isLoading } = useVenta(isNew ? undefined : id);
   const saveVenta = useSaveVenta();
