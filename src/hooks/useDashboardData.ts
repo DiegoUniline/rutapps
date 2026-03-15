@@ -15,7 +15,7 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
         .select('id, fecha, total, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelada');
+        .neq('status', 'cancelado' as any);
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
       const { data, error } = await q;
       if (error) throw error;
