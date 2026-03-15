@@ -83,6 +83,8 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
+    let body: any = {};
+    try { body = await req.json(); } catch (_) {}
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
