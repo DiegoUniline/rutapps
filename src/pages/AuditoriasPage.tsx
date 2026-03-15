@@ -191,7 +191,7 @@ export default function AuditoriasPage() {
             </div>
             <div>
               <Label>Almacén a auditar</Label>
-              <SearchableSelect options={almacenOptions} value={almacenId} onChange={setAlmacenId} placeholder="Seleccionar almacén..." />
+              <ModalSelect options={almacenOptions} value={almacenId} onChange={setAlmacenId} placeholder="Seleccionar almacén..." />
             </div>
             <div>
               <Label>Notas (opcional)</Label>
