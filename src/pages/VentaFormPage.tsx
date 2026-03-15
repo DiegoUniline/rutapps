@@ -64,11 +64,8 @@ export default function VentaFormPage() {
 
   const { data: clientesList } = useClientes();
   const { data: productosList } = useProductosForSelect();
-  const { data: unidadesList } = useUnidades();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
-  const { data: tasasIvaList } = useTasasIva();
-  const { data: tasasIepsList } = useTasasIeps();
 
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
