@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
+import ModalSelect from '@/components/ModalSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import {
   useEntrega, useSurtirLinea, useSurtirTodo,
@@ -56,7 +57,9 @@ export default function EntregaFormPage() {
   const [form, setForm] = useState<any>({});
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [showExpressDialog, setShowExpressDialog] = useState(false);
+  const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
+  const [surtirAlmacenId, setSurtirAlmacenId] = useState('');
 
   const readOnly = !isNew && (form.status === 'hecho' || form.status === 'cancelado' || form.status === 'cargado' || form.status === 'en_ruta');
   const isSurtido = form.status === 'surtido';
@@ -90,7 +93,6 @@ export default function EntregaFormPage() {
         empresaId: empresa!.id,
       });
       toast.success('Línea surtida');
-      // Update local state
       setLineas(prev => {
         const next = [...prev];
         next[idx] = { ...next[idx], hecho: true, cantidad_entregada: cant };
@@ -101,14 +103,19 @@ export default function EntregaFormPage() {
     }
   };
 
-  // Surtir all pending lines
-  const handleSurtirTodo = async () => {
-    const pendientes = lineas.filter((l: any) => !l.hecho);
-    const sinAlmacen = pendientes.filter((l: any) => !l.almacen_origen_id && !form.almacen_id);
-    if (sinAlmacen.length > 0) {
-      toast.error('Hay líneas sin almacén origen asignado');
+  // Open surtir todo dialog
+  const openSurtirTodoDialog = () => {
+    setSurtirAlmacenId(form.almacen_id ?? '');
+    setShowSurtirDialog(true);
+  };
+
+  // Surtir all pending lines (after confirming almacén)
+  const handleSurtirTodoConfirmado = async () => {
+    if (!surtirAlmacenId) {
+      toast.error('Selecciona un almacén origen');
       return;
     }
+    const pendientes = lineas.filter((l: any) => !l.hecho);
     try {
       await surtirTodoMut.mutateAsync({
         entregaId: form.id,
@@ -116,15 +123,16 @@ export default function EntregaFormPage() {
           id: l.id,
           producto_id: l.producto_id,
           cantidad_pedida: Number(l.cantidad_pedida),
-          almacen_origen_id: l.almacen_origen_id || form.almacen_id,
+          almacen_origen_id: l.almacen_origen_id || surtirAlmacenId,
           hecho: l.hecho,
         })),
         empresaId: empresa!.id,
-        almacenDefaultId: form.almacen_id,
+        almacenDefaultId: surtirAlmacenId,
       });
       toast.success('Todas las líneas surtidas');
-      setForm((p: any) => ({ ...p, status: 'surtido' }));
+      setForm((p: any) => ({ ...p, status: 'surtido', almacen_id: surtirAlmacenId }));
       setLineas(prev => prev.map(l => ({ ...l, hecho: true, cantidad_entregada: l.cantidad_pedida })));
+      setShowSurtirDialog(false);
     } catch (e: any) {
       toast.error(e.message);
     }
@@ -179,7 +187,6 @@ export default function EntregaFormPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-
   const updateLineaLocal = (idx: number, field: string, val: any) => {
     setLineas(prev => {
       const next = [...prev];
@@ -200,6 +207,17 @@ export default function EntregaFormPage() {
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
 
+  // Stock summary for surtir dialog
+  const pendientesParaSurtir = lineas.filter((l: any) => !l.hecho);
+  const resumenSurtir = pendientesParaSurtir.map((l: any) => {
+    const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
+    return {
+      nombre: prod ? `${prod.codigo} · ${prod.nombre}` : '—',
+      pedida: Number(l.cantidad_pedida) || 0,
+      stock: prod?.cantidad ?? 0,
+    };
+  });
+
   return (
     <div className="min-h-full">
       {/* Header */}
@@ -219,7 +237,7 @@ export default function EntregaFormPage() {
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {/* Surtir todo — only in borrador when lines exist */}
           {!isNew && isBorrador && lineas.length > 0 && !allLinesDone && (
-            <Button onClick={handleSurtirTodo} size="sm" variant="default" disabled={surtirTodoMut.isPending}>
+            <Button onClick={openSurtirTodoDialog} size="sm" variant="default" disabled={surtirTodoMut.isPending}>
               <PackageCheck className="h-3.5 w-3.5" /> Surtir todo
             </Button>
           )}
@@ -361,7 +379,6 @@ export default function EntregaFormPage() {
                   const stock = prod?.cantidad ?? 0;
                   const cantPedida = Number(l.cantidad_pedida) || 0;
                   const cantEntregada = Number(l.cantidad_entregada) || 0;
-                  const unidad = l.unidades?.abreviatura || '';
                   const almNombre = l.almacenes?.nombre;
 
                   return (
@@ -487,6 +504,74 @@ export default function EntregaFormPage() {
         </div>
       </div>
 
+      {/* ─── Dialog: Surtir todo (confirmar almacén) ─── */}
+      <Dialog open={showSurtirDialog} onOpenChange={setShowSurtirDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackageCheck className="h-5 w-5 text-primary" />
+              Surtir todo
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Se descontará stock del almacén origen para <span className="font-bold text-foreground">{pendientesParaSurtir.length}</span> línea(s) pendiente(s).
+            </p>
+
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">
+                Almacén origen *
+              </label>
+              <ModalSelect
+                options={almacenOptions}
+                value={surtirAlmacenId}
+                onChange={setSurtirAlmacenId}
+                placeholder="Seleccionar almacén..."
+              />
+            </div>
+
+            {/* Resumen de productos y stock */}
+            <div className="bg-muted/50 rounded-lg overflow-hidden">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-1.5 px-3 text-muted-foreground font-medium">Producto</th>
+                    <th className="text-right py-1.5 px-3 text-muted-foreground font-medium">Pedida</th>
+                    <th className="text-right py-1.5 px-3 text-muted-foreground font-medium">Stock</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumenSurtir.map((r, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1.5 px-3 truncate max-w-[200px]">{r.nombre}</td>
+                      <td className="py-1.5 px-3 text-right font-medium">{r.pedida}</td>
+                      <td className={cn("py-1.5 px-3 text-right font-medium", r.pedida > r.stock ? "text-destructive" : "text-muted-foreground")}>
+                        {r.stock}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {resumenSurtir.some(r => r.pedida > r.stock) && (
+              <p className="text-[11px] text-destructive flex items-center gap-1">
+                ⚠️ Hay productos con stock insuficiente. Se detendrá el proceso si no alcanza.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSurtirDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={handleSurtirTodoConfirmado}
+              disabled={!surtirAlmacenId || surtirTodoMut.isPending}
+            >
+              {surtirTodoMut.isPending ? 'Surtiendo...' : 'Confirmar surtido'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Asignar ruta dialog */}
       <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
         <DialogContent className="sm:max-w-md">
@@ -495,7 +580,7 @@ export default function EntregaFormPage() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <label className="label-odoo">Repartidor / Vendedor</label>
-            <SearchableSelect
+            <ModalSelect
               options={vendedorOptions}
               value={selectedVendedorRuta}
               onChange={setSelectedVendedorRuta}
@@ -515,10 +600,10 @@ export default function EntregaFormPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Zap className="h-4 w-4" /> Asignar y cargar</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Se asignará la ruta y se cargará directamente al camión (stock_camion).</p>
+          <p className="text-sm text-muted-foreground">Se asignará la ruta y se cargará directamente al camión.</p>
           <div className="space-y-3 py-2">
             <label className="label-odoo">Repartidor / Vendedor</label>
-            <SearchableSelect
+            <ModalSelect
               options={vendedorOptions}
               value={selectedVendedorRuta}
               onChange={setSelectedVendedorRuta}
