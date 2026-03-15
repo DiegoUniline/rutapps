@@ -189,6 +189,7 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
       <Route path="/ruta/descarga" element={<RutaDescarga />} />
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />
+      <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
 
       {/* Desktop POS */}
       <Route path="/pos" element={<PuntoVentaPage />} />
