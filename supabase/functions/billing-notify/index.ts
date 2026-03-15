@@ -189,11 +189,21 @@ Deno.serve(async (req) => {
             const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
             const msg = `⚠️ *Cobro fallido — Rutapp*\n\nHola ${profile.nombre || ""},\n\nNo pudimos procesar tu pago. Tienes *${GRACE_DAYS} días* para actualizar tu método de pago o pagar manualmente.\n\n💳 Paga aquí:\n${inv.hosted_invoice_url || "https://rutapps.lovable.app/facturacion"}\n\nSi no regularizas, tu acceso será suspendido.`;
 
-            await fetch(WHATSAPI_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-api-token": waToken },
-              body: JSON.stringify({ action: "send-text", phone, message: msg }),
-            }).catch((e) => console.error("WhatsApp failure error:", e));
+            let wStatus = "sent";
+            try {
+              const wRes = await fetch(WHATSAPI_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-api-token": waToken },
+                body: JSON.stringify({ action: "send-text", phone, message: msg }),
+              });
+              if (!wRes.ok) wStatus = "error";
+            } catch (e) { wStatus = "error"; }
+            await supabase.from("billing_notifications").insert({
+              customer_email: customerEmail, customer_phone: phone, channel: "whatsapp",
+              tipo: "cobro_fallido", mensaje: msg,
+              stripe_invoice_url: inv.hosted_invoice_url || null,
+              monto_centavos: inv.amount_due, status: wStatus,
+            }).catch(() => {});
           }
 
           results.push({ email: customerEmail, action: "payment_failed", status: "notified" });
