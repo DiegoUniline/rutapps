@@ -77,8 +77,17 @@ export default function VentaFormPage() {
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
 
-  // Entrega integration for pedidos
-  const { data: entregaExistente } = useEntregaByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
+  // Entrega integration for pedidos (1:N)
+  const { data: entregasExistentes } = useEntregasByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
+  const hayEntregas = (entregasExistentes ?? []).length > 0;
+  const entregasHechas = (entregasExistentes ?? []).filter(e => e.status === 'hecho');
+  const remaining = useMemo(() => {
+    if (!lineas || !entregasHechas.length) return null;
+    const validLineas = lineas.filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, cantidad: Number(l.cantidad) }));
+    return calcRemainingQty(validLineas, entregasHechas as any);
+  }, [lineas, entregasHechas]);
+  const fullyDelivered = remaining !== null && remaining.length === 0;
+  const canCreateEntrega = !isNew && form.tipo === 'pedido' && form.status === 'confirmado' && !fullyDelivered;
 
   // Payments state
   const [showPagoForm, setShowPagoForm] = useState(false);
