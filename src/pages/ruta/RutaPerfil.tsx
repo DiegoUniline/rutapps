@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, KeyRound, User, Loader2, Moon, Sun, Download } from 'lucide-react';
+import { ArrowLeft, LogOut, KeyRound, User, Loader2, Moon, Sun, Download, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
