@@ -302,6 +302,7 @@ function NavegacionContent() {
               directions={directions}
               options={{
                 suppressMarkers: true,
+                preserveViewport: true,
                 polylineOptions: { strokeColor: '#4285F4', strokeWeight: 5, strokeOpacity: 0.9 },
               }}
             />
