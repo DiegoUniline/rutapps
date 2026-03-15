@@ -328,7 +328,25 @@ export default function RutaVentaDetalle() {
     }
   };
 
-  if (isLoading) {
+  // ─── Handle cancelar ───
+  const handleCancelar = async () => {
+    if (!venta || !confirm('¿Estás seguro de cancelar esta venta? Esta acción no se puede deshacer.')) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
+      if (error) throw error;
+      toast.success('Venta cancelada');
+      queryClient.invalidateQueries({ queryKey: ['venta', id] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground text-[13px]">Cargando...</p>
