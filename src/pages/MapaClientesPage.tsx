@@ -414,7 +414,7 @@ export default function MapaClientesPage() {
         </div>
 
         {/* Color legend */}
-        <div className="absolute bottom-3 left-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-3 py-2 shadow-sm">
+        <div className="absolute bottom-2 left-2 md:bottom-3 md:left-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-2 py-1.5 md:px-3 md:py-2 shadow-sm max-w-[calc(100vw-1rem)] overflow-x-auto hidden md:block">
           {colorMode === 'dia' && (
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {DIAS.map(d => (
