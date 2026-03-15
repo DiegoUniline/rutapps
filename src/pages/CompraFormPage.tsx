@@ -459,7 +459,10 @@ export default function CompraFormPage() {
                             <td className="py-1.5 px-2">
                               {isEditable ? (
                                 <SearchableSelect
-                                  options={(productosList as any[])?.map(p => ({
+                                  options={(productosList as any[])?.filter(p => {
+                                    const usedIds = lineas.filter((_, j) => j !== idx).map(l => l.producto_id).filter(Boolean);
+                                    return !usedIds.includes(p.id);
+                                  }).map(p => ({
                                     value: p.id,
                                     label: `[${p.codigo}] ${p.nombre}`,
                                   })) ?? []}

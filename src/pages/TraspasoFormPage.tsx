@@ -590,7 +590,10 @@ export default function TraspasoFormPage() {
                                 <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</span>
                               ) : (
                                 <ProductSearchInput
-                                  products={(productosList ?? []).map(p => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: 0 }))}
+                                  products={(productosList ?? []).filter(p => {
+                                    const usedIds = lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean);
+                                    return !usedIds.includes(p.id);
+                                  }).map(p => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: 0 }))}
                                   value={l.producto_id}
                                   displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
                                   onSelect={pid => handleProductSelect(idx, pid)}

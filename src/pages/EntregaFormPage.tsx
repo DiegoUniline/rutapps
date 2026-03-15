@@ -440,7 +440,10 @@ export default function EntregaFormPage() {
                       <td className="py-1 px-2">
                         {isNew && !l.id ? (
                           <ProductSearchInput
-                            products={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
+                            products={(productosList ?? []).filter((p: any) => {
+                              const usedIds = lineas.filter((_: any, j: number) => j !== idx).map((ll: any) => ll.producto_id).filter(Boolean);
+                              return !usedIds.includes(p.id);
+                            }).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
                             value={l.producto_id ?? ''}
                             displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
                             onSelect={pid => {
