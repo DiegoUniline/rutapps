@@ -533,42 +533,54 @@ export type Database = {
       compras: {
         Row: {
           almacen_id: string | null
+          condicion_pago: string
           created_at: string
+          dias_credito: number | null
           empresa_id: string
           fecha: string
           folio: string | null
           id: string
           iva_total: number | null
           notas: string | null
+          notas_pago: string | null
           proveedor_id: string | null
+          saldo_pendiente: number | null
           status: string
           subtotal: number | null
           total: number | null
         }
         Insert: {
           almacen_id?: string | null
+          condicion_pago?: string
           created_at?: string
+          dias_credito?: number | null
           empresa_id: string
           fecha?: string
           folio?: string | null
           id?: string
           iva_total?: number | null
           notas?: string | null
+          notas_pago?: string | null
           proveedor_id?: string | null
+          saldo_pendiente?: number | null
           status?: string
           subtotal?: number | null
           total?: number | null
         }
         Update: {
           almacen_id?: string | null
+          condicion_pago?: string
           created_at?: string
+          dias_credito?: number | null
           empresa_id?: string
           fecha?: string
           folio?: string | null
           id?: string
           iva_total?: number | null
           notas?: string | null
+          notas_pago?: string | null
           proveedor_id?: string | null
+          saldo_pendiente?: number | null
           status?: string
           subtotal?: number | null
           total?: number | null
@@ -1002,6 +1014,70 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pago_compras: {
+        Row: {
+          compra_id: string
+          created_at: string
+          empresa_id: string
+          fecha: string
+          id: string
+          metodo_pago: string
+          monto: number
+          notas: string | null
+          proveedor_id: string | null
+          referencia: string | null
+          user_id: string
+        }
+        Insert: {
+          compra_id: string
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string
+          monto?: number
+          notas?: string | null
+          proveedor_id?: string | null
+          referencia?: string | null
+          user_id: string
+        }
+        Update: {
+          compra_id?: string
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string
+          monto?: number
+          notas?: string | null
+          proveedor_id?: string | null
+          referencia?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pago_compras_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_compras_proveedor_id_fkey"
+            columns: ["proveedor_id"]
+            isOneToOne: false
+            referencedRelation: "proveedores"
             referencedColumns: ["id"]
           },
         ]
