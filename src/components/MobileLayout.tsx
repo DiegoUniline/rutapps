@@ -21,7 +21,7 @@ export default function MobileLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top bar with sync cloud */}
-      <header className="flex items-center justify-between px-3 py-2 bg-card border-b border-border">
+      <header className="flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-card border-b border-border">
         <span className="text-sm font-bold text-foreground">Ruta</span>
         <div className="flex items-center gap-1">
           <button
