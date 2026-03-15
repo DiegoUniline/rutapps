@@ -13,7 +13,7 @@ export function useEntregasList(search?: string, vendedorFilter?: string, status
     queryFn: async () => {
       let q = supabase
         .from('entregas')
-        .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores!entregas_vendedor_id_fkey(nombre), ventas!entregas_pedido_id_fkey(folio)')
+        .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores!entregas_vendedor_id_fkey(nombre), ventas!entregas_pedido_id_fkey(folio), almacenes(nombre), vendedor_ruta:vendedores!entregas_vendedor_ruta_id_fkey(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
 

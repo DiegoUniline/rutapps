@@ -267,6 +267,8 @@ export default function EntregaListPage() {
               <TableHead className="text-[11px]">Pedido origen</TableHead>
               <TableHead className="text-[11px]">Cliente</TableHead>
               <TableHead className="text-[11px]">Vendedor</TableHead>
+              <TableHead className="text-[11px]">Almacén origen</TableHead>
+              <TableHead className="text-[11px]">Ruta asignada</TableHead>
               <TableHead className="text-[11px]">Fecha</TableHead>
               <TableHead className="text-[11px] text-center">Status</TableHead>
             </TableRow>
