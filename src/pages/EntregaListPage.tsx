@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Search, Package, Zap } from 'lucide-react';
+import { Truck, Search, Package, Zap, PackageCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useEntregasList, useVendedoresList } from '@/hooks/useEntregas';
+import { useEntregasList, useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
 import { fmtDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -35,6 +35,7 @@ export default function EntregaListPage() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
+  const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
 
@@ -63,9 +64,9 @@ export default function EntregaListPage() {
 
   const filtered = useMemo(() => entregas ?? [], [entregas]);
 
-  // Only borrador/surtido can be bulk-processed
+  // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
-    new Set(filtered.filter((e: any) => e.status === 'borrador' || e.status === 'surtido').map((e: any) => e.id)),
+    new Set(filtered.filter((e: any) => ['borrador', 'surtido', 'asignado'].includes(e.status)).map((e: any) => e.id)),
     [filtered]
   );
 
@@ -86,6 +87,17 @@ export default function EntregaListPage() {
   };
 
   const selectedEntregas = filtered.filter((e: any) => selectedIds.has(e.id));
+
+  // Determine what bulk actions are available based on selected statuses
+  const selectedStatuses = useMemo(() => {
+    const statuses = new Set<string>();
+    selectedEntregas.forEach((e: any) => statuses.add(e.status));
+    return statuses;
+  }, [selectedEntregas]);
+
+  const allSurtido = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'surtido');
+  const allAsignado = selectedStatuses.size > 0 && [...selectedStatuses].every(s => s === 'asignado');
+  const hasBorrador = selectedStatuses.has('borrador');
 
   // Bulk surtir + asignar
   const surtirAsignarMut = useMutation({
@@ -184,6 +196,63 @@ export default function EntregaListPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Bulk asignar
+  const bulkAsignarMut = useMutation({
+    mutationFn: async ({ cargarTambien }: { cargarTambien: boolean }) => {
+      if (!vendedorRutaId) throw new Error('Selecciona un repartidor');
+      const today = new Date().toISOString().slice(0, 10);
+      for (const entrega of selectedEntregas) {
+        const eid = (entrega as any).id;
+        await supabase.from('entregas').update({
+          status: 'asignado',
+          vendedor_ruta_id: vendedorRutaId,
+          fecha_asignacion: new Date().toISOString(),
+        } as any).eq('id', eid);
+        if (cargarTambien) {
+          const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho').eq('entrega_id', eid);
+          for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
+            await supabase.from('stock_camion').insert({ empresa_id: empresa!.id, vendedor_id: vendedorRutaId, producto_id: l.producto_id, cantidad_inicial: l.cantidad_entregada, cantidad_actual: l.cantidad_entregada, fecha: today } as any);
+            await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, vendedor_destino_id: vendedorRutaId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
+          }
+          await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
+        }
+      }
+    },
+    onSuccess: (_, vars) => {
+      toast.success(`${selectedEntregas.length} entrega(s) ${vars.cargarTambien ? 'asignadas y cargadas' : 'asignadas a ruta'}`);
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      setSelectedIds(new Set()); setShowAsignarDialog(false); setVendedorRutaId('');
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const bulkCargarMut = useMutation({
+    mutationFn: async () => {
+      const today = new Date().toISOString().slice(0, 10);
+      for (const entrega of selectedEntregas) {
+        const eid = (entrega as any).id;
+        const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
+        if (!vendId) continue;
+        const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho').eq('entrega_id', eid);
+        for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
+          await supabase.from('stock_camion').insert({ empresa_id: empresa!.id, vendedor_id: vendId, producto_id: l.producto_id, cantidad_inicial: l.cantidad_entregada, cantidad_actual: l.cantidad_entregada, fecha: today } as any);
+          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, vendedor_destino_id: vendId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
+        }
+        await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
+      }
+    },
+    onSuccess: () => {
+      toast.success(`${selectedEntregas.length} entrega(s) cargadas`);
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      setSelectedIds(new Set());
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleBulkCargar = () => bulkCargarMut.mutate();
+
   return (
     <div className="p-4 space-y-4 min-h-full">
       <div className="flex items-center justify-between">
@@ -242,13 +311,33 @@ export default function EntregaListPage() {
           />
         </div>
 
-        {selectedIds.size > 0 && (
-          <Button
-            onClick={() => setShowSurtirDialog(true)}
-            className="gap-1.5"
-          >
+        {/* Surtir rápido — only when borrador selected */}
+        {selectedIds.size > 0 && hasBorrador && (
+          <Button onClick={() => setShowSurtirDialog(true)} className="gap-1.5">
             <Zap className="h-4 w-4" />
             Surtir rápido ({selectedIds.size})
+          </Button>
+        )}
+
+        {/* Asignar ruta — only when all selected are surtido */}
+        {selectedIds.size > 0 && allSurtido && (
+          <>
+            <Button onClick={() => { setVendedorRutaId(''); setShowAsignarDialog(true); }} variant="outline" className="gap-1.5">
+              <Package className="h-4 w-4" />
+              Asignar ruta ({selectedIds.size})
+            </Button>
+            <Button onClick={() => { setVendedorRutaId(''); setShowAsignarDialog(true); }} className="gap-1.5">
+              <Zap className="h-4 w-4" />
+              Asignar y cargar ({selectedIds.size})
+            </Button>
+          </>
+        )}
+
+        {/* Cargar camión — only when all selected are asignado */}
+        {selectedIds.size > 0 && allAsignado && (
+          <Button onClick={handleBulkCargar} className="gap-1.5" disabled={bulkCargarMut.isPending}>
+            <Truck className="h-4 w-4" />
+            Cargar camión ({selectedIds.size})
           </Button>
         )}
       </div>
@@ -410,6 +499,62 @@ export default function EntregaListPage() {
               disabled={!almacenId || surtirAsignarMut.isPending}
             >
               {surtirAsignarMut.isPending ? 'Procesando...' : vendedorRutaId ? 'Surtir y asignar' : 'Surtir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Dialog: Asignar ruta ─── */}
+      <Dialog open={showAsignarDialog} onOpenChange={setShowAsignarDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Asignar ruta
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Selecciona el repartidor para <span className="font-bold text-foreground">{selectedIds.size}</span> entrega(s).
+            </p>
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1.5">
+                Vendedor de ruta *
+              </label>
+              <ModalSelect
+                options={vendedorOptions}
+                value={vendedorRutaId}
+                onChange={setVendedorRutaId}
+                placeholder="Seleccionar repartidor..."
+              />
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
+              {selectedEntregas.map((e: any) => (
+                <div key={e.id} className="flex items-center justify-between text-[12px]">
+                  <span className="font-mono font-bold">{e.folio}</span>
+                  <span className="text-muted-foreground">{e.clientes?.nombre ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => { setShowAsignarDialog(false); }} disabled={bulkAsignarMut.isPending}>
+              Cancelar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => bulkAsignarMut.mutate({ cargarTambien: false })}
+              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+            >
+              <Package className="h-3.5 w-3.5 mr-1" />
+              {bulkAsignarMut.isPending ? 'Procesando...' : 'Asignar ruta'}
+            </Button>
+            <Button
+              onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
+              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+            >
+              <Zap className="h-3.5 w-3.5 mr-1" />
+              {bulkAsignarMut.isPending ? 'Procesando...' : 'Asignar y cargar'}
             </Button>
           </DialogFooter>
         </DialogContent>
