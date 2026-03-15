@@ -5,8 +5,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
+import { useSubscription } from "@/hooks/useSubscription";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
+import SubscriptionBanner from "@/components/SubscriptionBanner";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -54,6 +56,8 @@ const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage")
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
+const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
+const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
@@ -98,8 +102,9 @@ function PageLoader() {
 
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const subscription = useSubscription();
 
-  if (loading) {
+  if (loading || subscription.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground text-sm">Cargando...</div>
@@ -120,96 +125,129 @@ function AppRoutes() {
     );
   }
 
+  // Super admin always has access
+  if (subscription.isSuperAdmin) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/super-admin" element={<SuperAdminPage />} />
+          {renderAuthenticatedRoutes()}
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  // Blocked users
+  if (subscription.isBlocked) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="*" element={<SubscriptionBlockedPage />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
-        {/* Mobile route sales module */}
-        <Route path="/ruta" element={<MobileLayout />}>
-          <Route index element={<RutaClientes />} />
-          <Route path="dashboard" element={<RutaDashboard />} />
-          <Route path="ventas" element={<RutaVentas />} />
-          <Route path="carga" element={<RutaMiCarga />} />
-          <Route path="cobros" element={<RutaCobros />} />
-          <Route path="stock" element={<RutaStock />} />
-          <Route path="gastos" element={<RutaGastos />} />
-          <Route path="entregas" element={<RutaEntregas />} />
-          <Route path="perfil" element={<RutaPerfil />} />
-        </Route>
-        <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
-        <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
-        <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
-        <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
-        <Route path="/ruta/descarga" element={<RutaDescarga />} />
-        <Route path="/ruta/mapa" element={<RutaMapaPage />} />
+    <>
+      <SubscriptionBanner />
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          {renderAuthenticatedRoutes()}
+        </Routes>
+      </Suspense>
+    </>
+  );
+}
 
-        {/* Desktop POS — fullscreen, no AppLayout */}
-        <Route path="/pos" element={<PuntoVentaPage />} />
+function renderAuthenticatedRoutes() {
+  return (
+    <>
+      {/* Mobile route sales module */}
+      <Route path="/ruta" element={<MobileLayout />}>
+        <Route index element={<RutaClientes />} />
+        <Route path="dashboard" element={<RutaDashboard />} />
+        <Route path="ventas" element={<RutaVentas />} />
+        <Route path="carga" element={<RutaMiCarga />} />
+        <Route path="cobros" element={<RutaCobros />} />
+        <Route path="stock" element={<RutaStock />} />
+        <Route path="gastos" element={<RutaGastos />} />
+        <Route path="entregas" element={<RutaEntregas />} />
+        <Route path="perfil" element={<RutaPerfil />} />
+      </Route>
+      <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
+      <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
+      <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
+      <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
+      <Route path="/ruta/descarga" element={<RutaDescarga />} />
+      <Route path="/ruta/mapa" element={<RutaMapaPage />} />
 
-        {/* Desktop ERP */}
-        <Route path="*" element={
-          <AppLayout>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/supervisor" element={<SupervisorDashboardPage />} />
-                <Route path="/productos" element={<ProductosListPage />} />
-                <Route path="/catalogo/:catalog" element={<CatalogPage />} />
-                <Route path="/productos/:id" element={<ProductoFormPage />} />
-                <Route path="/tarifas" element={<TarifasListPage />} />
-                <Route path="/tarifas/:id" element={<TarifaFormPage />} />
-                <Route path="/clientes" element={<ClientesListPage />} />
-                <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
-                <Route path="/ventas" element={<VentasListPage />} />
-                <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
-                <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
-                <Route path="/logistica/pedidos" element={<DemandaPage />} />
-                <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
-                <Route path="/logistica/entregas" element={<EntregaListPage />} />
-                <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
-                <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
-                <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
-                {/* Legacy redirects */}
-                <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
-                <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
-                <Route path="/entregas/:id" element={<EntregaFormPage />} />
-                <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
-                <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
-                <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
-                <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
-                <Route path="/ventas/cobranza" element={<CobranzaPage />} />
-                <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
-                <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
-                <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
-                <Route path="/ventas/promociones" element={<PromocionesPage />} />
-                <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
-                <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
-                <Route path="/ventas/:id" element={<VentaFormPage />} />
-                <Route path="/almacen/inventario" element={<InventarioPage />} />
-                <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
-                <Route path="/almacen/compras" element={<ComprasPage />} />
-                <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
-                <Route path="/almacen/lotes" element={<LotesPage />} />
-                <Route path="/almacen/descargas" element={<DescargasPage />} />
-                <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
-                <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
-                <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
-                <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
-                <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
-                <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
-                <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
-                <Route path="/reportes" element={<ReportesPage />} />
-                <Route path="/configuracion" element={<ConfiguracionPage />} />
-                <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
-                <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </AppLayout>
-        } />
-      </Routes>
-    </Suspense>
+      {/* Desktop POS */}
+      <Route path="/pos" element={<PuntoVentaPage />} />
+
+      {/* Desktop ERP */}
+      <Route path="*" element={
+        <AppLayout>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/supervisor" element={<SupervisorDashboardPage />} />
+              <Route path="/productos" element={<ProductosListPage />} />
+              <Route path="/catalogo/:catalog" element={<CatalogPage />} />
+              <Route path="/productos/:id" element={<ProductoFormPage />} />
+              <Route path="/tarifas" element={<TarifasListPage />} />
+              <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+              <Route path="/clientes" element={<ClientesListPage />} />
+              <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
+              <Route path="/ventas" element={<VentasListPage />} />
+              <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
+              <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
+              <Route path="/logistica/pedidos" element={<DemandaPage />} />
+              <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
+              <Route path="/logistica/entregas" element={<EntregaListPage />} />
+              <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
+              <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
+              <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
+              <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
+              <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
+              <Route path="/entregas/:id" element={<EntregaFormPage />} />
+              <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
+              <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
+              <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
+              <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
+              <Route path="/ventas/cobranza" element={<CobranzaPage />} />
+              <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
+              <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
+              <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
+              <Route path="/ventas/promociones" element={<PromocionesPage />} />
+              <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
+              <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
+              <Route path="/ventas/:id" element={<VentaFormPage />} />
+              <Route path="/almacen/inventario" element={<InventarioPage />} />
+              <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
+              <Route path="/almacen/compras" element={<ComprasPage />} />
+              <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
+              <Route path="/almacen/lotes" element={<LotesPage />} />
+              <Route path="/almacen/descargas" element={<DescargasPage />} />
+              <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
+              <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
+              <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
+              <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
+              <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
+              <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
+              <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
+              <Route path="/reportes" element={<ReportesPage />} />
+              <Route path="/configuracion" element={<ConfiguracionPage />} />
+              <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
+              <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </AppLayout>
+      } />
+    </>
   );
 }
 

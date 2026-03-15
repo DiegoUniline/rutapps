@@ -2265,6 +2265,120 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descuento_pct: number
+          id: string
+          meses: number
+          nombre: string
+          periodo: string
+          precio_por_usuario: number
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descuento_pct?: number
+          id?: string
+          meses?: number
+          nombre: string
+          periodo?: string
+          precio_por_usuario?: number
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descuento_pct?: number
+          id?: string
+          meses?: number
+          nombre?: string
+          periodo?: string
+          precio_por_usuario?: number
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          empresa_id: string
+          id: string
+          max_usuarios: number
+          plan_id: string | null
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          empresa_id: string
+          id?: string
+          max_usuarios?: number
+          plan_id?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          empresa_id?: string
+          id?: string
+          max_usuarios?: number
+          plan_id?: string | null
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      super_admins: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tarifa_lineas: {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
@@ -3033,6 +3147,7 @@ export type Database = {
     }
     Functions: {
       get_my_empresa_id: { Args: never; Returns: string }
+      is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
         Returns: string
