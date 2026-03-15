@@ -41,21 +41,26 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
 
-  // Fetch vendor's sales for the day
+  // Fetch vendor's sales for the day or date range
+  const fInicio = descarga.fecha_inicio || descarga.fecha;
+  const fFin = descarga.fecha_fin || descarga.fecha;
   const { data: ventasDia } = useQuery({
-    queryKey: ['descarga-ventas-dia', descarga.vendedor_id, descarga.fecha],
+    queryKey: ['descarga-ventas-dia', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('ventas')
         .select('id, folio, total, condicion_pago, clientes(nombre)')
-        .eq('vendedor_id', descarga.vendedor_id!)
-        .eq('fecha', descarga.fecha)
+        .eq('empresa_id', descarga.empresa_id)
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin)
         .neq('status', 'cancelado')
         .order('created_at', { ascending: true });
+      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: !!descarga.vendedor_id,
+    enabled: true,
   });
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
