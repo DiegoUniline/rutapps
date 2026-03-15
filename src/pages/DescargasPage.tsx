@@ -408,17 +408,22 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         <h2 className="text-lg font-bold text-foreground">Nueva descarga de ruta</h2>
       </div>
 
-      {/* Step 1: Select carga */}
+      {/* Step 1: Select carga (optional) */}
       <div className="bg-card border border-border rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">1. Selecciona la carga</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3">1. Selecciona la carga (opcional)</h3>
+        <p className="text-xs text-muted-foreground mb-3">Si no hay carga o solo liquidas efectivo, puedes dejarlo sin seleccionar.</p>
         {!cargas || cargas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay cargas activas (en ruta o completadas)</p>
+          <p className="text-sm text-muted-foreground">No hay cargas activas</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {cargas.map((c: any) => (
               <button
                 key={c.id}
-                onClick={() => { setSelectedCargaId(c.id); setLineas([]); setEfectivoEntregado(''); }}
+                onClick={() => {
+                  setSelectedCargaId(prev => prev === c.id ? null : c.id);
+                  setLineas([]);
+                  setEfectivoEntregado('');
+                }}
                 className={cn(
                   "border rounded-lg p-3 text-left transition-colors",
                   selectedCargaId === c.id
