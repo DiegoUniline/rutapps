@@ -100,25 +100,13 @@ function StatsTab() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    supabase.functions.invoke('admin-billing', { body: null, headers: {} })
-      .then(() => {});
-    // Use query param approach
-    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=dashboard_stats`, {
-      headers: {
-        'Authorization': `Bearer ${(supabase as any).auth.session?.()?.access_token || ''}`,
-        'Content-Type': 'application/json',
-        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
-    }).catch(() => {});
-
-    loadStats();
-  }, []);
+  useEffect(() => { loadStats(); }, []);
 
   async function loadStats() {
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
+      if (!token) throw new Error('No session');
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=dashboard_stats`,
         {
@@ -132,7 +120,7 @@ function StatsTab() {
       if (data.error) throw new Error(data.error);
       setStats(data);
     } catch (err) {
-      console.error(err);
+      console.error('Stats error:', err);
     } finally {
       setLoading(false);
     }
