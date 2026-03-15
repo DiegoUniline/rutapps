@@ -52,6 +52,40 @@ export default function TraspasoFormPage() {
   const [folio, setFolio] = useState('');
   const [lineas, setLineas] = useState<LineaForm[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  const handleGenerarPdf = () => {
+    const blob = generarTraspasoPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      traspaso: {
+        folio: folio || 'Nuevo',
+        fecha: new Date().toISOString().slice(0, 10),
+        status,
+        tipo,
+        notas: notas || undefined,
+      },
+      origen: origenLabel || '—',
+      destino: destinoLabel || '—',
+      responsable: profile?.nombre,
+      lineas: lineas.filter(l => l.producto_id).map(l => {
+        const prod = allProductos?.find(p => p.id === l.producto_id);
+        return {
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          cantidad: l.cantidad,
+        };
+      }),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   const readOnly = !isNew && status !== 'borrador';
 
