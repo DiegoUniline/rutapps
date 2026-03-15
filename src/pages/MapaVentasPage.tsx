@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -9,7 +9,7 @@ import { Filter, ShoppingCart, X, Calendar, Loader2, Navigation, Route, CheckCir
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { useGoogleMapsKey } from '@/hooks/useGoogleMapsKey';
+import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
 
 const mapContainerStyle = { width: '100%', height: '100%' };
