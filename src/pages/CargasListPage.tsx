@@ -8,7 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate } from '@/lib/utils';
+
+const CARGAS_COLUMNS: ExportColumn[] = [
+  { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+  { key: 'vendedor_nombre', header: 'Vendedor', width: 25 },
+  { key: 'status', header: 'Estado', width: 12 },
+];
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
