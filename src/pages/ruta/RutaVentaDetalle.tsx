@@ -54,6 +54,9 @@ export default function RutaVentaDetalle() {
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [saving, setSaving] = useState(false);
   const [ticketData, setTicketData] = useState<{ monto: number; cambio: number; metodo: string; folio: string; fecha: string } | null>(null);
+  const [sendingWA, setSendingWA] = useState(false);
+  const [showWADialog, setShowWADialog] = useState(false);
+  const [waPhone, setWaPhone] = useState('');
 
   // Edit state
   const [editLineas, setEditLineas] = useState<EditLinea[]>([]);
