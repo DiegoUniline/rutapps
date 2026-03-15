@@ -893,7 +893,7 @@ export default function VentaFormPage() {
                       <tfoot>
                         <tr className="border-t-2 border-border">
                           <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
-                          <td className="py-2 px-2 text-right font-semibold text-green-600">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                          <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       </tfoot>
                     </table>
