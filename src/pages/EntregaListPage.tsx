@@ -39,7 +39,8 @@ export default function EntregaListPage() {
   const [almacenId, setAlmacenId] = useState('');
   const [vendedorRutaId, setVendedorRutaId] = useState('');
 
-  const { data: entregas, isLoading } = useEntregasList(search, vendedorFilter, statusFilter);
+  // Always fetch ALL entregas (no status filter) so counts are correct
+  const { data: allEntregas, isLoading } = useEntregasList(search, vendedorFilter);
   const { data: vendedores } = useVendedoresList();
 
   const { data: almacenesList } = useQuery({
@@ -55,14 +56,19 @@ export default function EntregaListPage() {
   const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
 
   const counts = {
-    total: entregas?.length ?? 0,
-    borrador: entregas?.filter(e => (e as any).status === 'borrador').length ?? 0,
-    surtido: entregas?.filter(e => (e as any).status === 'surtido').length ?? 0,
-    asignado: entregas?.filter(e => ['asignado', 'cargado', 'en_ruta'].includes((e as any).status)).length ?? 0,
-    hecho: entregas?.filter(e => (e as any).status === 'hecho').length ?? 0,
+    total: allEntregas?.length ?? 0,
+    borrador: allEntregas?.filter(e => (e as any).status === 'borrador').length ?? 0,
+    surtido: allEntregas?.filter(e => (e as any).status === 'surtido').length ?? 0,
+    asignado: allEntregas?.filter(e => (e as any).status === 'asignado').length ?? 0,
+    cargado: allEntregas?.filter(e => (e as any).status === 'cargado').length ?? 0,
   };
 
-  const filtered = useMemo(() => entregas ?? [], [entregas]);
+  // Filter locally by selected tab
+  const filtered = useMemo(() => {
+    const list = allEntregas ?? [];
+    if (statusFilter === 'todos') return list;
+    return list.filter((e: any) => e.status === statusFilter);
+  }, [allEntregas, statusFilter]);
 
   // borrador, surtido, asignado can be bulk-processed
   const selectableIds = useMemo(() =>
@@ -268,7 +274,7 @@ export default function EntregaListPage() {
           { key: 'borrador', label: 'Borrador', count: counts.borrador },
           { key: 'surtido', label: 'Surtidos', count: counts.surtido },
           { key: 'asignado', label: 'Asignados', count: counts.asignado },
-          { key: 'cargado', label: 'Cargados', count: entregas?.filter(e => (e as any).status === 'cargado').length ?? 0 },
+          { key: 'cargado', label: 'Cargados', count: counts.cargado },
         ].map(tab => (
           <button
             key={tab.key}
@@ -358,7 +364,7 @@ export default function EntregaListPage() {
             {isLoading && (
               <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>
             )}
-            {!isLoading && (entregas ?? []).length === 0 && (
+            {!isLoading && filtered.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
                   <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -366,7 +372,7 @@ export default function EntregaListPage() {
                 </TableCell>
               </TableRow>
             )}
-            {(entregas ?? []).map((e: any) => {
+            {filtered.map((e: any) => {
               const badge = STATUS_BADGE[e.status] ?? STATUS_BADGE.borrador;
               const canSelect = selectableIds.has(e.id);
               return (
