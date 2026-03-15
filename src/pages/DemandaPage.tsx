@@ -328,7 +328,7 @@ export default function DemandaPage() {
             <div className="space-y-3">
               <div>
                 <label className="label-odoo">Almacén origen (por defecto)</label>
-                <SearchableSelect
+                <ModalSelect
                   options={almacenOptions}
                   value={almacenId}
                   onChange={setAlmacenId}
