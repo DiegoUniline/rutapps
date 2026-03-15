@@ -241,6 +241,8 @@ function renderAuthenticatedRoutes() {
               <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
               <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
               <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
+              <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
+              <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
               <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
               <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
               <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
