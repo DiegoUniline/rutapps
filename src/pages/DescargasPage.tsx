@@ -680,9 +680,10 @@ export default function DescargasPage() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="bg-muted/50 text-[11px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2.5 px-4">Fecha</th>
+                <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
                 <th className="text-left py-2.5 px-4">Vendedor</th>
-                <th className="text-right py-2.5 px-4">Efectivo esperado</th>
+                <th className="text-left py-2.5 px-4">Tipo</th>
+                <th className="text-right py-2.5 px-4">Esperado</th>
                 <th className="text-right py-2.5 px-4">Entregado</th>
                 <th className="text-right py-2.5 px-4">Diferencia</th>
                 <th className="text-center py-2.5 px-4">Status</th>
@@ -693,10 +694,17 @@ export default function DescargasPage() {
               {filtered.map((d: any) => {
                 const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
                 const dif = Number(d.diferencia_efectivo);
+                const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+                const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
                 return (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 px-4">{d.fecha}</td>
+                    <td className="py-2.5 px-4">
+                      {hasRange ? `${d.fecha_inicio} → ${d.fecha_fin}` : d.fecha}
+                    </td>
                     <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
+                    <td className="py-2.5 px-4">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-medium">{tipoLabel}</span>
+                    </td>
                     <td className="py-2.5 px-4 text-right">${Number(d.efectivo_esperado).toFixed(2)}</td>
                     <td className="py-2.5 px-4 text-right font-semibold">${Number(d.efectivo_entregado).toFixed(2)}</td>
                     <td className={cn(
