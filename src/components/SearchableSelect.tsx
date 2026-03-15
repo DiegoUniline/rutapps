@@ -158,6 +158,8 @@ export default function SearchableSelect({
         <div
           ref={dropdownRef}
           onPointerDown={e => e.stopPropagation()}
+          onMouseDown={e => e.stopPropagation()}
+          onPointerUp={e => e.stopPropagation()}
           style={{
             position: 'fixed',
             top: pos.top,
@@ -190,7 +192,8 @@ export default function SearchableSelect({
               filtered.map((o, i) => (
                 <div
                   key={o.value}
-                  onMouseDown={e => { e.preventDefault(); select(o.value); }}
+                  onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
+                  onMouseUp={() => select(o.value)}
                   onMouseEnter={() => setHighlightIdx(i)}
                   className={cn(
                     'px-3 py-2 text-[13px] cursor-pointer transition-colors truncate',
