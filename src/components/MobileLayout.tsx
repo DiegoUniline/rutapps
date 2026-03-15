@@ -17,6 +17,7 @@ const tabs = [
 
 export default function MobileLayout() {
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top bar with sync cloud */}
