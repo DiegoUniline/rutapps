@@ -584,6 +584,7 @@ function MonitorContent() {
                               style={{ backgroundColor: statusColor(v.status) + '15', color: statusColor(v.status) }}>
                               {v.status === 'sold' && <CheckCircle2 className="h-3 w-3" />}
                               {v.status === 'delivered' && <Truck className="h-3 w-3" />}
+                              {v.status === 'en_ruta' && <Navigation className="h-3 w-3" />}
                               {v.status === 'pending' && <Clock className="h-3 w-3" />}
                               {statusLabel(v.status)}
                             </span>
