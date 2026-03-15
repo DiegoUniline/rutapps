@@ -456,7 +456,7 @@ export default function RutaVentaDetalle() {
   if (view === 'ticket' && ticketData) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
           <button onClick={() => navigate('/ruta/ventas')} className="p-1 -ml-1">
             <X className="h-5 w-5 text-foreground" />
           </button>
