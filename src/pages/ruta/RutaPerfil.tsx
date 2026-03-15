@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, KeyRound, User, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, KeyRound, User, Loader2, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
