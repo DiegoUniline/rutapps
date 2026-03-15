@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap } from 'lucide-react';
+import { ArrowLeft, Check, X, Plus, Truck, Package, PackageCheck, Zap, FileText } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,8 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
+import { generarEntregaPdf } from '@/lib/entregaPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -60,7 +62,8 @@ export default function EntregaFormPage() {
   const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
   const [surtirAlmacenId, setSurtirAlmacenId] = useState('');
-
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const readOnly = !isNew && (form.status === 'hecho' || form.status === 'cancelado' || form.status === 'cargado' || form.status === 'en_ruta');
   const isSurtido = form.status === 'surtido';
   const isAsignado = form.status === 'asignado';
@@ -195,6 +198,46 @@ export default function EntregaFormPage() {
     });
   };
 
+  const handleGenerarEntregaPdf = () => {
+    const blob = generarEntregaPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      entrega: {
+        folio: form.folio ?? '',
+        fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+        status: form.status ?? 'borrador',
+        notas: form.notas,
+        fecha_asignacion: form.fecha_asignacion,
+        fecha_carga: form.fecha_carga,
+        validado_at: form.validado_at,
+      },
+      cliente: form.clientes?.nombre ?? clientesList?.find(c => c.id === form.cliente_id)?.nombre,
+      vendedor: vendedores?.find(v => v.id === form.vendedor_id)?.nombre,
+      repartidor: form.vendedor_ruta_id ? vendedores?.find(v => v.id === form.vendedor_ruta_id)?.nombre : undefined,
+      almacen: form.almacenes?.nombre ?? almacenesList?.find(a => a.id === form.almacen_id)?.nombre,
+      pedidoFolio: (form as any).ventas?.folio,
+      lineas: lineas.map((l: any) => {
+        const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          unidad: l.unidades?.abreviatura || (prod as any)?.unidades_venta?.abreviatura || '',
+          cantidad_pedida: Number(l.cantidad_pedida) || 0,
+          cantidad_entregada: Number(l.cantidad_entregada) || 0,
+          almacen_origen: l.almacenes?.nombre ?? almacenesList?.find((a: any) => a.id === l.almacen_origen_id)?.nombre ?? '',
+          hecho: !!l.hecho,
+        };
+      }),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
+
   const addLine = () => {
     setLineas(prev => [...prev, { producto_id: '', cantidad_pedida: 0, cantidad_entregada: 0, hecho: false }]);
   };
@@ -262,6 +305,12 @@ export default function EntregaFormPage() {
           {!isNew && isAsignado && (
             <Button onClick={handleCargar} size="sm" disabled={cargarMut.isPending}>
               <Truck className="h-3.5 w-3.5" /> Cargar camión
+            </Button>
+          )}
+          {/* Document */}
+          {!isNew && (
+            <Button onClick={handleGenerarEntregaPdf} size="sm" variant="outline" className="text-xs">
+              <FileText className="h-3.5 w-3.5" /> Documento
             </Button>
           )}
           {/* Cancel */}
@@ -618,6 +667,18 @@ export default function EntregaFormPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* PDF Preview Modal */}
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`${form.folio ?? 'entrega'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''}
+        caption={`Entrega ${form.folio}`}
+        tipo="entrega"
+        referencia_id={form.id}
+      />
     </div>
   );
 }

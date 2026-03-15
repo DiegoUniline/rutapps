@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink, FileText } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -14,6 +14,8 @@ import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hook
 import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
+import { generarPedidoPdf } from '@/lib/pedidoPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
@@ -108,6 +110,8 @@ export default function VentaFormPage() {
   const [pagoMetodo, setPagoMetodo] = useState('efectivo');
   const [pagoRef, setPagoRef] = useState('');
   const [pagoSaving, setPagoSaving] = useState(false);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   // Is read-only? Only borrador is editable
   const readOnly = !isNew && form.status !== 'borrador';
@@ -164,6 +168,74 @@ export default function VentaFormPage() {
 
   const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
   const saldoPendiente = (form.total ?? 0) - totalPagado;
+
+  const handleGenerarPdf = () => {
+    const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const blob = generarPedidoPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+        email: empresa?.email,
+      },
+      pedido: {
+        folio: form.folio ?? '',
+        fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+        status: form.status ?? 'borrador',
+        condicion_pago: form.condicion_pago ?? 'contado',
+        subtotal: form.subtotal ?? 0,
+        descuento_total: form.descuento_total ?? 0,
+        iva_total: form.iva_total ?? 0,
+        ieps_total: form.ieps_total ?? 0,
+        total: form.total ?? 0,
+        notas: form.notas,
+      },
+      cliente: {
+        nombre: clienteData?.nombre ?? '—',
+        codigo: clienteData?.codigo,
+        telefono: clienteData?.telefono,
+        direccion: clienteData?.direccion,
+        rfc: clienteData?.rfc,
+      },
+      lineas: lineas.filter(l => l.producto_id).map(l => {
+        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          cantidad: Number(l.cantidad) || 0,
+          unidad: (l as any).unidad_label || (prod as any)?.unidades_venta?.abreviatura || '',
+          precio_unitario: Number(l.precio_unitario) || 0,
+          descuento_pct: Number(l.descuento_pct) || 0,
+          iva_pct: Number(l.iva_pct) || 0,
+          ieps_pct: Number(l.ieps_pct) || 0,
+          total: Number(l.total) || 0,
+        };
+      }),
+      entregas: (entregasExistentes ?? []).map(e => ({
+        folio: e.folio ?? '',
+        status: e.status,
+        lineas: (e.entrega_lineas ?? []).map(el => {
+          const prod = productosList?.find((p: any) => p.id === el.producto_id);
+          return {
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cantidad_pedida: Number(el.cantidad_entregada) || 0,
+            cantidad_entregada: Number(el.cantidad_entregada) || 0,
+          };
+        }),
+      })),
+      pagos: (pagosData ?? []).map((p: any) => ({
+        fecha: p.cobros?.fecha ?? '',
+        metodo_pago: p.cobros?.metodo_pago ?? '',
+        monto: Number(p.monto_aplicado) || 0,
+        referencia: p.cobros?.referencia,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   const set = (field: string, val: any) => {
     if (readOnly) return;
@@ -438,6 +510,11 @@ export default function VentaFormPage() {
                 </button>
               ))}
             </div>
+          )}
+          {!isNew && (
+            <button onClick={handleGenerarPdf} className="btn-odoo-secondary text-xs">
+              <FileText className="h-3.5 w-3.5" /> Documento
+            </button>
           )}
           {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
@@ -1170,6 +1247,18 @@ export default function VentaFormPage() {
           ]} />
         </div>
       </div>
+      {/* PDF Preview Modal */}
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`${form.folio ?? 'pedido'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''}
+        caption={`Documento ${form.folio}`}
+        tipo="pedido"
+        referencia_id={form.id}
+      />
     </div>
   );
 }
