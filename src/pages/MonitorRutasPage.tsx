@@ -387,27 +387,32 @@ function MonitorContent() {
                   styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
                 }}
               >
-                {withGps.map(c => (
-                  <MarkerF
-                    key={c.id}
-                    position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
-                    icon={{
-                      path: google.maps.SymbolPath.CIRCLE,
-                      fillColor: statusColor(c.status),
-                      fillOpacity: 1,
-                      strokeColor: '#fff',
-                      strokeWeight: 2,
-                      scale: 10,
-                    }}
-                    label={{
-                      text: c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : c.status === 'en_ruta' ? '🚛' : '•',
-                      color: '#fff',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                    }}
-                    onClick={() => setSelectedClient(c)}
-                  />
-                ))}
+                {withGps.map(c => {
+                  const markerText = c.ordenEntrega && c.ordenEntrega > 0
+                    ? String(c.ordenEntrega)
+                    : c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•';
+                  return (
+                    <MarkerF
+                      key={c.id + c.status}
+                      position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
+                      icon={{
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: statusColor(c.status),
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 2,
+                        scale: c.ordenEntrega && c.ordenEntrega > 0 ? 14 : 10,
+                      }}
+                      label={{
+                        text: markerText,
+                        color: '#fff',
+                        fontSize: c.ordenEntrega && c.ordenEntrega > 0 ? '11px' : '10px',
+                        fontWeight: '700',
+                      }}
+                      onClick={() => setSelectedClient(c)}
+                    />
+                  );
+                })}
 
                 {selectedClient && selectedClient.gps_lat && (
                   <InfoWindow
