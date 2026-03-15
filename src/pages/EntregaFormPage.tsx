@@ -667,6 +667,18 @@ export default function EntregaFormPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* PDF Preview Modal */}
+      <DocumentPreviewModal
+        open={showPdfModal}
+        onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
+        pdfBlob={pdfBlob}
+        fileName={`${form.folio ?? 'entrega'}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''}
+        caption={`Entrega ${form.folio}`}
+        tipo="entrega"
+        referencia_id={form.id}
+      />
     </div>
   );
 }
