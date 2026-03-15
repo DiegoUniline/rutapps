@@ -88,7 +88,7 @@ export default function EntregaCamionPage() {
     <div className="p-4 space-y-4 min-h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/entregas')} className="btn-odoo-secondary !px-2.5">
+          <button onClick={() => navigate('/logistica/entregas')} className="btn-odoo-secondary !px-2.5">
             <ArrowLeft className="h-3.5 w-3.5" />
           </button>
           <div>
