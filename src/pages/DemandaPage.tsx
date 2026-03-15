@@ -428,7 +428,7 @@ export default function DemandaPage() {
                                 <TableHead className="text-[11px]">Código</TableHead>
                                 <TableHead className="text-[11px]">Producto</TableHead>
                                 <TableHead className="text-[11px] w-20 text-right">Demanda</TableHead>
-                                <TableHead className="text-[11px] w-20 text-right">Surtido</TableHead>
+                                <TableHead className="text-[11px] w-20 text-right">Entregado</TableHead>
                                 <TableHead className="text-[11px] w-20 text-right">Pendiente</TableHead>
                                 <TableHead className="text-[11px] w-20 text-right">Disponible</TableHead>
                                 <TableHead className="text-[11px] w-28 text-center">A surtir</TableHead>
