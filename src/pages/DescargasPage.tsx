@@ -312,6 +312,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const [lineas, setLineas] = useState<DescargaLinea[]>([]);
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
   const [notas, setNotas] = useState('');
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
 
   // Fetch cargas en_ruta / completada
   const { data: cargas } = useQuery({
