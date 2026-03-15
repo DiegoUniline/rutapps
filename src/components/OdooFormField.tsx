@@ -44,6 +44,15 @@ export function OdooField({
       if (inputRef.current instanceof HTMLInputElement) {
         inputRef.current.select();
       }
+      // Auto-open native select dropdown on single click activation
+      if (inputRef.current instanceof HTMLSelectElement) {
+        try {
+          (inputRef.current as any).showPicker?.();
+        } catch {
+          // showPicker not supported — dispatch click to open
+          inputRef.current.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+        }
+      }
     }
   }, [editing]);
 
