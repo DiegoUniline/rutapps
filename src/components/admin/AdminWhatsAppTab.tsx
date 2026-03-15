@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { MessageCircle, Save, Eye, EyeOff, CheckCircle2, AlertCircle, Smartphone, Bell, CreditCard, XCircle, Ban, Send } from 'lucide-react';
-import { buildBillingTicketHTML, sendBillingTicketWhatsApp, type BillingTicketData, type BillingTicketType } from '@/lib/billingTicketImage';
+import { buildBillingTextMessage, sendBillingTicketWhatsApp, type BillingTicketData, type BillingTicketType } from '@/lib/billingTicketImage';
 
 /* ─── Field labels per template type ─── */
 const FIELD_LABELS: Record<string, Record<string, string>> = {
@@ -91,7 +91,6 @@ export default function AdminWhatsAppTab() {
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [sendingTest, setSendingTest] = useState<string | null>(null);
   const [sendingAll, setSendingAll] = useState(false);
-  const ticketRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     loadConfig();
@@ -360,7 +359,7 @@ export default function AdminWhatsAppTab() {
               {templates.map(t => {
                 const fields = FIELD_LABELS[t.tipo] || {};
                 const sampleData = getSampleData(t.tipo, t.campos, t.emoji, t.encabezado);
-                const ticketHtml = buildBillingTicketHTML(sampleData);
+                const previewText = buildBillingTextMessage(sampleData);
 
                 return (
                   <TabsContent key={t.tipo} value={t.tipo}>
@@ -406,14 +405,14 @@ export default function AdminWhatsAppTab() {
                           disabled={!savedToken || !testPhone || sendingTest === t.tipo}
                         >
                           <Send className="h-4 w-4 mr-1.5" />
-                          {sendingTest === t.tipo ? 'Enviando ticket...' : `Enviar ticket de prueba`}
+                          {sendingTest === t.tipo ? 'Enviando...' : `Enviar prueba de este tipo`}
                         </Button>
                         {(!savedToken || !testPhone) && (
                           <p className="text-xs text-muted-foreground text-center">Configura el token y el número de prueba arriba.</p>
                         )}
                       </div>
 
-                      {/* Right: Phone Mockup with rendered HTML ticket */}
+                      {/* Right: Phone Mockup with text preview */}
                       <div className="flex justify-center">
                         <div className="w-[340px]">
                           <div className="rounded-[2rem] border-[3px] border-foreground/15 bg-background shadow-2xl overflow-hidden">
@@ -429,23 +428,20 @@ export default function AdminWhatsAppTab() {
                             </div>
                             {/* Chat background */}
                             <div
-                              className="min-h-[480px] p-3 flex flex-col justify-end"
+                              className="min-h-[420px] p-3 flex flex-col justify-end"
                               style={{ background: 'linear-gradient(180deg, #ece5dd 0%, #d9d2c5 100%)' }}
                             >
                               {/* Message bubble */}
-                              <div className="bg-white rounded-lg shadow-sm overflow-hidden max-w-[310px] self-start">
-                                {/* Rendered HTML ticket */}
-                                <div
-                                  ref={(el) => { ticketRefs.current[t.tipo] = el; }}
-                                  dangerouslySetInnerHTML={{ __html: ticketHtml }}
-                                  className="[&>div]:!shadow-none [&>div]:!rounded-none [&>div]:!w-full [&>div]:!max-w-full"
+                              <div className="bg-white rounded-lg shadow-sm p-3 max-w-[290px] self-start">
+                                <p className="text-[13px] text-gray-800 whitespace-pre-wrap leading-relaxed"
+                                   dangerouslySetInnerHTML={{
+                                     __html: previewText
+                                       .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+                                       .replace(/\n/g, '<br/>')
+                                   }}
                                 />
-                                {/* Caption */}
-                                <div className="px-3 py-1.5 border-t border-gray-100">
-                                  <p className="text-[11px] text-gray-600">{t.emoji} {t.encabezado}</p>
-                                </div>
                                 {/* Timestamp */}
-                                <div className="px-3 pb-1.5 flex justify-end">
+                                <div className="flex justify-end mt-1">
                                   <span className="text-[10px] text-gray-400">
                                     {new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} ✓✓
                                   </span>
@@ -454,7 +450,7 @@ export default function AdminWhatsAppTab() {
                             </div>
                           </div>
                           <p className="text-center text-xs text-muted-foreground mt-3">
-                            Así se verá el ticket en WhatsApp
+                            Así se verá el mensaje en WhatsApp
                           </p>
                         </div>
                       </div>

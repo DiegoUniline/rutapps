@@ -244,7 +244,7 @@ function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
   return lines.join("\n");
 }
 
-/* ─── Send WhatsApp (image or text fallback) ─── */
+/* ─── Send WhatsApp (text only) ─── */
 async function sendTicketWhatsApp(
   supabase: any,
   waToken: string,
@@ -256,49 +256,17 @@ async function sendTicketWhatsApp(
   amountCents?: number
 ): Promise<boolean> {
   const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
-  const caption = `${tpl.emoji} ${tpl.encabezado}`;
+  const textMsg = buildTextMessage(tpl, vars);
   let status = "sent";
 
-  // Try image first
-  const png = await generateTicketPng(tpl, vars);
-  if (png) {
-    // Upload to storage
-    const fileName = `whatsapp/billing-${tpl.tipo}-${Date.now()}.png`;
-    const { error: upErr } = await supabase.storage
-      .from("empresa-assets")
-      .upload(fileName, png, { contentType: "image/png", upsert: true });
-
-    if (!upErr) {
-      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(fileName);
-      try {
-        const res = await fetch(WHATSAPI_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-token": waToken },
-          body: JSON.stringify({ action: "send-image", phone: cleanPhone, url: urlData.publicUrl, caption }),
-        });
-        if (!res.ok) status = "error";
-      } catch { status = "error"; }
-
-      // Cleanup after 60s
-      setTimeout(() => { supabase.storage.from("empresa-assets").remove([fileName]).catch(() => {}); }, 60000);
-    } else {
-      console.error("Storage upload error:", upErr);
-      status = "error";
-    }
-  }
-
-  // Fallback to text if image failed
-  if (status === "error" || !png) {
-    const textMsg = buildTextMessage(tpl, vars);
-    try {
-      const res = await fetch(WHATSAPI_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-token": waToken },
-        body: JSON.stringify({ action: "send-text", phone: cleanPhone, message: textMsg }),
-      });
-      status = res.ok ? "sent" : "error";
-    } catch { status = "error"; }
-  }
+  try {
+    const res = await fetch(WHATSAPI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-token": waToken },
+      body: JSON.stringify({ action: "send-text", phone: cleanPhone, message: textMsg }),
+    });
+    status = res.ok ? "sent" : "error";
+  } catch { status = "error"; }
 
   // Log
   await supabase.from("billing_notifications").insert({
@@ -306,7 +274,7 @@ async function sendTicketWhatsApp(
     customer_phone: cleanPhone,
     channel: "whatsapp",
     tipo: tpl.tipo,
-    mensaje: caption,
+    mensaje: textMsg,
     stripe_invoice_url: invoiceUrl || null,
     monto_centavos: amountCents || 0,
     status,
