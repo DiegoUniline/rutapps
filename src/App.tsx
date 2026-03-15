@@ -44,6 +44,8 @@ const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
 const WhatsAppConfigPage = lazy(() => import("@/pages/WhatsAppConfigPage"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
+const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
@@ -125,6 +127,7 @@ function AppRoutes() {
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/supervisor" element={<SupervisorDashboardPage />} />
                 <Route path="/productos" element={<ProductosListPage />} />
                 <Route path="/productos/:id" element={<ProductoFormPage />} />
                 <Route path="/tarifas" element={<TarifasListPage />} />
@@ -139,6 +142,7 @@ function AppRoutes() {
                 <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
                 <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
                 <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
+                <Route path="/ventas/promociones" element={<PromocionesPage />} />
                 <Route path="/ventas/:id" element={<VentaFormPage />} />
                 <Route path="/almacen/inventario" element={<InventarioPage />} />
                 <Route path="/almacen/cargas" element={<CargasListPage />} />

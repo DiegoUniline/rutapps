@@ -20,6 +20,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
+  { label: 'Supervisor', icon: BarChart3, path: '/supervisor' },
   {
     label: 'Ventas',
     icon: ShoppingCart,
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
       { label: 'Reporte entregas', path: '/ventas/reporte-entregas' },
       { label: 'Demanda', path: '/ventas/demanda' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
+      { label: 'Promociones', path: '/ventas/promociones' },
       { label: 'Rutas', path: '/ventas/rutas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },

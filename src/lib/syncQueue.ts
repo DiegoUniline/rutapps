@@ -3,6 +3,16 @@ import { supabase } from './supabase';
 import { markAsSynced } from './syncVerify';
 
 const MAX_RETRIES = 5;
+const BASE_DELAY_MS = 1000;
+
+// Exponential backoff delay
+function getRetryDelay(retries: number): number {
+  return Math.min(BASE_DELAY_MS * Math.pow(2, retries), 30000); // max 30s
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // Add an operation to the sync queue and update local DB
 export async function queueOperation(
@@ -23,16 +33,25 @@ export async function queueOperation(
     }
   }
 
-  // 2. Add to sync queue
-  await offlineDb.syncQueue.add({
-    table,
-    operation,
-    data,
-    keyField,
-    keyValue,
-    createdAt: Date.now(),
-    retries: 0,
-  });
+  // 2. Deduplicate: if same table+key+operation pending, replace data
+  const existing = await offlineDb.syncQueue
+    .where('table').equals(table)
+    .filter(item => item.keyValue === keyValue && item.operation === operation)
+    .first();
+
+  if (existing && existing.id) {
+    await offlineDb.syncQueue.update(existing.id, { data, createdAt: Date.now(), retries: 0 });
+  } else {
+    await offlineDb.syncQueue.add({
+      table,
+      operation,
+      data,
+      keyField,
+      keyValue,
+      createdAt: Date.now(),
+      retries: 0,
+    });
+  }
 
   // 3. Try to sync immediately if online
   if (navigator.onLine) {
@@ -47,6 +66,13 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
   let failed = 0;
 
   for (const item of items) {
+    // Skip items that have exceeded max retries recently (backoff)
+    if (item.retries > 0) {
+      const delay = getRetryDelay(item.retries);
+      const elapsed = Date.now() - item.createdAt;
+      if (elapsed < delay) continue; // Not enough time passed for retry
+    }
+
     try {
       await processItem(item);
       await offlineDb.syncQueue.delete(item.id!);
@@ -55,14 +81,33 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
         markAsSynced(item.table, item.keyValue);
       }
       success++;
-    } catch (err) {
+    } catch (err: any) {
       console.error(`Sync failed for ${item.table}/${item.operation}:`, err);
+
+      // Handle specific conflict errors
+      const isConflict = err?.code === '23505'; // unique_violation
+      const isNotFound = err?.code === '42P01' || err?.code === 'PGRST116';
+
       const newRetries = (item.retries ?? 0) + 1;
-      if (newRetries >= MAX_RETRIES) {
-        // Move to a dead-letter approach: keep but mark
-        console.error(`Max retries reached for item ${item.id}, keeping in queue`);
+
+      if (isConflict && item.operation === 'insert') {
+        // Conflict on insert: convert to upsert (already using upsert, so just retry)
+        console.warn(`Conflict on insert ${item.table}/${item.keyValue}, will retry as upsert`);
       }
-      await offlineDb.syncQueue.update(item.id!, { retries: newRetries });
+
+      if (isNotFound || newRetries >= MAX_RETRIES) {
+        // Dead letter: keep in queue but mark with high retries
+        console.error(`Max retries or not found for item ${item.id}, marking as dead letter`);
+        await offlineDb.syncQueue.update(item.id!, {
+          retries: MAX_RETRIES + 1,
+          createdAt: Date.now(),
+        });
+      } else {
+        await offlineDb.syncQueue.update(item.id!, {
+          retries: newRetries,
+          createdAt: Date.now(), // Reset timestamp for backoff calculation
+        });
+      }
       failed++;
     }
   }
@@ -77,6 +122,13 @@ async function processItem(item: SyncQueueItem) {
   const cleanData = { ...data };
   delete cleanData._offline;
   delete cleanData._localId;
+  // Strip joined/nested objects that aren't real columns
+  const KNOWN_JOINS = ['clientes', 'vendedores', 'productos', 'unidades', 'tasas_iva', 'tasas_ieps', 'zonas', 'cobradores', 'tarifas', 'listas', 'almacenes', 'marcas'];
+  for (const key of KNOWN_JOINS) {
+    if (cleanData[key] && typeof cleanData[key] === 'object' && !Array.isArray(cleanData[key])) {
+      delete cleanData[key];
+    }
+  }
 
   switch (operation) {
     case 'insert': {
@@ -98,9 +150,26 @@ async function processItem(item: SyncQueueItem) {
   }
 }
 
-// Get count of pending sync items
+// Get count of pending sync items (exclude dead letters)
 export async function getPendingCount(): Promise<number> {
-  return offlineDb.syncQueue.count();
+  const items = await offlineDb.syncQueue.toArray();
+  return items.filter(i => (i.retries ?? 0) <= MAX_RETRIES).length;
+}
+
+// Get dead letter count
+export async function getDeadLetterCount(): Promise<number> {
+  const items = await offlineDb.syncQueue.toArray();
+  return items.filter(i => (i.retries ?? 0) > MAX_RETRIES).length;
+}
+
+// Retry dead letters (reset retries)
+export async function retryDeadLetters(): Promise<number> {
+  const items = await offlineDb.syncQueue.toArray();
+  const deadLetters = items.filter(i => (i.retries ?? 0) > MAX_RETRIES);
+  for (const dl of deadLetters) {
+    await offlineDb.syncQueue.update(dl.id!, { retries: 0, createdAt: Date.now() });
+  }
+  return deadLetters.length;
 }
 
 // Clear entire sync queue (use with caution)

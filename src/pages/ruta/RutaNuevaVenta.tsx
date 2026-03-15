@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft, Tag } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { queueOperation } from '@/lib/syncQueue';
@@ -9,6 +9,7 @@ import TicketVenta from '@/components/ruta/TicketVenta';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
+import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 
 interface CartItem {
   producto_id: string;
@@ -95,6 +96,9 @@ export default function RutaNuevaVenta() {
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
 
   const entregaInmediata = tipoVenta === 'venta_directa';
+
+  // Promotions engine
+  const { data: promocionesActivas } = usePromocionesActivas();
 
   const { data: clientes } = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
@@ -317,6 +321,26 @@ export default function RutaNuevaVenta() {
     setStep('productos');
   };
 
+  // Evaluate promotions
+  const selectedCliente = clientes?.find(c => c.id === clienteId);
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas || cart.length === 0) return [] as PromoResult[];
+    const cartForPromo: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => ({
+      producto_id: c.producto_id,
+      precio_unitario: c.precio_unitario,
+      cantidad: c.cantidad,
+    }));
+    return evaluatePromociones(
+      promocionesActivas,
+      cartForPromo,
+      clienteId || undefined,
+      (selectedCliente as any)?.zona_id || undefined,
+    );
+  }, [promocionesActivas, cart, clienteId, selectedCliente]);
+
+  const totalDescuentoPromos = useMemo(() =>
+    promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
     cart.forEach(item => {
@@ -328,8 +352,10 @@ export default function RutaNuevaVenta() {
       if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100);
       items += item.cantidad;
     });
-    return { subtotal, iva, ieps, total: subtotal + ieps + iva, items };
-  }, [cart]);
+    const totalBeforeDiscount = subtotal + ieps + iva;
+    const total = Math.max(0, totalBeforeDiscount - totalDescuentoPromos);
+    return { subtotal, iva, ieps, total, items, descuento: totalDescuentoPromos };
+  }, [cart, totalDescuentoPromos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
@@ -385,8 +411,8 @@ export default function RutaNuevaVenta() {
       }
 
       // 2. Create sale
-      const selectedCliente = clientes?.find(c => c.id === clienteId);
-      const tarifaId = selectedCliente?.tarifa_id || null;
+      const saveCliente = clientes?.find(c => c.id === clienteId);
+      const tarifaId = saveCliente?.tarifa_id || null;
       const almacenId = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
@@ -395,7 +421,7 @@ export default function RutaNuevaVenta() {
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: 'borrador', notas: notas || null,
         tarifa_id: tarifaId, almacen_id: almacenId,
-        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: 0,
+        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento,
         total: totals.total, saldo_pendiente: totals.total,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
@@ -987,6 +1013,22 @@ export default function RutaNuevaVenta() {
               </div>
             </section>
 
+            {/* Promotions applied */}
+            {promoResults.length > 0 && (
+              <section className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3">
+                <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Tag className="h-3 w-3" /> Promociones aplicadas
+                </p>
+                {promoResults.map((r, i) => (
+                  <div key={i} className="flex justify-between text-[11px] py-0.5">
+                    <span className="text-emerald-700 dark:text-emerald-300 truncate flex-1 mr-2">{r.descripcion}</span>
+                    {r.descuento > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">-${fmt(r.descuento)}</span>}
+                    {r.cantidad_gratis && r.cantidad_gratis > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">{r.cantidad_gratis}x gratis</span>}
+                  </div>
+                ))}
+              </section>
+            )}
+
             {/* Totals */}
             <section className="bg-card rounded-lg p-3">
               <div className="space-y-1">
@@ -998,6 +1040,12 @@ export default function RutaNuevaVenta() {
                   <div className="flex justify-between text-[12px]">
                     <span className="text-muted-foreground">IVA</span>
                     <span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span>
+                  </div>
+                )}
+                {totals.descuento > 0 && (
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span>
+                    <span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(totals.descuento)}</span>
                   </div>
                 )}
               </div>

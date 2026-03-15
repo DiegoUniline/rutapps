@@ -10,10 +10,11 @@ import { ReporteEntregas } from '@/components/reportes/ReporteEntregas';
 import { ReporteCargas } from '@/components/reportes/ReporteCargas';
 import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
+import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
@@ -174,6 +175,7 @@ export default function ReportesPage() {
     { key: 'cargas', label: 'Cargas', icon: BoxIcon },
     { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw },
     { key: 'utilidad', label: 'Utilidad', icon: DollarSign },
+    { key: 'promociones', label: 'Promociones', icon: TrendingUp },
   ];
 
   const handleExport = (format: 'excel' | 'pdf') => {
@@ -228,6 +230,7 @@ export default function ReportesPage() {
           {tab === 'cargas' && <ReporteCargas data={data} />}
           {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
           {tab === 'utilidad' && <ReporteUtilidad data={data} />}
+          {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
         </>
       )}
     </div>

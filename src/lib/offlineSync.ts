@@ -25,6 +25,7 @@ const TABLES_TO_CACHE = [
   'tasas_iva',
   'descarga_ruta',
   'descarga_ruta_lineas',
+  'promociones',
 ] as const;
 
 // Some tables need special select queries (joins)
@@ -42,7 +43,7 @@ export async function downloadAllData(empresaId: string): Promise<void> {
       const tablesWithEmpresa = [
         'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
         'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
-        'tasas_iva', 'descarga_ruta',
+        'tasas_iva', 'descarga_ruta', 'promociones',
       ];
 
       if (tablesWithEmpresa.includes(table)) {
