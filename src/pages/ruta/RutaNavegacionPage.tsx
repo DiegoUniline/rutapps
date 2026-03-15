@@ -155,10 +155,10 @@ function NavegacionContent() {
       (result, status) => {
         if (status === 'OK' && result) {
           setDirections(result);
-          // Auto-fit map to the route bounds
-          const bounds = result.routes?.[0]?.bounds;
-          if (bounds && mapRef.current) {
-            mapRef.current.fitBounds(bounds, { top: 160, bottom: 220, left: 30, right: 30 });
+          // Zoom in to user location at street level (like Google Maps nav)
+          if (mapRef.current && userLocation) {
+            mapRef.current.panTo(userLocation);
+            mapRef.current.setZoom(17);
           }
         } else {
           setDirections(null);
