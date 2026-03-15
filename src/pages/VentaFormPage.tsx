@@ -70,9 +70,7 @@ export default function VentaFormPage() {
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
 
-  // Entrega integration for pedidos
-  const isPedidoConfirmado = !isNew && form.tipo === 'pedido' && form.status === 'confirmado';
-  const { data: entregaExistente } = useEntregaByPedido(isPedidoConfirmado || (!isNew && form.tipo === 'pedido') ? form.id : undefined);
+  // Entrega integration — moved after form state declaration below
   const crearEntrega = useCrearEntrega();
 
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
