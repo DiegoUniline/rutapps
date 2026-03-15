@@ -102,6 +102,7 @@ function AppRoutes() {
           <Route path="stock" element={<RutaStock />} />
           <Route path="gastos" element={<RutaGastos />} />
           <Route path="entregas" element={<RutaEntregas />} />
+          <Route path="perfil" element={<RutaPerfil />} />
         </Route>
         <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
         <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
