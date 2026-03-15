@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign } from 'lucide-react';
+import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, fmtDate } from '@/lib/utils';
 
@@ -54,6 +56,7 @@ function useInventarioData() {
         const vendedorNombre = (c.vendedores as any)?.nombre ?? '—';
         if (!rutaBreakdown[rutaKey]) rutaBreakdown[rutaKey] = { vendedor: vendedorNombre, stockByProduct: {} };
 
+        const lineasDetalle: any[] = [];
         for (const cl of (c.carga_lineas ?? [])) {
           const enRuta = cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta;
           const qty = Math.max(0, enRuta);
@@ -63,11 +66,23 @@ function useInventarioData() {
           cargaTotal += qty;
           cargaValorCosto += qty * (prod?.costo ?? 0);
           cargaValorVenta += qty * (prod?.precio_principal ?? 0);
+          lineasDetalle.push({
+            producto_id: cl.producto_id,
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cargado: cl.cantidad_cargada,
+            entregado: cl.cantidad_vendida,
+            devuelto: cl.cantidad_devuelta,
+            abordo: qty,
+            costo: prod?.costo ?? 0,
+            precio: prod?.precio_principal ?? 0,
+          });
         }
         cargaDetails.push({
           id: c.id,
           origen: 'carga',
           vendedor: vendedorNombre,
+          vendedor_id: c.vendedor_id,
           repartidor: (c.repartidor as any)?.nombre,
           almacen: (c.almacen as any)?.nombre,
           fecha: c.fecha,
@@ -75,6 +90,7 @@ function useInventarioData() {
           totalUnidades: cargaTotal,
           valorCosto: cargaValorCosto,
           valorVenta: cargaValorVenta,
+          lineas: lineasDetalle,
         });
       }
 
@@ -98,17 +114,30 @@ function useInventarioData() {
       for (const [vid, group] of Object.entries(scByVendedor)) {
         if (cargaVendedorIds.has(vid)) continue;
         let total = 0, valCosto = 0, valVenta = 0;
+        const lineasDetalle: any[] = [];
         for (const sc of group.items ?? []) {
           const qty = Math.max(0, sc.cantidad_actual);
           total += qty;
           const prod = (productos ?? []).find(p => p.id === sc.producto_id);
           valCosto += qty * (prod?.costo ?? 0);
           valVenta += qty * (prod?.precio_principal ?? 0);
+          lineasDetalle.push({
+            producto_id: sc.producto_id,
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cargado: sc.cantidad_inicial,
+            entregado: sc.cantidad_inicial - sc.cantidad_actual,
+            devuelto: 0,
+            abordo: qty,
+            costo: prod?.costo ?? 0,
+            precio: prod?.precio_principal ?? 0,
+          });
         }
         cargaDetails.push({
           id: `sc-${vid}`,
           origen: 'entrega',
           vendedor: group.vendedor,
+          vendedor_id: vid,
           repartidor: null,
           almacen: null,
           fecha: (group.items ?? [])[0]?.fecha,
@@ -116,6 +145,7 @@ function useInventarioData() {
           totalUnidades: total,
           valorCosto: valCosto,
           valorVenta: valVenta,
+          lineas: lineasDetalle,
         });
       }
 
@@ -163,6 +193,7 @@ export default function InventarioPage() {
   const { data, isLoading } = useInventarioData();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
+  const [selectedRuta, setSelectedRuta] = useState<any>(null);
 
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
@@ -311,7 +342,7 @@ export default function InventarioPage() {
       )}
 
       {/* Rutas view */}
-      {view === 'rutas' && data && (
+      {view === 'rutas' && data && !selectedRuta && (
         <div className="space-y-3">
           {data.cargas.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
@@ -320,24 +351,33 @@ export default function InventarioPage() {
             </div>
           )}
           {data.cargas.map(c => (
-            <div key={c.id} className="bg-card border border-border rounded-lg p-4">
+            <div
+              key={c.id}
+              className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/40 transition-colors"
+              onClick={() => setSelectedRuta(c)}
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
                     <Truck className="h-4 w-4 inline mr-1" />
                     {c.vendedor}
                     {c.repartidor && c.repartidor !== c.vendedor && (
-                      <span className="text-muted-foreground font-normal"> · Repartidor: {c.repartidor}</span>
+                      <span className="text-muted-foreground font-normal"> · Rep: {c.repartidor}</span>
                     )}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {c.almacen && `Almacén: ${c.almacen} · `}{fmtDate(c.fecha)} · {c.status === 'en_ruta' ? 'En ruta' : c.status === 'cargado' ? 'Cargado (entrega)' : 'Pendiente'}
+                    {c.almacen && `Almacén: ${c.almacen} · `}{fmtDate(c.fecha)} ·{' '}
+                    <Badge variant="secondary" className="text-[10px] py-0">
+                      {c.status === 'en_ruta' ? 'En ruta' : c.status === 'cargado' ? 'Cargado' : 'Pendiente'}
+                    </Badge>
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{c.totalUnidades} uds abordo</p>
-                  <p className="text-sm font-bold text-foreground">Costo: $ {fmt(c.valorCosto)}</p>
-                  <p className="text-[12px] text-success font-medium">Venta: $ {fmt(c.valorVenta)}</p>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">{c.totalUnidades} uds abordo</p>
+                    <p className="text-sm font-bold text-foreground">$ {fmt(c.valorCosto)}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
               </div>
             </div>
@@ -356,6 +396,117 @@ export default function InventarioPage() {
           )}
         </div>
       )}
+
+      {/* Ruta detail view */}
+      {view === 'rutas' && selectedRuta && (
+        <RutaDetail ruta={selectedRuta} onBack={() => setSelectedRuta(null)} />
+      )}
+    </div>
+  );
+}
+
+function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
+  const lineas: any[] = ruta.lineas ?? [];
+  const totalCargado = lineas.reduce((s: number, l: any) => s + l.cargado, 0);
+  const totalEntregado = lineas.reduce((s: number, l: any) => s + l.entregado, 0);
+  const totalDevuelto = lineas.reduce((s: number, l: any) => s + l.devuelto, 0);
+  const totalAbordo = lineas.reduce((s: number, l: any) => s + l.abordo, 0);
+  const totalValorCosto = lineas.reduce((s: number, l: any) => s + l.abordo * l.costo, 0);
+  const totalValorVenta = lineas.reduce((s: number, l: any) => s + l.abordo * l.precio, 0);
+
+  return (
+    <div className="space-y-4">
+      <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 -ml-2">
+        <ArrowLeft className="h-4 w-4" /> Volver a rutas
+      </Button>
+
+      <div className="bg-card border border-border rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-base font-semibold text-foreground flex items-center gap-2">
+              <Truck className="h-5 w-5 text-primary" /> {ruta.vendedor}
+            </p>
+            <p className="text-[12px] text-muted-foreground mt-0.5">
+              {ruta.almacen && `Almacén: ${ruta.almacen} · `}{fmtDate(ruta.fecha)} ·{' '}
+              <Badge variant="secondary" className="text-[10px] py-0">
+                {ruta.status === 'en_ruta' ? 'En ruta' : ruta.status === 'cargado' ? 'Cargado' : 'Pendiente'}
+              </Badge>
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Cargado</p>
+            <p className="text-lg font-bold text-foreground">{totalCargado}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Entregado</p>
+            <p className="text-lg font-bold text-success">{totalEntregado}</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Devuelto</p>
+            <p className="text-lg font-bold text-warning">{totalDevuelto}</p>
+          </div>
+          <div className="bg-primary/10 rounded-lg p-3 text-center">
+            <p className="text-[10px] text-primary uppercase tracking-wide font-medium">Abordo</p>
+            <p className="text-lg font-bold text-primary">{totalAbordo}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-lg overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-[11px]">Código</TableHead>
+              <TableHead className="text-[11px]">Producto</TableHead>
+              <TableHead className="text-[11px] text-center">Cargado</TableHead>
+              <TableHead className="text-[11px] text-center">Entregado</TableHead>
+              <TableHead className="text-[11px] text-center">Devuelto</TableHead>
+              <TableHead className="text-[11px] text-center font-bold">Abordo</TableHead>
+              <TableHead className="text-[11px] text-right">Valor costo</TableHead>
+              <TableHead className="text-[11px] text-right">Valor venta</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lineas.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  Sin productos en esta ruta
+                </TableCell>
+              </TableRow>
+            )}
+            {lineas.map((l: any, i: number) => (
+              <TableRow key={i}>
+                <TableCell className="font-mono text-[11px] text-muted-foreground">{l.codigo}</TableCell>
+                <TableCell className="text-[12px] font-medium">{l.nombre}</TableCell>
+                <TableCell className="text-center">{l.cargado}</TableCell>
+                <TableCell className={cn("text-center", l.entregado > 0 ? "text-success font-medium" : "text-muted-foreground")}>
+                  {l.entregado}
+                </TableCell>
+                <TableCell className={cn("text-center", l.devuelto > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
+                  {l.devuelto}
+                </TableCell>
+                <TableCell className="text-center font-bold text-primary">{l.abordo}</TableCell>
+                <TableCell className="text-right text-[12px]">$ {fmt(l.abordo * l.costo)}</TableCell>
+                <TableCell className="text-right text-[12px] text-success">$ {fmt(l.abordo * l.precio)}</TableCell>
+              </TableRow>
+            ))}
+            {lineas.length > 0 && (
+              <TableRow className="bg-muted/50 font-bold">
+                <TableCell colSpan={2}>Totales</TableCell>
+                <TableCell className="text-center">{totalCargado}</TableCell>
+                <TableCell className="text-center text-success">{totalEntregado}</TableCell>
+                <TableCell className="text-center text-warning">{totalDevuelto}</TableCell>
+                <TableCell className="text-center text-primary">{totalAbordo}</TableCell>
+                <TableCell className="text-right">$ {fmt(totalValorCosto)}</TableCell>
+                <TableCell className="text-right text-success">$ {fmt(totalValorVenta)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
