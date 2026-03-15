@@ -134,7 +134,7 @@ export default function PromocionesPage() {
         </div>
       )}
 
-      <OdooPagination currentPage={page} totalPages={totalPages} onPageChange={setPage} totalItems={filtered.length} pageSize={pageSize} />
+      <OdooPagination from={(page - 1) * pageSize + 1} to={Math.min(page * pageSize, filtered.length)} total={filtered.length} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} />
 
       {/* Edit / Create Dialog */}
       <Dialog open={!!editing} onOpenChange={() => setEditing(null)}>
