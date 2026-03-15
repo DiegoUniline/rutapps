@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { ShoppingCart, Users, Truck, Banknote, Package } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
-import SyncStatusBar from '@/components/ruta/SyncStatusBar';
+import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import { cn } from '@/lib/utils';
 
 const tabs = [
@@ -15,8 +15,11 @@ const tabs = [
 export default function MobileLayout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Sync status bar */}
-      <SyncStatusBar />
+      {/* Top bar with sync cloud */}
+      <header className="flex items-center justify-between px-3 py-2 bg-card border-b border-border">
+        <span className="text-sm font-bold text-foreground">Ruta</span>
+        <SyncCloudButton />
+      </header>
 
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16">

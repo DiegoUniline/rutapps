@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getPendingCount, processSyncQueue } from '@/lib/syncQueue';
 import { downloadAllData, getLastSyncTime, isCacheStale } from '@/lib/offlineSync';
+import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
@@ -10,6 +11,7 @@ export function useNetworkStatus() {
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<number | null>(null);
+  const [verified, setVerified] = useState(false);
   const [autoSync, setAutoSyncState] = useState(() => {
     const saved = localStorage.getItem(AUTO_SYNC_KEY);
     return saved === null ? true : saved === 'true';
@@ -35,11 +37,21 @@ export function useNetworkStatus() {
 
   // Refresh pending count periodically
   useEffect(() => {
-    const refresh = () => getPendingCount().then(setPendingCount);
+    const refresh = async () => {
+      const count = await getPendingCount();
+      setPendingCount(count);
+      // If nothing pending, verify last batch
+      if (count === 0 && isOnline && empresa?.id) {
+        const isVerified = await verifySyncedItems(empresa.id);
+        setVerified(isVerified);
+      } else {
+        setVerified(false);
+      }
+    };
     refresh();
     const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isOnline, empresa?.id]);
 
   // Load last sync time
   useEffect(() => {
@@ -64,7 +76,7 @@ export function useNetworkStatus() {
     return () => clearInterval(interval);
   }, [autoSync, isOnline, empresa?.id]);
 
-  // Full sync: upload pending + download fresh data
+  // Full sync
   const syncNow = useCallback(async () => {
     if (!navigator.onLine || !empresa?.id) return;
     setIsSyncing(true);
@@ -76,6 +88,12 @@ export function useNetworkStatus() {
       setPendingCount(count);
       const time = await getLastSyncTime();
       setLastSync(time);
+      
+      // Verify after sync
+      if (count === 0) {
+        const isVerified = await verifySyncedItems(empresa.id);
+        setVerified(isVerified);
+      }
     } catch (err) {
       console.error('Sync error:', err);
     } finally {
@@ -92,5 +110,5 @@ export function useNetworkStatus() {
     }
   }, [isOnline, empresa?.id]);
 
-  return { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync };
+  return { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync, verified };
 }
