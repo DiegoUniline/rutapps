@@ -8,7 +8,7 @@ import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
 import { useProductosForSelect, useUnidades, useAlmacenes, useTarifasForSelect, useTasasIva, useTasasIeps } from '@/hooks/useData';
-import { useClientes } from '@/hooks/useClientes';
+import { useClientesAll } from '@/hooks/useClientes';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';

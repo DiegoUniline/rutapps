@@ -133,7 +133,7 @@ export default function MapaClientesPage() {
     },
   });
 
-  const { data: clientes, isLoading } = useClientes(search, statusFilter || undefined);
+  const { data: clientes, isLoading } = useClientesAll(search, statusFilter || undefined);
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
 
