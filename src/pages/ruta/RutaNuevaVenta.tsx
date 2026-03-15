@@ -318,15 +318,17 @@ export default function RutaNuevaVenta() {
   };
 
   const totals = useMemo(() => {
-    let subtotal = 0, iva = 0, items = 0;
+    let subtotal = 0, iva = 0, ieps = 0, items = 0;
     cart.forEach(item => {
-      if (item.es_cambio) { items += item.cantidad; return; } // don't charge
+      if (item.es_cambio) { items += item.cantidad; return; }
       const lineaSub = item.precio_unitario * item.cantidad;
       subtotal += lineaSub;
-      if (item.tiene_iva) iva += lineaSub * (item.iva_pct / 100);
+      const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0;
+      ieps += lineIeps;
+      if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100);
       items += item.cantidad;
     });
-    return { subtotal, iva, total: subtotal + iva, items };
+    return { subtotal, iva, ieps, total: subtotal + ieps + iva, items };
   }, [cart]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
