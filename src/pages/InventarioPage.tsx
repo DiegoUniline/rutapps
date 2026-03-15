@@ -41,18 +41,25 @@ function useInventarioData() {
         .gt('cantidad_actual', 0);
 
       // Build route stock map: producto_id -> qty on route
+      // AND per-route breakdown: rutaId -> { vendedor, stockByProduct }
       const rutaStock: Record<string, number> = {};
       const cargaDetails: any[] = [];
+      const rutaBreakdown: Record<string, { vendedor: string; stockByProduct: Record<string, number> }> = {};
 
       for (const c of (cargas ?? [])) {
         let cargaTotal = 0;
         let cargaValorCosto = 0;
         let cargaValorVenta = 0;
+        const rutaKey = c.vendedor_id ?? c.id;
+        const vendedorNombre = (c.vendedores as any)?.nombre ?? '—';
+        if (!rutaBreakdown[rutaKey]) rutaBreakdown[rutaKey] = { vendedor: vendedorNombre, stockByProduct: {} };
+
         for (const cl of (c.carga_lineas ?? [])) {
           const enRuta = cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta;
-          rutaStock[cl.producto_id] = (rutaStock[cl.producto_id] ?? 0) + Math.max(0, enRuta);
-          const prod = (productos ?? []).find(p => p.id === cl.producto_id);
           const qty = Math.max(0, enRuta);
+          rutaStock[cl.producto_id] = (rutaStock[cl.producto_id] ?? 0) + qty;
+          rutaBreakdown[rutaKey].stockByProduct[cl.producto_id] = (rutaBreakdown[rutaKey].stockByProduct[cl.producto_id] ?? 0) + qty;
+          const prod = (productos ?? []).find(p => p.id === cl.producto_id);
           cargaTotal += qty;
           cargaValorCosto += qty * (prod?.costo ?? 0);
           cargaValorVenta += qty * (prod?.precio_principal ?? 0);
@@ -60,7 +67,7 @@ function useInventarioData() {
         cargaDetails.push({
           id: c.id,
           origen: 'carga',
-          vendedor: (c.vendedores as any)?.nombre ?? '—',
+          vendedor: vendedorNombre,
           repartidor: (c.repartidor as any)?.nombre,
           almacen: (c.almacen as any)?.nombre,
           fecha: c.fecha,
@@ -79,13 +86,17 @@ function useInventarioData() {
           scByVendedor[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', items: [] };
         }
         scByVendedor[vid].items!.push(sc);
-        rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + Math.max(0, sc.cantidad_actual);
+        const qty = Math.max(0, sc.cantidad_actual);
+        rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + qty;
+        // Per-route breakdown
+        if (!rutaBreakdown[vid]) rutaBreakdown[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', stockByProduct: {} };
+        rutaBreakdown[vid].stockByProduct[sc.producto_id] = (rutaBreakdown[vid].stockByProduct[sc.producto_id] ?? 0) + qty;
       }
 
       // Add stock_camion groups as route cards (avoid duplicating cargas vendedores)
       const cargaVendedorIds = new Set((cargas ?? []).map(c => c.vendedor_id));
       for (const [vid, group] of Object.entries(scByVendedor)) {
-        if (cargaVendedorIds.has(vid)) continue; // already counted via cargas
+        if (cargaVendedorIds.has(vid)) continue;
         let total = 0, valCosto = 0, valVenta = 0;
         for (const sc of group.items ?? []) {
           const qty = Math.max(0, sc.cantidad_actual);
@@ -107,6 +118,11 @@ function useInventarioData() {
           valorVenta: valVenta,
         });
       }
+
+      // Build sorted list of routes for columns
+      const rutas = Object.entries(rutaBreakdown)
+        .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
+        .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
       // Products with enriched data
       const productosEnriquecidos = (productos ?? []).map(p => {
@@ -136,7 +152,7 @@ function useInventarioData() {
         valorVentaTotal: acc.valorVentaTotal + p.valorVentaTotal,
       }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0 });
 
-      return { productos: productosEnriquecidos, cargas: cargaDetails, totales };
+      return { productos: productosEnriquecidos, cargas: cargaDetails, totales, rutas };
     },
   });
 }
@@ -208,24 +224,35 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px]">Código</TableHead>
-                <TableHead className="text-[11px]">Producto</TableHead>
-                <TableHead className="text-[11px] text-center">Almacén</TableHead>
-                <TableHead className="text-[11px] text-center">En ruta</TableHead>
+                <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
+                <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
+                <TableHead className="text-[11px] text-center">
+                  <Warehouse className="h-3 w-3 inline mr-0.5" />Almacén
+                </TableHead>
+                {(data.rutas ?? []).map(r => (
+                  <TableHead key={r.id} className="text-[11px] text-center whitespace-nowrap">
+                    <Truck className="h-3 w-3 inline mr-0.5 text-warning" />{r.vendedor}
+                  </TableHead>
+                ))}
                 <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
                 <TableHead className="text-[11px] text-right">Valor costo</TableHead>
-                <TableHead className="text-[11px] text-right">Proyección venta</TableHead>
+                <TableHead className="text-[11px] text-right">Proyección</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts?.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
-                  <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
+                  <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
+                  <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
                   <TableCell className="text-center">{p.stockAlmacen} {(p.unidades as any)?.abreviatura ?? ''}</TableCell>
-                  <TableCell className={cn("text-center", p.stockRuta > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
-                    {p.stockRuta}
-                  </TableCell>
+                  {(data.rutas ?? []).map(r => {
+                    const qty = r.stockByProduct[p.id] ?? 0;
+                    return (
+                      <TableCell key={r.id} className={cn("text-center", qty > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
+                        {qty || '—'}
+                      </TableCell>
+                    );
+                  })}
                   <TableCell className="text-center font-bold">{p.stockTotal}</TableCell>
                   <TableCell className="text-right text-[12px]">$ {fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">$ {fmt(p.valorVentaTotal)}</TableCell>
@@ -233,9 +260,12 @@ export default function InventarioPage() {
               ))}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2}>Totales</TableCell>
+                  <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
                   <TableCell className="text-center">{data.totales.stockAlmacen}</TableCell>
-                  <TableCell className="text-center text-warning">{data.totales.stockRuta}</TableCell>
+                  {(data.rutas ?? []).map(r => {
+                    const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
+                    return <TableCell key={r.id} className="text-center text-warning">{total}</TableCell>;
+                  })}
                   <TableCell className="text-center">{data.totales.stockTotal}</TableCell>
                   <TableCell className="text-right">$ {fmt(data.totales.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-success">$ {fmt(data.totales.valorVentaTotal)}</TableCell>
