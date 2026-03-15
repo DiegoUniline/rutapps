@@ -32,6 +32,8 @@ export default function MobileLayout() {
         </div>
       </header>
 
+      <OfflineBanner />
+
       {/* Content area */}
       <main className="flex-1 overflow-auto pb-16">
         <Outlet />
