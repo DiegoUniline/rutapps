@@ -8,7 +8,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate } from '@/lib/utils';
+
+const CARGAS_COLUMNS: ExportColumn[] = [
+  { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+  { key: 'vendedor_nombre', header: 'Vendedor', width: 25 },
+  { key: 'status', header: 'Estado', width: 12 },
+];
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
@@ -33,9 +41,23 @@ export default function CargasListPage() {
           </h1>
           <p className="text-sm text-muted-foreground">Gestiona las cargas de producto para cada ruta</p>
         </div>
-        <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
-          <Plus className="h-4 w-4 mr-1" /> Nueva carga
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            onExcel={() => exportToExcel({
+              fileName: 'Cargas', title: 'Listado de Cargas',
+              columns: CARGAS_COLUMNS,
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+            })}
+            onPDF={() => exportToPDF({
+              fileName: 'Cargas', title: 'Listado de Cargas',
+              columns: CARGAS_COLUMNS,
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+            })}
+          />
+          <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
+            <Plus className="h-4 w-4 mr-1" /> Nueva carga
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2 items-center">

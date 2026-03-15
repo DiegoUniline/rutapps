@@ -10,8 +10,152 @@ import { ReporteEntregas } from '@/components/reportes/ReporteEntregas';
 import { ReporteCargas } from '@/components/reportes/ReporteCargas';
 import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 
 type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad';
+
+function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
+  const dateRange = { from: desde, to: hasta };
+
+  switch (tab) {
+    case 'resumen': {
+      const columns: ExportColumn[] = [
+        { key: 'concepto', header: 'Concepto', width: 20 },
+        { key: 'valor', header: 'Valor', format: 'currency', width: 16 },
+      ];
+      return {
+        fileName: 'Reporte_Resumen', title: 'Resumen General', columns, dateRange,
+        data: [
+          { concepto: 'Ventas', valor: data.totalVentas },
+          { concepto: 'Cobros', valor: data.totalCobros },
+          { concepto: 'Gastos', valor: data.totalGastos },
+          { concepto: 'Utilidad bruta', valor: data.utilidad },
+          { concepto: 'Por cobrar', valor: data.totalPendiente },
+          { concepto: 'Flujo neto', valor: data.totalCobros - data.totalGastos },
+        ],
+      };
+    }
+    case 'ventas_producto': {
+      const items = data.ventasPorProducto ?? [];
+      return {
+        fileName: 'Ventas_por_Producto', title: 'Ventas por Producto', dateRange,
+        columns: [
+          { key: 'codigo', header: 'Código', width: 12 },
+          { key: 'nombre', header: 'Producto', width: 30 },
+          { key: 'cantidad', header: 'Unidades', format: 'number', width: 10 },
+          { key: 'total', header: 'Total', format: 'currency', width: 14 },
+          { key: 'utilidad', header: 'Utilidad', format: 'currency', width: 14 },
+        ],
+        data: items,
+        totals: {
+          cantidad: items.reduce((s: number, p: any) => s + p.cantidad, 0),
+          total: items.reduce((s: number, p: any) => s + p.total, 0),
+          utilidad: items.reduce((s: number, p: any) => s + p.utilidad, 0),
+        },
+      };
+    }
+    case 'ventas_cliente': {
+      const items = data.ventasPorCliente ?? [];
+      return {
+        fileName: 'Ventas_por_Cliente', title: 'Ventas por Cliente', dateRange,
+        columns: [
+          { key: 'nombre', header: 'Cliente', width: 30 },
+          { key: 'ventas', header: 'Ventas', format: 'number', width: 10 },
+          { key: 'total', header: 'Total', format: 'currency', width: 14 },
+          { key: 'pendiente', header: 'Pendiente', format: 'currency', width: 14 },
+        ],
+        data: items,
+        totals: {
+          ventas: items.reduce((s: number, c: any) => s + c.ventas, 0),
+          total: items.reduce((s: number, c: any) => s + c.total, 0),
+          pendiente: items.reduce((s: number, c: any) => s + c.pendiente, 0),
+        },
+      };
+    }
+    case 'vendedores': {
+      const items = data.topVendedores ?? [];
+      return {
+        fileName: 'Reporte_Vendedores', title: 'Reporte de Vendedores', dateRange,
+        columns: [
+          { key: 'nombre', header: 'Vendedor', width: 25 },
+          { key: 'ventas', header: 'Ventas', format: 'number', width: 10 },
+          { key: 'total', header: 'Total', format: 'currency', width: 14 },
+        ],
+        data: items,
+        totals: {
+          ventas: items.reduce((s: number, v: any) => s + v.ventas, 0),
+          total: items.reduce((s: number, v: any) => s + v.total, 0),
+        },
+      };
+    }
+    case 'entregas': {
+      const items = data.entregas ?? [];
+      return {
+        fileName: 'Reporte_Entregas', title: 'Reporte de Entregas', dateRange,
+        columns: [
+          { key: 'folio', header: 'Folio', width: 12 },
+          { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+          { key: 'cliente', header: 'Cliente', width: 25 },
+          { key: 'total', header: 'Total', format: 'currency', width: 14 },
+          { key: 'status', header: 'Estado', width: 12 },
+        ],
+        data: items,
+      };
+    }
+    case 'cargas': {
+      const items = data.cargas ?? [];
+      return {
+        fileName: 'Reporte_Cargas', title: 'Reporte de Cargas', dateRange,
+        columns: [
+          { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+          { key: 'vendedor', header: 'Vendedor', width: 25 },
+          { key: 'productos', header: 'Productos', format: 'number', width: 10 },
+          { key: 'status', header: 'Estado', width: 12 },
+        ],
+        data: items,
+      };
+    }
+    case 'devoluciones': {
+      const items = data.devoluciones ?? [];
+      return {
+        fileName: 'Reporte_Devoluciones', title: 'Reporte de Devoluciones', dateRange,
+        columns: [
+          { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+          { key: 'cliente', header: 'Cliente', width: 25 },
+          { key: 'producto', header: 'Producto', width: 25 },
+          { key: 'cantidad', header: 'Cantidad', format: 'number', width: 10 },
+          { key: 'motivo', header: 'Motivo', width: 14 },
+        ],
+        data: items,
+      };
+    }
+    case 'utilidad': {
+      const items = data.utilidadPorProducto ?? data.ventasPorProducto ?? [];
+      return {
+        fileName: 'Reporte_Utilidad', title: 'Reporte de Utilidad', dateRange,
+        columns: [
+          { key: 'codigo', header: 'Código', width: 12 },
+          { key: 'nombre', header: 'Producto', width: 30 },
+          { key: 'costo_total', header: 'Costo', format: 'currency', width: 14 },
+          { key: 'total', header: 'Venta', format: 'currency', width: 14 },
+          { key: 'utilidad', header: 'Utilidad', format: 'currency', width: 14 },
+          { key: 'margen', header: 'Margen %', format: 'percent', width: 10 },
+        ],
+        data: items.map((p: any) => ({
+          ...p,
+          costo_total: p.costo_total ?? 0,
+          margen: p.total > 0 ? (p.utilidad / p.total) * 100 : 0,
+        })),
+        totals: {
+          total: items.reduce((s: number, p: any) => s + p.total, 0),
+          utilidad: items.reduce((s: number, p: any) => s + p.utilidad, 0),
+        },
+      };
+    }
+    default: return null;
+  }
+}
 
 export default function ReportesPage() {
   const now = new Date();
@@ -32,8 +176,12 @@ export default function ReportesPage() {
     { key: 'utilidad', label: 'Utilidad', icon: DollarSign },
   ];
 
-  const handlePrint = () => {
-    window.print();
+  const handleExport = (format: 'excel' | 'pdf') => {
+    if (!data) return;
+    const config = getExportConfig(tab, data, desde, hasta);
+    if (!config) return;
+    if (format === 'excel') exportToExcel(config);
+    else exportToPDF(config);
   };
 
   return (
@@ -46,7 +194,11 @@ export default function ReportesPage() {
           <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="input-odoo text-[13px] w-36" />
           <span className="text-muted-foreground text-[13px]">a</span>
           <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="input-odoo text-[13px] w-36" />
-          <button onClick={handlePrint} className="btn-odoo-secondary flex items-center gap-1 print:hidden">
+          <ExportButton
+            onExcel={() => handleExport('excel')}
+            onPDF={() => handleExport('pdf')}
+          />
+          <button onClick={() => window.print()} className="btn-odoo-secondary flex items-center gap-1 print:hidden">
             <Printer className="h-3.5 w-3.5" /> Imprimir
           </button>
         </div>

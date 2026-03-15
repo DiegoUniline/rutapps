@@ -5,8 +5,23 @@ import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentas } from '@/hooks/useVentas';
 import { cn, fmtDate } from '@/lib/utils';
+
+const VENTAS_COLUMNS: ExportColumn[] = [
+  { key: 'folio', header: 'Folio', width: 12 },
+  { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+  { key: 'cliente_nombre', header: 'Cliente', width: 25 },
+  { key: 'tipo', header: 'Tipo', width: 14 },
+  { key: 'condicion_pago', header: 'Condición', width: 12 },
+  { key: 'subtotal', header: 'Subtotal', format: 'currency', width: 14 },
+  { key: 'iva_total', header: 'IVA', format: 'currency', width: 12 },
+  { key: 'total', header: 'Total', format: 'currency', width: 14 },
+  { key: 'saldo_pendiente', header: 'Saldo', format: 'currency', width: 14 },
+  { key: 'status', header: 'Estado', width: 12 },
+];
 
 const PAGE_SIZE = 80;
 
@@ -79,9 +94,25 @@ export default function VentasListPage() {
               <option value="venta_directa">Venta directa</option>
             </select>
           </OdooFilterBar>
-          <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
-            <Plus className="h-3.5 w-3.5" /> Nueva venta
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <ExportButton
+              onExcel={() => exportToExcel({
+                fileName: 'Ventas', title: 'Reporte de Ventas',
+                columns: VENTAS_COLUMNS,
+                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                totals: { total: ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0, saldo_pendiente: ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0 },
+              })}
+              onPDF={() => exportToPDF({
+                fileName: 'Ventas', title: 'Reporte de Ventas',
+                columns: VENTAS_COLUMNS,
+                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                totals: { total: ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0, saldo_pendiente: ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0 },
+              })}
+            />
+            <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
+              <Plus className="h-3.5 w-3.5" /> Nueva venta
+            </button>
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded overflow-x-auto">
