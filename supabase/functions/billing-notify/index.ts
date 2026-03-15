@@ -1,5 +1,8 @@
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import satori from "npm:satori@0.12.1";
+import { Resvg } from "npm:@aspect-build/resvg-wasm@2.4.0";
+import { initWasm } from "npm:@aspect-build/resvg-wasm@2.4.0";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
@@ -17,6 +20,7 @@ const RUTAPP_PRODUCT_IDS = new Set([
 
 const GRACE_DAYS = 3;
 
+/* ─── Template types ─── */
 interface TemplateConfig {
   tipo: string;
   campos: Record<string, boolean>;
@@ -25,65 +29,127 @@ interface TemplateConfig {
   activo: boolean;
 }
 
-/* ─── Build message from template config ─── */
-function buildMessage(
-  tpl: TemplateConfig,
-  vars: {
-    nombre?: string;
-    empresa?: string;
-    monto?: string;
-    fecha_cobro?: string;
-    num_usuarios?: number;
-    enlace_facturacion?: string;
-    enlace_pago?: string;
-    fecha_vigencia?: string;
-  }
-): string {
-  const c = tpl.campos;
-  const lines: string[] = [];
-  lines.push(`${tpl.emoji} *${tpl.encabezado}*\n`);
-
-  const greeting = c.nombre_cliente && vars.nombre ? `Hola ${vars.nombre}` : "Hola";
-  const empresaLine = c.nombre_empresa && vars.empresa ? ` de *${vars.empresa}*` : "";
-
-  if (tpl.tipo === "pre_cobro") {
-    lines.push(`${greeting}${empresaLine},\n`);
-    if (c.fecha_cobro && vars.fecha_cobro) lines.push(`Mañana *${vars.fecha_cobro}* se realizará tu cobro automático`);
-    if (c.monto && vars.monto) lines.push(`de *${vars.monto}*`);
-    if (c.num_usuarios && vars.num_usuarios) lines.push(`por *${vars.num_usuarios} usuario(s)*.`);
-    else lines.push(".");
-    if (c.enlace_facturacion && vars.enlace_facturacion) lines.push(`\n💳 Si necesitas actualizar tu método de pago:\n${vars.enlace_facturacion}`);
-    if (c.mensaje_despedida) lines.push("\n¡Gracias por confiar en Rutapp! 🚀");
-  }
-
-  if (tpl.tipo === "cobro_exitoso") {
-    lines.push(`${greeting}${empresaLine},\n`);
-    if (c.monto && vars.monto) lines.push(`Tu pago de *${vars.monto}* se procesó correctamente.`);
-    else lines.push("Tu pago se procesó correctamente.");
-    if (c.fecha_vigencia && vars.fecha_vigencia) lines.push(`\nTu suscripción está activa hasta el *${vars.fecha_vigencia}*.`);
-    if (c.mensaje_despedida) lines.push("\n¡Gracias! 🎉");
-  }
-
-  if (tpl.tipo === "cobro_fallido") {
-    lines.push(`${greeting}${empresaLine},\n`);
-    lines.push("No pudimos procesar tu pago.");
-    if (c.monto && vars.monto) lines.push(`Monto pendiente: *${vars.monto}*.`);
-    if (c.dias_gracia) lines.push(`Tienes *${GRACE_DAYS} días* para regularizar tu pago.`);
-    if (c.enlace_pago && vars.enlace_pago) lines.push(`\n💳 Paga aquí:\n${vars.enlace_pago}`);
-    if (c.advertencia_suspension) lines.push("\n⚠️ Si no regularizas, tu acceso será suspendido.");
-  }
-
-  if (tpl.tipo === "suspension") {
-    lines.push(`${greeting}${empresaLine},\n`);
-    lines.push("Tu cuenta ha sido *suspendida* por falta de pago.");
-    if (c.enlace_facturacion && vars.enlace_facturacion) lines.push(`\nPara reactivar tu acceso:\n${vars.enlace_facturacion}`);
-    if (c.mensaje_contacto) lines.push("\nSi tienes dudas, contáctanos.");
-  }
-
-  return lines.join("\n");
+interface TicketVars {
+  nombre?: string;
+  empresa?: string;
+  monto?: string;
+  fechaCobro?: string;
+  numUsuarios?: number;
+  enlacePago?: string;
+  enlaceFacturacion?: string;
+  fechaVigencia?: string;
 }
 
-/* ─── Fallback templates if DB has none ─── */
+/* ─── Theme colors per type ─── */
+const THEMES: Record<string, { accent: string; badgeBg: string }> = {
+  pre_cobro: { accent: "#2563eb", badgeBg: "#dbeafe" },
+  cobro_exitoso: { accent: "#16a34a", badgeBg: "#dcfce7" },
+  cobro_fallido: { accent: "#dc2626", badgeBg: "#fee2e2" },
+  suspension: { accent: "#991b1b", badgeBg: "#fee2e2" },
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pre_cobro: "RECORDATORIO DE COBRO",
+  cobro_exitoso: "PAGO CONFIRMADO",
+  cobro_fallido: "PAGO FALLIDO",
+  suspension: "CUENTA SUSPENDIDA",
+};
+
+/* ─── Satori element helpers (React-element-like objects) ─── */
+function e(type: string, props: Record<string, any>, ...children: any[]) {
+  return { type, props: { ...props, children: children.length === 1 ? children[0] : children.length ? children : undefined } };
+}
+
+function buildTicketElement(tpl: TemplateConfig, vars: TicketVars) {
+  const theme = THEMES[tpl.tipo] || THEMES.pre_cobro;
+  const c = tpl.campos;
+  const rows: any[] = [];
+
+  const addRow = (label: string, value: string, bold = false) => {
+    rows.push(
+      e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #f0f0f0" } },
+        e("span", { style: { fontSize: 12, color: "#666" } }, label),
+        e("span", { style: { fontSize: bold ? 15 : 13, fontWeight: bold ? 700 : 500, color: bold ? "#111" : "#333" } }, value)
+      )
+    );
+  };
+
+  if (c.nombre_cliente && vars.nombre) addRow("Cliente", vars.nombre);
+  if (c.nombre_empresa && vars.empresa) addRow("Empresa", vars.empresa);
+
+  if (tpl.tipo === "pre_cobro") {
+    if (c.fecha_cobro && vars.fechaCobro) addRow("Fecha de cobro", vars.fechaCobro);
+    if (c.monto && vars.monto) addRow("Monto", vars.monto, true);
+    if (c.num_usuarios && vars.numUsuarios) addRow("Usuarios", `${vars.numUsuarios} usuario(s)`);
+  }
+  if (tpl.tipo === "cobro_exitoso") {
+    if (c.monto && vars.monto) addRow("Monto pagado", vars.monto, true);
+    if (c.fecha_vigencia && vars.fechaVigencia) addRow("Vigente hasta", vars.fechaVigencia);
+  }
+  if (tpl.tipo === "cobro_fallido") {
+    if (c.monto && vars.monto) addRow("Monto pendiente", vars.monto, true);
+    if (c.dias_gracia) addRow("Plazo para pagar", `${GRACE_DAYS} días`);
+  }
+  if (tpl.tipo === "suspension") {
+    // minimal rows already added
+  }
+
+  // Link row
+  const linkUrl = tpl.tipo === "cobro_fallido" && c.enlace_pago ? (vars.enlacePago || "") :
+    (c.enlace_facturacion ? (vars.enlaceFacturacion || "") : "");
+
+  const linkLabel = tpl.tipo === "cobro_fallido" ? "Pagar ahora" :
+    tpl.tipo === "suspension" ? "Reactivar acceso" :
+      tpl.tipo === "pre_cobro" ? "Actualizar método de pago" : "";
+
+  const linkSection = linkUrl && linkLabel ? e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", marginTop: 10 } },
+    e("div", { style: { background: "#2563eb", color: "#fff", fontSize: 12, fontWeight: 600, padding: "8px 20px", borderRadius: 6 } }, `💳 ${linkLabel}`),
+    e("div", { style: { fontSize: 9, color: "#999", marginTop: 4, wordBreak: "break-all", textAlign: "center" } }, linkUrl)
+  ) : null;
+
+  // Warning
+  const warning = tpl.tipo === "cobro_fallido" && c.advertencia_suspension
+    ? e("div", { style: { marginTop: 10, padding: "8px 12px", background: "#fef3c7", borderRadius: 6, borderLeft: "3px solid #f59e0b", display: "flex" } },
+      e("span", { style: { fontSize: 11, color: "#92400e" } }, "⚠️ Si no regularizas, tu acceso será suspendido.")
+    ) : null;
+
+  const contacto = tpl.tipo === "suspension" && c.mensaje_contacto
+    ? e("div", { style: { marginTop: 10, padding: "8px 12px", background: "#f0f9ff", borderRadius: 6, borderLeft: "3px solid #3b82f6", display: "flex" } },
+      e("span", { style: { fontSize: 11, color: "#1e40af" } }, "ℹ️ Si tienes dudas, contáctanos.")
+    ) : null;
+
+  const despedida = (tpl.tipo === "pre_cobro" || tpl.tipo === "cobro_exitoso") && c.mensaje_despedida
+    ? e("div", { style: { textAlign: "center", marginTop: 12, fontSize: 12, color: "#666" } },
+      tpl.tipo === "pre_cobro" ? "¡Gracias por confiar en Rutapp! 🚀" : "¡Gracias por tu pago! 🎉"
+    ) : null;
+
+  return e("div", { style: { display: "flex", flexDirection: "column", width: 360, fontFamily: "Inter", background: "#fff", borderRadius: 12, overflow: "hidden" } },
+    // Header
+    e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", background: theme.accent, padding: "18px 20px" } },
+      e("span", { style: { fontSize: 28 } }, tpl.emoji),
+      e("span", { style: { fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: 0.5, marginTop: 4 } }, tpl.encabezado)
+    ),
+    // Badge
+    e("div", { style: { display: "flex", justifyContent: "center", marginTop: -12 } },
+      e("span", { style: { background: theme.badgeBg, color: theme.accent, fontSize: 10, fontWeight: 700, padding: "4px 14px", borderRadius: 20, letterSpacing: 0.8, border: `1.5px solid ${theme.accent}33` } }, STATUS_LABELS[tpl.tipo] || "")
+    ),
+    // Body
+    e("div", { style: { display: "flex", flexDirection: "column", padding: "16px 20px" } },
+      ...rows,
+      ...(linkSection ? [linkSection] : []),
+      ...(warning ? [warning] : []),
+      ...(contacto ? [contacto] : []),
+      ...(despedida ? [despedida] : [])
+    ),
+    // Footer
+    e("div", { style: { display: "flex", justifyContent: "center", background: "#f8f9fa", padding: "10px 20px", borderTop: "1px solid #eee", fontSize: 10, color: "#999" } },
+      e("span", { style: { fontWeight: 600, color: theme.accent, marginRight: 4 } }, "Rutapp"),
+      " · Elaborado por Uniline"
+    )
+  );
+}
+
+/* ─── Fallback templates ─── */
 const DEFAULT_TEMPLATES: Record<string, TemplateConfig> = {
   pre_cobro: { tipo: "pre_cobro", emoji: "🔔", encabezado: "Aviso de cobro Rutapp", activo: true, campos: { nombre_cliente: true, nombre_empresa: true, monto: true, fecha_cobro: true, num_usuarios: true, enlace_facturacion: true, mensaje_despedida: true } },
   cobro_exitoso: { tipo: "cobro_exitoso", emoji: "✅", encabezado: "Pago exitoso — Rutapp", activo: true, campos: { nombre_cliente: true, nombre_empresa: true, monto: true, fecha_vigencia: true, mensaje_despedida: true } },
@@ -91,20 +157,165 @@ const DEFAULT_TEMPLATES: Record<string, TemplateConfig> = {
   suspension: { tipo: "suspension", emoji: "🔴", encabezado: "Cuenta suspendida — Rutapp", activo: true, campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_contacto: true } },
 };
 
-async function sendWhatsApp(waToken: string, phone: string, message: string): Promise<boolean> {
+/* ─── Font loading + WASM init ─── */
+let fontData: ArrayBuffer | null = null;
+let wasmInitialized = false;
+
+async function ensureFont() {
+  if (!fontData) {
+    const res = await fetch("https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.woff");
+    fontData = await res.arrayBuffer();
+  }
+  return fontData;
+}
+
+async function ensureWasm() {
+  if (!wasmInitialized) {
+    try {
+      // Try loading resvg WASM
+      const wasmRes = await fetch("https://unpkg.com/@aspect-build/resvg-wasm@2.4.0/resvg.wasm");
+      const wasmBuf = await wasmRes.arrayBuffer();
+      await initWasm(wasmBuf);
+      wasmInitialized = true;
+    } catch (e) {
+      console.error("WASM init error:", e);
+      // If WASM fails, we'll fall back to text-only
+    }
+  }
+  return wasmInitialized;
+}
+
+/* ─── Generate PNG from template ─── */
+async function generateTicketPng(tpl: TemplateConfig, vars: TicketVars): Promise<Uint8Array | null> {
   try {
-    const res = await fetch(WHATSAPI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-token": waToken },
-      body: JSON.stringify({ action: "send-text", phone, message }),
+    const font = await ensureFont();
+    const element = buildTicketElement(tpl, vars);
+
+    const svg = await satori(element, {
+      width: 360,
+      fonts: [{ name: "Inter", data: font, weight: 400, style: "normal" as const }],
     });
-    return res.ok;
-  } catch (e) {
-    console.error("WhatsApp send error:", e);
-    return false;
+
+    const wasmReady = await ensureWasm();
+    if (!wasmReady) return null;
+
+    const resvg = new Resvg(svg, { fitTo: { mode: "width" as const, value: 720 } });
+    const pngData = resvg.render();
+    return pngData.asPng();
+  } catch (err) {
+    console.error("Ticket PNG generation error:", err);
+    return null;
   }
 }
 
+/* ─── Build text fallback ─── */
+function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
+  const c = tpl.campos;
+  const lines: string[] = [];
+  lines.push(`${tpl.emoji} *${tpl.encabezado}*\n`);
+  const greeting = c.nombre_cliente && vars.nombre ? `Hola ${vars.nombre}` : "Hola";
+  const empresaLine = c.nombre_empresa && vars.empresa ? ` de *${vars.empresa}*` : "";
+  lines.push(`${greeting}${empresaLine},\n`);
+
+  if (tpl.tipo === "pre_cobro") {
+    if (c.fecha_cobro && vars.fechaCobro) lines.push(`Mañana *${vars.fechaCobro}* se realizará tu cobro automático`);
+    if (c.monto && vars.monto) lines.push(`de *${vars.monto}*`);
+    if (c.num_usuarios && vars.numUsuarios) lines.push(`por *${vars.numUsuarios} usuario(s)*.`);
+    if (c.enlace_facturacion) lines.push(`\n💳 ${vars.enlaceFacturacion || ""}`);
+    if (c.mensaje_despedida) lines.push("\n¡Gracias por confiar en Rutapp! 🚀");
+  }
+  if (tpl.tipo === "cobro_exitoso") {
+    if (c.monto && vars.monto) lines.push(`Tu pago de *${vars.monto}* se procesó correctamente.`);
+    if (c.fecha_vigencia && vars.fechaVigencia) lines.push(`Vigente hasta el *${vars.fechaVigencia}*.`);
+    if (c.mensaje_despedida) lines.push("\n¡Gracias! 🎉");
+  }
+  if (tpl.tipo === "cobro_fallido") {
+    lines.push("No pudimos procesar tu pago.");
+    if (c.monto && vars.monto) lines.push(`Pendiente: *${vars.monto}*.`);
+    if (c.dias_gracia) lines.push(`Tienes *${GRACE_DAYS} días* para pagar.`);
+    if (c.enlace_pago) lines.push(`\n💳 ${vars.enlacePago || ""}`);
+    if (c.advertencia_suspension) lines.push("\n⚠️ Si no regularizas, tu acceso será suspendido.");
+  }
+  if (tpl.tipo === "suspension") {
+    lines.push("Tu cuenta ha sido *suspendida* por falta de pago.");
+    if (c.enlace_facturacion) lines.push(`\n${vars.enlaceFacturacion || ""}`);
+    if (c.mensaje_contacto) lines.push("\nSi tienes dudas, contáctanos.");
+  }
+  return lines.join("\n");
+}
+
+/* ─── Send WhatsApp (image or text fallback) ─── */
+async function sendTicketWhatsApp(
+  supabase: any,
+  waToken: string,
+  phone: string,
+  tpl: TemplateConfig,
+  vars: TicketVars,
+  email: string,
+  invoiceUrl?: string | null,
+  amountCents?: number
+): Promise<boolean> {
+  const cleanPhone = phone.replace(/[\s\-\(\)]/g, "");
+  const caption = `${tpl.emoji} ${tpl.encabezado}`;
+  let status = "sent";
+
+  // Try image first
+  const png = await generateTicketPng(tpl, vars);
+  if (png) {
+    // Upload to storage
+    const fileName = `whatsapp/billing-${tpl.tipo}-${Date.now()}.png`;
+    const { error: upErr } = await supabase.storage
+      .from("empresa-assets")
+      .upload(fileName, png, { contentType: "image/png", upsert: true });
+
+    if (!upErr) {
+      const { data: urlData } = supabase.storage.from("empresa-assets").getPublicUrl(fileName);
+      try {
+        const res = await fetch(WHATSAPI_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-token": waToken },
+          body: JSON.stringify({ action: "send-image", phone: cleanPhone, url: urlData.publicUrl, caption }),
+        });
+        if (!res.ok) status = "error";
+      } catch { status = "error"; }
+
+      // Cleanup after 60s
+      setTimeout(() => { supabase.storage.from("empresa-assets").remove([fileName]).catch(() => {}); }, 60000);
+    } else {
+      console.error("Storage upload error:", upErr);
+      status = "error";
+    }
+  }
+
+  // Fallback to text if image failed
+  if (status === "error" || !png) {
+    const textMsg = buildTextMessage(tpl, vars);
+    try {
+      const res = await fetch(WHATSAPI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-token": waToken },
+        body: JSON.stringify({ action: "send-text", phone: cleanPhone, message: textMsg }),
+      });
+      status = res.ok ? "sent" : "error";
+    } catch { status = "error"; }
+  }
+
+  // Log
+  await supabase.from("billing_notifications").insert({
+    customer_email: email,
+    customer_phone: cleanPhone,
+    channel: "whatsapp",
+    tipo: tpl.tipo,
+    mensaje: caption,
+    stripe_invoice_url: invoiceUrl || null,
+    monto_centavos: amountCents || 0,
+    status,
+  }).catch(() => {});
+
+  return status === "sent";
+}
+
+/* ─── Main handler ─── */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -134,7 +345,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const waToken = waConfig?.api_token;
 
-    // Load message templates from DB
+    // Load templates
     const { data: tplRows } = await supabase
       .from("billing_message_templates")
       .select("tipo, campos, emoji, encabezado, activo");
@@ -151,67 +362,51 @@ Deno.serve(async (req) => {
 
     const FACTURACION_URL = "https://rutapps.lovable.app/facturacion";
 
-    // Helper to get empresa name
     async function getEmpresaName(empresaId: string): Promise<string> {
       const { data } = await supabase.from("empresas").select("nombre").eq("id", empresaId).maybeSingle();
       return data?.nombre || "";
     }
 
-    // ─── STEP 1: Pre-charge notifications (day before the 1st) ───
+    // ─── STEP 1: Pre-charge (day before the 1st) ───
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     if (tomorrow.getDate() === 1 && tplMap.pre_cobro.activo) {
       const tpl = tplMap.pre_cobro;
       const { data: activeSubs } = await supabase
         .from("subscriptions")
-        .select("id, empresa_id, max_usuarios, stripe_subscription_id, status")
+        .select("id, empresa_id, max_usuarios, status")
         .in("status", ["active", "trial"]);
 
       for (const sub of activeSubs || []) {
         try {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("user_id, nombre, telefono")
-            .eq("empresa_id", sub.empresa_id)
-            .limit(1)
-            .maybeSingle();
+          const { data: profile } = await supabase.from("profiles").select("user_id, nombre, telefono").eq("empresa_id", sub.empresa_id).limit(1).maybeSingle();
           if (!profile) continue;
-
           const { data: userData } = await supabase.auth.admin.getUserById(profile.user_id);
           const email = userData?.user?.email;
           if (!email) continue;
 
           const amount = sub.max_usuarios * 300;
-          const amountFmt = `$${amount.toLocaleString("es-MX")} MXN`;
           const empresaNombre = await getEmpresaName(sub.empresa_id);
 
-          const msg = buildMessage(tpl, {
-            nombre: profile.nombre || "",
-            empresa: empresaNombre,
-            monto: amountFmt,
-            fecha_cobro: `1 de ${getMonthName()}`,
-            num_usuarios: sub.max_usuarios,
-            enlace_facturacion: FACTURACION_URL,
-          });
-
           if (waToken && profile.telefono) {
-            const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
-            const ok = await sendWhatsApp(waToken, phone, msg);
-            await supabase.from("billing_notifications").insert({
-              customer_email: email, customer_phone: phone, channel: "whatsapp",
-              tipo: "pre_cobro", mensaje: msg, monto_centavos: amount * 100,
-              status: ok ? "sent" : "error",
-            }).catch(() => {});
+            await sendTicketWhatsApp(supabase, waToken, profile.telefono, tpl, {
+              nombre: profile.nombre || "",
+              empresa: empresaNombre,
+              monto: `$${amount.toLocaleString("es-MX")} MXN`,
+              fechaCobro: `1 de ${getMonthName()}`,
+              numUsuarios: sub.max_usuarios,
+              enlaceFacturacion: FACTURACION_URL,
+            }, email, null, amount * 100);
           }
           results.push({ sub_id: sub.id, action: "pre_notify", status: "sent" });
         } catch (err) {
-          console.error(`Pre-notify error for sub ${sub.id}:`, err);
+          console.error(`Pre-notify error:`, err);
           results.push({ sub_id: sub.id, action: "pre_notify", status: "error" });
         }
       }
     }
 
-    // ─── STEP 2: Check charges (1st or 2nd of month) ───
+    // ─── STEP 2: Check charges ───
     if (today.getDate() === 1 || today.getDate() === 2) {
       const recentInvoices = await stripe.invoices.list({
         limit: 100,
@@ -225,20 +420,13 @@ Deno.serve(async (req) => {
           const pid = typeof line.price?.product === "string" ? line.price.product : line.price?.product?.id;
           return pid && RUTAPP_PRODUCT_IDS.has(pid);
         });
-        if (!isRutapp) continue;
-
-        const customerEmail = inv.customer_email;
-        if (!customerEmail) continue;
+        if (!isRutapp || !inv.customer_email) continue;
 
         const { data: allUsers } = await supabase.auth.admin.listUsers();
-        const matchUser = allUsers?.users?.find((u: any) => u.email === customerEmail);
+        const matchUser = allUsers?.users?.find((u: any) => u.email === inv.customer_email);
         if (!matchUser) continue;
 
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("empresa_id, telefono, nombre")
-          .eq("user_id", matchUser.id)
-          .maybeSingle();
+        const { data: profile } = await supabase.from("profiles").select("empresa_id, telefono, nombre").eq("user_id", matchUser.id).maybeSingle();
         if (!profile) continue;
 
         const empresaNombre = await getEmpresaName(profile.empresa_id);
@@ -252,47 +440,27 @@ Deno.serve(async (req) => {
           }).eq("empresa_id", profile.empresa_id);
 
           if (waToken && profile.telefono) {
-            const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
-            const amountFmt = `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`;
-            const msg = buildMessage(tplMap.cobro_exitoso, {
+            await sendTicketWhatsApp(supabase, waToken, profile.telefono, tplMap.cobro_exitoso, {
               nombre: profile.nombre || "",
               empresa: empresaNombre,
-              monto: amountFmt,
-              fecha_vigencia: `1 de ${getNextMonthName()}`,
-            });
-            const ok = await sendWhatsApp(waToken, phone, msg);
-            await supabase.from("billing_notifications").insert({
-              customer_email: customerEmail, customer_phone: phone, channel: "whatsapp",
-              tipo: "cobro_exitoso", mensaje: msg, monto_centavos: inv.amount_paid,
-              stripe_invoice_url: inv.hosted_invoice_url || null,
-              status: ok ? "sent" : "error",
-            }).catch(() => {});
+              monto: `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`,
+              fechaVigencia: `1 de ${getNextMonthName()}`,
+            }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_paid);
           }
-          results.push({ email: customerEmail, action: "payment_confirmed" });
+          results.push({ email: inv.customer_email, action: "payment_confirmed" });
 
         } else if ((inv.status === "open" || inv.status === "uncollectible") && tplMap.cobro_fallido.activo) {
-          await supabase.from("subscriptions").update({
-            status: "past_due", updated_at: new Date().toISOString(),
-          }).eq("empresa_id", profile.empresa_id);
+          await supabase.from("subscriptions").update({ status: "past_due", updated_at: new Date().toISOString() }).eq("empresa_id", profile.empresa_id);
 
           if (waToken && profile.telefono) {
-            const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
-            const amountFmt = `$${(inv.amount_due / 100).toLocaleString("es-MX")} MXN`;
-            const msg = buildMessage(tplMap.cobro_fallido, {
+            await sendTicketWhatsApp(supabase, waToken, profile.telefono, tplMap.cobro_fallido, {
               nombre: profile.nombre || "",
               empresa: empresaNombre,
-              monto: amountFmt,
-              enlace_pago: inv.hosted_invoice_url || FACTURACION_URL,
-            });
-            const ok = await sendWhatsApp(waToken, phone, msg);
-            await supabase.from("billing_notifications").insert({
-              customer_email: customerEmail, customer_phone: phone, channel: "whatsapp",
-              tipo: "cobro_fallido", mensaje: msg,
-              stripe_invoice_url: inv.hosted_invoice_url || null,
-              monto_centavos: inv.amount_due, status: ok ? "sent" : "error",
-            }).catch(() => {});
+              monto: `$${(inv.amount_due / 100).toLocaleString("es-MX")} MXN`,
+              enlacePago: inv.hosted_invoice_url || FACTURACION_URL,
+            }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_due);
           }
-          results.push({ email: customerEmail, action: "payment_failed" });
+          results.push({ email: inv.customer_email, action: "payment_failed" });
         }
       }
     }
@@ -300,43 +468,27 @@ Deno.serve(async (req) => {
     // ─── STEP 3: Suspend after grace period ───
     const graceCutoff = new Date(today);
     graceCutoff.setDate(graceCutoff.getDate() - GRACE_DAYS);
-    const graceCutoffStr = graceCutoff.toISOString();
 
     const { data: pastDueSubs } = await supabase
       .from("subscriptions")
       .select("id, empresa_id, updated_at")
       .eq("status", "past_due")
-      .lt("updated_at", graceCutoffStr);
+      .lt("updated_at", graceCutoff.toISOString());
 
     for (const sub of pastDueSubs || []) {
-      await supabase.from("subscriptions").update({
-        status: "suspended", updated_at: new Date().toISOString(),
-      }).eq("id", sub.id);
+      await supabase.from("subscriptions").update({ status: "suspended", updated_at: new Date().toISOString() }).eq("id", sub.id);
 
       if (tplMap.suspension.activo) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("user_id, telefono, nombre")
-          .eq("empresa_id", sub.empresa_id)
-          .limit(1)
-          .maybeSingle();
+        const { data: profile } = await supabase.from("profiles").select("user_id, telefono, nombre").eq("empresa_id", sub.empresa_id).limit(1).maybeSingle();
 
         if (waToken && profile?.telefono) {
-          const phone = profile.telefono.replace(/[\s\-\(\)]/g, "");
           const empresaNombre = await getEmpresaName(sub.empresa_id);
-          const msg = buildMessage(tplMap.suspension, {
+          const { data: suspProfile } = await supabase.auth.admin.getUserById(profile.user_id);
+          await sendTicketWhatsApp(supabase, waToken, profile.telefono, tplMap.suspension, {
             nombre: profile.nombre || "",
             empresa: empresaNombre,
-            enlace_facturacion: FACTURACION_URL,
-          });
-          const ok = await sendWhatsApp(waToken, phone, msg);
-
-          const { data: suspProfile } = await supabase.auth.admin.getUserById(profile.user_id);
-          await supabase.from("billing_notifications").insert({
-            customer_email: suspProfile?.user?.email || "desconocido",
-            customer_phone: phone, channel: "whatsapp",
-            tipo: "suspension", mensaje: msg, status: ok ? "sent" : "error",
-          }).catch(() => {});
+            enlaceFacturacion: FACTURACION_URL,
+          }, suspProfile?.user?.email || "desconocido");
         }
       }
       results.push({ sub_id: sub.id, action: "suspended" });
@@ -361,6 +513,5 @@ function getMonthName() {
 
 function getNextMonthName() {
   const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  const nextMonth = (new Date().getMonth() + 2) % 12;
-  return months[nextMonth];
+  return months[(new Date().getMonth() + 2) % 12];
 }
