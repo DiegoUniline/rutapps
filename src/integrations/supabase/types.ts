@@ -1493,6 +1493,142 @@ export type Database = {
           },
         ]
       }
+      promocion_aplicada: {
+        Row: {
+          created_at: string
+          descripcion: string | null
+          descuento_aplicado: number
+          id: string
+          promocion_id: string
+          venta_id: string
+          venta_linea_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          descripcion?: string | null
+          descuento_aplicado?: number
+          id?: string
+          promocion_id: string
+          venta_id: string
+          venta_linea_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string | null
+          descuento_aplicado?: number
+          id?: string
+          promocion_id?: string
+          venta_id?: string
+          venta_linea_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promocion_aplicada_promocion_id_fkey"
+            columns: ["promocion_id"]
+            isOneToOne: false
+            referencedRelation: "promociones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_aplicada_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promocion_aplicada_venta_linea_id_fkey"
+            columns: ["venta_linea_id"]
+            isOneToOne: false
+            referencedRelation: "venta_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promociones: {
+        Row: {
+          activa: boolean
+          acumulable: boolean
+          aplica_a: Database["public"]["Enums"]["aplica_promocion"]
+          cantidad_gratis: number | null
+          cantidad_minima: number | null
+          clasificacion_ids: string[] | null
+          cliente_ids: string[] | null
+          created_at: string
+          descripcion: string | null
+          empresa_id: string
+          id: string
+          nombre: string
+          prioridad: number
+          producto_gratis_id: string | null
+          producto_ids: string[] | null
+          tipo: Database["public"]["Enums"]["tipo_promocion"]
+          valor: number
+          vigencia_fin: string | null
+          vigencia_inicio: string | null
+          zona_ids: string[] | null
+        }
+        Insert: {
+          activa?: boolean
+          acumulable?: boolean
+          aplica_a?: Database["public"]["Enums"]["aplica_promocion"]
+          cantidad_gratis?: number | null
+          cantidad_minima?: number | null
+          clasificacion_ids?: string[] | null
+          cliente_ids?: string[] | null
+          created_at?: string
+          descripcion?: string | null
+          empresa_id: string
+          id?: string
+          nombre: string
+          prioridad?: number
+          producto_gratis_id?: string | null
+          producto_ids?: string[] | null
+          tipo?: Database["public"]["Enums"]["tipo_promocion"]
+          valor?: number
+          vigencia_fin?: string | null
+          vigencia_inicio?: string | null
+          zona_ids?: string[] | null
+        }
+        Update: {
+          activa?: boolean
+          acumulable?: boolean
+          aplica_a?: Database["public"]["Enums"]["aplica_promocion"]
+          cantidad_gratis?: number | null
+          cantidad_minima?: number | null
+          clasificacion_ids?: string[] | null
+          cliente_ids?: string[] | null
+          created_at?: string
+          descripcion?: string | null
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          prioridad?: number
+          producto_gratis_id?: string | null
+          producto_ids?: string[] | null
+          tipo?: Database["public"]["Enums"]["tipo_promocion"]
+          valor?: number
+          vigencia_fin?: string | null
+          vigencia_inicio?: string | null
+          zona_ids?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promociones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promociones_producto_gratis_id_fkey"
+            columns: ["producto_gratis_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proveedores: {
         Row: {
           created_at: string
@@ -2245,6 +2381,12 @@ export type Database = {
     }
     Enums: {
       aplica_a_tarifa: "todos" | "categoria" | "producto"
+      aplica_promocion:
+        | "todos"
+        | "producto"
+        | "clasificacion"
+        | "cliente"
+        | "zona"
       calculo_costo:
         | "promedio"
         | "ultimo"
@@ -2275,6 +2417,12 @@ export type Database = {
       tipo_calculo_tarifa: "margen_costo" | "descuento_precio" | "precio_fijo"
       tipo_comision: "porcentaje" | "monto_fijo"
       tipo_devolucion: "almacen" | "tienda"
+      tipo_promocion:
+        | "descuento_porcentaje"
+        | "descuento_monto"
+        | "producto_gratis"
+        | "precio_especial"
+        | "volumen"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
       tipo_venta: "pedido" | "venta_directa"
     }
@@ -2405,6 +2553,13 @@ export const Constants = {
   public: {
     Enums: {
       aplica_a_tarifa: ["todos", "categoria", "producto"],
+      aplica_promocion: [
+        "todos",
+        "producto",
+        "clasificacion",
+        "cliente",
+        "zona",
+      ],
       calculo_costo: [
         "promedio",
         "ultimo",
@@ -2438,6 +2593,13 @@ export const Constants = {
       tipo_calculo_tarifa: ["margen_costo", "descuento_precio", "precio_fijo"],
       tipo_comision: ["porcentaje", "monto_fijo"],
       tipo_devolucion: ["almacen", "tienda"],
+      tipo_promocion: [
+        "descuento_porcentaje",
+        "descuento_monto",
+        "producto_gratis",
+        "precio_especial",
+        "volumen",
+      ],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],
       tipo_venta: ["pedido", "venta_directa"],
     },
