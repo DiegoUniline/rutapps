@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned, Crosshair, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
+import { toast } from 'sonner';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -18,7 +19,34 @@ export default function RutaClientes() {
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [modo, setModo] = useState<'visitas' | 'todos'>('visitas');
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
+  const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
+
+  const captureGps = useCallback(async (cliente: any) => {
+    if (!navigator.geolocation) {
+      toast.error('Tu navegador no soporta GPS');
+      return;
+    }
+    setCapturingGpsId(cliente.id);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        await offlineMutate('clientes', 'update', {
+          ...cliente,
+          gps_lat: latitude,
+          gps_lng: longitude,
+        });
+        refetch();
+        setCapturingGpsId(null);
+        toast.success(`GPS guardado para ${cliente.nombre}`);
+      },
+      (err) => {
+        setCapturingGpsId(null);
+        toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  }, [offlineMutate]);
 
   const { data: clientes, isLoading, refetch } = useOfflineQuery('clientes', {
     empresa_id: empresa?.id,
@@ -178,6 +206,21 @@ export default function RutaClientes() {
               </div>
 
               <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => captureGps(c)}
+                  disabled={capturingGpsId === c.id}
+                  className={cn(
+                    "w-11 h-11 rounded-xl flex items-center justify-center active:scale-90 transition-transform",
+                    c.gps_lat && c.gps_lng
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                  )}
+                  title={c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
+                >
+                  {capturingGpsId === c.id
+                    ? <Loader2 className="h-5 w-5 animate-spin" />
+                    : <Crosshair className="h-5 w-5" />}
+                </button>
                 {c.gps_lat && c.gps_lng && (
                   <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
                     className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
@@ -186,7 +229,7 @@ export default function RutaClientes() {
                 )}
                 {c.telefono && (
                   <a href={`tel:${c.telefono}`}
-                    className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 active:scale-90 transition-transform">
+                    className="w-11 h-11 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform">
                     <Phone className="h-5 w-5" />
                   </a>
                 )}
