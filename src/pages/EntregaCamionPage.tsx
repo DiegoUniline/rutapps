@@ -154,7 +154,7 @@ export default function EntregaCamionPage() {
         {entregas.map((e: any) => (
           <div key={e.id}
             className="bg-card border border-border rounded-lg p-3 cursor-pointer hover:bg-accent/50 transition-colors"
-            onClick={() => navigate(`/entregas/${e.id}`)}
+            onClick={() => navigate(`/logistica/entregas/${e.id}`)}
           >
             <div className="flex items-center justify-between">
               <div>
