@@ -530,11 +530,11 @@ export default function RutaNuevaVenta() {
         vendedor_id: profile?.vendedor_id || profile?.id || null,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
-        status: tipoVenta === 'venta_directa' ? 'confirmado' : 'borrador',
+        status: 'confirmado',
         notas: notas || null, subtotal: totals.subtotal, iva_total: totals.iva,
         tarifa_id: tarifaId2, almacen_id: almacenId2,
         ieps_total: totals.ieps, descuento_total: 0, total: totals.total,
-        saldo_pendiente: condicionPago === 'credito' ? totals.total : 0,
+        saldo_pendiente: condicionPago === 'contado' ? 0 : totals.total,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
       });
@@ -1309,9 +1309,11 @@ export default function RutaNuevaVenta() {
                   <span className="text-[20px] font-bold text-primary tabular-nums">${fmt(totalACobrar)}</span>
                 </div>
               )}
-              {totalACobrar === 0 && condicionPago === 'credito' && (
+              {totalACobrar === 0 && (condicionPago === 'credito' || condicionPago === 'por_definir') && (
                 <div className="mt-2 pt-2 border-t border-border/60">
-                  <p className="text-[12px] text-muted-foreground text-center">No hay cobro por ahora — se registra a crédito</p>
+                  <p className="text-[12px] text-muted-foreground text-center">
+                    {condicionPago === 'credito' ? 'No hay cobro por ahora — se registra a crédito' : 'No hay cobro por ahora — pago por definir'}
+                  </p>
                 </div>
               )}
             </section>
@@ -1321,7 +1323,7 @@ export default function RutaNuevaVenta() {
             <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito}
               className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
               <Check className="h-4 w-4" />
-              {saving ? 'Guardando...' : totalACobrar > 0 ? `Confirmar y cobrar $${fmt(totalACobrar)}` : 'Confirmar venta a crédito'}
+              {saving ? 'Guardando...' : totalACobrar > 0 ? `Confirmar y cobrar $${fmt(totalACobrar)}` : 'Confirmar venta'}
             </button>
           </div>
         </div>

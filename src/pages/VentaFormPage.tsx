@@ -330,7 +330,7 @@ export default function VentaFormPage() {
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
   }, [lineas]);
 
-  const handleSave = async () => {
+  const handleSave = async (autoConfirm = false) => {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     try {
@@ -352,7 +352,14 @@ export default function VentaFormPage() {
           subtotal: base, iva_monto: iva, ieps_monto: ieps, total: base + iva + ieps,
         } as any);
       }
-      toast.success('Venta guardada');
+      if (isNew && autoConfirm) {
+        // Set saldo_pendiente based on condicion_pago
+        const saldo = form.condicion_pago === 'contado' ? 0 : totals.total;
+        await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
+        toast.success('Venta confirmada');
+      } else {
+        toast.success('Venta guardada');
+      }
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
@@ -519,6 +526,15 @@ export default function VentaFormPage() {
           {!isNew && form.status === 'borrador' && (
             <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
+          {isNew && (
+            <button
+              onClick={async () => { await handleSave(); }}
+              disabled={saveVenta.isPending}
+              className="btn-odoo-secondary"
+            >
+              <Save className="h-3.5 w-3.5" /> Guardar borrador
+            </button>
+          )}
           {/* Entrega button for pedidos — 1:N partial deliveries */}
           {canCreateEntrega && (
             <button
@@ -567,9 +583,18 @@ export default function VentaFormPage() {
           {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && (
             <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
           )}
-          {!readOnly && (
-            <button onClick={handleSave} disabled={saveVenta.isPending} className="btn-odoo-primary">
+          {!readOnly && !isNew && (
+            <button onClick={() => handleSave()} disabled={saveVenta.isPending} className="btn-odoo-secondary">
               <Save className="h-3.5 w-3.5" /> Guardar
+            </button>
+          )}
+          {isNew && (
+            <button
+              onClick={() => handleSave(true)}
+              disabled={saveVenta.isPending}
+              className="btn-odoo-primary"
+            >
+              <Check className="h-3.5 w-3.5" /> Guardar y confirmar
             </button>
           )}
           {!isNew && form.status !== 'cancelado' && (
