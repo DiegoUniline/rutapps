@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, MessageCircle, Download, Receipt } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useVenta } from '@/hooks/useVentas';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
