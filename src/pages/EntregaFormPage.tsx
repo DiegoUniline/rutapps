@@ -307,6 +307,12 @@ export default function EntregaFormPage() {
               <Truck className="h-3.5 w-3.5" /> Cargar camión
             </Button>
           )}
+          {/* Document */}
+          {!isNew && (
+            <Button onClick={handleGenerarEntregaPdf} size="sm" variant="outline" className="text-xs">
+              <FileText className="h-3.5 w-3.5" /> Documento
+            </Button>
+          )}
           {/* Cancel */}
           {!isNew && !readOnly && (
             <Button onClick={handleCancelar} size="sm" variant="ghost" className="text-destructive text-xs">Cancelar</Button>
