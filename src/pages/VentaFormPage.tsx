@@ -199,6 +199,7 @@ export default function VentaFormPage() {
     }
   };
 
+  // Subtotal includes taxes: base + ieps + iva (MX standard: IVA applies on base+IEPS)
   const totals = useMemo(() => {
     let subtotal = 0, descuento_total = 0, iva_total = 0, ieps_total = 0;
     lineas.forEach(l => {
