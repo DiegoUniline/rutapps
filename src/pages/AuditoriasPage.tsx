@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import SearchableSelect from '@/components/SearchableSelect';
+import ModalSelect from '@/components/ModalSelect';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
