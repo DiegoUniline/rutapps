@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -9,7 +9,7 @@ import { Filter, ShoppingCart, X, Calendar, Loader2, Navigation, Route, CheckCir
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { useGoogleMapsKey } from '@/hooks/useGoogleMapsKey';
+import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
 
 const mapContainerStyle = { width: '100%', height: '100%' };
@@ -34,7 +34,7 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
-  const { apiKey, loading: loadingKey } = useGoogleMapsKey();
+  const { isLoaded } = useGoogleMaps();
   const [fechaDesde, setFechaDesde] = useState(weekAgo);
   const [fechaHasta, setFechaHasta] = useState(today);
   const [vendedorFilter, setVendedorFilter] = useState('');
@@ -51,11 +51,6 @@ export default function MapaVentasPage() {
     duration: string;
   } | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: apiKey ?? '',
-    id: 'google-map-ventas',
-  });
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
@@ -216,13 +211,6 @@ export default function MapaVentasPage() {
 
   const activeFiltersCount = [vendedorFilter, tipoFilter].filter(Boolean).length;
 
-  if (loadingKey || !apiKey) {
-    return (
-      <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">

@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 
@@ -135,9 +136,9 @@ function AppRoutes() {
                 <Route path="/ventas/entregas" element={<EntregasPage />} />
                 <Route path="/ventas/reporte-entregas" element={<ReporteEntregasPage />} />
                 <Route path="/ventas/cobranza" element={<CobranzaPage />} />
-                <Route path="/ventas/rutas" element={<RutasMapPage />} />
-                <Route path="/ventas/mapa-clientes" element={<MapaClientesPage />} />
-                <Route path="/ventas/mapa-ventas" element={<MapaVentasPage />} />
+                <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
+                <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
+                <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
                 <Route path="/ventas/:id" element={<VentaFormPage />} />
                 <Route path="/almacen/inventario" element={<InventarioPage />} />
                 <Route path="/almacen/cargas" element={<CargasListPage />} />

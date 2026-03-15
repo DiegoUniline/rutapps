@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -9,7 +9,7 @@ import { Search, Filter, MapPin, X, Users, Loader2, CheckCircle2, Navigation, Ro
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { useGoogleMapsKey } from '@/hooks/useGoogleMapsKey';
+import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = new Date().toLocaleDateString('es-MX', { weekday: 'long' }).replace(/^\w/, c => c.toUpperCase());
@@ -41,7 +41,7 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
 
 export default function MapaClientesPage() {
   const { user } = useAuth();
-  const { apiKey, loading: loadingKey } = useGoogleMapsKey();
+  const { isLoaded } = useGoogleMaps();
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
@@ -59,11 +59,6 @@ export default function MapaClientesPage() {
     duration: string;
   } | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: apiKey ?? '',
-    id: 'google-map-clientes',
-  });
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
@@ -199,13 +194,6 @@ export default function MapaClientesPage() {
     labelOrigin: new google.maps.Point(0, 0),
   });
 
-  if (loadingKey || !apiKey) {
-    return (
-      <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
