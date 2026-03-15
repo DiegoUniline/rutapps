@@ -473,8 +473,8 @@ export default function DemandaPage() {
                                     <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{l.productos?.codigo}</TableCell>
                                     <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? l.descripcion}</TableCell>
                                     <TableCell className="text-right text-[12px] py-1.5">{l.cantidad} {unidad}</TableCell>
-                                    <TableCell className="text-right text-[12px] text-success py-1.5">{l.cantidad_entregada} {unidad}</TableCell>
-                                    <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-warning" : "text-success")}>
+                                    <TableCell className="text-right text-[12px] text-muted-foreground py-1.5">{l.cantidad_entregada} {unidad}</TableCell>
+                                    <TableCell className={cn("text-right text-[12px] font-bold py-1.5", pendiente > 0 ? "text-destructive" : "text-muted-foreground")}>
                                       {pendiente} {unidad}
                                     </TableCell>
                                     <TableCell className={cn("text-right text-[12px] py-1.5", sinStock ? "text-destructive font-bold" : "text-muted-foreground")}>
