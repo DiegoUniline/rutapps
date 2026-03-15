@@ -38,6 +38,7 @@ interface ClientVisit {
   status: VisitStatus;
   ventaTotal?: number;
   entregaFolio?: string;
+  ordenEntrega?: number;
 }
 
 function MonitorContent() {
