@@ -449,7 +449,7 @@ function NavegacionContent() {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              {mode === 'clientes' ? (
+              {navigatingStop.tipo === 'cliente' ? (
                 <>
                   <Button onClick={() => handleSaleAndVisit(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
                     <ShoppingCart className="h-4 w-4" /> Vender
