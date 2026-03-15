@@ -10,8 +10,8 @@ export function useProductos(search?: string, statusFilter?: string) {
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       let q = supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, cantidad, status, imagen_url, tiene_iva, marca_id, marcas(nombre)')
-        .order('created_at', { ascending: false });
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura), lista_id, listas(nombre)')
+        .order('nombre', { ascending: true });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       const { data, error } = await q;
