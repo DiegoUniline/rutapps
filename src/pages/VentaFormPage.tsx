@@ -105,8 +105,8 @@ export default function VentaFormPage() {
       setForm(existingVenta);
       const existingLines = existingVenta.venta_lineas ?? [];
       setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
-    } else if (isNew && profile?.vendedor_id) {
-      setForm(prev => ({ ...prev, vendedor_id: profile.vendedor_id }));
+    } else if (isNew) {
+      setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
     }
   }, [existingVenta, isNew, profile]);
 
@@ -197,7 +197,7 @@ export default function VentaFormPage() {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     try {
-      const payload = { ...form, ...totals };
+      const payload = { ...form, ...totals, vendedor_id: profile?.vendedor_id ?? profile?.id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       for (const l of lineas) {
