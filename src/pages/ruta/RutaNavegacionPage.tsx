@@ -153,7 +153,16 @@ function NavegacionContent() {
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
-        setDirections(status === 'OK' && result ? result : null);
+        if (status === 'OK' && result) {
+          setDirections(result);
+          // Auto-fit map to the route bounds
+          const bounds = result.routes?.[0]?.bounds;
+          if (bounds && mapRef.current) {
+            mapRef.current.fitBounds(bounds, { top: 160, bottom: 220, left: 30, right: 30 });
+          }
+        } else {
+          setDirections(null);
+        }
       }
     );
   }, [isLoaded, navigatingTo, userLocation?.lat, userLocation?.lng]);
@@ -174,12 +183,10 @@ function NavegacionContent() {
     setActiveStopId(stop.id);
     setCurrentStepIdx(0);
     setPanelOpen(true);
-    // Fit bounds between user location and destination for a comfortable zoom
-    if (mapRef.current) {
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend({ lat: stop.gps_lat, lng: stop.gps_lng });
-      if (userLocation) bounds.extend(userLocation);
-      mapRef.current.fitBounds(bounds, { top: 140, bottom: 200, left: 40, right: 40 });
+    // Initial center on user while directions load
+    if (mapRef.current && userLocation) {
+      mapRef.current.panTo(userLocation);
+      mapRef.current.setZoom(15);
     }
   };
 
