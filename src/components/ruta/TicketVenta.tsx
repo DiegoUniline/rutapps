@@ -1,4 +1,5 @@
-import { Check, Share2, X } from 'lucide-react';
+import { Check, Printer, Share2, X } from 'lucide-react';
+import { useRef } from 'react';
 
 interface TicketVentaProps {
   empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null };
@@ -25,6 +26,67 @@ export default function TicketVenta(props: TicketVentaProps) {
     subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
     montoRecibido, cambio, onClose,
   } = props;
+
+  const ticketRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    if (!ticketRef.current) return;
+
+    const printWindow = window.open('', '_blank', 'width=320,height=600');
+    if (!printWindow) return;
+
+    const content = ticketRef.current.innerHTML;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Ticket ${folio}</title>
+        <style>
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            width: 80mm;
+            padding: 4mm;
+            color: #000;
+            background: #fff;
+          }
+          .ticket-print-zone { width: 100%; }
+          .ticket-print-zone img { max-height: 40px; max-width: 50mm; display: block; margin: 0 auto 4px; }
+          .ticket-header { text-align: center; margin-bottom: 6px; }
+          .ticket-header .empresa-nombre { font-size: 14px; font-weight: bold; }
+          .ticket-header .empresa-info { font-size: 10px; color: #444; }
+          .ticket-sep { border-top: 1px dashed #000; margin: 4px 0; }
+          .ticket-row { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
+          .ticket-row.bold { font-weight: bold; }
+          .ticket-row .label { color: #444; }
+          .ticket-products .product-line { display: flex; justify-content: space-between; font-size: 11px; line-height: 1.5; }
+          .ticket-products .product-line .name { flex: 1; margin-right: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .ticket-products .section-title { font-size: 10px; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 2px; color: #444; }
+          .ticket-total-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px; }
+          .ticket-footer { text-align: center; font-size: 9px; color: #666; margin-top: 8px; padding-top: 4px; border-top: 1px dashed #000; }
+          .cambio-tag { font-size: 10px; color: #666; }
+          @media print {
+            body { width: 80mm; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="ticket-print-zone">${content}</div>
+        <script>
+          window.onload = function() { window.print(); window.close(); };
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
 
   const handleShare = async () => {
     const text = [
@@ -69,18 +131,26 @@ export default function TicketVenta(props: TicketVentaProps) {
           <button onClick={onClose} className="p-1 -ml-1"><X className="h-5 w-5 text-foreground" /></button>
           <h1 className="text-[16px] font-bold text-foreground">Comprobante</h1>
         </div>
-        <button
-          onClick={handleShare}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[12px] font-semibold active:scale-95 transition-transform"
-        >
-          <Share2 className="h-3.5 w-3.5" /> Compartir
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground/10 text-foreground text-[12px] font-semibold active:scale-95 transition-transform"
+          >
+            <Printer className="h-3.5 w-3.5" /> Imprimir
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[12px] font-semibold active:scale-95 transition-transform"
+          >
+            <Share2 className="h-3.5 w-3.5" /> Compartir
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 p-4 flex flex-col items-center">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          {/* Header with total */}
-          <div className="bg-primary px-5 py-5 text-center">
+          {/* Header with total — screen only */}
+          <div className="bg-primary px-5 py-5 text-center print:hidden">
             <div className="w-11 h-11 bg-primary-foreground/20 rounded-full flex items-center justify-center mx-auto mb-2">
               <Check className="h-6 w-6 text-primary-foreground" />
             </div>
@@ -88,83 +158,77 @@ export default function TicketVenta(props: TicketVentaProps) {
             <p className="text-primary-foreground text-[28px] font-bold mt-0.5">$ {fmt(total)}</p>
           </div>
 
-          {/* Company info with logo */}
-          <div className="px-5 pt-4 pb-3 text-center border-b border-dashed border-border">
-            {empresa.logo_url && (
-              <img
-                src={empresa.logo_url}
-                alt={empresa.nombre}
-                className="h-10 max-w-[140px] object-contain mx-auto mb-2"
-              />
-            )}
-            <p className="text-[13px] font-bold text-foreground">{empresa.nombre}</p>
-            {empresa.rfc && <p className="text-[10px] text-muted-foreground mt-0.5">RFC: {empresa.rfc}</p>}
-            {empresa.direccion && <p className="text-[10px] text-muted-foreground mt-0.5">{empresa.direccion}</p>}
-            {empresa.telefono && <p className="text-[10px] text-muted-foreground">Tel: {empresa.telefono}</p>}
-          </div>
-
-          {/* Sale info */}
-          <div className="px-5 py-3 space-y-1.5 border-b border-border">
-            <Row label="Folio" value={folio} bold />
-            <Row label="Fecha" value={fecha} />
-            <Row label="Cliente" value={clienteNombre} />
-            <Row label="Pago" value={condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir'} />
-            {metodoPago && <Row label="Método" value={metodoPago} />}
-          </div>
-
-          {/* Products */}
-          <div className="px-5 py-3 border-b border-border">
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold mb-2 tracking-wide">Productos</p>
-            {lineas.map((l, i) => (
-              <div key={i} className="flex justify-between text-[12px] py-0.5">
-                <span className="text-foreground truncate flex-1 mr-2">
-                  {l.cantidad}x {l.nombre}
-                  {l.esCambio && <span className="text-muted-foreground ml-1">(cambio)</span>}
-                </span>
-                <span className="text-foreground font-medium shrink-0">$ {fmt(l.total)}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Totals — always show breakdown */}
-          <div className="px-5 py-3 space-y-1">
-            <div className="flex justify-between text-[12px]">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="text-foreground">$ {fmt(subtotal)}</span>
+          {/* Printable ticket content */}
+          <div ref={ticketRef}>
+            {/* Company info with logo */}
+            <div className="ticket-header px-5 pt-4 pb-3 text-center border-b border-dashed border-border">
+              {empresa.logo_url && (
+                <img
+                  src={empresa.logo_url}
+                  alt={empresa.nombre}
+                  className="h-10 max-w-[140px] object-contain mx-auto mb-2"
+                />
+              )}
+              <p className="empresa-nombre text-[13px] font-bold text-foreground">{empresa.nombre}</p>
+              {empresa.rfc && <p className="empresa-info text-[10px] text-muted-foreground mt-0.5">RFC: {empresa.rfc}</p>}
+              {empresa.direccion && <p className="empresa-info text-[10px] text-muted-foreground mt-0.5">{empresa.direccion}</p>}
+              {empresa.telefono && <p className="empresa-info text-[10px] text-muted-foreground">Tel: {empresa.telefono}</p>}
             </div>
-            <div className="flex justify-between text-[12px]">
-              <span className="text-muted-foreground">IVA</span>
-              <span className="text-foreground">$ {fmt(iva)}</span>
+
+            <div className="ticket-sep" />
+
+            {/* Sale info */}
+            <div className="px-5 py-3 space-y-1.5 border-b border-border">
+              <div className="ticket-row bold"><span className="label">Folio</span><span>{folio}</span></div>
+              <div className="ticket-row"><span className="label">Fecha</span><span>{fecha}</span></div>
+              <div className="ticket-row"><span className="label">Cliente</span><span>{clienteNombre}</span></div>
+              <div className="ticket-row"><span className="label">Pago</span><span>{condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir'}</span></div>
+              {metodoPago && <div className="ticket-row"><span className="label">Método</span><span>{metodoPago}</span></div>}
             </div>
-            {ieps > 0 && (
-              <div className="flex justify-between text-[12px]">
-                <span className="text-muted-foreground">IEPS</span>
-                <span className="text-foreground">$ {fmt(ieps)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-[14px] font-bold border-t border-dashed border-border pt-2 mt-1">
-              <span className="text-foreground">Total</span>
-              <span className="text-foreground">$ {fmt(total)}</span>
-            </div>
-            {montoRecibido != null && montoRecibido > 0 && (
-              <>
-                <div className="flex justify-between text-[12px]">
-                  <span className="text-muted-foreground">Recibido</span>
-                  <span className="text-foreground">$ {fmt(montoRecibido)}</span>
+
+            <div className="ticket-sep" />
+
+            {/* Products */}
+            <div className="ticket-products px-5 py-3 border-b border-border">
+              <p className="section-title text-[10px] text-muted-foreground uppercase font-semibold mb-2 tracking-wide">Productos</p>
+              {lineas.map((l, i) => (
+                <div key={i} className="product-line flex justify-between text-[12px] py-0.5">
+                  <span className="name text-foreground truncate flex-1 mr-2">
+                    {l.cantidad}x {l.nombre}
+                    {l.esCambio && <span className="cambio-tag text-muted-foreground ml-1">(cambio)</span>}
+                  </span>
+                  <span className="text-foreground font-medium shrink-0">$ {fmt(l.total)}</span>
                 </div>
-                {(cambio ?? 0) > 0 && (
-                  <div className="flex justify-between text-[12px]">
-                    <span className="text-muted-foreground">Cambio</span>
-                    <span className="text-primary font-bold">$ {fmt(cambio!)}</span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+              ))}
+            </div>
 
-          {/* Footer */}
-          <div className="px-5 py-3 border-t border-border text-center">
-            <p className="text-[9px] text-muted-foreground">Elaborado por Uniline — Innovación en la nube</p>
+            <div className="ticket-sep" />
+
+            {/* Totals */}
+            <div className="px-5 py-3 space-y-1">
+              <div className="ticket-row"><span className="label text-muted-foreground">Subtotal</span><span className="text-foreground">$ {fmt(subtotal)}</span></div>
+              <div className="ticket-row"><span className="label text-muted-foreground">IVA</span><span className="text-foreground">$ {fmt(iva)}</span></div>
+              {ieps > 0 && (
+                <div className="ticket-row"><span className="label text-muted-foreground">IEPS</span><span className="text-foreground">$ {fmt(ieps)}</span></div>
+              )}
+              <div className="ticket-total-row">
+                <span>Total</span>
+                <span>$ {fmt(total)}</span>
+              </div>
+              {montoRecibido != null && montoRecibido > 0 && (
+                <>
+                  <div className="ticket-row"><span className="label text-muted-foreground">Recibido</span><span className="text-foreground">$ {fmt(montoRecibido)}</span></div>
+                  {(cambio ?? 0) > 0 && (
+                    <div className="ticket-row"><span className="label text-muted-foreground">Cambio</span><span className="text-primary font-bold">$ {fmt(cambio!)}</span></div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="ticket-footer px-5 py-3 border-t border-border text-center">
+              <p className="text-[9px] text-muted-foreground">Elaborado por Uniline — Innovación en la nube</p>
+            </div>
           </div>
         </div>
 
@@ -175,15 +239,6 @@ export default function TicketVenta(props: TicketVentaProps) {
           Listo
         </button>
       </div>
-    </div>
-  );
-}
-
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className="flex justify-between text-[12px]">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={`text-foreground capitalize ${bold ? 'font-bold' : 'font-medium'}`}>{value}</span>
     </div>
   );
 }
