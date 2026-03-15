@@ -211,7 +211,8 @@ function NavegacionContent() {
 
   const handleSaleAndVisit = (stop: Stop) => {
     setCompletedIds(prev => new Set([...prev, stop.id]));
-    navigate(`/ruta/ventas/nueva?clienteId=${stop.id}`);
+    const realClientId = stop.id.replace('cli-', '');
+    navigate(`/ruta/ventas/nueva?clienteId=${realClientId}`);
   };
 
   const leg = directions?.routes?.[0]?.legs?.[0];
