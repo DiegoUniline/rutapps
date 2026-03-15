@@ -91,12 +91,13 @@ export function calcLineTax(params: {
   iva_monto: number;
   total: number;
 } {
-  const { cantidad, precio_unitario, descuento_pct, iva_pct, ieps_pct } = params;
+  const { cantidad, precio_unitario, descuento_pct, iva_pct, ieps_pct, ieps_tipo = 'porcentaje' } = params;
+  const isCuota = ieps_tipo === 'cuota';
   const base = cantidad * precio_unitario;
   const descuento = base * (descuento_pct || 0) / 100;
   const subtotal = base - descuento;
 
-  const ieps_monto = subtotal * (ieps_pct || 0) / 100;
+  const ieps_monto = isCuota ? (ieps_pct || 0) * cantidad : subtotal * (ieps_pct || 0) / 100;
   const iva_monto = (subtotal + ieps_monto) * (iva_pct || 0) / 100;
 
   return {
