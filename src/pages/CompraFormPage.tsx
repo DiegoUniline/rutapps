@@ -454,7 +454,7 @@ export default function CompraFormPage() {
                           ? (line._ieps_tipo === 'cuota' ? `$${line._ieps_pct}` : `${line._ieps_pct}%`)
                           : '';
                         return (
-                          <tr key={idx} className="border-b border-table-border">
+                          <tr key={idx} className="border-b border-table-border" data-row={idx}>
                             <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                             <td className="py-1.5 px-2">
                               {isEditable ? (
@@ -466,6 +466,14 @@ export default function CompraFormPage() {
                                   value={line.producto_id ?? ''}
                                   onChange={val => updateLinea(idx, 'producto_id', val)}
                                   placeholder="Buscar producto..."
+                                  onClose={() => {
+                                    setTimeout(() => {
+                                      const row = document.querySelector<HTMLTableRowElement>(`tr[data-row="${idx}"]`);
+                                      const inputs = row?.querySelectorAll<HTMLInputElement>('input[type="number"]');
+                                      inputs?.[0]?.focus();
+                                      inputs?.[0]?.select();
+                                    }, 30);
+                                  }}
                                 />
                               ) : (
                                 <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${line.productos.nombre}` : '—'}</span>
@@ -482,6 +490,15 @@ export default function CompraFormPage() {
                                 onChange={e => updateLinea(idx, 'cantidad', Number(e.target.value))}
                                 disabled={!isEditable}
                                 min={0}
+                                onKeyDown={e => {
+                                  if (e.key === 'Tab' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    const row = document.querySelector<HTMLTableRowElement>(`tr[data-row="${idx}"]`);
+                                    const inputs = row?.querySelectorAll<HTMLInputElement>('input[type="number"]');
+                                    inputs?.[1]?.focus();
+                                    inputs?.[1]?.select();
+                                  }
+                                }}
                               />
                             </td>
                             <td className="py-1.5 px-1">
@@ -495,6 +512,15 @@ export default function CompraFormPage() {
                                 }}
                                 disabled={!isEditable}
                                 min={1}
+                                onKeyDown={e => {
+                                  if (e.key === 'Tab' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    const row = document.querySelector<HTMLTableRowElement>(`tr[data-row="${idx}"]`);
+                                    const inputs = row?.querySelectorAll<HTMLInputElement>('input[type="number"]');
+                                    inputs?.[2]?.focus();
+                                    inputs?.[2]?.select();
+                                  }
+                                }}
                               />
                             </td>
                             <td className="py-1.5 px-2 text-right text-xs font-medium text-foreground tabular-nums">
@@ -510,15 +536,20 @@ export default function CompraFormPage() {
                                 disabled={!isEditable}
                                 step="0.01"
                                 onKeyDown={e => {
-                                  if (e.key === 'Tab' && !e.shiftKey && idx === lineas.length - 1 && isEditable) {
+                                  if (e.key === 'Tab' && !e.shiftKey) {
                                     e.preventDefault();
-                                    addLine();
-                                    setTimeout(() => {
-                                      const rows = document.querySelectorAll('table tbody tr');
-                                      const lastRow = rows[rows.length - 1];
-                                      const trigger = lastRow?.querySelector<HTMLDivElement>('.inline-edit-input');
+                                    if (idx === lineas.length - 1 && isEditable) {
+                                      addLine();
+                                      setTimeout(() => {
+                                        const newRow = document.querySelector<HTMLTableRowElement>(`tr[data-row="${idx + 1}"]`);
+                                        const trigger = newRow?.querySelector<HTMLDivElement>('.inline-edit-input');
+                                        trigger?.click();
+                                      }, 50);
+                                    } else {
+                                      const nextRow = document.querySelector<HTMLTableRowElement>(`tr[data-row="${idx + 1}"]`);
+                                      const trigger = nextRow?.querySelector<HTMLDivElement>('.inline-edit-input');
                                       trigger?.click();
-                                    }, 50);
+                                    }
                                   }
                                 }}
                               />
