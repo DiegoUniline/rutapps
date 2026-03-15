@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import SearchableSelect from '@/components/SearchableSelect';
-import ProductSearchInput from '@/components/ProductSearchInput';
+import ProductQuickSearch from '@/components/ProductQuickSearch';
 import { fmtDate, cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
