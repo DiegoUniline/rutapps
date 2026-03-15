@@ -46,6 +46,7 @@ const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const PromocionesPage = lazy(() => import("@/pages/PromocionesPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
+const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
@@ -128,6 +129,9 @@ function AppRoutes() {
         <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
         <Route path="/ruta/descarga" element={<RutaDescarga />} />
         <Route path="/ruta/mapa" element={<RutaMapaPage />} />
+
+        {/* Desktop POS — fullscreen, no AppLayout */}
+        <Route path="/pos" element={<PuntoVentaPage />} />
 
         {/* Desktop ERP */}
         <Route path="*" element={
