@@ -266,7 +266,8 @@ function NavegacionContent() {
           mapContainerStyle={{ width: '100%', height: '100%' }}
           options={{
             disableDefaultUI: true,
-            zoomControl: false,
+            zoomControl: true,
+            zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
             gestureHandling: 'greedy',
             styles: [
               { featureType: 'poi', stylers: [{ visibility: 'off' }] },
