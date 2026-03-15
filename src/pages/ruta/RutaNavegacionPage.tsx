@@ -153,7 +153,16 @@ function NavegacionContent() {
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
-        setDirections(status === 'OK' && result ? result : null);
+        if (status === 'OK' && result) {
+          setDirections(result);
+          // Auto-fit map to the route bounds
+          const bounds = result.routes?.[0]?.bounds;
+          if (bounds && mapRef.current) {
+            mapRef.current.fitBounds(bounds, { top: 160, bottom: 220, left: 30, right: 30 });
+          }
+        } else {
+          setDirections(null);
+        }
       }
     );
   }, [isLoaded, navigatingTo, userLocation?.lat, userLocation?.lng]);
