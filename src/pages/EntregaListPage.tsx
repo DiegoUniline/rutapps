@@ -274,7 +274,7 @@ export default function EntregaListPage() {
           { key: 'borrador', label: 'Borrador', count: counts.borrador },
           { key: 'surtido', label: 'Surtidos', count: counts.surtido },
           { key: 'asignado', label: 'Asignados', count: counts.asignado },
-          { key: 'cargado', label: 'Cargados', count: entregas?.filter(e => (e as any).status === 'cargado').length ?? 0 },
+          { key: 'cargado', label: 'Cargados', count: counts.cargado },
         ].map(tab => (
           <button
             key={tab.key}
