@@ -33,7 +33,14 @@ function useInventarioData() {
         .in('status', ['en_ruta', 'pendiente'] as any)
         .order('fecha', { ascending: false });
 
-      // Build route stock map: producto_id -> { carga_id -> qty_on_route }
+      // Stock camión from entregas cargadas
+      const { data: stockCamion } = await supabase
+        .from('stock_camion')
+        .select('id, vendedor_id, producto_id, cantidad_inicial, cantidad_actual, fecha, vendedores:vendedor_id(nombre)')
+        .eq('empresa_id', eid)
+        .gt('cantidad_actual', 0);
+
+      // Build route stock map: producto_id -> qty on route
       const rutaStock: Record<string, number> = {};
       const cargaDetails: any[] = [];
 
@@ -52,6 +59,7 @@ function useInventarioData() {
         }
         cargaDetails.push({
           id: c.id,
+          origen: 'carga',
           vendedor: (c.vendedores as any)?.nombre ?? '—',
           repartidor: (c.repartidor as any)?.nombre,
           almacen: (c.almacen as any)?.nombre,
@@ -60,6 +68,43 @@ function useInventarioData() {
           totalUnidades: cargaTotal,
           valorCosto: cargaValorCosto,
           valorVenta: cargaValorVenta,
+        });
+      }
+
+      // Group stock_camion by vendedor
+      const scByVendedor: Record<string, { vendedor: string; items: typeof stockCamion }> = {};
+      for (const sc of (stockCamion ?? [])) {
+        const vid = sc.vendedor_id;
+        if (!scByVendedor[vid]) {
+          scByVendedor[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', items: [] };
+        }
+        scByVendedor[vid].items!.push(sc);
+        rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + Math.max(0, sc.cantidad_actual);
+      }
+
+      // Add stock_camion groups as route cards (avoid duplicating cargas vendedores)
+      const cargaVendedorIds = new Set((cargas ?? []).map(c => c.vendedor_id));
+      for (const [vid, group] of Object.entries(scByVendedor)) {
+        if (cargaVendedorIds.has(vid)) continue; // already counted via cargas
+        let total = 0, valCosto = 0, valVenta = 0;
+        for (const sc of group.items ?? []) {
+          const qty = Math.max(0, sc.cantidad_actual);
+          total += qty;
+          const prod = (productos ?? []).find(p => p.id === sc.producto_id);
+          valCosto += qty * (prod?.costo ?? 0);
+          valVenta += qty * (prod?.precio_principal ?? 0);
+        }
+        cargaDetails.push({
+          id: `sc-${vid}`,
+          origen: 'entrega',
+          vendedor: group.vendedor,
+          repartidor: null,
+          almacen: null,
+          fecha: (group.items ?? [])[0]?.fecha,
+          status: 'cargado',
+          totalUnidades: total,
+          valorCosto: valCosto,
+          valorVenta: valVenta,
         });
       }
 
