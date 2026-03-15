@@ -323,6 +323,14 @@ export default function EntregaListPage() {
                   <TableCell
                     className="text-[12px] text-muted-foreground py-2"
                     onClick={() => navigate(`/logistica/entregas/${e.id}`)}
+                  >{e.almacenes?.nombre ?? '—'}</TableCell>
+                  <TableCell
+                    className="text-[12px] text-muted-foreground py-2"
+                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
+                  >{e.vendedor_ruta?.nombre ?? '—'}</TableCell>
+                  <TableCell
+                    className="text-[12px] text-muted-foreground py-2"
+                    onClick={() => navigate(`/logistica/entregas/${e.id}`)}
                   >{fmtDate(e.fecha)}</TableCell>
                   <TableCell
                     className="text-center py-2"
