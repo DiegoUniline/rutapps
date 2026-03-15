@@ -23,7 +23,7 @@ export default function RutaMapaPage() {
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('orden', { ascending: true });
-      return (data ?? []).filter(c => c.dia_visita?.includes(DIA_HOY) && c.gps_lat && c.gps_lng);
+      return (data ?? []).filter(c => c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng);
     },
   });
 
