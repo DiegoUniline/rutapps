@@ -5,13 +5,14 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 
 export default function RutaDashboard() {
   const navigate = useNavigate();
-  const { profile, empresa } = useAuth();
+  const { profile, empresa, user } = useAuth();
   const today = new Date().toISOString().slice(0, 10);
+  const vendedorId = profile?.vendedor_id;
 
-  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
-  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id });
-  const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id, fecha: today }, { enabled: !!empresa?.id });
-  const { data: cobros } = useOfflineQuery('cobros', { empresa_id: empresa?.id, fecha: today }, { enabled: !!empresa?.id });
+  const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
+  const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
+  const { data: gastos } = useOfflineQuery('gastos', { empresa_id: empresa?.id, fecha: today, user_id: user?.id }, { enabled: !!empresa?.id && !!user?.id });
+  const { data: cobros } = useOfflineQuery('cobros', { empresa_id: empresa?.id, fecha: today, user_id: user?.id }, { enabled: !!empresa?.id && !!user?.id });
 
   const ventasHoy = (ventas ?? []).filter((v: any) => v.fecha === today);
   const stats = {

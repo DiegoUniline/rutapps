@@ -4,9 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 
 export default function RutaStock() {
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
   const [search, setSearch] = useState('');
+  const almacenId = profile?.almacen_id;
 
+  // Products filtered by almacen assigned to vendedor
   const { data: productos, isLoading } = useOfflineQuery('productos', {
     empresa_id: empresa?.id,
     se_puede_vender: true,

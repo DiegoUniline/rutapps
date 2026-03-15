@@ -7,13 +7,15 @@ import { fmtDate } from '@/lib/utils';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
   const [search, setSearch] = useState('');
+  const vendedorId = profile?.vendedor_id;
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
     empresa_id: empresa?.id,
+    vendedor_id: vendedorId,
   }, {
-    enabled: !!empresa?.id,
+    enabled: !!empresa?.id && !!vendedorId,
     orderBy: 'created_at',
     ascending: false,
   });
