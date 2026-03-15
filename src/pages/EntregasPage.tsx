@@ -509,14 +509,12 @@ export default function EntregasPage() {
           </p>
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Nueva ruta / vendedor</label>
-            <select
-              className="border border-input rounded-md px-3 py-2 text-sm bg-background w-full"
+            <SearchableSelect
+              options={(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))}
               value={newVendedorId}
-              onChange={e => setNewVendedorId(e.target.value)}
-            >
-              <option value="">— Seleccionar —</option>
-              {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
+              onChange={setNewVendedorId}
+              placeholder="Seleccionar vendedor..."
+            />
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="ghost" size="sm" onClick={() => setReasignDialog(null)}>Cancelar</Button>

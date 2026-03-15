@@ -185,11 +185,14 @@ export default function DashboardPage() {
           <OdooDatePicker value={format(dateRange.to, 'yyyy-MM-dd')} onChange={d => { if (d) { setDateRange(prev => ({ ...prev, to: new Date(d + 'T12:00:00') })); setActivePreset(-1); }}} />
 
           {/* Vendedor filter */}
-          <select value={vendedorId} onChange={e => setVendedorId(e.target.value)}
-            className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm min-w-[140px]">
-            <option value="">Todos los vendedores</option>
-            {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-          </select>
+          <div className="min-w-[160px]">
+            <SearchableSelect
+              options={[{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+              value={vendedorId}
+              onChange={setVendedorId}
+              placeholder="Vendedor..."
+            />
+          </div>
         </div>
       </div>
 
