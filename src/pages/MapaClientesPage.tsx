@@ -1,11 +1,15 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Search, Filter, MapPin, Phone, Navigation, ShoppingCart, X, Layers, Users } from 'lucide-react';
+import { Search, Filter, MapPin, X, Users, Route, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import 'leaflet/dist/leaflet.css';
 
 // Fix leaflet default icons
