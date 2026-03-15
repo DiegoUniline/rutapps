@@ -206,9 +206,12 @@ export default function RutaNuevaVenta() {
         nombre: p.nombre,
         precio_unitario: esCambio ? 0 : (p.precio_principal ?? 0),
         cantidad: 1,
-        unidad: (p.unidades as any)?.abreviatura || (p.unidades as any)?.nombre || 'pz',
+        unidad: p.unidad_venta_id ? ((productos?.find(pr => pr.id === p.id) as any)?.abreviatura || 'pz') : 'pz',
+        unidad_id: p.unidad_venta_id ?? undefined,
         tiene_iva: esCambio ? false : (p.tiene_iva ?? false),
-        iva_pct: esCambio ? 0 : (p.tiene_iva ? ((p.tasas_iva as any)?.porcentaje ?? 16) : 0),
+        iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0),
+        tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false),
+        ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0),
         es_cambio: esCambio,
       }]);
     }
