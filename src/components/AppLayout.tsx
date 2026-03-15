@@ -5,7 +5,7 @@ import { UnilineFooter } from '@/components/UnilineFooter';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings
+  DollarSign, Settings, Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -225,6 +225,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div className={cn("flex gap-0.5", collapsed ? "flex-col items-center" : "")}>
+            <Link
+              to="/ruta"
+              className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+              title="Vista vendedor (móvil)"
+            >
+              <Smartphone className="h-4 w-4" />
+            </Link>
             <button
               onClick={() => setCollapsed(!collapsed)}
               className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
