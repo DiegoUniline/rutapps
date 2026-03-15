@@ -1,9 +1,12 @@
-import { RefreshCw, Wifi, WifiOff, Check, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, Check, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 export default function SyncStatusBar() {
-  const { isOnline, pendingCount, isSyncing, lastSync, syncNow } = useNetworkStatus();
+  const { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync } = useNetworkStatus();
+  const [expanded, setExpanded] = useState(false);
 
   const formatLastSync = (ts: number | null) => {
     if (!ts) return 'Nunca';
@@ -14,48 +17,114 @@ export default function SyncStatusBar() {
   };
 
   return (
-    <div className={cn(
-      "flex items-center gap-2 px-3 py-1.5 text-[11px] font-medium transition-colors",
-      !isOnline
-        ? "bg-destructive/10 text-destructive"
-        : pendingCount > 0
-          ? "bg-warning/10 text-warning"
-          : "bg-success/10 text-success"
-    )}>
-      {/* Status icon */}
-      {!isOnline ? (
-        <WifiOff className="h-3.5 w-3.5 shrink-0" />
-      ) : pendingCount > 0 ? (
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-      ) : (
-        <Check className="h-3.5 w-3.5 shrink-0" />
-      )}
+    <div className="border-b border-border">
+      {/* Main bar - always visible */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className={cn(
+          "w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors",
+          !isOnline
+            ? "bg-destructive/10 text-destructive"
+            : pendingCount > 0
+              ? "bg-orange-500/10 text-orange-600 dark:text-orange-400"
+              : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+        )}
+      >
+        {/* Status icon */}
+        {!isOnline ? (
+          <WifiOff className="h-3.5 w-3.5 shrink-0" />
+        ) : pendingCount > 0 ? (
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        ) : (
+          <Check className="h-3.5 w-3.5 shrink-0" />
+        )}
 
-      {/* Status text */}
-      <span className="flex-1 truncate">
-        {!isOnline
-          ? `Sin conexión · ${pendingCount} cambios pendientes`
-          : pendingCount > 0
-            ? `${pendingCount} cambios por sincronizar`
-            : `Sincronizado · ${formatLastSync(lastSync)}`
-        }
-      </span>
+        {/* Status text */}
+        <span className="flex-1 truncate text-left">
+          {!isOnline
+            ? `Sin conexión · ${pendingCount} pendientes`
+            : pendingCount > 0
+              ? `${pendingCount} cambios por sincronizar`
+              : `Sincronizado · ${formatLastSync(lastSync)}`
+          }
+        </span>
 
-      {/* Sync button */}
-      {isOnline && (
-        <button
-          onClick={syncNow}
-          disabled={isSyncing}
-          className={cn(
-            "flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold transition-all active:scale-95 shrink-0",
-            pendingCount > 0
-              ? "bg-warning text-warning-foreground"
-              : "bg-primary/10 text-primary"
+        {/* Auto-sync indicator */}
+        {autoSync && isOnline && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold shrink-0">
+            AUTO
+          </span>
+        )}
+
+        {expanded ? (
+          <ChevronUp className="h-3.5 w-3.5 shrink-0" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+        )}
+      </button>
+
+      {/* Expanded panel */}
+      {expanded && (
+        <div className="px-3 py-3 bg-muted/50 space-y-3">
+          {/* Auto-sync toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground">Sincronización automática</p>
+              <p className="text-[10px] text-muted-foreground">
+                Envía cambios cada 30s mientras haya internet
+              </p>
+            </div>
+            <Switch
+              checked={autoSync}
+              onCheckedChange={setAutoSync}
+            />
+          </div>
+
+          {/* Connection status */}
+          <div className="flex items-center gap-2 text-xs">
+            {isOnline ? (
+              <Wifi className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <WifiOff className="h-3.5 w-3.5 text-destructive" />
+            )}
+            <span className="text-muted-foreground">
+              {isOnline ? 'Conectado a internet' : 'Sin conexión — los datos se guardan localmente'}
+            </span>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-2 text-[11px]">
+            <div className="bg-background rounded-md p-2 text-center">
+              <p className="text-lg font-bold text-foreground">{pendingCount}</p>
+              <p className="text-muted-foreground">Pendientes</p>
+            </div>
+            <div className="bg-background rounded-md p-2 text-center">
+              <p className="text-lg font-bold text-foreground">{formatLastSync(lastSync)}</p>
+              <p className="text-muted-foreground">Última sync</p>
+            </div>
+          </div>
+
+          {/* Manual sync button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); syncNow(); }}
+            disabled={isSyncing || !isOnline}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all active:scale-[0.98]",
+              !isOnline
+                ? "bg-muted text-muted-foreground cursor-not-allowed"
+                : "bg-primary text-primary-foreground"
+            )}
+          >
+            <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
+            {isSyncing ? 'Sincronizando...' : !isOnline ? 'Sin conexión' : 'Sincronizar ahora'}
+          </button>
+
+          {!isOnline && (
+            <p className="text-[10px] text-muted-foreground text-center">
+              🔒 Tus datos están seguros. Se enviarán automáticamente cuando vuelva la conexión.
+            </p>
           )}
-        >
-          <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
-          {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
-        </button>
+        </div>
       )}
     </div>
   );
