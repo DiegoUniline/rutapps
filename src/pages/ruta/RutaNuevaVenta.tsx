@@ -346,58 +346,64 @@ export default function RutaNuevaVenta() {
     ));
   };
 
-  // Save without payment
+  // Offline-safe save (queues everything locally)
   const handleSaveOnly = async () => {
     if (!empresa || !user) return;
     setSaving(true);
     try {
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+      const ventaId = crypto.randomUUID();
 
       // 1. Save devoluciones if any
       if (devoluciones.length > 0 && clienteId) {
-        const { data: dev } = await supabase.from('devoluciones').insert({
-          empresa_id: profile!.empresa_id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda' as const,
-        }).select('id').single();
-        if (dev) {
-          await supabase.from('devolucion_lineas').insert(
-            devoluciones.map(d => ({ devolucion_id: dev.id, producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo as any }))
-          );
+        const devId = crypto.randomUUID();
+        await queueOperation('devoluciones', 'insert', {
+          id: devId, empresa_id: empresa.id, user_id: user.id,
+          cliente_id: clienteId, tipo: 'tienda', fecha: new Date().toISOString().split('T')[0],
+          created_at: new Date().toISOString(),
+        });
+        for (const d of devoluciones) {
+          await queueOperation('devolucion_lineas', 'insert', {
+            id: crypto.randomUUID(), devolucion_id: devId,
+            producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo,
+            created_at: new Date().toISOString(),
+          });
         }
       }
 
       // 2. Create sale
-      const chargedItems = cart.filter(c => !c.es_cambio);
-      const { data: venta, error: ventaErr } = await supabase.from('ventas').insert({
-        empresa_id: profile!.empresa_id, cliente_id: clienteId, tipo: tipoVenta,
+      await queueOperation('ventas', 'insert', {
+        id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
-        status: 'borrador' as const, notas: notas || null,
+        status: 'borrador', notas: notas || null,
         subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: 0, descuento_total: 0,
         total: totals.total, saldo_pendiente: totals.total,
-      }).select('id').single();
-      if (ventaErr) throw ventaErr;
+        fecha: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+      });
 
-      // 3. Insert all lines (including cambios at $0)
-      const lineas = cart.map(item => ({
-        venta_id: venta.id, producto_id: item.producto_id, descripcion: item.nombre,
-        cantidad: item.cantidad, precio_unitario: item.precio_unitario,
-        subtotal: item.precio_unitario * item.cantidad,
-        iva_pct: item.iva_pct,
-        iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
-        ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
-        total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
-        notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
-      }));
-      await supabase.from('venta_lineas').insert(lineas);
+      // 3. Insert lines
+      for (const item of cart) {
+        await queueOperation('venta_lineas', 'insert', {
+          id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id,
+          descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario,
+          subtotal: item.precio_unitario * item.cantidad,
+          iva_pct: item.iva_pct,
+          iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
+          ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
+          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
+          created_at: new Date().toISOString(),
+        });
+      }
 
       // 4. Update carga
-      await updateCargaVendida(cart);
+      await updateCargaVendidaOffline(cart);
 
-      toast.success('Venta guardada');
+      toast.success('Venta guardada (se sincronizará automáticamente)');
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['ventas'] });
-      setTicketInfo({ folio: venta.id.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
+      setTicketInfo({ folio: ventaId.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
@@ -405,112 +411,125 @@ export default function RutaNuevaVenta() {
     if (!empresa || !user) return;
     setSaving(true);
     try {
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+      const ventaId = crypto.randomUUID();
 
       // 1. Save devoluciones
       if (devoluciones.length > 0 && clienteId) {
-        const { data: dev } = await supabase.from('devoluciones').insert({
-          empresa_id: profile!.empresa_id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda' as const,
-        }).select('id').single();
-        if (dev) {
-          await supabase.from('devolucion_lineas').insert(
-            devoluciones.map(d => ({ devolucion_id: dev.id, producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo as any }))
-          );
+        const devId = crypto.randomUUID();
+        await queueOperation('devoluciones', 'insert', {
+          id: devId, empresa_id: empresa.id, user_id: user.id,
+          cliente_id: clienteId, tipo: 'tienda', fecha: new Date().toISOString().split('T')[0],
+          created_at: new Date().toISOString(),
+        });
+        for (const d of devoluciones) {
+          await queueOperation('devolucion_lineas', 'insert', {
+            id: crypto.randomUUID(), devolucion_id: devId,
+            producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo,
+            created_at: new Date().toISOString(),
+          });
         }
       }
 
       // 2. Create the sale
-      const { data: venta, error: ventaErr } = await supabase.from('ventas').insert({
-        empresa_id: profile!.empresa_id, cliente_id: clienteId, tipo: tipoVenta,
+      await queueOperation('ventas', 'insert', {
+        id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
-        status: tipoVenta === 'venta_directa' ? 'confirmado' as const : 'borrador' as const,
+        status: tipoVenta === 'venta_directa' ? 'confirmado' : 'borrador',
         notas: notas || null, subtotal: totals.subtotal, iva_total: totals.iva,
         ieps_total: 0, descuento_total: 0, total: totals.total,
         saldo_pendiente: condicionPago === 'credito' ? totals.total : 0,
-      }).select('id').single();
-      if (ventaErr) throw ventaErr;
+        fecha: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString(),
+      });
 
-      const lineas = cart.map(item => ({
-        venta_id: venta.id, producto_id: item.producto_id, descripcion: item.nombre,
-        cantidad: item.cantidad, precio_unitario: item.precio_unitario,
-        subtotal: item.precio_unitario * item.cantidad,
-        iva_pct: item.iva_pct,
-        iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
-        ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
-        total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
-        notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
-      }));
-      await supabase.from('venta_lineas').insert(lineas);
+      // 3. Insert lines
+      for (const item of cart) {
+        await queueOperation('venta_lineas', 'insert', {
+          id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id,
+          descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario,
+          subtotal: item.precio_unitario * item.cantidad,
+          iva_pct: item.iva_pct,
+          iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0,
+          ieps_pct: 0, ieps_monto: 0, descuento_pct: 0,
+          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
+          notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
+          created_at: new Date().toISOString(),
+        });
+      }
 
-      // 3. Cobro
+      // 4. Cobro
       if (totalACobrar > 0 && clienteId) {
-        const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
-          empresa_id: profile!.empresa_id, cliente_id: clienteId, user_id: user.id,
+        const cobroId = crypto.randomUUID();
+        await queueOperation('cobros', 'insert', {
+          id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id,
           monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null,
-        }).select('id').single();
-        if (cobroErr) throw cobroErr;
+          fecha: new Date().toISOString().split('T')[0],
+          created_at: new Date().toISOString(),
+        });
 
         const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
         if (condicionPago === 'contado') {
-          aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: totals.total });
+          aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: totals.total });
         }
         for (const cuenta of cuentasPendientes) {
           if (cuenta.montoAplicar > 0) {
-            aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar });
-            await supabase.from('ventas').update({ saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar }).eq('id', cuenta.id);
+            aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar });
+            // Update saldo_pendiente locally
+            await queueOperation('ventas', 'update', {
+              id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar,
+            });
           }
         }
-        if (aplicaciones.length > 0) {
-          await supabase.from('cobro_aplicaciones').insert(aplicaciones);
+        for (const app of aplicaciones) {
+          await queueOperation('cobro_aplicaciones', 'insert', {
+            id: crypto.randomUUID(), ...app,
+            created_at: new Date().toISOString(),
+          });
         }
       }
 
-      // 4. Update carga
-      await updateCargaVendida(cart);
+      // 5. Update carga
+      await updateCargaVendidaOffline(cart);
 
-      toast.success('¡Venta registrada!');
+      toast.success('¡Venta registrada! Se sincronizará automáticamente');
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
-      setTicketInfo({ folio: venta.id.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
+      setTicketInfo({ folio: ventaId.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
-  // Update cantidad_vendida in active carga
-  const updateCargaVendida = async (items: CartItem[]) => {
+  // Update cantidad_vendida in active carga (offline-safe)
+  const updateCargaVendidaOffline = async (items: CartItem[]) => {
     try {
-      // Find active carga (en_ruta) for current user's vendedor
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-      if (!profile) return;
-      const { data: cargas } = await supabase
-        .from('cargas')
-        .select('id')
-        .eq('empresa_id', profile.empresa_id)
-        .eq('status', 'en_ruta')
-        .order('fecha', { ascending: false })
-        .limit(1);
-      if (!cargas || cargas.length === 0) return;
-      const cargaId = cargas[0].id;
+      const cargasTable = getOfflineTable('cargas');
+      const cargaLineasTable = getOfflineTable('carga_lineas');
+      if (!cargasTable || !cargaLineasTable) return;
 
-      // For each sold product, update cantidad_vendida
+      // Find active carga from local DB
+      const allCargas = await cargasTable.toArray();
+      const activeCarga = allCargas
+        .filter((c: any) => c.empresa_id === empresa?.id && c.status === 'en_ruta')
+        .sort((a: any, b: any) => (b.fecha > a.fecha ? 1 : -1))[0];
+      if (!activeCarga) return;
+
+      const allLineas = await cargaLineasTable.toArray();
+      
       for (const item of items) {
-        const { data: cl } = await supabase
-          .from('carga_lineas')
-          .select('id, cantidad_vendida')
-          .eq('carga_id', cargaId)
-          .eq('producto_id', item.producto_id)
-          .single();
+        const cl = allLineas.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === item.producto_id);
         if (cl) {
-          await supabase.from('carga_lineas').update({
+          await queueOperation('carga_lineas', 'update', {
+            id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
+            cantidad_cargada: cl.cantidad_cargada,
             cantidad_vendida: (cl.cantidad_vendida ?? 0) + item.cantidad,
-          }).eq('id', cl.id);
+            cantidad_devuelta: cl.cantidad_devuelta ?? 0,
+          });
         }
       }
     } catch (e) {
-      console.error('Error updating carga:', e);
+      console.error('Error updating carga offline:', e);
     }
   };
 
