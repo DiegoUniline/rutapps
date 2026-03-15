@@ -615,9 +615,36 @@ export default function VentaFormPage() {
                                     readOnly={readOnly}
                                   />
                                 )}
-                                {/* Mobile: show taxes below product name */}
-                                {!isEmpty && impuestosLabel && (
-                                  <span className="text-[10px] text-muted-foreground block md:hidden mt-0.5">{impuestosLabel}</span>
+                                {/* Mobile: show taxes below product name — toggleable */}
+                                {!isEmpty && (
+                                  <div className="flex flex-wrap gap-1 md:hidden mt-0.5">
+                                    {Number(l.iva_pct) > 0 && (
+                                      <button
+                                        type="button"
+                                        disabled={readOnly}
+                                        onClick={() => {
+                                          if (readOnly) return;
+                                          updateLine(idx, 'iva_pct', 0);
+                                        }}
+                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground"
+                                      >
+                                        IVA {l.iva_pct}% ✕
+                                      </button>
+                                    )}
+                                    {Number(l.ieps_pct) > 0 && (
+                                      <button
+                                        type="button"
+                                        disabled={readOnly}
+                                        onClick={() => {
+                                          if (readOnly) return;
+                                          updateLine(idx, 'ieps_pct', 0);
+                                        }}
+                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground"
+                                      >
+                                        IEPS {l.ieps_pct}% ✕
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </td>
                               <td className="py-1 px-2">
