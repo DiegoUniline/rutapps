@@ -407,7 +407,7 @@ export default function VentaFormPage() {
                     lineas: linesToUse,
                   });
                   toast.success('Entrega creada');
-                  navigate(`/entregas/${result.id}`);
+                  navigate(`/logistica/entregas/${result.id}`);
                 } catch (e: any) { toast.error(e.message); }
               }}
               disabled={crearEntrega.isPending}
