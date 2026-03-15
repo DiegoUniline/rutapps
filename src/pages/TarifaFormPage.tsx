@@ -365,7 +365,7 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3"></td>
                             </tr>
                             <tr className="bg-primary/5">
-                              <td colSpan={7} className="py-2 px-3">
+                              <td colSpan={8} className="py-2 px-3">
                                 <div className="flex items-center gap-2">
                                   <button onClick={handleAddLinea} disabled={saveLinea.isPending} className="btn-odoo-primary text-[12px] py-1 px-3">
                                     <Plus className="h-3 w-3" /> Agregar
