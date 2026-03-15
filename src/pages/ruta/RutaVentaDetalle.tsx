@@ -825,8 +825,8 @@ export default function RutaVentaDetalle() {
           <h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1>
           <p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p>
         </div>
-        {/* Edit button */}
-        {venta.status !== 'cancelado' && venta.status !== 'facturado' && (
+        {/* Edit button - only for borrador */}
+        {venta.status === 'borrador' && (
           <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-all">
             <Pencil className="h-4 w-4 text-muted-foreground" />
           </button>
