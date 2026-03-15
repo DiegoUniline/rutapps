@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera } from 'lucide-react';
 import { calcTax } from '@/lib/taxUtils';
