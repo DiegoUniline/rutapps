@@ -337,7 +337,7 @@ export default function DemandaPage() {
               </div>
               <div>
                 <label className="label-odoo">Repartidor / Vendedor de ruta</label>
-                <SearchableSelect
+                <ModalSelect
                   options={vendedorOptions}
                   value={vendedorRutaId}
                   onChange={setVendedorRutaId}
