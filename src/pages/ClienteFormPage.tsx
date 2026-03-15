@@ -100,6 +100,27 @@ export default function ClienteFormPage() {
     } catch (err: any) { toast.error(err.message); }
   };
 
+  const captureGps = () => {
+    if (!navigator.geolocation) {
+      toast.error('Tu navegador no soporta GPS');
+      return;
+    }
+    setCapturingGps(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setForm(prev => ({ ...prev, gps_lat: latitude, gps_lng: longitude }));
+        setCapturingGps(false);
+        toast.success('Ubicación GPS capturada');
+      },
+      (err) => {
+        setCapturingGps(false);
+        toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
+
   const toggleDia = (dia: string) => {
     const current = form.dia_visita ?? [];
     set('dia_visita', current.includes(dia) ? current.filter(d => d !== dia) : [...current, dia]);
