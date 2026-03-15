@@ -52,6 +52,7 @@ function NavegacionContent() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
 
