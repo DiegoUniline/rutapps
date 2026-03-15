@@ -16,6 +16,8 @@ export default function RutaPerfil() {
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   const handleChangePassword = async () => {
     if (newPass.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
