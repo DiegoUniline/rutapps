@@ -407,8 +407,8 @@ export default function VentaFormPage() {
         {/* Header card */}
         <div className="bg-card border border-border rounded-md p-5">
           {readOnly && (
-            <div className="mb-3 text-xs text-muted-foreground bg-muted px-3 py-2 rounded flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-warning" />
+            <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
               Esta venta está {form.status} y no se puede editar.
             </div>
           )}
