@@ -6,7 +6,7 @@ import { OdooField } from '@/components/OdooFormField';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones } from '@/hooks/useData';
 import { toast } from 'sonner';
-import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa } from '@/types';
+import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
