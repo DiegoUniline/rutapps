@@ -224,24 +224,35 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px]">Código</TableHead>
-                <TableHead className="text-[11px]">Producto</TableHead>
-                <TableHead className="text-[11px] text-center">Almacén</TableHead>
-                <TableHead className="text-[11px] text-center">En ruta</TableHead>
+                <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
+                <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
+                <TableHead className="text-[11px] text-center">
+                  <Warehouse className="h-3 w-3 inline mr-0.5" />Almacén
+                </TableHead>
+                {(data.rutas ?? []).map(r => (
+                  <TableHead key={r.id} className="text-[11px] text-center whitespace-nowrap">
+                    <Truck className="h-3 w-3 inline mr-0.5 text-warning" />{r.vendedor}
+                  </TableHead>
+                ))}
                 <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
                 <TableHead className="text-[11px] text-right">Valor costo</TableHead>
-                <TableHead className="text-[11px] text-right">Proyección venta</TableHead>
+                <TableHead className="text-[11px] text-right">Proyección</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts?.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
-                  <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
+                  <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
+                  <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
                   <TableCell className="text-center">{p.stockAlmacen} {(p.unidades as any)?.abreviatura ?? ''}</TableCell>
-                  <TableCell className={cn("text-center", p.stockRuta > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
-                    {p.stockRuta}
-                  </TableCell>
+                  {(data.rutas ?? []).map(r => {
+                    const qty = r.stockByProduct[p.id] ?? 0;
+                    return (
+                      <TableCell key={r.id} className={cn("text-center", qty > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
+                        {qty || '—'}
+                      </TableCell>
+                    );
+                  })}
                   <TableCell className="text-center font-bold">{p.stockTotal}</TableCell>
                   <TableCell className="text-right text-[12px]">$ {fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">$ {fmt(p.valorVentaTotal)}</TableCell>
@@ -249,9 +260,12 @@ export default function InventarioPage() {
               ))}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2}>Totales</TableCell>
+                  <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
                   <TableCell className="text-center">{data.totales.stockAlmacen}</TableCell>
-                  <TableCell className="text-center text-warning">{data.totales.stockRuta}</TableCell>
+                  {(data.rutas ?? []).map(r => {
+                    const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
+                    return <TableCell key={r.id} className="text-center text-warning">{total}</TableCell>;
+                  })}
                   <TableCell className="text-center">{data.totales.stockTotal}</TableCell>
                   <TableCell className="text-right">$ {fmt(data.totales.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-success">$ {fmt(data.totales.valorVentaTotal)}</TableCell>
