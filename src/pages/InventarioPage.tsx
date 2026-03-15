@@ -152,7 +152,7 @@ function useInventarioData() {
         valorVentaTotal: acc.valorVentaTotal + p.valorVentaTotal,
       }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0 });
 
-      return { productos: productosEnriquecidos, cargas: cargaDetails, totales };
+      return { productos: productosEnriquecidos, cargas: cargaDetails, totales, rutas };
     },
   });
 }
