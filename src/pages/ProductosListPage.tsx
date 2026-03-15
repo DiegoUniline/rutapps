@@ -67,9 +67,21 @@ function ProductosTable() {
             <option value="borrador">Borrador</option>
           </select>
         </OdooFilterBar>
-        <button onClick={() => navigate('/productos/nuevo')} className="btn-odoo-primary shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Nuevo
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ExportButton
+            onExcel={() => exportToExcel({
+              fileName: 'Productos', title: 'Catálogo de Productos',
+              columns: PRODUCTOS_COLUMNS, data: productos ?? [],
+            })}
+            onPDF={() => exportToPDF({
+              fileName: 'Productos', title: 'Catálogo de Productos',
+              columns: PRODUCTOS_COLUMNS, data: productos ?? [],
+            })}
+          />
+          <button onClick={() => navigate('/productos/nuevo')} className="btn-odoo-primary shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Nuevo
+          </button>
+        </div>
       </div>
 
       {/* Table */}
