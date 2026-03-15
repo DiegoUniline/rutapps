@@ -1,22 +1,23 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, MarkerF, InfoWindow } from '@react-google-maps/api';
-import SearchableSelect from '@/components/SearchableSelect';
 import {
   Activity, Users, MapPin, CheckCircle2, XCircle, Clock, Truck,
-  ShoppingCart, TrendingUp, Eye, BarChart3, Package, Navigation
+  ShoppingCart, TrendingUp, Eye, BarChart3, Package, Navigation, CalendarIcon, Filter
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIA_HOY_IDX = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-const DIA_HOY = DIAS[DIA_HOY_IDX];
-const DIA_HOY_LABEL = DIA_HOY.charAt(0).toUpperCase() + DIA_HOY.slice(1);
-const TODAY = new Date().toISOString().split('T')[0];
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtMoney = (n: number) => '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -42,10 +43,22 @@ interface ClientVisit {
 function MonitorContent() {
   const { empresa } = useAuth();
   const { isLoaded } = useGoogleMaps();
-  const [vendedorFilter, setVendedorFilter] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [vendedorFilters, setVendedorFilters] = useState<string[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientVisit | null>(null);
   const [view, setView] = useState<'map' | 'table'>('map');
   const mapRef = useRef<google.maps.Map | null>(null);
+
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const dayIdx = selectedDate.getDay() === 0 ? 6 : selectedDate.getDay() - 1;
+  const diaVisita = DIAS[dayIdx];
+  const diaLabel = diaVisita.charAt(0).toUpperCase() + diaVisita.slice(1);
+
+  const toggleVendedor = (id: string) => {
+    setVendedorFilters(prev =>
+      prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+    );
+  };
 
   // Vendedores
   const { data: vendedores } = useQuery({
@@ -56,9 +69,9 @@ function MonitorContent() {
     },
   });
 
-  // Clients scheduled for today
+  // Clients scheduled for selected day
   const { data: clientesHoy } = useQuery({
-    queryKey: ['monitor-clientes-hoy', empresa?.id],
+    queryKey: ['monitor-clientes-hoy', empresa?.id, diaVisita],
     enabled: !!empresa?.id,
     refetchInterval: 30000,
     queryFn: async () => {
@@ -69,43 +82,43 @@ function MonitorContent() {
         .eq('status', 'activo')
         .order('orden', { ascending: true });
       return (data ?? []).filter((c: any) =>
-        c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY)
+        c.dia_visita?.some((d: string) => d.toLowerCase() === diaVisita)
       );
     },
   });
 
-  // Today's sales
+  // Sales for selected date
   const { data: ventasHoy } = useQuery({
-    queryKey: ['monitor-ventas-hoy', TODAY],
+    queryKey: ['monitor-ventas-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
         .select('id, cliente_id, vendedor_id, total, status, tipo')
-        .eq('fecha', TODAY);
+        .eq('fecha', dateStr);
       return data ?? [];
     },
   });
 
-  // Today's entregas
+  // Entregas for selected date
   const { data: entregasHoy } = useQuery({
-    queryKey: ['monitor-entregas-hoy', TODAY],
+    queryKey: ['monitor-entregas-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
         .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio')
-        .eq('fecha', TODAY);
+        .eq('fecha', dateStr);
       return data ?? [];
     },
   });
 
-  // Today's cobros
+  // Cobros for selected date
   const { data: cobrosHoy } = useQuery({
-    queryKey: ['monitor-cobros-hoy', TODAY],
+    queryKey: ['monitor-cobros-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', TODAY);
+      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', dateStr);
       return data ?? [];
     },
   });
@@ -151,9 +164,9 @@ function MonitorContent() {
   }, [clientesHoy, ventasHoy, entregasHoy]);
 
   const filtered = useMemo(() => {
-    if (!vendedorFilter) return visits;
-    return visits.filter(v => v.vendedor_id === vendedorFilter);
-  }, [visits, vendedorFilter]);
+    if (vendedorFilters.length === 0) return visits;
+    return visits.filter(v => v.vendedor_id && vendedorFilters.includes(v.vendedor_id));
+  }, [visits, vendedorFilters]);
 
   const withGps = useMemo(() => filtered.filter(v => v.gps_lat && v.gps_lng), [filtered]);
 
@@ -183,14 +196,23 @@ function MonitorContent() {
     return Array.from(map.entries()).map(([id, d]) => ({ id, ...d }));
   }, [visits]);
 
-  const onMapLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    if (withGps.length > 0) {
+  // Auto-zoom to fit markers when filter changes
+  const fitBounds = useCallback(() => {
+    if (mapRef.current && withGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       withGps.forEach(c => bounds.extend({ lat: c.gps_lat!, lng: c.gps_lng! }));
-      map.fitBounds(bounds, 60);
+      mapRef.current.fitBounds(bounds, 60);
     }
   }, [withGps]);
+
+  useEffect(() => {
+    fitBounds();
+  }, [fitBounds]);
+
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    fitBounds();
+  }, [fitBounds]);
 
   const statusColor = (s: VisitStatus) => {
     switch (s) {
@@ -219,17 +241,54 @@ function MonitorContent() {
             <Activity className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold text-foreground">Monitor de productividad</h1>
           </div>
-          <Badge variant="secondary" className="text-[11px]">{DIA_HOY_LABEL}</Badge>
+          <Badge variant="secondary" className="text-[11px]">{diaLabel}</Badge>
 
-          <div className="flex flex-col gap-0.5 min-w-[160px]">
-            <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Vendedor</label>
-            <SearchableSelect
-              options={[{ value: '', label: 'Todos' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
-              value={vendedorFilter}
-              onChange={setVendedorFilter}
-              placeholder="Vendedor..."
-            />
-          </div>
+          {/* Date picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <CalendarIcon className="h-3.5 w-3.5" />
+                {format(selectedDate, "dd MMM yyyy", { locale: es })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => d && setSelectedDate(d)}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Vendedor multi-select */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <Filter className="h-3.5 w-3.5" />
+                {vendedorFilters.length === 0 ? 'Todos los vendedores' : `${vendedorFilters.length} vendedor(es)`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2 pointer-events-auto" align="start">
+              <div className="space-y-1 max-h-60 overflow-auto">
+                {(vendedores ?? []).map(v => (
+                  <label key={v.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-xs">
+                    <Checkbox
+                      checked={vendedorFilters.includes(v.id)}
+                      onCheckedChange={() => toggleVendedor(v.id)}
+                    />
+                    <span className="truncate">{v.nombre}</span>
+                  </label>
+                ))}
+              </div>
+              {vendedorFilters.length > 0 && (
+                <Button variant="ghost" size="sm" className="w-full mt-1 text-xs h-7" onClick={() => setVendedorFilters([])}>
+                  Limpiar filtros
+                </Button>
+              )}
+            </PopoverContent>
+          </Popover>
 
           <div className="flex items-center gap-1 ml-auto">
             <button onClick={() => setView('map')} className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-colors", view === 'map' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted")}>
@@ -350,10 +409,10 @@ function MonitorContent() {
                   return (
                     <button
                       key={vs.id}
-                      onClick={() => setVendedorFilter(vendedorFilter === vs.id ? '' : vs.id)}
+                      onClick={() => toggleVendedor(vs.id)}
                       className={cn(
                         "flex items-center gap-2 px-3 py-2.5 w-full text-left border-b border-border/30 last:border-0 transition-colors",
-                        vendedorFilter === vs.id ? "bg-primary/5" : "hover:bg-muted/50"
+                        vendedorFilters.includes(vs.id) ? "bg-primary/5" : "hover:bg-muted/50"
                       )}
                     >
                       <div className="min-w-0 flex-1">
@@ -448,7 +507,7 @@ function MonitorContent() {
               <div className="bg-card border border-border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-border flex items-center gap-2">
                   <Eye className="h-4 w-4 text-primary" />
-                  <h2 className="text-sm font-bold text-foreground">Detalle de visitas — {DIA_HOY_LABEL}</h2>
+                  <h2 className="text-sm font-bold text-foreground">Detalle de visitas — {diaLabel}</h2>
                   <Badge variant="secondary" className="ml-auto text-[10px]">{filtered.length} clientes</Badge>
                 </div>
                 <div className="overflow-x-auto max-h-[50vh]">
