@@ -392,7 +392,7 @@ function NavegacionContent() {
             </button>
             <div className="flex-1 min-w-0">
               <p className="text-[13px] font-bold text-foreground">
-                {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+                Mi ruta
               </p>
               <p className="text-[11px] text-muted-foreground">
                 {completedCount}/{totalCount} completadas
