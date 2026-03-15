@@ -641,7 +641,7 @@ export default function VentaFormPage() {
                       )}
                     >Pedido</button>
                     <button
-                      onClick={() => set('tipo', 'venta_directa')}
+                      onClick={() => { set('tipo', 'venta_directa'); set('condicion_pago', 'contado'); }}
                       className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
                         form.tipo === 'venta_directa' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
                       )}
