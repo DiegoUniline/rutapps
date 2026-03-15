@@ -37,6 +37,16 @@ const navItems: NavItem[] = [
   },
   { label: 'Clientes', icon: Users, path: '/clientes' },
   {
+    label: 'Logística',
+    icon: MapPin,
+    path: '/logistica',
+    children: [
+      { label: 'Rutas', path: '/ventas/rutas' },
+      { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
+      { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },
+    ],
+  },
+  {
     label: 'Catálogo',
     icon: Package,
     path: '/productos',
