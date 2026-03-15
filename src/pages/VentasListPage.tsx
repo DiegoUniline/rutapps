@@ -5,8 +5,23 @@ import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentas } from '@/hooks/useVentas';
 import { cn, fmtDate } from '@/lib/utils';
+
+const VENTAS_COLUMNS: ExportColumn[] = [
+  { key: 'folio', header: 'Folio', width: 12 },
+  { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
+  { key: 'cliente_nombre', header: 'Cliente', width: 25 },
+  { key: 'tipo', header: 'Tipo', width: 14 },
+  { key: 'condicion_pago', header: 'Condición', width: 12 },
+  { key: 'subtotal', header: 'Subtotal', format: 'currency', width: 14 },
+  { key: 'iva_total', header: 'IVA', format: 'currency', width: 12 },
+  { key: 'total', header: 'Total', format: 'currency', width: 14 },
+  { key: 'saldo_pendiente', header: 'Saldo', format: 'currency', width: 14 },
+  { key: 'status', header: 'Estado', width: 12 },
+];
 
 const PAGE_SIZE = 80;
 
