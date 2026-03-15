@@ -193,6 +193,7 @@ export default function InventarioPage() {
   const { data, isLoading } = useInventarioData();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
+  const [selectedRuta, setSelectedRuta] = useState<any>(null);
 
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
