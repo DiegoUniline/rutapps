@@ -586,13 +586,18 @@ export default function RutaNuevaVenta() {
         folio={ticketInfo.folio}
         fecha={ticketInfo.fecha}
         clienteNombre={clienteNombre}
-        lineas={cart.map(item => ({
-          nombre: item.nombre,
-          cantidad: item.cantidad,
-          precio: item.precio_unitario,
-          total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
-          esCambio: item.es_cambio,
-        }))}
+        lineas={cart.map(item => {
+          const lineSub = item.precio_unitario * item.cantidad;
+          const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+          const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
+          return {
+            nombre: item.nombre,
+            cantidad: item.cantidad,
+            precio: item.precio_unitario,
+            total: lineSub + lineIeps + lineIva,
+            esCambio: item.es_cambio,
+          };
+        })}
         subtotal={totals.subtotal}
         iva={totals.iva}
         total={totals.total}

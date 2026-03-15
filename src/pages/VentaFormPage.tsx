@@ -315,7 +315,15 @@ export default function VentaFormPage() {
               </div>
               <div>
                 <label className="label-odoo">Cliente</label>
-                <select className="input-odoo" value={form.cliente_id ?? ''} onChange={e => set('cliente_id', e.target.value)}>
+                <select className="input-odoo" value={form.cliente_id ?? ''} onChange={e => {
+                  const cId = e.target.value;
+                  set('cliente_id', cId);
+                  // Auto-fill tarifa from client config
+                  const c = clientesList?.find(cl => cl.id === cId);
+                  if (c?.tarifa_id && !form.tarifa_id) {
+                    set('tarifa_id', c.tarifa_id);
+                  }
+                }}>
                   <option value="">Seleccionar cliente</option>
                   {clienteOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
