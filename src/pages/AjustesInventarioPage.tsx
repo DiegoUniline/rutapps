@@ -240,6 +240,11 @@ export default function AjustesInventarioPage() {
           <Settings2 className="h-5 w-5" /> Ajustes de inventario
         </h1>
         <div className="flex gap-2">
+          {rows.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+              <FileText className="h-4 w-4 mr-1" /> PDF
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setTab(tab === 'ajuste' ? 'historial' : 'ajuste')}>
             {tab === 'ajuste' ? 'Ver historial' : 'Volver a ajuste'}
           </Button>
