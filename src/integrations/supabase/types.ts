@@ -1403,8 +1403,10 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           empresa_id: string
+          estado: string
           id: string
           nombre: string | null
+          telefono: string | null
           user_id: string
           vendedor_id: string | null
         }
@@ -1413,8 +1415,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           empresa_id: string
+          estado?: string
           id?: string
           nombre?: string | null
+          telefono?: string | null
           user_id: string
           vendedor_id?: string | null
         }
@@ -1423,8 +1427,10 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           empresa_id?: string
+          estado?: string
           id?: string
           nombre?: string | null
+          telefono?: string | null
           user_id?: string
           vendedor_id?: string | null
         }
