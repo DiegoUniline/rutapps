@@ -1,0 +1,1 @@
+ALTER TABLE public.tarifa_lineas ADD COLUMN base_precio text NOT NULL DEFAULT 'sin_impuestos';
