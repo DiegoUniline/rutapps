@@ -80,6 +80,24 @@ export function useCobradores() {
   return useQuery({ queryKey: ['cobradores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').order('nombre'); return data as Cobrador[]; }});
 }
 
+// All clients (for maps, selects, exports - no pagination)
+export function useClientesAll(search?: string, statusFilter?: string) {
+  return useQuery({
+    queryKey: ['clientes-all', search, statusFilter],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      let q = supabase.from('clientes')
+        .select('id, codigo, nombre, telefono, direccion, colonia, vendedor_id, zona_id, status, orden, credito, limite_credito, dia_visita, gps_lat, gps_lng, tarifa_id, contacto, email, zonas(nombre), vendedores(nombre), tarifas(nombre)')
+        .order('orden', { ascending: true });
+      if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
+      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Cliente[];
+    },
+  });
+}
+
 // Pedido sugerido per client
 export function usePedidoSugerido(clienteId?: string) {
   return useQuery({
