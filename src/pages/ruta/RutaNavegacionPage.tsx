@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X } from 'lucide-react';
+import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,20 @@ import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+/** Pick an icon for a maneuver instruction */
+function ManeuverIcon({ maneuver }: { maneuver?: string }) {
+  if (!maneuver) return <ArrowUp className="h-7 w-7" />;
+  if (maneuver.includes('left')) return <CornerUpLeft className="h-7 w-7" />;
+  if (maneuver.includes('right')) return <CornerUpRight className="h-7 w-7" />;
+  if (maneuver.includes('uturn') || maneuver.includes('u-turn')) return <RotateCw className="h-7 w-7" />;
+  return <ArrowUp className="h-7 w-7" />;
+}
+
+/** Strip HTML tags from directions instructions */
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, '');
+}
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
