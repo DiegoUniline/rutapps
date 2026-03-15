@@ -66,6 +66,9 @@ export default function SuperAdminPage() {
             <TabsTrigger value="whatsapp" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <MessageCircle className="h-4 w-4" /> WhatsApp
             </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Bell className="h-4 w-4" /> Historial
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
@@ -73,6 +76,7 @@ export default function SuperAdminPage() {
           <TabsContent value="subscriptions"><AdminSubscriptionsTab /></TabsContent>
           <TabsContent value="invoices"><AdminInvoicesTab /></TabsContent>
           <TabsContent value="whatsapp"><AdminWhatsAppTab /></TabsContent>
+          <TabsContent value="notifications"><AdminNotificationsTab /></TabsContent>
         </Tabs>
       </div>
     </div>
