@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useDescargasListDesktop, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -33,7 +33,21 @@ const MOTIVOS = [
   { value: 'otro', label: 'Otro' },
 ];
 
-/* ─── Detail / Approve panel — Side by side: Vendor vs System ─── */
+/* ─── Section Card helper ─── */
+function SectionCard({ title, icon: Icon, children, className }: { title: string; icon: React.ElementType; children: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("border-t border-border", className)}>
+      <div className="px-5 py-4">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2 mb-3">
+          <Icon className="h-4 w-4" /> {title}
+        </h3>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Detail / Approve panel — Full activity breakdown ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
   const { user } = useAuth();
@@ -41,38 +55,137 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
 
-  // Fetch vendor's sales for the day or date range
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
+
+  // All ventas (including cancelled)
   const { data: ventasDia } = useQuery({
-    queryKey: ['descarga-ventas-dia', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    queryKey: ['descarga-ventas-full', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, total, condicion_pago, clientes(nombre)')
+        .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
-        .neq('status', 'cancelado')
         .order('created_at', { ascending: true });
       if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
       const { data, error } = await q;
       if (error) throw error;
       return data;
     },
-    enabled: true,
+  });
+
+  // Devoluciones
+  const { data: devoluciones } = useQuery({
+    queryKey: ['descarga-devoluciones', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    queryFn: async () => {
+      let q = supabase
+        .from('devoluciones')
+        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))')
+        .eq('empresa_id', descarga.empresa_id)
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin);
+      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Cobros recibidos
+  const { data: cobros } = useQuery({
+    queryKey: ['descarga-cobros', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cobros')
+        .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
+        .eq('empresa_id', descarga.empresa_id)
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Gastos
+  const { data: gastos } = useQuery({
+    queryKey: ['descarga-gastos-full', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    queryFn: async () => {
+      let q = supabase
+        .from('gastos')
+        .select('id, monto, concepto, fecha, notas')
+        .eq('empresa_id', descarga.empresa_id)
+        .gte('fecha', fInicio)
+        .lte('fecha', fFin);
+      if (descarga.vendedor_id) q = q.eq('vendedor_id', descarga.vendedor_id);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Computed values
+  const ventasActivas = (ventasDia || []).filter((v: any) => v.status !== 'cancelado');
+  const ventasCanceladas = (ventasDia || []).filter((v: any) => v.status === 'cancelado');
+  const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
+  const ventasCredito = ventasActivas.filter((v: any) => v.condicion_pago === 'credito');
+
+  const totalContado = ventasContado.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  const totalCredito = ventasCredito.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  const totalCancelado = ventasCanceladas.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  const totalVentasGeneral = ventasActivas.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+
+  const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
+  const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+
+  // Cobros by payment method
+  const cobrosPorMetodo: Record<string, number> = {};
+  (cobros || []).forEach((c: any) => {
+    const m = c.metodo_pago || 'efectivo';
+    cobrosPorMetodo[m] = (cobrosPorMetodo[m] || 0) + Number(c.monto);
+  });
+
+  // Aggregate products sold
+  const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
+  ventasActivas.forEach((v: any) => {
+    (v.venta_lineas || []).forEach((l: any) => {
+      const pid = l.producto_id;
+      if (!pid) return;
+      if (!productosSold[pid]) {
+        productosSold[pid] = {
+          nombre: l.productos?.nombre || '—',
+          codigo: l.productos?.codigo || '',
+          cantidad: 0,
+          total: 0,
+        };
+      }
+      productosSold[pid].cantidad += Number(l.cantidad) || 0;
+      productosSold[pid].total += Number(l.total) || 0;
+    });
+  });
+  const productosArr = Object.values(productosSold).sort((a, b) => b.total - a.total);
+
+  // Devoluciones summary
+  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string }[] = [];
+  (devoluciones || []).forEach((d: any) => {
+    (d.devolucion_lineas || []).forEach((l: any) => {
+      devLineas.push({
+        nombre: l.productos?.nombre || '—',
+        codigo: l.productos?.codigo || '',
+        cantidad: Number(l.cantidad),
+        motivo: l.motivo || '—',
+      });
+    });
   });
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
   const isPendiente = descarga.status === 'pendiente';
+  const dif = Number(descarga.diferencia_efectivo);
 
-  const totalVentasContado = (ventasDia || [])
-    .filter((v: any) => v.condicion_pago === 'contado')
-    .reduce((sum: number, v: any) => sum + (Number(v.total) || 0), 0);
-  const totalVentasCredito = (ventasDia || [])
-    .filter((v: any) => v.condicion_pago === 'credito')
-    .reduce((sum: number, v: any) => sum + (Number(v.total) || 0), 0);
-  const totalVentasGeneral = (ventasDia || []).reduce((sum: number, v: any) => sum + (Number(v.total) || 0), 0);
+  // Effective cash expected: contado sales + cobros efectivo - gastos
+  const efectivoSistema = totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
 
   const aprobarMutation = useMutation({
     mutationFn: async (accion: 'aprobada' | 'rechazada') => {
@@ -98,24 +211,21 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     onError: (e: any) => toast.error(e.message),
   });
 
-  const dif = Number(descarga.diferencia_efectivo);
-
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card border border-border rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+      <div className="bg-card border border-border rounded-lg max-w-5xl w-full max-h-[90vh] overflow-auto">
         {/* Header */}
         <div className="p-5 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
           <div>
             <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <PackageCheck className="h-5 w-5" /> Revisión de liquidación
+              <PackageCheck className="h-5 w-5" /> Revisión completa de liquidación
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {(descarga as any).vendedores?.nombre ?? 'Sin vendedor asignado'} — {
+              {(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} — {
                 descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
                   ? `${descarga.fecha_inicio} al ${descarga.fecha_fin}`
                   : descarga.fecha
               }
-              {!descarga.carga_id && ' (sin carga)'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -131,134 +241,108 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           </div>
         </div>
 
-        {/* ─── Side by side: Vendor Declared vs System ─── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:divide-x divide-border">
-          {/* LEFT: Vendor declared */}
-          <div className="p-5 space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">📋 Declarado por vendedor</h3>
-            <div className="space-y-2">
-              <div className="bg-muted/50 rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground uppercase">Efectivo entregado</div>
-                <div className="text-lg font-bold text-foreground">${Number(descarga.efectivo_entregado).toFixed(2)}</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground uppercase">Crédito declarado (referencia)</div>
-                <div className="text-lg font-bold text-foreground">${totalVentasCredito.toFixed(2)}</div>
-              </div>
-            </div>
-            {/* Declared product returns */}
-            <div>
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Productos devueltos (declarado)</div>
-              <div className="space-y-1">
-                {(lineas || []).map((l: any) => (
-                  <div key={l.id} className="flex items-center justify-between bg-muted/30 rounded px-3 py-1.5 text-[12px]">
-                    <span className="font-medium">{(l as any).productos?.nombre}</span>
-                    <span className="font-bold">{Number(l.cantidad_real)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {descarga.notas && (
-              <div>
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Observaciones vendedor</div>
-                <p className="text-[13px] text-foreground bg-muted/30 rounded p-3">{descarga.notas}</p>
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT: System calculated */}
-          <div className="p-5 space-y-4">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">🖥️ Calculado por sistema</h3>
-            <div className="space-y-2">
-              <div className="bg-muted/50 rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground uppercase">Efectivo esperado</div>
-                <div className="text-lg font-bold text-foreground">${Number(descarga.efectivo_esperado).toFixed(2)}</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground uppercase">Ventas a crédito (sistema)</div>
-                <div className="text-lg font-bold text-foreground">${totalVentasCredito.toFixed(2)}</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3">
-                <div className="text-[10px] text-muted-foreground uppercase">Total general ventas</div>
-                <div className="text-lg font-bold text-foreground">${totalVentasGeneral.toFixed(2)}</div>
-              </div>
-            </div>
-            {/* Expected product returns */}
-            <div>
-              <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Productos esperados vs declarados</div>
-              <div className="space-y-1">
-                {(lineas || []).map((l: any) => {
-                  const d = Number(l.diferencia);
-                  return (
-                    <div key={l.id} className={cn(
-                      "flex items-center justify-between rounded px-3 py-1.5 text-[12px]",
-                      d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/30"
-                    )}>
-                      <span className="font-medium">{(l as any).productos?.nombre}</span>
-                      <div className="flex items-center gap-3">
-                        <span className="text-muted-foreground">Esp: {Number(l.cantidad_esperada)}</span>
-                        <span className="font-bold">Real: {Number(l.cantidad_real)}</span>
-                        {d !== 0 && (
-                          <span className={cn("font-bold", d > 0 ? "text-green-600" : "text-destructive")}>
-                            {d > 0 ? '+' : ''}{d}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ─── Differences summary ─── */}
-        <div className="px-5 py-4 border-t border-border">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">⚖️ Resumen de diferencias</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className={cn(
-              "rounded-lg p-3 text-center",
-              dif > 0 ? "bg-green-50 border border-green-200" : dif < 0 ? "bg-destructive/5 border border-destructive/20" : "bg-muted/50"
-            )}>
-              <div className="text-[10px] text-muted-foreground uppercase">Diferencia efectivo</div>
-              <div className={cn("text-lg font-bold", dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : "text-foreground")}>
-                {dif > 0 ? '+' : ''}${dif.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-muted-foreground">{dif > 0 ? 'Sobra' : dif < 0 ? 'Falta' : 'Cuadra'}</div>
-            </div>
-            <div className={cn(
-              "rounded-lg p-3 text-center",
-              conDiferencias.length > 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/50"
-            )}>
-              <div className="text-[10px] text-muted-foreground uppercase">Diferencias producto</div>
-              <div className={cn("text-lg font-bold", conDiferencias.length > 0 ? "text-amber-700" : "text-foreground")}>
-                {conDiferencias.length}
-              </div>
-              <div className="text-[10px] text-muted-foreground">{conDiferencias.length > 0 ? 'Con discrepancia' : 'Sin diferencias'}</div>
+        {/* ═══ RESUMEN GENERAL ═══ */}
+        <div className="px-5 py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Ventas contado</div>
+              <div className="text-lg font-bold text-foreground">${totalContado.toFixed(2)}</div>
+              <div className="text-[10px] text-muted-foreground">{ventasContado.length} ventas</div>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <div className="text-[10px] text-muted-foreground uppercase">Pedidos del día</div>
-              <div className="text-lg font-bold text-foreground">{ventasDia?.length ?? 0}</div>
-              <div className="text-[10px] text-muted-foreground">${totalVentasGeneral.toFixed(2)} total</div>
+              <div className="text-[10px] text-muted-foreground uppercase">Ventas crédito</div>
+              <div className="text-lg font-bold text-foreground">${totalCredito.toFixed(2)}</div>
+              <div className="text-[10px] text-muted-foreground">{ventasCredito.length} ventas</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Cobros recibidos</div>
+              <div className="text-lg font-bold text-foreground">${totalCobros.toFixed(2)}</div>
+              <div className="text-[10px] text-muted-foreground">{(cobros || []).length} cobros</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Gastos</div>
+              <div className="text-lg font-bold text-destructive">-${totalGastos.toFixed(2)}</div>
+              <div className="text-[10px] text-muted-foreground">{(gastos || []).length} gastos</div>
+            </div>
+            {ventasCanceladas.length > 0 && (
+              <div className="bg-destructive/5 rounded-lg p-3 text-center border border-destructive/20">
+                <div className="text-[10px] text-muted-foreground uppercase">Canceladas</div>
+                <div className="text-lg font-bold text-destructive">${totalCancelado.toFixed(2)}</div>
+                <div className="text-[10px] text-muted-foreground">{ventasCanceladas.length} ventas</div>
+              </div>
+            )}
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[10px] text-muted-foreground uppercase">Devoluciones</div>
+              <div className="text-lg font-bold text-foreground">{devLineas.length}</div>
+              <div className="text-[10px] text-muted-foreground">productos devueltos</div>
             </div>
           </div>
         </div>
 
-        {/* ─── Orders detail ─── */}
-        {ventasDia && ventasDia.length > 0 && (
-          <div className="px-5 py-4 border-t border-border">
-            <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">📦 Pedidos del día</h3>
+        {/* ═══ CUADRE DE EFECTIVO ═══ */}
+        <SectionCard title="Cuadre de efectivo" icon={DollarSign}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Vendor declared */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold text-muted-foreground uppercase">Declarado por vendedor</div>
+              <div className="bg-muted/50 rounded-md p-3">
+                <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
+                <div className="text-xl font-bold text-foreground">${Number(descarga.efectivo_entregado).toFixed(2)}</div>
+              </div>
+              {descarga.notas && (
+                <div className="bg-muted/30 rounded-md p-3">
+                  <div className="text-[10px] text-muted-foreground uppercase mb-1">Observaciones</div>
+                  <p className="text-[13px] text-foreground">{descarga.notas}</p>
+                </div>
+              )}
+            </div>
+            {/* System calculated */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-semibold text-muted-foreground uppercase">Calculado por sistema</div>
+              <div className="bg-muted/50 rounded-md p-3 space-y-1.5 text-[12px]">
+                <div className="flex justify-between"><span className="text-muted-foreground">Ventas contado</span><span className="font-semibold">${totalContado.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold">${(cobrosPorMetodo['efectivo'] || 0).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-${totalGastos.toFixed(2)}</span></div>
+                <div className="border-t border-border pt-1.5 flex justify-between font-bold">
+                  <span>Efectivo esperado</span>
+                  <span>${efectivoSistema.toFixed(2)}</span>
+                </div>
+              </div>
+              {/* Difference */}
+              {(() => {
+                const d = Number(descarga.efectivo_entregado) - efectivoSistema;
+                return (
+                  <div className={cn(
+                    "rounded-md p-3 text-center",
+                    d > 0 ? "bg-green-50 border border-green-200" : d < 0 ? "bg-destructive/5 border border-destructive/20" : "bg-muted/50"
+                  )}>
+                    <div className="text-[10px] text-muted-foreground uppercase">Diferencia</div>
+                    <div className={cn("text-lg font-bold", d > 0 ? "text-green-600" : d < 0 ? "text-destructive" : "text-foreground")}>
+                      {d > 0 ? '+' : ''}${d.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">{d > 0 ? 'Sobra' : d < 0 ? 'Falta' : 'Cuadra'}</div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* ═══ VENTAS DEL PERIODO ═══ */}
+        <SectionCard title={`Ventas del periodo (${ventasActivas.length})`} icon={ShoppingCart}>
+          {ventasActivas.length > 0 ? (
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
                   <th className="text-left py-2">Folio</th>
                   <th className="text-left py-2">Cliente</th>
-                  <th className="text-left py-2">Forma pago</th>
+                  <th className="text-left py-2">Pago</th>
+                  <th className="text-left py-2">Estado</th>
                   <th className="text-right py-2">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {ventasDia.map((v: any) => (
+                {ventasActivas.map((v: any) => (
                   <tr key={v.id} className="border-b border-border/50">
                     <td className="py-1.5 font-mono text-foreground">{v.folio ?? '—'}</td>
                     <td className="py-1.5">{v.clientes?.nombre ?? '—'}</td>
@@ -266,19 +350,185 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <span className={cn(
                         "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
                         v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                      )}>
-                        {v.condicion_pago}
-                      </span>
+                      )}>{v.condicion_pago}</span>
                     </td>
+                    <td className="py-1.5 text-[10px] text-muted-foreground">{v.status}</td>
                     <td className="py-1.5 text-right font-semibold">${Number(v.total).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold text-[12px]">
+                  <td colSpan={4} className="py-2 text-right text-muted-foreground">Total ventas activas:</td>
+                  <td className="py-2 text-right">${totalVentasGeneral.toFixed(2)}</td>
+                </tr>
+              </tfoot>
             </table>
-          </div>
+          ) : <p className="text-sm text-muted-foreground">Sin ventas en este periodo</p>}
+
+          {/* Cancelled sales */}
+          {ventasCanceladas.length > 0 && (
+            <div className="mt-4">
+              <div className="text-[11px] font-semibold text-destructive uppercase mb-2">Ventas canceladas ({ventasCanceladas.length})</div>
+              <div className="space-y-1">
+                {ventasCanceladas.map((v: any) => (
+                  <div key={v.id} className="flex items-center justify-between bg-destructive/5 rounded px-3 py-1.5 text-[12px]">
+                    <span className="font-mono">{v.folio ?? '—'}</span>
+                    <span>{v.clientes?.nombre ?? '—'}</span>
+                    <span className="font-semibold text-destructive line-through">${Number(v.total).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </SectionCard>
+
+        {/* ═══ PRODUCTOS VENDIDOS (AGREGADO) ═══ */}
+        {productosArr.length > 0 && (
+          <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Producto</th>
+                  <th className="text-left py-2">Código</th>
+                  <th className="text-right py-2">Cantidad</th>
+                  <th className="text-right py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productosArr.map((p, i) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="py-1.5 font-medium">{p.nombre}</td>
+                    <td className="py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
+                    <td className="py-1.5 text-right">{p.cantidad}</td>
+                    <td className="py-1.5 text-right font-semibold">${p.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </SectionCard>
         )}
 
-        {/* ─── Admin actions ─── */}
+        {/* ═══ COBROS RECIBIDOS ═══ */}
+        {(cobros || []).length > 0 && (
+          <SectionCard title={`Cobros recibidos (${(cobros || []).length})`} icon={CreditCard}>
+            {/* By method summary */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
+                <div key={metodo} className="bg-muted/50 rounded-md px-3 py-2 text-[12px]">
+                  <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
+                  <span className="font-bold">${total.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Cliente</th>
+                  <th className="text-left py-2">Método</th>
+                  <th className="text-left py-2">Referencia</th>
+                  <th className="text-right py-2">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(cobros || []).map((c: any) => (
+                  <tr key={c.id} className="border-b border-border/50">
+                    <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
+                    <td className="py-1.5 capitalize">{c.metodo_pago}</td>
+                    <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
+                    <td className="py-1.5 text-right font-semibold">${Number(c.monto).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold">
+                  <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
+                  <td className="py-2 text-right">${totalCobros.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </SectionCard>
+        )}
+
+        {/* ═══ GASTOS ═══ */}
+        {(gastos || []).length > 0 && (
+          <SectionCard title={`Gastos (${(gastos || []).length})`} icon={TrendingDown}>
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Concepto</th>
+                  <th className="text-left py-2">Notas</th>
+                  <th className="text-right py-2">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(gastos || []).map((g: any) => (
+                  <tr key={g.id} className="border-b border-border/50">
+                    <td className="py-1.5 font-medium">{g.concepto}</td>
+                    <td className="py-1.5 text-muted-foreground">{g.notas || '—'}</td>
+                    <td className="py-1.5 text-right font-semibold text-destructive">-${Number(g.monto).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold">
+                  <td colSpan={2} className="py-2 text-right text-muted-foreground">Total gastos:</td>
+                  <td className="py-2 text-right text-destructive">-${totalGastos.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </SectionCard>
+        )}
+
+        {/* ═══ DEVOLUCIONES ═══ */}
+        {devLineas.length > 0 && (
+          <SectionCard title={`Devoluciones (${devLineas.length} productos)`} icon={RotateCcw}>
+            <div className="space-y-1">
+              {devLineas.map((d, i) => (
+                <div key={i} className="flex items-center justify-between bg-muted/30 rounded px-3 py-1.5 text-[12px]">
+                  <div>
+                    <span className="font-medium">{d.nombre}</span>
+                    <span className="text-muted-foreground font-mono ml-2">{d.codigo}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{d.motivo}</span>
+                    <span className="font-bold">{d.cantidad}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* ═══ PRODUCTOS DEVUELTOS (Descarga lineas) ═══ */}
+        {(lineas || []).length > 0 && (
+          <SectionCard title="Cuadre de productos (carga)" icon={PackageCheck}>
+            <div className="space-y-1">
+              {(lineas || []).map((l: any) => {
+                const d = Number(l.diferencia);
+                return (
+                  <div key={l.id} className={cn(
+                    "flex items-center justify-between rounded px-3 py-1.5 text-[12px]",
+                    d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/30"
+                  )}>
+                    <span className="font-medium">{(l as any).productos?.nombre}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-muted-foreground">Esp: {Number(l.cantidad_esperada)}</span>
+                      <span className="font-bold">Real: {Number(l.cantidad_real)}</span>
+                      {d !== 0 && (
+                        <span className={cn("font-bold", d > 0 ? "text-green-600" : "text-destructive")}>
+                          {d > 0 ? '+' : ''}{d}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SectionCard>
+        )}
+
+        {/* ═══ ADMIN ACTIONS ═══ */}
         {isPendiente && (
           <div className="p-5 border-t border-border space-y-3">
             <div>
