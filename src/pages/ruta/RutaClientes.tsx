@@ -64,15 +64,15 @@ export default function RutaClientes() {
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-background px-4 pt-4 pb-2 space-y-3">
         <div className="flex items-center justify-between">
-          <h1 className="text-[20px] font-bold text-foreground">Clientes</h1>
+          <h1 className="text-xl font-bold text-foreground">Clientes</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/ruta/mapa')}
-              className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
+              className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform"
             >
-              <MapPinned className="h-4 w-4" />
+              <MapPinned className="h-5 w-5" />
             </button>
-            <Badge variant="secondary" className="text-[11px]">{filtered.length}</Badge>
+            <Badge variant="secondary" className="text-sm">{filtered.length}</Badge>
           </div>
         </div>
 
@@ -80,17 +80,17 @@ export default function RutaClientes() {
           <button
             onClick={() => setModo('visitas')}
             className={cn(
-              "flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors",
+              "flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors",
               modo === 'visitas' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
-            <Calendar className="h-3.5 w-3.5 inline mr-1.5" />
+            <Calendar className="h-4 w-4 inline mr-1.5" />
             Visitas del día
           </button>
           <button
             onClick={() => setModo('todos')}
             className={cn(
-              "flex-1 py-2 rounded-lg text-[12px] font-semibold transition-colors",
+              "flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors",
               modo === 'todos' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
@@ -107,7 +107,7 @@ export default function RutaClientes() {
                   key={d}
                   onClick={() => setDiaFiltro(d)}
                   className={cn(
-                    "shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-colors capitalize",
+                    "shrink-0 px-3 py-2 rounded-full text-xs font-semibold transition-colors capitalize",
                     diaFiltro === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -124,7 +124,7 @@ export default function RutaClientes() {
           <input
             type="text"
             placeholder="Buscar por nombre, código o dirección..."
-            className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -134,40 +134,40 @@ export default function RutaClientes() {
       <AlertasVendedor />
 
       <div className="flex-1 overflow-auto px-4 space-y-2 pb-4 pt-2">
-        {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
+        {isLoading && <p className="text-center text-muted-foreground text-sm py-8">Cargando...</p>}
 
         {filtered.map((c: any, idx: number) => (
-          <div key={c.id} className="bg-card border border-border rounded-2xl p-3.5 active:bg-muted/30 transition-colors">
+          <div key={c.id} className="bg-card border border-border rounded-2xl p-4 active:bg-muted/30 transition-colors">
             <div className="flex items-start gap-3">
               <div className="flex flex-col items-center gap-0.5 shrink-0 pt-0.5">
                 <button onClick={() => moveItem(idx, 'up')} disabled={idx === 0}
-                  className={cn("p-0.5 rounded transition-colors", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
-                  <ChevronUp className="h-3.5 w-3.5" />
+                  className={cn("p-1 rounded transition-colors", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
+                  <ChevronUp className="h-4 w-4" />
                 </button>
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-bold text-[12px]">{idx + 1}</span>
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <span className="text-primary font-bold text-sm">{idx + 1}</span>
                 </div>
                 <button onClick={() => moveItem(idx, 'down')} disabled={idx === filtered.length - 1}
-                  className={cn("p-0.5 rounded transition-colors", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
-                  <ChevronDown className="h-3.5 w-3.5" />
+                  className={cn("p-1 rounded transition-colors", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
+                  <ChevronDown className="h-4 w-4" />
                 </button>
               </div>
 
               <div className="flex-1 min-w-0">
-                <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-[14px] font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
+                <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className="text-base font-semibold text-foreground truncate text-left underline-offset-2 active:underline">{c.nombre}</button>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {c.codigo && <span className="text-[10px] text-muted-foreground font-mono">{c.codigo}</span>}
+                  {c.codigo && <span className="text-xs text-muted-foreground font-mono">{c.codigo}</span>}
                 </div>
                 {c.direccion && (
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1.5 truncate">
-                    <MapPin className="h-3 w-3 shrink-0" /> {c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1.5 truncate">
+                    <MapPin className="h-3.5 w-3.5 shrink-0" /> {c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
                   </p>
                 )}
                 {modo === 'todos' && c.dia_visita && c.dia_visita.length > 0 && (
                   <div className="flex gap-1 mt-1.5 flex-wrap">
                     {c.dia_visita.map((d: string) => (
                       <span key={d} className={cn(
-                        "text-[9px] px-1.5 py-0.5 rounded-full font-medium capitalize",
+                        "text-[11px] px-2 py-0.5 rounded-full font-medium capitalize",
                         d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                       )}>
                         {d.slice(0, 3)}
@@ -180,19 +180,19 @@ export default function RutaClientes() {
               <div className="flex flex-col items-center gap-1.5 shrink-0">
                 {c.gps_lat && c.gps_lng && (
                   <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
-                    className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
-                    <Navigation className="h-4 w-4" />
+                    className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
+                    <Navigation className="h-5 w-5" />
                   </button>
                 )}
                 {c.telefono && (
                   <a href={`tel:${c.telefono}`}
-                    className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 active:scale-90 transition-transform">
-                    <Phone className="h-4 w-4" />
+                    className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600 active:scale-90 transition-transform">
+                    <Phone className="h-5 w-5" />
                   </a>
                 )}
                 <button onClick={() => navigate(`/ruta/ventas/nueva?clienteId=${c.id}`)}
-                  className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
-                  <ShoppingCart className="h-4 w-4" />
+                  className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
+                  <ShoppingCart className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -201,8 +201,8 @@ export default function RutaClientes() {
 
         {!isLoading && filtered.length === 0 && (
           <div className="text-center py-12">
-            <Calendar className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-            <p className="text-muted-foreground text-sm">
+            <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
+            <p className="text-muted-foreground text-base">
               {modo === 'visitas' ? `No hay visitas programadas para el ${diaFiltro}` : 'No se encontraron clientes'}
             </p>
           </div>

@@ -1,12 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-type Step = 'cliente' | 'cuentas' | 'pago';
+type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
 interface VentaPendiente {
   id: string;
@@ -15,7 +15,6 @@ interface VentaPendiente {
   total: number;
   saldo_pendiente: number;
   montoAplicar: number;
-  selected: boolean;
 }
 
 const METODOS_PAGO = [
@@ -34,6 +33,7 @@ export default function RutaCobrar() {
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNombre, setClienteNombre] = useState('');
   const [searchCliente, setSearchCliente] = useState('');
+  const [montoRecibido, setMontoRecibido] = useState('');
   const [cuentas, setCuentas] = useState<VentaPendiente[]>([]);
   const [metodoPago, setMetodoPago] = useState('efectivo');
   const [referencia, setReferencia] = useState('');
@@ -45,7 +45,6 @@ export default function RutaCobrar() {
     queryKey: ['ruta-clientes-cobro', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      // Get clients
       const { data: clientesData } = await supabase
         .from('clientes')
         .select('id, codigo, nombre, telefono')
@@ -55,7 +54,6 @@ export default function RutaCobrar() {
 
       if (!clientesData) return [];
 
-      // Get all pending sales grouped by client
       const { data: ventasData } = await supabase
         .from('ventas')
         .select('cliente_id, saldo_pendiente')
@@ -90,7 +88,7 @@ export default function RutaCobrar() {
     c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
   );
 
-  // Fetch pending invoices for selected client
+  // Fetch pending invoices for selected client (ordered oldest first)
   const { data: ventasPendientes, isLoading: loadingVentas } = useQuery({
     queryKey: ['ruta-ventas-pendientes', clienteId],
     enabled: !!clienteId,
@@ -102,7 +100,7 @@ export default function RutaCobrar() {
         .eq('condicion_pago', 'credito')
         .in('status', ['confirmado', 'entregado', 'facturado'])
         .gt('saldo_pendiente', 0)
-        .order('fecha', { ascending: true });
+        .order('fecha', { ascending: true }); // Oldest first!
       return data ?? [];
     },
   });
@@ -110,49 +108,52 @@ export default function RutaCobrar() {
   const selectCliente = (c: any) => {
     setClienteId(c.id);
     setClienteNombre(c.nombre);
-    setStep('cuentas');
+    setCuentas([]);
+    setMontoRecibido('');
+    setStep('monto');
   };
 
-  // When ventas load, initialize cuentas state
-  const initCuentas = () => {
-    if (ventasPendientes && cuentas.length === 0) {
-      setCuentas(ventasPendientes.map(v => ({
+  const totalPendienteCliente = useMemo(() =>
+    (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
+    [ventasPendientes]
+  );
+
+  // Auto-apply amount to oldest debts first
+  const autoApply = (monto: number, ventas: typeof ventasPendientes) => {
+    if (!ventas || ventas.length === 0) return [];
+    let restante = monto;
+    return ventas.map(v => {
+      const saldo = v.saldo_pendiente ?? 0;
+      const aplicar = Math.min(restante, saldo);
+      restante = Math.max(0, restante - saldo);
+      return {
         id: v.id,
         folio: v.folio,
         fecha: v.fecha,
         total: v.total ?? 0,
-        saldo_pendiente: v.saldo_pendiente ?? 0,
-        montoAplicar: 0,
-        selected: false,
-      })));
-    }
+        saldo_pendiente: saldo,
+        montoAplicar: Math.round(aplicar * 100) / 100,
+      };
+    });
   };
 
-  // Auto-init when ventas load
-  if (step === 'cuentas' && ventasPendientes && cuentas.length === 0 && ventasPendientes.length > 0) {
-    initCuentas();
-  }
+  // When user enters amount and proceeds, auto-distribute
+  const proceedToDistribution = () => {
+    const monto = parseFloat(montoRecibido);
+    if (isNaN(monto) || monto <= 0) return;
+    const distributed = autoApply(monto, ventasPendientes ?? []);
+    setCuentas(distributed);
+    setStep('cuentas');
+  };
 
   const totalAplicado = cuentas.reduce((s, c) => s + c.montoAplicar, 0);
-  const totalPendienteCliente = cuentas.reduce((s, c) => s + c.saldo_pendiente, 0);
-
-  const liquidarTodo = () => {
-    setCuentas(prev => prev.map(c => ({ ...c, selected: true, montoAplicar: c.saldo_pendiente })));
-  };
-
-  const toggleCuenta = (id: string) => {
-    setCuentas(prev => prev.map(c => {
-      if (c.id !== id) return c;
-      const newSelected = !c.selected;
-      return { ...c, selected: newSelected, montoAplicar: newSelected ? c.saldo_pendiente : 0 };
-    }));
-  };
+  const sobrante = parseFloat(montoRecibido || '0') - totalAplicado;
 
   const updateMontoAplicar = (id: string, monto: number) => {
     setCuentas(prev => prev.map(c => {
       if (c.id !== id) return c;
       const clamped = Math.min(Math.max(0, monto), c.saldo_pendiente);
-      return { ...c, montoAplicar: clamped, selected: clamped > 0 };
+      return { ...c, montoAplicar: Math.round(clamped * 100) / 100 };
     }));
   };
 
@@ -160,11 +161,8 @@ export default function RutaCobrar() {
     if (!empresa || !user || totalAplicado <= 0) return;
     setSaving(true);
     try {
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-
-      // Create cobro
       const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
-        empresa_id: profile!.empresa_id,
+        empresa_id: empresa.id,
         cliente_id: clienteId!,
         monto: totalAplicado,
         metodo_pago: metodoPago,
@@ -174,7 +172,6 @@ export default function RutaCobrar() {
       }).select('id').single();
       if (cobroErr) throw cobroErr;
 
-      // Create aplicaciones
       const aplicaciones = cuentas
         .filter(c => c.montoAplicar > 0)
         .map(c => ({
@@ -187,10 +184,9 @@ export default function RutaCobrar() {
         const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones);
         if (appErr) throw appErr;
 
-        // Update saldo_pendiente on each venta
         for (const app of aplicaciones) {
           const cuenta = cuentas.find(c => c.id === app.venta_id)!;
-          const nuevoSaldo = cuenta.saldo_pendiente - app.monto_aplicado;
+          const nuevoSaldo = Math.round((cuenta.saldo_pendiente - app.monto_aplicado) * 100) / 100;
           await supabase.from('ventas').update({ saldo_pendiente: nuevoSaldo }).eq('id', app.venta_id);
         }
       }
@@ -207,14 +203,14 @@ export default function RutaCobrar() {
     }
   };
 
-  const STEPS: Step[] = ['cliente', 'cuentas', 'pago'];
-  const STEP_LABELS: Record<Step, string> = { cliente: 'Cliente', cuentas: 'Cuentas', pago: 'Cobrar' };
+  const STEPS: Step[] = ['cliente', 'monto', 'cuentas', 'pago'];
+  const STEP_LABELS: Record<Step, string> = { cliente: 'Cliente', monto: 'Monto', cuentas: 'Distribución', pago: 'Cobrar' };
   const currentStepIdx = STEPS.indexOf(step);
 
   const goBack = () => {
     if (currentStepIdx === 0) navigate('/ruta/cobros');
     else {
-      if (step === 'cuentas') { setCuentas([]); }
+      if (step === 'monto') { setCuentas([]); setMontoRecibido(''); }
       setStep(STEPS[currentStepIdx - 1]);
     }
   };
@@ -229,23 +225,25 @@ export default function RutaCobrar() {
     return Math.floor(diff / (1000 * 60 * 60 * 24));
   };
 
+  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border">
-        <div className="flex items-center gap-2 px-3 h-12">
-          <button onClick={goBack} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all">
-            <ArrowLeft className="h-[18px] w-[18px] text-foreground" />
+        <div className="flex items-center gap-2 px-4 h-14">
+          <button onClick={goBack} className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-accent active:scale-95 transition-all">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
-          <span className="text-[15px] font-semibold text-foreground flex-1">Cobrar</span>
+          <span className="text-base font-semibold text-foreground flex-1">Cobrar</span>
         </div>
-        <div className="flex px-3 pb-2.5 gap-1.5">
+        <div className="flex px-4 pb-3 gap-2">
           {STEPS.map((s, i) => (
             <div key={s} className="flex-1 flex flex-col items-center gap-1">
-              <div className={`h-[3px] w-full rounded-full transition-colors ${
+              <div className={`h-1 w-full rounded-full transition-colors ${
                 i <= currentStepIdx ? 'bg-primary' : 'bg-border'
               }`} />
-              <span className={`text-[10px] font-medium transition-colors ${
+              <span className={`text-xs font-medium transition-colors ${
                 i <= currentStepIdx ? 'text-primary' : 'text-muted-foreground/60'
               }`}>{STEP_LABELS[s]}</span>
             </div>
@@ -256,13 +254,13 @@ export default function RutaCobrar() {
       {/* ─── STEP 1: Seleccionar cliente ─── */}
       {step === 'cliente' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-3 pt-2.5 pb-1.5">
+          <div className="px-4 pt-3 pb-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Buscar cliente..."
-                className="w-full bg-accent/60 rounded-lg pl-8 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40 transition-shadow"
+                className="w-full bg-accent/60 rounded-xl pl-10 pr-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-shadow"
                 value={searchCliente}
                 onChange={e => setSearchCliente(e.target.value)}
                 autoFocus
@@ -270,58 +268,56 @@ export default function RutaCobrar() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto px-3 pb-4">
-            {/* Clients with pending balance */}
+          <div className="flex-1 overflow-auto px-4 pb-4">
             {filteredConSaldo.length > 0 && (
               <>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2">
                   Con saldo pendiente ({filteredConSaldo.length})
                 </p>
-                <div className="space-y-[3px]">
+                <div className="space-y-1">
                   {filteredConSaldo.map(c => (
                     <button
                       key={c.id}
                       onClick={() => selectCliente(c)}
-                      className="w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left bg-card hover:bg-accent/30"
+                      className="w-full rounded-xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.98] transition-all text-left bg-card hover:bg-accent/30 min-h-[56px]"
                     >
-                      <div className="w-7 h-7 rounded-md bg-destructive/10 flex items-center justify-center shrink-0">
-                        <span className="text-[11px] font-bold text-destructive">{c.nombre.charAt(0)}</span>
+                      <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-destructive">{c.nombre.charAt(0)}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-medium text-foreground truncate">{c.nombre}</p>
-                        {c.codigo && <p className="text-[10.5px] text-muted-foreground">{c.codigo}</p>}
+                        <p className="text-sm font-medium text-foreground truncate">{c.nombre}</p>
+                        {c.codigo && <p className="text-xs text-muted-foreground">{c.codigo}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-[12px] font-bold text-destructive">${c.saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-                        <p className="text-[9px] text-muted-foreground">pendiente</p>
+                        <p className="text-sm font-bold text-destructive">${fmt(c.saldoPendiente)}</p>
+                        <p className="text-xs text-muted-foreground">pendiente</p>
                       </div>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
                     </button>
                   ))}
                 </div>
               </>
             )}
 
-            {/* Clients without balance */}
             {filteredSinSaldo.length > 0 && (
               <>
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2 mt-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2 mt-3">
                   Sin saldo ({filteredSinSaldo.length})
                 </p>
-                <div className="space-y-[3px]">
+                <div className="space-y-1">
                   {filteredSinSaldo.map(c => (
                     <button
                       key={c.id}
                       onClick={() => selectCliente(c)}
-                      className="w-full rounded-lg px-3 py-2.5 flex items-center gap-2.5 active:scale-[0.98] transition-all text-left bg-card/50 opacity-60"
+                      className="w-full rounded-xl px-4 py-3.5 flex items-center gap-3 active:scale-[0.98] transition-all text-left bg-card/50 opacity-60 min-h-[56px]"
                     >
-                      <div className="w-7 h-7 rounded-md bg-accent flex items-center justify-center shrink-0">
-                        <span className="text-[11px] font-bold text-foreground">{c.nombre.charAt(0)}</span>
+                      <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                        <span className="text-sm font-bold text-foreground">{c.nombre.charAt(0)}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-medium text-foreground truncate">{c.nombre}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{c.nombre}</p>
                       </div>
-                      <span className="text-[10px] text-success font-medium">Al corriente</span>
+                      <span className="text-xs text-success font-medium">Al corriente</span>
                     </button>
                   ))}
                 </div>
@@ -331,155 +327,223 @@ export default function RutaCobrar() {
         </div>
       )}
 
-      {/* ─── STEP 2: Cuentas pendientes ─── */}
-      {step === 'cuentas' && (
+      {/* ─── STEP 2: Monto recibido ─── */}
+      {step === 'monto' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Client + total header */}
-          <div className="px-3 pt-2.5 pb-2">
-            <div className="bg-card rounded-lg p-3 flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-accent flex items-center justify-center shrink-0">
-                <span className="text-[11px] font-bold text-foreground">{clienteNombre.charAt(0)}</span>
+          <div className="flex-1 px-4 pt-4 space-y-4">
+            {/* Client info */}
+            <div className="bg-card rounded-xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold text-foreground">{clienteNombre.charAt(0)}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-medium text-foreground truncate">{clienteNombre}</p>
-                <p className="text-[10.5px] text-muted-foreground">
-                  {cuentas.length} {cuentas.length === 1 ? 'cuenta' : 'cuentas'} · Total: ${totalPendienteCliente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                </p>
+                <p className="text-sm font-semibold text-foreground truncate">{clienteNombre}</p>
+                {totalPendienteCliente > 0 && (
+                  <p className="text-xs text-destructive font-medium">
+                    Deuda total: ${fmt(totalPendienteCliente)}
+                    {ventasPendientes && ventasPendientes.length > 0 && ` · ${ventasPendientes.length} cuenta${ventasPendientes.length > 1 ? 's' : ''}`}
+                  </p>
+                )}
+                {loadingVentas && <p className="text-xs text-muted-foreground">Cargando cuentas...</p>}
               </div>
-              <button
-                onClick={liquidarTodo}
-                className="text-[10.5px] font-semibold text-primary bg-primary/8 rounded-md px-2.5 py-1.5 active:scale-95 transition-transform"
-              >
-                Liquidar todo
-              </button>
+            </div>
+
+            {/* Pending invoices preview (oldest first) */}
+            {ventasPendientes && ventasPendientes.length > 0 && (
+              <div className="bg-card rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Info className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Cuentas pendientes (más antigua primero)
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  {ventasPendientes.map((v, i) => {
+                    const dias = daysSince(v.fecha);
+                    return (
+                      <div key={v.id} className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}.</span>
+                          <div>
+                            <p className="text-sm font-medium text-foreground">{v.folio || 'Sin folio'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDate(v.fecha)} · {dias}d
+                              {dias > 30 && <span className="text-destructive ml-1">⚠ vencida</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-sm font-bold text-foreground tabular-nums">${fmt(v.saldo_pendiente ?? 0)}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Amount input */}
+            <div className="bg-card rounded-xl p-4 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">¿Cuánto te entrega el cliente?</p>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className="w-full text-2xl font-bold bg-accent/40 rounded-xl pl-10 pr-4 py-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={montoRecibido}
+                  onChange={e => setMontoRecibido(e.target.value)}
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+              {totalPendienteCliente > 0 && (
+                <button
+                  onClick={() => setMontoRecibido(totalPendienteCliente.toString())}
+                  className="text-xs text-primary font-semibold active:underline"
+                >
+                  Liquidar todo · ${fmt(totalPendienteCliente)}
+                </button>
+              )}
             </div>
           </div>
 
-          {loadingVentas ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-[12px] text-muted-foreground">Cargando cuentas...</p>
-            </div>
-          ) : cuentas.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2 px-8">
-              <Check className="h-10 w-10 text-success" />
-              <p className="text-[14px] font-semibold text-foreground text-center">Sin cuentas pendientes</p>
-              <p className="text-[12px] text-muted-foreground text-center">Este cliente está al corriente</p>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-auto px-3 space-y-[3px] pb-20">
-              {cuentas.map(c => {
-                const dias = daysSince(c.fecha);
-                const vencida = dias > 30;
-                return (
-                  <div
-                    key={c.id}
-                    className={`rounded-lg px-3 py-2.5 transition-all ${
-                      c.selected ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {/* Checkbox */}
-                      <button
-                        onClick={() => toggleCuenta(c.id)}
-                        className={`w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all ${
-                          c.selected ? 'bg-primary text-primary-foreground' : 'border-2 border-border'
-                        }`}
-                      >
-                        {c.selected && <Check className="h-3 w-3" />}
-                      </button>
-
-                      <div className="flex-1 min-w-0" onClick={() => toggleCuenta(c.id)}>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[12px] font-semibold text-foreground">{c.folio || 'Sin folio'}</span>
-                          {vencida && <AlertCircle className="h-3 w-3 text-destructive" />}
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-px">
-                          <span className="text-[10px] text-muted-foreground">{formatDate(c.fecha)}</span>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className={`text-[10px] font-medium ${vencida ? 'text-destructive' : 'text-muted-foreground'}`}>
-                            {dias}d
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">·</span>
-                          <span className="text-[10px] text-muted-foreground">Total: ${c.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] text-muted-foreground">Saldo</p>
-                        <p className="text-[12.5px] font-bold text-foreground">${c.saldo_pendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-                      </div>
-                    </div>
-
-                    {/* Editable amount */}
-                    {c.selected && (
-                      <div className="mt-2 pt-2 border-t border-border/40 flex items-center justify-between">
-                        <span className="text-[10.5px] text-muted-foreground">Aplicar:</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[12px] text-foreground">$</span>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            className="w-24 text-right text-[13px] font-bold bg-accent/40 rounded-md px-2 py-1 focus:outline-none focus:ring-1.5 focus:ring-primary/40 text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={c.montoAplicar || ''}
-                            onChange={e => {
-                              const val = parseFloat(e.target.value);
-                              updateMontoAplicar(c.id, isNaN(val) ? 0 : val);
-                            }}
-                            onFocus={e => e.target.select()}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Floating bar */}
-          {totalAplicado > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-2 bg-background/95 backdrop-blur-sm border-t border-border safe-area-bottom">
-              <button
-                onClick={() => setStep('pago')}
-                className="w-full bg-primary text-primary-foreground rounded-xl py-3 flex items-center justify-between px-4 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20"
-              >
-                <span className="text-[13px] font-medium">
-                  {cuentas.filter(c => c.selected).length} {cuentas.filter(c => c.selected).length === 1 ? 'cuenta' : 'cuentas'}
-                </span>
-                <span className="text-[14px] font-bold">Cobrar ${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-              </button>
-            </div>
-          )}
+          {/* Continue button */}
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-background/95 backdrop-blur-sm border-t border-border safe-area-bottom">
+            <button
+              onClick={proceedToDistribution}
+              disabled={!montoRecibido || parseFloat(montoRecibido) <= 0}
+              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-base font-bold disabled:opacity-40 active:scale-[0.98] transition-transform min-h-[52px]"
+            >
+              Continuar
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ─── STEP 3: Método de pago y confirmar ─── */}
+      {/* ─── STEP 3: Distribución automática ─── */}
+      {step === 'cuentas' && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 pt-3 pb-2">
+            <div className="bg-card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-foreground">{clienteNombre}</p>
+                <p className="text-lg font-bold text-primary tabular-nums">${montoRecibido}</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Info className="h-3.5 w-3.5 shrink-0" />
+                <span>Aplicado automáticamente a las cuentas más antiguas. Puedes ajustar manualmente.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto px-4 space-y-1.5 pb-24">
+            {cuentas.map((c, i) => {
+              const dias = daysSince(c.fecha);
+              const vencida = dias > 30;
+              const liquidada = c.montoAplicar >= c.saldo_pendiente;
+              return (
+                <div
+                  key={c.id}
+                  className={`rounded-xl px-4 py-3.5 transition-all ${
+                    c.montoAplicar > 0 ? 'bg-primary/[0.04] ring-1 ring-primary/20' : 'bg-card'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}.</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{c.folio || 'Sin folio'}</span>
+                        {vencida && <AlertCircle className="h-3.5 w-3.5 text-destructive" />}
+                        {liquidada && c.montoAplicar > 0 && (
+                          <span className="text-[11px] bg-success/10 text-success font-semibold px-2 py-0.5 rounded-full">Liquidada</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {formatDate(c.fecha)} · {dias}d · Saldo: ${fmt(c.saldo_pendiente)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Aplicar:</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-foreground">$</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className="w-28 text-right text-base font-bold bg-accent/40 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40 text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={c.montoAplicar || ''}
+                        onChange={e => {
+                          const val = parseFloat(e.target.value);
+                          updateMontoAplicar(c.id, isNaN(val) ? 0 : val);
+                        }}
+                        onFocus={e => e.target.select()}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Surplus warning */}
+            {sobrante > 0.01 && (
+              <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Sobrante: ${fmt(sobrante)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    El cliente entrega más de lo que debe. Revisa los montos o registra como anticipo.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Floating bar */}
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-background/95 backdrop-blur-sm border-t border-border safe-area-bottom">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-xs text-muted-foreground">
+                {cuentas.filter(c => c.montoAplicar > 0).length} cuentas
+              </span>
+              <span className="text-sm font-bold text-foreground tabular-nums">Total: ${fmt(totalAplicado)}</span>
+            </div>
+            <button
+              onClick={() => setStep('pago')}
+              disabled={totalAplicado <= 0}
+              className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-base font-bold disabled:opacity-40 active:scale-[0.98] transition-transform min-h-[52px]"
+            >
+              Continuar al cobro
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── STEP 4: Método de pago y confirmar ─── */}
       {step === 'pago' && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-auto px-3 pt-2.5 pb-20 space-y-2.5">
+          <div className="flex-1 overflow-auto px-4 pt-3 pb-24 space-y-3">
 
             {/* Total to collect */}
-            <section className="bg-card rounded-lg p-4 text-center">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total a cobrar</p>
-              <p className="text-[28px] font-bold text-primary tabular-nums">${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">{clienteNombre}</p>
+            <section className="bg-card rounded-xl p-5 text-center">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total a cobrar</p>
+              <p className="text-3xl font-bold text-primary tabular-nums">${fmt(totalAplicado)}</p>
+              <p className="text-sm text-muted-foreground mt-1">{clienteNombre}</p>
             </section>
 
             {/* Payment method */}
-            <section className="bg-card rounded-lg p-3">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Método de pago</p>
-              <div className="grid grid-cols-4 gap-1.5">
+            <section className="bg-card rounded-xl p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Método de pago</p>
+              <div className="grid grid-cols-4 gap-2">
                 {METODOS_PAGO.map(m => (
                   <button
                     key={m.value}
                     onClick={() => setMetodoPago(m.value)}
-                    className={`flex flex-col items-center gap-1 py-2.5 rounded-md text-[10.5px] font-medium transition-all active:scale-95 ${
+                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl text-xs font-medium transition-all active:scale-95 min-h-[64px] ${
                       metodoPago === m.value
                         ? 'bg-primary text-primary-foreground shadow-sm'
                         : 'bg-accent/60 text-foreground'
                     }`}
                   >
-                    <m.icon className="h-4 w-4" />
+                    <m.icon className="h-5 w-5" />
                     {m.label}
                   </button>
                 ))}
@@ -489,7 +553,7 @@ export default function RutaCobrar() {
                 <input
                   type="text"
                   placeholder="Referencia / No. operación"
-                  className="w-full mt-2.5 bg-accent/40 rounded-md px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                  className="w-full mt-3 bg-accent/40 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
                   value={referencia}
                   onChange={e => setReferencia(e.target.value)}
                 />
@@ -497,21 +561,21 @@ export default function RutaCobrar() {
             </section>
 
             {/* Applied invoices summary */}
-            <section className="bg-card rounded-lg p-3">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                Cuentas a liquidar ({cuentas.filter(c => c.selected).length})
+            <section className="bg-card rounded-xl p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Cuentas a liquidar ({cuentas.filter(c => c.montoAplicar > 0).length})
               </p>
-              <div className="space-y-1.5">
-                {cuentas.filter(c => c.selected).map(c => (
-                  <div key={c.id} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0">
+              <div className="space-y-2">
+                {cuentas.filter(c => c.montoAplicar > 0).map(c => (
+                  <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0">
                     <div>
-                      <p className="text-[12px] font-medium text-foreground">{c.folio || 'Sin folio'}</p>
-                      <p className="text-[10px] text-muted-foreground">{formatDate(c.fecha)} · Saldo: ${c.saldo_pendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                      <p className="text-sm font-medium text-foreground">{c.folio || 'Sin folio'}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · Saldo: ${fmt(c.saldo_pendiente)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[12.5px] font-bold text-foreground tabular-nums">${c.montoAplicar.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                      <p className="text-sm font-bold text-foreground tabular-nums">${fmt(c.montoAplicar)}</p>
                       {c.montoAplicar >= c.saldo_pendiente && (
-                        <span className="text-[9px] text-success font-medium">Liquidada</span>
+                        <span className="text-[11px] text-success font-medium">Liquidada</span>
                       )}
                     </div>
                   </div>
@@ -520,10 +584,10 @@ export default function RutaCobrar() {
             </section>
 
             {/* Notes */}
-            <section className="bg-card rounded-lg p-3">
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notas</p>
+            <section className="bg-card rounded-xl p-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Notas</p>
               <textarea
-                className="w-full bg-accent/40 rounded-md px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none transition-shadow"
+                className="w-full bg-accent/40 rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none transition-shadow"
                 rows={2}
                 placeholder="Observaciones del cobro..."
                 value={notas}
@@ -533,14 +597,14 @@ export default function RutaCobrar() {
           </div>
 
           {/* Confirm button */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-2 bg-background/95 backdrop-blur-sm border-t border-border safe-area-bottom">
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-background/95 backdrop-blur-sm border-t border-border safe-area-bottom">
             <button
               onClick={handleSave}
               disabled={saving || totalAplicado <= 0}
-              className="w-full bg-success text-success-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-1.5"
+              className="w-full bg-success text-success-foreground rounded-xl py-4 text-base font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-2 min-h-[52px]"
             >
-              <Check className="h-4 w-4" />
-              {saving ? 'Registrando...' : `Confirmar cobro · $${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`}
+              <Check className="h-5 w-5" />
+              {saving ? 'Registrando...' : `Confirmar cobro · $${fmt(totalAplicado)}`}
             </button>
           </div>
         </div>
