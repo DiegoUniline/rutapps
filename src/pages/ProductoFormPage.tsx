@@ -579,7 +579,7 @@ export default function ProductoFormPage() {
               onChange={v => set('marca_id', v || null)}
               format={() => findName(marcas, form.marca_id ?? undefined)}
             />
-            <OdooField label="Clasificación" value={form.clasificacion_id} type="select"
+            <OdooField label="Categoría" value={form.clasificacion_id} type="select"
               options={clasificaciones?.map(c => ({ value: c.id, label: c.nombre })) ?? []}
               onChange={v => set('clasificacion_id', v || null)}
               format={() => findName(clasificaciones, form.clasificacion_id ?? undefined)}

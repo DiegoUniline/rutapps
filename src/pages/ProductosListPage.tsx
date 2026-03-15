@@ -107,7 +107,7 @@ export default function ProductosListPage() {
                   <th className="th-odoo w-10">Img</th>
                   <th className="th-odoo text-left">Código</th>
                   <th className="th-odoo text-left">Nombre</th>
-                  <th className="th-odoo text-left hidden lg:table-cell">Clasificación</th>
+                  <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
                   <th className="th-odoo text-left hidden md:table-cell">Marca</th>
                   <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
                   <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
