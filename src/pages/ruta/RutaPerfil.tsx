@@ -92,6 +92,19 @@ export default function RutaPerfil() {
           )}
         </div>
 
+        {/* Theme toggle */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-muted/50 transition-colors"
+          >
+            {theme === 'dark' ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
+            <span className="text-[14px] font-medium text-foreground flex-1 text-left">
+              {theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            </span>
+          </button>
+        </div>
+
         {/* Sign out */}
         <button
           onClick={handleSignOut}
