@@ -143,7 +143,7 @@ export default function VentaFormPage() {
     if (!producto) return;
     const ivaPct = producto.tiene_iva ? Number(producto.iva_pct ?? 16) : 0;
     const iepsPct = producto.tiene_ieps ? Number(producto.ieps_pct ?? 0) : 0;
-    const unidadId = producto.unidad_venta_id || producto.unidad_compra_id || nextUnitFallback(lineas[idx]?.unidad_id);
+    const unidadId = producto.unidad_venta_id || producto.unidad_compra_id || null;
     setLineas(prev => {
       const next = [...prev];
       next[idx] = {
