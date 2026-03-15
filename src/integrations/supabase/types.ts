@@ -1406,6 +1406,7 @@ export type Database = {
           id: string
           nombre: string | null
           user_id: string
+          vendedor_id: string | null
         }
         Insert: {
           almacen_id?: string | null
@@ -1415,6 +1416,7 @@ export type Database = {
           id?: string
           nombre?: string | null
           user_id: string
+          vendedor_id?: string | null
         }
         Update: {
           almacen_id?: string | null
@@ -1424,6 +1426,7 @@ export type Database = {
           id?: string
           nombre?: string | null
           user_id?: string
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -1438,6 +1441,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
             referencedColumns: ["id"]
           },
         ]

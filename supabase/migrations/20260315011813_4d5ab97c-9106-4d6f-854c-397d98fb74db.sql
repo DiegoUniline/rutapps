@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN vendedor_id uuid REFERENCES public.vendedores(id) ON DELETE SET NULL DEFAULT NULL;

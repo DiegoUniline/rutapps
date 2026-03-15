@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Save, Trash2, Plus, X } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
@@ -43,6 +44,7 @@ const EDITABLE_COLS = ['producto', 'unidad', 'cantidad', 'precio', 'descuento', 
 export default function VentaFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const isNew = id === 'nuevo';
   const { data: existingVenta, isLoading } = useVenta(isNew ? undefined : id);
   const saveVenta = useSaveVenta();
@@ -84,10 +86,11 @@ export default function VentaFormPage() {
     if (existingVenta) {
       setForm(existingVenta);
       const existingLines = existingVenta.venta_lineas ?? [];
-      // Always ensure at least one blank line at the end
       setLineas([...existingLines, emptyLine()]);
+    } else if (isNew && profile?.vendedor_id) {
+      setForm(prev => ({ ...prev, vendedor_id: profile.vendedor_id }));
     }
-  }, [existingVenta]);
+  }, [existingVenta, isNew, profile]);
 
   const set = (field: string, val: any) => {
     setForm(prev => ({ ...prev, [field]: val }));
