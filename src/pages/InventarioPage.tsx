@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign } from 'lucide-react';
+import { Warehouse, Truck, Package, Search, TrendingUp, DollarSign, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, fmtDate } from '@/lib/utils';
 
