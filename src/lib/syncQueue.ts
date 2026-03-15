@@ -1,5 +1,6 @@
 import { offlineDb, type SyncQueueItem, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
+import { markAsSynced } from './syncVerify';
 
 const MAX_RETRIES = 5;
 
