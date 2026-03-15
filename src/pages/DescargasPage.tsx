@@ -343,13 +343,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 
   const { lineas: lineasBase, efectivoEsperado, ventasContado, gastosTotal } = useDescargaCalculos(selectedCargaId);
 
+  const lineasBaseJson = JSON.stringify(lineasBase.map(l => l.producto_id));
   useEffect(() => {
     if (lineasBase.length > 0) {
       setLineas(lineasBase);
     } else {
       setLineas([]);
     }
-  }, [lineasBase]);
+  }, [lineasBaseJson]);
 
   const updateLinea = (idx: number, field: keyof DescargaLinea, value: any) => {
     setLineas(prev => prev.map((l, i) => {
