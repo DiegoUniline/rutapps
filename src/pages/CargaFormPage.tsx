@@ -74,6 +74,7 @@ export default function CargaFormPage() {
       setVendedorId(carga.vendedor_id ?? '');
       setRepartidorId((carga as any).repartidor_id ?? '');
       setAlmacenId((carga as any).almacen_id ?? '');
+      setAlmacenDestinoId((carga as any).almacen_destino_id ?? '');
       setFecha(carga.fecha);
       setNotas(carga.notas ?? '');
       setLineas((carga.carga_lineas ?? []).map((l: any) => ({
