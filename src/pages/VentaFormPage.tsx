@@ -169,6 +169,74 @@ export default function VentaFormPage() {
   const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
   const saldoPendiente = (form.total ?? 0) - totalPagado;
 
+  const handleGenerarPdf = () => {
+    const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const blob = generarPedidoPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+        email: empresa?.email,
+      },
+      pedido: {
+        folio: form.folio ?? '',
+        fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+        status: form.status ?? 'borrador',
+        condicion_pago: form.condicion_pago ?? 'contado',
+        subtotal: form.subtotal ?? 0,
+        descuento_total: form.descuento_total ?? 0,
+        iva_total: form.iva_total ?? 0,
+        ieps_total: form.ieps_total ?? 0,
+        total: form.total ?? 0,
+        notas: form.notas,
+      },
+      cliente: {
+        nombre: clienteData?.nombre ?? '—',
+        codigo: clienteData?.codigo,
+        telefono: clienteData?.telefono,
+        direccion: clienteData?.direccion,
+        rfc: clienteData?.rfc,
+      },
+      lineas: lineas.filter(l => l.producto_id).map(l => {
+        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          cantidad: Number(l.cantidad) || 0,
+          unidad: (l as any).unidad_label || (prod as any)?.unidades_venta?.abreviatura || '',
+          precio_unitario: Number(l.precio_unitario) || 0,
+          descuento_pct: Number(l.descuento_pct) || 0,
+          iva_pct: Number(l.iva_pct) || 0,
+          ieps_pct: Number(l.ieps_pct) || 0,
+          total: Number(l.total) || 0,
+        };
+      }),
+      entregas: (entregasExistentes ?? []).map(e => ({
+        folio: e.folio ?? '',
+        status: e.status,
+        lineas: (e.entrega_lineas ?? []).map(el => {
+          const prod = productosList?.find((p: any) => p.id === el.producto_id);
+          return {
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cantidad_pedida: Number(el.cantidad_entregada) || 0,
+            cantidad_entregada: Number(el.cantidad_entregada) || 0,
+          };
+        }),
+      })),
+      pagos: (pagosData ?? []).map((p: any) => ({
+        fecha: p.cobros?.fecha ?? '',
+        metodo_pago: p.cobros?.metodo_pago ?? '',
+        monto: Number(p.monto_aplicado) || 0,
+        referencia: p.cobros?.referencia,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
+
   const set = (field: string, val: any) => {
     if (readOnly) return;
     setForm(prev => ({ ...prev, [field]: val }));
