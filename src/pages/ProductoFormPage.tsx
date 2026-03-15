@@ -552,8 +552,7 @@ export default function ProductoFormPage() {
                     {(form as any).costo_incluye_impuestos && (form.costo ?? 0) > 0 && (
                       <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
                         {(() => {
-                          const { calcTax } = require('@/lib/taxUtils');
-                          const t = calcTax({ precio: form.costo ?? 0, iva_pct: (form as any).iva_pct ?? 16, ieps_pct: (form as any).ieps_pct ?? 0, incluye_impuestos: true });
+                          const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, incluye_impuestos: true });
                           return <>Costo neto: <strong>$ {t.precio_neto.toFixed(2)}</strong> + IEPS: $ {t.ieps_monto.toFixed(2)} + IVA: $ {t.iva_monto.toFixed(2)}</>;
                         })()}
                       </div>
