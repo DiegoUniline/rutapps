@@ -432,20 +432,20 @@ export default function CompraFormPage() {
             content: (
               <div className="space-y-3">
                 <div className="bg-card border border-border rounded overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-sm table-fixed">
                     <thead>
                       <tr className="border-b border-table-border">
-                        <th className="th-odoo text-left w-12">#</th>
-                        <th className="th-odoo text-left min-w-[200px]">Producto</th>
-                        <th className="th-odoo text-center w-20">Ud. compra</th>
-                        <th className="th-odoo text-right w-20">Cantidad</th>
-                        <th className="th-odoo text-center w-16">Factor</th>
-                        <th className="th-odoo text-right w-20">Piezas</th>
-                        <th className="th-odoo text-right w-28">Costo unit.</th>
-                        <th className="th-odoo text-center w-16">IVA</th>
-                        <th className="th-odoo text-center w-16">IEPS</th>
-                        <th className="th-odoo text-right w-28">Total</th>
-                        {isEditable && <th className="th-odoo w-10"></th>}
+                        <th className="th-odoo text-left w-8">#</th>
+                        <th className="th-odoo text-left">Producto</th>
+                        <th className="th-odoo text-center w-16">Ud.</th>
+                        <th className="th-odoo text-right w-16">Cant.</th>
+                        <th className="th-odoo text-center w-14">Factor</th>
+                        <th className="th-odoo text-right w-16">Piezas</th>
+                        <th className="th-odoo text-right w-24">Costo</th>
+                        <th className="th-odoo text-center w-14">IVA</th>
+                        <th className="th-odoo text-center w-14">IEPS</th>
+                        <th className="th-odoo text-right w-24">Total</th>
+                        {isEditable && <th className="th-odoo w-8"></th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -455,29 +455,27 @@ export default function CompraFormPage() {
                           : '';
                         return (
                           <tr key={idx} className="border-b border-table-border">
-                            <td className="py-1.5 px-3 text-muted-foreground text-xs">{idx + 1}</td>
-                            <td className="py-1.5 px-3">
+                            <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
+                            <td className="py-1.5 px-2">
                               {isEditable ? (
                                 <select
                                   className="input-odoo w-full text-xs"
                                   value={line.producto_id ?? ''}
                                   onChange={e => updateLinea(idx, 'producto_id', e.target.value)}
                                 >
-                                  <option value="">Seleccionar producto...</option>
+                                  <option value="">Seleccionar...</option>
                                   {(productosList as any[])?.map(p => (
                                     <option key={p.id} value={p.id}>[{p.codigo}] {p.nombre}</option>
                                   ))}
                                 </select>
                               ) : (
-                                <span className="text-xs">{line.productos?.nombre ?? '—'}</span>
+                                <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${line.productos.nombre}` : '—'}</span>
                               )}
                             </td>
-                            {/* Unidad de compra */}
-                            <td className="py-1.5 px-3 text-center text-xs text-muted-foreground">
+                            <td className="py-1.5 px-2 text-center text-xs text-muted-foreground uppercase">
                               {line._unidad_compra || 'pz'}
                             </td>
-                            {/* Cantidad */}
-                            <td className="py-1.5 px-3">
+                            <td className="py-1.5 px-2">
                               <input
                                 type="number"
                                 className="input-odoo w-full text-right text-xs"
@@ -487,23 +485,10 @@ export default function CompraFormPage() {
                                 min={0}
                               />
                             </td>
-                            {/* Factor conversión */}
-                            <td className="py-1.5 px-3 text-center">
-                              {isEditable ? (
-                                <input
-                                  type="number"
-                                  className="input-odoo w-full text-center text-xs"
-                                  value={line._factor_conversion ?? 1}
-                                  onChange={e => updateLinea(idx, '_factor_conversion', Number(e.target.value))}
-                                  min={1}
-                                  step={1}
-                                />
-                              ) : (
-                                <span className="text-xs">{line._factor_conversion ?? 1}</span>
-                              )}
+                            <td className="py-1.5 px-2 text-center text-xs text-muted-foreground tabular-nums">
+                              {line._factor_conversion ?? 1}
                             </td>
-                            {/* Piezas */}
-                            <td className="py-1.5 px-3 text-right text-xs font-medium text-foreground">
+                            <td className="py-1.5 px-2 text-right text-xs font-medium text-foreground tabular-nums">
                               {((line.cantidad ?? 1) * (line._factor_conversion ?? 1)).toLocaleString('es-MX')}
                             </td>
                             {/* Costo unit */}
