@@ -54,7 +54,10 @@ Deno.serve(async (req) => {
       .eq("user_id", userId);
 
     const isAdmin = userRoles?.some(
-      (ur: any) => ur.roles?.es_sistema === true || ur.roles?.nombre?.toLowerCase() === "admin"
+      (ur: any) => {
+        const roleName = (ur.roles?.nombre ?? "").toLowerCase();
+        return ur.roles?.es_sistema === true || roleName.includes("admin");
+      }
     );
 
     if (!isAdmin) {

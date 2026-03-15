@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2 } from 'lucide-react';
+import GpsMapPicker from '@/components/GpsMapPicker';
+import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
@@ -26,6 +28,7 @@ const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', '
 
 export default function ClienteFormPage() {
   const { id } = useParams();
+  const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
   const { data: existing } = useCliente(isNew ? undefined : id);
@@ -239,7 +242,7 @@ export default function ClienteFormPage() {
                   <div className="flex items-center gap-2 flex-1">
                     {form.gps_lat && form.gps_lng ? (
                       <span className="text-[11px] text-muted-foreground">
-                        {form.gps_lat.toFixed(6)}, {form.gps_lng.toFixed(6)}
+                        {Number(form.gps_lat).toFixed(6)}, {Number(form.gps_lng).toFixed(6)}
                       </span>
                     ) : (
                       <span className="text-[11px] text-muted-foreground">Sin ubicación</span>
@@ -256,6 +259,20 @@ export default function ClienteFormPage() {
                       )}
                       {form.gps_lat && form.gps_lng ? 'Actualizar GPS' : 'Capturar GPS'}
                     </button>
+                    <GpsMapPicker
+                      lat={form.gps_lat ? Number(form.gps_lat) : null}
+                      lng={form.gps_lng ? Number(form.gps_lng) : null}
+                      onChange={(lat, lng) => setForm(prev => ({ ...prev, gps_lat: lat, gps_lng: lng }))}
+                      isLoaded={mapsLoaded}
+                    />
+                    {form.gps_lat && form.gps_lng && (
+                      <button
+                        onClick={() => setForm(prev => ({ ...prev, gps_lat: undefined, gps_lng: undefined }))}
+                        className="text-[11px] text-destructive hover:underline"
+                      >
+                        Quitar
+                      </button>
+                    )}
                   </div>
                 </div>
                 <OdooField label="Zona" value={form.zona_id} onChange={v => set('zona_id', v || null)} type="select"
