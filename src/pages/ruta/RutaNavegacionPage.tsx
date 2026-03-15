@@ -253,10 +253,8 @@ function NavegacionContent() {
   // Keep camera centered on user's blue dot while navigating (Google Maps-like)
   useEffect(() => {
     if (!navigatingTo || !userLocation || !mapRef.current) return;
-    mapRef.current.panTo(userLocation);
-    if ((mapRef.current.getZoom() ?? 0) < 17) {
-      mapRef.current.setZoom(17);
-    }
+    mapRef.current.setCenter(userLocation);
+    mapRef.current.setZoom(17);
   }, [navigatingTo, userLocation?.lat, userLocation?.lng]);
 
   if (totalCount === 0) {
