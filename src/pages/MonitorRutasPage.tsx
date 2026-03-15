@@ -22,7 +22,7 @@ const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', '
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtMoney = (n: number) => '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered';
+type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered' | 'en_ruta';
 
 interface ClientVisit {
   id: string;
