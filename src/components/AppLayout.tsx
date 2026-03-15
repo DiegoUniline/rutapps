@@ -105,6 +105,7 @@ const navItems: NavItem[] = [
       { label: 'General', path: '/configuracion' },
       { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
+      { label: 'Facturación', path: '/facturacion' },
     ],
   },
 ];
