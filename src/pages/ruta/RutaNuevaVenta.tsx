@@ -534,7 +534,7 @@ export default function RutaNuevaVenta() {
         notas: notas || null, subtotal: totals.subtotal, iva_total: totals.iva,
         tarifa_id: tarifaId2, almacen_id: almacenId2,
         ieps_total: totals.ieps, descuento_total: 0, total: totals.total,
-        saldo_pendiente: condicionPago === 'credito' ? totals.total : 0,
+        saldo_pendiente: condicionPago === 'contado' ? 0 : totals.total,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
       });
