@@ -146,10 +146,10 @@ export function useValidarEntrega() {
       entregaId: string;
       lineas: { id: string; producto_id: string; cantidad_entregada: number; hecho: boolean }[];
     }) => {
-      // Fetch entrega to get vendedor_id
+      // Fetch entrega to get vendedor_id and almacen_id (origin)
       const { data: entrega } = await supabase
         .from('entregas')
-        .select('vendedor_id, empresa_id')
+        .select('vendedor_id, empresa_id, almacen_id')
         .eq('id', entregaId)
         .single();
       if (!entrega) throw new Error('Entrega no encontrada');
@@ -162,10 +162,24 @@ export function useValidarEntrega() {
         }).eq('id', l.id);
       }
 
-      // Insert into stock_camion for delivered items
       const today = new Date().toISOString().slice(0, 10);
+
       for (const l of lineas) {
-        if (l.cantidad_entregada > 0 && entrega.vendedor_id) {
+        if (l.cantidad_entregada <= 0) continue;
+
+        // 1. Deduct stock from origin (almacén → productos.cantidad)
+        if (entrega.almacen_id || true) {
+          // Deduct from producto stock
+          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+          if (prod) {
+            await supabase.from('productos').update({
+              cantidad: Math.max(0, (prod.cantidad ?? 0) - l.cantidad_entregada),
+            } as any).eq('id', l.producto_id);
+          }
+        }
+
+        // 2. Insert into stock_camion (destination)
+        if (entrega.vendedor_id) {
           await supabase.from('stock_camion').insert({
             empresa_id: entrega.empresa_id,
             vendedor_id: entrega.vendedor_id,
@@ -175,6 +189,21 @@ export function useValidarEntrega() {
             fecha: today,
           } as any);
         }
+
+        // 3. Log movimiento de inventario (salida from almacén)
+        await supabase.from('movimientos_inventario').insert({
+          empresa_id: entrega.empresa_id,
+          tipo: 'salida',
+          producto_id: l.producto_id,
+          cantidad: l.cantidad_entregada,
+          almacen_origen_id: entrega.almacen_id ?? null,
+          vendedor_destino_id: entrega.vendedor_id ?? null,
+          referencia_tipo: 'entrega',
+          referencia_id: entregaId,
+          user_id: user?.id,
+          fecha: today,
+          notas: `Entrega validada → camión`,
+        } as any);
       }
 
       // Update entrega status
@@ -188,7 +217,10 @@ export function useValidarEntrega() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entrega'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      qc.invalidateQueries({ queryKey: ['demanda'] });
+      qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
   });
 }
