@@ -99,7 +99,9 @@ export default function VentaFormPage() {
 
   // Auto-fill product data when selecting a product
   const handleProductSelect = (idx: number, productoId: string) => {
-    const producto = productosList?.find(p => p.id === productoId);
+    const producto = productosList?.find((p: any) => p.id === productoId);
+    const ivaPct = producto?.tiene_iva ? (producto.iva_pct ?? 16) : 0;
+    const iepsPct = producto?.tiene_ieps ? (producto.ieps_pct ?? 0) : 0;
     setLineas(prev => {
       const next = [...prev];
       next[idx] = {
@@ -107,8 +109,8 @@ export default function VentaFormPage() {
         producto_id: productoId,
         precio_unitario: producto?.precio_principal ?? 0,
         unidad_id: producto?.unidad_venta_id ?? next[idx].unidad_id,
-        iva_pct: producto?.iva_pct ?? 0,
-        ieps_pct: producto?.ieps_pct ?? 0,
+        iva_pct: ivaPct,
+        ieps_pct: iepsPct,
       };
       return next;
     });
