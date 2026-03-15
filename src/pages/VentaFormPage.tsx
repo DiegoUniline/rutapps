@@ -14,6 +14,8 @@ import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hook
 import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
+import { generarPedidoPdf } from '@/lib/pedidoPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
