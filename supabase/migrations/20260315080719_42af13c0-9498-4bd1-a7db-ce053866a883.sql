@@ -1,0 +1,1 @@
+ALTER TABLE public.entregas ADD COLUMN IF NOT EXISTS orden_entrega integer DEFAULT 0;

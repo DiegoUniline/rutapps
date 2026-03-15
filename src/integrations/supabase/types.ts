@@ -1035,6 +1035,7 @@ export type Database = {
           folio: string | null
           id: string
           notas: string | null
+          orden_entrega: number | null
           pedido_id: string | null
           status: Database["public"]["Enums"]["status_entrega"]
           validado_at: string | null
@@ -1053,6 +1054,7 @@ export type Database = {
           folio?: string | null
           id?: string
           notas?: string | null
+          orden_entrega?: number | null
           pedido_id?: string | null
           status?: Database["public"]["Enums"]["status_entrega"]
           validado_at?: string | null
@@ -1071,6 +1073,7 @@ export type Database = {
           folio?: string | null
           id?: string
           notas?: string | null
+          orden_entrega?: number | null
           pedido_id?: string | null
           status?: Database["public"]["Enums"]["status_entrega"]
           validado_at?: string | null
