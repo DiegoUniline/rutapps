@@ -379,7 +379,40 @@ export default function VentaFormPage() {
           {!isNew && form.status === 'borrador' && (
             <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
-          {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && (
+          {/* Entrega button for pedidos */}
+          {!isNew && form.tipo === 'pedido' && form.status === 'confirmado' && !entregaExistente && (
+            <button
+              onClick={async () => {
+                const validLines = (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0);
+                if (validLines.length === 0) { toast.error('No hay líneas para crear entrega'); return; }
+                try {
+                  const result = await crearEntrega.mutateAsync({
+                    pedidoId: form.id,
+                    vendedorId: form.vendedor_id,
+                    clienteId: form.cliente_id,
+                    almacenId: form.almacen_id,
+                    lineas: validLines.map(l => ({
+                      producto_id: l.producto_id!,
+                      unidad_id: l.unidad_id,
+                      cantidad_pedida: Number(l.cantidad),
+                    })),
+                  });
+                  toast.success('Entrega creada');
+                  navigate(`/entregas/${result.id}`);
+                } catch (e: any) { toast.error(e.message); }
+              }}
+              disabled={crearEntrega.isPending}
+              className="btn-odoo-primary"
+            >
+              <Truck className="h-3.5 w-3.5" /> Crear entrega
+            </button>
+          )}
+          {!isNew && form.tipo === 'pedido' && entregaExistente && (
+            <button onClick={() => navigate(`/entregas/${entregaExistente.id}`)} className="btn-odoo-secondary">
+              <Truck className="h-3.5 w-3.5" /> Ver entrega ({entregaExistente.folio})
+            </button>
+          )}
+          {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
           )}
           {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && (
