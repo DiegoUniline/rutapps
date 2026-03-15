@@ -192,7 +192,7 @@ async function generateTicketPng(tpl: TemplateConfig, vars: TicketVars): Promise
     const element = buildTicketElement(tpl, vars);
 
     const svg = await satori(element, {
-      width: 360,
+      width: 320,
       fonts: [{ name: "Inter", data: font, weight: 400, style: "normal" as const }],
     });
 
