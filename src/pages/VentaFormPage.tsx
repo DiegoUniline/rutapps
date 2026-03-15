@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save, Trash2, Plus, X, Banknote } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Banknote } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import ProductSearchInput from '@/components/ProductSearchInput';
 import { useVenta, useSaveVenta, useSaveVentaLinea, useDeleteVentaLinea, useDeleteVenta } from '@/hooks/useVentas';
-import { useProductosForSelect, useUnidades, useAlmacenes, useTarifasForSelect, useTasasIva, useTasasIeps } from '@/hooks/useData';
+import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -46,8 +47,8 @@ function emptyLine(): Partial<VentaLinea> {
   };
 }
 
-// Editable columns in order for Tab navigation
-const EDITABLE_COLS = ['producto', 'unidad', 'cantidad', 'precio', 'descuento', 'iva', 'ieps'] as const;
+// Editable columns: producto(0), cantidad(1), descuento(2)
+const COL_COUNT = 3;
 
 export default function VentaFormPage() {
   const { id } = useParams();
@@ -63,11 +64,8 @@ export default function VentaFormPage() {
 
   const { data: clientesList } = useClientes();
   const { data: productosList } = useProductosForSelect();
-  const { data: unidadesList } = useUnidades();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
-  const { data: tasasIvaList } = useTasasIva();
-  const { data: tasasIepsList } = useTasasIeps();
 
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
@@ -160,24 +158,27 @@ export default function VentaFormPage() {
     setDirty(true);
   };
 
-  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
-    if (e.key !== 'Tab') return;
-    e.preventDefault();
-    const isLastCol = colIdx >= EDITABLE_COLS.length - 1;
-    const isLastRow = rowIdx >= lineas.length - 1;
-    if (e.shiftKey) {
-      if (colIdx > 0) focusCell(rowIdx, colIdx - 1);
-      else if (rowIdx > 0) focusCell(rowIdx - 1, EDITABLE_COLS.length - 1);
-    } else {
-      if (!isLastCol) {
+  const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
+    if (dir === 'next') {
+      if (colIdx < COL_COUNT - 1) {
         focusCell(rowIdx, colIdx + 1);
-      } else if (isLastRow) {
+      } else if (rowIdx >= lineas.length - 1) {
         setLineas(prev => [...prev, emptyLine()]);
         setDirty(true);
         setTimeout(() => focusCell(rowIdx + 1, 0), 50);
       } else {
         focusCell(rowIdx + 1, 0);
       }
+    } else {
+      if (colIdx > 0) focusCell(rowIdx, colIdx - 1);
+      else if (rowIdx > 0) focusCell(rowIdx - 1, COL_COUNT - 1);
+    }
+  }, [lineas.length, focusCell]);
+
+  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      navigateCell(rowIdx, colIdx, e.shiftKey ? 'prev' : 'next');
     }
   };
 
@@ -319,8 +320,6 @@ export default function VentaFormPage() {
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
-  const productoOptions = (productosList ?? []).map((p: any) => ({ value: p.id, label: `${p.codigo} · ${p.nombre}` }));
-  const unidadOptions = (unidadesList ?? []).map(u => ({ value: u.id, label: u.nombre }));
   const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
 
   const steps = form.entrega_inmediata ? VENTA_STEPS_INMEDIATA : VENTA_STEPS_FULL;
@@ -544,15 +543,12 @@ export default function VentaFormPage() {
                       <thead>
                         <tr className="border-b border-table-border text-left">
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[200px]">Producto</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24">Unidad</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Cantidad</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[280px]">Producto</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Cantidad</th>
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Precio unit.</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Desc %</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Iva %</th>
-                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20 text-right">Ieps %</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Desc %</th>
                           <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">Subtotal</th>
-                          {!readOnly && <th className="py-2 px-2 w-8"></th>}
+                          <th className="py-2 px-2 w-8"></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -561,41 +557,28 @@ export default function VentaFormPage() {
                           const price = Number(l.precio_unitario) || 0;
                           const desc = Number(l.descuento_pct) || 0;
                           const lineBase = qty * price * (1 - desc / 100);
-                          const prodName = productosList?.find((p: any) => p.id === l.producto_id);
-                          const unidadName = unidadesList?.find(u => u.id === l.unidad_id);
+                          const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                          const isLast = idx === lineas.length - 1;
+                          const isEmpty = !l.producto_id;
                           return (
-                            <tr key={idx} className="border-b border-table-border hover:bg-table-hover transition-colors">
-                              <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
+                            <tr key={idx} className={cn(
+                              "border-b border-table-border transition-colors group",
+                              isEmpty ? "bg-transparent" : "hover:bg-table-hover"
+                            )}>
+                              <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
                               <td className="py-1 px-2">
                                 {readOnly ? (
-                                  <span className="text-[12px]">{prodName ? `${prodName.codigo} · ${prodName.nombre}` : '—'}</span>
+                                  <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</span>
                                 ) : (
-                                  <select
-                                    ref={el => setCellRef(idx, 0, el)}
-                                    className="input-odoo text-[12px] !py-1"
+                                  <ProductSearchInput
+                                    products={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
                                     value={l.producto_id ?? ''}
-                                    onChange={e => handleProductSelect(idx, e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 0)}
-                                  >
-                                    <option value="">Seleccionar producto</option>
-                                    {productoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                  </select>
-                                )}
-                              </td>
-                              <td className="py-1 px-2">
-                                {readOnly ? (
-                                  <span className="text-[12px]">{unidadName?.nombre ?? '—'}</span>
-                                ) : (
-                                  <select
-                                    ref={el => setCellRef(idx, 1, el)}
-                                    className="input-odoo text-[12px] !py-1"
-                                    value={l.unidad_id ?? ''}
-                                    onChange={e => updateLine(idx, 'unidad_id', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 1)}
-                                  >
-                                    <option value="">—</option>
-                                    {unidadOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                  </select>
+                                    displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
+                                    onSelect={pid => handleProductSelect(idx, pid)}
+                                    onNavigate={dir => navigateCell(idx, 0, dir)}
+                                    autoFocus={isLast && isEmpty}
+                                    readOnly={readOnly}
+                                  />
                                 )}
                               </td>
                               <td className="py-1 px-2">
@@ -603,79 +586,52 @@ export default function VentaFormPage() {
                                   <span className="text-[12px] block text-right">{l.cantidad}</span>
                                 ) : (
                                   <input
-                                    ref={el => setCellRef(idx, 2, el)}
-                                    type="number" className="input-odoo text-[12px] text-right !py-1"
+                                    ref={el => setCellRef(idx, 1, el)}
+                                    type="number"
+                                    inputMode="numeric"
+                                    className="input-odoo text-[12px] text-right !py-1"
                                     value={l.cantidad ?? ''}
                                     onChange={e => updateLine(idx, 'cantidad', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 2)}
+                                    onKeyDown={e => handleCellKeyDown(e, idx, 1)}
+                                    onFocus={e => e.target.select()}
                                     min="0" step="1"
                                   />
                                 )}
                               </td>
-                              <td className="py-1 px-2">
-                                {readOnly ? (
-                                  <span className="text-[12px] block text-right">${Number(l.precio_unitario ?? 0).toFixed(2)}</span>
-                                ) : (
-                                  <input
-                                    ref={el => setCellRef(idx, 3, el)}
-                                    type="number" className="input-odoo text-[12px] text-right !py-1"
-                                    value={l.precio_unitario ?? ''}
-                                    onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 3)}
-                                    min="0" step="0.01"
-                                  />
-                                )}
+                              <td className="py-1.5 px-2 text-right text-muted-foreground">
+                                ${price.toFixed(2)}
                               </td>
                               <td className="py-1 px-2">
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">{l.descuento_pct ?? 0}%</span>
                                 ) : (
                                   <input
-                                    ref={el => setCellRef(idx, 4, el)}
-                                    type="number" className="input-odoo text-[12px] text-right !py-1"
+                                    ref={el => setCellRef(idx, 2, el)}
+                                    type="number"
+                                    inputMode="numeric"
+                                    className="input-odoo text-[12px] text-right !py-1"
                                     value={l.descuento_pct ?? ''}
                                     onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 4)}
+                                    onKeyDown={e => handleCellKeyDown(e, idx, 2)}
+                                    onFocus={e => e.target.select()}
                                     min="0" max="100" step="0.1"
                                   />
                                 )}
                               </td>
-                              <td className="py-1 px-2">
-                                {readOnly ? (
-                                  <span className="text-[12px] block text-right">{l.iva_pct ?? 0}%</span>
-                                ) : (
-                                  <input
-                                    ref={el => setCellRef(idx, 5, el)}
-                                    type="number" className="input-odoo text-[12px] text-right !py-1"
-                                    value={l.iva_pct ?? ''}
-                                    onChange={e => updateLine(idx, 'iva_pct', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 5)}
-                                    min="0" step="1"
-                                  />
-                                )}
+                              <td className="py-1.5 px-2 text-right font-medium">
+                                {isEmpty ? '' : `$${lineBase.toFixed(2)}`}
                               </td>
-                              <td className="py-1 px-2">
-                                {readOnly ? (
-                                  <span className="text-[12px] block text-right">{l.ieps_pct ?? 0}%</span>
-                                ) : (
-                                  <input
-                                    ref={el => setCellRef(idx, 6, el)}
-                                    type="number" className="input-odoo text-[12px] text-right !py-1"
-                                    value={l.ieps_pct ?? ''}
-                                    onChange={e => updateLine(idx, 'ieps_pct', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 6)}
-                                    min="0" step="1"
-                                  />
-                                )}
-                              </td>
-                              <td className="py-1.5 px-2 text-right font-medium">${lineBase.toFixed(2)}</td>
-                              {!readOnly && (
-                                <td className="py-1.5 px-2">
-                                  <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors">
-                                    <X className="h-3.5 w-3.5" />
+                              <td className="py-1.5 px-2">
+                                {!readOnly && !isEmpty && (
+                                  <button
+                                    onClick={() => removeLine(idx)}
+                                    className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                                    style={{ opacity: undefined }} // always visible on mobile via CSS below
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
                                   </button>
-                                </td>
-                              )}
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
@@ -685,12 +641,12 @@ export default function VentaFormPage() {
 
                   {!readOnly && (
                     <button onClick={addLine} className="btn-odoo-secondary text-xs">
-                      <Plus className="h-3 w-3" /> Agregar línea
+                      <Plus className="h-3 w-3" /> Agregar producto
                     </button>
                   )}
 
-                  {/* Totals */}
-                  <div className="flex justify-end pt-2">
+                  {/* Totals — sticky on mobile */}
+                  <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
                     <div className="w-72 bg-accent rounded-md p-3 space-y-1.5 text-[13px]">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
@@ -704,13 +660,13 @@ export default function VentaFormPage() {
                       )}
                       {totals.iva_total > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Iva</span>
+                          <span className="text-muted-foreground">IVA</span>
                           <span>${totals.iva_total.toFixed(2)}</span>
                         </div>
                       )}
                       {totals.ieps_total > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Ieps</span>
+                          <span className="text-muted-foreground">IEPS</span>
                           <span>${totals.ieps_total.toFixed(2)}</span>
                         </div>
                       )}
