@@ -9,11 +9,15 @@
  * If costo_incluye_impuestos = true, the system extracts taxes from the gross amount.
  */
 
+export type IepsTipo = 'porcentaje' | 'cuota';
+
 export interface TaxInput {
   precio: number;       // base price or gross price
   iva_pct: number;      // e.g. 16
-  ieps_pct: number;     // e.g. 8
+  ieps_pct: number;     // e.g. 8 (percentage) or fixed amount per unit
+  ieps_tipo?: IepsTipo; // 'porcentaje' (default) or 'cuota' (fixed amount)
   incluye_impuestos?: boolean;
+  cantidad?: number;    // needed when ieps_tipo='cuota' to calc total IEPS
 }
 
 export interface TaxBreakdown {
