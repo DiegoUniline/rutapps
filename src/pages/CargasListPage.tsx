@@ -46,14 +46,14 @@ export default function CargasListPage() {
         <div className="flex items-center gap-2">
           <ExportButton
             onExcel={() => exportToExcel({
-              fileName: 'Cargas', title: 'Listado de Cargas',
+              fileName: 'Cargas', title: 'Listado de Cargas / Traspasos',
               columns: CARGAS_COLUMNS,
-              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '', origen: c.almacen_origen?.nombre || '—', destino: c.almacen_destino?.nombre || '—' })),
             })}
             onPDF={() => exportToPDF({
-              fileName: 'Cargas', title: 'Listado de Cargas',
+              fileName: 'Cargas', title: 'Listado de Cargas / Traspasos',
               columns: CARGAS_COLUMNS,
-              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '' })),
+              data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '', origen: c.almacen_origen?.nombre || '—', destino: c.almacen_destino?.nombre || '—' })),
             })}
           />
           <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
