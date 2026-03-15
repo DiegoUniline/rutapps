@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +8,6 @@ import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -33,10 +32,13 @@ function NavegacionContent() {
   const mode = (searchParams.get('modo') as 'clientes' | 'entregas') || 'clientes';
   const { empresa, profile } = useAuth();
   const { isLoaded } = useGoogleMaps();
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
 
   // Watch user location
@@ -108,36 +110,60 @@ function NavegacionContent() {
     }
   }, [mode, clientesData, allEntregas, vendedorId, clienteMap]);
 
-  const currentStop = stops[currentIdx];
   const completedCount = completedIds.size;
   const totalCount = stops.length;
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+  const activeStop = stops.find(s => s.id === activeStopId) ?? null;
+  const navigatingStop = stops.find(s => s.id === navigatingTo) ?? null;
 
-  // Calculate directions from user to current stop
+  // Calculate directions when navigating
   useEffect(() => {
-    if (!isLoaded || !currentStop || !userLocation) {
+    if (!isLoaded || !navigatingStop || !userLocation) {
       setDirections(null);
       return;
     }
-
     const service = new google.maps.DirectionsService();
     service.route(
       {
         origin: userLocation,
-        destination: { lat: currentStop.gps_lat, lng: currentStop.gps_lng },
+        destination: { lat: navigatingStop.gps_lat, lng: navigatingStop.gps_lng },
         travelMode: google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
         setDirections(status === 'OK' && result ? result : null);
       }
     );
-  }, [isLoaded, currentStop?.id, userLocation?.lat, userLocation?.lng]);
+  }, [isLoaded, navigatingTo, userLocation?.lat, userLocation?.lng]);
 
-  const openGoogleMaps = (stop: Stop) => {
-    const url = userLocation
-      ? `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${stop.gps_lat},${stop.gps_lng}&travelmode=driving`
-      : `https://www.google.com/maps/dir/?api=1&destination=${stop.gps_lat},${stop.gps_lng}&travelmode=driving`;
-    window.open(url, '_blank');
+  // Fit map to show all markers initially
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    if (stops.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
+      if (userLocation) bounds.extend(userLocation);
+      map.fitBounds(bounds, 60);
+    }
+  }, [stops, userLocation]);
+
+  const startNavigation = (stop: Stop) => {
+    setNavigatingTo(stop.id);
+    setActiveStopId(stop.id);
+    setPanelOpen(true);
+    // Zoom to stop
+    mapRef.current?.panTo({ lat: stop.gps_lat, lng: stop.gps_lng });
+    mapRef.current?.setZoom(14);
+  };
+
+  const stopNavigation = () => {
+    setNavigatingTo(null);
+    setDirections(null);
+    // Reset to show all
+    if (mapRef.current && stops.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
+      if (userLocation) bounds.extend(userLocation);
+      mapRef.current.fitBounds(bounds, 60);
+    }
   };
 
   const handleVisited = async (stop: Stop) => {
@@ -152,16 +178,22 @@ function NavegacionContent() {
     }
     setCompletedIds(prev => new Set([...prev, stop.id]));
     toast.success(mode === 'entregas' ? '¡Entregado!' : '¡Visitado!');
+    stopNavigation();
 
-    // Auto-advance
-    const nextIdx = stops.findIndex((s, i) => i > currentIdx && !completedIds.has(s.id) && s.id !== stop.id);
-    if (nextIdx >= 0) setCurrentIdx(nextIdx);
+    // Auto-navigate to next
+    const currentStopIdx = stops.findIndex(s => s.id === stop.id);
+    const nextStop = stops.find((s, i) => i > currentStopIdx && !completedIds.has(s.id) && s.id !== stop.id);
+    if (nextStop) {
+      setTimeout(() => startNavigation(nextStop), 600);
+    }
   };
 
   const handleSaleAndVisit = (stop: Stop) => {
     setCompletedIds(prev => new Set([...prev, stop.id]));
     navigate(`/ruta/ventas/nueva?clienteId=${stop.id}`);
   };
+
+  const leg = directions?.routes?.[0]?.legs?.[0];
 
   if (totalCount === 0) {
     return (
@@ -180,174 +212,250 @@ function NavegacionContent() {
     );
   }
 
-  const leg = directions?.routes?.[0]?.legs?.[0];
-
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1 -ml-1">
-          <ArrowLeft className="h-5 w-5 text-foreground" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-base font-bold text-foreground">
-            {mode === 'entregas' ? 'Ruta de entregas' : 'Ruta de visitas'}
-          </h1>
-          <p className="text-[11px] text-muted-foreground">
-            {completedCount}/{totalCount} completadas
-          </p>
-        </div>
-        {completedCount === totalCount && (
-          <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-0 text-[10px]">✓ Listo</Badge>
-        )}
-      </header>
-
-      {/* Progress bar */}
-      <div className="h-1.5 bg-muted">
-        <div className="h-full bg-primary transition-all duration-500 rounded-r-full" style={{ width: `${progress}%` }} />
-      </div>
-
-      {/* MAP — shows route to current stop */}
-      {isLoaded && currentStop && (
-        <div className="h-52 relative">
-          <GoogleMap
-            center={{ lat: currentStop.gps_lat, lng: currentStop.gps_lng }}
-            zoom={13}
-            mapContainerStyle={{ width: '100%', height: '100%' }}
-            options={{
-              disableDefaultUI: true,
-              zoomControl: false,
-              gestureHandling: 'greedy',
-              styles: [
-                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-                { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-              ],
-            }}
-          >
-            {directions ? (
-              <DirectionsRenderer
-                directions={directions}
-                options={{
-                  suppressMarkers: false,
-                  polylineOptions: { strokeColor: 'hsl(var(--primary))', strokeWeight: 5 },
-                }}
-              />
-            ) : (
-              <MarkerF position={{ lat: currentStop.gps_lat, lng: currentStop.gps_lng }} />
-            )}
-          </GoogleMap>
-
-          {/* ETA overlay */}
-          {leg && (
-            <div className="absolute bottom-3 left-3 bg-card/90 backdrop-blur-sm border border-border rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
-              <Navigation className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[13px] font-semibold text-foreground">{leg.duration?.text}</span>
-              <span className="text-[11px] text-muted-foreground">· {leg.distance?.text}</span>
-            </div>
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-background">
+      {/* FULL SCREEN MAP */}
+      {isLoaded && (
+        <GoogleMap
+          onLoad={onMapLoad}
+          center={stops[0] ? { lat: stops[0].gps_lat, lng: stops[0].gps_lng } : undefined}
+          zoom={13}
+          mapContainerStyle={{ width: '100%', height: '100%' }}
+          options={{
+            disableDefaultUI: true,
+            zoomControl: false,
+            gestureHandling: 'greedy',
+            styles: [
+              { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+              { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+            ],
+          }}
+        >
+          {/* Route when navigating */}
+          {directions && (
+            <DirectionsRenderer
+              directions={directions}
+              options={{
+                suppressMarkers: true,
+                polylineOptions: { strokeColor: '#4285F4', strokeWeight: 5, strokeOpacity: 0.9 },
+              }}
+            />
           )}
 
-          {/* Open in Google Maps button */}
-          <button
-            onClick={() => openGoogleMaps(currentStop)}
-            className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm border border-border rounded-xl px-3 py-2 flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
-          >
-            <ExternalLink className="h-3.5 w-3.5 text-primary" />
-            <span className="text-[11px] font-semibold text-foreground">Google Maps</span>
-          </button>
-        </div>
+          {/* User location */}
+          {userLocation && (
+            <MarkerF
+              position={userLocation}
+              icon={{
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: '#4285F4',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 3,
+              }}
+            />
+          )}
+
+          {/* Stop markers */}
+          {stops.map((stop, idx) => {
+            const isCompleted = completedIds.has(stop.id);
+            const isNavigating = navigatingTo === stop.id;
+            return (
+              <MarkerF
+                key={stop.id}
+                position={{ lat: stop.gps_lat, lng: stop.gps_lng }}
+                label={{
+                  text: isCompleted ? '✓' : `${idx + 1}`,
+                  color: '#ffffff',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                }}
+                icon={{
+                  path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
+                  fillColor: isCompleted ? '#22c55e' : isNavigating ? '#ef4444' : '#6366f1',
+                  fillOpacity: isCompleted ? 0.5 : 1,
+                  strokeColor: '#ffffff',
+                  strokeWeight: 2,
+                  scale: isNavigating ? 2 : 1.5,
+                  anchor: new google.maps.Point(12, 22),
+                  labelOrigin: new google.maps.Point(12, 9),
+                }}
+                onClick={() => {
+                  if (!isCompleted) {
+                    setActiveStopId(stop.id);
+                    setPanelOpen(true);
+                  }
+                }}
+              />
+            );
+          })}
+        </GoogleMap>
       )}
 
-      {/* Current stop card */}
-      {currentStop && !completedIds.has(currentStop.id) && (
-        <div className="px-4 py-3 bg-card border-b border-border space-y-2.5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0">
-              {currentIdx + 1}
-            </div>
-            <div className="flex-1 min-w-0">
-              {currentStop.folio && <p className="text-[10px] font-mono text-muted-foreground">{currentStop.folio}</p>}
-              <p className="text-[15px] font-bold text-foreground truncate">{currentStop.nombre}</p>
-              {(currentStop.direccion || currentStop.colonia) && (
-                <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate">
-                  <MapPin className="h-3 w-3 shrink-0" />
-                  {[currentStop.direccion, currentStop.colonia].filter(Boolean).join(', ')}
-                </p>
-              )}
-            </div>
-            {currentStop.telefono && (
-              <a href={`tel:${currentStop.telefono}`}
-                className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform shrink-0">
-                <Phone className="h-4 w-4" />
-              </a>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {mode === 'clientes' ? (
+      {/* TOP BAR — floating over map */}
+      <div className="absolute top-0 left-0 right-0 z-10 pt-[max(0.5rem,env(safe-area-inset-top))]">
+        <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
+          <button onClick={() => navigate(-1)} className="p-1 -ml-0.5">
+            <ArrowLeft className="h-5 w-5 text-foreground" />
+          </button>
+          <div className="flex-1 min-w-0">
+            {navigatingStop ? (
               <>
-                <Button onClick={() => handleSaleAndVisit(currentStop)} className="flex-1 rounded-xl gap-2 h-11">
-                  <ShoppingCart className="h-4 w-4" /> Vender
-                </Button>
-                <Button variant="outline" onClick={() => handleVisited(currentStop)} className="flex-1 rounded-xl gap-2 h-11">
-                  <Check className="h-4 w-4" /> Sin venta
-                </Button>
+                <p className="text-[13px] font-bold text-foreground truncate">{navigatingStop.nombre}</p>
+                {leg && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {leg.duration?.text} · {leg.distance?.text}
+                  </p>
+                )}
               </>
             ) : (
-              <Button onClick={() => handleVisited(currentStop)} className="flex-1 rounded-xl gap-2 h-11">
-                <Truck className="h-4 w-4" /> Marcar entregado
-              </Button>
+              <>
+                <p className="text-[13px] font-bold text-foreground">
+                  {mode === 'entregas' ? 'Entregas' : 'Visitas'}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {completedCount}/{totalCount} completadas
+                </p>
+              </>
+            )}
+          </div>
+          {navigatingStop && (
+            <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+              <X className="h-4 w-4 text-foreground" />
+            </button>
+          )}
+          {/* Progress dots */}
+          <div className="flex gap-0.5">
+            {stops.slice(0, 12).map((s, i) => (
+              <div
+                key={s.id}
+                className={cn(
+                  "w-2 h-2 rounded-full",
+                  completedIds.has(s.id)
+                    ? "bg-emerald-500"
+                    : navigatingTo === s.id
+                      ? "bg-red-500"
+                      : "bg-muted-foreground/30"
+                )}
+              />
+            ))}
+            {stops.length > 12 && (
+              <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
             )}
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Remaining stops list */}
-      <div className="flex-1 overflow-auto pb-[env(safe-area-inset-bottom)]">
-        {stops.map((stop, idx) => {
-          const isCompleted = completedIds.has(stop.id);
-          const isCurrent = idx === currentIdx;
-          if (isCurrent && !isCompleted) return null; // shown above
-
-          return (
-            <div
-              key={stop.id}
-              onClick={() => !isCompleted && setCurrentIdx(idx)}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 border-b border-border transition-colors",
-                isCompleted ? "opacity-40" : "active:bg-muted/50"
-              )}
-            >
-              <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
-                isCompleted
-                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                  : "bg-muted text-muted-foreground"
-              )}>
-                {isCompleted ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+      {/* NAVIGATION ACTION BAR — when navigating, shown at bottom */}
+      {navigatingStop && !completedIds.has(navigatingStop.id) && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-3 bg-card/95 backdrop-blur-md border border-border rounded-2xl p-3 shadow-lg space-y-2.5">
+            {/* Stop info */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                {stops.findIndex(s => s.id === navigatingStop.id) + 1}
               </div>
               <div className="flex-1 min-w-0">
-                {stop.folio && <p className="text-[10px] font-mono text-muted-foreground">{stop.folio}</p>}
-                <p className={cn("text-sm font-medium truncate", isCompleted ? "line-through text-muted-foreground" : "text-foreground")}>
-                  {stop.nombre}
-                </p>
-                {(stop.direccion || stop.colonia) && (
+                {navigatingStop.folio && <p className="text-[10px] font-mono text-muted-foreground">{navigatingStop.folio}</p>}
+                <p className="text-[15px] font-bold text-foreground truncate">{navigatingStop.nombre}</p>
+                {(navigatingStop.direccion || navigatingStop.colonia) && (
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {[stop.direccion, stop.colonia].filter(Boolean).join(', ')}
+                    <MapPin className="h-3 w-3 inline mr-0.5" />
+                    {[navigatingStop.direccion, navigatingStop.colonia].filter(Boolean).join(', ')}
                   </p>
                 )}
               </div>
-              {!isCompleted && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); openGoogleMaps(stop); }}
-                  className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform shrink-0"
-                >
-                  <Navigation className="h-4 w-4" />
-                </button>
+              {navigatingStop.telefono && (
+                <a href={`tel:${navigatingStop.telefono}`}
+                  className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform shrink-0">
+                  <Phone className="h-4 w-4" />
+                </a>
               )}
             </div>
-          );
-        })}
-      </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2">
+              {mode === 'clientes' ? (
+                <>
+                  <Button onClick={() => handleSaleAndVisit(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
+                    <ShoppingCart className="h-4 w-4" /> Vender
+                  </Button>
+                  <Button variant="outline" onClick={() => handleVisited(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
+                    <Check className="h-4 w-4" /> Sin venta
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => handleVisited(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
+                  <Truck className="h-4 w-4" /> Marcar entregado
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BOTTOM SHEET — stop list (when NOT navigating) */}
+      {!navigatingTo && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 pb-[max(0rem,env(safe-area-inset-bottom))]">
+          {/* Toggle handle */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => setPanelOpen(!panelOpen)}
+              className="bg-card/90 backdrop-blur-md border border-border border-b-0 rounded-t-xl px-6 py-1.5"
+            >
+              <ChevronUp className={cn("h-4 w-4 text-muted-foreground transition-transform", panelOpen ? "rotate-180" : "")} />
+            </button>
+          </div>
+
+          <div className={cn(
+            "bg-card/95 backdrop-blur-md border-t border-border transition-all duration-300 overflow-hidden",
+            panelOpen ? "max-h-[45vh]" : "max-h-0"
+          )}>
+            <div className="overflow-auto max-h-[45vh]">
+              {stops.map((stop, idx) => {
+                const isCompleted = completedIds.has(stop.id);
+                return (
+                  <button
+                    key={stop.id}
+                    disabled={isCompleted}
+                    onClick={() => startNavigation(stop)}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-4 py-3 border-b border-border/50 text-left transition-colors",
+                      isCompleted ? "opacity-40" : "active:bg-muted/50"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
+                      isCompleted
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                        : "bg-primary/10 text-primary"
+                    )}>
+                      {isCompleted ? <Check className="h-3.5 w-3.5" /> : idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {stop.folio && <p className="text-[10px] font-mono text-muted-foreground">{stop.folio}</p>}
+                      <p className={cn("text-sm font-medium truncate", isCompleted ? "line-through text-muted-foreground" : "text-foreground")}>
+                        {stop.nombre}
+                      </p>
+                      {(stop.direccion || stop.colonia) && (
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {[stop.direccion, stop.colonia].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    {!isCompleted && (
+                      <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground shrink-0">
+                        <Navigation className="h-4 w-4" />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
