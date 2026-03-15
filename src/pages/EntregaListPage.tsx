@@ -537,25 +537,29 @@ export default function EntregaListPage() {
               ))}
             </div>
           </div>
-          <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => { setShowAsignarDialog(false); }} disabled={bulkAsignarMut.isPending}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+            <Button variant="ghost" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive">
               Cancelar
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => bulkAsignarMut.mutate({ cargarTambien: false })}
-              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
-            >
-              <Package className="h-3.5 w-3.5 mr-1" />
-              {bulkAsignarMut.isPending ? 'Procesando...' : 'Asignar ruta'}
-            </Button>
-            <Button
-              onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
-              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
-            >
-              <Zap className="h-3.5 w-3.5 mr-1" />
-              {bulkAsignarMut.isPending ? 'Procesando...' : 'Asignar y cargar'}
-            </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                variant="outline"
+                onClick={() => bulkAsignarMut.mutate({ cargarTambien: false })}
+                disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+                className="gap-1.5"
+              >
+                <Package className="h-3.5 w-3.5" />
+                Asignar ruta
+              </Button>
+              <Button
+                onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
+                disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+                className="gap-1.5"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Asignar y cargar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
