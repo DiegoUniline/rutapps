@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer } from 'lucide-react';
+import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportesData } from '@/hooks/useReportesData';
+import { useVendedores } from '@/hooks/useClientes';
 import { ReporteResumen } from '@/components/reportes/ReporteResumen';
 import { ReporteVentasProducto } from '@/components/reportes/ReporteVentasProducto';
 import { ReporteVentasCliente } from '@/components/reportes/ReporteVentasCliente';
@@ -13,6 +14,9 @@ import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
 import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from '@/components/ui/popover';
 
 type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones';
 
@@ -163,7 +167,9 @@ export default function ReportesPage() {
   const mesActual = now.toISOString().slice(0, 7);
   const [desde, setDesde] = useState(mesActual + '-01');
   const [hasta, setHasta] = useState(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
-  const { data, isLoading } = useReportesData(desde, hasta);
+  const [selectedVendedores, setSelectedVendedores] = useState<string[]>([]);
+  const { data: vendedoresList } = useVendedores();
+  const { data, isLoading } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined);
   const [tab, setTab] = useState<ReportTab>('resumen');
 
   const tabs: { key: ReportTab; label: string; icon: React.ElementType }[] = [
@@ -178,6 +184,12 @@ export default function ReportesPage() {
     { key: 'promociones', label: 'Promociones', icon: TrendingUp },
   ];
 
+  const toggleVendedor = (id: string) => {
+    setSelectedVendedores(prev =>
+      prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+    );
+  };
+
   const handleExport = (format: 'excel' | 'pdf') => {
     if (!data) return;
     const config = getExportConfig(tab, data, desde, hasta);
@@ -186,16 +198,72 @@ export default function ReportesPage() {
     else exportToPDF(config);
   };
 
+  const vendedorNames = selectedVendedores
+    .map(id => vendedoresList?.find(v => v.id === id)?.nombre)
+    .filter(Boolean);
+
   return (
     <div className="p-4 space-y-4 min-h-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <BarChart3 className="h-5 w-5" /> Reportes
         </h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="input-odoo text-[13px] w-36" />
           <span className="text-muted-foreground text-[13px]">a</span>
           <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} className="input-odoo text-[13px] w-36" />
+
+          {/* Vendedor multi-select */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={cn(
+                "input-odoo text-[13px] flex items-center gap-1.5 min-w-[140px] max-w-[220px] truncate",
+                selectedVendedores.length > 0 && "border-primary/60 bg-primary/5"
+              )}>
+                <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">
+                  {selectedVendedores.length === 0
+                    ? 'Todos los usuarios'
+                    : selectedVendedores.length === 1
+                      ? vendedorNames[0]
+                      : `${selectedVendedores.length} usuarios`}
+                </span>
+                <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="end">
+              <div className="max-h-60 overflow-y-auto p-1">
+                {vendedoresList?.map(v => (
+                  <label
+                    key={v.id}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedVendedores.includes(v.id)}
+                      onChange={() => toggleVendedor(v.id)}
+                      className="rounded border-input"
+                    />
+                    <span className="truncate">{v.nombre}</span>
+                  </label>
+                ))}
+                {(!vendedoresList || vendedoresList.length === 0) && (
+                  <p className="text-[12px] text-muted-foreground p-3 text-center">Sin usuarios</p>
+                )}
+              </div>
+              {selectedVendedores.length > 0 && (
+                <div className="border-t border-border p-1.5">
+                  <button
+                    onClick={() => setSelectedVendedores([])}
+                    className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
+                  >
+                    <X className="h-3 w-3" /> Limpiar filtro
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           <ExportButton
             onExcel={() => handleExport('excel')}
             onPDF={() => handleExport('pdf')}
@@ -205,6 +273,21 @@ export default function ReportesPage() {
           </button>
         </div>
       </div>
+
+      {/* Active filter chips */}
+      {selectedVendedores.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap print:hidden">
+          <span className="text-[11px] text-muted-foreground">Filtrando por:</span>
+          {vendedorNames.map((name, i) => (
+            <span key={selectedVendedores[i]} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
+              {name}
+              <button onClick={() => toggleVendedor(selectedVendedores[i])} className="hover:text-destructive">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-0.5 border-b border-border overflow-x-auto print:hidden">

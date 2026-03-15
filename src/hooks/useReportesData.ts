@@ -2,25 +2,41 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 
-export function useReportesData(desde: string, hasta: string) {
+export function useReportesData(desde: string, hasta: string, vendedorIds?: string[]) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['reportes-full', empresa?.id, desde, hasta],
+    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async () => {
       const eid = empresa!.id;
+      const hasVendorFilter = vendedorIds && vendedorIds.length > 0;
+
+      let ventasQ = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
+      if (hasVendorFilter) ventasQ = ventasQ.in('vendedor_id', vendedorIds);
+
+      let cobrosQ = supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
+
+      let gastosQ = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
+      if (hasVendorFilter) gastosQ = gastosQ.in('vendedor_id', vendedorIds);
+
+      const clientesQ = supabase.from('clientes').select('id, nombre, codigo, status').eq('empresa_id', eid);
+      const productosQ = supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo');
+
+      let ventaLineasQ = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta);
+      if (hasVendorFilter) ventaLineasQ = ventaLineasQ.in('ventas.vendedor_id', vendedorIds);
+
+      let cargasQ = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false });
+      if (hasVendorFilter) cargasQ = cargasQ.in('vendedor_id', vendedorIds);
+
+      let devolucionesQ = supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false });
+      if (hasVendorFilter) devolucionesQ = devolucionesQ.in('vendedor_id', vendedorIds);
+
+      let entregasQ = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha_entrega', desde).lte('fecha_entrega', hasta).in('status', ['confirmado', 'entregado']);
+      if (hasVendorFilter) entregasQ = entregasQ.in('vendedor_id', vendedorIds);
 
       const [ventasRes, cobrosRes, gastosRes, clientesRes, productosRes, ventaLineasRes, cargasRes, devolucionesRes, entregasRes] = await Promise.all([
-        supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta),
-        supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta),
-        supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta),
-        supabase.from('clientes').select('id, nombre, codigo, status').eq('empresa_id', eid),
-        supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo'),
-        supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta),
-        supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }),
-        supabase.from('devoluciones').select('id, fecha, tipo, notas, vendedor_id, cliente_id, vendedores(nombre), clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }),
-        supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, status, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), venta_lineas(producto_id, cantidad, total, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha_entrega', desde).lte('fecha_entrega', hasta).in('status', ['confirmado', 'entregado']),
+        ventasQ, cobrosQ, gastosQ, clientesQ, productosQ, ventaLineasQ, cargasQ, devolucionesQ, entregasQ,
       ]);
 
       const ventas = ventasRes.data ?? [];
