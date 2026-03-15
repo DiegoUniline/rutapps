@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import SearchableSelect from '@/components/SearchableSelect';
 import { GoogleMap, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
