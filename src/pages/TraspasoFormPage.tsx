@@ -3,12 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, Plus, Check } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Check, FileText } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import { generarTraspasoPdf } from '@/lib/traspasoPdf';
+import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
