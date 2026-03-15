@@ -40,6 +40,10 @@ const navItems: NavItem[] = [
     icon: MapPin,
     path: '/logistica',
     children: [
+      { label: 'Dashboard', path: '/logistica/dashboard' },
+      { label: 'Pedidos pendientes', path: '/logistica/pedidos-pendientes' },
+      { label: 'Asignación', path: '/logistica/asignacion' },
+      { label: 'Quiebres de stock', path: '/logistica/quiebres' },
       { label: 'Rutas', path: '/ventas/rutas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },
