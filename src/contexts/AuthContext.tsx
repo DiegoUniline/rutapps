@@ -25,10 +25,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = useCallback(async (u: User | null) => {
     if (u) {
-      const { data: p } = await supabase.from('profiles').select('*').eq('user_id', u.id).maybeSingle();
+      const { data: p } = await supabase.from('profiles')
+        .select('id, user_id, nombre, empresa_id, vendedor_id, almacen_id, telefono, estado, avatar_url')
+        .eq('user_id', u.id).maybeSingle();
       setProfile(p);
       if (p?.empresa_id) {
-        const { data: e } = await supabase.from('empresas').select('*').eq('id', p.empresa_id).maybeSingle();
+        const { data: e } = await supabase.from('empresas')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos')
+          .eq('id', p.empresa_id).maybeSingle();
         setEmpresa(e);
       } else {
         setEmpresa(null);
