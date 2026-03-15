@@ -34,6 +34,7 @@ function ClientesTable() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [importOpen, setImportOpen] = useState(false);
   const { data: clientes, isLoading } = useClientes(search, statusFilter);
 
   const total = clientes?.length ?? 0;
