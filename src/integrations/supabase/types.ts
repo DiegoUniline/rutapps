@@ -1399,6 +1399,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          almacen_id: string | null
           avatar_url: string | null
           created_at: string
           empresa_id: string
@@ -1407,6 +1408,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          almacen_id?: string | null
           avatar_url?: string | null
           created_at?: string
           empresa_id: string
@@ -1415,6 +1417,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          almacen_id?: string | null
           avatar_url?: string | null
           created_at?: string
           empresa_id?: string
@@ -1423,6 +1426,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_empresa_id_fkey"
             columns: ["empresa_id"]
