@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
+import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -33,6 +34,7 @@ function ClientesTable() {
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [importOpen, setImportOpen] = useState(false);
   const { data: clientes, isLoading } = useClientes(search, statusFilter);
 
   const total = clientes?.length ?? 0;
@@ -83,10 +85,14 @@ function ClientesTable() {
               data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
             })}
           />
+          <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
+            <Upload className="h-3.5 w-3.5" /> Importar
+          </button>
           <button onClick={() => navigate('/clientes/nuevo')} className="btn-odoo-primary shrink-0">
             <Plus className="h-3.5 w-3.5" /> Nuevo
           </button>
         </div>
+        <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
       </div>
 
       <div className="bg-card border border-border rounded overflow-x-auto">
