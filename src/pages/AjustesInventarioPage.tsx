@@ -39,6 +39,38 @@ export default function AjustesInventarioPage() {
   const [resetMotivo, setResetMotivo] = useState('Reinicio general de stock');
   const [resetting, setResetting] = useState(false);
   const [tab, setTab] = useState<'ajuste' | 'historial'>('ajuste');
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+
+  const handleGenerarPdf = () => {
+    if (changedRows.length === 0 && rows.length === 0) return;
+    const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre;
+    const dataRows = changedRows.length > 0 ? changedRows : rows;
+    const blob = generarAjusteInventarioPdf({
+      empresa: {
+        nombre: empresa?.nombre ?? '',
+        razon_social: empresa?.razon_social,
+        rfc: empresa?.rfc,
+        direccion: empresa?.direccion,
+        telefono: empresa?.telefono,
+      },
+      ajuste: {
+        fecha: new Date().toISOString().slice(0, 10),
+        motivo,
+        almacen: almacenNombre,
+        responsable: profile?.nombre,
+      },
+      lineas: dataRows.map(r => ({
+        codigo: r.codigo,
+        nombre: r.nombre,
+        cantidad_anterior: r.cantidadSistema,
+        cantidad_nueva: r.cantidadReal ?? r.cantidadSistema,
+        diferencia: (r.cantidadReal ?? r.cantidadSistema) - r.cantidadSistema,
+      })),
+    });
+    setPdfBlob(blob);
+    setShowPdfModal(true);
+  };
 
   // Load products for selected almacen
   const { data: productos, isLoading: loadingProducts } = useQuery({
