@@ -537,30 +537,30 @@ export default function EntregaListPage() {
               ))}
             </div>
           </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-            <Button variant="ghost" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive">
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-4 border-t">
+            <Button variant="ghost" onClick={() => setShowAsignarDialog(false)} disabled={bulkAsignarMut.isPending} className="text-destructive mr-auto">
               Cancelar
             </Button>
-            <div className="flex gap-2 ml-auto">
-              <Button
-                variant="outline"
-                onClick={() => bulkAsignarMut.mutate({ cargarTambien: false })}
-                disabled={!vendedorRutaId || bulkAsignarMut.isPending}
-                className="gap-1.5"
-              >
-                <Package className="h-3.5 w-3.5" />
-                Asignar ruta
-              </Button>
-              <Button
-                onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
-                disabled={!vendedorRutaId || bulkAsignarMut.isPending}
-                className="gap-1.5"
-              >
-                <Zap className="h-3.5 w-3.5" />
-                Asignar y cargar
-              </Button>
-            </div>
-          </DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => bulkAsignarMut.mutate({ cargarTambien: false })}
+              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+              className="gap-1.5"
+            >
+              <Package className="h-3.5 w-3.5" />
+              Asignar
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => bulkAsignarMut.mutate({ cargarTambien: true })}
+              disabled={!vendedorRutaId || bulkAsignarMut.isPending}
+              className="gap-1.5"
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Asignar y cargar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
