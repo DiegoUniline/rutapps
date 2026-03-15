@@ -151,7 +151,8 @@ function AppRoutes() {
                 <Route path="/clientes" element={<ClientesListPage />} />
                 <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
                 <Route path="/ventas" element={<VentasListPage />} />
-                <Route path="/ventas/demanda" element={<DemandaPage />} />
+                <Route path="/ventas/surtido" element={<DemandaPage />} />
+                <Route path="/ventas/demanda" element={<Navigate to="/ventas/surtido" replace />} />
                 <Route path="/ventas/entregas" element={<EntregasPage />} />
                 <Route path="/ventas/reporte-entregas" element={<ReporteEntregasPage />} />
                 <Route path="/ventas/cobranza" element={<CobranzaPage />} />
