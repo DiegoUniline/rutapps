@@ -391,7 +391,7 @@ function MonitorContent() {
                       scale: 10,
                     }}
                     label={{
-                      text: c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•',
+                      text: c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : c.status === 'en_ruta' ? '🚛' : '•',
                       color: '#fff',
                       fontSize: '10px',
                       fontWeight: '700',
