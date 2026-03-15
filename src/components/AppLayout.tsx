@@ -172,6 +172,7 @@ function Breadcrumb() {
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
     configuracion: 'Configuración', descargas: 'Descargas de ruta',
+    usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
   };
 
   if (segments.length <= 1) return null;
