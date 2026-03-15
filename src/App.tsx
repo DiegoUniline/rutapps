@@ -140,6 +140,7 @@ function AppRoutes() {
                 <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
                 <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
                 <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
+                <Route path="/ventas/promociones" element={<PromocionesPage />} />
                 <Route path="/ventas/:id" element={<VentaFormPage />} />
                 <Route path="/almacen/inventario" element={<InventarioPage />} />
                 <Route path="/almacen/cargas" element={<CargasListPage />} />
