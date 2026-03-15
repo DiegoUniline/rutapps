@@ -321,6 +321,26 @@ export default function RutaNuevaVenta() {
     setStep('productos');
   };
 
+  // Evaluate promotions
+  const selectedCliente = clientes?.find(c => c.id === clienteId);
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas || cart.length === 0) return [] as PromoResult[];
+    const cartForPromo: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => ({
+      producto_id: c.producto_id,
+      precio_unitario: c.precio_unitario,
+      cantidad: c.cantidad,
+    }));
+    return evaluatePromociones(
+      promocionesActivas,
+      cartForPromo,
+      clienteId || undefined,
+      (selectedCliente as any)?.zona_id || undefined,
+    );
+  }, [promocionesActivas, cart, clienteId, selectedCliente]);
+
+  const totalDescuentoPromos = useMemo(() =>
+    promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
     cart.forEach(item => {
@@ -332,8 +352,10 @@ export default function RutaNuevaVenta() {
       if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100);
       items += item.cantidad;
     });
-    return { subtotal, iva, ieps, total: subtotal + ieps + iva, items };
-  }, [cart]);
+    const totalBeforeDiscount = subtotal + ieps + iva;
+    const total = Math.max(0, totalBeforeDiscount - totalDescuentoPromos);
+    return { subtotal, iva, ieps, total, items, descuento: totalDescuentoPromos };
+  }, [cart, totalDescuentoPromos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
