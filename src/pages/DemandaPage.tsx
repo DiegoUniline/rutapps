@@ -155,13 +155,10 @@ export default function DemandaPage() {
           const qty = surtidoCantidades[key] ?? 0;
           return {
             producto_id: l.producto_id,
-            cantidad: qty,
-            precio_unitario: l.precio_unitario,
-            descripcion: l.descripcion,
-            unidad_id: l.unidad_id,
-            descuento_pct: l.descuento_pct ?? 0,
-            subtotal: qty * l.precio_unitario,
-            total: qty * l.precio_unitario,
+            unidad_id: l.unidad_id ?? null,
+            cantidad_pedida: qty,
+            cantidad_entregada: qty,
+            hecho: false,
           };
         });
 
@@ -170,70 +167,46 @@ export default function DemandaPage() {
       // Validate stock
       for (const l of lineas) {
         const disponible = getStockOrigen(l.producto_id);
-        if (l.cantidad > disponible) {
+        if (l.cantidad_pedida > disponible) {
           const prod = pedido.venta_lineas.find((vl: any) => vl.producto_id === l.producto_id);
-          throw new Error(`Stock insuficiente para ${prod?.productos?.nombre ?? 'producto'}: disponible ${disponible}, solicitado ${l.cantidad}`);
+          throw new Error(`Stock insuficiente para ${prod?.productos?.nombre ?? 'producto'}: disponible ${disponible}, solicitado ${l.cantidad_pedida}`);
         }
       }
 
-      const total = lineas.reduce((s: number, l: any) => s + l.total, 0);
-
-      // Create delivery order with status "confirmado" (pending delivery, stock already deducted)
       const assignedVendedor = vendedorEntrega[pedido.id] ?? pedido.vendedor_id;
       if (!assignedVendedor) throw new Error('Asigna un vendedor/ruta antes de generar la entrega');
-      const fechaEnt = fechaEntrega[pedido.id] ?? new Date();
-      const { data: venta, error } = await supabase.from('ventas').insert({
+
+      // Create entrega record
+      const { data: entrega, error } = await supabase.from('entregas').insert({
         empresa_id: empresa!.id,
-        tipo: 'venta_directa',
-        status: 'confirmado',
-        condicion_pago: pedido.condicion_pago,
-        cliente_id: pedido.cliente_id,
+        pedido_id: pedido.id,
         vendedor_id: assignedVendedor,
-        pedido_origen_id: pedido.id,
-        fecha_entrega: fechaEnt.toISOString().slice(0, 10),
-        subtotal: total,
-        total,
-        saldo_pendiente: pedido.condicion_pago === 'credito' ? total : 0,
-        entrega_inmediata: false,
-      } as any).select().single();
+        cliente_id: pedido.cliente_id,
+        almacen_id: origenActual.type === 'almacen' ? null : null,
+        status: 'borrador',
+      } as any).select('id, folio').single();
       if (error) throw error;
 
-      const { error: lErr } = await supabase.from('venta_lineas').insert(
-        lineas.map((l: any) => ({ ...l, venta_id: venta.id }))
+      // Insert entrega_lineas
+      const { error: lErr } = await supabase.from('entrega_lineas').insert(
+        lineas.map((l: any) => ({
+          entrega_id: entrega.id,
+          producto_id: l.producto_id,
+          unidad_id: l.unidad_id,
+          cantidad_pedida: l.cantidad_pedida,
+          cantidad_entregada: l.cantidad_entregada,
+          hecho: false,
+        }))
       );
       if (lErr) throw lErr;
 
-      // Deduct stock from origin
-      if (origenActual.type === 'almacen') {
-        for (const l of lineas) {
-          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-          if (prod) {
-            await supabase.from('productos').update({ cantidad: Math.max(0, (prod.cantidad ?? 0) - l.cantidad) } as any).eq('id', l.producto_id);
-          }
-        }
-      } else if (origenActual.type === 'ruta' && origenActual.cargaId) {
-        // Deduct from carga_lineas (increment cantidad_vendida)
-        for (const l of lineas) {
-          const { data: cl } = await supabase
-            .from('carga_lineas')
-            .select('id, cantidad_vendida')
-            .eq('carga_id', origenActual.cargaId)
-            .eq('producto_id', l.producto_id)
-            .single();
-          if (cl) {
-            await supabase.from('carga_lineas').update({ cantidad_vendida: (cl.cantidad_vendida ?? 0) + l.cantidad }).eq('id', cl.id);
-          }
-        }
-      }
-
-      return venta;
+      return entrega;
     },
     onSuccess: () => {
-      toast.success('Pedido de entrega generado y asignado a ruta — stock descontado del origen');
+      toast.success('Entrega creada — ve a Entregas para validar y descontar stock');
       qc.invalidateQueries({ queryKey: ['demanda'] });
-      qc.invalidateQueries({ queryKey: ['ventas'] });
-      qc.invalidateQueries({ queryKey: ['origenes-surtido'] });
-      qc.invalidateQueries({ queryKey: ['cargas'] });
+      qc.invalidateQueries({ queryKey: ['entregas-list'] });
+      qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       setSurtidoCantidades({});
       setExpandedId(null);
     },
