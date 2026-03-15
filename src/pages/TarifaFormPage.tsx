@@ -20,6 +20,13 @@ const CALCULO_LABELS: Record<TipoCalculoTarifa, string> = {
   precio_fijo: 'Precio fijo',
 };
 
+const REDONDEO_LABELS: Record<string, string> = {
+  ninguno: 'Sin redondeo',
+  arriba: '↑ Hacia arriba',
+  abajo: '↓ Hacia abajo',
+  cercano: '≈ Al más cercano',
+};
+
 const EMPTY_LINEA = {
   producto_ids: [] as string[],
   clasificacion_ids: [] as string[],
@@ -30,6 +37,7 @@ const EMPTY_LINEA = {
   descuento_max: 0,
   margen_pct: 0,
   descuento_pct: 0,
+  redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
 };
 
