@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Truck, Banknote, Package, Monitor } from 'lucide-react';
+import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -11,6 +11,7 @@ const tabs = [
   { label: 'Entregas', icon: Truck, path: '/ruta/entregas' },
   { label: 'Carga', icon: Package, path: '/ruta/carga' },
   { label: 'Cobros', icon: Banknote, path: '/ruta/cobros' },
+  { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
 ];
 
 export default function MobileLayout() {
