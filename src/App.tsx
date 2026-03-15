@@ -140,12 +140,13 @@ function AppRoutes() {
     );
   }
 
-  // Blocked users
+  // Blocked users — only billing access
   if (subscription.isBlocked) {
     return (
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="*" element={<SubscriptionBlockedPage />} />
+          <Route path="/facturacion" element={<FacturacionPage />} />
+          <Route path="*" element={<Navigate to="/facturacion" replace />} />
         </Routes>
       </Suspense>
     );
