@@ -57,7 +57,7 @@ export async function downloadAllData(empresaId: string): Promise<void> {
       }
 
       // Limit large tables to recent data
-      const recentTables = ['ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos', 'devoluciones', 'devolucion_lineas'];
+      const recentTables = ['ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos', 'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas'];
       if (recentTables.includes(table)) {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
