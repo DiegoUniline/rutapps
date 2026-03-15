@@ -452,140 +452,156 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         )}
       </div>
 
+      {/* Date range (optional) */}
+      <div className="bg-card border border-border rounded-lg p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Periodo (opcional)</h3>
+        <p className="text-xs text-muted-foreground mb-3">Para liquidaciones semanales o por rango de fechas.</p>
+        <div className="grid grid-cols-2 gap-3 max-w-sm">
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Desde</label>
+            <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Hasta</label>
+            <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* Cash reconciliation — always visible */}
+      <div className="bg-card border border-border rounded-lg p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
+        </h3>
+        {selectedCargaId && (
+          <div className="grid grid-cols-3 gap-3 text-[12px]">
+            <div className="bg-muted/50 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Ventas contado</div>
+              <div className="font-bold text-foreground">${ventasContado.toFixed(2)}</div>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Gastos</div>
+              <div className="font-bold text-destructive">-${gastosTotal.toFixed(2)}</div>
+            </div>
+            <div className="bg-primary/5 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Esperado</div>
+              <div className="font-bold text-primary">${efectivoEsperado.toFixed(2)}</div>
+            </div>
+          </div>
+        )}
+        <div className="max-w-xs">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Efectivo entregado</label>
+          <Input
+            type="number"
+            value={efectivoEntregado}
+            onChange={e => setEfectivoEntregado(e.target.value)}
+            placeholder={selectedCargaId ? efectivoEsperado.toFixed(2) : '0.00'}
+          />
+        </div>
+        {diferenciaEfectivo !== 0 && (
+          <div className={cn(
+            "flex items-center gap-2 p-2 rounded-md text-[12px] font-semibold max-w-xs",
+            diferenciaEfectivo > 0 ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive"
+          )}>
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${diferenciaEfectivo.toFixed(2)}
+          </div>
+        )}
+      </div>
+
+      {/* Product reconciliation — only when carga selected */}
       {selectedCargaId && lineas.length > 0 && (
-        <>
-          {/* Cash reconciliation */}
-          <div className="bg-card border border-border rounded-lg p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
-            </h3>
-            <div className="grid grid-cols-3 gap-3 text-[12px]">
-              <div className="bg-muted/50 rounded-md p-3 text-center">
-                <div className="text-muted-foreground">Ventas contado</div>
-                <div className="font-bold text-foreground">${ventasContado.toFixed(2)}</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3 text-center">
-                <div className="text-muted-foreground">Gastos</div>
-                <div className="font-bold text-destructive">-${gastosTotal.toFixed(2)}</div>
-              </div>
-              <div className="bg-primary/5 rounded-md p-3 text-center">
-                <div className="text-muted-foreground">Esperado</div>
-                <div className="font-bold text-primary">${efectivoEsperado.toFixed(2)}</div>
-              </div>
-            </div>
-            <div className="max-w-xs">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Efectivo entregado</label>
-              <Input
-                type="number"
-                value={efectivoEntregado}
-                onChange={e => setEfectivoEntregado(e.target.value)}
-                placeholder={efectivoEsperado.toFixed(2)}
-              />
-            </div>
-            {diferenciaEfectivo !== 0 && (
-              <div className={cn(
-                "flex items-center gap-2 p-2 rounded-md text-[12px] font-semibold max-w-xs",
-                diferenciaEfectivo > 0 ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive"
-              )}>
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${diferenciaEfectivo.toFixed(2)}
-              </div>
-            )}
-          </div>
-
-          {/* Product reconciliation */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <PackageCheck className="h-4 w-4" /> 3. Cuadre de productos
-            </h3>
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2 px-2">Producto</th>
-                  <th className="text-center py-2 px-1 w-16">Cargado</th>
-                  <th className="text-center py-2 px-1 w-16">Vendido</th>
-                  <th className="text-center py-2 px-1 w-16">Devuelto</th>
-                  <th className="text-center py-2 px-1 w-16">Esperado</th>
-                  <th className="text-center py-2 px-1 w-20">Real</th>
-                  <th className="text-center py-2 px-1 w-14">Dif.</th>
-                  <th className="text-left py-2 px-1 w-32">Motivo</th>
-                  <th className="text-left py-2 px-1">Notas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lineas.map((l, idx) => (
-                  <tr key={l.producto_id} className={cn("border-b border-border/50", l.diferencia !== 0 && "bg-amber-50/50")}>
-                    <td className="py-2 px-2">
-                      <div className="font-medium text-foreground">{l.producto_nombre}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono">{l.producto_codigo}</div>
-                    </td>
-                    <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_cargada}</td>
-                    <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_vendida}</td>
-                    <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_devuelta}</td>
-                    <td className="py-2 px-1 text-center font-semibold">{l.cantidad_esperada}</td>
-                    <td className="py-2 px-1">
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <PackageCheck className="h-4 w-4" /> 3. Cuadre de productos
+          </h3>
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                <th className="text-left py-2 px-2">Producto</th>
+                <th className="text-center py-2 px-1 w-16">Cargado</th>
+                <th className="text-center py-2 px-1 w-16">Vendido</th>
+                <th className="text-center py-2 px-1 w-16">Devuelto</th>
+                <th className="text-center py-2 px-1 w-16">Esperado</th>
+                <th className="text-center py-2 px-1 w-20">Real</th>
+                <th className="text-center py-2 px-1 w-14">Dif.</th>
+                <th className="text-left py-2 px-1 w-32">Motivo</th>
+                <th className="text-left py-2 px-1">Notas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineas.map((l, idx) => (
+                <tr key={l.producto_id} className={cn("border-b border-border/50", l.diferencia !== 0 && "bg-amber-50/50")}>
+                  <td className="py-2 px-2">
+                    <div className="font-medium text-foreground">{l.producto_nombre}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono">{l.producto_codigo}</div>
+                  </td>
+                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_cargada}</td>
+                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_vendida}</td>
+                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_devuelta}</td>
+                  <td className="py-2 px-1 text-center font-semibold">{l.cantidad_esperada}</td>
+                  <td className="py-2 px-1">
+                    <Input
+                      type="number"
+                      value={l.cantidad_real}
+                      onChange={e => updateLinea(idx, 'cantidad_real', Number(e.target.value) || 0)}
+                      className="h-7 text-[12px] text-center w-16 mx-auto"
+                    />
+                  </td>
+                  <td className={cn(
+                    "py-2 px-1 text-center font-bold",
+                    l.diferencia > 0 ? "text-green-600" : l.diferencia < 0 ? "text-destructive" : ""
+                  )}>
+                    {l.diferencia > 0 ? '+' : ''}{l.diferencia}
+                  </td>
+                  <td className="py-2 px-1">
+                    {l.diferencia !== 0 ? (
+                      <select
+                        value={l.motivo || ''}
+                        onChange={e => updateLinea(idx, 'motivo', e.target.value || null)}
+                        className="input-odoo text-[11px] h-7 w-full"
+                      >
+                        <option value="">Motivo...</option>
+                        {MOTIVOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                      </select>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="py-2 px-1">
+                    {l.diferencia !== 0 ? (
                       <Input
-                        type="number"
-                        value={l.cantidad_real}
-                        onChange={e => updateLinea(idx, 'cantidad_real', Number(e.target.value) || 0)}
-                        className="h-7 text-[12px] text-center w-16 mx-auto"
+                        value={l.notas || ''}
+                        onChange={e => updateLinea(idx, 'notas', e.target.value)}
+                        placeholder="Detalle..."
+                        className="h-7 text-[11px]"
                       />
-                    </td>
-                    <td className={cn(
-                      "py-2 px-1 text-center font-bold",
-                      l.diferencia > 0 ? "text-green-600" : l.diferencia < 0 ? "text-destructive" : ""
-                    )}>
-                      {l.diferencia > 0 ? '+' : ''}{l.diferencia}
-                    </td>
-                    <td className="py-2 px-1">
-                      {l.diferencia !== 0 ? (
-                        <select
-                          value={l.motivo || ''}
-                          onChange={e => updateLinea(idx, 'motivo', e.target.value || null)}
-                          className="input-odoo text-[11px] h-7 w-full"
-                        >
-                          <option value="">Motivo...</option>
-                          {MOTIVOS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                        </select>
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="py-2 px-1">
-                      {l.diferencia !== 0 ? (
-                        <Input
-                          value={l.notas || ''}
-                          onChange={e => updateLinea(idx, 'notas', e.target.value)}
-                          placeholder="Detalle..."
-                          className="h-7 text-[11px]"
-                        />
-                      ) : <span className="text-muted-foreground">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Notes & submit */}
-          <div className="bg-card border border-border rounded-lg p-5">
-            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas generales</label>
-            <textarea
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              placeholder="Observaciones sobre la descarga..."
-              className="input-odoo min-h-[60px] text-[13px] w-full"
-            />
-          </div>
-
-          <Button
-            onClick={() => submitMutation.mutate()}
-            disabled={submitMutation.isPending}
-            className="w-full sm:w-auto"
-          >
-            <PackageCheck className="h-4 w-4 mr-2" />
-            {hayDiferencias ? 'Enviar para aprobación' : 'Completar descarga'}
-          </Button>
-        </>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+
+      {/* Notes & submit */}
+      <div className="bg-card border border-border rounded-lg p-5">
+        <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Notas generales</label>
+        <textarea
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          placeholder="Observaciones sobre la descarga..."
+          className="input-odoo min-h-[60px] text-[13px] w-full"
+        />
+      </div>
+
+      <Button
+        onClick={() => submitMutation.mutate()}
+        disabled={submitMutation.isPending || efectivoEntregado === ''}
+        className="w-full sm:w-auto"
+      >
+        <PackageCheck className="h-4 w-4 mr-2" />
+        {hayDiferencias ? 'Enviar para aprobación' : 'Completar descarga'}
+      </Button>
     </div>
   );
 }
