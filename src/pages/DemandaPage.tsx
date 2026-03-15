@@ -88,7 +88,7 @@ function useOrigenes() {
       // Active cargas with lines
       const { data: cargas } = await supabase
         .from('cargas')
-        .select('id, vendedor_id, vendedores(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
+        .select('id, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
         .eq('empresa_id', eid)
         .in('status', ['en_ruta', 'pendiente'] as any)
         .order('fecha', { ascending: false });

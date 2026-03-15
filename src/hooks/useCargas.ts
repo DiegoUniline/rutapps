@@ -7,7 +7,7 @@ export function useCargas(search?: string, statusFilter?: string) {
     queryFn: async () => {
       let q = supabase
         .from('cargas')
-        .select('*, vendedores(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
+        .select('*, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
         .order('fecha', { ascending: false });
       if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
@@ -24,7 +24,7 @@ export function useCarga(id?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('*, vendedores(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
+        .select('*, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(*, productos(id, codigo, nombre, precio_principal, cantidad))')
         .eq('id', id!)
         .single();
       if (error) throw error;
