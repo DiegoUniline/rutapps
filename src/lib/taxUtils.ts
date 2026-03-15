@@ -84,6 +84,7 @@ export function calcLineTax(params: {
   descuento_pct: number;
   iva_pct: number;
   ieps_pct: number;
+  ieps_tipo?: IepsTipo;
 }): {
   subtotal: number;
   ieps_monto: number;
