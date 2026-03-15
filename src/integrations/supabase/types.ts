@@ -960,6 +960,7 @@ export type Database = {
       }
       entrega_lineas: {
         Row: {
+          almacen_origen_id: string | null
           cantidad_entregada: number
           cantidad_pedida: number
           created_at: string
@@ -970,6 +971,7 @@ export type Database = {
           unidad_id: string | null
         }
         Insert: {
+          almacen_origen_id?: string | null
           cantidad_entregada?: number
           cantidad_pedida?: number
           created_at?: string
@@ -980,6 +982,7 @@ export type Database = {
           unidad_id?: string | null
         }
         Update: {
+          almacen_origen_id?: string | null
           cantidad_entregada?: number
           cantidad_pedida?: number
           created_at?: string
@@ -990,6 +993,13 @@ export type Database = {
           unidad_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "entrega_lineas_almacen_origen_id_fkey"
+            columns: ["almacen_origen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "entrega_lineas_entrega_id_fkey"
             columns: ["entrega_id"]
@@ -1020,6 +1030,8 @@ export type Database = {
           created_at: string
           empresa_id: string
           fecha: string
+          fecha_asignacion: string | null
+          fecha_carga: string | null
           folio: string | null
           id: string
           notas: string | null
@@ -1028,6 +1040,7 @@ export type Database = {
           validado_at: string | null
           validado_por: string | null
           vendedor_id: string | null
+          vendedor_ruta_id: string | null
         }
         Insert: {
           almacen_id?: string | null
@@ -1035,6 +1048,8 @@ export type Database = {
           created_at?: string
           empresa_id: string
           fecha?: string
+          fecha_asignacion?: string | null
+          fecha_carga?: string | null
           folio?: string | null
           id?: string
           notas?: string | null
@@ -1043,6 +1058,7 @@ export type Database = {
           validado_at?: string | null
           validado_por?: string | null
           vendedor_id?: string | null
+          vendedor_ruta_id?: string | null
         }
         Update: {
           almacen_id?: string | null
@@ -1050,6 +1066,8 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           fecha?: string
+          fecha_asignacion?: string | null
+          fecha_carga?: string | null
           folio?: string | null
           id?: string
           notas?: string | null
@@ -1058,6 +1076,7 @@ export type Database = {
           validado_at?: string | null
           validado_por?: string | null
           vendedor_id?: string | null
+          vendedor_ruta_id?: string | null
         }
         Relationships: [
           {
@@ -1091,6 +1110,13 @@ export type Database = {
           {
             foreignKeyName: "entregas_vendedor_id_fkey"
             columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_vendedor_ruta_id_fkey"
+            columns: ["vendedor_ruta_id"]
             isOneToOne: false
             referencedRelation: "vendedores"
             referencedColumns: ["id"]
@@ -2744,7 +2770,15 @@ export type Database = {
       status_carga: "pendiente" | "en_ruta" | "completada" | "cancelada"
       status_cliente: "activo" | "inactivo" | "suspendido"
       status_descarga: "pendiente" | "aprobada" | "rechazada"
-      status_entrega: "borrador" | "listo" | "hecho" | "cancelado"
+      status_entrega:
+        | "borrador"
+        | "surtido"
+        | "asignado"
+        | "cargado"
+        | "en_ruta"
+        | "listo"
+        | "hecho"
+        | "cancelado"
       status_producto: "activo" | "inactivo" | "borrador"
       status_venta:
         | "borrador"
@@ -2921,7 +2955,16 @@ export const Constants = {
       status_carga: ["pendiente", "en_ruta", "completada", "cancelada"],
       status_cliente: ["activo", "inactivo", "suspendido"],
       status_descarga: ["pendiente", "aprobada", "rechazada"],
-      status_entrega: ["borrador", "listo", "hecho", "cancelado"],
+      status_entrega: [
+        "borrador",
+        "surtido",
+        "asignado",
+        "cargado",
+        "en_ruta",
+        "listo",
+        "hecho",
+        "cancelado",
+      ],
       status_producto: ["activo", "inactivo", "borrador"],
       status_venta: [
         "borrador",

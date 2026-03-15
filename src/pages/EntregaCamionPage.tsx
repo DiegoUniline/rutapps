@@ -75,7 +75,7 @@ export default function EntregaCamionPage() {
           cantidad_entregada: Number(l.cantidad_entregada) || 0,
           hecho: true,
         }));
-        await validarMut.mutateAsync({ entregaId: ent.id, lineas: items });
+        await validarMut.mutateAsync({ entregaId: ent.id });
       }
       toast.success(`${pendientes.length} entregas validadas`);
       qc.invalidateQueries({ queryKey: ['entregas-camion'] });
