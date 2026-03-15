@@ -492,7 +492,7 @@ export default function CompraFormPage() {
                                 value={line._factor_conversion ?? 1}
                                 onChange={e => {
                                   const val = Math.max(1, Number(e.target.value) || 1);
-                                  updateLine(i, { _factor_conversion: val } as any);
+                                  updateLinea(idx, '_factor_conversion', val);
                                 }}
                                 disabled={!isEditable}
                                 min={1}
