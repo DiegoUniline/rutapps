@@ -149,6 +149,30 @@ export default function MapaClientesPage() {
             )}
           </button>
 
+          {/* Optimize route button - admin only */}
+          {isAdmin && withGps.length >= 2 && (
+            <button
+              onClick={handleOptimize}
+              disabled={optimizing}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold border transition-all",
+                optimizeResult
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
+                optimizing && "opacity-70"
+              )}
+            >
+              {optimizing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : optimizeResult ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Route className="h-4 w-4" />
+              )}
+              {optimizing ? 'Optimizando...' : optimizeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
+            </button>
+          )}
+
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-primary" />
@@ -158,6 +182,11 @@ export default function MapaClientesPage() {
               <div className="w-3 h-3 rounded-full bg-muted-foreground/40" />
               {withoutGps.length} sin GPS
             </span>
+            {optimizeResult?.distance_meters && (
+              <span className="text-emerald-600 font-medium">
+                {(optimizeResult.distance_meters / 1000).toFixed(1)} km
+              </span>
+            )}
           </div>
         </div>
 
