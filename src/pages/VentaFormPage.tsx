@@ -407,8 +407,8 @@ export default function VentaFormPage() {
         {/* Header card */}
         <div className="bg-card border border-border rounded-md p-5">
           {readOnly && (
-            <div className="mb-3 text-xs text-muted-foreground bg-muted px-3 py-2 rounded flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-warning" />
+            <div className="mb-3 text-xs text-muted-foreground bg-muted/60 border border-border px-3 py-2 rounded flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
               Esta venta está {form.status} y no se puede editar.
             </div>
           )}
@@ -542,18 +542,18 @@ export default function VentaFormPage() {
               </div>
               {/* Saldo info for confirmed+ sales */}
               {!isNew && form.status !== 'borrador' && (
-                <div className="bg-muted rounded-md p-3 space-y-1 text-[13px]">
+                <div className="bg-card border border-border rounded-md p-3 space-y-1 text-[13px]">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total</span>
                     <span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pagado</span>
-                    <span className="text-green-600 font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between border-t border-border pt-1">
                     <span className="font-medium">Saldo</span>
-                    <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-green-600")}>
+                    <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>
                       ${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -893,7 +893,7 @@ export default function VentaFormPage() {
                       <tfoot>
                         <tr className="border-t-2 border-border">
                           <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
-                          <td className="py-2 px-2 text-right font-semibold text-green-600">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                          <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -942,8 +942,8 @@ export default function VentaFormPage() {
                   )}
 
                   {saldoPendiente <= 0.01 && (pagosData ?? []).length > 0 && (
-                    <div className="text-green-600 text-sm font-medium flex items-center gap-2">
-                      <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+                    <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
+                      <span className="inline-block w-2 h-2 rounded-full bg-primary" />
                       Venta pagada en su totalidad
                     </div>
                   )}
