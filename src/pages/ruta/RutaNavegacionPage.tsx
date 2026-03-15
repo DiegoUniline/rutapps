@@ -209,6 +209,27 @@ function NavegacionContent() {
   };
 
   const leg = directions?.routes?.[0]?.legs?.[0];
+  const steps = leg?.steps ?? [];
+  const currentStep = steps[currentStepIdx];
+  const nextStep = steps[currentStepIdx + 1];
+
+  // Auto-advance step based on user proximity
+  useEffect(() => {
+    if (!userLocation || steps.length === 0) return;
+    // Find closest upcoming step
+    for (let i = currentStepIdx; i < steps.length; i++) {
+      const endLat = steps[i].end_location.lat();
+      const endLng = steps[i].end_location.lng();
+      const dist = Math.sqrt(
+        Math.pow((userLocation.lat - endLat) * 111000, 2) +
+        Math.pow((userLocation.lng - endLng) * 111000 * Math.cos(userLocation.lat * Math.PI / 180), 2)
+      );
+      if (dist < 30 && i > currentStepIdx) {
+        setCurrentStepIdx(i);
+        break;
+      }
+    }
+  }, [userLocation, steps, currentStepIdx]);
 
   if (totalCount === 0) {
     return (
