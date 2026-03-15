@@ -47,7 +47,7 @@ export default function AjustesInventarioPage() {
         .from('productos')
         .select('id, codigo, nombre, cantidad, se_puede_inventariar, status')
         .eq('empresa_id', empresa!.id)
-        .in('status', ['activo', 'bajo_stock'])
+        .in('status', ['activo'] as any[])
         .order('nombre');
       if (error) throw error;
       return (data ?? []).filter((p: any) => p.se_puede_inventariar !== false);
