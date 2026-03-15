@@ -37,7 +37,7 @@ class OfflineDatabase extends Dexie {
   tasas_iva!: Table;
   descarga_ruta!: Table;
   descarga_ruta_lineas!: Table;
-
+  promociones!: Table;
   // Sync infrastructure
   syncQueue!: Table<SyncQueueItem, number>;
   cacheTimestamps!: Table<CacheTimestamp, string>;
