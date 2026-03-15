@@ -406,12 +406,25 @@ export default function ProductoFormPage() {
   const saveProvMut = useSaveProductoProveedor();
   const deleteProvMut = useDeleteProductoProveedor();
 
-  // Auto-select all almacenes for new products
+  // Auto-select defaults for new products: all almacenes, first unidad (Pieza), first lista (Lista General)
   useEffect(() => {
-    if (isNew && almacenes && almacenes.length > 0 && (form.almacenes ?? []).length === 0) {
-      setForm(prev => ({ ...prev, almacenes: almacenes.map(a => a.id) }));
-    }
-  }, [isNew, almacenes]);
+    if (!isNew) return;
+    setForm(prev => {
+      const updates: Partial<Producto> = {};
+      if (almacenes && almacenes.length > 0 && (prev.almacenes ?? []).length === 0) {
+        updates.almacenes = almacenes.map(a => a.id);
+      }
+      if (unidades && unidades.length > 0 && !prev.unidad_venta_id) {
+        const pieza = unidades.find(u => u.nombre.toLowerCase() === 'pieza') ?? unidades[0];
+        updates.unidad_venta_id = pieza.id;
+      }
+      if (listas && listas.length > 0 && !prev.lista_id) {
+        const general = listas.find(l => l.nombre.toLowerCase().includes('general')) ?? listas[0];
+        updates.lista_id = general.id;
+      }
+      return Object.keys(updates).length ? { ...prev, ...updates } : prev;
+    });
+  }, [isNew, almacenes, unidades, listas]);
 
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
