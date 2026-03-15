@@ -48,8 +48,8 @@ function emptyLine(): Partial<VentaLinea> & { unidad_label?: string; impuestos_l
   };
 }
 
-// Editable columns: producto(0), cantidad(1), descuento(2)
-const COL_COUNT = 3;
+// Editable columns: producto(0), cantidad(1), precio(2), descuento(3)
+const COL_COUNT = 4;
 
 export default function VentaFormPage() {
   const { id } = useParams();
