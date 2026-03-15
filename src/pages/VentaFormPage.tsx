@@ -828,29 +828,29 @@ export default function VentaFormPage() {
                     <div className="w-72 bg-accent rounded-md p-3 space-y-1.5 text-[13px]">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>${totals.subtotal.toFixed(2)}</span>
+                        <span>${totals.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                       {totals.descuento_total > 0 && (
                         <div className="flex justify-between text-destructive">
                           <span>Descuento</span>
-                          <span>-${totals.descuento_total.toFixed(2)}</span>
+                          <span>-${totals.descuento_total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
                       {totals.ieps_total > 0 && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">IEPS</span>
-                          <span>${totals.ieps_total.toFixed(2)}</span>
+                          <span>${totals.ieps_total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
                       {totals.iva_total > 0 && (
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">IVA</span>
-                          <span>${totals.iva_total.toFixed(2)}</span>
+                          <span>${totals.iva_total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                       )}
                       <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
                         <span>Total</span>
-                        <span>${totals.total.toFixed(2)}</span>
+                        <span>${totals.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     </div>
                   </div>
