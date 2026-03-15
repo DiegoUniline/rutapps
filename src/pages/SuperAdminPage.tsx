@@ -14,6 +14,7 @@ import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
