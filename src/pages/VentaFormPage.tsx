@@ -197,7 +197,7 @@ export default function VentaFormPage() {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     try {
-      const payload = { ...form, ...totals };
+      const payload = { ...form, ...totals, vendedor_id: profile?.vendedor_id ?? profile?.id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       for (const l of lineas) {
