@@ -167,28 +167,10 @@ export default function WhatsAppConfigPage() {
         <h2 className="text-sm font-semibold text-foreground">Conexión API (WhatsAPI)</h2>
 
         <div className="space-y-2">
-          <Label className="text-xs">URL del API</Label>
-          <Input
-            placeholder="https://api.ejemplo.com"
-            value={form.api_url}
-            onChange={e => update('api_url', e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs">Nombre de instancia</Label>
-          <Input
-            placeholder="mi-instancia"
-            value={form.instance_name}
-            onChange={e => update('instance_name', e.target.value)}
-          />
-        </div>
-
-        <div className="space-y-2">
           <Label className="text-xs">Token / API Key</Label>
           <Input
             type="password"
-            placeholder="Pega aquí tu token"
+            placeholder="Pega aquí tu token de WhatsAPI"
             value={form.api_token}
             onChange={e => update('api_token', e.target.value)}
           />
