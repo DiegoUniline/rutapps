@@ -346,7 +346,6 @@
   .odoo-module-check input[type="checkbox"] {
     @apply rounded border-input h-3.5 w-3.5;
   }
-}
 
   /* Inline edit cells — global pattern */
   .inline-edit-cell {
@@ -373,4 +372,5 @@
 /* Safe area for mobile bottom nav */
 .safe-area-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 }
