@@ -13,12 +13,22 @@ const tabs = [
 ];
 
 export default function MobileLayout() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top bar with sync cloud */}
       <header className="flex items-center justify-between px-3 py-2 bg-card border-b border-border">
         <span className="text-sm font-bold text-foreground">Ruta</span>
-        <SyncCloudButton />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            title="Ir a escritorio"
+          >
+            <Monitor className="h-5 w-5" />
+          </button>
+          <SyncCloudButton />
+        </div>
       </header>
 
       {/* Content area */}
