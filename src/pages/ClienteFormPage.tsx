@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, Trash2, Star, Camera, Plus, Minus, Search, X } from 'lucide-react';
+import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2 } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
