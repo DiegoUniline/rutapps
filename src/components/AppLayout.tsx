@@ -257,6 +257,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {navItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
+          {isSuperAdmin && (
+            <Link
+              to="/super-admin"
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mt-2 border-t border-sidebar-border/30 pt-3",
+                collapsed ? "justify-center px-2" : "",
+                "text-amber-500 hover:bg-sidebar-hover"
+              )}
+              title={collapsed ? 'Panel Master' : undefined}
+            >
+              <Shield className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Panel Master</span>}
+            </Link>
+          )}
         </nav>
 
         <div className="border-t border-sidebar-border/30 p-2.5">
