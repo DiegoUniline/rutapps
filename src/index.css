@@ -158,7 +158,7 @@
     @apply border-border;
   }
   html {
-    font-size: 13px;
+    font-size: 16px;
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted)) transparent;
   }
