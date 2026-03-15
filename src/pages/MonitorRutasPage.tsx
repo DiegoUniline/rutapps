@@ -38,6 +38,7 @@ interface ClientVisit {
   status: VisitStatus;
   ventaTotal?: number;
   entregaFolio?: string;
+  ordenEntrega?: number;
 }
 
 function MonitorContent() {
@@ -63,6 +64,7 @@ function MonitorContent() {
   // Vendedores
   const { data: vendedores } = useQuery({
     queryKey: ['monitor-vendedores'],
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await supabase.from('vendedores').select('id, nombre').order('nombre');
       return data ?? [];
@@ -73,7 +75,8 @@ function MonitorContent() {
   const { data: clientesHoy } = useQuery({
     queryKey: ['monitor-clientes-hoy', empresa?.id, diaVisita],
     enabled: !!empresa?.id,
-    refetchInterval: 30000,
+    staleTime: 60 * 1000,
+    refetchInterval: 60000,
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
@@ -107,7 +110,7 @@ function MonitorContent() {
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
-        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, clientes(id, nombre, codigo, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, vendedores(nombre))')
+        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, orden_entrega, clientes(id, nombre, codigo, direccion, colonia, gps_lat, gps_lng, vendedor_id, vendedores(nombre))')
         .eq('fecha', dateStr);
       return data ?? [];
     },
@@ -139,12 +142,18 @@ function MonitorContent() {
       if (e.cliente_id) {
         const prev = entregasByClient.get(e.cliente_id);
         const clientInfo = e.clientes || prev?.clientInfo;
+        // Keep highest priority: hecho > cargado > asignado > surtido > borrador
+        const prevDelivered = prev?.isDelivered || false;
+        const isDelivered = prevDelivered || e.status === 'hecho';
+        // Use orden_entrega from the most relevant entrega
+        const ordenEntrega = e.orden_entrega ?? prev?.ordenEntrega ?? 0;
         entregasByClient.set(e.cliente_id, {
           clientInfo,
-          isDelivered: (prev?.isDelivered || false) || e.status === 'hecho',
+          isDelivered: isDelivered,
           hasEntrega: true,
           entregaFolio: e.folio,
           entregaStatus: e.status,
+          ordenEntrega,
           vendedor_ruta_id: e.vendedor_ruta_id || e.vendedor_id,
         });
       }
@@ -177,6 +186,7 @@ function MonitorContent() {
         status: getEntregaStatus(entrega, sale),
         ventaTotal: sale?.total,
         entregaFolio: entrega?.entregaFolio,
+        ordenEntrega: entrega?.ordenEntrega,
       });
     });
 
@@ -199,6 +209,7 @@ function MonitorContent() {
           status: getEntregaStatus(info, sale),
           ventaTotal: sale?.total,
           entregaFolio: info.entregaFolio,
+          ordenEntrega: info.ordenEntrega,
         });
       }
     });
@@ -378,27 +389,32 @@ function MonitorContent() {
                   styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
                 }}
               >
-                {withGps.map(c => (
-                  <MarkerF
-                    key={c.id}
-                    position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
-                    icon={{
-                      path: google.maps.SymbolPath.CIRCLE,
-                      fillColor: statusColor(c.status),
-                      fillOpacity: 1,
-                      strokeColor: '#fff',
-                      strokeWeight: 2,
-                      scale: 10,
-                    }}
-                    label={{
-                      text: c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : c.status === 'en_ruta' ? '🚛' : '•',
-                      color: '#fff',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                    }}
-                    onClick={() => setSelectedClient(c)}
-                  />
-                ))}
+                {withGps.map(c => {
+                  const markerText = c.ordenEntrega && c.ordenEntrega > 0
+                    ? String(c.ordenEntrega)
+                    : c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•';
+                  return (
+                    <MarkerF
+                      key={c.id + c.status}
+                      position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
+                      icon={{
+                        path: google.maps.SymbolPath.CIRCLE,
+                        fillColor: statusColor(c.status),
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 2,
+                        scale: c.ordenEntrega && c.ordenEntrega > 0 ? 14 : 10,
+                      }}
+                      label={{
+                        text: markerText,
+                        color: '#fff',
+                        fontSize: c.ordenEntrega && c.ordenEntrega > 0 ? '11px' : '10px',
+                        fontWeight: '700',
+                      }}
+                      onClick={() => setSelectedClient(c)}
+                    />
+                  );
+                })}
 
                 {selectedClient && selectedClient.gps_lat && (
                   <InfoWindow
@@ -407,12 +423,19 @@ function MonitorContent() {
                   >
                     <div className="min-w-[200px] p-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor(selectedClient.status) }} />
+                        {selectedClient.ordenEntrega ? (
+                          <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: statusColor(selectedClient.status) }}>
+                            {selectedClient.ordenEntrega}
+                          </span>
+                        ) : (
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColor(selectedClient.status) }} />
+                        )}
                         <span className="font-bold text-sm">{selectedClient.nombre}</span>
                       </div>
                       {selectedClient.codigo && <p className="text-xs text-gray-500 font-mono">{selectedClient.codigo}</p>}
                       {selectedClient.direccion && <p className="text-xs text-gray-600">{selectedClient.direccion}</p>}
                       <p className="text-xs font-medium">Vendedor: {selectedClient.vendedorNombre ?? '—'}</p>
+                      {selectedClient.entregaFolio && <p className="text-xs text-gray-500">Entrega: {selectedClient.entregaFolio}</p>}
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
                           style={{ backgroundColor: statusColor(selectedClient.status) + '20', color: statusColor(selectedClient.status) }}>
