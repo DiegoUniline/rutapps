@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { InlineEditCell } from '@/components/InlineEditCell';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
@@ -21,8 +22,6 @@ interface CatalogCRUDProps {
 export default function CatalogCRUD({ title, tableName, columns, queryKey }: CatalogCRUDProps) {
   const qc = useQueryClient();
   const [newRow, setNewRow] = useState<Record<string, string | number>>({});
-  const [editId, setEditId] = useState<string | null>(null);
-  const [editRow, setEditRow] = useState<Record<string, string | number>>({});
 
   const { data: items, isLoading } = useQuery({
     queryKey: [queryKey],
@@ -63,23 +62,20 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
     }
   };
 
-  const startEdit = (item: any) => {
-    setEditId(item.id);
-    const row: Record<string, string | number> = {};
-    columns.forEach(c => { row[c.key] = item[c.key] ?? ''; });
-    setEditRow(row);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editId) return;
+  // Inline save a single field
+  const handleInlineSave = async (id: string, field: string, val: string, type?: string) => {
     try {
-      const { error } = await (supabase.from as any)(tableName).update(editRow).eq('id', editId);
+      const updateVal = type === 'number' ? Number(val) : val;
+      const { error } = await (supabase.from as any)(tableName).update({ [field]: updateVal }).eq('id', id);
       if (error) throw error;
-      setEditId(null);
-      qc.invalidateQueries({ queryKey: [queryKey] });
+      // Optimistic: update local cache
+      qc.setQueryData([queryKey], (old: any[] | undefined) =>
+        old?.map(item => item.id === id ? { ...item, [field]: updateVal } : item)
+      );
       toast.success('Actualizado');
     } catch (err: any) {
       toast.error(err.message);
+      qc.invalidateQueries({ queryKey: [queryKey] });
     }
   };
 
@@ -95,46 +91,29 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                 {columns.map(c => (
                   <th key={c.key} className="th-odoo text-left">{c.label}</th>
                 ))}
-                <th className="th-odoo w-24 text-right">Acciones</th>
+                <th className="th-odoo w-16 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
               {items?.map(item => (
-                <tr key={item.id} className="border-b border-table-border last:border-0 hover:bg-table-hover transition-colors">
+                <tr key={item.id} className="border-b border-table-border last:border-0 hover:bg-table-hover transition-colors group">
                   {columns.map(c => (
-                    <td key={c.key} className="py-1.5 px-3">
-                      {editId === item.id ? (
-                        <input
-                          type={c.type === 'number' ? 'number' : 'text'}
-                          value={editRow[c.key] ?? ''}
-                          onChange={e => setEditRow(prev => ({ ...prev, [c.key]: c.type === 'number' ? +e.target.value : e.target.value }))}
-                          className="input-odoo text-xs"
-                        />
-                      ) : (
-                        <span>{item[c.key] ?? '—'}</span>
-                      )}
+                    <td key={c.key} className="py-0.5 px-3">
+                      <InlineEditCell
+                        value={item[c.key]}
+                        type={c.type || 'text'}
+                        onSave={val => handleInlineSave(item.id, c.key, val, c.type)}
+                        required={c.key === 'nombre'}
+                      />
                     </td>
                   ))}
                   <td className="py-1.5 px-3 text-right">
-                    {editId === item.id ? (
-                      <div className="flex justify-end gap-1">
-                        <button className="text-success hover:text-success/80 p-1" onClick={handleSaveEdit}>
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => setEditId(null)}>
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex justify-end gap-1">
-                        <button className="text-muted-foreground hover:text-foreground p-1" onClick={() => startEdit(item)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button className="text-destructive hover:text-destructive/80 p-1" onClick={() => handleDelete(item.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    )}
+                    <button
+                      className="text-muted-foreground hover:text-destructive p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -147,7 +126,8 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                       placeholder={c.label}
                       value={newRow[c.key] ?? ''}
                       onChange={e => setNewRow(prev => ({ ...prev, [c.key]: c.type === 'number' ? +e.target.value : e.target.value }))}
-                      className="input-odoo text-xs"
+                      onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+                      className="inline-edit-input text-xs"
                     />
                   </td>
                 ))}
