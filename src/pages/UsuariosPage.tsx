@@ -221,8 +221,29 @@ export default function UsuariosPage() {
 
       {tab === 'usuarios' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
-            <button onClick={() => setShowNewUser(true)} className="btn-odoo-primary text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">
+                <Users className="h-3.5 w-3.5 inline mr-1" />
+                {activeUsers} / {subscription.maxUsuarios} usuarios activos
+              </span>
+              {availableSlots <= 0 && (
+                <span className="text-xs text-destructive flex items-center gap-1">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Límite alcanzado
+                </span>
+              )}
+              {availableSlots > 0 && availableSlots <= 2 && (
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  {availableSlots} lugar{availableSlots !== 1 ? 'es' : ''} disponible{availableSlots !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setShowNewUser(true)}
+              disabled={availableSlots <= 0}
+              className={cn("btn-odoo-primary text-xs", availableSlots <= 0 && "opacity-50 cursor-not-allowed")}
+            >
               <UserPlus className="h-3.5 w-3.5 mr-1" /> Nuevo usuario
             </button>
           </div>
