@@ -1,16 +1,14 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Upload } from 'lucide-react';
 import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
-import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductos } from '@/hooks/useData';
-import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
@@ -24,7 +22,7 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
-function ProductosTable() {
+export default function ProductosListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
@@ -50,7 +48,9 @@ function ProductosTable() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="p-4 space-y-3 min-h-full">
+      <h1 className="text-xl font-semibold text-foreground">Productos</h1>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
@@ -168,31 +168,6 @@ function ProductosTable() {
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-export default function ProductosListPage() {
-  const [searchParams] = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'productos';
-
-  return (
-    <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground">Productos & Catálogos</h1>
-      <OdooTabs
-        activeTab={activeTab}
-        tabs={[
-          { key: 'productos', label: 'Productos', content: <ProductosTable /> },
-          { key: 'marcas', label: 'Marcas', content: <CatalogCRUD title="Marcas" tableName="marcas" queryKey="marcas" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'clasificaciones', label: 'Clasificaciones', content: <CatalogCRUD title="Clasificaciones" tableName="clasificaciones" queryKey="clasificaciones" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'proveedores', label: 'Proveedores', content: <CatalogCRUD title="Proveedores" tableName="proveedores" queryKey="proveedores" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'unidades', label: 'Unidades', content: <CatalogCRUD title="Unidades" tableName="unidades" queryKey="unidades" columns={[{ key: 'nombre', label: 'Nombre' }, { key: 'abreviatura', label: 'Abreviatura' }]} /> },
-          { key: 'listas', label: 'Listas', content: <CatalogCRUD title="Listas" tableName="listas" queryKey="listas" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'almacenes', label: 'Almacenes', content: <CatalogCRUD title="Almacenes" tableName="almacenes" queryKey="almacenes" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'tasas_iva', label: 'Tasas IVA', content: <CatalogCRUD title="Tasas IVA" tableName="tasas_iva" queryKey="tasas_iva" columns={[{ key: 'nombre', label: 'Nombre' }, { key: 'porcentaje', label: 'Porcentaje %', type: 'number' }]} /> },
-          { key: 'tasas_ieps', label: 'Tasas IEPS', content: <CatalogCRUD title="Tasas IEPS" tableName="tasas_ieps" queryKey="tasas_ieps" columns={[{ key: 'nombre', label: 'Nombre' }, { key: 'porcentaje', label: 'Porcentaje %', type: 'number' }]} /> },
-        ]}
-      />
     </div>
   );
 }
