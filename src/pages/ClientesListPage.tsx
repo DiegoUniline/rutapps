@@ -6,9 +6,24 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useClientes } from '@/hooks/useClientes';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
+
+const CLIENTES_COLUMNS: ExportColumn[] = [
+  { key: 'codigo', header: 'Código', width: 10 },
+  { key: 'nombre', header: 'Nombre', width: 30 },
+  { key: 'contacto', header: 'Contacto', width: 20 },
+  { key: 'telefono', header: 'Teléfono', width: 14 },
+  { key: 'email', header: 'Email', width: 22 },
+  { key: 'direccion', header: 'Dirección', width: 30 },
+  { key: 'colonia', header: 'Colonia', width: 16 },
+  { key: 'credito', header: 'Crédito', width: 8 },
+  { key: 'limite_credito', header: 'Límite crédito', format: 'currency', width: 14 },
+  { key: 'status', header: 'Estado', width: 10 },
+];
 
 const PAGE_SIZE = 80;
 
