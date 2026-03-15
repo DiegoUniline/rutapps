@@ -142,6 +142,7 @@ function AppRoutes() {
                 <Route path="/reportes" element={<ReportesPage />} />
                 <Route path="/configuracion" element={<ConfiguracionPage />} />
                 <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
+                <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

@@ -72,7 +72,16 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Reportes', icon: BarChart3, path: '/reportes' },
-  { label: 'Configuración', icon: Settings, path: '/configuracion' },
+  {
+    label: 'Configuración',
+    icon: Settings,
+    path: '/configuracion',
+    children: [
+      { label: 'General', path: '/configuracion' },
+      { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
+      { label: 'WhatsApp', path: '/configuracion/whatsapp' },
+    ],
+  },
 ];
 
 function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
