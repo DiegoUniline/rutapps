@@ -703,20 +703,15 @@ export default function ProductoFormPage() {
               key: 'proveedores',
               label: 'Proveedores',
               content: (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10">
-                  <div>
-                    <OdooField label="Proveedor principal" value={form.proveedor_id} type="select"
-                      options={proveedores?.map(p => ({ value: p.id, label: p.nombre })) ?? []}
-                      onChange={v => set('proveedor_id', v || null)}
-                      format={() => findName(proveedores, form.proveedor_id ?? undefined)}
-                    />
-                  </div>
-                  <div>
-                    <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2">
-                      💡 Asigna el proveedor principal de este producto para facilitar las compras y el rastreo de costos.
-                    </div>
-                  </div>
-                </div>
+                <ProveedoresTab
+                  productoId={id}
+                  isNew={isNew}
+                  proveedores={proveedores ?? []}
+                  prodProveedores={prodProveedores ?? []}
+                  onSave={saveProvMut.mutateAsync}
+                  onDelete={deleteProvMut.mutateAsync}
+                  saving={saveProvMut.isPending}
+                />
               ),
             },
           ]}
