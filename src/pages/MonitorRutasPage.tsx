@@ -100,14 +100,14 @@ function MonitorContent() {
     },
   });
 
-  // Entregas for selected date
+  // Entregas for selected date (with client GPS)
   const { data: entregasHoy } = useQuery({
     queryKey: ['monitor-entregas-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
-        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio')
+        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, clientes(id, nombre, codigo, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, vendedores(nombre))')
         .eq('fecha', dateStr);
       return data ?? [];
     },
