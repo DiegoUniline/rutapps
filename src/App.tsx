@@ -5,8 +5,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
+import { useSubscription } from "@/hooks/useSubscription";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
+import SubscriptionBanner from "@/components/SubscriptionBanner";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
