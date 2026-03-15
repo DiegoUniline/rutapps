@@ -12,6 +12,7 @@ import MobileLayout from "@/components/MobileLayout";
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
+const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
 const ProductoFormPage = lazy(() => import("@/pages/ProductoFormPage"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
 const TarifaFormPage = lazy(() => import("@/pages/TarifaFormPage"));
