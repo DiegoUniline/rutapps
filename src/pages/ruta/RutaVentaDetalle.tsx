@@ -56,9 +56,11 @@ export default function RutaVentaDetalle() {
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [saving, setSaving] = useState(false);
   const [ticketData, setTicketData] = useState<{ monto: number; cambio: number; metodo: string; folio: string; fecha: string } | null>(null);
-  const [sendingWA, setSendingWA] = useState(false);
+  const [sendingWA, setSendingWA] = false ? useState(false) : useState(false);
   const [showWADialog, setShowWADialog] = useState(false);
   const [waPhone, setWaPhone] = useState('');
+  const [ecPdfBlob, setEcPdfBlob] = useState<Blob | null>(null);
+  const [showEcPreview, setShowEcPreview] = useState(false);
 
   // Edit state
   const [editLineas, setEditLineas] = useState<EditLinea[]>([]);
