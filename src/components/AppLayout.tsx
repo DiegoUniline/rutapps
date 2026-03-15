@@ -41,6 +41,8 @@ const navItems: NavItem[] = [
       { label: 'Dashboard', path: '/logistica/dashboard' },
       { label: 'Pedidos pendientes', path: '/logistica/pedidos' },
       { label: 'Entregas', path: '/logistica/entregas' },
+      { label: 'Cargas', path: '/almacen/cargas' },
+      { label: 'Descargas de ruta', path: '/almacen/descargas' },
       { label: 'Rutas', path: '/ventas/rutas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },
@@ -69,8 +71,6 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Compras', path: '/almacen/compras' },
-      { label: 'Cargas', path: '/almacen/cargas' },
-      { label: 'Descargas de ruta', path: '/almacen/descargas' },
       { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
