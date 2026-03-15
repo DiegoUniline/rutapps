@@ -368,7 +368,7 @@ export default function TraspasosPage() {
             {/* Products */}
             <div>
               <Label>Productos</Label>
-              <ProductSearchInput onSelect={addLinea} />
+              <ProductQuickSearch onSelect={addLinea} />
               {lineas.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {lineas.map((l, i) => (

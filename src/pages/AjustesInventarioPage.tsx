@@ -170,7 +170,7 @@ export default function AjustesInventarioPage() {
                   <Button size="sm" variant="ghost" onClick={() => { setProductoId(''); setProductoNombre(''); }}>Cambiar</Button>
                 </div>
               ) : (
-                <ProductSearchInput onSelect={selectProducto} />
+                <ProductQuickSearch onSelect={selectProducto} />
               )}
             </div>
 
