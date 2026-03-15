@@ -150,7 +150,7 @@ export default function RutaNuevaVenta() {
     queryFn: async () => {
       const { data } = await supabase
         .from('cliente_pedido_sugerido')
-        .select('*, productos(id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje))')
+        .select('*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, tasa_iva_id, tasa_ieps_id, unidad_venta_id, unidades:unidad_venta_id(id, nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje), tasas_ieps:tasa_ieps_id(porcentaje))')
         .eq('cliente_id', clienteId!);
       return data ?? [];
     },
