@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned, Crosshair, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
+import { toast } from 'sonner';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
