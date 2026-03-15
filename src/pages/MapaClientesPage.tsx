@@ -41,7 +41,7 @@ function decodePolyline(encoded: string): { lat: number; lng: number }[] {
 
 export default function MapaClientesPage() {
   const { user } = useAuth();
-  const { apiKey, loading: loadingKey } = useGoogleMapsKey();
+  const { isLoaded } = useGoogleMaps();
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
@@ -59,11 +59,6 @@ export default function MapaClientesPage() {
     duration: string;
   } | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: apiKey ?? '',
-    id: 'google-map-clientes',
-  });
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
