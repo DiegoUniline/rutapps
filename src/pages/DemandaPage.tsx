@@ -279,7 +279,7 @@ export default function DemandaPage() {
                 <TableRow
                   key={pedido.id}
                   className={cn("cursor-pointer hover:bg-accent/50 transition-colors", isSelected && "bg-primary/5")}
-                  onClick={() => navigate(`/ventas/${pedido.id}`)}
+                  onClick={() => navigate(`/logistica/pedidos/${pedido.id}`)}
                 >
                   <TableCell className="py-2" onClick={e => e.stopPropagation()}>
                     <Checkbox

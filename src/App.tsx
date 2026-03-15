@@ -165,6 +165,7 @@ function AppRoutes() {
                 <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
                 <Route path="/logistica/pedidos" element={<DemandaPage />} />
+                <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
                 <Route path="/logistica/entregas" element={<EntregaListPage />} />
                 <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
                 <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
