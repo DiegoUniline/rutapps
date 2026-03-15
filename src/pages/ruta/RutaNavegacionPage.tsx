@@ -38,12 +38,13 @@ interface Stop {
   gps_lng: number;
   folio?: string;
   tipo: 'cliente' | 'entrega';
+  orden: number;
+  entregaRef?: any;
 }
 
 function NavegacionContent() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const mode = (searchParams.get('modo') as 'clientes' | 'entregas') || 'clientes';
   const { empresa, profile } = useAuth();
   const { isLoaded } = useGoogleMaps();
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
@@ -55,6 +56,7 @@ function NavegacionContent() {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
+  const vendedorId = profile?.vendedor_id;
 
   // Watch user location
   useEffect(() => {
@@ -67,10 +69,10 @@ function NavegacionContent() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Fetch clients
+  // Fetch clients for today
   const { data: clientesData } = useQuery({
     queryKey: ['nav-clientes', empresa?.id],
-    enabled: !!empresa?.id && mode === 'clientes',
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
@@ -85,45 +87,52 @@ function NavegacionContent() {
   });
 
   // Fetch entregas
-  const vendedorId = profile?.vendedor_id;
   const { data: allEntregas, refetch: refetchEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
-  }, { enabled: !!empresa?.id && mode === 'entregas', orderBy: 'orden_entrega' });
+  }, { enabled: !!empresa?.id, orderBy: 'orden_entrega' });
 
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, {
-    enabled: !!empresa?.id && mode === 'entregas',
+    enabled: !!empresa?.id,
   });
 
   const clienteMap = useMemo(() => new Map((clientes ?? []).map((c: any) => [c.id, c])), [clientes]);
 
+  // Build unified stops: clients + entregas merged, avoiding duplicates (same client GPS)
   const stops: Stop[] = useMemo(() => {
-    if (mode === 'clientes') {
-      return (clientesData ?? []).map(c => ({
-        id: c.id, nombre: c.nombre,
-        direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
-        telefono: c.telefono ?? undefined,
-        gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
-      }));
-    } else {
-      return (allEntregas ?? [])
-        .filter((e: any) =>
-          (e.status === 'cargado' || e.status === 'en_ruta') &&
-          (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
-        )
-        .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
-        .map((e: any) => {
-          const cliente = clienteMap.get(e.cliente_id);
-          return {
-            id: e.id, nombre: cliente?.nombre ?? 'Sin cliente',
-            direccion: cliente?.direccion ?? undefined, colonia: cliente?.colonia ?? undefined,
-            telefono: cliente?.telefono ?? undefined,
-            gps_lat: cliente?.gps_lat ?? 0, gps_lng: cliente?.gps_lng ?? 0,
-            folio: e.folio, tipo: 'entrega' as const,
-          };
-        })
-        .filter(s => s.gps_lat !== 0 && s.gps_lng !== 0);
-    }
-  }, [mode, clientesData, allEntregas, vendedorId, clienteMap]);
+    const clientStops: Stop[] = (clientesData ?? []).map((c, i) => ({
+      id: `cli-${c.id}`, nombre: c.nombre,
+      direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
+      telefono: c.telefono ?? undefined,
+      gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
+      orden: c.orden ?? i,
+    }));
+
+    const entregaStops: Stop[] = (allEntregas ?? [])
+      .filter((e: any) =>
+        (e.status === 'cargado' || e.status === 'en_ruta') &&
+        (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
+      )
+      .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
+      .map((e: any) => {
+        const cliente = clienteMap.get(e.cliente_id);
+        return {
+          id: `ent-${e.id}`, nombre: cliente?.nombre ?? 'Sin cliente',
+          direccion: cliente?.direccion ?? undefined, colonia: cliente?.colonia ?? undefined,
+          telefono: cliente?.telefono ?? undefined,
+          gps_lat: cliente?.gps_lat ?? 0, gps_lng: cliente?.gps_lng ?? 0,
+          folio: e.folio, tipo: 'entrega' as const,
+          orden: e.orden_entrega ?? 999,
+          entregaRef: e,
+        };
+      })
+      .filter(s => s.gps_lat !== 0 && s.gps_lng !== 0);
+
+    // Merge: entregas first (priority), then client visits
+    const all = [...entregaStops, ...clientStops];
+    // Sort by orden
+    all.sort((a, b) => a.orden - b.orden);
+    return all;
+  }, [clientesData, allEntregas, vendedorId, clienteMap]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
