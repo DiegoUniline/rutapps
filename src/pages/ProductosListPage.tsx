@@ -25,7 +25,7 @@ const PAGE_SIZE = 80;
 export default function ProductosListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
+  const [statusFilter, setStatusFilter] = useState('activo');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
@@ -46,6 +46,8 @@ export default function ProductosListPage() {
     next.has(id) ? next.delete(id) : next.add(id);
     setSelected(next);
   };
+
+  const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
 
   return (
     <div className="p-4 space-y-3 min-h-full">
@@ -93,7 +95,7 @@ export default function ProductosListPage() {
       {/* Table */}
       <div className="bg-card border border-border rounded overflow-x-auto">
         {isLoading ? (
-          <div className="p-4"><TableSkeleton rows={8} cols={7} /></div>
+          <div className="p-4"><TableSkeleton rows={8} cols={12} /></div>
         ) : (
           <>
             <table className="w-full text-sm">
@@ -102,11 +104,16 @@ export default function ProductosListPage() {
                   <th className="th-odoo w-10 text-center">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
                   </th>
-                  <th className="th-odoo w-12">Img</th>
+                  <th className="th-odoo w-10">Img</th>
                   <th className="th-odoo text-left">Código</th>
                   <th className="th-odoo text-left">Nombre</th>
+                  <th className="th-odoo text-left hidden lg:table-cell">Clasificación</th>
                   <th className="th-odoo text-left hidden md:table-cell">Marca</th>
+                  <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
+                  <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
                   <th className="th-odoo text-right">Precio</th>
+                  <th className="th-odoo text-right hidden md:table-cell">Costo</th>
+                  <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
                   <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
                   <th className="th-odoo text-center">Status</th>
                 </tr>
@@ -114,12 +121,12 @@ export default function ProductosListPage() {
               <tbody>
                 {pageData.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
+                    <td colSpan={13} className="text-center py-12 text-muted-foreground text-sm">
                       No hay productos. Crea el primero.
                     </td>
                   </tr>
                 )}
-                {pageData.map(p => (
+                {pageData.map((p: any) => (
                   <tr
                     key={p.id}
                     className={cn(
@@ -131,7 +138,7 @@ export default function ProductosListPage() {
                     <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(p.id); }}>
                       <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} className="rounded border-input" />
                     </td>
-                    <td className="py-1.5 px-3">
+                    <td className="py-1.5 px-2">
                       {p.imagen_url ? (
                         <img src={p.imagen_url} alt="" className="h-7 w-7 rounded object-cover" />
                       ) : (
@@ -139,12 +146,24 @@ export default function ProductosListPage() {
                       )}
                     </td>
                     <td className="py-1.5 px-3 font-mono text-xs">{p.codigo}</td>
-                    <td className="py-1.5 px-3 font-medium">{p.nombre}</td>
-                    <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{p.marcas?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 text-right font-medium">${p.precio_principal?.toFixed(2)}</td>
+                    <td className="py-1.5 px-3 font-medium max-w-[200px] truncate">{p.nombre}</td>
+                    <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
+                    <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
+                    <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
+                    <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
+                    <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
+                    <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+                    <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
+                      <span className={cn(
+                        "font-medium",
+                        (p.cantidad ?? 0) <= 0 ? "text-destructive" : (p.cantidad ?? 0) < (p.min ?? 0) ? "text-warning" : "text-foreground"
+                      )}>
+                        {p.cantidad ?? 0}
+                      </span>
+                    </td>
                     <td className="py-1.5 px-3 hidden sm:table-cell text-center">
                       {p.tiene_iva ? (
-                        <span className="text-xxs font-medium text-success">Sí</span>
+                        <span className="text-xxs font-medium text-success">{p.iva_pct ?? 16}%</span>
                       ) : (
                         <span className="text-xxs text-muted-foreground">No</span>
                       )}
