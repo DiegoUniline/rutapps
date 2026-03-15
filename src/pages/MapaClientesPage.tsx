@@ -1,11 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Search, Filter, MapPin, X, Users, Loader2, CheckCircle2 } from 'lucide-react';
+import { Search, Filter, MapPin, X, Users, Loader2, CheckCircle2, Navigation, Route, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -24,6 +24,21 @@ const COLORS: Record<string, string> = {
 const mapContainerStyle = { width: '100%', height: '100%' };
 const defaultCenter = { lat: 23.6345, lng: -102.5528 };
 
+function decodePolyline(encoded: string): { lat: number; lng: number }[] {
+  const points: { lat: number; lng: number }[] = [];
+  let index = 0, lat = 0, lng = 0;
+  while (index < encoded.length) {
+    let shift = 0, result = 0, byte: number;
+    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+    shift = 0; result = 0;
+    do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+
 export default function MapaClientesPage() {
   const { user } = useAuth();
   const { apiKey, loading: loadingKey } = useGoogleMapsKey();
@@ -34,8 +49,15 @@ export default function MapaClientesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
+  const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [settingOrigin, setSettingOrigin] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
-  const [optimizeResult, setOptimizeResult] = useState<{ duration?: string; distance_meters?: number } | null>(null);
+  const [routeResult, setRouteResult] = useState<{
+    orderedIds: string[];
+    polyline: string | null;
+    distance_meters: number;
+    duration: string;
+  } | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded } = useJsApiLoader({
@@ -80,14 +102,35 @@ export default function MapaClientesPage() {
     if (mapRef.current && withGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
       mapRef.current.fitBounds(bounds, 50);
     }
-  }, [withGps]);
+  }, [withGps, originPoint]);
+
+  const polylinePoints = useMemo(() => {
+    if (!routeResult?.polyline) return null;
+    return decodePolyline(routeResult.polyline);
+  }, [routeResult]);
+
+  const orderedClients = useMemo(() => {
+    if (!routeResult) return null;
+    return routeResult.orderedIds.map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
+  }, [routeResult, withGps]);
+
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (settingOrigin && e.latLng) {
+      setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      setSettingOrigin(false);
+      setRouteResult(null);
+      toast.success('Punto de partida establecido');
+    }
+  }, [settingOrigin]);
 
   const handleOptimize = async () => {
+    if (!originPoint) { toast.error('Primero establece un punto de partida'); return; }
     if (withGps.length < 2) { toast.error('Se necesitan al menos 2 clientes con GPS'); return; }
     setOptimizing(true);
-    setOptimizeResult(null);
+    setRouteResult(null);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
@@ -98,7 +141,7 @@ export default function MapaClientesPage() {
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ waypoints, dia_filtro: diaFilter || null }),
+        body: JSON.stringify({ origin: originPoint, waypoints, dia_filtro: diaFilter || null }),
       });
 
       const result = await res.json();
@@ -109,13 +152,27 @@ export default function MapaClientesPage() {
       );
       await Promise.all(updates);
 
-      setOptimizeResult({ duration: result.duration, distance_meters: result.distance_meters });
+      setRouteResult({
+        orderedIds: result.optimized_order,
+        polyline: result.polyline,
+        distance_meters: result.distance_meters,
+        duration: result.duration,
+      });
       toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
     } catch (err: any) {
       toast.error(err.message || 'Error al optimizar ruta');
     } finally {
       setOptimizing(false);
     }
+  };
+
+  const formatDuration = (d?: string) => {
+    if (!d) return '';
+    const secs = parseInt(d.replace('s', ''));
+    if (isNaN(secs)) return d;
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return h > 0 ? `${h}h ${m}min` : `${m} min`;
   };
 
   const getMarkerIcon = (cliente: any) => {
@@ -132,6 +189,16 @@ export default function MapaClientesPage() {
     };
   };
 
+  const createNumberedLabel = (): google.maps.Symbol => ({
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: '#6366f1',
+    fillOpacity: 1,
+    strokeColor: '#fff',
+    strokeWeight: 3,
+    scale: 16,
+    labelOrigin: new google.maps.Point(0, 0),
+  });
+
   if (loadingKey || !apiKey) {
     return (
       <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
@@ -144,7 +211,7 @@ export default function MapaClientesPage() {
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
       {/* Header */}
       <div className="bg-card border-b border-border px-5 py-3">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <MapPin className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold text-foreground">Mapa de clientes</h1>
@@ -161,11 +228,42 @@ export default function MapaClientesPage() {
             <Filter className="h-4 w-4" />Filtros
             {activeFiltersCount > 0 && <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">{activeFiltersCount}</Badge>}
           </button>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+
+          {/* Optimize controls */}
+          <button
+            onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Haz click en el mapa para establecer el punto de partida'); }}
+            className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors",
+              settingOrigin ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
+                : originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground")}>
+            <Navigation className="h-4 w-4" />
+            {settingOrigin ? 'Click en el mapa...' : originPoint ? 'Punto establecido' : 'Punto de partida'}
+          </button>
+          {originPoint && !settingOrigin && (
+            <button onClick={() => { setOriginPoint(null); setRouteResult(null); }}
+              className="text-xs text-destructive hover:underline py-2">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {isAdmin && originPoint && withGps.length >= 2 && (
+            <button onClick={handleOptimize} disabled={optimizing}
+              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all",
+                routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
+                optimizing && "opacity-70")}>
+              {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : routeResult ? <CheckCircle2 className="h-4 w-4" /> : <Route className="h-4 w-4" />}
+              {optimizing ? 'Optimizando...' : routeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
+            </button>
+          )}
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground ml-auto">
             <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-primary" />{withGps.length} con GPS</span>
             <span className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-muted-foreground/40" />{withoutGps.length} sin GPS</span>
-            {optimizeResult?.distance_meters && (
-              <span className="text-emerald-600 font-medium">{(optimizeResult.distance_meters / 1000).toFixed(1)} km</span>
+            {routeResult && (
+              <>
+                <span className="text-emerald-600 font-semibold">{(routeResult.distance_meters / 1000).toFixed(1)} km</span>
+                <span className="text-emerald-600">{formatDuration(routeResult.duration)}</span>
+              </>
             )}
           </div>
         </div>
@@ -190,7 +288,7 @@ export default function MapaClientesPage() {
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Día de visita</label>
-              <select value={diaFilter} onChange={e => setDiaFilter(e.target.value)}
+              <select value={diaFilter} onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
                 className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
                 <option value="">Todos</option>
                 {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
@@ -214,6 +312,13 @@ export default function MapaClientesPage() {
             )}
           </div>
         )}
+
+        {!originPoint && !routeResult && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
+            <Info className="h-3.5 w-3.5 shrink-0" />
+            <span>Filtra por zona, vendedor o día, luego haz click en <strong>"Punto de partida"</strong> y selecciona en el mapa desde dónde iniciar. Después presiona <strong>"Optimizar ruta"</strong>.</span>
+          </div>
+        )}
       </div>
 
       {/* Map */}
@@ -223,28 +328,72 @@ export default function MapaClientesPage() {
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         )}
+        {settingOrigin && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+            Haz click en el mapa para establecer el punto de partida
+          </div>
+        )}
         {isLoaded && (
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
             center={withGps.length > 0 ? { lat: withGps[0].gps_lat, lng: withGps[0].gps_lng } : defaultCenter}
             zoom={6}
             onLoad={onMapLoad}
+            onClick={handleMapClick}
             options={{
               styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
               mapTypeControl: false,
               streetViewControl: false,
               fullscreenControl: true,
+              draggableCursor: settingOrigin ? 'crosshair' : undefined,
             }}
           >
-            {withGps.map((c: any) => (
+            {/* Origin marker */}
+            {originPoint && (
               <Marker
-                key={c.id}
-                position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                icon={getMarkerIcon(c)}
-                onClick={() => setSelectedCliente(c)}
-                title={c.nombre}
+                position={originPoint}
+                icon={{
+                  path: google.maps.SymbolPath.CIRCLE,
+                  fillColor: '#059669',
+                  fillOpacity: 1,
+                  strokeColor: '#fff',
+                  strokeWeight: 3,
+                  scale: 14,
+                }}
+                label={{ text: '▶', color: '#fff', fontSize: '10px', fontWeight: '700' }}
               />
-            ))}
+            )}
+
+            {/* Route polyline */}
+            {polylinePoints && (
+              <Polyline
+                path={polylinePoints}
+                options={{ strokeColor: '#6366f1', strokeWeight: 4, strokeOpacity: 0.8 }}
+              />
+            )}
+
+            {/* Markers */}
+            {orderedClients ? (
+              orderedClients.map((c: any, idx: number) => (
+                <Marker
+                  key={c.id}
+                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                  icon={createNumberedLabel()}
+                  label={{ text: `${idx + 1}`, color: '#fff', fontSize: '11px', fontWeight: '700' }}
+                  onClick={() => setSelectedCliente(c)}
+                />
+              ))
+            ) : (
+              withGps.map((c: any) => (
+                <Marker
+                  key={c.id}
+                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                  icon={getMarkerIcon(c)}
+                  onClick={() => setSelectedCliente(c)}
+                  title={c.nombre}
+                />
+              ))
+            )}
 
             {selectedCliente && (
               <InfoWindow
@@ -276,8 +425,32 @@ export default function MapaClientesPage() {
           </GoogleMap>
         )}
 
+        {/* Route order sidebar */}
+        {orderedClients && orderedClients.length > 0 && (
+          <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-64 max-h-[60vh] flex flex-col">
+            <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Route className="h-3.5 w-3.5 text-primary" />
+                Orden de visita
+              </span>
+              <span className="text-[10px] text-muted-foreground">{orderedClients.length} paradas</span>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {orderedClients.map((c: any, idx: number) => (
+                <div key={c.id} className="flex items-center gap-2 px-3 py-2 border-b border-border/30 last:border-0">
+                  <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold shrink-0">{idx + 1}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-foreground truncate">{c.nombre}</div>
+                    {c.direccion && <div className="text-[10px] text-muted-foreground truncate">{c.direccion}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Clients without GPS sidebar */}
-        {withoutGps.length > 0 && (
+        {!orderedClients && withoutGps.length > 0 && (
           <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-64 max-h-[60vh] flex flex-col">
             <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />

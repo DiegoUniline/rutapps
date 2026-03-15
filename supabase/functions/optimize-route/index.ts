@@ -6,6 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MONTHLY_LIMIT = 50;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -62,6 +64,42 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Get empresa_id
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("empresa_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (!profile) {
+      return new Response(
+        JSON.stringify({ error: "Perfil no encontrado" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check monthly limit (50 per empresa per month)
+    const now = new Date();
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count: monthlyCount, error: countError } = await supabase
+      .from("optimizacion_rutas_log")
+      .select("id", { count: "exact", head: true })
+      .eq("empresa_id", profile.empresa_id)
+      .gte("created_at", firstOfMonth);
+
+    if (countError) {
+      console.error("Error checking monthly limit:", countError);
+    }
+
+    if ((monthlyCount ?? 0) >= MONTHLY_LIMIT) {
+      return new Response(
+        JSON.stringify({
+          error: `Límite mensual alcanzado (${MONTHLY_LIMIT} optimizaciones por mes). Se renueva el día 1 del siguiente mes.`,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { origin, waypoints, dia_filtro } = await req.json();
 
     if (!origin || !origin.lat || !origin.lng) {
@@ -78,20 +116,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get empresa_id
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("empresa_id")
-      .eq("user_id", userId)
-      .single();
-
-    if (!profile) {
-      return new Response(
-        JSON.stringify({ error: "Perfil no encontrado" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Log usage
     await supabase.from("optimizacion_rutas_log").insert({
       empresa_id: profile.empresa_id,
@@ -101,8 +125,6 @@ Deno.serve(async (req) => {
     });
 
     // Build Google Routes API request
-    // Origin = user-selected point, destination = same (round trip back)
-    // All client waypoints are intermediates to be optimized
     const routeRequest: any = {
       origin: {
         location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
@@ -157,9 +179,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build optimized order from intermediate indexes
     const optimizedIndexes: number[] = route.optimizedIntermediateWaypointIndex ?? [];
     const optimizedWaypoints = optimizedIndexes.map((idx: number) => waypoints[idx]);
+
+    const remaining = MONTHLY_LIMIT - (monthlyCount ?? 0) - 1;
 
     return new Response(
       JSON.stringify({
@@ -167,6 +190,7 @@ Deno.serve(async (req) => {
         duration: route.duration,
         distance_meters: route.distanceMeters,
         polyline: route.polyline?.encodedPolyline ?? null,
+        remaining_this_month: remaining,
       }),
       {
         status: 200,
