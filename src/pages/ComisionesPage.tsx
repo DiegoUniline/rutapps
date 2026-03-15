@@ -2,14 +2,12 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
-import { OdooDatePicker } from '@/components/OdooDatePicker';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Check, DollarSign, User, Calendar } from 'lucide-react';
+import { Check, DollarSign } from 'lucide-react';
 
 const PAGE_SIZE = 20;
 
@@ -20,12 +18,10 @@ export default function ComisionesPage() {
   const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
   const [page, setPage] = useState(0);
 
-  // Pago form
   const [payVendedor, setPayVendedor] = useState<string>('');
   const [payFechaCorte, setPayFechaCorte] = useState(new Date().toISOString().slice(0, 10));
   const [showPayForm, setShowPayForm] = useState(false);
 
-  // Vendedores
   const { data: vendedores } = useQuery({
     queryKey: ['vendedores'],
     queryFn: async () => {
@@ -34,7 +30,6 @@ export default function ComisionesPage() {
     },
   });
 
-  // Comisiones list
   const { data: comisiones, isLoading } = useQuery({
     queryKey: ['venta_comisiones', vendedorFilter, statusFilter],
     queryFn: async () => {
@@ -51,7 +46,6 @@ export default function ComisionesPage() {
     },
   });
 
-  // Pending commissions for pay form
   const { data: pendingForPay } = useQuery({
     queryKey: ['comisiones-pendientes-pago', payVendedor, payFechaCorte],
     enabled: !!payVendedor && !!payFechaCorte,
@@ -73,14 +67,12 @@ export default function ComisionesPage() {
     [pendingForPay]
   );
 
-  // Pay mutation
   const payMut = useMutation({
     mutationFn: async () => {
       if (!payVendedor || !empresa?.id || !user?.id) throw new Error('Datos incompletos');
       const ids = (pendingForPay ?? []).map(c => c.id);
       if (ids.length === 0) throw new Error('No hay comisiones pendientes');
 
-      // Create pago
       const { data: pago, error: pagoErr } = await supabase.from('pago_comisiones').insert({
         empresa_id: empresa.id,
         vendedor_id: payVendedor,
@@ -90,7 +82,6 @@ export default function ComisionesPage() {
       }).select('id').single();
       if (pagoErr) throw pagoErr;
 
-      // Mark comisiones as paid
       const { error: upErr } = await supabase
         .from('venta_comisiones')
         .update({ pagada: true, pago_comision_id: pago.id })
@@ -107,14 +98,15 @@ export default function ComisionesPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Paginated
   const paged = useMemo(() => (comisiones ?? []).slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [comisiones, page]);
-  const totalPages = Math.ceil((comisiones ?? []).length / PAGE_SIZE);
-
-  // Summary
   const totalMonto = useMemo(() => (comisiones ?? []).reduce((s, c) => s + c.comision_monto, 0), [comisiones]);
 
-  const vendedorItems = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
+  const vendedorOpts = [{ value: '', label: 'Todos los vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))];
+  const vendedorPayOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
+
+  const from = page * PAGE_SIZE + 1;
+  const to = Math.min((page + 1) * PAGE_SIZE, (comisiones ?? []).length);
+  const total = (comisiones ?? []).length;
 
   return (
     <div className="p-4 space-y-3 min-h-full">
@@ -129,7 +121,7 @@ export default function ComisionesPage() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="w-48">
           <SearchableSelect
-            items={[{ value: '', label: 'Todos los vendedores' }, ...vendedorItems]}
+            options={vendedorOpts}
             value={vendedorFilter}
             onChange={v => { setVendedorFilter(v); setPage(0); }}
             placeholder="Vendedor"
@@ -154,7 +146,7 @@ export default function ComisionesPage() {
         </div>
       </div>
 
-      {/* Pay form modal */}
+      {/* Pay form */}
       {showPayForm && (
         <div className="bg-card border border-primary/30 rounded-lg p-4 shadow-lg space-y-3">
           <h2 className="text-base font-semibold flex items-center gap-2">
@@ -164,7 +156,7 @@ export default function ComisionesPage() {
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor</label>
               <SearchableSelect
-                items={vendedorItems}
+                options={vendedorPayOpts}
                 value={payVendedor}
                 onChange={setPayVendedor}
                 placeholder="Seleccionar vendedor"
@@ -231,9 +223,9 @@ export default function ComisionesPage() {
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {c.comision_monto?.toFixed(2)}</td>
                   <td className="py-1.5 px-3 text-center">
                     {c.pagada ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Pagada</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
                     ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pendiente</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
                     )}
                   </td>
                 </tr>
@@ -248,8 +240,14 @@ export default function ComisionesPage() {
         </div>
       )}
 
-      {totalPages > 1 && (
-        <OdooPagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={comisiones?.length ?? 0} pageSize={PAGE_SIZE} />
+      {total > PAGE_SIZE && (
+        <OdooPagination
+          from={from}
+          to={to}
+          total={total}
+          onPrev={() => setPage(p => Math.max(0, p - 1))}
+          onNext={() => setPage(p => p + 1)}
+        />
       )}
     </div>
   );
