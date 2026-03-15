@@ -565,7 +565,7 @@ export default function VentaFormPage() {
               label: 'Líneas de venta',
               content: (
                 <div className="p-4 space-y-3">
-                  <div className="overflow-x-auto">
+                  <div>
                     <table className="w-full text-[13px]">
                       <thead>
                         <tr className="border-b border-table-border text-left">
