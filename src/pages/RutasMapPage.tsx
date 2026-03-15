@@ -1,78 +1,22 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
-import { useClientes, useZonas, useVendedores } from '@/hooks/useClientes';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
+import { useClientes, useVendedores } from '@/hooks/useClientes';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { MapPin, Route, Loader2, CheckCircle2, Navigation, X, Info } from 'lucide-react';
+import { Route, Loader2, CheckCircle2, Navigation, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import 'leaflet/dist/leaflet.css';
-
-// Fix leaflet default icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-});
+import { useGoogleMapsKey } from '@/hooks/useGoogleMapsKey';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-
-function createNumberedIcon(num: number, color: string) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width: 30px; height: 30px; border-radius: 50%;
-      background: ${color}; border: 3px solid white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 12px; font-weight: 700; color: white;
-    ">${num}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -15],
-  });
-}
-
-function createOriginIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width: 34px; height: 34px; border-radius: 50%;
-      background: #059669; border: 3px solid white;
-      box-shadow: 0 2px 10px rgba(5,150,105,0.5);
-      display: flex; align-items: center; justify-content: center;
-    "><svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>`,
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -17],
-  });
-}
-
-function createClientIcon(color: string) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width: 24px; height: 24px; border-radius: 50% 50% 50% 0;
-      background: ${color}; border: 2px solid white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-      transform: rotate(-45deg);
-    "><div style="
-      width: 6px; height: 6px; background: white; border-radius: 50%;
-      transform: rotate(45deg); margin: 5px auto;
-    "></div></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 24],
-    popupAnchor: [0, -24],
-  });
-}
+const mapContainerStyle = { width: '100%', height: '100%' };
+const defaultCenter = { lat: 23.6345, lng: -102.5528 };
 
 // Decode Google encoded polyline
-function decodePolyline(encoded: string): [number, number][] {
-  const points: [number, number][] = [];
+function decodePolyline(encoded: string): { lat: number; lng: number }[] {
+  const points: { lat: number; lng: number }[] = [];
   let index = 0, lat = 0, lng = 0;
   while (index < encoded.length) {
     let shift = 0, result = 0, byte: number;
@@ -81,29 +25,14 @@ function decodePolyline(encoded: string): [number, number][] {
     shift = 0; result = 0;
     do { byte = encoded.charCodeAt(index++) - 63; result |= (byte & 0x1f) << shift; shift += 5; } while (byte >= 0x20);
     lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-    points.push([lat / 1e5, lng / 1e5]);
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
   }
   return points;
 }
 
-function FitBounds({ positions }: { positions: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (positions.length > 0) {
-      const bounds = L.latLngBounds(positions.map(p => L.latLng(p[0], p[1])));
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-    }
-  }, [positions, map]);
-  return null;
-}
-
-function ClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
-  useMapEvents({ click: (e) => onClick(e.latlng.lat, e.latlng.lng) });
-  return null;
-}
-
 export default function RutasMapPage() {
   const { user } = useAuth();
+  const { apiKey, loading: loadingKey } = useGoogleMapsKey();
   const [diaFilter, setDiaFilter] = useState('');
   const [vendedorFilter, setVendedorFilter] = useState('');
   const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
@@ -115,6 +44,13 @@ export default function RutasMapPage() {
     distance_meters: number;
     duration: string;
   } | null>(null);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: apiKey ?? '',
+    id: 'google-map-rutas',
+  });
 
   const { data: isAdmin } = useQuery({
     queryKey: ['is-admin', user?.id],
@@ -131,7 +67,6 @@ export default function RutasMapPage() {
   const { data: clientes, isLoading } = useClientes('', undefined);
   const { data: vendedores } = useVendedores();
 
-  // Filter clients by day + vendedor
   const filtered = useMemo(() => {
     let result = clientes ?? [];
     if (diaFilter) result = result.filter((c: any) => c.dia_visita?.includes(diaFilter));
@@ -141,37 +76,32 @@ export default function RutasMapPage() {
 
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
 
-  const positions = useMemo<[number, number][]>(
-    () => withGps.map((c: any) => [c.gps_lat, c.gps_lng]),
-    [withGps]
-  );
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
 
-  const allPositions = useMemo(() => {
-    const pts = [...positions];
-    if (originPoint) pts.push([originPoint.lat, originPoint.lng]);
-    return pts;
-  }, [positions, originPoint]);
-
-  const defaultCenter: [number, number] = positions.length > 0
-    ? [positions.reduce((s, p) => s + p[0], 0) / positions.length, positions.reduce((s, p) => s + p[1], 0) / positions.length]
-    : [23.6345, -102.5528];
+  useEffect(() => {
+    if (mapRef.current && withGps.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
+      mapRef.current.fitBounds(bounds, 50);
+    }
+  }, [withGps, originPoint]);
 
   const polylinePoints = useMemo(() => {
     if (!routeResult?.polyline) return null;
     return decodePolyline(routeResult.polyline);
   }, [routeResult]);
 
-  // Ordered clients for numbered markers
   const orderedClients = useMemo(() => {
     if (!routeResult) return null;
-    return routeResult.orderedIds
-      .map(id => withGps.find((c: any) => c.id === id))
-      .filter(Boolean);
+    return routeResult.orderedIds.map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
   }, [routeResult, withGps]);
 
-  const handleMapClick = useCallback((lat: number, lng: number) => {
-    if (settingOrigin) {
-      setOriginPoint({ lat, lng });
+  const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
+    if (settingOrigin && e.latLng) {
+      setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
       setSettingOrigin(false);
       setRouteResult(null);
       toast.success('Punto de partida establecido');
@@ -194,21 +124,13 @@ export default function RutasMapPage() {
 
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          origin: originPoint,
-          waypoints,
-          dia_filtro: diaFilter || null,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ origin: originPoint, waypoints, dia_filtro: diaFilter || null }),
       });
 
       const result = await res.json();
       if (!res.ok) { toast.error(result.error || 'Error al optimizar'); return; }
 
-      // Update orden in DB
       const updates = result.optimized_order.map((id: string, idx: number) =>
         supabase.from('clientes').update({ orden: idx + 1 }).eq('id', id)
       );
@@ -229,7 +151,6 @@ export default function RutasMapPage() {
     }
   };
 
-  // Parse duration like "3600s" to readable
   const formatDuration = (d?: string) => {
     if (!d) return '';
     const secs = parseInt(d.replace('s', ''));
@@ -238,6 +159,24 @@ export default function RutasMapPage() {
     const m = Math.floor((secs % 3600) / 60);
     return h > 0 ? `${h}h ${m}min` : `${m} min`;
   };
+
+  const createNumberedLabel = (num: number): google.maps.Symbol => ({
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: '#6366f1',
+    fillOpacity: 1,
+    strokeColor: '#fff',
+    strokeWeight: 3,
+    scale: 16,
+    labelOrigin: new google.maps.Point(0, 0),
+  });
+
+  if (loadingKey || !apiKey) {
+    return (
+      <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
@@ -248,75 +187,47 @@ export default function RutasMapPage() {
             <Route className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold text-foreground">Optimización de rutas</h1>
           </div>
-
-          {/* Day filter */}
           <div className="flex flex-col gap-0.5">
             <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Día</label>
-            <select
-              value={diaFilter}
-              onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
-              className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[130px]"
-            >
+            <select value={diaFilter} onChange={e => { setDiaFilter(e.target.value); setRouteResult(null); }}
+              className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[130px]">
               <option value="">Todos los días</option>
               {DIAS.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
-
-          {/* Vendedor filter */}
           <div className="flex flex-col gap-0.5">
             <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Vendedor</label>
-            <select
-              value={vendedorFilter}
-              onChange={e => { setVendedorFilter(e.target.value); setRouteResult(null); }}
-              className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]"
-            >
+            <select value={vendedorFilter} onChange={e => { setVendedorFilter(e.target.value); setRouteResult(null); }}
+              className="bg-background border border-border rounded-md px-2.5 py-1.5 text-sm min-w-[140px]">
               <option value="">Todos</option>
               {vendedores?.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
             </select>
           </div>
-
-          {/* Set origin button */}
           <button
             onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Haz click en el mapa para establecer el punto de partida'); }}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors mt-auto",
-              settingOrigin
-                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
-                : originPoint
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                  : "bg-background border-border text-muted-foreground hover:text-foreground"
-            )}
-          >
+            className={cn("flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-colors mt-auto",
+              settingOrigin ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
+                : originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-background border-border text-muted-foreground hover:text-foreground")}>
             <Navigation className="h-4 w-4" />
             {settingOrigin ? 'Click en el mapa...' : originPoint ? 'Punto establecido' : 'Punto de partida'}
           </button>
-
           {originPoint && !settingOrigin && (
             <button onClick={() => { setOriginPoint(null); setRouteResult(null); }}
               className="text-xs text-destructive hover:underline mt-auto py-2">
               <X className="h-3.5 w-3.5" />
             </button>
           )}
-
-          {/* Optimize button */}
           {isAdmin && originPoint && withGps.length >= 1 && (
-            <button
-              onClick={handleOptimize}
-              disabled={optimizing}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all mt-auto",
-                routeResult
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+            <button onClick={handleOptimize} disabled={optimizing}
+              className={cn("flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-all mt-auto",
+                routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
                   : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
-                optimizing && "opacity-70"
-              )}
-            >
+                optimizing && "opacity-70")}>
               {optimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : routeResult ? <CheckCircle2 className="h-4 w-4" /> : <Route className="h-4 w-4" />}
               {optimizing ? 'Optimizando...' : routeResult ? 'Ruta optimizada' : 'Optimizar ruta'}
             </button>
           )}
-
-          {/* Stats */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground ml-auto mt-auto">
             <span><Badge variant="secondary" className="text-[10px]">{withGps.length}</Badge> clientes</span>
             {routeResult && (
@@ -327,8 +238,6 @@ export default function RutasMapPage() {
             )}
           </div>
         </div>
-
-        {/* Instructions */}
         {!originPoint && !routeResult && (
           <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground bg-accent/50 px-3 py-2 rounded-lg">
             <Info className="h-3.5 w-3.5 shrink-0" />
@@ -339,72 +248,103 @@ export default function RutasMapPage() {
 
       {/* Map */}
       <div className="flex-1 relative">
-        {isLoading && (
+        {(isLoading || !isLoaded) && (
           <div className="absolute inset-0 z-[1000] bg-background/60 flex items-center justify-center">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         )}
         {settingOrigin && (
-          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 bg-emerald-600 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
             Haz click en el mapa para establecer el punto de partida
           </div>
         )}
-        <MapContainer
-          center={defaultCenter}
-          zoom={6}
-          className="h-full w-full z-0"
-          style={{ background: 'hsl(var(--background))' }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {allPositions.length > 0 && <FitBounds positions={allPositions} />}
-          <ClickHandler onClick={handleMapClick} />
+        {isLoaded && (
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={withGps.length > 0 ? { lat: withGps[0].gps_lat, lng: withGps[0].gps_lng } : defaultCenter}
+            zoom={6}
+            onLoad={onMapLoad}
+            onClick={handleMapClick}
+            options={{
+              styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+              mapTypeControl: false,
+              streetViewControl: false,
+              fullscreenControl: true,
+              draggableCursor: settingOrigin ? 'crosshair' : undefined,
+            }}
+          >
+            {/* Origin marker */}
+            {originPoint && (
+              <Marker
+                position={originPoint}
+                icon={{
+                  path: google.maps.SymbolPath.CIRCLE,
+                  fillColor: '#059669',
+                  fillOpacity: 1,
+                  strokeColor: '#fff',
+                  strokeWeight: 3,
+                  scale: 14,
+                }}
+                label={{ text: '▶', color: '#fff', fontSize: '10px', fontWeight: '700' }}
+              />
+            )}
 
-          {/* Origin marker */}
-          {originPoint && (
-            <Marker position={[originPoint.lat, originPoint.lng]} icon={createOriginIcon()}>
-              <Popup><div className="font-semibold text-sm">Punto de partida</div></Popup>
-            </Marker>
-          )}
+            {/* Route polyline */}
+            {polylinePoints && (
+              <Polyline
+                path={polylinePoints}
+                options={{ strokeColor: '#6366f1', strokeWeight: 4, strokeOpacity: 0.8 }}
+              />
+            )}
 
-          {/* Route polyline */}
-          {polylinePoints && (
-            <Polyline positions={polylinePoints} pathOptions={{ color: '#6366f1', weight: 4, opacity: 0.8 }} />
-          )}
+            {/* Numbered client markers (optimized) */}
+            {orderedClients ? (
+              orderedClients.map((c: any, idx: number) => (
+                <Marker
+                  key={c.id}
+                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                  icon={createNumberedLabel(idx + 1)}
+                  label={{ text: `${idx + 1}`, color: '#fff', fontSize: '11px', fontWeight: '700' }}
+                  onClick={() => setSelectedClient(c)}
+                />
+              ))
+            ) : (
+              withGps.map((c: any) => (
+                <Marker
+                  key={c.id}
+                  position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    fillColor: '#714BF4',
+                    fillOpacity: 1,
+                    strokeColor: '#fff',
+                    strokeWeight: 2,
+                    scale: 8,
+                  }}
+                  onClick={() => setSelectedClient(c)}
+                  title={c.nombre}
+                />
+              ))
+            )}
 
-          {/* Client markers */}
-          {orderedClients ? (
-            orderedClients.map((c: any, idx: number) => (
-              <Marker key={c.id} position={[c.gps_lat, c.gps_lng]} icon={createNumberedIcon(idx + 1, '#6366f1')}>
-                <Popup>
-                  <div className="min-w-[180px]">
-                    <div className="font-bold text-sm">#{idx + 1} — {c.nombre}</div>
-                    {c.codigo && <div className="text-xs text-gray-500 font-mono">{c.codigo}</div>}
-                    {c.direccion && <div className="text-xs text-gray-600 mt-1">{c.direccion}</div>}
-                  </div>
-                </Popup>
-              </Marker>
-            ))
-          ) : (
-            withGps.map((c: any) => (
-              <Marker key={c.id} position={[c.gps_lat, c.gps_lng]} icon={createClientIcon('#714BF4')}>
-                <Popup>
-                  <div className="min-w-[180px]">
-                    <div className="font-bold text-sm">{c.nombre}</div>
-                    {c.codigo && <div className="text-xs text-gray-500 font-mono">{c.codigo}</div>}
-                    {c.direccion && <div className="text-xs text-gray-600 mt-1">{c.direccion}</div>}
-                  </div>
-                </Popup>
-              </Marker>
-            ))
-          )}
-        </MapContainer>
+            {selectedClient && (
+              <InfoWindow
+                position={{ lat: selectedClient.gps_lat, lng: selectedClient.gps_lng }}
+                onCloseClick={() => setSelectedClient(null)}
+              >
+                <div className="min-w-[180px] p-1">
+                  <div className="font-bold text-sm">{selectedClient.nombre}</div>
+                  {selectedClient.codigo && <div className="text-xs text-gray-500 font-mono">{selectedClient.codigo}</div>}
+                  {selectedClient.direccion && <div className="text-xs text-gray-600 mt-1">{selectedClient.direccion}</div>}
+                </div>
+              </InfoWindow>
+            )}
+          </GoogleMap>
+        )}
 
         {/* Route order sidebar */}
         {orderedClients && orderedClients.length > 0 && (
-          <div className="absolute top-3 right-3 z-[1000] bg-card border border-border rounded-xl shadow-lg w-64 max-h-[60vh] flex flex-col">
+          <div className="absolute top-3 right-3 z-10 bg-card border border-border rounded-xl shadow-lg w-64 max-h-[60vh] flex flex-col">
             <div className="px-3 py-2.5 border-b border-border flex items-center justify-between">
               <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <Route className="h-3.5 w-3.5 text-primary" />
