@@ -254,13 +254,33 @@ export default function EntregaListPage() {
           />
         </div>
 
-        {selectedIds.size > 0 && (
-          <Button
-            onClick={() => setShowSurtirDialog(true)}
-            className="gap-1.5"
-          >
+        {/* Surtir rápido — only when borrador selected */}
+        {selectedIds.size > 0 && hasBorrador && (
+          <Button onClick={() => setShowSurtirDialog(true)} className="gap-1.5">
             <Zap className="h-4 w-4" />
             Surtir rápido ({selectedIds.size})
+          </Button>
+        )}
+
+        {/* Asignar ruta — only when all selected are surtido */}
+        {selectedIds.size > 0 && allSurtido && (
+          <>
+            <Button onClick={() => { setVendedorRutaId(''); setShowAsignarDialog(true); }} variant="outline" className="gap-1.5">
+              <Package className="h-4 w-4" />
+              Asignar ruta ({selectedIds.size})
+            </Button>
+            <Button onClick={() => { setVendedorRutaId(''); setShowAsignarDialog(true); }} className="gap-1.5">
+              <Zap className="h-4 w-4" />
+              Asignar y cargar ({selectedIds.size})
+            </Button>
+          </>
+        )}
+
+        {/* Cargar camión — only when all selected are asignado */}
+        {selectedIds.size > 0 && allAsignado && (
+          <Button onClick={handleBulkCargar} className="gap-1.5" disabled={bulkCargarMut.isPending}>
+            <Truck className="h-4 w-4" />
+            Cargar camión ({selectedIds.size})
           </Button>
         )}
       </div>
