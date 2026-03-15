@@ -78,7 +78,7 @@ export default function PromocionesPage() {
         </Button>
       </div>
 
-      <OdooFilterBar searchValue={search} onSearch={setSearch} searchPlaceholder="Buscar promociones..." />
+      <OdooFilterBar search={search} onSearchChange={setSearch} placeholder="Buscar promociones..." />
 
       {isLoading ? <TableSkeleton /> : (
         <div className="border border-border rounded-xl overflow-hidden bg-card">
