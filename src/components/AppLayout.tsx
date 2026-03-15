@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { UnilineFooter } from '@/components/UnilineFooter';
+import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone
+  DollarSign, Settings, Smartphone, Moon, Sun
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -201,6 +202,7 @@ function Breadcrumb() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { empresa, profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -235,6 +237,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           )}
           <div className={cn("flex gap-0.5", collapsed ? "flex-col items-center" : "")}>
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+              title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             <Link
               to="/ruta"
               className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"

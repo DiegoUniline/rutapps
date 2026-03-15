@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, KeyRound, User, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, KeyRound, User, Loader2, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/hooks/useTheme';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 export default function RutaPerfil() {
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [showChangePass, setShowChangePass] = useState(false);
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -88,6 +90,19 @@ export default function RutaPerfil() {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Theme toggle */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-muted/50 transition-colors"
+          >
+            {theme === 'dark' ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
+            <span className="text-[14px] font-medium text-foreground flex-1 text-left">
+              {theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            </span>
+          </button>
         </div>
 
         {/* Sign out */}
