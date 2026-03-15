@@ -157,6 +157,7 @@ export default function SearchableSelect({
       {open && pos && createPortal(
         <div
           ref={dropdownRef}
+          onPointerDown={e => e.stopPropagation()}
           style={{
             position: 'fixed',
             top: pos.top,
