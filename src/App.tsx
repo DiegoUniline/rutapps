@@ -58,6 +58,7 @@ const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const AuditoriaConteoPage = lazy(() => import("@/pages/AuditoriaConteoPage"));
 const AuditoriaResultadosPage = lazy(() => import("@/pages/AuditoriaResultadosPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
+const MonitorRutasPage = lazy(() => import("@/pages/MonitorRutasPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
@@ -203,6 +204,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/login" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/supervisor" element={<SupervisorDashboardPage />} />
+              <Route path="/monitor-rutas" element={<MonitorRutasPage />} />
               <Route path="/productos" element={<ProductosListPage />} />
               <Route path="/catalogo/:catalog" element={<CatalogPage />} />
               <Route path="/productos/:id" element={<ProductoFormPage />} />

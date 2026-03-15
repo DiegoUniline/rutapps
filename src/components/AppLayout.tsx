@@ -44,6 +44,7 @@ const navItems: NavItem[] = [
       { label: 'Entregas', path: '/logistica/entregas' },
       
       { label: 'Descargas de ruta', path: '/almacen/descargas' },
+      { label: 'Monitor de rutas', path: '/monitor-rutas' },
       { label: 'Rutas', path: '/ventas/rutas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },
