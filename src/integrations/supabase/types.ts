@@ -1481,6 +1481,76 @@ export type Database = {
           },
         ]
       }
+      role_permisos: {
+        Row: {
+          accion: string
+          id: string
+          modulo: string
+          permitido: boolean
+          role_id: string
+        }
+        Insert: {
+          accion: string
+          id?: string
+          modulo: string
+          permitido?: boolean
+          role_id: string
+        }
+        Update: {
+          accion?: string
+          id?: string
+          modulo?: string
+          permitido?: boolean
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permisos_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          acceso_ruta_movil: boolean
+          created_at: string
+          descripcion: string | null
+          empresa_id: string
+          es_sistema: boolean
+          id: string
+          nombre: string
+        }
+        Insert: {
+          acceso_ruta_movil?: boolean
+          created_at?: string
+          descripcion?: string | null
+          empresa_id: string
+          es_sistema?: boolean
+          id?: string
+          nombre: string
+        }
+        Update: {
+          acceso_ruta_movil?: boolean
+          created_at?: string
+          descripcion?: string | null
+          empresa_id?: string
+          es_sistema?: boolean
+          id?: string
+          nombre?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roles_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tarifa_lineas: {
         Row: {
           aplica_a: Database["public"]["Enums"]["aplica_a_tarifa"]
@@ -1703,6 +1773,35 @@ export type Database = {
           nombre?: string
         }
         Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendedores: {
         Row: {
@@ -2101,6 +2200,7 @@ export type Database = {
         Args: { p_empresa_id: string; prefix: string }
         Returns: string
       }
+      user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
     }
     Enums: {
       aplica_a_tarifa: "todos" | "categoria" | "producto"
