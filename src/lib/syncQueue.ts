@@ -50,6 +50,10 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
     try {
       await processItem(item);
       await offlineDb.syncQueue.delete(item.id!);
+      // Mark for verification
+      if (item.keyValue) {
+        markAsSynced(item.table, item.keyValue);
+      }
       success++;
     } catch (err) {
       console.error(`Sync failed for ${item.table}/${item.operation}:`, err);
