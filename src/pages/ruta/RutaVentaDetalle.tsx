@@ -1125,6 +1125,18 @@ export default function RutaVentaDetalle() {
           </button>
         )}
       </div>
+
+      {/* Estado de cuenta PDF preview */}
+      <DocumentPreviewModal
+        open={showEcPreview}
+        onClose={() => setShowEcPreview(false)}
+        pdfBlob={ecPdfBlob}
+        fileName={`Estado-Cuenta-${clienteNombre.replace(/\s+/g, '-')}.pdf`}
+        empresaId={empresa?.id ?? ''}
+        defaultPhone={clienteData?.telefono ?? ''}
+        caption={`Estado de cuenta - ${clienteNombre}`}
+        tipo="estado_cuenta"
+      />
     </div>
   );
 }
