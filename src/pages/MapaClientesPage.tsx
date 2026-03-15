@@ -112,6 +112,55 @@ export default function MapaClientesPage() {
 
   const activeFiltersCount = [zonaFilter, vendedorFilter, diaFilter, statusFilter].filter(Boolean).length;
 
+  const handleOptimize = async () => {
+    if (withGps.length < 2) {
+      toast.error('Se necesitan al menos 2 clientes con GPS');
+      return;
+    }
+    setOptimizing(true);
+    setOptimizeResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) { toast.error('Sesión no válida'); return; }
+
+      const waypoints = withGps.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng }));
+
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ waypoints, dia_filtro: diaFilter || null }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        toast.error(result.error || 'Error al optimizar');
+        return;
+      }
+
+      // Reorder clientes based on optimized order
+      const orderMap = new Map<string, number>();
+      (result.optimized_order as string[]).forEach((id: string, idx: number) => orderMap.set(id, idx));
+
+      // Update orden in DB for each client
+      const updates = result.optimized_order.map((id: string, idx: number) =>
+        supabase.from('clientes').update({ orden: idx + 1 }).eq('id', id)
+      );
+      await Promise.all(updates);
+
+      setOptimizeResult({ duration: result.duration, distance_meters: result.distance_meters });
+      toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al optimizar ruta');
+    } finally {
+      setOptimizing(false);
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col">
       {/* Header */}
