@@ -337,7 +337,6 @@ export default function CompraFormPage() {
             <OdooDatePicker
               value={form.fecha ?? ''}
               onChange={val => updateField('fecha', val)}
-              disabled={!isEditable}
             />
           </div>
           <div>

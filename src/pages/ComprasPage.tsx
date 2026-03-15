@@ -196,7 +196,7 @@ export default function ComprasPage() {
                       )}
                     </td>
                     <td className="py-1.5 px-3 text-center">
-                      <StatusChip status={STATUS_MAP[c.status]?.variant ?? c.status} label={STATUS_MAP[c.status]?.label ?? c.status} />
+                      <StatusChip status={c.status} />
                     </td>
                   </tr>
                 ))}
