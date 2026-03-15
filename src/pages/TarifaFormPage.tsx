@@ -339,6 +339,77 @@ export default function TarifaFormPage() {
                       </thead>
                       <tbody>
                         {sortedLineas.map(l => (
+                          editingLineaId === l.id ? (
+                            <tr key={l.id} className="bg-primary/5 border-b border-table-border">
+                              <td className="py-2 px-3">
+                                <select className="input-odoo text-xs w-full" value={editLinea.aplica_a}
+                                  onChange={e => setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] }))}>
+                                  <option value="todos">Todos</option>
+                                  <option value="categoria">Categoría</option>
+                                  <option value="producto">Producto</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3">
+                                {editLinea.aplica_a === 'producto' && (
+                                  <ChipSelect items={prodItems} selectedIds={editLinea.producto_ids}
+                                    onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
+                                )}
+                                {editLinea.aplica_a === 'categoria' && (
+                                  <ChipSelect items={clasItems} selectedIds={editLinea.clasificacion_ids}
+                                    onChange={ids => setEditLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
+                                )}
+                                {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
+                              </td>
+                              <td className="py-2 px-3">
+                                <select className="input-odoo text-xs w-full" value={editLinea.tipo_calculo}
+                                  onChange={e => setEditLinea(p => ({ ...p, tipo_calculo: e.target.value as TipoCalculoTarifa }))}>
+                                  <option value="margen_costo">Margen % s/costo</option>
+                                  <option value="descuento_precio">Descuento % s/precio</option>
+                                  <option value="precio_fijo">Precio fijo</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3">
+                                <select className="input-odoo text-xs w-full" value={editLinea.base_precio}
+                                  onChange={e => setEditLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
+                                  <option value="sin_impuestos">Sin impuestos</option>
+                                  <option value="con_impuestos">Con impuestos</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3">
+                                {editLinea.tipo_calculo === 'margen_costo'
+                                  ? <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.margen_pct || ''} onChange={e => setEditLinea(p => ({ ...p, margen_pct: +e.target.value }))} />
+                                  : editLinea.tipo_calculo === 'descuento_precio'
+                                  ? <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.descuento_pct || ''} onChange={e => setEditLinea(p => ({ ...p, descuento_pct: +e.target.value }))} />
+                                  : <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio || ''} onChange={e => setEditLinea(p => ({ ...p, precio: +e.target.value }))} />
+                                }
+                              </td>
+                              <td className="py-2 px-3">
+                                <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.comision_pct || ''} onChange={e => setEditLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
+                              </td>
+                              <td className="py-2 px-3">
+                                <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio_minimo || ''} onChange={e => setEditLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
+                              </td>
+                              <td className="py-2 px-3">
+                                <select className="input-odoo text-xs w-full" value={editLinea.redondeo}
+                                  onChange={e => setEditLinea(p => ({ ...p, redondeo: e.target.value as RedondeoTarifa }))}>
+                                  <option value="ninguno">Sin redondeo</option>
+                                  <option value="arriba">↑ Arriba</option>
+                                  <option value="abajo">↓ Abajo</option>
+                                  <option value="cercano">≈ Cercano</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <div className="flex items-center gap-1">
+                                  <button onClick={handleSaveEditLinea} className="text-primary hover:text-primary/80">
+                                    <Check className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button onClick={() => setEditingLineaId(null)} className="text-muted-foreground hover:text-foreground">
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
                           <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                             <td className="py-1.5 px-3">{getAplicaBadge(l.aplica_a)}</td>
                             <td className="py-1.5 px-3">
@@ -359,11 +430,17 @@ export default function TarifaFormPage() {
                             <td className="py-1.5 px-3 text-right font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</td>
                             <td className="py-1.5 px-3 text-xs text-muted-foreground">{REDONDEO_LABELS[(l as any).redondeo] || '—'}</td>
                             <td className="py-1.5 px-3 text-center">
-                              <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button onClick={() => startEditLinea(l)} className="text-muted-foreground hover:text-primary">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
+                          )
                         ))}
                         {sortedLineas.length === 0 && !showAddRow && (
                           <tr><td colSpan={9} className="py-6 text-center text-[12px] text-muted-foreground">
