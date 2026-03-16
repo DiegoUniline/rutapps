@@ -84,7 +84,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-table-border">
-              <th className="th-odoo text-left">Lista de precios</th>
+              <th className="th-odoo text-left">Tarifa</th>
               <th className="th-odoo text-left">Tipo</th>
               <th className="th-odoo text-right">Costo</th>
               <th className="th-odoo text-right">Precio</th>
