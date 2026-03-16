@@ -38,7 +38,7 @@ export default function ClienteFormPage() {
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
   const { data: cobradores } = useCobradores();
-  const { data: listas } = useListas();
+  const { data: tarifas } = useTarifasForSelect();
   const { data: tarifas } = useTarifasForSelect();
   const { data: productosSelect } = useProductosForSelect();
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
