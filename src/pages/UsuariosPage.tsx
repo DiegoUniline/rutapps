@@ -487,16 +487,17 @@ export default function UsuariosPage() {
   );
 }
 
-function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleAll, onToggleGroup }: {
-  role: Role; permisos: RolePermiso[]; onEdit: () => void; onDelete: () => void;
+function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
+  role: Role; permisos: RolePermiso[]; onEdit: () => void; onToggleActivo: () => void;
   onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const groups = getModuloGroups();
+  const isInactive = role.activo === false;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isInactive && "opacity-60")}>
       <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
         <div className="flex items-center gap-3">
           {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
@@ -505,11 +506,14 @@ function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleA
             <span className="text-sm font-semibold text-foreground">{role.nombre}</span>
             {role.descripcion && <span className="text-xs text-muted-foreground ml-2">{role.descripcion}</span>}
             {role.acceso_ruta_movil && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Ruta móvil</span>}
+            {isInactive && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">Inactivo</span>}
           </div>
         </div>
         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-          <button onClick={onEdit} className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
-          <button onClick={onDelete} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button onClick={onEdit} className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
+          <button onClick={onToggleActivo} className={cn("p-1.5 rounded", isInactive ? "hover:bg-success/10 text-success" : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive")} title={isInactive ? 'Reactivar' : 'Dar de baja'}>
+            {isInactive ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
       {open && (
