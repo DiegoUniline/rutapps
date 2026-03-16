@@ -574,6 +574,7 @@ export default function MapaClientesPage() {
             )}
           </GoogleMap>
         )}
+        <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
         {/* Route order sidebar */}
         {orderedClients && orderedClients.length > 0 && (
