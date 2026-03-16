@@ -236,6 +236,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
+  const { data: setupComplete } = useSetupComplete();
+  const location = useLocation();
+  const setupActive = location.pathname === '/configuracion-inicial';
 
   return (
     <div className="min-h-screen flex bg-background">
