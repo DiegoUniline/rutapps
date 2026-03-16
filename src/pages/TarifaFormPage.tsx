@@ -593,9 +593,19 @@ export default function TarifaFormPage() {
                   </div>
 
                   {!showAddRow && (
-                    <button className="odoo-link" onClick={() => setShowAddRow(true)}>
-                      <Plus className="h-3.5 w-3.5 inline mr-1" />Agregar un precio
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button className="odoo-link" onClick={() => setShowAddRow(true)}>
+                        <Plus className="h-3.5 w-3.5 inline mr-1" />Agregar un precio
+                      </button>
+                      <button
+                        className="odoo-link"
+                        onClick={handleLoadAllCategories}
+                        disabled={loadingAllCats}
+                      >
+                        <Layers className="h-3.5 w-3.5 inline mr-1" />
+                        {loadingAllCats ? 'Cargando...' : 'Cargar todas las categorías'}
+                      </button>
+                    </div>
                   )}
                 </div>
               ),
