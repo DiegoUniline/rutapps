@@ -581,19 +581,16 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     sY += selloSatLines.length * 2 + 3;
 
     // Certificados
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text(`No. cert. SAT: `, infoX, sY);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
     doc.text(cfdi.no_certificado_sat || '—', infoX + 22, sY);
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
     doc.text(`No. cert. emisor: `, infoX + 60, sY);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
     doc.text(cfdi.no_certificado_emisor || '—', infoX + 85, sY);
 
     y = Math.max(y + qrSize + 4, sY + 6);
