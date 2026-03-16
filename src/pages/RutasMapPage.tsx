@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Route, Loader2, CheckCircle2, Navigation, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 

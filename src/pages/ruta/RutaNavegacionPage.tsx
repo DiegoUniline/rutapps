@@ -9,6 +9,7 @@ import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 
 /** Pick an icon for a maneuver instruction */

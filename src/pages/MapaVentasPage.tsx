@@ -10,6 +10,7 @@ import { Filter, ShoppingCart, Truck, X, Calendar, Loader2, Navigation, Route, C
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import MapRecenterButton from '@/components/MapRecenterButton';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
