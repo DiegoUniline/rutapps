@@ -451,6 +451,144 @@ export type Database = {
           },
         ]
       }
+      cat_forma_pago: {
+        Row: {
+          activo: boolean | null
+          clave: string
+          descripcion: string
+          id: string
+        }
+        Insert: {
+          activo?: boolean | null
+          clave: string
+          descripcion: string
+          id?: string
+        }
+        Update: {
+          activo?: boolean | null
+          clave?: string
+          descripcion?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      cat_metodo_pago: {
+        Row: {
+          activo: boolean | null
+          clave: string
+          descripcion: string
+          id: string
+        }
+        Insert: {
+          activo?: boolean | null
+          clave: string
+          descripcion: string
+          id?: string
+        }
+        Update: {
+          activo?: boolean | null
+          clave?: string
+          descripcion?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      cat_moneda: {
+        Row: {
+          activo: boolean | null
+          clave: string
+          descripcion: string
+          id: string
+        }
+        Insert: {
+          activo?: boolean | null
+          clave: string
+          descripcion: string
+          id?: string
+        }
+        Update: {
+          activo?: boolean | null
+          clave?: string
+          descripcion?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      cat_regimen_fiscal: {
+        Row: {
+          activo: boolean | null
+          clave: string
+          descripcion: string
+          id: string
+          persona_fisica: boolean | null
+          persona_moral: boolean | null
+        }
+        Insert: {
+          activo?: boolean | null
+          clave: string
+          descripcion: string
+          id?: string
+          persona_fisica?: boolean | null
+          persona_moral?: boolean | null
+        }
+        Update: {
+          activo?: boolean | null
+          clave?: string
+          descripcion?: string
+          id?: string
+          persona_fisica?: boolean | null
+          persona_moral?: boolean | null
+        }
+        Relationships: []
+      }
+      cat_tipo_comprobante: {
+        Row: {
+          activo: boolean | null
+          clave: string
+          descripcion: string
+          id: string
+        }
+        Insert: {
+          activo?: boolean | null
+          clave: string
+          descripcion: string
+          id?: string
+        }
+        Update: {
+          activo?: boolean | null
+          clave?: string
+          descripcion?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      cat_uso_cfdi: {
+        Row: {
+          activo: boolean | null
+          clave: string
+          descripcion: string
+          id: string
+          persona_fisica: boolean | null
+          persona_moral: boolean | null
+        }
+        Insert: {
+          activo?: boolean | null
+          clave: string
+          descripcion: string
+          id?: string
+          persona_fisica?: boolean | null
+          persona_moral?: boolean | null
+        }
+        Update: {
+          activo?: boolean | null
+          clave?: string
+          descripcion?: string
+          id?: string
+          persona_fisica?: boolean | null
+          persona_moral?: boolean | null
+        }
+        Relationships: []
+      }
       clasificaciones: {
         Row: {
           created_at: string
