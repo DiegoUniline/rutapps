@@ -9,6 +9,8 @@ import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
 import { useTarifasForSelect, useProductosForSelect } from '@/hooks/useData';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 
@@ -42,6 +44,16 @@ export default function ClienteFormPage() {
   const { data: productosSelect } = useProductosForSelect();
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
   const savePedidoMutation = useSavePedidoSugerido();
+
+  // SAT catalogs for fiscal section
+  const { data: catRegimen } = useQuery({
+    queryKey: ['cat_regimen_fiscal'], staleTime: 10 * 60 * 1000,
+    queryFn: async () => { const { data } = await supabase.from('cat_regimen_fiscal').select('clave, descripcion').eq('activo', true).order('clave'); return data ?? []; },
+  });
+  const { data: catUsoCfdi } = useQuery({
+    queryKey: ['cat_uso_cfdi'], staleTime: 10 * 60 * 1000,
+    queryFn: async () => { const { data } = await supabase.from('cat_uso_cfdi').select('clave, descripcion').eq('activo', true).order('clave'); return data ?? []; },
+  });
 
   const [form, setForm] = useState<Partial<Cliente>>(defaultCliente);
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
@@ -309,18 +321,7 @@ export default function ClienteFormPage() {
                     <OdooField label="RFC Fiscal" value={(form as any).facturama_rfc} onChange={v => set('facturama_rfc' as any, v?.toUpperCase())} placeholder="RFC del receptor" />
                     <OdooField label="Razón Social" value={(form as any).facturama_razon_social} onChange={v => set('facturama_razon_social' as any, v)} placeholder="Razón social como aparece en constancia" />
                     <OdooField label="Régimen Fiscal" value={(form as any).facturama_regimen_fiscal} onChange={v => set('facturama_regimen_fiscal' as any, v)} type="select"
-                      options={[
-                        { value: '601', label: '601 - General de Ley PM' },
-                        { value: '603', label: '603 - Personas Morales con Fines no Lucrativos' },
-                        { value: '605', label: '605 - Sueldos y Salarios' },
-                        { value: '606', label: '606 - Arrendamiento' },
-                        { value: '608', label: '608 - Demás ingresos' },
-                        { value: '612', label: '612 - Personas Físicas con Actividad Empresarial' },
-                        { value: '616', label: '616 - Sin obligaciones fiscales' },
-                        { value: '621', label: '621 - Incorporación Fiscal' },
-                        { value: '625', label: '625 - Régimen de las Actividades Agrícolas' },
-                        { value: '626', label: '626 - RESICO' },
-                      ]} />
+                      options={(catRegimen ?? []).map(r => ({ value: r.clave, label: `${r.clave} - ${r.descripcion}` }))} />
                   </>
                 )}
               </div>
@@ -328,17 +329,7 @@ export default function ClienteFormPage() {
                 {form.requiere_factura && (
                   <>
                     <OdooField label="Uso CFDI" value={(form as any).facturama_uso_cfdi} onChange={v => set('facturama_uso_cfdi' as any, v)} type="select"
-                      options={[
-                        { value: 'G01', label: 'G01 - Adquisición de mercancías' },
-                        { value: 'G02', label: 'G02 - Devoluciones, descuentos o bonificaciones' },
-                        { value: 'G03', label: 'G03 - Gastos en general' },
-                        { value: 'I01', label: 'I01 - Construcciones' },
-                        { value: 'I02', label: 'I02 - Mobiliario y equipo de oficina' },
-                        { value: 'I04', label: 'I04 - Equipo de cómputo' },
-                        { value: 'P01', label: 'P01 - Por definir' },
-                        { value: 'S01', label: 'S01 - Sin efectos fiscales' },
-                        { value: 'CP01', label: 'CP01 - Pagos' },
-                      ]} />
+                      options={(catUsoCfdi ?? []).map(u => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }))} />
                     <OdooField label="Código Postal" value={(form as any).facturama_cp} onChange={v => set('facturama_cp' as any, v)} placeholder="C.P. fiscal del receptor" />
                     <OdooField label="Correo Facturación" value={(form as any).facturama_correo_facturacion} onChange={v => set('facturama_correo_facturacion' as any, v)} placeholder="email@ejemplo.com" />
                   </>
