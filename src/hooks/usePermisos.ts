@@ -17,23 +17,43 @@ interface UsePermisosReturn {
 }
 
 /**
+ * All permission modules available in the system.
+ * Each module maps to one or more sidebar sections / route groups.
+ */
+export const MODULOS = [
+  { id: 'ventas', label: 'Ventas', desc: 'Ventas, cobranza, promociones' },
+  { id: 'pos', label: 'Punto de venta', desc: 'Módulo POS' },
+  { id: 'clientes', label: 'Clientes', desc: 'Lista de clientes, formularios' },
+  { id: 'logistica', label: 'Logística', desc: 'Dashboard logística, pedidos, entregas, descargas, monitor, rutas, mapas' },
+  { id: 'catalogo', label: 'Catálogo', desc: 'Productos, tarifas, categorías, marcas, proveedores, unidades, tasas' },
+  { id: 'almacen', label: 'Almacén', desc: 'Inventario, traspasos, ajustes, auditorías, compras, lotes, almacenes' },
+  { id: 'finanzas', label: 'Finanzas', desc: 'Cuentas por cobrar/pagar, gastos, comisiones' },
+  { id: 'reportes', label: 'Reportes', desc: 'Reportes generales y entregas' },
+  { id: 'facturacion', label: 'Facturación CFDI', desc: 'Facturas electrónicas y catálogos SAT' },
+  { id: 'configuracion', label: 'Configuración', desc: 'General, usuarios, WhatsApp, suscripción' },
+];
+
+export const ACCIONES = ['ver', 'crear', 'editar', 'eliminar'];
+
+/**
  * Maps route path prefixes to permission module IDs.
- * Used by sidebar filtering and route guards.
+ * Used by route guards.
  */
 export const ROUTE_TO_MODULE: Record<string, string> = {
   '/ventas': 'ventas',
-  '/pos': 'ventas',
+  '/pos': 'pos',
   '/clientes': 'clientes',
   '/productos': 'catalogo',
   '/tarifas': 'catalogo',
   '/proveedores': 'catalogo',
   '/catalogo': 'catalogo',
   '/almacen': 'almacen',
-  '/logistica': 'almacen',
+  '/logistica': 'logistica',
+  '/monitor-rutas': 'logistica',
   '/finanzas': 'finanzas',
   '/reportes': 'reportes',
   '/configuracion': 'configuracion',
-  '/facturacion-cfdi': 'ventas',
+  '/facturacion-cfdi': 'facturacion',
 };
 
 /** Maps sidebar nav item base paths to module IDs */
@@ -42,17 +62,17 @@ export const NAV_MODULE_MAP: Record<string, string> = {
   '/supervisor': '',         // always visible
   '/ventas': 'ventas',
   '/clientes': 'clientes',
-  '/logistica': 'almacen',
+  '/logistica': 'logistica',
   '/productos': 'catalogo',
   '/almacen': 'almacen',
   '/finanzas': 'finanzas',
   '/reportes': 'reportes',
-  '/facturacion-cfdi': 'ventas',
+  '/facturacion-cfdi': 'facturacion',
   '/configuracion': 'configuracion',
 };
 
 export function usePermisos(): UsePermisosReturn {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [permisos, setPermisos] = useState<Permiso[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasRole, setHasRole] = useState<boolean | null>(null);
