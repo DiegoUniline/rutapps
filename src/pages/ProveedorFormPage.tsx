@@ -250,6 +250,8 @@ export default function ProveedorFormPage() {
                     onChange={v => set('dias_credito', Number(v))} type="number" />
                   <OdooField label="Límite de crédito" value={String(form.limite_credito ?? 0)}
                     onChange={v => set('limite_credito', Number(v))} type="number" />
+                  <OdooField label="Tiempo de entrega (días)" value={String(form.tiempo_entrega_dias ?? 0)}
+                    onChange={v => set('tiempo_entrega_dias', Number(v))} type="number" />
                 </div>
               ),
             },
