@@ -114,6 +114,7 @@ export default function VentaFormPage() {
   const [pagoSaving, setPagoSaving] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
 
   // Is read-only? Only borrador is editable
   const readOnly = !isNew && form.status !== 'borrador';
