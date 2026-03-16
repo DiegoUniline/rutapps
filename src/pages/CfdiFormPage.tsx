@@ -15,6 +15,8 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { generarCfdiPdf } from '@/lib/cfdiPdf';
+import { loadLogoBase64 } from '@/lib/pdfBase';
 
 const CFDI_STEPS = [
   { key: 'borrador', label: 'Borrador' },
