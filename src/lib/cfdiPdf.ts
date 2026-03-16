@@ -318,14 +318,13 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   ];
 
   for (const [lbl, val] of infoRows) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.muted);
+    doc.setTextColor(...C.text);
     doc.text(lbl, colR, ry);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(val, colR + 38, ry);
-    ry += 4.5;
+    doc.text(val, colR + 42, ry);
+    ry += 5;
   }
 
   y = Math.max(leftEndY, ry) + 2;
