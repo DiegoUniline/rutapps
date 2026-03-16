@@ -190,16 +190,20 @@ function NavegacionContent() {
     }
   };
 
-  const stopNavigation = () => {
-    setNavigatingTo(null);
-    setDirections(null);
-    setCurrentStepIdx(0);
+  const recenterMap = useCallback(() => {
     if (mapRef.current && stops.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
       if (userLocation) bounds.extend(userLocation);
       mapRef.current.fitBounds(bounds, 60);
     }
+  }, [stops, userLocation]);
+
+  const stopNavigation = () => {
+    setNavigatingTo(null);
+    setDirections(null);
+    setCurrentStepIdx(0);
+    recenterMap();
   };
 
   const handleVisited = async (stop: Stop) => {
