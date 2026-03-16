@@ -279,7 +279,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Forma de Pago</Label>
-                    <SearchableSelect options={formaOptions} value={paymentForm} onValueChange={setPaymentForm} placeholder="Forma pago" />
+                    <SearchableSelect options={formaOptions} value={paymentForm} onChange={setPaymentForm} placeholder="Forma pago" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Método de Pago</Label>
