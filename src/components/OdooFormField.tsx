@@ -65,9 +65,45 @@ export function OdooField({
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (e.key === 'Enter') {
       e.preventDefault();
       save();
+    } else if (e.key === 'Tab') {
+      // Save current value but let the browser handle Tab navigation naturally
+      save();
+      // Find next editable field and click it to activate inline edit
+      const current = e.currentTarget as HTMLElement;
+      const row = current.closest('.odoo-field-row');
+      if (row) {
+        const allRows = Array.from(
+          row.closest('.space-y-1, .grid, form, [class*="gap"]')
+            ?.querySelectorAll('.odoo-field-row') ?? []
+        );
+        const idx = allRows.indexOf(row);
+        // Look for next editable (idle) field
+        for (let i = idx + 1; i < allRows.length; i++) {
+          const idle = allRows[i].querySelector('.inline-edit-idle') as HTMLElement;
+          if (idle) {
+            e.preventDefault();
+            setTimeout(() => idle.click(), 30);
+            return;
+          }
+        }
+        // If not found in same column, try next column
+        const container = row.closest('.grid');
+        if (container) {
+          const allFieldRows = Array.from(container.querySelectorAll('.odoo-field-row'));
+          const globalIdx = allFieldRows.indexOf(row);
+          for (let i = globalIdx + 1; i < allFieldRows.length; i++) {
+            const idle = allFieldRows[i].querySelector('.inline-edit-idle') as HTMLElement;
+            if (idle) {
+              e.preventDefault();
+              setTimeout(() => idle.click(), 30);
+              return;
+            }
+          }
+        }
+      }
     } else if (e.key === 'Escape') {
       e.preventDefault();
       discard();
