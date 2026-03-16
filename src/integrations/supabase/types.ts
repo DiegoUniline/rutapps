@@ -788,6 +788,13 @@ export type Database = {
           direccion: string | null
           email: string | null
           empresa_id: string
+          facturama_correo_facturacion: string | null
+          facturama_cp: string | null
+          facturama_id: string | null
+          facturama_razon_social: string | null
+          facturama_regimen_fiscal: string | null
+          facturama_rfc: string | null
+          facturama_uso_cfdi: string | null
           fecha_alta: string | null
           foto_fachada_url: string | null
           foto_url: string | null
@@ -801,6 +808,7 @@ export type Database = {
           notas: string | null
           orden: number | null
           regimen_fiscal: string | null
+          requiere_factura: boolean | null
           rfc: string | null
           status: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id: string | null
@@ -822,6 +830,13 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           empresa_id: string
+          facturama_correo_facturacion?: string | null
+          facturama_cp?: string | null
+          facturama_id?: string | null
+          facturama_razon_social?: string | null
+          facturama_regimen_fiscal?: string | null
+          facturama_rfc?: string | null
+          facturama_uso_cfdi?: string | null
           fecha_alta?: string | null
           foto_fachada_url?: string | null
           foto_url?: string | null
@@ -835,6 +850,7 @@ export type Database = {
           notas?: string | null
           orden?: number | null
           regimen_fiscal?: string | null
+          requiere_factura?: boolean | null
           rfc?: string | null
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
@@ -856,6 +872,13 @@ export type Database = {
           direccion?: string | null
           email?: string | null
           empresa_id?: string
+          facturama_correo_facturacion?: string | null
+          facturama_cp?: string | null
+          facturama_id?: string | null
+          facturama_razon_social?: string | null
+          facturama_regimen_fiscal?: string | null
+          facturama_rfc?: string | null
+          facturama_uso_cfdi?: string | null
           fecha_alta?: string | null
           foto_fachada_url?: string | null
           foto_url?: string | null
@@ -869,6 +892,7 @@ export type Database = {
           notas?: string | null
           orden?: number | null
           regimen_fiscal?: string | null
+          requiere_factura?: boolean | null
           rfc?: string | null
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
@@ -3457,6 +3481,8 @@ export type Database = {
           created_at: string
           descripcion: string | null
           descuento_pct: number | null
+          factura_cfdi_id: string | null
+          facturado: boolean | null
           id: string
           ieps_monto: number | null
           ieps_pct: number | null
@@ -3475,6 +3501,8 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_pct?: number | null
+          factura_cfdi_id?: string | null
+          facturado?: boolean | null
           id?: string
           ieps_monto?: number | null
           ieps_pct?: number | null
@@ -3493,6 +3521,8 @@ export type Database = {
           created_at?: string
           descripcion?: string | null
           descuento_pct?: number | null
+          factura_cfdi_id?: string | null
+          facturado?: boolean | null
           id?: string
           ieps_monto?: number | null
           ieps_pct?: number | null
@@ -3507,6 +3537,13 @@ export type Database = {
           venta_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "venta_lineas_factura_cfdi_id_fkey"
+            columns: ["factura_cfdi_id"]
+            isOneToOne: false
+            referencedRelation: "cfdis"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "venta_lineas_producto_id_fkey"
             columns: ["producto_id"]
@@ -3547,6 +3584,7 @@ export type Database = {
           iva_total: number | null
           notas: string | null
           pedido_origen_id: string | null
+          requiere_factura: boolean | null
           saldo_pendiente: number | null
           status: Database["public"]["Enums"]["status_venta"]
           subtotal: number | null
@@ -3571,6 +3609,7 @@ export type Database = {
           iva_total?: number | null
           notas?: string | null
           pedido_origen_id?: string | null
+          requiere_factura?: boolean | null
           saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
           subtotal?: number | null
@@ -3595,6 +3634,7 @@ export type Database = {
           iva_total?: number | null
           notas?: string | null
           pedido_origen_id?: string | null
+          requiere_factura?: boolean | null
           saldo_pendiente?: number | null
           status?: Database["public"]["Enums"]["status_venta"]
           subtotal?: number | null
