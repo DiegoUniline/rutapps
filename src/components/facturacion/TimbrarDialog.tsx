@@ -289,7 +289,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                         { value: 'PPD', label: 'PPD - Pago en parcialidades' },
                       ]}
                       value={paymentMethod}
-                      onValueChange={setPaymentMethod}
+                      onChange={setPaymentMethod}
                       placeholder="Método"
                     />
                   </div>
