@@ -673,6 +673,7 @@ export type Database = {
       }
       cfdis: {
         Row: {
+          cadena_original: string | null
           cancel_date: string | null
           cancel_status: string | null
           cfdi_type: string
@@ -682,11 +683,14 @@ export type Database = {
           error_detalle: string | null
           expedition_place: string | null
           facturama_id: string | null
+          fecha_timbrado: string | null
           folio: string | null
           folio_fiscal: string | null
           id: string
           ieps_total: number
           iva_total: number
+          no_certificado_emisor: string | null
+          no_certificado_sat: string | null
           payment_form: string | null
           payment_method: string | null
           pdf_url: string | null
@@ -696,6 +700,8 @@ export type Database = {
           receiver_rfc: string | null
           receiver_tax_zip_code: string | null
           retenciones_total: number
+          sello_cfdi: string | null
+          sello_sat: string | null
           serie: string | null
           status: string
           subtotal: number
@@ -706,6 +712,7 @@ export type Database = {
           xml_url: string | null
         }
         Insert: {
+          cadena_original?: string | null
           cancel_date?: string | null
           cancel_status?: string | null
           cfdi_type?: string
@@ -715,11 +722,14 @@ export type Database = {
           error_detalle?: string | null
           expedition_place?: string | null
           facturama_id?: string | null
+          fecha_timbrado?: string | null
           folio?: string | null
           folio_fiscal?: string | null
           id?: string
           ieps_total?: number
           iva_total?: number
+          no_certificado_emisor?: string | null
+          no_certificado_sat?: string | null
           payment_form?: string | null
           payment_method?: string | null
           pdf_url?: string | null
@@ -729,6 +739,8 @@ export type Database = {
           receiver_rfc?: string | null
           receiver_tax_zip_code?: string | null
           retenciones_total?: number
+          sello_cfdi?: string | null
+          sello_sat?: string | null
           serie?: string | null
           status?: string
           subtotal?: number
@@ -739,6 +751,7 @@ export type Database = {
           xml_url?: string | null
         }
         Update: {
+          cadena_original?: string | null
           cancel_date?: string | null
           cancel_status?: string | null
           cfdi_type?: string
@@ -748,11 +761,14 @@ export type Database = {
           error_detalle?: string | null
           expedition_place?: string | null
           facturama_id?: string | null
+          fecha_timbrado?: string | null
           folio?: string | null
           folio_fiscal?: string | null
           id?: string
           ieps_total?: number
           iva_total?: number
+          no_certificado_emisor?: string | null
+          no_certificado_sat?: string | null
           payment_form?: string | null
           payment_method?: string | null
           pdf_url?: string | null
@@ -762,6 +778,8 @@ export type Database = {
           receiver_rfc?: string | null
           receiver_tax_zip_code?: string | null
           retenciones_total?: number
+          sello_cfdi?: string | null
+          sello_sat?: string | null
           serie?: string | null
           status?: string
           subtotal?: number
