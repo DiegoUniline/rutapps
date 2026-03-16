@@ -178,6 +178,40 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
+      const cfdiId = data?.cfdi?.id;
+      if (!cfdiId) throw new Error('Se timbró, pero no se pudo guardar el CFDI localmente');
+
+      const cfdiLineas = ventaLineas.map((l: any) => ({
+        cfdi_id: cfdiId,
+        venta_linea_id: l.id,
+        producto_id: l.producto_id,
+        descripcion: l.descripcion || l.productos?.nombre || 'Producto',
+        cantidad: l.cantidad,
+        precio_unitario: l.precio_unitario,
+        subtotal: l.subtotal ?? 0,
+        iva_pct: l.iva_pct ?? 0,
+        ieps_pct: l.ieps_pct ?? 0,
+        iva_monto: l.iva_monto ?? 0,
+        ieps_monto: l.ieps_monto ?? 0,
+        total: l.total ?? 0,
+        product_code: l.productos?.codigo_sat || '01010101',
+        unit_code: 'H87',
+        unit_name: 'Pieza',
+      }));
+
+      const { error: linesError } = await supabase.from('cfdi_lineas').insert(cfdiLineas);
+      if (linesError) throw linesError;
+
+      const ventaLineaIds = ventaLineas.map((l: any) => l.id).filter(Boolean);
+      if (ventaLineaIds.length > 0) {
+        const { error: updateError } = await supabase
+          .from('venta_lineas')
+          .update({ facturado: true, factura_cfdi_id: cfdiId })
+          .in('id', ventaLineaIds);
+
+        if (updateError) throw updateError;
+      }
+
       toast.success(`Factura timbrada · UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
       onSuccess();
       resetForm();
