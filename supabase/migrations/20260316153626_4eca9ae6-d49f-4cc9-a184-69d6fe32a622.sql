@@ -1,0 +1,21 @@
+
+ALTER TABLE public.proveedores
+  ADD COLUMN IF NOT EXISTS contacto text,
+  ADD COLUMN IF NOT EXISTS telefono text,
+  ADD COLUMN IF NOT EXISTS email text,
+  ADD COLUMN IF NOT EXISTS rfc text,
+  ADD COLUMN IF NOT EXISTS razon_social text,
+  ADD COLUMN IF NOT EXISTS direccion text,
+  ADD COLUMN IF NOT EXISTS colonia text,
+  ADD COLUMN IF NOT EXISTS ciudad text,
+  ADD COLUMN IF NOT EXISTS estado text,
+  ADD COLUMN IF NOT EXISTS cp text,
+  ADD COLUMN IF NOT EXISTS notas text,
+  ADD COLUMN IF NOT EXISTS sitio_web text,
+  ADD COLUMN IF NOT EXISTS condicion_pago text NOT NULL DEFAULT 'contado',
+  ADD COLUMN IF NOT EXISTS dias_credito integer DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS limite_credito numeric DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS banco text,
+  ADD COLUMN IF NOT EXISTS cuenta_banco text,
+  ADD COLUMN IF NOT EXISTS clabe text,
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'activo';

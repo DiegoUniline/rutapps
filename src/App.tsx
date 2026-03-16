@@ -18,6 +18,8 @@ const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
 const ProductoFormPage = lazy(() => import("@/pages/ProductoFormPage"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
+const ProveedoresListPage = lazy(() => import("@/pages/ProveedoresListPage"));
+const ProveedorFormPage = lazy(() => import("@/pages/ProveedorFormPage"));
 const TarifaFormPage = lazy(() => import("@/pages/TarifaFormPage"));
 const ClientesListPage = lazy(() => import("@/pages/ClientesListPage"));
 const ClienteFormPage = lazy(() => import("@/pages/ClienteFormPage"));
@@ -210,6 +212,8 @@ function renderAuthenticatedRoutes() {
               <Route path="/productos/:id" element={<ProductoFormPage />} />
               <Route path="/tarifas" element={<TarifasListPage />} />
               <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+              <Route path="/proveedores" element={<ProveedoresListPage />} />
+              <Route path="/proveedores/:id" element={<ProveedorFormPage />} />
               <Route path="/clientes" element={<ClientesListPage />} />
               <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
               <Route path="/ventas" element={<VentasListPage />} />
