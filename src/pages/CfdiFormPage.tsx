@@ -651,13 +651,16 @@ export default function CfdiFormPage() {
               <AlertTriangle className="h-5 w-5" />
               Error al timbrar
             </DialogTitle>
+            <DialogDescription>
+              Revisa el detalle exacto que devolvió el sistema de facturación.
+            </DialogDescription>
           </DialogHeader>
           <div className="whitespace-pre-wrap text-sm text-muted-foreground bg-destructive/5 border border-destructive/20 rounded-lg p-4 max-h-[300px] overflow-y-auto">
             {errorDialog}
           </div>
-          <DialogFooter>
+          <div className="flex justify-end">
             <Button onClick={() => setErrorDialog(null)}>Cerrar</Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
