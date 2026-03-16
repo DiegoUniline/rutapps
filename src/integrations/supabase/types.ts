@@ -2313,6 +2313,7 @@ export type Database = {
           sitio_web: string | null
           status: string
           telefono: string | null
+          tiempo_entrega_dias: number | null
         }
         Insert: {
           banco?: string | null
@@ -2338,6 +2339,7 @@ export type Database = {
           sitio_web?: string | null
           status?: string
           telefono?: string | null
+          tiempo_entrega_dias?: number | null
         }
         Update: {
           banco?: string | null
@@ -2363,6 +2365,7 @@ export type Database = {
           sitio_web?: string | null
           status?: string
           telefono?: string | null
+          tiempo_entrega_dias?: number | null
         }
         Relationships: [
           {
