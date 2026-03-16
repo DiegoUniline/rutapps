@@ -82,7 +82,7 @@ async function verificarConexion() {
 // ========================================
 async function timbrar(supabase: any, userId: string, body: any) {
   const auth = getAuth();
-  const { venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
+  const { cfdi_id, venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
 
   // Auto-generate folio if not provided
   let folio = body.folio;
@@ -275,8 +275,9 @@ async function timbrar(supabase: any, userId: string, body: any) {
     }
   }
 
-  // Save CFDI record
-  const { data: cfdiRecord, error: insertErr } = await supabase.from("cfdis").insert({
+  // Save CFDI record — update existing borrador if cfdi_id provided, else insert new
+  let cfdiRecord = null;
+  const cfdiPayload = {
     empresa_id,
     venta_id: venta_id || null,
     facturama_id: facturamaId,
@@ -302,9 +303,23 @@ async function timbrar(supabase: any, userId: string, body: any) {
     xml_url: xmlUrl,
     status: "timbrado",
     user_id: userId,
-  }).select().single();
+    updated_at: new Date().toISOString(),
+  };
 
-  if (insertErr) console.error("Error saving CFDI:", insertErr);
+  if (cfdi_id) {
+    const { data, error: updateErr } = await supabase.from("cfdis")
+      .update(cfdiPayload)
+      .eq("id", cfdi_id)
+      .select().single();
+    if (updateErr) console.error("Error updating CFDI:", updateErr);
+    cfdiRecord = data;
+  } else {
+    const { data, error: insertErr } = await supabase.from("cfdis")
+      .insert(cfdiPayload)
+      .select().single();
+    if (insertErr) console.error("Error inserting CFDI:", insertErr);
+    cfdiRecord = data;
+  }
 
   return new Response(
     JSON.stringify({
