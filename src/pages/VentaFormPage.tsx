@@ -17,6 +17,7 @@ import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
+import { loadLogoBase64 } from '@/lib/pdfBase';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
@@ -172,17 +173,27 @@ export default function VentaFormPage() {
   const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
   const saldoPendiente = (form.total ?? 0) - totalPagado;
 
-  const handleGenerarPdf = () => {
+  const handleGenerarPdf = async () => {
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const vendedorName = profile?.nombre || user?.email || '';
+    const almacenName = almacenesList?.find((a: any) => a.id === form.almacen_id)?.nombre;
+    const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
+
     const blob = generarPedidoPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',
         razon_social: empresa?.razon_social,
         rfc: empresa?.rfc,
         direccion: empresa?.direccion,
+        colonia: empresa?.colonia,
+        ciudad: empresa?.ciudad,
+        estado: empresa?.estado,
+        cp: empresa?.cp,
         telefono: empresa?.telefono,
         email: empresa?.email,
+        logo_url: empresa?.logo_url,
       },
+      logoBase64: logo,
       pedido: {
         folio: form.folio ?? '',
         fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
@@ -201,7 +212,12 @@ export default function VentaFormPage() {
         telefono: clienteData?.telefono,
         direccion: clienteData?.direccion,
         rfc: clienteData?.rfc,
+        email: clienteData?.email,
+        cp: clienteData?.facturama_cp,
+        colonia: clienteData?.colonia,
       },
+      vendedor: vendedorName,
+      almacen: almacenName,
       lineas: lineas.filter(l => l.producto_id).map(l => {
         const prod = productosList?.find((p: any) => p.id === l.producto_id);
         return {
