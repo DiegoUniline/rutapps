@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSetupComplete } from '@/pages/ConfiguracionInicialPage';
+import { usePermisos, NAV_MODULE_MAP } from '@/hooks/usePermisos';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
 import {
@@ -247,8 +248,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
   const { data: setupComplete } = useSetupComplete();
+  const { hasModulo, loading: permisosLoading } = usePermisos();
   const location = useLocation();
   const setupActive = location.pathname === '/configuracion-inicial';
+
+  // Filter nav items based on permissions
+  const visibleNavItems = isSuperAdmin ? navItems : navItems.filter(item => {
+    const modulo = NAV_MODULE_MAP[item.path] ?? '';
+    return hasModulo(modulo);
+  });
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -286,7 +294,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {!collapsed && <span>Configuración inicial</span>}
             </Link>
           )}
-          {navItems.map(item => (
+          {visibleNavItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
           {isSuperAdmin && (
