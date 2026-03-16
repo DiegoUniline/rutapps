@@ -362,7 +362,7 @@ export default function UsuariosPage() {
                         {isEditing ? (
                           <select className="input-odoo text-xs py-1" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
                             <option value="">Sin rol</option>
-                            {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                            {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                           </select>
                         ) : (
                           <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
