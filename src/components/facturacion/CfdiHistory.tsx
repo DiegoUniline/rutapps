@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Download, Mail, FileText } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
