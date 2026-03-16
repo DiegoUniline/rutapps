@@ -553,9 +553,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     sY += cadenaLines.length * 2 + 3;
 
     // Sello digital del CFDI
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text('Sello digital del CFDI', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
