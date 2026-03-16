@@ -248,8 +248,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
   const { data: setupComplete } = useSetupComplete();
+  const { hasModulo, loading: permisosLoading } = usePermisos();
   const location = useLocation();
   const setupActive = location.pathname === '/configuracion-inicial';
+
+  // Filter nav items based on permissions
+  const visibleNavItems = isSuperAdmin ? navItems : navItems.filter(item => {
+    const modulo = NAV_MODULE_MAP[item.path] ?? '';
+    return hasModulo(modulo);
+  });
 
   return (
     <div className="min-h-screen flex bg-background">
