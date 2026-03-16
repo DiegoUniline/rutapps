@@ -452,11 +452,40 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...PDF.muted);
     doc.setFontSize(5.5);
-    // Simulated cadena — in a real implementation this would come from the XML
-    const cadenaText = `||1.1|${cfdi.folio_fiscal}|${dateStr}|SAT970701NN3|...||`;
+    const cadenaText = cfdi.cadena_original || `||1.1|${cfdi.folio_fiscal}|...||`;
     const cadenaLines = doc.splitTextToSize(cadenaText, rightX - ML);
     doc.text(cadenaLines, ML, y);
     y += cadenaLines.length * 2.5 + 3;
+
+    // No. Certificado del Emisor y SAT
+    if (cfdi.no_certificado_emisor || cfdi.no_certificado_sat) {
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...PDF.dark);
+      if (cfdi.no_certificado_emisor) {
+        doc.text(`No. Certificado del Emisor: `, ML, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(cfdi.no_certificado_emisor, ML + 42, y);
+      }
+      if (cfdi.no_certificado_sat) {
+        const satX = cfdi.no_certificado_emisor ? ML + 100 : ML;
+        doc.setFont('helvetica', 'bold');
+        doc.text(`No. Certificado SAT: `, satX, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(cfdi.no_certificado_sat, satX + 35, y);
+      }
+      y += 4;
+    }
+
+    if (cfdi.fecha_timbrado) {
+      doc.setFontSize(6);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...PDF.dark);
+      doc.text('Fecha y Hora de Certificación: ', ML, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(cfdi.fecha_timbrado, ML + 48, y);
+      y += 5;
+    }
 
     // Sello digital del CFDI
     doc.setFontSize(6);
@@ -467,10 +496,10 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...PDF.muted);
     doc.setFontSize(5.5);
-    // Placeholder — this would come from the actual XML data
-    const selloText = 'Sello disponible en el archivo XML del CFDI';
-    doc.text(selloText, ML, y);
-    y += 5;
+    const selloCfdiText = cfdi.sello_cfdi || 'Disponible en el archivo XML';
+    const selloCfdiLines = doc.splitTextToSize(selloCfdiText, rightX - ML);
+    doc.text(selloCfdiLines, ML, y);
+    y += selloCfdiLines.length * 2.5 + 3;
 
     // Sello del SAT
     doc.setFontSize(6);
@@ -481,8 +510,10 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...PDF.muted);
     doc.setFontSize(5.5);
-    doc.text('Sello disponible en el archivo XML del CFDI', ML, y);
-    y += 6;
+    const selloSatText = cfdi.sello_sat || 'Disponible en el archivo XML';
+    const selloSatLines = doc.splitTextToSize(selloSatText, rightX - ML);
+    doc.text(selloSatLines, ML, y);
+    y += selloSatLines.length * 2.5 + 4;
 
     // Legal notice
     doc.setFontSize(6);

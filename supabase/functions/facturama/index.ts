@@ -310,6 +310,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
     status: "timbrado",
     user_id: userId,
     updated_at: new Date().toISOString(),
+    cadena_original: cadenaOriginal,
+    sello_cfdi: selloCfdi,
+    sello_sat: selloSat,
+    no_certificado_sat: noCertSat,
+    no_certificado_emisor: noCertEmisor,
+    fecha_timbrado: fechaTimbrado,
   };
 
   if (cfdi_id) {
