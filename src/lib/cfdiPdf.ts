@@ -384,9 +384,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       { content: l.product_code, styles: { textColor: C.muted, fontStyle: 'normal', fontSize: 7 } },
       l.descripcion,
       { content: String(l.cantidad), styles: { halign: 'center' } },
-      { content: `${l.unit_code} ${l.unit_name}`, styles: { textColor: C.muted, fontSize: 7 } },
+      `${l.unit_code} ${l.unit_name}`,
       { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
-      { content: ivaStr, styles: { halign: 'center', textColor: C.muted } },
+      { content: ivaStr, styles: { halign: 'center' } },
       { content: `$${fmtCurrency(l.subtotal)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]);
   }
