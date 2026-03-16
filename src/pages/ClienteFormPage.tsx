@@ -45,6 +45,16 @@ export default function ClienteFormPage() {
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
   const savePedidoMutation = useSavePedidoSugerido();
 
+  // SAT catalogs for fiscal section
+  const { data: catRegimen } = useQuery({
+    queryKey: ['cat_regimen_fiscal'], staleTime: 10 * 60 * 1000,
+    queryFn: async () => { const { data } = await supabase.from('cat_regimen_fiscal').select('clave, descripcion').eq('activo', true).order('clave'); return data ?? []; },
+  });
+  const { data: catUsoCfdi } = useQuery({
+    queryKey: ['cat_uso_cfdi'], staleTime: 10 * 60 * 1000,
+    queryFn: async () => { const { data } = await supabase.from('cat_uso_cfdi').select('clave, descripcion').eq('activo', true).order('clave'); return data ?? []; },
+  });
+
   const [form, setForm] = useState<Partial<Cliente>>(defaultCliente);
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
   const [starred, setStarred] = useState(false);
