@@ -8,7 +8,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
-import { useListas, useTarifasForSelect, useProductosForSelect } from '@/hooks/useData';
+import { useTarifasForSelect, useProductosForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 
