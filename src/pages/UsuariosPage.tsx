@@ -205,6 +205,9 @@ export default function UsuariosPage() {
   // ── Create user ──
   const activeUsers = profiles.filter(p => p.estado === 'activo').length;
   const availableSlots = subscription.maxUsuarios - activeUsers;
+  const displayRoles = rolesTab === 'activos' ? roles.filter(r => r.activo !== false) : roles.filter(r => r.activo === false);
+  // Only show active roles in user role selector
+  const activeRoles = roles.filter(r => r.activo !== false);
 
   const createUser = async () => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
