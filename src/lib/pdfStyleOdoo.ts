@@ -1,12 +1,13 @@
 /**
  * Shared PDF utilities — Matching the HTML invoice design EXACTLY
  * Colors, spacing, and typography replicate the HTML template
+ * Font sizes calibrated for professional A4/Letter output
  */
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export const ML = 16;
-export const MR = 16;
+export const ML = 14;
+export const MR = 14;
 
 // ── Colors matching the HTML design EXACTLY ──
 export const C = {
@@ -78,39 +79,39 @@ export function drawDocHeader(
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
-  let y = 18;
+  let y = 20;
   let emisorX = ML;
-  const logoSize = 16;
+  const logoSize = 18;
 
   // Logo
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', ML, y - 5, logoSize, logoSize);
-      emisorX = ML + logoSize + 4;
+      doc.addImage(logoBase64, 'PNG', ML, y - 6, logoSize, logoSize);
+      emisorX = ML + logoSize + 5;
     } catch { /* ignore */ }
   }
 
-  // Company name — .emisor-nombre: 12px, 600
-  doc.setFontSize(10);
+  // Company name — .emisor-nombre: 12px, 600 → PDF 13pt
+  doc.setFontSize(13);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   const companyName = empresa.razon_social || empresa.nombre;
-  const maxNameW = (pageW * 0.55) - emisorX;
+  const maxNameW = (pageW * 0.52) - emisorX;
   const nameLines = doc.splitTextToSize(companyName, maxNameW);
   doc.text(nameLines[0], emisorX, y);
-  y += 4;
+  y += 5;
   if (nameLines.length > 1) {
     doc.text(nameLines[1], emisorX, y);
-    y += 4;
+    y += 5;
   }
 
-  // RFC — .emisor-dato: #666, 10.5px
-  doc.setFontSize(8);
+  // RFC — .emisor-dato: #666, 10.5px → PDF 9.5pt
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...C.muted);
   if (empresa.rfc) {
     doc.text(`RFC: ${empresa.rfc}`, emisorX, y);
-    y += 3.5;
+    y += 4.5;
   }
 
   // Address
@@ -119,10 +120,10 @@ export function drawDocHeader(
     const addrLine = addrParts.join(', ');
     const addrLines = doc.splitTextToSize(addrLine, maxNameW);
     doc.text(addrLines[0], emisorX, y);
-    y += 3.5;
+    y += 4.5;
     if (addrLines.length > 1) {
       doc.text(addrLines[1], emisorX, y);
-      y += 3.5;
+      y += 4.5;
     }
   }
 
@@ -132,29 +133,29 @@ export function drawDocHeader(
   if (empresa.email) metaItems.push(empresa.email);
   if (metaItems.length > 0) {
     doc.text(metaItems.join(' · '), emisorX, y);
-    y += 3.5;
+    y += 4.5;
   }
 
   // ── Right side ──
-  // Doc type — .doc-tipo: 22px, 700
-  doc.setFontSize(18);
+  // Doc type — .doc-tipo: 22px, 700 → PDF 22pt
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  doc.text(docType, rightX, 18, { align: 'right' });
+  doc.text(docType, rightX, 20, { align: 'right' });
 
-  // Folio — .doc-folio: 13px, #555, 600
-  doc.setFontSize(10);
+  // Folio — .doc-folio: 13px, #555, 600 → PDF 12pt
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.label);
-  doc.text(`Folio: ${folio}`, rightX, 23.5, { align: 'right' });
+  doc.text(`Folio: ${folio}`, rightX, 27, { align: 'right' });
 
   // Status chip
   if (statusLabel) {
-    const chipY = 27;
-    const chipFontSize = 7;
+    const chipY = 33;
+    const chipFontSize = 8;
     doc.setFontSize(chipFontSize);
     doc.setFont('helvetica', 'bold');
-    const chipW = doc.getTextWidth(statusLabel) + 8;
+    const chipW = doc.getTextWidth(statusLabel) + 10;
     const chipX = rightX - chipW;
 
     if (statusColor === 'green') {
@@ -168,15 +169,15 @@ export function drawDocHeader(
       doc.setDrawColor(...C.border);
     }
     doc.setLineWidth(0.3);
-    doc.roundedRect(chipX, chipY - 3, chipW, 5.5, 2.5, 2.5, 'FD');
+    doc.roundedRect(chipX, chipY - 3.5, chipW, 6.5, 3, 3, 'FD');
 
     if (statusColor === 'green') doc.setTextColor(...C.green);
     else if (statusColor === 'red') doc.setTextColor(...C.red);
     else doc.setTextColor(...C.label);
-    doc.text(statusLabel, chipX + 4, chipY + 0.8);
+    doc.text(statusLabel, chipX + 5, chipY + 0.8);
   }
 
-  return Math.max(y + 5, logoBase64 ? 38 : 34);
+  return Math.max(y + 6, logoBase64 ? 44 : 40);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -194,67 +195,67 @@ export function drawInfoGrid(
   const rightX = pageW - MR;
   const midX = pageW / 2;
   const colL = ML;
-  const colR = midX + 5;
+  const colR = midX + 6;
 
   // Top border
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
-  y += 6;
+  y += 7;
 
-  const gridTopY = y - 3;
+  const gridTopY = y - 4;
 
-  // Section titles — .info-label-sec: 10px, 700, #888, uppercase
-  doc.setFontSize(7);
+  // Section titles — .info-label-sec: 10px, 700, #888, uppercase → PDF 8.5pt
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.sublabel);
   doc.text(leftTitle.toUpperCase(), colL, y);
   doc.text(rightTitle.toUpperCase(), colR, y);
-  y += 5;
+  y += 6;
 
   // Left rows
   let ly = y;
   for (const [lbl, val] of leftRows) {
     if (lbl === '_name') {
-      // Special: client name — .cliente-nombre: 600, 11.5px
-      doc.setFontSize(8.5);
+      // Special: client name — .cliente-nombre: 600, 11.5px → PDF 11pt
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...C.text);
       doc.text(val, colL, ly);
-      ly += 4;
+      ly += 5;
     } else {
-      // .cliente-dato: #555, 10.5px
-      doc.setFontSize(7.5);
+      // .cliente-dato: #555, 10.5px → PDF 9.5pt
+      doc.setFontSize(9.5);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...C.label);
       doc.text(`${lbl} ${val}`, colL, ly);
-      ly += 3.8;
+      ly += 4.5;
     }
   }
 
-  // Right rows — table style: .lbl #666, .val 600 #1a1a1a
+  // Right rows — table style: .lbl #666, .val 600 #1a1a1a → PDF 9.5pt
   let ry = y;
   for (const [lbl, val] of rightRows) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...C.muted);
     doc.text(lbl, colR, ry);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(val, colR + 38, ry);
-    ry += 4;
+    doc.text(val, colR + 42, ry);
+    ry += 5;
   }
 
-  y = Math.max(ly, ry) + 2;
+  y = Math.max(ly, ry) + 3;
 
   // Vertical divider
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.3);
-  doc.line(midX, gridTopY, midX, y - 2);
+  doc.line(midX, gridTopY, midX, y - 3);
 
   // Bottom border
   doc.line(ML, y, rightX, y);
-  return y + 7;
+  return y + 8;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -277,17 +278,17 @@ export function drawCleanTable(
     styles: {
       fillColor: C.white,
       textColor: C.text,
-      fontSize: 8,
-      cellPadding: { top: 3.2, bottom: 3.2, left: 4, right: 4 },
+      fontSize: 9.5,
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
       lineWidth: 0,
       font: 'helvetica',
     },
     headStyles: {
       fillColor: C.headBg,
       textColor: C.text,
-      fontSize: 8,
+      fontSize: 9.5,
       fontStyle: 'bold',
-      cellPadding: { top: 3.2, bottom: 3.2, left: 4, right: 4 },
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
     },
     bodyStyles: { fillColor: C.white },
     alternateRowStyles: { fillColor: C.white },
@@ -320,20 +321,20 @@ export function drawTotalsBlock(
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
-  const totLabelX = rightX - 52;
+  const totLabelX = rightX - 56;
 
   // Top border
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.3);
   doc.line(ML, y - 2, rightX, y - 2);
-  y += 2;
+  y += 3;
 
   for (const row of rows) {
     if (row.separator) {
       doc.setDrawColor(...C.border);
       doc.setLineWidth(0.3);
       doc.line(totLabelX - 10, y, rightX, y);
-      y += 3;
+      y += 4;
     }
 
     if (row.bold) {
@@ -341,16 +342,16 @@ export function drawTotalsBlock(
       doc.setDrawColor(...C.text);
       doc.setLineWidth(0.6);
       doc.line(totLabelX - 10, y - 1, rightX, y - 1);
-      y += 3;
+      y += 4;
 
-      doc.setFontSize(10);
+      doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...C.text);
       doc.text(row.label, totLabelX, y, { align: 'right' });
       doc.text(row.value, rightX, y, { align: 'right' });
-      y += 7;
+      y += 8;
     } else {
-      doc.setFontSize(8);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       if (row.red) {
         doc.setTextColor(...C.red);
@@ -365,7 +366,7 @@ export function drawTotalsBlock(
         doc.setTextColor(...C.text);
       }
       doc.text(row.value, rightX, y, { align: 'right' });
-      y += 4.5;
+      y += 5.5;
     }
   }
   return y;
@@ -382,13 +383,13 @@ export function drawImporteConLetra(doc: jsPDF, y: number, text: string): number
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
-  y += 5;
+  y += 6;
 
-  doc.setFontSize(7);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(68, 68, 68); // #444
   doc.text(text.toUpperCase(), midX, y, { align: 'center' });
-  y += 4;
+  y += 5;
 
   doc.line(ML, y, rightX, y);
   return y + 7;
@@ -404,10 +405,10 @@ export function drawNotes(doc: jsPDF, y: number, notes: string, title = 'NOTAS')
   y = checkPageBreak(doc, y, 25);
 
   // Calculate text height
-  doc.setFontSize(7.5);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
-  const textLines = doc.splitTextToSize(notes, contentW - 10);
-  const boxH = 6 + textLines.length * 3.2 + 4;
+  const textLines = doc.splitTextToSize(notes, contentW - 12);
+  const boxH = 8 + textLines.length * 4 + 5;
 
   // Box background
   doc.setFillColor(...C.noteBg);
@@ -415,17 +416,17 @@ export function drawNotes(doc: jsPDF, y: number, notes: string, title = 'NOTAS')
   doc.setLineWidth(0.3);
   doc.roundedRect(ML, y, contentW, boxH, 2, 2, 'FD');
 
-  // Title — .notas-lbl
-  doc.setFontSize(7);
+  // Title — .notas-lbl → PDF 8.5pt
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.sublabel);
-  doc.text(title.toUpperCase(), ML + 5, y + 5);
+  doc.text(title.toUpperCase(), ML + 6, y + 6);
 
-  // Text — .notas-txt
-  doc.setFontSize(7.5);
+  // Text — .notas-txt → PDF 9.5pt
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...C.label);
-  doc.text(textLines, ML + 5, y + 9);
+  doc.text(textLines, ML + 6, y + 11);
 
   return y + boxH + 6;
 }
@@ -441,49 +442,49 @@ export function drawSignatures(
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
-  y = checkPageBreak(doc, y, 35);
+  y = checkPageBreak(doc, y, 40);
 
   // Top border
   doc.setDrawColor(...C.border);
   doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
-  y += 14;
+  y += 16;
 
-  const sigW = (pageW - ML - MR - 24) / 2;
+  const sigW = (pageW - ML - MR - 28) / 2;
 
   // Left signature line
   doc.setDrawColor(...C.label);
   doc.setLineWidth(0.3);
-  doc.line(ML + 6, y, ML + 6 + sigW, y);
+  doc.line(ML + 8, y, ML + 8 + sigW, y);
 
   // Right signature line
-  doc.line(pageW - MR - 6 - sigW, y, pageW - MR - 6, y);
+  doc.line(pageW - MR - 8 - sigW, y, pageW - MR - 8, y);
 
-  // Left labels
-  doc.setFontSize(7);
+  // Left labels → PDF 9pt
+  doc.setFontSize(9);
   doc.setTextColor(...C.muted);
   doc.setFont('helvetica', 'normal');
-  doc.text(left.title, ML + 6 + sigW / 2, y + 4, { align: 'center' });
+  doc.text(left.title, ML + 8 + sigW / 2, y + 5, { align: 'center' });
   if (left.name) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(left.name, ML + 6 + sigW / 2, y + 8, { align: 'center' });
+    doc.text(left.name, ML + 8 + sigW / 2, y + 10, { align: 'center' });
   }
 
-  // Right labels
-  doc.setFontSize(7);
+  // Right labels → PDF 9pt
+  doc.setFontSize(9);
   doc.setTextColor(...C.muted);
   doc.setFont('helvetica', 'normal');
-  doc.text(right.title, pageW - MR - 6 - sigW / 2, y + 4, { align: 'center' });
+  doc.text(right.title, pageW - MR - 8 - sigW / 2, y + 5, { align: 'center' });
   if (right.name) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(right.name, pageW - MR - 6 - sigW / 2, y + 8, { align: 'center' });
+    doc.text(right.name, pageW - MR - 8 - sigW / 2, y + 10, { align: 'center' });
   }
 
-  return y + 14;
+  return y + 16;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -512,10 +513,10 @@ export function drawFooter(doc: jsPDF, empresa?: EmpresaInfo) {
     // Separator line
     doc.setDrawColor(...C.borderLight);
     doc.setLineWidth(0.2);
-    doc.line(ML, pageH - 14, pageW - MR, pageH - 14);
+    doc.line(ML, pageH - 16, pageW - MR, pageH - 16);
 
-    // Company info centered — .pie: 9px, #aaa
-    doc.setFontSize(6.5);
+    // Company info centered — .pie: 9px, #aaa → PDF 8pt
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...C.light);
 
@@ -525,12 +526,12 @@ export function drawFooter(doc: jsPDF, empresa?: EmpresaInfo) {
         empresa.rfc ? `RFC: ${empresa.rfc}` : '',
         [empresa.direccion, empresa.ciudad, empresa.estado].filter(Boolean).join(', '),
       ].filter(Boolean);
-      doc.text(parts.join(' · '), midX, pageH - 10, { align: 'center' });
+      doc.text(parts.join(' · '), midX, pageH - 11, { align: 'center' });
     } else {
-      doc.text('Generado por Uniline — uniline.app', midX, pageH - 10, { align: 'center' });
+      doc.text('Generado por Uniline — uniline.app', midX, pageH - 11, { align: 'center' });
     }
 
-    // Page number
+    // Page number → PDF 8pt
     doc.text(`Página ${i} de ${totalPages}`, pageW - MR, pageH - 6, { align: 'right' });
   }
 }
