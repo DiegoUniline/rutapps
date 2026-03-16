@@ -267,6 +267,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/facturacion" element={<FacturacionPage />} />
               <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
               <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
+              <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
