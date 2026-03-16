@@ -2,21 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { MODULOS, ACCIONES } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const MODULOS = [
-  { id: 'ventas', label: 'Ventas' },
-  { id: 'clientes', label: 'Clientes' },
-  { id: 'catalogo', label: 'Catálogo' },
-  { id: 'almacen', label: 'Almacén' },
-  { id: 'finanzas', label: 'Finanzas' },
-  { id: 'reportes', label: 'Reportes' },
-  { id: 'configuracion', label: 'Configuración' },
-];
-
-const ACCIONES = ['ver', 'crear', 'editar', 'eliminar'];
 
 interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; }
 interface RolePermiso { id: string; role_id: string; modulo: string; accion: string; permitido: boolean; }

@@ -212,22 +212,14 @@ function renderAuthenticatedRoutes() {
 
 function GuardedDesktopRoutes() {
   const location = useLocation();
-  const { isSuperAdmin } = useSubscription();
 
   return (
     <Suspense fallback={<PageLoader />}>
-      {/* Super admins bypass permission checks */}
-      {isSuperAdmin ? (
+      <PermissionGuard path={location.pathname}>
         <Routes>
           {desktopRoutes()}
         </Routes>
-      ) : (
-        <PermissionGuard path={location.pathname}>
-          <Routes>
-            {desktopRoutes()}
-          </Routes>
-        </PermissionGuard>
-      )}
+      </PermissionGuard>
     </Suspense>
   );
 }
