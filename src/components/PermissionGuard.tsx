@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { usePermisos, ROUTE_TO_MODULE } from '@/hooks/usePermisos';
+import { usePermisos, PATH_MODULE_MAP } from '@/hooks/usePermisos';
 import { useSubscription } from '@/hooks/useSubscription';
 
 /**
@@ -11,18 +11,16 @@ export function PermissionGuard({ path, children }: { path: string; children: Re
   const { isSuperAdmin } = useSubscription();
 
   if (loading) return null;
-
-  // Super admins bypass all permission checks
   if (isSuperAdmin) return <>{children}</>;
 
-  // Find the matching module for this path
-  const matchingKey = Object.keys(ROUTE_TO_MODULE)
-    .sort((a, b) => b.length - a.length) // longest prefix first
-    .find(prefix => path.startsWith(prefix));
+  // Find the most specific matching path (longest prefix first)
+  const matchingKey = Object.keys(PATH_MODULE_MAP)
+    .sort((a, b) => b.length - a.length)
+    .find(prefix => path === prefix || path.startsWith(prefix + '/'));
 
-  const modulo = matchingKey ? ROUTE_TO_MODULE[matchingKey] : '';
+  const modulo = matchingKey ? PATH_MODULE_MAP[matchingKey] : '';
 
-  // No module mapping = always accessible (dashboard, etc.)
+  // No module mapping or empty = always accessible
   if (!modulo) return <>{children}</>;
 
   if (!hasModulo(modulo)) {
