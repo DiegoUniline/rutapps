@@ -44,6 +44,8 @@ interface VentaPdfParams {
     unidad?: string;
     precio_unitario: number;
     descuento_pct: number;
+    iva_pct: number;
+    ieps_pct: number;
     total: number;
   }[];
   pagos: {
