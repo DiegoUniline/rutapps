@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSetupComplete } from '@/pages/ConfiguracionInicialPage';
+import { usePermisos, NAV_MODULE_MAP } from '@/hooks/usePermisos';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
 import {
