@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * Entrega PDF — Clean Odoo-style layout
+ */
 import {
-  PDF, ML, MR, fmtDate,
-  drawHeader, drawInfoSection, drawSectionTitle, drawFooter, drawNotes, checkPageBreak,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
+  createDoc, C, fmtDate,
+  drawDocHeader, drawInfoGrid, drawCleanTable,
+  drawNotes, drawSignatures, drawFooter, checkPageBreak,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 interface EntregaPdfParams {
   empresa: EmpresaInfo;
@@ -35,77 +36,82 @@ interface EntregaPdfParams {
   }[];
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  borrador: 'Borrador', surtido: 'Surtido', asignado: 'Asignado',
+  cargado: 'Cargado', en_ruta: 'En ruta', hecho: 'Entregado', cancelado: 'Cancelado',
+};
+
 export function generarEntregaPdf(params: EntregaPdfParams): Blob {
   const { empresa, logoBase64, entrega, cliente, vendedor, repartidor, almacen, pedidoFolio, lineas } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const doc = createDoc();
 
-  const statusLabels: Record<string, string> = {
-    borrador: 'Borrador', surtido: 'Surtido', asignado: 'Asignado',
-    cargado: 'Cargado', en_ruta: 'En ruta', hecho: 'Entregado', cancelado: 'Cancelado',
-  };
+  let y = drawDocHeader(doc, empresa, 'ENTREGA', entrega.folio, logoBase64);
 
-  let y = drawHeader(doc, empresa, 'ENTREGA', entrega.folio, logoBase64);
+  y = drawInfoGrid(doc, y,
+    'Destinatario',
+    [
+      ['Cliente:', cliente || 'Sin cliente'],
+      ...(pedidoFolio ? [['Pedido:', pedidoFolio] as [string, string]] : []),
+      ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
+      ...(repartidor ? [['Repartidor:', repartidor] as [string, string]] : []),
+    ],
+    'Información',
+    [
+      ['Fecha:', fmtDate(entrega.fecha)],
+      ['Estado:', STATUS_LABELS[entrega.status] ?? entrega.status],
+      ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
+      ...(entrega.validado_at ? [['Entregado:', new Date(entrega.validado_at).toLocaleString('es-MX')] as [string, string]] : []),
+    ],
+  );
 
-  y = drawInfoSection(doc, y, [
-    ['Cliente:', cliente || 'Sin cliente'],
-    ...(pedidoFolio ? [['Pedido:', pedidoFolio] as [string, string]] : []),
-    ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
-    ...(repartidor ? [['Repartidor:', repartidor] as [string, string]] : []),
-  ], [
-    ['Fecha:', fmtDate(entrega.fecha)],
-    ['Estado:', statusLabels[entrega.status] ?? entrega.status],
-    ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
-    ...(entrega.validado_at ? [['Entregado:', new Date(entrega.validado_at).toLocaleString('es-MX')] as [string, string]] : []),
-  ]);
-
-  y = drawSectionTitle(doc, y, 'Detalle de Productos');
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: ML, right: MR },
-    head: [['Código', 'Producto', 'Unidad', 'Almacén', 'Pedida', 'Surtida', 'Estado']],
-    body: lineas.map(l => [
-      l.codigo, l.nombre, l.unidad || '—', l.almacen_origen || '—',
-      String(l.cantidad_pedida), String(l.cantidad_entregada),
-      l.hecho ? '✓ Surtido' : 'Pendiente',
+  y = drawCleanTable(doc, y,
+    ['Código', 'Producto', 'Unidad', 'Almacén', 'Pedida', 'Surtida', 'Estado'],
+    lineas.map(l => [
+      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.nombre,
+      { content: l.unidad || '—', styles: { textColor: C.muted } },
+      { content: l.almacen_origen || '—', styles: { textColor: C.muted, fontSize: 7 } },
+      { content: String(l.cantidad_pedida), styles: { halign: 'right' } },
+      { content: String(l.cantidad_entregada), styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: l.hecho ? '✓ Surtido' : 'Pendiente', styles: { fontStyle: 'bold' } },
     ]),
-    headStyles: TABLE_HEAD_STYLE,
-    bodyStyles: TABLE_BODY_STYLE,
-    alternateRowStyles: TABLE_ALT_STYLE,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 22 },
+    {
+      0: { cellWidth: 22 },
       2: { cellWidth: 16 },
       3: { cellWidth: 26 },
-      4: { halign: 'right', cellWidth: 16 },
-      5: { halign: 'right', cellWidth: 16 },
-      6: { cellWidth: 20 },
+      4: { cellWidth: 16, halign: 'right' },
+      5: { cellWidth: 16, halign: 'right' },
+      6: { cellWidth: 22 },
     },
-    didParseCell: (data) => {
+    (data: any) => {
       if (data.section === 'body' && data.column.index === 6) {
-        const val = data.cell.raw as string;
-        if (val.includes('✓')) {
-          data.cell.styles.textColor = PDF.success;
-          data.cell.styles.fontStyle = 'bold';
+        const val = data.cell.raw?.content || data.cell.raw;
+        if (typeof val === 'string' && val.includes('✓')) {
+          data.cell.styles.textColor = C.success;
         } else {
-          data.cell.styles.textColor = PDF.danger;
+          data.cell.styles.textColor = C.danger;
         }
       }
     },
-  });
+  );
 
-  // Summary line
-  y = (doc as any).lastAutoTable.finalY + 4;
+  // Summary
   const totalPedida = lineas.reduce((s, l) => s + l.cantidad_pedida, 0);
   const totalEntregada = lineas.reduce((s, l) => s + l.cantidad_entregada, 0);
+  const pendientes = lineas.filter(l => !l.hecho).length;
+
   doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.muted);
-  doc.text(`Total pedida: ${totalPedida}  ·  Total surtida: ${totalEntregada}  ·  Líneas pendientes: ${lineas.filter(l => !l.hecho).length}`, ML, y);
-  y += 8;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.text);
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.text(`Pedida: ${totalPedida}  ·  Surtida: ${totalEntregada}  ·  Pendientes: ${pendientes}`, pageW - 14, y - 2, { align: 'right' });
+  y += 12;
+
+  // Signatures
+  y = drawSignatures(doc, y, 'Entrega', 'Recibe');
 
   if (entrega.notas) {
-    y = checkPageBreak(doc, y);
-    drawNotes(doc, y, entrega.notas);
+    y = drawNotes(doc, y, entrega.notas);
   }
 
   drawFooter(doc);
