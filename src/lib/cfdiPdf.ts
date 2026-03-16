@@ -545,8 +545,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.text('Cadena original del complemento de certificación digital del SAT', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
-    doc.setFontSize(4.5);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(5);
     const cadenaText = cfdi.cadena_original || `||1.1|${cfdi.folio_fiscal}|...||`;
     const cadenaLines = doc.splitTextToSize(cadenaText, maxTextW);
     doc.text(cadenaLines, infoX, sY);
