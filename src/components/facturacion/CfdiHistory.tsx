@@ -20,10 +20,13 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
     queryFn: async () => {
       const { data } = await supabase
         .from('cfdis')
-        .select('*')
+        .select('*, cfdi_lineas(id)')
         .eq('venta_id', ventaId)
         .order('created_at', { ascending: false });
-      return data ?? [];
+      // Only show CFDIs that are timbrado/cancelado OR have lines
+      return (data ?? []).filter((c: any) =>
+        c.status === 'timbrado' || c.status === 'cancelado' || (c.cfdi_lineas && c.cfdi_lineas.length > 0)
+      );
     },
   });
 
