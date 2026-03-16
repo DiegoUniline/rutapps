@@ -415,7 +415,21 @@ export default function UsuariosPage() {
 
       {tab === 'roles' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1 border-b border-border">
+              <button
+                onClick={() => setRolesTab('activos')}
+                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", rolesTab === 'activos' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              >
+                Activos ({roles.filter(r => r.activo !== false).length})
+              </button>
+              <button
+                onClick={() => setRolesTab('inactivos')}
+                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", rolesTab === 'inactivos' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              >
+                Inactivos ({roles.filter(r => r.activo === false).length})
+              </button>
+            </div>
             <button onClick={() => { setShowRoleForm(true); setEditingRole(null); setRoleName(''); setRoleDesc(''); setRoleMovil(false); }} className="btn-odoo-primary text-xs">
               <Plus className="h-3.5 w-3.5 mr-1" /> Nuevo rol
             </button>
@@ -436,10 +450,10 @@ export default function UsuariosPage() {
               </div>
             </div>
           )}
-          {roles.map(role => (
+          {displayRoles.map(role => (
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
               onEdit={() => { setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil); setShowRoleForm(true); }}
-              onDelete={() => deleteRole(role.id)}
+              onToggleActivo={() => toggleRoleActivo(role.id, role.activo !== false)}
               onTogglePermiso={(mod, acc) => togglePermiso(role.id, mod, acc)}
               onToggleAll={(mod) => toggleAllModule(role.id, mod)}
               onToggleGroup={(group) => toggleAllGroup(role.id, group)} />
