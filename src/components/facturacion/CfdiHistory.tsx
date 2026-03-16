@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Download, Mail, FileText } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
@@ -11,6 +12,7 @@ interface CfdiHistoryProps {
 }
 
 export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps) {
+  const navigate = useNavigate();
   // Get unique cfdi_ids from facturado lines
   const cfdiIds = [...new Set(lineas.filter(l => l.facturado && l.factura_cfdi_id).map(l => l.factura_cfdi_id))];
 
@@ -57,7 +59,7 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
             }).join(', ');
 
             return (
-              <tr key={cfdi.id} className="border-b border-table-border hover:bg-table-hover">
+              <tr key={cfdi.id} className="border-b border-table-border hover:bg-table-hover cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
                 <td className="py-1.5 px-2">
                   <div>
                     <span className="font-mono text-xs font-medium">{cfdi.serie}{cfdi.folio || cfdi.id.slice(0, 6)}</span>
