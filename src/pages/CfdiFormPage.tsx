@@ -718,9 +718,17 @@ export default function CfdiFormPage() {
                     PDF Facturama (original)
                   </a>
                 </Button>
-              )}
-            </div>
-          )}
+               )}
+               <Button
+                 variant="destructive"
+                 size="sm"
+                 onClick={() => setShowCancelDialog(true)}
+               >
+                 <XCircle className="h-4 w-4 mr-1.5" />
+                 Cancelar CFDI
+               </Button>
+             </div>
+           )}
         </CardContent>
       </Card>
 
