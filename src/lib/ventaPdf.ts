@@ -1,5 +1,5 @@
 /**
- * Venta/Remisión PDF — Clean Odoo-style layout
+ * Venta/Remisión PDF — Professional clean layout
  */
 import {
   createDoc, ML, MR, C, fmtCurrency, fmtDate,
@@ -63,7 +63,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
 
   let y = drawDocHeader(doc, empresa, tipoLabel, venta.folio, logoBase64);
 
-  // Info grid
+  // Info grid — Client + Document info
   y = drawInfoGrid(doc, y,
     'Cliente',
     [
@@ -87,21 +87,21 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   y = drawCleanTable(doc, y,
     ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.%', 'Importe'],
     lineas.map(l => [
-      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.codigo,
       l.nombre,
       { content: String(l.cantidad), styles: { halign: 'center' } },
-      { content: l.unidad || '—', styles: { textColor: C.muted } },
+      l.unidad || '—',
       { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
-      { content: l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—', styles: { halign: 'center', textColor: C.muted } },
+      { content: l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—', styles: { halign: 'center' } },
       { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 22 },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 24, halign: 'right' },
+      0: { cellWidth: 24 },
+      2: { cellWidth: 16, halign: 'center' },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 24, halign: 'right' },
+      5: { cellWidth: 18, halign: 'center' },
+      6: { cellWidth: 26, halign: 'right' },
     },
   );
 
@@ -133,11 +133,11 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
       { 3: { halign: 'right' } },
     );
 
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 2, { align: 'right' });
-    y += 6;
+    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 3, { align: 'right' });
+    y += 7;
   }
 
   if (venta.notas) {
