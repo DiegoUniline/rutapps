@@ -113,6 +113,6 @@ export function generarEntregaPdf(params: EntregaPdfParams): Blob {
     y = drawNotes(doc, y, entrega.notas);
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }

@@ -96,6 +96,6 @@ export function generarTraspasoPdf(params: TraspasoPdfParams): Blob {
     y = drawNotes(doc, y, traspaso.notas);
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }
