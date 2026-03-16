@@ -59,7 +59,7 @@ export function useDeleteProducto() {
   return useMutation({
     mutationFn: async (id: string) => {
       // Soft delete: set status to 'baja' instead of deleting
-      const { error } = await supabase.from('productos').update({ status: 'baja' }).eq('id', id);
+      const { error } = await supabase.from('productos').update({ status: 'inactivo' }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['productos'] }),
