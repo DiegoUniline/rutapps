@@ -117,17 +117,40 @@ export default function UsuariosPage() {
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
     const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
     if (existing) {
+      // Optimistic update
+      setPermisos(prev => prev.map(p => p.id === existing.id ? { ...p, permitido: !p.permitido } : p));
       await supabase.from('role_permisos').update({ permitido: !existing.permitido }).eq('id', existing.id);
     } else {
-      await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: true });
+      // Optimistic: add a temporary entry
+      const tempId = `temp-${Date.now()}`;
+      setPermisos(prev => [...prev, { id: tempId, role_id: roleId, modulo, accion, permitido: true }]);
+      const { data } = await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: true }).select().single();
+      if (data) {
+        setPermisos(prev => prev.map(p => p.id === tempId ? data : p));
+      }
     }
-    load();
   };
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
     const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
     const allEnabled = ACCIONES.every(a => modulePerms.find(p => p.accion === a)?.permitido);
     const newVal = !allEnabled;
+    
+    // Optimistic update all at once
+    setPermisos(prev => {
+      let updated = [...prev];
+      for (const accion of ACCIONES) {
+        const existing = updated.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
+        if (existing) {
+          updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
+        } else {
+          updated.push({ id: `temp-${Date.now()}-${accion}`, role_id: roleId, modulo, accion, permitido: newVal });
+        }
+      }
+      return updated;
+    });
+
+    // Persist in background
     for (const accion of ACCIONES) {
       const existing = modulePerms.find(p => p.accion === accion);
       if (existing) {
@@ -136,7 +159,8 @@ export default function UsuariosPage() {
         await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal });
       }
     }
-    load();
+    // Sync with DB to get real IDs
+    load(false);
   };
 
   // ── User edit ──
