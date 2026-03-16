@@ -165,12 +165,12 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
                   </div>
                 </div>
                 <div className="odoo-field-row">
-                  <span className="odoo-field-label">Lista de precios</span>
+                  <span className="odoo-field-label">Tarifa</span>
                   <SearchableSelect
                     options={(tarifasDisp ?? []).map((t: any) => ({ value: t.id, label: t.nombre }))}
                     value={newRule.tarifa_id}
                     onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
-                    placeholder="Buscar lista..."
+                    placeholder="Buscar tarifa..."
                   />
                 </div>
               </div>

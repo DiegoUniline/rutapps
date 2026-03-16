@@ -302,9 +302,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Lista de Precios" value={form.lista_id} onChange={v => set('lista_id', v || null)} type="select"
-                    options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []} />
-                  <OdooField label="Tarifa Principal" value={form.tarifa_id} onChange={v => set('tarifa_id', v || null)} type="select"
+                  <OdooField label="Tarifa" value={form.tarifa_id} onChange={v => set('tarifa_id', v || null)} type="select"
                     options={tarifas?.map(t => ({ value: t.id, label: t.nombre })) ?? []} />
                 </OdooSection>
                 <OdooSection title="Visitas">
