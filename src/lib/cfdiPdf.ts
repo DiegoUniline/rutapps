@@ -249,9 +249,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // ═══════════════════════════════════════════════════════
   // Top border
   doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.3);
+  doc.setLineWidth(0.4);
   doc.line(ML, y, rightX, y);
-  y += 6;
+  y += 7;
 
   const colL = ML;
   const colR = midX + 4;
