@@ -19,7 +19,16 @@ interface CatRow {
   nombre?: string;
 }
 
-const CATALOGS = [
+interface CatalogDef {
+  key: string;
+  table: string;
+  label: string;
+  hasPersona: boolean;
+  isTasa?: boolean;
+  isUnidad?: boolean;
+}
+
+const CATALOGS: CatalogDef[] = [
   { key: 'regimen', table: 'cat_regimen_fiscal', label: 'Régimen Fiscal', hasPersona: true },
   { key: 'uso_cfdi', table: 'cat_uso_cfdi', label: 'Uso CFDI', hasPersona: true },
   { key: 'forma_pago', table: 'cat_forma_pago', label: 'Forma de Pago', hasPersona: false },
@@ -29,7 +38,7 @@ const CATALOGS = [
   { key: 'tasas_iva', table: 'tasas_iva', label: 'Tasas IVA', hasPersona: false, isTasa: true },
   { key: 'tasas_ieps', table: 'tasas_ieps', label: 'Tasas IEPS', hasPersona: false, isTasa: true },
   { key: 'unidades_sat', table: 'unidades_sat', label: 'Unidades SAT', hasPersona: false, isUnidad: true },
-] as const;
+];
 
 function CatalogTab({ catalog }: { catalog: typeof CATALOGS[number] }) {
   const [search, setSearch] = useState('');
