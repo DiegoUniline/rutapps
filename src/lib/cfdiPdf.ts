@@ -274,26 +274,26 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   y += 4;
 
   // Receptor RFC
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...C.label);
+  doc.setTextColor(...C.text);
   doc.text(`RFC: ${receiver.rfc}`, colL, y);
-  y += 3.5;
+  y += 4;
 
   // Receptor address
   if (receiver.direccion) {
     doc.text(receiver.direccion, colL, y);
-    y += 3.5;
+    y += 4;
   }
 
   // Receptor CP
   doc.text(`C.P. ${receiver.tax_zip_code || ''}`, colL, y);
-  y += 3.5;
+  y += 4;
 
   // Receptor email
   if (receiver.email) {
     doc.text(receiver.email, colL, y);
-    y += 3.5;
+    y += 4;
   }
 
   const leftEndY = y;
