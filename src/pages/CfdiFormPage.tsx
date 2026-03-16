@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { generarCfdiPdf } from '@/lib/cfdiPdf';
+import { loadLogoBase64 } from '@/lib/pdfBase';
 
 const CFDI_STEPS = [
   { key: 'borrador', label: 'Borrador' },
@@ -610,15 +612,107 @@ export default function CfdiFormPage() {
 
           {/* Timbrado info */}
           {cfdi.status === 'timbrado' && (
-            <div className="mt-4 flex gap-2">
-              {cfdi.pdf_url && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={cfdi.pdf_url} target="_blank" rel="noopener noreferrer">Descargar PDF</a>
-                </Button>
-              )}
+            <div className="mt-4 flex gap-2 flex-wrap">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
+                    // Get catalog labels
+                    const formaLabel = formasPago?.find((f: any) => f.clave === cfdi.payment_form);
+                    const usoLabel = usoCfdiList?.find((u: any) => u.clave === cfdi.receiver_cfdi_use);
+                    const regEmisorLabel = regimenesList?.find((r: any) => r.clave === empresa?.regimen_fiscal);
+                    const regReceptorLabel = regimenesList?.find((r: any) => r.clave === cfdi.receiver_fiscal_regime);
+
+                    const blob = generarCfdiPdf({
+                      empresa: {
+                        nombre: empresa?.nombre || '',
+                        razon_social: empresa?.razon_social,
+                        rfc: empresa?.rfc,
+                        direccion: empresa?.direccion,
+                        colonia: empresa?.colonia,
+                        ciudad: empresa?.ciudad,
+                        estado: empresa?.estado,
+                        cp: empresa?.cp,
+                        telefono: empresa?.telefono,
+                        email: empresa?.email,
+                        logo_url: empresa?.logo_url,
+                        regimen_fiscal: empresa?.regimen_fiscal,
+                      },
+                      logoBase64: logo,
+                      cfdi: {
+                        serie: cfdi.serie,
+                        folio: cfdi.folio,
+                        folio_fiscal: cfdi.folio_fiscal,
+                        cfdi_type: cfdi.cfdi_type,
+                        currency: cfdi.currency,
+                        payment_form: cfdi.payment_form,
+                        payment_method: cfdi.payment_method,
+                        expedition_place: cfdi.expedition_place,
+                        subtotal: Number(cfdi.subtotal),
+                        iva_total: Number(cfdi.iva_total),
+                        ieps_total: Number(cfdi.ieps_total),
+                        retenciones_total: Number(cfdi.retenciones_total),
+                        total: Number(cfdi.total),
+                        created_at: cfdi.created_at,
+                        status: cfdi.status,
+                      },
+                      receiver: {
+                        rfc: cfdi.receiver_rfc || '',
+                        name: cfdi.receiver_name || '',
+                        cfdi_use: cfdi.receiver_cfdi_use,
+                        fiscal_regime: cfdi.receiver_fiscal_regime,
+                        tax_zip_code: cfdi.receiver_tax_zip_code,
+                      },
+                      lineas: (lineas as any[]).map(l => ({
+                        descripcion: l.descripcion || '',
+                        product_code: l.product_code || '01010101',
+                        unit_code: l.unit_code || 'H87',
+                        unit_name: l.unit_name || 'Pieza',
+                        cantidad: l.cantidad || 0,
+                        precio_unitario: l.precio_unitario || 0,
+                        subtotal: l.subtotal || 0,
+                        iva_pct: l.iva_pct || 0,
+                        ieps_pct: l.ieps_pct || 0,
+                        iva_monto: l.iva_monto || 0,
+                        ieps_monto: l.ieps_monto || 0,
+                        total: l.total || 0,
+                      })),
+                      formasPagoLabel: formaLabel ? `${formaLabel.clave} - ${formaLabel.descripcion}` : undefined,
+                      metodoPagoLabel: cfdi.payment_method === 'PUE' ? 'PUE - Pago en una sola exhibición' : cfdi.payment_method === 'PPD' ? 'PPD - Pago en parcialidades' : undefined,
+                      usoCfdiLabel: usoLabel ? `${usoLabel.clave} - ${usoLabel.descripcion}` : undefined,
+                      regimenEmisorLabel: regEmisorLabel ? `${regEmisorLabel.clave} - ${regEmisorLabel.descripcion}` : undefined,
+                      regimenReceptorLabel: regReceptorLabel ? `${regReceptorLabel.clave} - ${regReceptorLabel.descripcion}` : undefined,
+                    });
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Factura_${cfdi.serie || 'A'}-${cfdi.folio || 'borrador'}.pdf`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  } catch (e: any) {
+                    toast.error('Error al generar PDF: ' + e.message);
+                  }
+                }}
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                Descargar PDF
+              </Button>
               {cfdi.xml_url && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={cfdi.xml_url} target="_blank" rel="noopener noreferrer">Descargar XML</a>
+                  <a href={cfdi.xml_url} target="_blank" rel="noopener noreferrer">
+                    <FileText className="h-4 w-4 mr-1.5" />
+                    Descargar XML
+                  </a>
+                </Button>
+              )}
+              {cfdi.pdf_url && (
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={cfdi.pdf_url} target="_blank" rel="noopener noreferrer">
+                    PDF Facturama (original)
+                  </a>
                 </Button>
               )}
             </div>
