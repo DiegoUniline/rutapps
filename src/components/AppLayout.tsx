@@ -294,7 +294,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {!collapsed && <span>Configuración inicial</span>}
             </Link>
           )}
-          {navItems.map(item => (
+          {visibleNavItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
           {isSuperAdmin && (
