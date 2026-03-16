@@ -530,7 +530,7 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">
                                 {newLinea.aplica_a === 'producto' && (
-                                  <ChipSelect items={prodItems} selectedIds={newLinea.producto_ids}
+                                  <ChipSelect items={getAvailableProds(newLinea.producto_ids)} selectedIds={newLinea.producto_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
                                 )}
                                 {newLinea.aplica_a === 'categoria' && (
