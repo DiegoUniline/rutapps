@@ -573,8 +573,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.text('Sello digital del SAT', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
-    doc.setFontSize(4.5);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(5);
     const selloSatText = cfdi.sello_sat || 'Disponible en el archivo XML';
     const selloSatLines = doc.splitTextToSize(selloSatText, maxTextW);
     doc.text(selloSatLines, infoX, sY);
