@@ -267,7 +267,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   y += 6;
 
   // Receptor name
-  doc.setFontSize(8.5);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text(receiver.name, colL, y);
