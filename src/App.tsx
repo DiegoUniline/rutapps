@@ -259,6 +259,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
               <Route path="/reportes" element={<ReportesPage />} />
               <Route path="/configuracion" element={<ConfiguracionPage />} />
+              <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
               <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
               <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
               <Route path="/facturacion" element={<FacturacionPage />} />
