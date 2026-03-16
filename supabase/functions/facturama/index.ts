@@ -35,11 +35,6 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    const supabase = getSupabase(authHeader);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("No autenticado");
-
     const body = await req.json();
     const { action } = body;
 
