@@ -809,8 +809,8 @@ export default function CfdiFormPage() {
               </div>
             )}
 
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-              <p className="text-xs text-amber-800 dark:text-amber-200">
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3">
+              <p className="text-xs text-destructive">
                 <strong>⚠️ Atención:</strong> La cancelación de un CFDI es un proceso ante el SAT y puede requerir la aceptación del receptor. Esta acción no se puede deshacer.
               </p>
             </div>
