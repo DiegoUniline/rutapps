@@ -18,6 +18,8 @@ const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
 const ProductoFormPage = lazy(() => import("@/pages/ProductoFormPage"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
+const ProveedoresListPage = lazy(() => import("@/pages/ProveedoresListPage"));
+const ProveedorFormPage = lazy(() => import("@/pages/ProveedorFormPage"));
 const TarifaFormPage = lazy(() => import("@/pages/TarifaFormPage"));
 const ClientesListPage = lazy(() => import("@/pages/ClientesListPage"));
 const ClienteFormPage = lazy(() => import("@/pages/ClienteFormPage"));
