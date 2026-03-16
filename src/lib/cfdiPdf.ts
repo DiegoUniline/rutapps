@@ -169,7 +169,7 @@ function drawPair(doc: jsPDF, x: number, y: number, label: string, value: string
 
 export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const { empresa, logoBase64, cfdi, receiver, lineas, formasPagoLabel, metodoPagoLabel, usoCfdiLabel, regimenEmisorLabel, regimenReceptorLabel } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: false, putOnlyUsedFonts: true });
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
   const midX = pageW / 2;
