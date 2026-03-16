@@ -1,31 +1,37 @@
 /**
- * Shared PDF document utilities — Odoo-style professional layout
- * Reusable header, footer, info boxes and summary cards
+ * Shared PDF document utilities — Clean Odoo-style professional layout
+ * No colored bars, neutral palette, logo support, clean tables
  */
 import jsPDF from 'jspdf';
 
-// ── Color palette ──
-export const PDF_COLORS = {
-  primary: [37, 99, 235] as [number, number, number],     // blue-600
-  indigo: [79, 70, 229] as [number, number, number],      // indigo-600
-  dark: [15, 23, 42] as [number, number, number],         // slate-900
-  muted: [100, 116, 139] as [number, number, number],     // slate-500
-  success: [22, 163, 74] as [number, number, number],     // green-600
-  danger: [220, 38, 38] as [number, number, number],      // red-600
-  warning: [217, 119, 6] as [number, number, number],     // amber-600
-  teal: [13, 148, 136] as [number, number, number],       // teal-600
+// ── Neutral color palette (no vivid colors) ──
+export const PDF = {
+  black: [33, 37, 41] as [number, number, number],
+  dark: [52, 58, 64] as [number, number, number],
+  muted: [134, 142, 150] as [number, number, number],
+  light: [173, 181, 189] as [number, number, number],
+  border: [222, 226, 230] as [number, number, number],
+  bgAlt: [248, 249, 250] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  success: [40, 167, 69] as [number, number, number],
+  danger: [220, 53, 69] as [number, number, number],
 };
 
-export const MARGIN_L = 14;
-export const MARGIN_R = 14;
+export const ML = 14; // margin left
+export const MR = 14; // margin right
 
 export interface EmpresaInfo {
   nombre: string;
   razon_social?: string | null;
   rfc?: string | null;
   direccion?: string | null;
+  colonia?: string | null;
+  ciudad?: string | null;
+  estado?: string | null;
+  cp?: string | null;
   telefono?: string | null;
   email?: string | null;
+  logo_url?: string | null;
 }
 
 // ── Format helpers ──
@@ -49,165 +55,248 @@ export const fmtDateTime = (d: string) => {
   } catch { return d; }
 };
 
-// ── Header bar (colored strip at top) ──
+/**
+ * Draw clean header: Company name left, document type + folio right
+ * Optional logo image (if pre-loaded as base64)
+ */
 export function drawHeader(
   doc: jsPDF,
   empresa: EmpresaInfo,
   docTitle: string,
   docReference: string,
-  color: [number, number, number] = PDF_COLORS.primary,
+  logoBase64?: string | null,
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setFillColor(...color);
-  doc.rect(0, 0, pageW, 28, 'F');
+  let y = 14;
+  let leftX = ML;
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
+  // Logo if available
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', ML, 8, 20, 20);
+      leftX = ML + 24;
+    } catch { /* ignore bad image */ }
+  }
+
+  // Company name
+  doc.setTextColor(...PDF.black);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(empresa.nombre.toUpperCase(), MARGIN_L, 12);
+  doc.text(empresa.nombre.toUpperCase(), leftX, y);
 
-  doc.setFontSize(7.5);
+  // Company details line
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  const details = [
-    empresa.razon_social,
-    empresa.rfc ? `RFC: ${empresa.rfc}` : null,
-    empresa.direccion,
-    empresa.telefono ? `Tel: ${empresa.telefono}` : null,
-  ].filter(Boolean).join('  ·  ');
-  if (details) doc.text(details, MARGIN_L, 18);
+  doc.setTextColor(...PDF.muted);
+  const details: string[] = [];
+  if (empresa.razon_social) details.push(empresa.razon_social);
+  if (empresa.rfc) details.push(`RFC: ${empresa.rfc}`);
+  const addr = [empresa.direccion, empresa.colonia, empresa.ciudad, empresa.estado, empresa.cp].filter(Boolean).join(', ');
+  if (addr) details.push(addr);
+  if (empresa.telefono) details.push(`Tel: ${empresa.telefono}`);
+  if (empresa.email) details.push(empresa.email);
 
-  doc.setFontSize(11);
+  let dy = y + 5;
+  // Split details into max 2 lines
+  const line1 = details.slice(0, 3).join('  ·  ');
+  const line2 = details.slice(3).join('  ·  ');
+  if (line1) { doc.text(line1, leftX, dy); dy += 4; }
+  if (line2) { doc.text(line2, leftX, dy); dy += 4; }
+
+  // Document type + reference on right side
+  doc.setTextColor(...PDF.black);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text(docTitle, pageW - MARGIN_R, 12, { align: 'right' });
+  doc.text(docTitle, pageW - MR, 14, { align: 'right' });
   doc.setFontSize(9);
-  doc.text(docReference, pageW - MARGIN_R, 18, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...PDF.dark);
+  doc.text(docReference, pageW - MR, 20, { align: 'right' });
 
-  return 35;
+  // Separator line
+  const lineY = Math.max(dy, 26) + 2;
+  doc.setDrawColor(...PDF.border);
+  doc.setLineWidth(0.4);
+  doc.line(ML, lineY, pageW - MR, lineY);
+
+  return lineY + 6;
 }
 
-// ── Info box (rounded rect with key-value rows) ──
-export function drawInfoBox(
+/**
+ * Draw a clean info section with key-value rows (no colored background)
+ */
+export function drawInfoSection(
   doc: jsPDF,
   y: number,
-  title: string,
-  rows: (string | null)[][],
+  leftRows: [string, string][],
+  rightRows: [string, string][],
 ): number {
   const pageW = doc.internal.pageSize.getWidth();
-  const contentW = pageW - MARGIN_L - MARGIN_R;
-  const rowCount = rows.filter(r => r.some(Boolean)).length;
-  const boxH = 6 + rowCount * 6;
+  const midX = pageW / 2;
+  const labelW = 32;
 
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(MARGIN_L, y, contentW, boxH, 2, 2, 'FD');
+  const maxRows = Math.max(leftRows.length, rightRows.length);
+  for (let i = 0; i < maxRows; i++) {
+    const ly = y + i * 5;
+    if (leftRows[i]) {
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...PDF.muted);
+      doc.text(leftRows[i][0], ML, ly);
+      doc.setTextColor(...PDF.black);
+      doc.setFont('helvetica', 'bold');
+      doc.text(leftRows[i][1], ML + labelW, ly);
+    }
+    if (rightRows[i]) {
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...PDF.muted);
+      doc.text(rightRows[i][0], midX + 10, ly);
+      doc.setTextColor(...PDF.black);
+      doc.setFont('helvetica', 'bold');
+      doc.text(rightRows[i][1], midX + 10 + labelW, ly);
+    }
+  }
 
-  doc.setTextColor(...PDF_COLORS.dark);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(title, MARGIN_L + 4, y + 6);
+  return y + maxRows * 5 + 4;
+}
 
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF_COLORS.muted);
+/**
+ * Clean totals block aligned to right
+ */
+export function drawTotals(
+  doc: jsPDF,
+  y: number,
+  rows: { label: string; value: string; bold?: boolean }[],
+): number {
+  const pageW = doc.internal.pageSize.getWidth();
+  const rightX = pageW - MR;
+  const labelX = rightX - 60;
 
-  let ry = y + 12;
-  rows.forEach(row => {
-    const text = row.filter(Boolean).join('  ·  ');
-    if (text) {
-      doc.text(text, MARGIN_L + 4, ry);
-      ry += 6;
+  rows.forEach((row, i) => {
+    const ry = y + i * 5.5;
+    doc.setFontSize(row.bold ? 8.5 : 7.5);
+    doc.setFont('helvetica', row.bold ? 'bold' : 'normal');
+    doc.setTextColor(...(row.bold ? PDF.black : PDF.muted));
+    doc.text(row.label, labelX, ry);
+    doc.setTextColor(...PDF.black);
+    doc.text(row.value, rightX, ry, { align: 'right' });
+
+    if (row.bold) {
+      // Line above total
+      doc.setDrawColor(...PDF.border);
+      doc.setLineWidth(0.3);
+      doc.line(labelX, ry - 3, rightX, ry - 3);
     }
   });
 
-  return y + boxH + 6;
+  return y + rows.length * 5.5 + 4;
 }
 
-// ── Summary metric boxes (up to 4 boxes) ──
-export interface SummaryBox {
-  label: string;
-  value: string;
-  color?: [number, number, number];
-  bgColor?: [number, number, number];
-  borderColor?: [number, number, number];
-}
-
-export function drawSummaryBoxes(doc: jsPDF, y: number, boxes: SummaryBox[]): number {
+/**
+ * Draw a section title — simple bold text with a thin line
+ */
+export function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
   const pageW = doc.internal.pageSize.getWidth();
-  const contentW = pageW - MARGIN_L - MARGIN_R;
-  const gap = 4;
-  const boxW = (contentW - gap * (boxes.length - 1)) / boxes.length;
-
-  boxes.forEach((box, i) => {
-    const x = MARGIN_L + i * (boxW + gap);
-    doc.setFillColor(...(box.bgColor ?? [248, 250, 252]));
-    doc.setDrawColor(...(box.borderColor ?? [226, 232, 240]));
-    doc.roundedRect(x, y, boxW, 18, 1.5, 1.5, 'FD');
-
-    doc.setTextColor(...PDF_COLORS.muted);
-    doc.setFontSize(6.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(box.label, x + boxW / 2, y + 5.5, { align: 'center' });
-
-    doc.setTextColor(...(box.color ?? PDF_COLORS.dark));
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(box.value, x + boxW / 2, y + 13, { align: 'center' });
-  });
-
-  return y + 24;
-}
-
-// ── Section title ──
-export function drawSectionTitle(
-  doc: jsPDF,
-  y: number,
-  title: string,
-  color: [number, number, number] = PDF_COLORS.primary,
-): number {
-  doc.setTextColor(...color);
-  doc.setFontSize(9);
+  doc.setTextColor(...PDF.dark);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(title, MARGIN_L, y + 1);
-  return y + 4;
+  doc.text(title, ML, y);
+
+  doc.setDrawColor(...PDF.border);
+  doc.setLineWidth(0.2);
+  doc.line(ML, y + 2, pageW - MR, y + 2);
+
+  return y + 6;
 }
 
-// ── Footer on all pages ──
-export function drawFooter(doc: jsPDF) {
+/**
+ * Clean table header styles (neutral gray)
+ */
+export const TABLE_HEAD_STYLE = {
+  fillColor: [245, 245, 245] as [number, number, number],
+  textColor: [52, 58, 64] as [number, number, number],
+  fontSize: 7,
+  fontStyle: 'bold' as const,
+  cellPadding: 2.5,
+  lineColor: [222, 226, 230] as [number, number, number],
+  lineWidth: 0.3,
+};
+
+export const TABLE_BODY_STYLE = {
+  fontSize: 7,
+  cellPadding: 2.5,
+  textColor: [33, 37, 41] as [number, number, number],
+  lineColor: [240, 240, 240] as [number, number, number],
+  lineWidth: 0.15,
+};
+
+export const TABLE_ALT_STYLE = {
+  fillColor: [252, 252, 252] as [number, number, number],
+};
+
+/**
+ * Footer on all pages — clean line + pagination
+ */
+export function drawFooter(doc: jsPDF, footerText = 'Elaborado por Uniline — uniline.app') {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(MARGIN_L, pageH - 14, pageW - MARGIN_R, pageH - 14);
-    doc.setTextColor(...PDF_COLORS.muted);
-    doc.setFontSize(6.5);
+    doc.setDrawColor(...PDF.border);
+    doc.setLineWidth(0.3);
+    doc.line(ML, pageH - 12, pageW - MR, pageH - 12);
+    doc.setTextColor(...PDF.light);
+    doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
-    doc.text('Elaborado por Uniline — Innovación en la nube', MARGIN_L, pageH - 9);
-    doc.text(`Página ${i} de ${totalPages}`, pageW - MARGIN_R, pageH - 9, { align: 'right' });
+    doc.text(footerText, ML, pageH - 8);
+    doc.text(`Página ${i} de ${totalPages}`, pageW - MR, pageH - 8, { align: 'right' });
   }
 }
 
-// ── Notes section ──
-export function drawNotes(doc: jsPDF, y: number, notes: string): number {
+/**
+ * Notes section
+ */
+export function drawNotes(doc: jsPDF, y: number, notes: string, label = 'Notas'): number {
   const pageW = doc.internal.pageSize.getWidth();
-  const contentW = pageW - MARGIN_L - MARGIN_R;
   if (y > 240) { doc.addPage(); y = 14; }
-  doc.setTextColor(...PDF_COLORS.muted);
-  doc.setFontSize(7.5);
+  doc.setTextColor(...PDF.muted);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
-  doc.text('NOTAS:', MARGIN_L, y);
+  doc.text(`${label}:`, ML, y);
   doc.setFont('helvetica', 'normal');
-  const split = doc.splitTextToSize(notes, contentW);
-  doc.text(split, MARGIN_L, y + 5);
-  return y + 5 + split.length * 3.5;
+  doc.setTextColor(...PDF.dark);
+  const split = doc.splitTextToSize(notes, pageW - ML - MR);
+  doc.text(split, ML, y + 4);
+  return y + 4 + split.length * 3.2;
 }
 
-// ── Check page break ──
-export function checkPageBreak(doc: jsPDF, y: number, needed: number = 40): number {
+/**
+ * Check page break
+ */
+export function checkPageBreak(doc: jsPDF, y: number, needed = 40): number {
   if (y > doc.internal.pageSize.getHeight() - needed) {
     doc.addPage();
     return 14;
   }
   return y;
+}
+
+/**
+ * Load logo from URL as base64 for PDF embedding
+ */
+export async function loadLogoBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
