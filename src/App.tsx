@@ -201,79 +201,104 @@ function renderAuthenticatedRoutes() {
       {/* Desktop POS */}
       <Route path="/pos" element={<PuntoVentaPage />} />
 
-      {/* Desktop ERP */}
       <Route path="*" element={
         <AppLayout>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/supervisor" element={<SupervisorDashboardPage />} />
-              <Route path="/monitor-rutas" element={<MonitorRutasPage />} />
-              <Route path="/productos" element={<ProductosListPage />} />
-              <Route path="/catalogo/:catalog" element={<CatalogPage />} />
-              <Route path="/productos/:id" element={<ProductoFormPage />} />
-              <Route path="/tarifas" element={<TarifasListPage />} />
-              <Route path="/tarifas/:id" element={<TarifaFormPage />} />
-              <Route path="/proveedores" element={<ProveedoresListPage />} />
-              <Route path="/proveedores/:id" element={<ProveedorFormPage />} />
-              <Route path="/clientes" element={<ClientesListPage />} />
-              <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
-              <Route path="/ventas" element={<VentasListPage />} />
-              <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
-              <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
-              <Route path="/logistica/pedidos" element={<DemandaPage />} />
-              <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
-              <Route path="/logistica/entregas" element={<EntregaListPage />} />
-              <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
-              <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
-              <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
-              <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
-              <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
-              <Route path="/entregas/:id" element={<EntregaFormPage />} />
-              <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
-              <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
-              <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
-              <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
-              <Route path="/ventas/cobranza" element={<CobranzaPage />} />
-              <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
-              <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
-              <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
-              <Route path="/ventas/promociones" element={<PromocionesPage />} />
-              <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
-              <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
-              <Route path="/ventas/:id" element={<VentaFormPage />} />
-              <Route path="/almacen/inventario" element={<InventarioPage />} />
-              <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
-              <Route path="/almacen/compras" element={<ComprasPage />} />
-              <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
-              <Route path="/almacen/lotes" element={<LotesPage />} />
-              <Route path="/almacen/descargas" element={<DescargasPage />} />
-              <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
-              <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
-              <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
-              <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
-              <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
-              <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
-              <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
-              <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
-              <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
-              <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
-              <Route path="/reportes" element={<ReportesPage />} />
-              <Route path="/configuracion" element={<ConfiguracionPage />} />
-              <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
-              <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
-              <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
-              <Route path="/facturacion" element={<FacturacionPage />} />
-              <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
-              <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
-              <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+          <GuardedDesktopRoutes />
         </AppLayout>
       } />
+    </>
+  );
+}
+
+function GuardedDesktopRoutes() {
+  const location = useLocation();
+  const { isSuperAdmin } = useSubscription();
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      {/* Super admins bypass permission checks */}
+      {isSuperAdmin ? (
+        <Routes>
+          {desktopRoutes()}
+        </Routes>
+      ) : (
+        <PermissionGuard path={location.pathname}>
+          <Routes>
+            {desktopRoutes()}
+          </Routes>
+        </PermissionGuard>
+      )}
+    </Suspense>
+  );
+}
+
+function desktopRoutes() {
+  return (
+    <>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/supervisor" element={<SupervisorDashboardPage />} />
+      <Route path="/monitor-rutas" element={<MonitorRutasPage />} />
+      <Route path="/productos" element={<ProductosListPage />} />
+      <Route path="/catalogo/:catalog" element={<CatalogPage />} />
+      <Route path="/productos/:id" element={<ProductoFormPage />} />
+      <Route path="/tarifas" element={<TarifasListPage />} />
+      <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+      <Route path="/proveedores" element={<ProveedoresListPage />} />
+      <Route path="/proveedores/:id" element={<ProveedorFormPage />} />
+      <Route path="/clientes" element={<ClientesListPage />} />
+      <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
+      <Route path="/ventas" element={<VentasListPage />} />
+      <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
+      <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
+      <Route path="/logistica/pedidos" element={<DemandaPage />} />
+      <Route path="/logistica/pedidos/:id" element={<PedidoPendienteDetailPage />} />
+      <Route path="/logistica/entregas" element={<EntregaListPage />} />
+      <Route path="/logistica/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
+      <Route path="/logistica/entregas/camion/:vendedorId" element={<EntregaCamionPage />} />
+      <Route path="/logistica/entregas/:id" element={<EntregaFormPage />} />
+      <Route path="/entregas" element={<Navigate to="/logistica/entregas" replace />} />
+      <Route path="/entregas/nuevo" element={<Navigate to="/logistica/entregas" replace />} />
+      <Route path="/entregas/:id" element={<EntregaFormPage />} />
+      <Route path="/logistica/pedidos-pendientes" element={<Navigate to="/logistica/pedidos" replace />} />
+      <Route path="/ventas/entregas" element={<Navigate to="/logistica/entregas" replace />} />
+      <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
+      <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
+      <Route path="/ventas/cobranza" element={<CobranzaPage />} />
+      <Route path="/ventas/rutas" element={<GoogleMapsProvider><RutasMapPage /></GoogleMapsProvider>} />
+      <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider><MapaClientesPage /></GoogleMapsProvider>} />
+      <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider><MapaVentasPage /></GoogleMapsProvider>} />
+      <Route path="/ventas/promociones" element={<PromocionesPage />} />
+      <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
+      <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
+      <Route path="/ventas/:id" element={<VentaFormPage />} />
+      <Route path="/almacen/inventario" element={<InventarioPage />} />
+      <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
+      <Route path="/almacen/compras" element={<ComprasPage />} />
+      <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
+      <Route path="/almacen/lotes" element={<LotesPage />} />
+      <Route path="/almacen/descargas" element={<DescargasPage />} />
+      <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
+      <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
+      <Route path="/almacen/ajustes" element={<AjustesInventarioPage />} />
+      <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
+      <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
+      <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
+      <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
+      <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
+      <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
+      <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
+      <Route path="/reportes" element={<ReportesPage />} />
+      <Route path="/configuracion" element={<ConfiguracionPage />} />
+      <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
+      <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
+      <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
+      <Route path="/facturacion" element={<FacturacionPage />} />
+      <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
+      <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
+      <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
+      <Route path="*" element={<NotFound />} />
     </>
   );
 }
