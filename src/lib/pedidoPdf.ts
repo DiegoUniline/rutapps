@@ -123,12 +123,12 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
       { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 22 },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 24, halign: 'right' },
+      0: { cellWidth: 24 },
+      2: { cellWidth: 16, halign: 'center' },
+      3: { cellWidth: 22 },
+      4: { cellWidth: 26, halign: 'right' },
+      5: { cellWidth: 18, halign: 'center' },
+      6: { cellWidth: 28, halign: 'right' },
     },
   );
 
