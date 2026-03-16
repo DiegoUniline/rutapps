@@ -2290,22 +2290,79 @@ export type Database = {
       }
       proveedores: {
         Row: {
+          banco: string | null
+          ciudad: string | null
+          clabe: string | null
+          colonia: string | null
+          condicion_pago: string
+          contacto: string | null
+          cp: string | null
           created_at: string
+          cuenta_banco: string | null
+          dias_credito: number | null
+          direccion: string | null
+          email: string | null
           empresa_id: string
+          estado: string | null
           id: string
+          limite_credito: number | null
           nombre: string
+          notas: string | null
+          razon_social: string | null
+          rfc: string | null
+          sitio_web: string | null
+          status: string
+          telefono: string | null
         }
         Insert: {
+          banco?: string | null
+          ciudad?: string | null
+          clabe?: string | null
+          colonia?: string | null
+          condicion_pago?: string
+          contacto?: string | null
+          cp?: string | null
           created_at?: string
+          cuenta_banco?: string | null
+          dias_credito?: number | null
+          direccion?: string | null
+          email?: string | null
           empresa_id: string
+          estado?: string | null
           id?: string
+          limite_credito?: number | null
           nombre: string
+          notas?: string | null
+          razon_social?: string | null
+          rfc?: string | null
+          sitio_web?: string | null
+          status?: string
+          telefono?: string | null
         }
         Update: {
+          banco?: string | null
+          ciudad?: string | null
+          clabe?: string | null
+          colonia?: string | null
+          condicion_pago?: string
+          contacto?: string | null
+          cp?: string | null
           created_at?: string
+          cuenta_banco?: string | null
+          dias_credito?: number | null
+          direccion?: string | null
+          email?: string | null
           empresa_id?: string
+          estado?: string | null
           id?: string
+          limite_credito?: number | null
           nombre?: string
+          notas?: string | null
+          razon_social?: string | null
+          rfc?: string | null
+          sitio_web?: string | null
+          status?: string
+          telefono?: string | null
         }
         Relationships: [
           {
