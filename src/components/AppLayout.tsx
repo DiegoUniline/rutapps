@@ -106,7 +106,8 @@ const navItems: NavItem[] = [
     icon: FileText,
     path: '/facturacion-cfdi',
     children: [
-      { label: 'Catálogos SAT', path: '/facturacion-cfdi' },
+      { label: 'Facturas CFDI', path: '/facturacion-cfdi' },
+      { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
     ],
   },
   {

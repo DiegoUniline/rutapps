@@ -589,6 +589,123 @@ export type Database = {
         }
         Relationships: []
       }
+      cfdis: {
+        Row: {
+          cancel_date: string | null
+          cancel_status: string | null
+          cfdi_type: string
+          created_at: string
+          currency: string
+          empresa_id: string
+          error_detalle: string | null
+          expedition_place: string | null
+          facturama_id: string | null
+          folio: string | null
+          folio_fiscal: string | null
+          id: string
+          ieps_total: number
+          iva_total: number
+          payment_form: string | null
+          payment_method: string | null
+          pdf_url: string | null
+          receiver_cfdi_use: string | null
+          receiver_fiscal_regime: string | null
+          receiver_name: string | null
+          receiver_rfc: string | null
+          receiver_tax_zip_code: string | null
+          retenciones_total: number
+          serie: string | null
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string
+          venta_id: string | null
+          xml_url: string | null
+        }
+        Insert: {
+          cancel_date?: string | null
+          cancel_status?: string | null
+          cfdi_type?: string
+          created_at?: string
+          currency?: string
+          empresa_id: string
+          error_detalle?: string | null
+          expedition_place?: string | null
+          facturama_id?: string | null
+          folio?: string | null
+          folio_fiscal?: string | null
+          id?: string
+          ieps_total?: number
+          iva_total?: number
+          payment_form?: string | null
+          payment_method?: string | null
+          pdf_url?: string | null
+          receiver_cfdi_use?: string | null
+          receiver_fiscal_regime?: string | null
+          receiver_name?: string | null
+          receiver_rfc?: string | null
+          receiver_tax_zip_code?: string | null
+          retenciones_total?: number
+          serie?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+          venta_id?: string | null
+          xml_url?: string | null
+        }
+        Update: {
+          cancel_date?: string | null
+          cancel_status?: string | null
+          cfdi_type?: string
+          created_at?: string
+          currency?: string
+          empresa_id?: string
+          error_detalle?: string | null
+          expedition_place?: string | null
+          facturama_id?: string | null
+          folio?: string | null
+          folio_fiscal?: string | null
+          id?: string
+          ieps_total?: number
+          iva_total?: number
+          payment_form?: string | null
+          payment_method?: string | null
+          pdf_url?: string | null
+          receiver_cfdi_use?: string | null
+          receiver_fiscal_regime?: string | null
+          receiver_name?: string | null
+          receiver_rfc?: string | null
+          receiver_tax_zip_code?: string | null
+          retenciones_total?: number
+          serie?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+          venta_id?: string | null
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdis_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdis_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clasificaciones: {
         Row: {
           created_at: string
@@ -663,6 +780,7 @@ export type Database = {
           codigo: string | null
           colonia: string | null
           contacto: string | null
+          cp: string | null
           created_at: string
           credito: boolean | null
           dia_visita: string[] | null
@@ -682,10 +800,12 @@ export type Database = {
           nombre: string
           notas: string | null
           orden: number | null
+          regimen_fiscal: string | null
           rfc: string | null
           status: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id: string | null
           telefono: string | null
+          uso_cfdi: string | null
           vendedor_id: string | null
           zona_id: string | null
         }
@@ -694,6 +814,7 @@ export type Database = {
           codigo?: string | null
           colonia?: string | null
           contacto?: string | null
+          cp?: string | null
           created_at?: string
           credito?: boolean | null
           dia_visita?: string[] | null
@@ -713,10 +834,12 @@ export type Database = {
           nombre: string
           notas?: string | null
           orden?: number | null
+          regimen_fiscal?: string | null
           rfc?: string | null
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
+          uso_cfdi?: string | null
           vendedor_id?: string | null
           zona_id?: string | null
         }
@@ -725,6 +848,7 @@ export type Database = {
           codigo?: string | null
           colonia?: string | null
           contacto?: string | null
+          cp?: string | null
           created_at?: string
           credito?: boolean | null
           dia_visita?: string[] | null
@@ -744,10 +868,12 @@ export type Database = {
           nombre?: string
           notas?: string | null
           orden?: number | null
+          regimen_fiscal?: string | null
           rfc?: string | null
           status?: Database["public"]["Enums"]["status_cliente"] | null
           tarifa_id?: string | null
           telefono?: string | null
+          uso_cfdi?: string | null
           vendedor_id?: string | null
           zona_id?: string | null
         }
