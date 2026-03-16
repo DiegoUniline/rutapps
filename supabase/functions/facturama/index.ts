@@ -211,6 +211,12 @@ async function timbrar(supabase: any, userId: string, body: any) {
   const result = JSON.parse(content);
   const facturamaId = result.Id;
   const folioFiscal = result.Complement?.TaxStamp?.Uuid;
+  const selloCfdi = result.Complement?.TaxStamp?.CfdiSign || null;
+  const selloSat = result.Complement?.TaxStamp?.SatSign || null;
+  const noCertSat = result.Complement?.TaxStamp?.SatCertNumber || null;
+  const noCertEmisor = result.Complement?.TaxStamp?.NoCertificado || null;
+  const fechaTimbrado = result.Complement?.TaxStamp?.Date || null;
+  const cadenaOriginal = result.OriginalString || null;
 
   // Download PDF and XML as base64
   let pdfBase64 = null;
