@@ -122,6 +122,15 @@ export interface Cliente {
   orden?: number;
   tarifa_id?: string;
   status?: StatusCliente;
+  // Facturación
+  requiere_factura?: boolean;
+  facturama_rfc?: string;
+  facturama_razon_social?: string;
+  facturama_regimen_fiscal?: string;
+  facturama_uso_cfdi?: string;
+  facturama_cp?: string;
+  facturama_correo_facturacion?: string;
+  facturama_id?: string;
   created_at: string;
   // joined
   zonas?: { nombre: string };
@@ -220,8 +229,10 @@ export interface VentaLinea {
   ieps_monto: number;
   total: number;
   notas?: string;
+  facturado?: boolean;
+  factura_cfdi_id?: string;
   created_at: string;
   // joined
-  productos?: { id: string; codigo: string; nombre: string; precio_principal: number; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; unidad_venta_id: string | null };
+  productos?: { id: string; codigo: string; nombre: string; precio_principal: number; tiene_iva: boolean; tiene_ieps: boolean; tasa_iva_id: string | null; tasa_ieps_id: string | null; unidad_venta_id: string | null; codigo_sat?: string; udem_sat_id?: string };
   unidades?: { nombre: string; abreviatura?: string };
 }

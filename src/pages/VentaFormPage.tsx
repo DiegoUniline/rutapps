@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink, FileText, Receipt } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
+import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
+import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -112,6 +114,7 @@ export default function VentaFormPage() {
   const [pagoSaving, setPagoSaving] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
 
   // Is read-only? Only borrador is editable
   const readOnly = !isNew && form.status !== 'borrador';
@@ -577,10 +580,16 @@ export default function VentaFormPage() {
               <FileText className="h-3.5 w-3.5" /> Documento
             </button>
           )}
+          {/* Factura button — visible when requiere_factura and has pending lines */}
+          {!isNew && (form as any).requiere_factura && lineas.some(l => l.producto_id && !l.facturado) && (
+            <button onClick={() => setShowFacturaDrawer(true)} className="btn-odoo-primary text-xs">
+              <Receipt className="h-3.5 w-3.5" /> Facturar • {lineas.filter(l => l.producto_id && !l.facturado).length} pendientes
+            </button>
+          )}
           {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
           )}
-          {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && (
+          {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && !(form as any).requiere_factura && (
             <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
           )}
           {!readOnly && !isNew && (
@@ -661,6 +670,8 @@ export default function VentaFormPage() {
                       set('cliente_id', cId);
                       const c = clientesList?.find(cl => cl.id === cId);
                       if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
+                      // Inherit requiere_factura from client
+                      if (c?.requiere_factura) set('requiere_factura', true);
                     }}
                     placeholder="Buscar cliente..."
                   />
@@ -1317,6 +1328,25 @@ export default function VentaFormPage() {
                 </div>
               ),
             },
+            // Facturación tab — only if requiere_factura
+            ...(!isNew && (form as any).requiere_factura ? [{
+              key: 'facturacion',
+              label: `Facturación (${lineas.filter(l => l.producto_id && l.facturado).length}/${lineas.filter(l => l.producto_id).length})`,
+              content: (
+                <div className="p-4">
+                  <CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />
+                  {lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && (
+                    <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4">
+                      <span className="inline-block w-2 h-2 rounded-full bg-primary" />
+                      Todas las líneas facturadas
+                    </div>
+                  )}
+                  {!lineas.some(l => l.facturado) && (
+                    <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>
+                  )}
+                </div>
+              ),
+            }] : []),
           ]} />
         </div>
       </div>
@@ -1332,6 +1362,17 @@ export default function VentaFormPage() {
         tipo="pedido"
         referencia_id={form.id}
       />
+      {/* Factura Drawer */}
+      {showFacturaDrawer && form.id && form.cliente_id && (
+        <FacturaDrawer
+          open={showFacturaDrawer}
+          onClose={() => setShowFacturaDrawer(false)}
+          ventaId={form.id}
+          cliente={clientesList?.find(c => c.id === form.cliente_id) as any}
+          lineas={lineas as any}
+          productosList={productosList ?? []}
+        />
+      )}
     </div>
   );
 }
