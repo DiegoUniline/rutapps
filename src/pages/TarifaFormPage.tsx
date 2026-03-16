@@ -208,8 +208,8 @@ export default function TarifaFormPage() {
         clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
       } as any);
       setEditingLineaId(null);
+      setEditingCol(null);
       refetch();
-      toast.success('Regla actualizada');
     } catch (err: any) { toast.error(err.message); }
   };
 
