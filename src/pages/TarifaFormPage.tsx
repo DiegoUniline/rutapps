@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Check, Layers } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Layers } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -95,6 +95,7 @@ export default function TarifaFormPage() {
   const [newLinea, setNewLinea] = useState({ ...EMPTY_LINEA });
   const [editingName, setEditingName] = useState(false);
   const [editingLineaId, setEditingLineaId] = useState<string | null>(null);
+  const [editingCol, setEditingCol] = useState<string | null>(null);
   const [editLinea, setEditLinea] = useState({ ...EMPTY_LINEA });
 
   useEffect(() => { if (existing) { setForm(existing); setOriginalForm(existing); } }, [existing]);
@@ -157,23 +158,31 @@ export default function TarifaFormPage() {
     try { await deleteLinea.mutateAsync(lineaId); refetch(); } catch (err: any) { toast.error(err.message); }
   };
 
-  const startEditLinea = (l: TarifaLinea) => {
+  const startEditLinea = (l: TarifaLinea, col: string) => {
+    // If switching to a different line, save the previous one first
+    if (editingLineaId && editingLineaId !== l.id) {
+      handleSaveEditLinea();
+    }
+    if (editingLineaId === l.id && editingCol === col) return;
+    if (editingLineaId !== l.id) {
+      setEditLinea({
+        producto_ids: l.producto_ids ?? [],
+        clasificacion_ids: l.clasificacion_ids ?? [],
+        aplica_a: l.aplica_a,
+        tipo_calculo: l.tipo_calculo,
+        precio: l.precio,
+        precio_minimo: l.precio_minimo,
+        descuento_max: (l as any).descuento_max ?? 0,
+        margen_pct: l.margen_pct,
+        descuento_pct: l.descuento_pct,
+        comision_pct: (l as any).comision_pct ?? 0,
+        base_precio: (l as any).base_precio ?? 'sin_impuestos',
+        redondeo: (l as any).redondeo ?? 'ninguno',
+        notas: (l as any).notas ?? '',
+      });
+    }
     setEditingLineaId(l.id);
-    setEditLinea({
-      producto_ids: l.producto_ids ?? [],
-      clasificacion_ids: l.clasificacion_ids ?? [],
-      aplica_a: l.aplica_a,
-      tipo_calculo: l.tipo_calculo,
-      precio: l.precio,
-      precio_minimo: l.precio_minimo,
-      descuento_max: (l as any).descuento_max ?? 0,
-      margen_pct: l.margen_pct,
-      descuento_pct: l.descuento_pct,
-      comision_pct: (l as any).comision_pct ?? 0,
-      base_precio: (l as any).base_precio ?? 'sin_impuestos',
-      redondeo: (l as any).redondeo ?? 'ninguno',
-      notas: (l as any).notas ?? '',
-    });
+    setEditingCol(col);
   };
 
   const handleSaveEditLinea = async () => {
@@ -199,8 +208,8 @@ export default function TarifaFormPage() {
         clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
       } as any);
       setEditingLineaId(null);
+      setEditingCol(null);
       refetch();
-      toast.success('Regla actualizada');
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -406,105 +415,118 @@ export default function TarifaFormPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {sortedLineas.map(l => (
-                          editingLineaId === l.id ? (
-                            <tr key={l.id} className="bg-primary/5 border-b border-table-border">
-                              <td className="py-2 px-3">
-                                <select className="input-odoo text-xs w-full" value={editLinea.aplica_a}
-                                  onChange={e => setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] }))}>
+                        {sortedLineas.map(l => {
+                          const isEditing = editingLineaId === l.id;
+                          const ec = (col: string) => isEditing && editingCol === col;
+                          const cellClick = (col: string) => (e: React.MouseEvent) => { e.stopPropagation(); startEditLinea(l, col); };
+                          const blurSave = () => { handleSaveEditLinea(); };
+                          return (
+                          <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                            {/* Aplica a */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('aplica_a')}>
+                              {ec('aplica_a') ? (
+                                <select autoFocus className="input-odoo text-xs w-full" value={editLinea.aplica_a}
+                                  onBlur={blurSave}
+                                  onChange={e => { setEditLinea(p => ({ ...p, aplica_a: e.target.value as AplicaATarifa, producto_ids: [], clasificacion_ids: [] })); }}>
                                   <option value="todos">Todos</option>
                                   <option value="categoria">Categoría</option>
                                   <option value="producto">Producto</option>
                                 </select>
-                              </td>
-                              <td className="py-2 px-3">
-                                {editLinea.aplica_a === 'producto' && (
-                                  <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
-                                    onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
-                                )}
-                                {editLinea.aplica_a === 'categoria' && (
-                                  <ChipSelect items={getAvailableClas(editLinea.clasificacion_ids)} selectedIds={editLinea.clasificacion_ids}
-                                    onChange={ids => setEditLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
-                                )}
-                                {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
-                              </td>
-                              <td className="py-2 px-3">
-                                <select className="input-odoo text-xs w-full" value={editLinea.tipo_calculo}
+                              ) : getAplicaBadge(l.aplica_a)}
+                            </td>
+                            {/* Productos / Categorías */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('items')}>
+                              {ec('items') ? (
+                                <div onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) blurSave(); }}>
+                                  {editLinea.aplica_a === 'producto' && (
+                                    <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
+                                      onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
+                                  )}
+                                  {editLinea.aplica_a === 'categoria' && (
+                                    <ChipSelect items={getAvailableClas(editLinea.clasificacion_ids)} selectedIds={editLinea.clasificacion_ids}
+                                      onChange={ids => setEditLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
+                                  )}
+                                  {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {l.aplica_a === 'producto' && l.producto_ids.map(pid => (
+                                    <span key={pid} className="odoo-badge text-[11px]">{prodMap.get(pid) ?? pid}</span>
+                                  ))}
+                                  {l.aplica_a === 'categoria' && l.clasificacion_ids.map(cid => (
+                                    <span key={cid} className="odoo-badge text-[11px]">{clasMap.get(cid) ?? cid}</span>
+                                  ))}
+                                  {l.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">Todos</span>}
+                                </div>
+                              )}
+                            </td>
+                            {/* Cálculo */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('tipo_calculo')}>
+                              {ec('tipo_calculo') ? (
+                                <select autoFocus className="input-odoo text-xs w-full" value={editLinea.tipo_calculo}
+                                  onBlur={blurSave}
                                   onChange={e => setEditLinea(p => ({ ...p, tipo_calculo: e.target.value as TipoCalculoTarifa }))}>
                                   <option value="margen_costo">Margen % s/costo</option>
                                   <option value="descuento_precio">Descuento % s/precio</option>
                                   <option value="precio_fijo">Precio fijo</option>
                                 </select>
-                              </td>
-                              <td className="py-2 px-3">
-                                <select className="input-odoo text-xs w-full" value={editLinea.base_precio}
+                              ) : <span className="text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</span>}
+                            </td>
+                            {/* Base */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('base_precio')}>
+                              {ec('base_precio') ? (
+                                <select autoFocus className="input-odoo text-xs w-full" value={editLinea.base_precio}
+                                  onBlur={blurSave}
                                   onChange={e => setEditLinea(p => ({ ...p, base_precio: e.target.value as any }))}>
                                   <option value="sin_impuestos">Sin impuestos</option>
                                   <option value="con_impuestos">Con impuestos</option>
                                 </select>
-                              </td>
-                              <td className="py-2 px-3">
-                                {editLinea.tipo_calculo === 'margen_costo'
-                                  ? <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.margen_pct || ''} onChange={e => setEditLinea(p => ({ ...p, margen_pct: +e.target.value }))} />
+                              ) : <span className="text-xs text-muted-foreground">{(l as any).base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}</span>}
+                            </td>
+                            {/* Valor */}
+                            <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('valor')}>
+                              {ec('valor') ? (
+                                editLinea.tipo_calculo === 'margen_costo'
+                                  ? <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.margen_pct || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, margen_pct: +e.target.value }))} />
                                   : editLinea.tipo_calculo === 'descuento_precio'
-                                  ? <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.descuento_pct || ''} onChange={e => setEditLinea(p => ({ ...p, descuento_pct: +e.target.value }))} />
-                                  : <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio || ''} onChange={e => setEditLinea(p => ({ ...p, precio: +e.target.value }))} />
-                                }
-                              </td>
-                              <td className="py-2 px-3">
-                                <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.comision_pct || ''} onChange={e => setEditLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
-                              </td>
-                              <td className="py-2 px-3">
-                                <input type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio_minimo || ''} onChange={e => setEditLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
-                              </td>
-                              <td className="py-2 px-3">
-                                <select className="input-odoo text-xs w-full" value={editLinea.redondeo}
+                                  ? <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.descuento_pct || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, descuento_pct: +e.target.value }))} />
+                                  : <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, precio: +e.target.value }))} />
+                              ) : <span className="font-mono text-odoo-teal font-semibold">{getCalculoDisplay(l)}</span>}
+                            </td>
+                            {/* Comisión */}
+                            <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('comision')}>
+                              {ec('comision') ? (
+                                <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.comision_pct || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, comision_pct: +e.target.value }))} />
+                              ) : <span className="font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</span>}
+                            </td>
+                            {/* Precio mín */}
+                            <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('precio_min')}>
+                              {ec('precio_min') ? (
+                                <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio_minimo || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
+                              ) : <span className="font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</span>}
+                            </td>
+                            {/* Redondeo */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('redondeo')}>
+                              {ec('redondeo') ? (
+                                <select autoFocus className="input-odoo text-xs w-full" value={editLinea.redondeo}
+                                  onBlur={blurSave}
                                   onChange={e => setEditLinea(p => ({ ...p, redondeo: e.target.value as RedondeoTarifa }))}>
                                   <option value="ninguno">Sin redondeo</option>
                                   <option value="arriba">↑ Arriba</option>
                                   <option value="abajo">↓ Abajo</option>
                                   <option value="cercano">≈ Cercano</option>
                                 </select>
-                              </td>
-                              <td className="py-2 px-3 text-center">
-                                <div className="flex items-center gap-1">
-                                  <button onClick={handleSaveEditLinea} className="text-primary hover:text-primary/80">
-                                    <Check className="h-3.5 w-3.5" />
-                                  </button>
-                                  <button onClick={() => setEditingLineaId(null)} className="text-muted-foreground hover:text-foreground">
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ) : (
-                          <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer" onClick={() => { if (editingLineaId !== l.id) startEditLinea(l); }}>
-                            <td className="py-1.5 px-3">{getAplicaBadge(l.aplica_a)}</td>
-                            <td className="py-1.5 px-3">
-                              <div className="flex flex-wrap gap-1">
-                                {l.aplica_a === 'producto' && l.producto_ids.map(pid => (
-                                  <span key={pid} className="odoo-badge text-[11px]">{prodMap.get(pid) ?? pid}</span>
-                                ))}
-                                {l.aplica_a === 'categoria' && l.clasificacion_ids.map(cid => (
-                                  <span key={cid} className="odoo-badge text-[11px]">{clasMap.get(cid) ?? cid}</span>
-                                ))}
-                                {l.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">Todos</span>}
-                              </div>
+                              ) : <span className="text-xs text-muted-foreground">{REDONDEO_LABELS[(l as any).redondeo] || '—'}</span>}
                             </td>
-                            <td className="py-1.5 px-3 text-xs text-muted-foreground">{CALCULO_LABELS[l.tipo_calculo]}</td>
-                            <td className="py-1.5 px-3 text-xs text-muted-foreground">{(l as any).base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}</td>
-                            <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">{getCalculoDisplay(l)}</td>
-                            <td className="py-1.5 px-3 text-right font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</td>
-                            <td className="py-1.5 px-3 text-right font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</td>
-                            <td className="py-1.5 px-3 text-xs text-muted-foreground">{REDONDEO_LABELS[(l as any).redondeo] || '—'}</td>
-                            <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                            {/* Delete */}
+                            <td className="py-1.5 px-3 text-center">
                               <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
                             </td>
                           </tr>
-                          )
-                        ))}
+                          );
+                        })}
                         {sortedLineas.length === 0 && !showAddRow && (
                           <tr><td colSpan={9} className="py-6 text-center text-[12px] text-muted-foreground">
                             Sin reglas de precio. Haz clic en "Agregar un precio" para empezar.
