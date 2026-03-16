@@ -180,4 +180,4 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   return doc.output('blob');
 }
 
-const MR = 14;
+
