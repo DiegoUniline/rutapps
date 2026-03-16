@@ -176,6 +176,6 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
     y = drawNotes(doc, y, pedido.notas);
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }

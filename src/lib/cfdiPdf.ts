@@ -611,7 +611,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.setTextColor(...C.text);
   doc.text('Este documento es una representación impresa de un CFDI · Generado por tu sistema', midX, y, { align: 'center' });
 
-  drawFooter(doc, `${empresa.nombre} — Factura generada por Rutapp`);
+  drawFooter(doc, empresa);
 
   return doc.output('blob');
 }

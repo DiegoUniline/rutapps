@@ -165,6 +165,6 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
     y += split.length * 3.8 + 5;
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }

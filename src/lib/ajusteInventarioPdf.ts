@@ -82,6 +82,6 @@ export function generarAjusteInventarioPdf(params: AjusteInventarioPdfParams): B
     y = drawNotes(doc, y, `Motivo: ${ajuste.motivo}`);
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }

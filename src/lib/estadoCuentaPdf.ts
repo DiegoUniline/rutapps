@@ -139,6 +139,6 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
     doc.text('Sin pagos registrados', ML, y + 4);
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }

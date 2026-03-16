@@ -90,12 +90,12 @@ export function generarTraspasoPdf(params: TraspasoPdfParams): Blob {
   y += 14;
 
   // Signatures
-  y = drawSignatures(doc, y, 'Entrega', 'Recibe');
+  y = drawSignatures(doc, y, { title: 'Entrega' }, { title: 'Recibe' });
 
   if (traspaso.notas) {
     y = drawNotes(doc, y, traspaso.notas);
   }
 
-  drawFooter(doc);
+  drawFooter(doc, empresa);
   return doc.output('blob');
 }
