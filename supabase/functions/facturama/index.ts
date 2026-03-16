@@ -43,18 +43,27 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // Actions that don't require user auth
+    if (action === "verificar_conexion") {
+      return await verificarConexion();
+    } else if (action === "list_csds") {
+      return await listCsds();
+    } else if (action === "upload_csd") {
+      return await uploadCsd(body);
+    } else if (action === "descargar") {
+      return await descargar(body);
+    }
+
+    // Actions that require user auth
+    const authHeader = req.headers.get("Authorization") || "";
+    const supabase = getSupabase(authHeader);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("No autenticado");
+
     if (action === "timbrar") {
       return await timbrar(supabase, user.id, body);
     } else if (action === "cancelar") {
       return await cancelar(supabase, user.id, body);
-    } else if (action === "descargar") {
-      return await descargar(body);
-    } else if (action === "verificar_conexion") {
-      return await verificarConexion();
-    } else if (action === "upload_csd") {
-      return await uploadCsd(body);
-    } else if (action === "list_csds") {
-      return await listCsds();
     } else {
       throw new Error(`Acción no válida: ${action}`);
     }
