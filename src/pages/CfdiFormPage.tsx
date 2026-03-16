@@ -315,10 +315,26 @@ export default function CfdiFormPage() {
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       navigate('/facturacion-cfdi');
     } catch (e: any) {
-      // Parse Facturama error for user-friendly display
-      let errorMsg = e.message || 'Error al timbrar';
+      let errorMsg = 'No se pudo timbrar la factura.';
+
       try {
-        // Try to extract ModelState details from nested JSON
+        if (e instanceof FunctionsHttpError) {
+          const responseBody = await e.context.json();
+          if (responseBody?.error) {
+            errorMsg = responseBody.error;
+          } else if (responseBody?.Message) {
+            errorMsg = responseBody.Message;
+          } else {
+            errorMsg = JSON.stringify(responseBody);
+          }
+        } else if (e?.data?.error) {
+          errorMsg = e.data.error;
+        } else if (e?.error?.Message) {
+          errorMsg = e.error.Message;
+        } else if (e?.message) {
+          errorMsg = e.message;
+        }
+
         const match = errorMsg.match(/Facturama rechazó: (.*)/);
         if (match) {
           const parsed = JSON.parse(match[1]);
@@ -334,7 +350,10 @@ export default function CfdiFormPage() {
             errorMsg = parsed.Message;
           }
         }
-      } catch { /* use raw message */ }
+      } catch {
+        errorMsg = e?.message || errorMsg;
+      }
+
       setErrorDialog(errorMsg);
     } finally {
       setTimbring(false);
