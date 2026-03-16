@@ -290,8 +290,10 @@ export default function CfdiFormPage() {
         },
       });
 
-      if (error) throw error;
+      // Check for errors - data.error contains the real Facturama message
       if (data?.error) throw new Error(data.error);
+      if (error) throw new Error(data?.error || error.message || 'Error desconocido al timbrar');
+      if (!data?.success) throw new Error(data?.error || 'Respuesta inesperada del servidor');
 
       // Mark venta_lineas as facturado
       const cfdiId = data.cfdi?.id || cfdi.id;
