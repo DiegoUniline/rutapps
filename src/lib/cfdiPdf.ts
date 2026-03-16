@@ -559,8 +559,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.text('Sello digital del CFDI', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
-    doc.setFontSize(4.5);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(5);
     const selloCfdiText = cfdi.sello_cfdi || 'Disponible en el archivo XML';
     const selloCfdiLines = doc.splitTextToSize(selloCfdiText, maxTextW);
     doc.text(selloCfdiLines, infoX, sY);
