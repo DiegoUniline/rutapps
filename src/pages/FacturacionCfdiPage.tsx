@@ -193,7 +193,10 @@ export default function FacturacionCfdiPage() {
                         {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || '—'}
                       </TableCell>
                       <TableCell className="truncate max-w-[200px]">{cfdi.receiver_name || '—'}</TableCell>
-                      <TableCell className="font-mono text-xs">{cfdi.receiver_rfc || '—'}</TableCell>
+                       <TableCell className="font-mono text-xs">{cfdi.receiver_rfc || '—'}</TableCell>
+                       <TableCell className="font-mono text-xs text-primary">
+                         {(cfdi.ventas as any)?.folio || '—'}
+                       </TableCell>
                       <TableCell className="text-right font-medium">
                         ${Number(cfdi.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                       </TableCell>
