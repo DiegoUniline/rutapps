@@ -107,7 +107,7 @@ export function generarEntregaPdf(params: EntregaPdfParams): Blob {
   doc.text(`Pedida: ${totalPedida}  ·  Surtida: ${totalEntregada}  ·  Pendientes: ${pendientes}`, pageW - MR, y - 3, { align: 'right' });
   y += 14;
 
-  y = drawSignatures(doc, y, 'Entrega', 'Recibe');
+  y = drawSignatures(doc, y, { title: 'Entrega' }, { title: 'Recibe' });
 
   if (entrega.notas) {
     y = drawNotes(doc, y, entrega.notas);
