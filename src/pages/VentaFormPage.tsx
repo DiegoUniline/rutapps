@@ -1328,6 +1328,25 @@ export default function VentaFormPage() {
                 </div>
               ),
             },
+            // Facturación tab — only if requiere_factura
+            ...(!isNew && (form as any).requiere_factura ? [{
+              key: 'facturacion',
+              label: `Facturación (${lineas.filter(l => l.producto_id && l.facturado).length}/${lineas.filter(l => l.producto_id).length})`,
+              content: (
+                <div className="p-4">
+                  <CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />
+                  {lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && (
+                    <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4">
+                      <span className="inline-block w-2 h-2 rounded-full bg-primary" />
+                      Todas las líneas facturadas
+                    </div>
+                  )}
+                  {!lineas.some(l => l.facturado) && (
+                    <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>
+                  )}
+                </div>
+              ),
+            }] : []),
           ]} />
         </div>
       </div>
@@ -1343,6 +1362,17 @@ export default function VentaFormPage() {
         tipo="pedido"
         referencia_id={form.id}
       />
+      {/* Factura Drawer */}
+      {showFacturaDrawer && form.id && form.cliente_id && (
+        <FacturaDrawer
+          open={showFacturaDrawer}
+          onClose={() => setShowFacturaDrawer(false)}
+          ventaId={form.id}
+          cliente={clientesList?.find(c => c.id === form.cliente_id) as any}
+          lineas={lineas as any}
+          productosList={productosList ?? []}
+        />
+      )}
     </div>
   );
 }
