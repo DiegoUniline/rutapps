@@ -158,23 +158,31 @@ export default function TarifaFormPage() {
     try { await deleteLinea.mutateAsync(lineaId); refetch(); } catch (err: any) { toast.error(err.message); }
   };
 
-  const startEditLinea = (l: TarifaLinea) => {
+  const startEditLinea = (l: TarifaLinea, col: string) => {
+    // If switching to a different line, save the previous one first
+    if (editingLineaId && editingLineaId !== l.id) {
+      handleSaveEditLinea();
+    }
+    if (editingLineaId === l.id && editingCol === col) return;
+    if (editingLineaId !== l.id) {
+      setEditLinea({
+        producto_ids: l.producto_ids ?? [],
+        clasificacion_ids: l.clasificacion_ids ?? [],
+        aplica_a: l.aplica_a,
+        tipo_calculo: l.tipo_calculo,
+        precio: l.precio,
+        precio_minimo: l.precio_minimo,
+        descuento_max: (l as any).descuento_max ?? 0,
+        margen_pct: l.margen_pct,
+        descuento_pct: l.descuento_pct,
+        comision_pct: (l as any).comision_pct ?? 0,
+        base_precio: (l as any).base_precio ?? 'sin_impuestos',
+        redondeo: (l as any).redondeo ?? 'ninguno',
+        notas: (l as any).notas ?? '',
+      });
+    }
     setEditingLineaId(l.id);
-    setEditLinea({
-      producto_ids: l.producto_ids ?? [],
-      clasificacion_ids: l.clasificacion_ids ?? [],
-      aplica_a: l.aplica_a,
-      tipo_calculo: l.tipo_calculo,
-      precio: l.precio,
-      precio_minimo: l.precio_minimo,
-      descuento_max: (l as any).descuento_max ?? 0,
-      margen_pct: l.margen_pct,
-      descuento_pct: l.descuento_pct,
-      comision_pct: (l as any).comision_pct ?? 0,
-      base_precio: (l as any).base_precio ?? 'sin_impuestos',
-      redondeo: (l as any).redondeo ?? 'ninguno',
-      notas: (l as any).notas ?? '',
-    });
+    setEditingCol(col);
   };
 
   const handleSaveEditLinea = async () => {
