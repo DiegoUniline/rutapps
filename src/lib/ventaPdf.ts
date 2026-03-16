@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * Venta/Remisión PDF — Clean Odoo-style layout
+ */
 import {
-  PDF, ML, MR, fmtCurrency, fmtDate,
-  drawHeader, drawInfoSection, drawTotals, drawSectionTitle, drawFooter, drawNotes, checkPageBreak,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
+  createDoc, ML, MR, C, fmtCurrency, fmtDate,
+  drawDocHeader, drawInfoGrid, drawCleanTable, drawTotalsBlock,
+  drawNotes, drawFooter, checkPageBreak,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 interface VentaPdfParams {
   empresa: EmpresaInfo;
@@ -52,53 +53,57 @@ interface VentaPdfParams {
 
 export function generarVentaPdf(params: VentaPdfParams): Blob {
   const { empresa, logoBase64, venta, cliente, vendedor, almacen, lineas, pagos } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const doc = createDoc();
+  const pageW = doc.internal.pageSize.getWidth();
+  const rightX = pageW - MR;
 
   const tipoLabel = venta.tipo === 'pedido' ? 'PEDIDO' : 'VENTA';
-
-  let y = drawHeader(doc, empresa, tipoLabel, venta.folio, logoBase64);
-
   const statusLabel = venta.status.charAt(0).toUpperCase() + venta.status.slice(1);
   const pagoLabel = venta.condicion_pago === 'credito' ? 'Crédito' : venta.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
-  y = drawInfoSection(doc, y, [
-    ['Cliente:', cliente.nombre],
-    ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
-    ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
-    ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
-  ], [
-    ['Fecha:', fmtDate(venta.fecha)],
-    ['Estado:', statusLabel],
-    ['Pago:', pagoLabel],
-    ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
-    ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
-  ]);
 
-  y = drawSectionTitle(doc, y, 'Productos');
+  let y = drawDocHeader(doc, empresa, tipoLabel, venta.folio, logoBase64);
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: ML, right: MR },
-    head: [['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.%', 'Total']],
-    body: lineas.map(l => [
-      l.codigo, l.nombre, String(l.cantidad), l.unidad || '—',
-      `$${fmtCurrency(l.precio_unitario)}`,
-      l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—',
-      `$${fmtCurrency(l.total)}`,
+  // Info grid
+  y = drawInfoGrid(doc, y,
+    'Cliente',
+    [
+      ['Nombre:', cliente.nombre],
+      ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
+      ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
+      ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
+      ...(cliente.direccion ? [['Dirección:', cliente.direccion] as [string, string]] : []),
+    ],
+    'Información del documento',
+    [
+      ['Fecha:', fmtDate(venta.fecha)],
+      ['Estado:', statusLabel],
+      ['Condición de pago:', pagoLabel],
+      ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
+      ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
+    ],
+  );
+
+  // Products table
+  y = drawCleanTable(doc, y,
+    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.%', 'Importe'],
+    lineas.map(l => [
+      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.nombre,
+      { content: String(l.cantidad), styles: { halign: 'center' } },
+      { content: l.unidad || '—', styles: { textColor: C.muted } },
+      { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
+      { content: l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—', styles: { halign: 'center', textColor: C.muted } },
+      { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
-    headStyles: TABLE_HEAD_STYLE,
-    bodyStyles: TABLE_BODY_STYLE,
-    alternateRowStyles: TABLE_ALT_STYLE,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 22 },
-      2: { halign: 'right', cellWidth: 14 },
-      3: { cellWidth: 16 },
-      4: { halign: 'right', cellWidth: 22 },
-      5: { halign: 'right', cellWidth: 16 },
-      6: { halign: 'right', fontStyle: 'bold', cellWidth: 24 },
+    {
+      0: { cellWidth: 22 },
+      2: { cellWidth: 14, halign: 'center' },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 16, halign: 'center' },
+      6: { cellWidth: 24, halign: 'right' },
     },
-  });
-
-  y = (doc as any).lastAutoTable.finalY + 6;
+  );
 
   // Totals
   const totalRows: { label: string; value: string; bold?: boolean }[] = [
@@ -110,38 +115,33 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   totalRows.push({ label: 'Total:', value: `$${fmtCurrency(venta.total)}`, bold: true });
   if (venta.saldo_pendiente > 0) totalRows.push({ label: 'Saldo pendiente:', value: `$${fmtCurrency(venta.saldo_pendiente)}` });
 
-  y = drawTotals(doc, y, totalRows);
+  y = drawTotalsBlock(doc, y, totalRows);
 
   // Pagos
   if (pagos.length > 0) {
     y = checkPageBreak(doc, y);
-    y = drawSectionTitle(doc, y, 'Pagos Registrados');
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
 
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Fecha', 'Método', 'Referencia', 'Monto']],
-      body: pagos.map(p => [
-        fmtDate(p.fecha), p.metodo_pago, p.referencia || '—', `$${fmtCurrency(p.monto)}`,
+    y = drawCleanTable(doc, y,
+      ['Fecha', 'Método', 'Referencia', 'Monto'],
+      pagos.map(p => [
+        fmtDate(p.fecha),
+        p.metodo_pago,
+        p.referencia || '—',
+        { content: `$${fmtCurrency(p.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-    });
+      { 3: { halign: 'right' } },
+    );
 
-    y = (doc as any).lastAutoTable.finalY + 2;
-    doc.setTextColor(...PDF.dark);
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, doc.internal.pageSize.getWidth() - MR, y + 4, { align: 'right' });
-    y += 10;
+    doc.setTextColor(...C.text);
+    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 2, { align: 'right' });
+    y += 6;
   }
 
   if (venta.notas) {
-    y = checkPageBreak(doc, y);
-    drawNotes(doc, y, venta.notas);
+    y = drawNotes(doc, y, venta.notas);
   }
 
   drawFooter(doc);

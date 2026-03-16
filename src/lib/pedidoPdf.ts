@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * Pedido PDF — Clean Odoo-style layout
+ */
 import {
-  PDF, ML, MR, fmtCurrency, fmtDate,
-  drawHeader, drawInfoSection, drawTotals, drawSectionTitle, drawFooter, drawNotes,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
+  createDoc, C, fmtCurrency, fmtDate,
+  drawDocHeader, drawInfoGrid, drawCleanTable, drawTotalsBlock,
+  drawNotes, drawFooter, checkPageBreak,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 interface PedidoPdfParams {
   empresa: EmpresaInfo;
@@ -57,58 +58,66 @@ interface PedidoPdfParams {
   }[];
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  borrador: 'Borrador', confirmado: 'Confirmado', entregado: 'Entregado',
+  facturado: 'Facturado', cancelado: 'Cancelado',
+};
+
+const ENTREGA_STATUS: Record<string, string> = {
+  borrador: 'Borrador', surtido: 'Surtido', asignado: 'Asignado',
+  cargado: 'Cargado', en_ruta: 'En ruta', hecho: 'Entregado', cancelado: 'Cancelado',
+};
+
 export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const doc = createDoc();
+  const pageW = doc.internal.pageSize.getWidth();
+  const rightX = pageW - MR;
 
-  // Header
-  let y = drawHeader(doc, empresa, 'PEDIDO', pedido.folio, logoBase64);
+  const statusLabel = STATUS_LABELS[pedido.status] ?? pedido.status;
+  const pagoLabel = pedido.condicion_pago === 'credito' ? 'Crédito' : pedido.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
 
-  // Info section
-  const statusLabel = pedido.status.charAt(0).toUpperCase() + pedido.status.slice(1);
-  y = drawInfoSection(doc, y, [
-    ['Cliente:', cliente.nombre],
-    ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
-    ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
-    ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
-  ], [
-    ['Fecha:', fmtDate(pedido.fecha)],
-    ['Estado:', statusLabel],
-    ['Pago:', pedido.condicion_pago === 'credito' ? 'Crédito' : 'Contado'],
-    ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
-    ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
-  ]);
+  let y = drawDocHeader(doc, empresa, 'PEDIDO', pedido.folio, logoBase64);
+
+  y = drawInfoGrid(doc, y,
+    'Cliente',
+    [
+      ['Nombre:', cliente.nombre],
+      ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
+      ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
+      ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
+    ],
+    'Información del documento',
+    [
+      ['Fecha:', fmtDate(pedido.fecha)],
+      ['Estado:', statusLabel],
+      ['Condición de pago:', pagoLabel],
+      ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
+      ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
+    ],
+  );
 
   // Products table
-  y = drawSectionTitle(doc, y, 'Productos');
-
-  autoTable(doc, {
-    startY: y,
-    margin: { left: ML, right: MR },
-    head: [['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.%', 'Total']],
-    body: lineas.map(l => [
-      l.codigo,
+  y = drawCleanTable(doc, y,
+    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.%', 'Importe'],
+    lineas.map(l => [
+      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
       l.nombre,
-      String(l.cantidad),
-      l.unidad || '—',
-      `$${fmtCurrency(l.precio_unitario)}`,
-      l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—',
-      `$${fmtCurrency(l.total)}`,
+      { content: String(l.cantidad), styles: { halign: 'center' } },
+      { content: l.unidad || '—', styles: { textColor: C.muted } },
+      { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
+      { content: l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—', styles: { halign: 'center', textColor: C.muted } },
+      { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
-    headStyles: TABLE_HEAD_STYLE,
-    bodyStyles: TABLE_BODY_STYLE,
-    alternateRowStyles: TABLE_ALT_STYLE,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 22 },
-      2: { halign: 'right', cellWidth: 14 },
-      3: { cellWidth: 16 },
-      4: { halign: 'right', cellWidth: 22 },
-      5: { halign: 'right', cellWidth: 16 },
-      6: { halign: 'right', fontStyle: 'bold', cellWidth: 24 },
+    {
+      0: { cellWidth: 22 },
+      2: { cellWidth: 14, halign: 'center' },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 16, halign: 'center' },
+      6: { cellWidth: 24, halign: 'right' },
     },
-  });
-
-  y = (doc as any).lastAutoTable.finalY + 6;
+  );
 
   // Totals
   const totalRows: { label: string; value: string; bold?: boolean }[] = [
@@ -119,79 +128,56 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   if (pedido.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `$${fmtCurrency(pedido.ieps_total)}` });
   totalRows.push({ label: 'Total:', value: `$${fmtCurrency(pedido.total)}`, bold: true });
 
-  y = drawTotals(doc, y, totalRows);
+  y = drawTotalsBlock(doc, y, totalRows);
 
   // Entregas
   if (entregas.length > 0) {
     y = checkPageBreak(doc, y);
-    y = drawSectionTitle(doc, y, 'Historial de Entregas');
-
-    const statusLabels: Record<string, string> = {
-      borrador: 'Borrador', surtido: 'Surtido', asignado: 'Asignado',
-      cargado: 'Cargado', en_ruta: 'En ruta', hecho: 'Entregado', cancelado: 'Cancelado',
-    };
-
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Folio', 'Estado', 'Repartidor', 'Productos']],
-      body: entregas.map(e => [
-        e.folio,
-        statusLabels[e.status] ?? e.status,
+    y = drawCleanTable(doc, y,
+      ['Folio', 'Estado', 'Repartidor', 'Productos'],
+      entregas.map(e => [
+        { content: e.folio, styles: { fontStyle: 'bold' } },
+        ENTREGA_STATUS[e.status] ?? e.status,
         e.repartidor ?? '—',
-        e.lineas.map(l => `${l.cantidad_entregada}/${l.cantidad_pedida} ${l.codigo}`).join(', '),
+        { content: e.lineas.map(l => `${l.cantidad_entregada}/${l.cantidad_pedida} ${l.codigo}`).join(', '), styles: { fontSize: 6.5, textColor: C.muted } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 22 },
-        1: { cellWidth: 20 },
+      {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 22 },
         2: { cellWidth: 30 },
       },
-    });
-
-    y = (doc as any).lastAutoTable.finalY + 6;
+    );
   }
 
   // Pagos
   if (pagos.length > 0) {
     y = checkPageBreak(doc, y);
-    y = drawSectionTitle(doc, y, 'Pagos Registrados');
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
 
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Fecha', 'Método', 'Referencia', 'Monto']],
-      body: pagos.map(p => [
-        fmtDate(p.fecha), p.metodo_pago, p.referencia || '—', `$${fmtCurrency(p.monto)}`,
+    y = drawCleanTable(doc, y,
+      ['Fecha', 'Método', 'Referencia', 'Monto'],
+      pagos.map(p => [
+        fmtDate(p.fecha),
+        p.metodo_pago,
+        p.referencia || '—',
+        { content: `$${fmtCurrency(p.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-    });
+      { 3: { halign: 'right' } },
+    );
 
-    y = (doc as any).lastAutoTable.finalY + 2;
-    doc.setTextColor(...PDF.dark);
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, doc.internal.pageSize.getWidth() - MR, y + 4, { align: 'right' });
-    y += 10;
+    doc.setTextColor(...C.text);
+    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 2, { align: 'right' });
+    y += 6;
   }
 
-  // Notes
   if (pedido.notas) {
-    y = checkPageBreak(doc, y);
-    drawNotes(doc, y, pedido.notas);
+    y = drawNotes(doc, y, pedido.notas);
   }
 
   drawFooter(doc);
   return doc.output('blob');
 }
 
-function checkPageBreak(doc: jsPDF, y: number): number {
-  if (y > 220) { doc.addPage(); return 14; }
-  return y;
-}
+const MR = 14;
