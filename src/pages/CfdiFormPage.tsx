@@ -625,7 +625,7 @@ export default function CfdiFormPage() {
                     const regEmisorLabel = regimenesList?.find((r: any) => r.clave === empresa?.regimen_fiscal);
                     const regReceptorLabel = regimenesList?.find((r: any) => r.clave === cfdi.receiver_fiscal_regime);
 
-                    const blob = generarCfdiPdf({
+                    const blob = await generarCfdiPdf({
                       empresa: {
                         nombre: empresa?.nombre || '',
                         razon_social: empresa?.razon_social,
