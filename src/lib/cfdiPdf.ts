@@ -181,33 +181,49 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // HEADER: Logo + Emisor (left) | FACTURA + Folio (right)
   // ═══════════════════════════════════════════════════════
   let emisorX = ML;
+  const logoSize = 18;
 
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', ML, y - 5, 16, 16);
-      emisorX = ML + 20;
+      doc.addImage(logoBase64, 'PNG', ML, y - 6, logoSize, logoSize);
+      emisorX = ML + logoSize + 5;
     } catch { /* ignore */ }
   }
 
-  // Emisor name
+  // Emisor name — big and bold
+  const maxNameW = (pageW / 2) - emisorX;
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.text);
+  const companyName = empresa.razon_social || empresa.nombre;
+  const nameLines = doc.splitTextToSize(companyName, maxNameW);
+  doc.text(nameLines[0], emisorX, y);
+  y += 5;
+  if (nameLines.length > 1) {
+    doc.text(nameLines[1], emisorX, y);
+    y += 5;
+  }
+
+  // Emisor RFC
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  doc.text(empresa.razon_social || empresa.nombre, emisorX, y);
-
-  // Emisor RFC
-  y += 4;
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...C.muted);
   doc.text(`RFC: ${empresa.rfc || ''}`, emisorX, y);
+  y += 4.5;
 
   // Emisor address
-  y += 3.5;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...C.text);
   const addr = [empresa.direccion, empresa.colonia, empresa.ciudad, empresa.estado].filter(Boolean).join(', ');
   if (addr) {
-    doc.text(addr, emisorX, y);
-    y += 3.5;
+    const addrLines = doc.splitTextToSize(addr, maxNameW);
+    doc.text(addrLines[0], emisorX, y);
+    y += 4;
+    if (addrLines.length > 1) {
+      doc.text(addrLines[1], emisorX, y);
+      y += 4;
+    }
   }
 
   // Emisor CP + Régimen
@@ -215,18 +231,18 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.text(`C.P. ${empresa.cp || ''} · Régimen: ${regimenLabel}`, emisorX, y);
 
   // Right side: FACTURA + Folio
-  doc.setFontSize(16);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  doc.text('FACTURA', rightX, 16, { align: 'right' });
+  doc.text('FACTURA', rightX, 18, { align: 'right' });
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.label);
+  doc.setTextColor(...C.text);
   const folioText = `Folio: ${cfdi.serie || 'A'}-${cfdi.folio || '—'}`;
-  doc.text(folioText, rightX, 22, { align: 'right' });
+  doc.text(folioText, rightX, 25, { align: 'right' });
 
-  y = Math.max(y + 6, logoBase64 ? 34 : 30);
+  y = Math.max(y + 8, logoBase64 ? 42 : 38);
 
   // ═══════════════════════════════════════════════════════
   // TWO-COLUMN INFO GRID (with top/bottom borders)
