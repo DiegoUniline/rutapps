@@ -118,7 +118,7 @@ export function useDeleteCarga() {
   return useMutation({
     mutationFn: async (id: string) => {
       // Soft delete: cancel instead of deleting
-      const { error } = await supabase.from('cargas').update({ status: 'cancelado' }).eq('id', id);
+      const { error } = await supabase.from('cargas').update({ status: 'cancelada' }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['cargas'] }),
