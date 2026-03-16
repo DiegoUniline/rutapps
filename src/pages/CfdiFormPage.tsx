@@ -362,7 +362,7 @@ export default function CfdiFormPage() {
       </div>
 
       {/* Statusbar */}
-      <OdooStatusbar steps={CFDI_STEPS} currentStep={cfdi.status} onStepClick={() => {}} />
+      <OdooStatusbar steps={CFDI_STEPS} current={cfdi.status} onStepClick={() => {}} />
 
       {/* Receptor & Pago */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
