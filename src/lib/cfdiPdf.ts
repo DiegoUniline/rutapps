@@ -71,20 +71,20 @@ export interface CfdiPdfParams {
 
 // ── Colors matching the HTML exactly ──
 const C = {
-  text: [26, 26, 26] as [number, number, number],       // #1a1a1a
-  label: [85, 85, 85] as [number, number, number],       // #555
-  muted: [102, 102, 102] as [number, number, number],    // #666
-  sublabel: [136, 136, 136] as [number, number, number], // #888
-  light: [170, 170, 170] as [number, number, number],    // #aaa
-  border: [224, 224, 224] as [number, number, number],    // #e0e0e0
-  borderLight: [238, 238, 238] as [number, number, number], // #eee
-  headBg: [247, 247, 247] as [number, number, number],   // #f7f7f7
-  uuidBg: [250, 250, 250] as [number, number, number],   // #fafafa
-  uuidBorder: [232, 232, 232] as [number, number, number], // #e8e8e8
+  text: [26, 26, 26] as [number, number, number],
+  label: [26, 26, 26] as [number, number, number],
+  muted: [26, 26, 26] as [number, number, number],
+  sublabel: [26, 26, 26] as [number, number, number],
+  light: [26, 26, 26] as [number, number, number],
+  border: [224, 224, 224] as [number, number, number],
+  borderLight: [238, 238, 238] as [number, number, number],
+  headBg: [247, 247, 247] as [number, number, number],
+  uuidBg: [250, 250, 250] as [number, number, number],
+  uuidBorder: [232, 232, 232] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  footerBorder: [119, 119, 119] as [number, number, number], // #777
-  cfdiLabel: [68, 68, 68] as [number, number, number],   // #444
-  cfdiVal: [51, 51, 51] as [number, number, number],     // #333
+  footerBorder: [26, 26, 26] as [number, number, number],
+  cfdiLabel: [26, 26, 26] as [number, number, number],
+  cfdiVal: [26, 26, 26] as [number, number, number],
 };
 
 // ── Number to spanish words ──
