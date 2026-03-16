@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSetupComplete } from '@/pages/ConfiguracionInicialPage';
-import { usePermisos, NAV_MODULE_MAP } from '@/hooks/usePermisos';
+import { usePermisos, PATH_MODULE_MAP } from '@/hooks/usePermisos';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
 import {
@@ -44,7 +44,6 @@ const navItems: NavItem[] = [
       { label: 'Dashboard', path: '/logistica/dashboard' },
       { label: 'Pedidos pendientes', path: '/logistica/pedidos' },
       { label: 'Entregas', path: '/logistica/entregas' },
-      
       { label: 'Descargas de ruta', path: '/almacen/descargas' },
       { label: 'Monitor de rutas', path: '/monitor-rutas' },
       { label: 'Rutas', path: '/ventas/rutas' },
@@ -63,7 +62,6 @@ const navItems: NavItem[] = [
       { label: 'Marcas', path: '/catalogo/marcas' },
       { label: 'Proveedores', path: '/proveedores' },
       { label: 'Unidades', path: '/catalogo/unidades' },
-      
       { label: 'Tasas IVA', path: '/catalogo/tasas-iva' },
       { label: 'Tasas IEPS', path: '/catalogo/tasas-ieps' },
     ],
@@ -123,6 +121,30 @@ const navItems: NavItem[] = [
     ],
   },
 ];
+
+/** Filter nav items based on granular sub-module permissions */
+function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean) {
+  if (isSuperAdmin) return navItems;
+
+  return navItems.reduce<NavItem[]>((acc, item) => {
+    if (!item.children) {
+      // Top-level item without children
+      const modulo = PATH_MODULE_MAP[item.path] ?? '';
+      if (hasModulo(modulo)) acc.push(item);
+    } else {
+      // Filter children
+      const visibleChildren = item.children.filter(child => {
+        const modulo = PATH_MODULE_MAP[child.path] ?? '';
+        return hasModulo(modulo);
+      });
+      // Only show parent if at least one child is visible
+      if (visibleChildren.length > 0) {
+        acc.push({ ...item, children: visibleChildren });
+      }
+    }
+    return acc;
+  }, []);
+}
 
 function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   const location = useLocation();
@@ -252,11 +274,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const setupActive = location.pathname === '/configuracion-inicial';
 
-  // Filter nav items based on permissions
-  const visibleNavItems = isSuperAdmin ? navItems : navItems.filter(item => {
-    const modulo = NAV_MODULE_MAP[item.path] ?? '';
-    return hasModulo(modulo);
-  });
+  const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
   return (
     <div className="min-h-screen flex bg-background">

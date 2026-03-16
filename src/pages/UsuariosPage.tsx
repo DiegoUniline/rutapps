@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { MODULOS, ACCIONES } from '@/hooks/usePermisos';
+import { MODULOS, ACCIONES, getModuloGroups } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -106,11 +106,9 @@ export default function UsuariosPage() {
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
     const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
     if (existing) {
-      // Optimistic update
       setPermisos(prev => prev.map(p => p.id === existing.id ? { ...p, permitido: !p.permitido } : p));
       await supabase.from('role_permisos').update({ permitido: !existing.permitido }).eq('id', existing.id);
     } else {
-      // Optimistic: add a temporary entry
       const tempId = `temp-${Date.now()}`;
       setPermisos(prev => [...prev, { id: tempId, role_id: roleId, modulo, accion, permitido: true }]);
       const { data } = await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: true }).select().single();
@@ -120,12 +118,47 @@ export default function UsuariosPage() {
     }
   };
 
+  const toggleAllGroup = async (roleId: string, group: string) => {
+    const groupMods = MODULOS.filter(m => m.group === group);
+    const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
+    const allChecked = groupMods.every(mod => ACCIONES.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido));
+    const newVal = !allChecked;
+
+    // Optimistic
+    setPermisos(prev => {
+      let updated = [...prev];
+      for (const mod of groupMods) {
+        for (const accion of ACCIONES) {
+          const existing = updated.find(p => p.role_id === roleId && p.modulo === mod.id && p.accion === accion);
+          if (existing) {
+            updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
+          } else {
+            updated.push({ id: `temp-${Date.now()}-${mod.id}-${accion}`, role_id: roleId, modulo: mod.id, accion, permitido: newVal });
+          }
+        }
+      }
+      return updated;
+    });
+
+    // Persist
+    for (const mod of groupMods) {
+      for (const accion of ACCIONES) {
+        const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
+        if (existing) {
+          await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
+        } else {
+          await supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal });
+        }
+      }
+    }
+    load(false);
+  };
+
   const toggleAllModule = async (roleId: string, modulo: string) => {
     const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
     const allEnabled = ACCIONES.every(a => modulePerms.find(p => p.accion === a)?.permitido);
     const newVal = !allEnabled;
-    
-    // Optimistic update all at once
+
     setPermisos(prev => {
       let updated = [...prev];
       for (const accion of ACCIONES) {
@@ -139,7 +172,6 @@ export default function UsuariosPage() {
       return updated;
     });
 
-    // Persist in background
     for (const accion of ACCIONES) {
       const existing = modulePerms.find(p => p.accion === accion);
       if (existing) {
@@ -148,7 +180,6 @@ export default function UsuariosPage() {
         await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal });
       }
     }
-    // Sync with DB to get real IDs
     load(false);
   };
 
@@ -261,7 +292,6 @@ export default function UsuariosPage() {
             </button>
           </div>
 
-          {/* New user form */}
           {showNewUser && (
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Crear nuevo usuario</h3>
@@ -408,7 +438,10 @@ export default function UsuariosPage() {
           {roles.map(role => (
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
               onEdit={() => { setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil); setShowRoleForm(true); }}
-              onDelete={() => deleteRole(role.id)} onTogglePermiso={(mod, acc) => togglePermiso(role.id, mod, acc)} onToggleAll={(mod) => toggleAllModule(role.id, mod)} />
+              onDelete={() => deleteRole(role.id)}
+              onTogglePermiso={(mod, acc) => togglePermiso(role.id, mod, acc)}
+              onToggleAll={(mod) => toggleAllModule(role.id, mod)}
+              onToggleGroup={(group) => toggleAllGroup(role.id, group)} />
           ))}
           {roles.length === 0 && !showRoleForm && <div className="text-center py-12 text-muted-foreground text-sm">No hay roles creados. Crea uno para empezar a asignar permisos.</div>}
         </div>
@@ -435,11 +468,14 @@ export default function UsuariosPage() {
   );
 }
 
-function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleAll }: {
+function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleAll, onToggleGroup }: {
   role: Role; permisos: RolePermiso[]; onEdit: () => void; onDelete: () => void;
   onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
+  onToggleGroup: (group: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const groups = getModuloGroups();
+
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
@@ -461,23 +497,27 @@ function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleA
         <div className="border-t border-border">
           <table className="w-full text-xs">
             <thead><tr className="bg-accent/30">
-              <th className="text-left px-4 py-2 font-semibold text-foreground w-40">Módulo</th>
-              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-20">{a}</th>)}
-              <th className="text-center px-2 py-2 font-semibold text-foreground w-20">Todos</th>
+              <th className="text-left px-4 py-2 font-semibold text-foreground w-48">Módulo</th>
+              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a}</th>)}
+              <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todos</th>
             </tr></thead>
             <tbody>
-              {MODULOS.map(mod => {
-                const modPerms = permisos.filter(p => p.modulo === mod.id);
-                const allChecked = ACCIONES.every(a => modPerms.find(p => p.accion === a)?.permitido);
+              {groups.map(group => {
+                const groupMods = MODULOS.filter(m => m.group === group);
+                const groupPerms = permisos.filter(p => groupMods.some(m => m.id === p.modulo));
+                const allGroupChecked = groupMods.every(mod => ACCIONES.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido));
+
                 return (
-                  <tr key={mod.id} className="border-t border-border/50 hover:bg-accent/20">
-                    <td className="px-4 py-2 font-medium text-foreground">{mod.label}</td>
-                    {ACCIONES.map(acc => {
-                      const perm = modPerms.find(p => p.accion === acc);
-                      return <td key={acc} className="text-center px-2 py-2"><input type="checkbox" checked={perm?.permitido ?? false} onChange={() => onTogglePermiso(mod.id, acc)} className="rounded border-border cursor-pointer" /></td>;
-                    })}
-                    <td className="text-center px-2 py-2"><input type="checkbox" checked={allChecked} onChange={() => onToggleAll(mod.id)} className="rounded border-border cursor-pointer" /></td>
-                  </tr>
+                  <GroupRows
+                    key={group}
+                    group={group}
+                    mods={groupMods}
+                    permisos={permisos}
+                    allGroupChecked={allGroupChecked}
+                    onTogglePermiso={onTogglePermiso}
+                    onToggleAll={onToggleAll}
+                    onToggleGroup={onToggleGroup}
+                  />
                 );
               })}
             </tbody>
@@ -485,5 +525,49 @@ function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleA
         </div>
       )}
     </div>
+  );
+}
+
+function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, onToggleAll, onToggleGroup }: {
+  group: string;
+  mods: { id: string; label: string; group: string }[];
+  permisos: RolePermiso[];
+  allGroupChecked: boolean;
+  onTogglePermiso: (mod: string, acc: string) => void;
+  onToggleAll: (mod: string) => void;
+  onToggleGroup: (group: string) => void;
+}) {
+  return (
+    <>
+      {/* Group header row */}
+      <tr className="bg-accent/50 border-t border-border">
+        <td className="px-4 py-2 font-bold text-foreground text-[13px]">{group}</td>
+        {ACCIONES.map(a => <td key={a} className="text-center px-2 py-2"></td>)}
+        <td className="text-center px-2 py-2">
+          <input type="checkbox" checked={allGroupChecked} onChange={() => onToggleGroup(group)} className="rounded border-border cursor-pointer" title={`Todos los permisos de ${group}`} />
+        </td>
+      </tr>
+      {/* Sub-module rows */}
+      {mods.map(mod => {
+        const modPerms = permisos.filter(p => p.modulo === mod.id);
+        const allChecked = ACCIONES.every(a => modPerms.find(p => p.accion === a)?.permitido);
+        return (
+          <tr key={mod.id} className="border-t border-border/30 hover:bg-accent/20">
+            <td className="px-4 py-1.5 pl-8 text-muted-foreground">{mod.label}</td>
+            {ACCIONES.map(acc => {
+              const perm = modPerms.find(p => p.accion === acc);
+              return (
+                <td key={acc} className="text-center px-2 py-1.5">
+                  <input type="checkbox" checked={perm?.permitido ?? false} onChange={() => onTogglePermiso(mod.id, acc)} className="rounded border-border cursor-pointer" />
+                </td>
+              );
+            })}
+            <td className="text-center px-2 py-1.5">
+              <input type="checkbox" checked={allChecked} onChange={() => onToggleAll(mod.id)} className="rounded border-border cursor-pointer" />
+            </td>
+          </tr>
+        );
+      })}
+    </>
   );
 }
