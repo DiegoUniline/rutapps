@@ -534,7 +534,7 @@ export default function TarifaFormPage() {
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
                                 )}
                                 {newLinea.aplica_a === 'categoria' && (
-                                  <ChipSelect items={clasItems} selectedIds={newLinea.clasificacion_ids}
+                                  <ChipSelect items={getAvailableClas(newLinea.clasificacion_ids)} selectedIds={newLinea.clasificacion_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
                                 )}
                                 {newLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
