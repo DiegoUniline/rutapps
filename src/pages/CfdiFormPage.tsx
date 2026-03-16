@@ -265,6 +265,7 @@ export default function CfdiFormPage() {
       const { data, error } = await supabase.functions.invoke('facturama', {
         body: {
           action: 'timbrar',
+          cfdi_id: cfdi.id,
           empresa_id: empresa.id,
           venta_id: cfdi.venta_id || null,
           folio: cfdi.folio || '',
@@ -297,20 +298,16 @@ export default function CfdiFormPage() {
       if (!data?.success) throw new Error(data?.error || 'Respuesta inesperada del servidor');
 
       // Mark venta_lineas as facturado
-      const cfdiId = data.cfdi?.id || cfdi.id;
       for (const l of lineas) {
         if (l.venta_linea_id) {
-          await supabase.from('venta_lineas').update({ facturado: true, factura_cfdi_id: cfdiId }).eq('id', l.venta_linea_id);
+          await supabase.from('venta_lineas').update({ facturado: true, factura_cfdi_id: cfdi.id }).eq('id', l.venta_linea_id);
         }
-      }
-
-      // Delete the borrador since timbrar created a new timbrado record
-      if (data.cfdi?.id && data.cfdi.id !== cfdi.id) {
-        await supabase.from('cfdis').delete().eq('id', cfdi.id);
       }
 
       toast.success(`¡Factura timbrada! UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
       queryClient.invalidateQueries({ queryKey: ['cfdis'] });
+      queryClient.invalidateQueries({ queryKey: ['cfdi', cfdi.id] });
+      queryClient.invalidateQueries({ queryKey: ['cfdi-lineas', cfdi.id] });
       queryClient.invalidateQueries({ queryKey: ['venta'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       navigate('/facturacion-cfdi');
