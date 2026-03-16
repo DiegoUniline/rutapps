@@ -1,8 +1,8 @@
 /**
- * Estado de Cuenta PDF — Clean Odoo-style layout
+ * Estado de Cuenta PDF — Professional clean layout
  */
 import {
-  createDoc, C, fmtCurrency, fmtDate,
+  createDoc, ML, MR, C, fmtCurrency, fmtDate,
   drawDocHeader, drawInfoGrid, drawCleanTable,
   drawFooter, checkPageBreak,
   type EmpresaInfo,
@@ -41,7 +41,7 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
   const { empresa, logoBase64, cliente, ventas, cobros } = params;
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
-  const rightX = pageW - 14;
+  const rightX = pageW - MR;
 
   const fechaHoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -85,18 +85,18 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
         { content: `$${fmtCurrency(v.saldo_pendiente)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
       ]),
       {
-        0: { cellWidth: 22 },
+        0: { cellWidth: 24 },
         4: { halign: 'right' },
         5: { halign: 'right' },
         6: { halign: 'right' },
       },
     );
 
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total pendiente: $${fmtCurrency(totalPendiente)}`, rightX, y - 2, { align: 'right' });
-    y += 6;
+    doc.text(`Total pendiente: $${fmtCurrency(totalPendiente)}`, rightX, y - 3, { align: 'right' });
+    y += 7;
   }
 
   // Ventas saldadas
@@ -108,9 +108,9 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
         { content: v.folio || '—', styles: { fontStyle: 'bold' } },
         fmtDate(v.fecha),
         { content: `$${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
-        { content: v.status.charAt(0).toUpperCase() + v.status.slice(1), styles: { textColor: C.muted } },
+        v.status.charAt(0).toUpperCase() + v.status.slice(1),
       ]),
-      { 0: { cellWidth: 22 }, 2: { halign: 'right' } },
+      { 0: { cellWidth: 24 }, 2: { halign: 'right' } },
     );
   }
 
@@ -128,14 +128,15 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
       { 3: { halign: 'right' } },
     );
 
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total cobrado: $${fmtCurrency(totalCobrado)}`, rightX, y - 2, { align: 'right' });
+    doc.text(`Total cobrado: $${fmtCurrency(totalCobrado)}`, rightX, y - 3, { align: 'right' });
   } else {
-    doc.setTextColor(...C.muted);
-    doc.setFontSize(7.5);
-    doc.text('Sin pagos registrados', 14, y + 4);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Sin pagos registrados', ML, y + 4);
   }
 
   drawFooter(doc);

@@ -1,10 +1,10 @@
 /**
- * Traspaso PDF — Clean Odoo-style layout
+ * Traspaso PDF — Professional clean layout
  */
 import {
-  createDoc, C, fmtDate,
+  createDoc, ML, MR, C, fmtDate,
   drawDocHeader, drawInfoGrid, drawCleanTable,
-  drawNotes, drawSignatures, drawFooter, checkPageBreak,
+  drawNotes, drawSignatures, drawFooter,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
 
@@ -67,27 +67,27 @@ export function generarTraspasoPdf(params: TraspasoPdfParams): Blob {
   y = drawCleanTable(doc, y,
     ['#', 'Código', 'Producto', 'Unidad', 'Cantidad'],
     lineas.map((l, i) => [
-      { content: String(i + 1), styles: { halign: 'center', textColor: C.muted } },
-      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      { content: String(i + 1), styles: { halign: 'center' } },
+      l.codigo,
       l.nombre,
-      { content: l.unidad || '—', styles: { textColor: C.muted } },
+      l.unidad || '—',
       { content: String(l.cantidad), styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 24 },
-      3: { cellWidth: 20 },
-      4: { cellWidth: 22, halign: 'right' },
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 26 },
+      3: { cellWidth: 22 },
+      4: { cellWidth: 24, halign: 'right' },
     },
   );
 
   // Total summary
   const pageW = doc.internal.pageSize.getWidth();
-  doc.setFontSize(7.5);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  doc.text(`Total: ${lineas.length} productos · ${totalUnidades} unidades`, pageW - 14, y - 2, { align: 'right' });
-  y += 12;
+  doc.text(`Total: ${lineas.length} productos · ${totalUnidades} unidades`, pageW - MR, y - 3, { align: 'right' });
+  y += 14;
 
   // Signatures
   y = drawSignatures(doc, y, 'Entrega', 'Recibe');

@@ -156,7 +156,7 @@ function formatDateShort(dateStr: string): string {
 }
 
 // ── Helper: draw text pair (label + value) ──
-function drawPair(doc: jsPDF, x: number, y: number, label: string, value: string, labelColor = C.muted, fontSize = 7.5) {
+function drawPair(doc: jsPDF, x: number, y: number, label: string, value: string, labelColor = C.text, fontSize = 8.5) {
   doc.setFontSize(fontSize);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...labelColor);
@@ -181,33 +181,49 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // HEADER: Logo + Emisor (left) | FACTURA + Folio (right)
   // ═══════════════════════════════════════════════════════
   let emisorX = ML;
+  const logoSize = 18;
 
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', ML, y - 5, 16, 16);
-      emisorX = ML + 20;
+      doc.addImage(logoBase64, 'PNG', ML, y - 6, logoSize, logoSize);
+      emisorX = ML + logoSize + 5;
     } catch { /* ignore */ }
   }
 
-  // Emisor name
+  // Emisor name — big and bold
+  const maxNameW = (pageW / 2) - emisorX;
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...C.text);
+  const companyName = empresa.razon_social || empresa.nombre;
+  const nameLines = doc.splitTextToSize(companyName, maxNameW);
+  doc.text(nameLines[0], emisorX, y);
+  y += 5;
+  if (nameLines.length > 1) {
+    doc.text(nameLines[1], emisorX, y);
+    y += 5;
+  }
+
+  // Emisor RFC
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  doc.text(empresa.razon_social || empresa.nombre, emisorX, y);
-
-  // Emisor RFC
-  y += 4;
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...C.muted);
   doc.text(`RFC: ${empresa.rfc || ''}`, emisorX, y);
+  y += 4.5;
 
   // Emisor address
-  y += 3.5;
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...C.text);
   const addr = [empresa.direccion, empresa.colonia, empresa.ciudad, empresa.estado].filter(Boolean).join(', ');
   if (addr) {
-    doc.text(addr, emisorX, y);
-    y += 3.5;
+    const addrLines = doc.splitTextToSize(addr, maxNameW);
+    doc.text(addrLines[0], emisorX, y);
+    y += 4;
+    if (addrLines.length > 1) {
+      doc.text(addrLines[1], emisorX, y);
+      y += 4;
+    }
   }
 
   // Emisor CP + Régimen
@@ -215,27 +231,27 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.text(`C.P. ${empresa.cp || ''} · Régimen: ${regimenLabel}`, emisorX, y);
 
   // Right side: FACTURA + Folio
-  doc.setFontSize(16);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  doc.text('FACTURA', rightX, 16, { align: 'right' });
+  doc.text('FACTURA', rightX, 18, { align: 'right' });
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.label);
+  doc.setTextColor(...C.text);
   const folioText = `Folio: ${cfdi.serie || 'A'}-${cfdi.folio || '—'}`;
-  doc.text(folioText, rightX, 22, { align: 'right' });
+  doc.text(folioText, rightX, 25, { align: 'right' });
 
-  y = Math.max(y + 6, logoBase64 ? 34 : 30);
+  y = Math.max(y + 8, logoBase64 ? 42 : 38);
 
   // ═══════════════════════════════════════════════════════
   // TWO-COLUMN INFO GRID (with top/bottom borders)
   // ═══════════════════════════════════════════════════════
   // Top border
   doc.setDrawColor(...C.border);
-  doc.setLineWidth(0.3);
+  doc.setLineWidth(0.4);
   doc.line(ML, y, rightX, y);
-  y += 6;
+  y += 7;
 
   const colL = ML;
   const colR = midX + 4;
@@ -244,40 +260,40 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const gridTopY = y - 3;
 
   // ── LEFT COLUMN: Receptor ──
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.sublabel);
+  doc.setTextColor(...C.text);
   doc.text('RECEPTOR', colL, y);
-  y += 5;
+  y += 6;
 
   // Receptor name
-  doc.setFontSize(8.5);
+  doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text(receiver.name, colL, y);
   y += 4;
 
   // Receptor RFC
-  doc.setFontSize(7.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...C.label);
+  doc.setTextColor(...C.text);
   doc.text(`RFC: ${receiver.rfc}`, colL, y);
-  y += 3.5;
+  y += 4;
 
   // Receptor address
   if (receiver.direccion) {
     doc.text(receiver.direccion, colL, y);
-    y += 3.5;
+    y += 4;
   }
 
   // Receptor CP
   doc.text(`C.P. ${receiver.tax_zip_code || ''}`, colL, y);
-  y += 3.5;
+  y += 4;
 
   // Receptor email
   if (receiver.email) {
     doc.text(receiver.email, colL, y);
-    y += 3.5;
+    y += 4;
   }
 
   const leftEndY = y;
@@ -285,11 +301,11 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // ── RIGHT COLUMN: Información del documento ──
   let ry = gridTopY + 3;
 
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.sublabel);
+  doc.setTextColor(...C.text);
   doc.text('INFORMACIÓN DEL DOCUMENTO', colR, ry);
-  ry += 5;
+  ry += 6;
 
   // Info rows as table
   const infoRows: [string, string][] = [
@@ -302,14 +318,13 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   ];
 
   for (const [lbl, val] of infoRows) {
-    doc.setFontSize(7.5);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.muted);
+    doc.setTextColor(...C.text);
     doc.text(lbl, colR, ry);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(val, colR + 38, ry);
-    ry += 4.5;
+    doc.text(val, colR + 42, ry);
+    ry += 5;
   }
 
   y = Math.max(leftEndY, ry) + 2;
@@ -369,9 +384,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       { content: l.product_code, styles: { textColor: C.muted, fontStyle: 'normal', fontSize: 7 } },
       l.descripcion,
       { content: String(l.cantidad), styles: { halign: 'center' } },
-      { content: `${l.unit_code} ${l.unit_name}`, styles: { textColor: C.muted, fontSize: 7 } },
+      `${l.unit_code} ${l.unit_name}`,
       { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
-      { content: ivaStr, styles: { halign: 'center', textColor: C.muted } },
+      { content: ivaStr, styles: { halign: 'center' } },
       { content: `$${fmtCurrency(l.subtotal)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]);
   }
@@ -385,16 +400,16 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     styles: {
       fillColor: C.white,
       textColor: C.text,
-      fontSize: 7.5,
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      fontSize: 8.5,
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
       lineWidth: 0,
     },
     headStyles: {
       fillColor: C.headBg,
       textColor: C.text,
-      fontSize: 7.5,
+      fontSize: 8.5,
       fontStyle: 'bold',
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
     },
     bodyStyles: {
       fillColor: C.white,
@@ -438,56 +453,45 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.line(ML, y - 2, rightX, y - 2);
   y += 2;
 
-  const totLabelX = rightX - 50;
+  const totLabelX = rightX - 55;
 
   // Subtotal
-  doc.setFontSize(7.5);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.muted);
-  doc.text('Subtotal:', totLabelX, y, { align: 'right' });
   doc.setTextColor(...C.text);
+  doc.text('Subtotal:', totLabelX, y, { align: 'right' });
   doc.text(`$${fmtCurrency(cfdi.subtotal)}`, rightX, y, { align: 'right' });
-  y += 5;
+  y += 5.5;
 
   // IEPS if any
   if (cfdi.ieps_total > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.muted);
     doc.text('IEPS:', totLabelX, y, { align: 'right' });
-    doc.setTextColor(...C.text);
     doc.text(`$${fmtCurrency(cfdi.ieps_total)}`, rightX, y, { align: 'right' });
-    y += 5;
+    y += 5.5;
   }
 
   // IVA
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.muted);
   doc.text('IVA 16%:', totLabelX, y, { align: 'right' });
-  doc.setTextColor(...C.text);
   doc.text(`$${fmtCurrency(cfdi.iva_total)}`, rightX, y, { align: 'right' });
-  y += 5;
+  y += 5.5;
 
   // Retenciones if any
   if (cfdi.retenciones_total > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.muted);
     doc.text('Retenciones:', totLabelX, y, { align: 'right' });
-    doc.setTextColor(...C.text);
     doc.text(`-$${fmtCurrency(cfdi.retenciones_total)}`, rightX, y, { align: 'right' });
-    y += 5;
+    y += 5.5;
   }
 
-  // Total line (border-top: 2px solid #1a1a1a)
+  // Total line
   doc.setDrawColor(...C.text);
-  doc.setLineWidth(0.6);
-  doc.line(totLabelX - 15, y - 1, rightX, y - 1);
-  y += 3;
+  doc.setLineWidth(0.8);
+  doc.line(totLabelX - 15, y, rightX, y);
+  y += 5;
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.muted);
-  doc.text('Total:', totLabelX, y, { align: 'right' });
   doc.setTextColor(...C.text);
+  doc.text('Total:', totLabelX, y, { align: 'right' });
   doc.text(`$${fmtCurrency(cfdi.total)}`, rightX, y, { align: 'right' });
   y += 8;
 
@@ -502,9 +506,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.line(ML, y, rightX, y);
   y += 5;
 
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.cfdiLabel);
+  doc.setTextColor(...C.text);
   doc.text(words, midX, y, { align: 'center' });
   y += 4;
 
@@ -535,61 +539,58 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     let sY = y;
 
     // Cadena Original
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text('Cadena original del complemento de certificación digital del SAT', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
-    doc.setFontSize(4.5);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(5);
     const cadenaText = cfdi.cadena_original || `||1.1|${cfdi.folio_fiscal}|...||`;
     const cadenaLines = doc.splitTextToSize(cadenaText, maxTextW);
     doc.text(cadenaLines, infoX, sY);
     sY += cadenaLines.length * 2 + 3;
 
     // Sello digital del CFDI
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text('Sello digital del CFDI', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
-    doc.setFontSize(4.5);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(5);
     const selloCfdiText = cfdi.sello_cfdi || 'Disponible en el archivo XML';
     const selloCfdiLines = doc.splitTextToSize(selloCfdiText, maxTextW);
     doc.text(selloCfdiLines, infoX, sY);
     sY += selloCfdiLines.length * 2 + 3;
 
     // Sello digital del SAT
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text('Sello digital del SAT', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
-    doc.setFontSize(4.5);
+    doc.setTextColor(...C.text);
+    doc.setFontSize(5);
     const selloSatText = cfdi.sello_sat || 'Disponible en el archivo XML';
     const selloSatLines = doc.splitTextToSize(selloSatText, maxTextW);
     doc.text(selloSatLines, infoX, sY);
     sY += selloSatLines.length * 2 + 3;
 
     // Certificados
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text(`No. cert. SAT: `, infoX, sY);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
     doc.text(cfdi.no_certificado_sat || '—', infoX + 22, sY);
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
     doc.text(`No. cert. emisor: `, infoX + 60, sY);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.footerBorder);
     doc.text(cfdi.no_certificado_emisor || '—', infoX + 85, sY);
 
     y = Math.max(y + qrSize + 4, sY + 6);
@@ -601,13 +602,13 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   y = checkPageBreak(doc, y, 16);
 
   doc.setDrawColor(...C.borderLight);
-  doc.setLineWidth(0.2);
+  doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
   y += 5;
 
-  doc.setFontSize(6.5);
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...C.light);
+  doc.setTextColor(...C.text);
   doc.text('Este documento es una representación impresa de un CFDI · Generado por tu sistema', midX, y, { align: 'center' });
 
   drawFooter(doc, `${empresa.nombre} — Factura generada por Rutapp`);

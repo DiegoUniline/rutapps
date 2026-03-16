@@ -1,8 +1,8 @@
 /**
- * Auditoría PDF — Clean Odoo-style layout
+ * Auditoría PDF — Professional clean layout
  */
 import {
-  createDoc, C, fmtDate,
+  createDoc, ML, C, fmtDate,
   drawDocHeader, drawInfoGrid, drawCleanTable,
   drawNotes, drawFooter, checkPageBreak,
   type EmpresaInfo,
@@ -71,21 +71,21 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
   y = drawCleanTable(doc, y,
     ['Código', 'Producto', 'Esperada', 'Real', 'Diferencia', 'Ajust.', 'Notas'],
     lineas.map(l => [
-      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.codigo,
       l.nombre,
       { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
       { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
       { content: l.diferencia !== 0 ? (l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia)) : '0', styles: { halign: 'right', fontStyle: 'bold' } },
       { content: l.ajustado ? '✓' : '—', styles: { halign: 'center' } },
-      { content: l.notas || '', styles: { fontSize: 6.5, textColor: C.muted } },
+      l.notas || '',
     ]),
     {
-      0: { cellWidth: 22 },
-      2: { cellWidth: 18, halign: 'right' },
-      3: { cellWidth: 18, halign: 'right' },
-      4: { cellWidth: 20, halign: 'right' },
-      5: { cellWidth: 14, halign: 'center' },
-      6: { cellWidth: 30 },
+      0: { cellWidth: 24 },
+      2: { cellWidth: 20, halign: 'right' },
+      3: { cellWidth: 20, halign: 'right' },
+      4: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 16, halign: 'center' },
+      6: { cellWidth: 32 },
     },
     (data: any) => {
       if (data.section === 'body' && data.column.index === 4) {
@@ -111,17 +111,17 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
     y = drawCleanTable(doc, y,
       ['Código', 'Producto', 'Esperada', 'Real', 'Faltante'],
       lineas.filter(l => l.diferencia < 0).map(l => [
-        { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+        l.codigo,
         l.nombre,
         { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
         { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
         { content: String(Math.abs(l.diferencia)), styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
       ]),
       {
-        0: { cellWidth: 22 },
-        2: { cellWidth: 18, halign: 'right' },
-        3: { cellWidth: 18, halign: 'right' },
-        4: { cellWidth: 18, halign: 'right' },
+        0: { cellWidth: 24 },
+        2: { cellWidth: 20, halign: 'right' },
+        3: { cellWidth: 20, halign: 'right' },
+        4: { cellWidth: 20, halign: 'right' },
       },
     );
   }
@@ -132,17 +132,17 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
     y = drawCleanTable(doc, y,
       ['Código', 'Producto', 'Esperada', 'Real', 'Excedente'],
       lineas.filter(l => l.diferencia > 0).map(l => [
-        { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+        l.codigo,
         l.nombre,
         { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
         { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
         { content: `+${l.diferencia}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.success } },
       ]),
       {
-        0: { cellWidth: 22 },
-        2: { cellWidth: 18, halign: 'right' },
-        3: { cellWidth: 18, halign: 'right' },
-        4: { cellWidth: 18, halign: 'right' },
+        0: { cellWidth: 24 },
+        2: { cellWidth: 20, halign: 'right' },
+        3: { cellWidth: 20, halign: 'right' },
+        4: { cellWidth: 20, halign: 'right' },
       },
     );
   }
@@ -152,16 +152,17 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
   }
   if (auditoria.notas_supervisor) {
     y = checkPageBreak(doc, y, 20);
-    doc.setFontSize(7);
+    doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.sublabel);
-    doc.text('NOTAS DEL SUPERVISOR', 14, y);
-    y += 4;
+    doc.setTextColor(...C.text);
+    doc.text('NOTAS DEL SUPERVISOR', ML, y);
+    y += 5;
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.muted);
-    const split = doc.splitTextToSize(auditoria.notas_supervisor, doc.internal.pageSize.getWidth() - 28);
-    doc.text(split, 14, y);
-    y += split.length * 3.2 + 4;
+    doc.setTextColor(...C.text);
+    const split = doc.splitTextToSize(auditoria.notas_supervisor, doc.internal.pageSize.getWidth() - 32);
+    doc.text(split, ML, y);
+    y += split.length * 3.8 + 5;
   }
 
   drawFooter(doc);

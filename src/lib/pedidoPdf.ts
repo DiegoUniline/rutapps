@@ -1,8 +1,8 @@
 /**
- * Pedido PDF — Clean Odoo-style layout
+ * Pedido PDF — Professional clean layout
  */
 import {
-  createDoc, C, fmtCurrency, fmtDate,
+  createDoc, ML, MR, C, fmtCurrency, fmtDate,
   drawDocHeader, drawInfoGrid, drawCleanTable, drawTotalsBlock,
   drawNotes, drawFooter, checkPageBreak,
   type EmpresaInfo,
@@ -72,7 +72,7 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos } = params;
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
-  const rightX = pageW - 14;
+  const rightX = pageW - MR;
 
   const statusLabel = STATUS_LABELS[pedido.status] ?? pedido.status;
   const pagoLabel = pedido.condicion_pago === 'credito' ? 'Crédito' : pedido.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
@@ -101,21 +101,21 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   y = drawCleanTable(doc, y,
     ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.%', 'Importe'],
     lineas.map(l => [
-      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.codigo,
       l.nombre,
       { content: String(l.cantidad), styles: { halign: 'center' } },
-      { content: l.unidad || '—', styles: { textColor: C.muted } },
+      l.unidad || '—',
       { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
-      { content: l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—', styles: { halign: 'center', textColor: C.muted } },
+      { content: l.descuento_pct > 0 ? `${l.descuento_pct}%` : '—', styles: { halign: 'center' } },
       { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 22 },
-      2: { cellWidth: 14, halign: 'center' },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 24, halign: 'right' },
+      0: { cellWidth: 24 },
+      2: { cellWidth: 16, halign: 'center' },
+      3: { cellWidth: 20 },
+      4: { cellWidth: 24, halign: 'right' },
+      5: { cellWidth: 18, halign: 'center' },
+      6: { cellWidth: 26, halign: 'right' },
     },
   );
 
@@ -139,12 +139,12 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
         { content: e.folio, styles: { fontStyle: 'bold' } },
         ENTREGA_STATUS[e.status] ?? e.status,
         e.repartidor ?? '—',
-        { content: e.lineas.map(l => `${l.cantidad_entregada}/${l.cantidad_pedida} ${l.codigo}`).join(', '), styles: { fontSize: 6.5, textColor: C.muted } },
+        e.lineas.map(l => `${l.cantidad_entregada}/${l.cantidad_pedida} ${l.codigo}`).join(', '),
       ]),
       {
-        0: { cellWidth: 22 },
-        1: { cellWidth: 22 },
-        2: { cellWidth: 30 },
+        0: { cellWidth: 24 },
+        1: { cellWidth: 24 },
+        2: { cellWidth: 32 },
       },
     );
   }
@@ -165,11 +165,11 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
       { 3: { halign: 'right' } },
     );
 
-    doc.setFontSize(7.5);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 2, { align: 'right' });
-    y += 6;
+    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 3, { align: 'right' });
+    y += 7;
   }
 
   if (pedido.notas) {
@@ -179,5 +179,3 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   drawFooter(doc);
   return doc.output('blob');
 }
-
-
