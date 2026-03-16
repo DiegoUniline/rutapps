@@ -669,11 +669,6 @@ export default function VentaFormPage() {
                     }}
                     placeholder="Buscar cliente..."
                   />
-                      const c = clientesList?.find(cl => cl.id === cId);
-                      if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
-                    }}
-                    placeholder="Buscar cliente..."
-                  />
                 )}
               </div>
               <div>
