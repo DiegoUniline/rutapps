@@ -52,7 +52,10 @@ export function useSaveCliente() {
         return data;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['clientes'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['cliente'] });
+    },
   });
 }
 
