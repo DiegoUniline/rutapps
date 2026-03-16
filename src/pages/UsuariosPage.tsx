@@ -97,10 +97,11 @@ export default function UsuariosPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const deleteRole = async (id: string) => {
-    if (!confirm('¿Eliminar este rol?')) return;
-    await supabase.from('roles').delete().eq('id', id);
-    toast.success('Rol eliminado'); load();
+  const toggleRoleActivo = async (id: string, currentActivo: boolean) => {
+    const newVal = !currentActivo;
+    await supabase.from('roles').update({ activo: newVal }).eq('id', id);
+    toast.success(newVal ? 'Rol reactivado' : 'Rol dado de baja');
+    load();
   };
 
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
