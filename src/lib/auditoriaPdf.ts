@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * Auditoría PDF — Clean Odoo-style layout
+ */
 import {
-  PDF, ML, MR, fmtDate, fmtDateTime,
-  drawHeader, drawInfoSection, drawSectionTitle, drawFooter, drawNotes, checkPageBreak,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
+  createDoc, C, fmtDate,
+  drawDocHeader, drawInfoGrid, drawCleanTable,
+  drawNotes, drawFooter, checkPageBreak,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 interface AuditoriaPdfParams {
   empresa: EmpresaInfo;
@@ -39,137 +40,128 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
   const { empresa, logoBase64, auditoria, almacen, responsable, aprobador, lineas } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-
-  let y = drawHeader(doc, empresa, 'AUDITORÍA', auditoria.nombre, logoBase64);
+  const doc = createDoc();
 
   const faltantes = lineas.filter(l => l.diferencia < 0).length;
   const excedentes = lineas.filter(l => l.diferencia > 0).length;
   const contados = lineas.filter(l => l.cantidad_real !== null).length;
 
-  y = drawInfoSection(doc, y, [
-    ['Auditoría:', auditoria.nombre],
-    ['Fecha:', fmtDate(auditoria.fecha)],
-    ['Estado:', STATUS_LABELS[auditoria.status] ?? auditoria.status],
-    ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
-  ], [
-    ['Productos:', String(lineas.length)],
-    ['Contados:', String(contados)],
-    ['Faltantes:', String(faltantes)],
-    ['Excedentes:', String(excedentes)],
-    ...(responsable ? [['Responsable:', responsable] as [string, string]] : []),
-    ...(aprobador ? [['Aprobó:', aprobador] as [string, string]] : []),
-  ]);
+  let y = drawDocHeader(doc, empresa, 'AUDITORÍA', auditoria.nombre, logoBase64);
 
-  y = drawSectionTitle(doc, y, 'Detalle de Conteo');
+  y = drawInfoGrid(doc, y,
+    'Auditoría',
+    [
+      ['Nombre:', auditoria.nombre],
+      ['Fecha:', fmtDate(auditoria.fecha)],
+      ['Estado:', STATUS_LABELS[auditoria.status] ?? auditoria.status],
+      ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
+    ],
+    'Resumen',
+    [
+      ['Productos:', String(lineas.length)],
+      ['Contados:', String(contados)],
+      ['Faltantes:', String(faltantes)],
+      ['Excedentes:', String(excedentes)],
+      ...(responsable ? [['Responsable:', responsable] as [string, string]] : []),
+      ...(aprobador ? [['Aprobó:', aprobador] as [string, string]] : []),
+    ],
+  );
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: ML, right: MR },
-    head: [['Código', 'Producto', 'Esperada', 'Real', 'Diferencia', 'Ajustado', 'Notas']],
-    body: lineas.map(l => [
-      l.codigo, l.nombre,
-      String(l.cantidad_esperada),
-      l.cantidad_real !== null ? String(l.cantidad_real) : '—',
-      l.diferencia !== 0 ? (l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia)) : '0',
-      l.ajustado ? '✓' : '—',
-      l.notas || '',
+  // Main table
+  y = drawCleanTable(doc, y,
+    ['Código', 'Producto', 'Esperada', 'Real', 'Diferencia', 'Ajust.', 'Notas'],
+    lineas.map(l => [
+      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.nombre,
+      { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
+      { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
+      { content: l.diferencia !== 0 ? (l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia)) : '0', styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: l.ajustado ? '✓' : '—', styles: { halign: 'center' } },
+      { content: l.notas || '', styles: { fontSize: 6.5, textColor: C.muted } },
     ]),
-    headStyles: TABLE_HEAD_STYLE,
-    bodyStyles: TABLE_BODY_STYLE,
-    alternateRowStyles: TABLE_ALT_STYLE,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 22 },
-      2: { halign: 'right', cellWidth: 18 },
-      3: { halign: 'right', cellWidth: 18 },
-      4: { halign: 'right', cellWidth: 20 },
-      5: { halign: 'center', cellWidth: 16 },
+    {
+      0: { cellWidth: 22 },
+      2: { cellWidth: 18, halign: 'right' },
+      3: { cellWidth: 18, halign: 'right' },
+      4: { cellWidth: 20, halign: 'right' },
+      5: { cellWidth: 14, halign: 'center' },
       6: { cellWidth: 30 },
     },
-    didParseCell: (data: any) => {
+    (data: any) => {
       if (data.section === 'body' && data.column.index === 4) {
-        const raw = data.cell.raw as string;
-        if (raw.startsWith('-')) {
-          data.cell.styles.textColor = PDF.danger;
-          data.cell.styles.fontStyle = 'bold';
-        } else if (raw.startsWith('+')) {
-          data.cell.styles.textColor = PDF.success;
+        const raw = data.cell.raw?.content || data.cell.raw;
+        if (typeof raw === 'string') {
+          if (raw.startsWith('-')) data.cell.styles.textColor = C.danger;
+          else if (raw.startsWith('+')) data.cell.styles.textColor = C.success;
+        }
+      }
+      if (data.section === 'body' && data.column.index === 5) {
+        const raw = data.cell.raw?.content || data.cell.raw;
+        if (raw === '✓') {
+          data.cell.styles.textColor = C.success;
           data.cell.styles.fontStyle = 'bold';
         }
       }
-      if (data.section === 'body' && data.column.index === 5 && data.cell.raw === '✓') {
-        data.cell.styles.textColor = PDF.success;
-        data.cell.styles.fontStyle = 'bold';
-      }
     },
-  });
+  );
 
-  y = (doc as any).lastAutoTable.finalY + 6;
-
-  // Faltantes summary
+  // Faltantes detail
   if (faltantes > 0) {
     y = checkPageBreak(doc, y);
-    y = drawSectionTitle(doc, y, `Faltantes (${faltantes})`);
-
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Código', 'Producto', 'Esperada', 'Real', 'Faltante']],
-      body: lineas.filter(l => l.diferencia < 0).map(l => [
-        l.codigo, l.nombre,
-        String(l.cantidad_esperada),
-        l.cantidad_real !== null ? String(l.cantidad_real) : '—',
-        String(Math.abs(l.diferencia)),
+    y = drawCleanTable(doc, y,
+      ['Código', 'Producto', 'Esperada', 'Real', 'Faltante'],
+      lineas.filter(l => l.diferencia < 0).map(l => [
+        { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+        l.nombre,
+        { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
+        { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
+        { content: String(Math.abs(l.diferencia)), styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 22 },
-        2: { halign: 'right', cellWidth: 18 },
-        3: { halign: 'right', cellWidth: 18 },
-        4: { halign: 'right', fontStyle: 'bold', cellWidth: 18, textColor: PDF.danger },
+      {
+        0: { cellWidth: 22 },
+        2: { cellWidth: 18, halign: 'right' },
+        3: { cellWidth: 18, halign: 'right' },
+        4: { cellWidth: 18, halign: 'right' },
       },
-    });
-
-    y = (doc as any).lastAutoTable.finalY + 6;
+    );
   }
 
-  // Excedentes summary
+  // Excedentes detail
   if (excedentes > 0) {
     y = checkPageBreak(doc, y);
-    y = drawSectionTitle(doc, y, `Excedentes (${excedentes})`);
-
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Código', 'Producto', 'Esperada', 'Real', 'Excedente']],
-      body: lineas.filter(l => l.diferencia > 0).map(l => [
-        l.codigo, l.nombre,
-        String(l.cantidad_esperada),
-        l.cantidad_real !== null ? String(l.cantidad_real) : '—',
-        `+${l.diferencia}`,
+    y = drawCleanTable(doc, y,
+      ['Código', 'Producto', 'Esperada', 'Real', 'Excedente'],
+      lineas.filter(l => l.diferencia > 0).map(l => [
+        { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+        l.nombre,
+        { content: String(l.cantidad_esperada), styles: { halign: 'right' } },
+        { content: l.cantidad_real !== null ? String(l.cantidad_real) : '—', styles: { halign: 'right' } },
+        { content: `+${l.diferencia}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.success } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 22 },
-        2: { halign: 'right', cellWidth: 18 },
-        3: { halign: 'right', cellWidth: 18 },
-        4: { halign: 'right', fontStyle: 'bold', cellWidth: 18, textColor: PDF.success },
+      {
+        0: { cellWidth: 22 },
+        2: { cellWidth: 18, halign: 'right' },
+        3: { cellWidth: 18, halign: 'right' },
+        4: { cellWidth: 18, halign: 'right' },
       },
-    });
-
-    y = (doc as any).lastAutoTable.finalY + 6;
+    );
   }
 
-  if (auditoria.notas) drawNotes(doc, y, auditoria.notas);
+  if (auditoria.notas) {
+    y = drawNotes(doc, y, auditoria.notas);
+  }
   if (auditoria.notas_supervisor) {
-    y = (doc as any).lastAutoTable?.finalY ?? y;
-    y += auditoria.notas ? 14 : 0;
-    y = checkPageBreak(doc, y);
-    drawNotes(doc, y, auditoria.notas_supervisor, 'Notas del supervisor');
+    y = checkPageBreak(doc, y, 20);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...C.sublabel);
+    doc.text('NOTAS DEL SUPERVISOR', 14, y);
+    y += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C.muted);
+    const split = doc.splitTextToSize(auditoria.notas_supervisor, doc.internal.pageSize.getWidth() - 28);
+    doc.text(split, 14, y);
+    y += split.length * 3.2 + 4;
   }
 
   drawFooter(doc);

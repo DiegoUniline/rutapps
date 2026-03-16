@@ -9,7 +9,7 @@ import {
   ML, MR, fmtCurrency,
   drawFooter, checkPageBreak,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 export interface CfdiPdfParams {
   empresa: EmpresaInfo & {

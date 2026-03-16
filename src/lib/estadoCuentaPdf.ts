@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * Estado de Cuenta PDF — Clean Odoo-style layout
+ */
 import {
-  PDF, ML, MR, fmtCurrency, fmtDate,
-  drawHeader, drawInfoSection, drawSectionTitle, drawFooter, checkPageBreak,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
+  createDoc, C, fmtCurrency, fmtDate,
+  drawDocHeader, drawInfoGrid, drawCleanTable,
+  drawFooter, checkPageBreak,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 interface EstadoCuentaParams {
   empresa: EmpresaInfo;
@@ -38,123 +39,103 @@ interface EstadoCuentaParams {
 
 export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
   const { empresa, logoBase64, cliente, ventas, cobros } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
+  const rightX = pageW - 14;
 
-  let y = drawHeader(doc, empresa, 'ESTADO DE CUENTA',
-    `Fecha: ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}`,
-    logoBase64,
-  );
+  const fechaHoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  let y = drawDocHeader(doc, empresa, 'ESTADO DE CUENTA', fechaHoy, logoBase64);
 
   const totalVendido = ventas.reduce((s, v) => s + v.total, 0);
   const totalPendiente = ventas.reduce((s, v) => s + v.saldo_pendiente, 0);
   const totalCobrado = cobros.reduce((s, c) => s + c.monto, 0);
 
-  y = drawInfoSection(doc, y, [
-    ['Cliente:', cliente.nombre],
-    ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
-    ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
-    ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
-  ], [
-    ['Total vendido:', `$${fmtCurrency(totalVendido)}`],
-    ['Total cobrado:', `$${fmtCurrency(totalCobrado)}`],
-    ['Saldo pendiente:', `$${fmtCurrency(totalPendiente)}`],
-    ...(cliente.credito ? [['Crédito:', `${cliente.dias_credito ?? 0} días · Límite: $${fmtCurrency(cliente.limite_credito ?? 0)}`] as [string, string]] : []),
-  ]);
+  y = drawInfoGrid(doc, y,
+    'Cliente',
+    [
+      ['Nombre:', cliente.nombre],
+      ...(cliente.codigo ? [['Código:', cliente.codigo] as [string, string]] : []),
+      ...(cliente.rfc ? [['RFC:', cliente.rfc] as [string, string]] : []),
+      ...(cliente.telefono ? [['Teléfono:', cliente.telefono] as [string, string]] : []),
+    ],
+    'Resumen financiero',
+    [
+      ['Total vendido:', `$${fmtCurrency(totalVendido)}`],
+      ['Total cobrado:', `$${fmtCurrency(totalCobrado)}`],
+      ['Saldo pendiente:', `$${fmtCurrency(totalPendiente)}`],
+      ...(cliente.credito ? [['Crédito:', `${cliente.dias_credito ?? 0} días · Límite: $${fmtCurrency(cliente.limite_credito ?? 0)}`] as [string, string]] : []),
+    ],
+  );
 
-  // Ventas with pending balance
+  // Ventas con saldo pendiente
   const ventasConSaldo = ventas.filter(v => v.saldo_pendiente > 0);
   const ventasSaldadas = ventas.filter(v => v.saldo_pendiente <= 0);
 
   if (ventasConSaldo.length > 0) {
-    y = drawSectionTitle(doc, y, 'Ventas con saldo pendiente');
-
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Folio', 'Fecha', 'Condición', 'Estado', 'Total', 'Pagado', 'Pendiente']],
-      body: ventasConSaldo.map(v => [
-        v.folio || '—',
+    y = drawCleanTable(doc, y,
+      ['Folio', 'Fecha', 'Condición', 'Estado', 'Total', 'Pagado', 'Pendiente'],
+      ventasConSaldo.map(v => [
+        { content: v.folio || '—', styles: { fontStyle: 'bold' } },
         fmtDate(v.fecha),
         v.condicion_pago === 'credito' ? 'Crédito' : v.condicion_pago === 'contado' ? 'Contado' : 'Por definir',
         v.status.charAt(0).toUpperCase() + v.status.slice(1),
-        `$${fmtCurrency(v.total)}`,
-        `$${fmtCurrency(v.total - v.saldo_pendiente)}`,
-        `$${fmtCurrency(v.saldo_pendiente)}`,
+        { content: `$${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
+        { content: `$${fmtCurrency(v.total - v.saldo_pendiente)}`, styles: { halign: 'right' } },
+        { content: `$${fmtCurrency(v.saldo_pendiente)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 22 },
+      {
+        0: { cellWidth: 22 },
         4: { halign: 'right' },
         5: { halign: 'right' },
-        6: { halign: 'right', fontStyle: 'bold', textColor: PDF.danger },
+        6: { halign: 'right' },
       },
-    });
+    );
 
-    y = (doc as any).lastAutoTable.finalY + 3;
-    doc.setTextColor(...PDF.dark);
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total pendiente: $${fmtCurrency(totalPendiente)}`, pageW - MR, y, { align: 'right' });
-    y += 8;
+    doc.setTextColor(...C.text);
+    doc.text(`Total pendiente: $${fmtCurrency(totalPendiente)}`, rightX, y - 2, { align: 'right' });
+    y += 6;
   }
 
-  // Settled sales
+  // Ventas saldadas
   if (ventasSaldadas.length > 0) {
     y = checkPageBreak(doc, y);
-    y = drawSectionTitle(doc, y, `Ventas saldadas (${ventasSaldadas.length})`);
-
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Folio', 'Fecha', 'Total', 'Estado']],
-      body: ventasSaldadas.slice(0, 20).map(v => [
-        v.folio || '—', fmtDate(v.fecha), `$${fmtCurrency(v.total)}`,
-        v.status.charAt(0).toUpperCase() + v.status.slice(1),
+    y = drawCleanTable(doc, y,
+      ['Folio', 'Fecha', 'Total', 'Estado'],
+      ventasSaldadas.slice(0, 20).map(v => [
+        { content: v.folio || '—', styles: { fontStyle: 'bold' } },
+        fmtDate(v.fecha),
+        { content: `$${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
+        { content: v.status.charAt(0).toUpperCase() + v.status.slice(1), styles: { textColor: C.muted } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: { ...TABLE_BODY_STYLE, textColor: PDF.muted },
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 22 },
-        2: { halign: 'right' },
-      },
-    });
-    y = (doc as any).lastAutoTable.finalY + 6;
+      { 0: { cellWidth: 22 }, 2: { halign: 'right' } },
+    );
   }
 
   // Cobros
   y = checkPageBreak(doc, y);
-  y = drawSectionTitle(doc, y, 'Historial de Pagos');
-
   if (cobros.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Fecha', 'Método', 'Referencia', 'Monto']],
-      body: cobros.map(c => [
+    y = drawCleanTable(doc, y,
+      ['Fecha', 'Método', 'Referencia', 'Monto'],
+      cobros.map(c => [
         fmtDate(c.fecha),
         c.metodo_pago === 'efectivo' ? 'Efectivo' : c.metodo_pago === 'transferencia' ? 'Transferencia' : c.metodo_pago === 'tarjeta' ? 'Tarjeta' : c.metodo_pago,
         c.referencia || '—',
-        `$${fmtCurrency(c.monto)}`,
+        { content: `$${fmtCurrency(c.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
-      headStyles: TABLE_HEAD_STYLE,
-      bodyStyles: TABLE_BODY_STYLE,
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } },
-    });
+      { 3: { halign: 'right' } },
+    );
 
-    y = (doc as any).lastAutoTable.finalY + 3;
-    doc.setTextColor(...PDF.dark);
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total cobrado: $${fmtCurrency(totalCobrado)}`, pageW - MR, y, { align: 'right' });
+    doc.setTextColor(...C.text);
+    doc.text(`Total cobrado: $${fmtCurrency(totalCobrado)}`, rightX, y - 2, { align: 'right' });
   } else {
-    doc.setTextColor(...PDF.muted);
+    doc.setTextColor(...C.muted);
     doc.setFontSize(7.5);
-    doc.text('Sin pagos registrados', ML, y + 4);
+    doc.text('Sin pagos registrados', 14, y + 4);
   }
 
   drawFooter(doc);

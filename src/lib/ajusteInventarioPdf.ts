@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * Ajuste de Inventario PDF — Clean Odoo-style layout
+ */
 import {
-  PDF, ML, MR, fmtDate, fmtDateTime,
-  drawHeader, drawInfoSection, drawSectionTitle, drawFooter, drawNotes,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
+  createDoc, C, fmtDate,
+  drawDocHeader, drawInfoGrid, drawCleanTable,
+  drawNotes, drawFooter,
   type EmpresaInfo,
-} from './pdfBase';
+} from './pdfStyleOdoo';
 
 interface AjusteInventarioPdfParams {
   empresa: EmpresaInfo;
@@ -28,61 +29,57 @@ interface AjusteInventarioPdfParams {
 
 export function generarAjusteInventarioPdf(params: AjusteInventarioPdfParams): Blob {
   const { empresa, logoBase64, ajuste, lineas } = params;
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-
-  let y = drawHeader(doc, empresa, 'AJUSTE DE INVENTARIO', fmtDate(ajuste.fecha), logoBase64);
+  const doc = createDoc();
 
   const aumentos = lineas.filter(l => l.diferencia > 0).length;
   const reducciones = lineas.filter(l => l.diferencia < 0).length;
 
-  y = drawInfoSection(doc, y, [
-    ['Fecha:', fmtDate(ajuste.fecha)],
-    ['Motivo:', ajuste.motivo || 'Ajuste manual'],
-    ...(ajuste.almacen ? [['Almacén:', ajuste.almacen] as [string, string]] : []),
-  ], [
-    ['Productos:', String(lineas.length)],
-    ['Aumentos:', String(aumentos)],
-    ['Reducciones:', String(reducciones)],
-    ...(ajuste.responsable ? [['Responsable:', ajuste.responsable] as [string, string]] : []),
-  ]);
+  let y = drawDocHeader(doc, empresa, 'AJUSTE DE INVENTARIO', fmtDate(ajuste.fecha), logoBase64);
 
-  y = drawSectionTitle(doc, y, 'Detalle de Ajustes');
+  y = drawInfoGrid(doc, y,
+    'Detalle del ajuste',
+    [
+      ['Fecha:', fmtDate(ajuste.fecha)],
+      ['Motivo:', ajuste.motivo || 'Ajuste manual'],
+      ...(ajuste.almacen ? [['Almacén:', ajuste.almacen] as [string, string]] : []),
+    ],
+    'Resumen',
+    [
+      ['Productos:', String(lineas.length)],
+      ['Aumentos:', String(aumentos)],
+      ['Reducciones:', String(reducciones)],
+      ...(ajuste.responsable ? [['Responsable:', ajuste.responsable] as [string, string]] : []),
+    ],
+  );
 
-  autoTable(doc, {
-    startY: y,
-    margin: { left: ML, right: MR },
-    head: [['Código', 'Producto', 'Anterior', 'Nueva', 'Diferencia']],
-    body: lineas.map(l => [
-      l.codigo, l.nombre,
-      String(l.cantidad_anterior), String(l.cantidad_nueva),
-      l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia),
+  y = drawCleanTable(doc, y,
+    ['Código', 'Producto', 'Anterior', 'Nueva', 'Diferencia'],
+    lineas.map(l => [
+      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.nombre,
+      { content: String(l.cantidad_anterior), styles: { halign: 'right' } },
+      { content: String(l.cantidad_nueva), styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia), styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
-    headStyles: TABLE_HEAD_STYLE,
-    bodyStyles: TABLE_BODY_STYLE,
-    alternateRowStyles: TABLE_ALT_STYLE,
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 24 },
-      2: { halign: 'right', cellWidth: 20 },
-      3: { halign: 'right', cellWidth: 20 },
-      4: { halign: 'right', cellWidth: 22 },
+    {
+      0: { cellWidth: 24 },
+      2: { cellWidth: 20, halign: 'right' },
+      3: { cellWidth: 20, halign: 'right' },
+      4: { cellWidth: 22, halign: 'right' },
     },
-    didParseCell: (data: any) => {
+    (data: any) => {
       if (data.section === 'body' && data.column.index === 4) {
-        const raw = data.cell.raw as string;
-        if (raw.startsWith('+')) {
-          data.cell.styles.textColor = PDF.success;
-          data.cell.styles.fontStyle = 'bold';
-        } else if (raw.startsWith('-')) {
-          data.cell.styles.textColor = PDF.danger;
-          data.cell.styles.fontStyle = 'bold';
+        const raw = data.cell.raw?.content || data.cell.raw;
+        if (typeof raw === 'string') {
+          if (raw.startsWith('+')) data.cell.styles.textColor = C.success;
+          else if (raw.startsWith('-')) data.cell.styles.textColor = C.danger;
         }
       }
     },
-  });
+  );
 
   if (ajuste.motivo) {
-    y = (doc as any).lastAutoTable.finalY + 8;
-    drawNotes(doc, y, `Motivo: ${ajuste.motivo}`);
+    y = drawNotes(doc, y, `Motivo: ${ajuste.motivo}`);
   }
 
   drawFooter(doc);
