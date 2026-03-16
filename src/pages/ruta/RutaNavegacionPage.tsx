@@ -360,6 +360,7 @@ function NavegacionContent() {
           })}
         </GoogleMap>
       )}
+      <MapRecenterButton onClick={recenterMap} className="bottom-24 left-3" />
 
       {/* TOP BAR */}
       <div className="absolute top-0 left-0 right-0 z-10 pt-[max(0.5rem,env(safe-area-inset-top))]">
