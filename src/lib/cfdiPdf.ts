@@ -347,8 +347,15 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   autoTable(doc, {
     startY: y,
     margin: { left: ML, right: MR },
+    theme: 'plain',
     head: tableHead,
     body: tableBody,
+    styles: {
+      fillColor: [255, 255, 255],
+      textColor: [33, 37, 41],
+      lineColor: [210, 210, 210],
+      lineWidth: 0.2,
+    },
     headStyles: {
       fillColor: [255, 255, 255],
       textColor: [33, 37, 41],
@@ -359,11 +366,15 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       lineWidth: 0.3,
     },
     bodyStyles: {
+      fillColor: [255, 255, 255],
       fontSize: 7,
       cellPadding: 2.5,
       textColor: [33, 37, 41],
       lineColor: [220, 220, 220],
       lineWidth: 0.2,
+    },
+    alternateRowStyles: {
+      fillColor: [255, 255, 255],
     },
     columnStyles: {
       0: { cellWidth: 20, halign: 'center' },
@@ -373,12 +384,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       4: { cellWidth: 22, halign: 'right' },
       5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
     },
-    didDrawCell: (data: any) => {
-      // Draw bottom border for each row
-      if (data.section === 'body') {
-        doc.setDrawColor(...borderColor);
-        doc.setLineWidth(0.3);
-      }
+    didParseCell: (data: any) => {
+      data.cell.styles.fillColor = [255, 255, 255];
     },
   });
 
