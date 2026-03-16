@@ -187,7 +187,7 @@ export default function FacturacionCfdiPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((cfdi: any) => (
-                    <TableRow key={cfdi.id} className="text-[13px]">
+                    <TableRow key={cfdi.id} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
                       <TableCell className="font-mono text-xs font-semibold">
                         {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || '—'}
                       </TableCell>
