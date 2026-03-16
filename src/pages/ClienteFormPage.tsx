@@ -254,7 +254,7 @@ export default function ClienteFormPage() {
                   }
                 }} placeholder="5210dígitos" />
                 <OdooField label="Email" value={form.email} onChange={v => set('email', v)} />
-                <OdooField label="RFC" value={form.rfc} onChange={v => set('rfc', v)} />
+                
               </div>
               <div className="space-y-1">
                 <OdooField label="Dirección" value={form.direccion} onChange={v => set('direccion', v)} />
