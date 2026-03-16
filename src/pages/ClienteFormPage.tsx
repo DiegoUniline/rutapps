@@ -39,7 +39,6 @@ export default function ClienteFormPage() {
   const { data: vendedores } = useVendedores();
   const { data: cobradores } = useCobradores();
   const { data: tarifas } = useTarifasForSelect();
-  const { data: tarifas } = useTarifasForSelect();
   const { data: productosSelect } = useProductosForSelect();
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
   const savePedidoMutation = useSavePedidoSugerido();
