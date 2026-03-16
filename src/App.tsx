@@ -264,6 +264,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
               <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
               <Route path="/facturacion" element={<FacturacionPage />} />
+              <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
