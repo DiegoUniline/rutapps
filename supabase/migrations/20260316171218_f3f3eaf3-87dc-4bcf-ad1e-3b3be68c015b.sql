@@ -1,0 +1,1 @@
+UPDATE public.cfdis SET status = 'borrador', facturama_id = NULL, folio_fiscal = NULL, pdf_url = NULL, xml_url = NULL, updated_at = now() WHERE id = '15cd947e-08fd-44f0-8eb9-7541f762d7a9'
