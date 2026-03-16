@@ -214,25 +214,26 @@ export function drawSectionTitle(doc: jsPDF, y: number, title: string): number {
  * Clean table header styles (neutral gray)
  */
 export const TABLE_HEAD_STYLE = {
-  fillColor: [245, 245, 245] as [number, number, number],
-  textColor: [52, 58, 64] as [number, number, number],
+  fillColor: [255, 255, 255] as [number, number, number],
+  textColor: [33, 37, 41] as [number, number, number],
   fontSize: 7,
   fontStyle: 'bold' as const,
   cellPadding: 2.5,
-  lineColor: [222, 226, 230] as [number, number, number],
+  lineColor: [200, 200, 200] as [number, number, number],
   lineWidth: 0.3,
 };
 
 export const TABLE_BODY_STYLE = {
+  fillColor: [255, 255, 255] as [number, number, number],
   fontSize: 7,
   cellPadding: 2.5,
   textColor: [33, 37, 41] as [number, number, number],
-  lineColor: [240, 240, 240] as [number, number, number],
+  lineColor: [238, 238, 238] as [number, number, number],
   lineWidth: 0.15,
 };
 
 export const TABLE_ALT_STYLE = {
-  fillColor: [252, 252, 252] as [number, number, number],
+  fillColor: [255, 255, 255] as [number, number, number],
 };
 
 /**
