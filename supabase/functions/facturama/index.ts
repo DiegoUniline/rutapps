@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const FACTURAMA_API = "https://api.facturama.mx";
+const FACTURAMA_API = "https://apisandbox.facturama.mx";
 
 function getAuth() {
   const user = Deno.env.get("FACTURAMA_USERNAME");
