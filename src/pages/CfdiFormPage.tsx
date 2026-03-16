@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, FileCheck, Loader2, Trash2, Save } from 'lucide-react';
+import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -124,6 +125,7 @@ export default function CfdiFormPage() {
   const [saving, setSaving] = useState(false);
   const [timbring, setTimbring] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<string | null>(null);
 
   const readOnly = cfdi?.status !== 'borrador';
 
@@ -310,7 +312,27 @@ export default function CfdiFormPage() {
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       navigate('/facturacion-cfdi');
     } catch (e: any) {
-      toast.error(e.message || 'Error al timbrar');
+      // Parse Facturama error for user-friendly display
+      let errorMsg = e.message || 'Error al timbrar';
+      try {
+        // Try to extract ModelState details from nested JSON
+        const match = errorMsg.match(/Facturama rechazó: (.*)/);
+        if (match) {
+          const parsed = JSON.parse(match[1]);
+          if (parsed.ModelState) {
+            const details = Object.entries(parsed.ModelState)
+              .map(([key, msgs]: [string, any]) => {
+                const field = key.replace('cfdiToCreate.', '');
+                return `• ${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`;
+              })
+              .join('\n');
+            errorMsg = `${parsed.Message || 'Error de validación'}\n\n${details}`;
+          } else if (parsed.Message) {
+            errorMsg = parsed.Message;
+          }
+        }
+      } catch { /* use raw message */ }
+      setErrorDialog(errorMsg);
     } finally {
       setTimbring(false);
     }
@@ -598,6 +620,24 @@ export default function CfdiFormPage() {
           </Button>
         </div>
       )}
+
+      {/* Error dialog */}
+      <Dialog open={!!errorDialog} onOpenChange={() => setErrorDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Error al timbrar
+            </DialogTitle>
+          </DialogHeader>
+          <div className="whitespace-pre-wrap text-sm text-muted-foreground bg-destructive/5 border border-destructive/20 rounded-lg p-4 max-h-[300px] overflow-y-auto">
+            {errorDialog}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialog(null)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

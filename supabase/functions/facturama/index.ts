@@ -82,7 +82,13 @@ async function verificarConexion() {
 // ========================================
 async function timbrar(supabase: any, userId: string, body: any) {
   const auth = getAuth();
-  const { venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, folio, name_id } = body;
+  const { venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
+
+  // Auto-generate folio if not provided
+  let folio = body.folio;
+  if (!folio || folio.trim() === '') {
+    folio = String(Date.now()).slice(-8);
+  }
 
   // Build Facturama items with exact tax calculations
   const facItems: any[] = [];
