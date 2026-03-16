@@ -156,7 +156,7 @@ function formatDateShort(dateStr: string): string {
 }
 
 // ── Helper: draw text pair (label + value) ──
-function drawPair(doc: jsPDF, x: number, y: number, label: string, value: string, labelColor = C.muted, fontSize = 7.5) {
+function drawPair(doc: jsPDF, x: number, y: number, label: string, value: string, labelColor = C.text, fontSize = 8.5) {
   doc.setFontSize(fontSize);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...labelColor);
