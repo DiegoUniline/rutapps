@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Pencil, Check, Layers } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Check, Layers } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -478,7 +478,7 @@ export default function TarifaFormPage() {
                               </td>
                             </tr>
                           ) : (
-                          <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                          <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer" onClick={() => { if (editingLineaId !== l.id) startEditLinea(l); }}>
                             <td className="py-1.5 px-3">{getAplicaBadge(l.aplica_a)}</td>
                             <td className="py-1.5 px-3">
                               <div className="flex flex-wrap gap-1">
@@ -497,15 +497,10 @@ export default function TarifaFormPage() {
                             <td className="py-1.5 px-3 text-right font-mono text-xs">{(l as any).comision_pct ? `${(l as any).comision_pct}%` : '—'}</td>
                             <td className="py-1.5 px-3 text-right font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</td>
                             <td className="py-1.5 px-3 text-xs text-muted-foreground">{REDONDEO_LABELS[(l as any).redondeo] || '—'}</td>
-                            <td className="py-1.5 px-3 text-center">
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => startEditLinea(l)} className="text-muted-foreground hover:text-primary">
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </button>
-                                <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
+                            <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                              <button onClick={() => handleDeleteLinea(l.id)} className="text-destructive hover:text-destructive/80">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
                             </td>
                           </tr>
                           )
