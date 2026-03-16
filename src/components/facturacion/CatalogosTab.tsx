@@ -72,7 +72,7 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
   if (isLoading) return <TableSkeleton rows={8} cols={3} />;
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3 h-[calc(100vh-280px)]">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
