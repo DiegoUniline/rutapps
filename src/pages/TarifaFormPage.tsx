@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Pencil, Check } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Pencil, Check, Layers } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -127,6 +127,8 @@ export default function TarifaFormPage() {
     if (newLinea.aplica_a === 'categoria' && newLinea.clasificacion_ids.length === 0) {
       toast.error('Selecciona al menos una categoría'); return;
     }
+    // Duplicate validation
+    if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids)) return;
     try {
       await saveLinea.mutateAsync({
         tarifa_id: id,
@@ -176,6 +178,8 @@ export default function TarifaFormPage() {
 
   const handleSaveEditLinea = async () => {
     if (!editingLineaId) return;
+    // Duplicate validation (exclude current line)
+    if (!validateNoDuplicates(editLinea.aplica_a, editLinea.producto_ids, editLinea.clasificacion_ids, editingLineaId)) return;
     try {
       await saveLinea.mutateAsync({
         id: editingLineaId,
@@ -205,6 +209,70 @@ export default function TarifaFormPage() {
     const order: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
     return (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
   });
+
+  // ── Used IDs tracking (for duplicate prevention) ──
+  const usedCatIds = new Set<string>();
+  const usedProdIds = new Set<string>();
+  lineas.forEach(l => {
+    if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => usedCatIds.add(id));
+    if (l.aplica_a === 'producto') l.producto_ids.forEach(id => usedProdIds.add(id));
+  });
+
+  // Available items (excluding already used, but include current editing line's items)
+  const getAvailableClas = (currentIds: string[]) =>
+    clasItems.filter(c => !usedCatIds.has(c.id) || currentIds.includes(c.id));
+  const getAvailableProds = (currentIds: string[]) =>
+    prodItems.filter(p => !usedProdIds.has(p.id) || currentIds.includes(p.id));
+
+  // Validation helper
+  const validateNoDuplicates = (aplica_a: string, prodIds: string[], clasIds: string[], excludeLineaId?: string) => {
+    const otherLineas = lineas.filter(l => l.id !== excludeLineaId);
+    if (aplica_a === 'categoria') {
+      const otherCatIds = new Set<string>();
+      otherLineas.forEach(l => { if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => otherCatIds.add(id)); });
+      const dupes = clasIds.filter(id => otherCatIds.has(id));
+      if (dupes.length > 0) {
+        const names = dupes.map(id => clasMap.get(id) ?? id).join(', ');
+        toast.error(`Categoría(s) ya en otra regla: ${names}`);
+        return false;
+      }
+    }
+    if (aplica_a === 'producto') {
+      const otherProdIds = new Set<string>();
+      otherLineas.forEach(l => { if (l.aplica_a === 'producto') l.producto_ids.forEach(id => otherProdIds.add(id)); });
+      const dupes = prodIds.filter(id => otherProdIds.has(id));
+      if (dupes.length > 0) {
+        const names = dupes.map(id => prodMap.get(id) ?? id).join(', ');
+        toast.error(`Producto(s) ya en otra regla: ${names}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // ── Load all categories button ──
+  const [loadingAllCats, setLoadingAllCats] = useState(false);
+  const handleLoadAllCategories = async () => {
+    if (!id || isNew || !clasificaciones) return;
+    const unusedCats = clasificaciones.filter(c => !usedCatIds.has(c.id));
+    if (unusedCats.length === 0) { toast.info('Todas las categorías ya tienen regla'); return; }
+    setLoadingAllCats(true);
+    try {
+      for (const cat of unusedCats) {
+        await saveLinea.mutateAsync({
+          tarifa_id: id,
+          aplica_a: 'categoria',
+          tipo_calculo: 'margen_costo',
+          precio: 0, precio_minimo: 0, descuento_max: 0, margen_pct: 0, descuento_pct: 0,
+          producto_ids: [],
+          clasificacion_ids: [cat.id],
+        } as any);
+      }
+      refetch();
+      toast.success(`${unusedCats.length} categorías agregadas`);
+    } catch (err: any) { toast.error(err.message); }
+    setLoadingAllCats(false);
+  };
 
   const getCalculoDisplay = (l: TarifaLinea) => {
     if (l.tipo_calculo === 'margen_costo') return `+${l.margen_pct}% s/costo`;
@@ -351,11 +419,11 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">
                                 {editLinea.aplica_a === 'producto' && (
-                                  <ChipSelect items={prodItems} selectedIds={editLinea.producto_ids}
+                                  <ChipSelect items={getAvailableProds(editLinea.producto_ids)} selectedIds={editLinea.producto_ids}
                                     onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
                                 )}
                                 {editLinea.aplica_a === 'categoria' && (
-                                  <ChipSelect items={clasItems} selectedIds={editLinea.clasificacion_ids}
+                                  <ChipSelect items={getAvailableClas(editLinea.clasificacion_ids)} selectedIds={editLinea.clasificacion_ids}
                                     onChange={ids => setEditLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
                                 )}
                                 {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
@@ -462,11 +530,11 @@ export default function TarifaFormPage() {
                               </td>
                               <td className="py-2 px-3">
                                 {newLinea.aplica_a === 'producto' && (
-                                  <ChipSelect items={prodItems} selectedIds={newLinea.producto_ids}
+                                  <ChipSelect items={getAvailableProds(newLinea.producto_ids)} selectedIds={newLinea.producto_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
                                 )}
                                 {newLinea.aplica_a === 'categoria' && (
-                                  <ChipSelect items={clasItems} selectedIds={newLinea.clasificacion_ids}
+                                  <ChipSelect items={getAvailableClas(newLinea.clasificacion_ids)} selectedIds={newLinea.clasificacion_ids}
                                     onChange={ids => setNewLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
                                 )}
                                 {newLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
@@ -525,9 +593,19 @@ export default function TarifaFormPage() {
                   </div>
 
                   {!showAddRow && (
-                    <button className="odoo-link" onClick={() => setShowAddRow(true)}>
-                      <Plus className="h-3.5 w-3.5 inline mr-1" />Agregar un precio
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button className="odoo-link" onClick={() => setShowAddRow(true)}>
+                        <Plus className="h-3.5 w-3.5 inline mr-1" />Agregar un precio
+                      </button>
+                      <button
+                        className="odoo-link"
+                        onClick={handleLoadAllCategories}
+                        disabled={loadingAllCats}
+                      >
+                        <Layers className="h-3.5 w-3.5 inline mr-1" />
+                        {loadingAllCats ? 'Cargando...' : 'Cargar todas las categorías'}
+                      </button>
+                    </div>
                   )}
                 </div>
               ),
