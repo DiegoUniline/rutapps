@@ -122,6 +122,15 @@ export interface Cliente {
   orden?: number;
   tarifa_id?: string;
   status?: StatusCliente;
+  // Facturación
+  requiere_factura?: boolean;
+  facturama_rfc?: string;
+  facturama_razon_social?: string;
+  facturama_regimen_fiscal?: string;
+  facturama_uso_cfdi?: string;
+  facturama_cp?: string;
+  facturama_correo_facturacion?: string;
+  facturama_id?: string;
   created_at: string;
   // joined
   zonas?: { nombre: string };
