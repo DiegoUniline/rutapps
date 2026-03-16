@@ -296,6 +296,13 @@ export function drawCleanTable(
     bodyStyles: { fillColor: C.white },
     alternateRowStyles: { fillColor: C.white },
     columnStyles: columnStyles || {},
+    didParseCell: (data: any) => {
+      // Sync header alignment with columnStyles so headers align with body values
+      if (data.section === 'head' && columnStyles && columnStyles[data.column.index]?.halign) {
+        data.cell.styles.halign = columnStyles[data.column.index].halign;
+      }
+      if (didParseCell) didParseCell(data);
+    },
     didDrawCell: (data: any) => {
       if (data.section === 'head') {
         doc.setDrawColor(...C.border);
