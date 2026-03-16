@@ -88,6 +88,15 @@ export default function RutasMapPage() {
     }
   }, [withGps, originPoint]);
 
+  const handleRecenter = useCallback(() => {
+    if (mapRef.current && withGps.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
+      mapRef.current.fitBounds(bounds, 50);
+    }
+  }, [withGps, originPoint]);
+
   const polylinePoints = useMemo(() => {
     if (!routeResult?.polyline) return null;
     return decodePolyline(routeResult.polyline);
