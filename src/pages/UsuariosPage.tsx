@@ -19,6 +19,7 @@ export default function UsuariosPage() {
   const { empresa } = useAuth();
   const subscription = useSubscription();
   const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
+  const [rolesTab, setRolesTab] = useState<'activos' | 'inactivos'>('activos');
   const [roles, setRoles] = useState<Role[]>([]);
   const [permisos, setPermisos] = useState<RolePermiso[]>([]);
   const [profiles, setProfiles] = useState<ProfileUser[]>([]);
