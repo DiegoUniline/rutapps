@@ -12,6 +12,7 @@ interface CfdiHistoryProps {
 }
 
 export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps) {
+  const navigate = useNavigate();
   // Get unique cfdi_ids from facturado lines
   const cfdiIds = [...new Set(lineas.filter(l => l.facturado && l.factura_cfdi_id).map(l => l.factura_cfdi_id))];
 
