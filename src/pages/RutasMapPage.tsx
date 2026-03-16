@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Route, Loader2, CheckCircle2, Navigation, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 
@@ -80,6 +81,15 @@ export default function RutasMapPage() {
   }, []);
 
   useEffect(() => {
+    if (mapRef.current && withGps.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
+      mapRef.current.fitBounds(bounds, 50);
+    }
+  }, [withGps, originPoint]);
+
+  const handleRecenter = useCallback(() => {
     if (mapRef.current && withGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
@@ -335,6 +345,7 @@ export default function RutasMapPage() {
             )}
           </GoogleMap>
         )}
+        <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
         {/* Route order sidebar */}
         {orderedClients && orderedClients.length > 0 && (

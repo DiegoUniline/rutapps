@@ -10,6 +10,7 @@ import { Filter, ShoppingCart, Truck, X, Calendar, Loader2, Navigation, Route, C
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import MapRecenterButton from '@/components/MapRecenterButton';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
@@ -167,6 +168,15 @@ export default function MapaVentasPage() {
   const markersForBounds = viewMode === 'pedidos' ? ventasConGps : entregasConGps;
 
   useEffect(() => {
+    if (mapRef.current && markersForBounds.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      markersForBounds.forEach((v: any) => bounds.extend({ lat: v.clientes.gps_lat, lng: v.clientes.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
+      mapRef.current.fitBounds(bounds, 50);
+    }
+  }, [markersForBounds, originPoint]);
+
+  const handleRecenter = useCallback(() => {
     if (mapRef.current && markersForBounds.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       markersForBounds.forEach((v: any) => bounds.extend({ lat: v.clientes.gps_lat, lng: v.clientes.gps_lng }));
@@ -610,6 +620,7 @@ export default function MapaVentasPage() {
             )}
           </GoogleMap>
         )}
+        <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
         {/* Route order sidebar */}
         {orderedItems && orderedItems.length > 0 && (

@@ -9,6 +9,7 @@ import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 
 /** Pick an icon for a maneuver instruction */
@@ -190,16 +191,20 @@ function NavegacionContent() {
     }
   };
 
-  const stopNavigation = () => {
-    setNavigatingTo(null);
-    setDirections(null);
-    setCurrentStepIdx(0);
+  const recenterMap = useCallback(() => {
     if (mapRef.current && stops.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
       if (userLocation) bounds.extend(userLocation);
       mapRef.current.fitBounds(bounds, 60);
     }
+  }, [stops, userLocation]);
+
+  const stopNavigation = () => {
+    setNavigatingTo(null);
+    setDirections(null);
+    setCurrentStepIdx(0);
+    recenterMap();
   };
 
   const handleVisited = async (stop: Stop) => {
@@ -356,6 +361,7 @@ function NavegacionContent() {
           })}
         </GoogleMap>
       )}
+      <MapRecenterButton onClick={recenterMap} className="bottom-24 left-3" />
 
       {/* TOP BAR */}
       <div className="absolute top-0 left-0 right-0 z-10 pt-[max(0.5rem,env(safe-area-inset-top))]">
