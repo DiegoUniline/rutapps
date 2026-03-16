@@ -28,6 +28,7 @@ interface Proveedor {
   banco?: string;
   cuenta_banco?: string;
   clabe?: string;
+  tiempo_entrega_dias: number;
   status: string;
 }
 
