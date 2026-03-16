@@ -453,56 +453,45 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.line(ML, y - 2, rightX, y - 2);
   y += 2;
 
-  const totLabelX = rightX - 50;
+  const totLabelX = rightX - 55;
 
   // Subtotal
-  doc.setFontSize(7.5);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.muted);
-  doc.text('Subtotal:', totLabelX, y, { align: 'right' });
   doc.setTextColor(...C.text);
+  doc.text('Subtotal:', totLabelX, y, { align: 'right' });
   doc.text(`$${fmtCurrency(cfdi.subtotal)}`, rightX, y, { align: 'right' });
-  y += 5;
+  y += 5.5;
 
   // IEPS if any
   if (cfdi.ieps_total > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.muted);
     doc.text('IEPS:', totLabelX, y, { align: 'right' });
-    doc.setTextColor(...C.text);
     doc.text(`$${fmtCurrency(cfdi.ieps_total)}`, rightX, y, { align: 'right' });
-    y += 5;
+    y += 5.5;
   }
 
   // IVA
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.muted);
   doc.text('IVA 16%:', totLabelX, y, { align: 'right' });
-  doc.setTextColor(...C.text);
   doc.text(`$${fmtCurrency(cfdi.iva_total)}`, rightX, y, { align: 'right' });
-  y += 5;
+  y += 5.5;
 
   // Retenciones if any
   if (cfdi.retenciones_total > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.muted);
     doc.text('Retenciones:', totLabelX, y, { align: 'right' });
-    doc.setTextColor(...C.text);
     doc.text(`-$${fmtCurrency(cfdi.retenciones_total)}`, rightX, y, { align: 'right' });
-    y += 5;
+    y += 5.5;
   }
 
-  // Total line (border-top: 2px solid #1a1a1a)
+  // Total line
   doc.setDrawColor(...C.text);
-  doc.setLineWidth(0.6);
-  doc.line(totLabelX - 15, y - 1, rightX, y - 1);
-  y += 3;
+  doc.setLineWidth(0.8);
+  doc.line(totLabelX - 15, y, rightX, y);
+  y += 5;
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.muted);
-  doc.text('Total:', totLabelX, y, { align: 'right' });
   doc.setTextColor(...C.text);
+  doc.text('Total:', totLabelX, y, { align: 'right' });
   doc.text(`$${fmtCurrency(cfdi.total)}`, rightX, y, { align: 'right' });
   y += 8;
 
