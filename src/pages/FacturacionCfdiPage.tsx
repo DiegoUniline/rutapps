@@ -54,7 +54,7 @@ export default function FacturacionCfdiPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cfdis')
-        .select('*')
+        .select('*, ventas(folio)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
