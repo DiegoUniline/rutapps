@@ -3030,6 +3030,38 @@ export type Database = {
           },
         ]
       }
+      tasas_isr_ret: {
+        Row: {
+          created_at: string | null
+          empresa_id: string
+          id: string
+          nombre: string
+          porcentaje: number
+        }
+        Insert: {
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          nombre: string
+          porcentaje?: number
+        }
+        Update: {
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          porcentaje?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasas_isr_ret_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasas_iva: {
         Row: {
           created_at: string
@@ -3055,6 +3087,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tasas_iva_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasas_iva_ret: {
+        Row: {
+          created_at: string | null
+          empresa_id: string
+          id: string
+          nombre: string
+          porcentaje: number
+        }
+        Insert: {
+          created_at?: string | null
+          empresa_id: string
+          id?: string
+          nombre: string
+          porcentaje?: number
+        }
+        Update: {
+          created_at?: string | null
+          empresa_id?: string
+          id?: string
+          nombre?: string
+          porcentaje?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasas_iva_ret_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"

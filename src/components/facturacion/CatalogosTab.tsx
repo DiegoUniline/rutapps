@@ -37,6 +37,8 @@ const CATALOGS: CatalogDef[] = [
   { key: 'tipo_comp', table: 'cat_tipo_comprobante', label: 'Tipo Comprobante', hasPersona: false },
   { key: 'tasas_iva', table: 'tasas_iva', label: 'Tasas IVA', hasPersona: false, isTasa: true },
   { key: 'tasas_ieps', table: 'tasas_ieps', label: 'Tasas IEPS', hasPersona: false, isTasa: true },
+  { key: 'tasas_isr_ret', table: 'tasas_isr_ret', label: 'Ret. ISR', hasPersona: false, isTasa: true },
+  { key: 'tasas_iva_ret', table: 'tasas_iva_ret', label: 'Ret. IVA', hasPersona: false, isTasa: true },
   { key: 'unidades_sat', table: 'unidades_sat', label: 'Unidades SAT', hasPersona: false, isUnidad: true },
 ];
 
