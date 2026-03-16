@@ -260,6 +260,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {setupComplete === false && (
+            <Link
+              to="/configuracion-inicial"
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mb-1",
+                collapsed ? "justify-center px-2" : "",
+                setupActive
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-primary/80 hover:bg-primary/5 hover:text-primary"
+              )}
+              title={collapsed ? 'Configuración inicial' : undefined}
+            >
+              <Sparkles className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Configuración inicial</span>}
+            </Link>
+          )}
           {navItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}
