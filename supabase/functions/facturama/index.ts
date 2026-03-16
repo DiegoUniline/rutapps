@@ -7,7 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const FACTURAMA_API = "https://apisandbox.facturama.mx";
+// Use production API
+const FACTURAMA_API = "https://api.facturama.mx";
 
 function getAuth() {
   const user = Deno.env.get("FACTURAMA_USERNAME");
@@ -50,6 +51,10 @@ serve(async (req) => {
       return await descargar(body);
     } else if (action === "verificar_conexion") {
       return await verificarConexion();
+    } else if (action === "upload_csd") {
+      return await uploadCsd(body);
+    } else if (action === "list_csds") {
+      return await listCsds();
     } else {
       throw new Error(`Acción no válida: ${action}`);
     }
@@ -73,6 +78,77 @@ async function verificarConexion() {
   const ok = res.status === 200;
   return new Response(
     JSON.stringify({ ok, status: res.status }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// ========================================
+// UPLOAD CSD (Certificado de Sello Digital)
+// ========================================
+async function uploadCsd(body: any) {
+  const auth = getAuth();
+  const { rfc, certificate_base64, private_key_base64, password } = body;
+
+  if (!rfc || !certificate_base64 || !private_key_base64 || !password) {
+    throw new Error("Faltan campos: rfc, certificate_base64, private_key_base64, password");
+  }
+
+  const payload = {
+    Rfc: rfc.toUpperCase().trim(),
+    Certificate: certificate_base64,
+    PrivateKey: private_key_base64,
+    PrivateKeyPassword: password,
+  };
+
+  console.log(`📤 Subiendo CSD para RFC: ${payload.Rfc}`);
+
+  // Try POST first (new), if 409/conflict try PUT (update)
+  let response = await fetch(`${FACTURAMA_API}/api-lite/csds`, {
+    method: "POST",
+    headers: { Authorization: auth, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 409 || response.status === 400) {
+    // CSD already exists, try update
+    console.log("CSD ya existe, intentando actualizar...");
+    response = await fetch(`${FACTURAMA_API}/api-lite/csds/${encodeURIComponent(payload.Rfc)}`, {
+      method: "PUT",
+      headers: { Authorization: auth, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  const content = await response.text();
+  console.log(`📥 CSD response [${response.status}]:`, content);
+
+  if (response.status !== 200 && response.status !== 201 && response.status !== 204) {
+    throw new Error(`Error al subir CSD: ${content}`);
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, message: "CSD subido correctamente a Facturama" }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// ========================================
+// LIST CSDs
+// ========================================
+async function listCsds() {
+  const auth = getAuth();
+  const res = await fetch(`${FACTURAMA_API}/api-lite/csds`, {
+    headers: { Authorization: auth },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error al obtener CSDs: ${text}`);
+  }
+
+  const data = await res.json();
+  return new Response(
+    JSON.stringify({ csds: data }),
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
