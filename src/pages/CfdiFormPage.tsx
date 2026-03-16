@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle, Download, FileText } from 'lucide-react';
+import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle, Download, FileText, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -129,6 +129,10 @@ export default function CfdiFormPage() {
   const [timbring, setTimbring] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [errorDialog, setErrorDialog] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelMotivo, setCancelMotivo] = useState('02');
+  const [cancelUuidSustitucion, setCancelUuidSustitucion] = useState('');
+  const [canceling, setCanceling] = useState(false);
 
   const readOnly = cfdi?.status !== 'borrador';
 
@@ -714,9 +718,17 @@ export default function CfdiFormPage() {
                     PDF Facturama (original)
                   </a>
                 </Button>
-              )}
-            </div>
-          )}
+               )}
+               <Button
+                 variant="destructive"
+                 size="sm"
+                 onClick={() => setShowCancelDialog(true)}
+               >
+                 <XCircle className="h-4 w-4 mr-1.5" />
+                 Cancelar CFDI
+               </Button>
+             </div>
+           )}
         </CardContent>
       </Card>
 
@@ -751,6 +763,93 @@ export default function CfdiFormPage() {
           </div>
           <div className="flex justify-end">
             <Button onClick={() => setErrorDialog(null)}>Cerrar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel CFDI dialog — SAT motivos */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Cancelar CFDI
+            </DialogTitle>
+            <DialogDescription>
+              Selecciona el motivo de cancelación según lo requiere el SAT.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Motivo de cancelación</label>
+              <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+              >
+                <option value="01">01 - Comprobante emitido con errores con relación</option>
+                <option value="02">02 - Comprobante emitido con errores sin relación</option>
+                <option value="03">03 - No se llevó a cabo la operación</option>
+                <option value="04">04 - Operación nominativa relacionada en una factura global</option>
+              </select>
+            </div>
+
+            {cancelMotivo === '01' && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">UUID del CFDI que sustituye</label>
+                <Input
+                  placeholder="Ej: 6c7287de-8238-4de0-a39b-6b4226e576dd"
+                  value={cancelUuidSustitucion}
+                  onChange={(e) => setCancelUuidSustitucion(e.target.value)}
+                  className="font-mono text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Cuando el motivo es "01", debes indicar el UUID del nuevo CFDI que sustituye al que se cancela.
+                </p>
+              </div>
+            )}
+
+            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3">
+              <p className="text-xs text-destructive">
+                <strong>⚠️ Atención:</strong> La cancelación de un CFDI es un proceso ante el SAT y puede requerir la aceptación del receptor. Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowCancelDialog(false)}>
+                Cerrar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={canceling || (cancelMotivo === '01' && !cancelUuidSustitucion.trim())}
+                onClick={async () => {
+                  setCanceling(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke('facturama', {
+                      body: {
+                        action: 'cancelar',
+                        cfdi_id: id,
+                        rfc_emisor: empresa?.rfc || '',
+                        motivo: cancelMotivo,
+                        folio_sustitucion: cancelMotivo === '01' ? cancelUuidSustitucion.trim() : undefined,
+                      },
+                    });
+                    if (error) throw error;
+                    if (data?.error) throw new Error(data.error);
+                    toast.success(data?.message || 'Cancelación procesada correctamente');
+                    setShowCancelDialog(false);
+                    queryClient.invalidateQueries({ queryKey: ['cfdi', id] });
+                  } catch (e: any) {
+                    toast.error(e.message || 'Error al cancelar');
+                  } finally {
+                    setCanceling(false);
+                  }
+                }}
+              >
+                {canceling ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <XCircle className="h-4 w-4 mr-1.5" />}
+                {canceling ? 'Cancelando...' : 'Confirmar cancelación'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
