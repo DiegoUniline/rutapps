@@ -423,7 +423,7 @@ export default function TarifaFormPage() {
                                     onChange={ids => setEditLinea(p => ({ ...p, producto_ids: ids }))} placeholder="+ Producto..." />
                                 )}
                                 {editLinea.aplica_a === 'categoria' && (
-                                  <ChipSelect items={clasItems} selectedIds={editLinea.clasificacion_ids}
+                                  <ChipSelect items={getAvailableClas(editLinea.clasificacion_ids)} selectedIds={editLinea.clasificacion_ids}
                                     onChange={ids => setEditLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
                                 )}
                                 {editLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
