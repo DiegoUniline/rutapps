@@ -59,7 +59,7 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
             }).join(', ');
 
             return (
-              <tr key={cfdi.id} className="border-b border-table-border hover:bg-table-hover">
+              <tr key={cfdi.id} className="border-b border-table-border hover:bg-table-hover cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
                 <td className="py-1.5 px-2">
                   <div>
                     <span className="font-mono text-xs font-medium">{cfdi.serie}{cfdi.folio || cfdi.id.slice(0, 6)}</span>
