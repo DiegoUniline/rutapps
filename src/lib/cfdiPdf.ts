@@ -506,9 +506,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.line(ML, y, rightX, y);
   y += 5;
 
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.cfdiLabel);
+  doc.setTextColor(...C.text);
   doc.text(words, midX, y, { align: 'center' });
   y += 4;
 
