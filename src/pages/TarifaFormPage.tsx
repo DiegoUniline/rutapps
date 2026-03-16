@@ -127,6 +127,8 @@ export default function TarifaFormPage() {
     if (newLinea.aplica_a === 'categoria' && newLinea.clasificacion_ids.length === 0) {
       toast.error('Selecciona al menos una categoría'); return;
     }
+    // Duplicate validation
+    if (!validateNoDuplicates(newLinea.aplica_a, newLinea.producto_ids, newLinea.clasificacion_ids)) return;
     try {
       await saveLinea.mutateAsync({
         tarifa_id: id,
@@ -176,6 +178,8 @@ export default function TarifaFormPage() {
 
   const handleSaveEditLinea = async () => {
     if (!editingLineaId) return;
+    // Duplicate validation (exclude current line)
+    if (!validateNoDuplicates(editLinea.aplica_a, editLinea.producto_ids, editLinea.clasificacion_ids, editingLineaId)) return;
     try {
       await saveLinea.mutateAsync({
         id: editingLineaId,
