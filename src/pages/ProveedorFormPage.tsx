@@ -177,92 +177,98 @@ export default function ProveedorFormPage() {
       <div className="bg-card border border-border rounded p-5">
         <OdooTabs
           tabs={[
-            { key: 'general', label: 'General' },
-            { key: 'fiscal', label: 'Fiscal y Bancario' },
-            { key: 'compras', label: 'Compras' },
-            { key: 'notas', label: 'Notas' },
+            {
+              key: 'general', label: 'General',
+              content: (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
+                    <OdooField label="Nombre *" value={form.nombre}
+                      onChange={v => set('nombre', v)} />
+                    <OdooField label="Contacto" value={form.contacto ?? ''}
+                      onChange={v => set('contacto', v)} />
+                    <OdooField label="Teléfono" value={form.telefono ?? ''}
+                      onChange={v => set('telefono', v)} />
+                    <OdooField label="Email" value={form.email ?? ''}
+                      onChange={v => set('email', v)} />
+                    <OdooField label="Sitio web" value={form.sitio_web ?? ''}
+                      onChange={v => set('sitio_web', v)} />
+                  </div>
+                  <OdooSection title="Dirección">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
+                      <OdooField label="Calle y número" value={form.direccion ?? ''}
+                        onChange={v => set('direccion', v)} />
+                      <OdooField label="Colonia" value={form.colonia ?? ''}
+                        onChange={v => set('colonia', v)} />
+                      <OdooField label="Ciudad" value={form.ciudad ?? ''}
+                        onChange={v => set('ciudad', v)} />
+                      <OdooField label="Estado" value={form.estado ?? ''}
+                        onChange={v => set('estado', v)} type="select"
+                        options={ESTADOS_MX.map(e => ({ value: e, label: e }))} />
+                      <OdooField label="C.P." value={form.cp ?? ''}
+                        onChange={v => set('cp', v)} />
+                    </div>
+                  </OdooSection>
+                </div>
+              ),
+            },
+            {
+              key: 'fiscal', label: 'Fiscal y Bancario',
+              content: (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
+                    <OdooField label="RFC" value={form.rfc ?? ''}
+                      onChange={v => set('rfc', v)} />
+                    <OdooField label="Razón social" value={form.razon_social ?? ''}
+                      onChange={v => set('razon_social', v)} />
+                  </div>
+                  <OdooSection title="Datos bancarios">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
+                      <OdooField label="Banco" value={form.banco ?? ''}
+                        onChange={v => set('banco', v)} />
+                      <OdooField label="No. de cuenta" value={form.cuenta_banco ?? ''}
+                        onChange={v => set('cuenta_banco', v)} />
+                      <OdooField label="CLABE interbancaria" value={form.clabe ?? ''}
+                        onChange={v => set('clabe', v)} />
+                    </div>
+                  </OdooSection>
+                </div>
+              ),
+            },
+            {
+              key: 'compras', label: 'Compras',
+              content: (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
+                  <OdooField label="Condición de pago" value={form.condicion_pago}
+                    onChange={v => set('condicion_pago', v)} type="select"
+                    options={[
+                      { value: 'contado', label: 'Contado' },
+                      { value: 'credito', label: 'Crédito' },
+                      { value: 'anticipo', label: 'Anticipo' },
+                    ]} />
+                  <OdooField label="Días de crédito" value={String(form.dias_credito ?? 0)}
+                    onChange={v => set('dias_credito', Number(v))} type="number" />
+                  <OdooField label="Límite de crédito" value={String(form.limite_credito ?? 0)}
+                    onChange={v => set('limite_credito', Number(v))} type="number" />
+                </div>
+              ),
+            },
+            {
+              key: 'notas', label: 'Notas',
+              content: (
+                <div>
+                  <label className="text-[12px] text-muted-foreground mb-1 block">Notas internas</label>
+                  <textarea
+                    value={form.notas ?? ''}
+                    onChange={e => set('notas', e.target.value)}
+                    rows={5}
+                    className="input-odoo w-full text-[13px]"
+                    placeholder="Notas sobre este proveedor..."
+                  />
+                </div>
+              ),
+            },
           ]}
-        >
-          {(tab) => {
-            if (tab === 'general') return (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
-                  <OdooField label="Nombre *" value={form.nombre}
-                    onChange={v => set('nombre', v)} />
-                  <OdooField label="Contacto" value={form.contacto ?? ''}
-                    onChange={v => set('contacto', v)} />
-                  <OdooField label="Teléfono" value={form.telefono ?? ''}
-                    onChange={v => set('telefono', v)} />
-                  <OdooField label="Email" value={form.email ?? ''}
-                    onChange={v => set('email', v)} type="email" />
-                  <OdooField label="Sitio web" value={form.sitio_web ?? ''}
-                    onChange={v => set('sitio_web', v)} />
-                </div>
-                <OdooSection title="Dirección">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
-                    <OdooField label="Calle y número" value={form.direccion ?? ''}
-                      onChange={v => set('direccion', v)} />
-                    <OdooField label="Colonia" value={form.colonia ?? ''}
-                      onChange={v => set('colonia', v)} />
-                    <OdooField label="Ciudad" value={form.ciudad ?? ''}
-                      onChange={v => set('ciudad', v)} />
-                    <OdooField label="Estado" value={form.estado ?? ''}
-                      onChange={v => set('estado', v)} type="select"
-                      options={ESTADOS_MX.map(e => ({ value: e, label: e }))} />
-                    <OdooField label="C.P." value={form.cp ?? ''}
-                      onChange={v => set('cp', v)} />
-                  </div>
-                </OdooSection>
-              </div>
-            );
-
-            if (tab === 'fiscal') return (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
-                  <OdooField label="RFC" value={form.rfc ?? ''}
-                    onChange={v => set('rfc', v)} />
-                  <OdooField label="Razón social" value={form.razon_social ?? ''}
-                    onChange={v => set('razon_social', v)} />
-                </div>
-                <OdooSection title="Datos bancarios">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
-                    <OdooField label="Banco" value={form.banco ?? ''}
-                      onChange={v => set('banco', v)} />
-                    <OdooField label="No. de cuenta" value={form.cuenta_banco ?? ''}
-                      onChange={v => set('cuenta_banco', v)} />
-                    <OdooField label="CLABE interbancaria" value={form.clabe ?? ''}
-                      onChange={v => set('clabe', v)} />
-                  </div>
-                </OdooSection>
-              </div>
-            );
-
-            if (tab === 'compras') return (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
-                <OdooField label="Condición de pago" value={form.condicion_pago}
-                  onChange={v => set('condicion_pago', v)} type="select"
-                  options={[
-                    { value: 'contado', label: 'Contado' },
-                    { value: 'credito', label: 'Crédito' },
-                    { value: 'anticipo', label: 'Anticipo' },
-                  ]} />
-                <OdooField label="Días de crédito" value={String(form.dias_credito ?? 0)}
-                  onChange={v => set('dias_credito', Number(v))} type="number" />
-                <OdooField label="Límite de crédito" value={String(form.limite_credito ?? 0)}
-                  onChange={v => set('limite_credito', Number(v))} type="currency" />
-              </div>
-            );
-
-            if (tab === 'notas') return (
-              <div>
-                <OdooField label="Notas internas" value={form.notas ?? ''}
-                  onChange={v => set('notas', v)} type="textarea" />
-              </div>
-            );
-
-            return null;
-          }}
-        </OdooTabs>
+        />
       </div>
     </div>
   );

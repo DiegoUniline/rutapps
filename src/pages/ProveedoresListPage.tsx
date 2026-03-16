@@ -100,8 +100,9 @@ export default function ProveedoresListPage() {
       </div>
 
       {total > PAGE_SIZE && (
-        <OdooPagination from={from} to={to} total={total} page={page} onPage={setPage}
-          pageSize={PAGE_SIZE} totalPages={Math.ceil(total / PAGE_SIZE)} />
+        <OdooPagination from={from} to={to} total={total}
+          onPrev={() => setPage(p => Math.max(1, p - 1))}
+          onNext={() => setPage(p => p + 1)} />
       )}
     </div>
   );
