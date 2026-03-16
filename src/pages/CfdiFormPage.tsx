@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle, Download, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
