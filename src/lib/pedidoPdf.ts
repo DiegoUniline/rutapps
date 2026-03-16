@@ -72,7 +72,7 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos } = params;
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
-  const rightX = pageW - MR;
+  const rightX = pageW - 14;
 
   const statusLabel = STATUS_LABELS[pedido.status] ?? pedido.status;
   const pagoLabel = pedido.condicion_pago === 'credito' ? 'Crédito' : pedido.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
