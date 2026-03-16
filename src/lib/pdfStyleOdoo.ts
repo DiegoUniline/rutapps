@@ -296,6 +296,13 @@ export function drawCleanTable(
     bodyStyles: { fillColor: C.white },
     alternateRowStyles: { fillColor: C.white },
     columnStyles: columnStyles || {},
+    didParseCell: (data: any) => {
+      // Sync header alignment with columnStyles so headers align with body values
+      if (data.section === 'head' && columnStyles && columnStyles[data.column.index]?.halign) {
+        data.cell.styles.halign = columnStyles[data.column.index].halign;
+      }
+      if (didParseCell) didParseCell(data);
+    },
     didDrawCell: (data: any) => {
       if (data.section === 'head') {
         doc.setDrawColor(...C.border);
@@ -308,7 +315,7 @@ export function drawCleanTable(
         doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
       }
     },
-    didParseCell,
+    
   });
 
   return (doc as any).lastAutoTable.finalY + 6;
