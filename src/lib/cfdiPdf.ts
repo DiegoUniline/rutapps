@@ -1,6 +1,5 @@
 /**
- * Custom CFDI PDF generator — Super clean layout replicating Facturama style
- * No colored backgrounds, no badges. Clean neutral typography with logo.
+ * Custom CFDI PDF generator — Exact replica of Facturama layout with logo support
  */
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -8,7 +7,6 @@ import QRCode from 'qrcode';
 import {
   PDF, ML, MR, fmtCurrency,
   drawFooter, checkPageBreak,
-  TABLE_HEAD_STYLE, TABLE_BODY_STYLE, TABLE_ALT_STYLE,
   type EmpresaInfo,
 } from './pdfBase';
 
@@ -68,7 +66,7 @@ export interface CfdiPdfParams {
   regimenReceptorLabel?: string;
 }
 
-// Number to spanish words (simplified for MXN)
+// Number to spanish words
 function numberToWords(n: number): string {
   const units = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
   const teens = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
@@ -116,415 +114,474 @@ async function generateQrDataUrl(text: string): Promise<string | null> {
   }
 }
 
+function formatCfdiDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    const month = d.getMonth() + 1;
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    const secs = String(d.getSeconds()).padStart(2, '0');
+    return `${day}/${month}/${year} - ${hours}:${mins}:${secs}`;
+  } catch {
+    return dateStr;
+  }
+}
+
 export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const { empresa, logoBase64, cfdi, receiver, lineas, formasPagoLabel, metodoPagoLabel, usoCfdiLabel, regimenEmisorLabel, regimenReceptorLabel } = params;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const midX = pageW / 2;
 
-  const folioDisplay = `${cfdi.serie || 'A'}-${cfdi.folio || '—'}`;
+  const folioDisplay = `FOLIO: ${cfdi.serie || 'A'}  ${cfdi.folio || '—'}`;
+
+  // Colors
+  const black: [number, number, number] = [33, 37, 41];
+  const gray: [number, number, number] = [100, 100, 100];
+  const lightGray: [number, number, number] = [180, 180, 180];
+  const borderColor: [number, number, number] = [200, 200, 200];
+
   let y = 14;
-  let leftStartX = ML;
 
   // ═══════════════════════════════════════════
-  // HEADER — Logo + Company name left, FACTURA + folio right
+  // TOP ROW: FACTURA (left) | FOLIO (right)
   // ═══════════════════════════════════════════
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...black);
+
+  let logoEndX = ML;
   if (logoBase64) {
     try {
-      doc.addImage(logoBase64, 'PNG', ML, 8, 22, 22);
-      leftStartX = ML + 26;
+      doc.addImage(logoBase64, 'PNG', ML, 8, 18, 18);
+      logoEndX = ML + 22;
     } catch { /* ignore */ }
   }
 
-  // Company name (bold, large)
-  doc.setTextColor(...PDF.black);
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.text(empresa.nombre.toUpperCase(), leftStartX, y);
+  doc.text('FACTURA', logoEndX, y);
 
-  // Razon social if different
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(folioDisplay, rightX, y, { align: 'right' });
+
+  y += 6;
+
+  // ═══════════════════════════════════════════
+  // EMISOR (left-center) | RECEPTOR (right)
+  // ═══════════════════════════════════════════
+  const emisorX = logoEndX;
+  const receptorX = midX + 15;
+
+  // Emisor header
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Emisor:', emisorX, y);
+
+  // Receptor header
+  doc.text('Receptor:', receptorX, y);
+  y += 4;
+
+  // Emisor name + RFC
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...black);
+  doc.text((empresa.razon_social || empresa.nombre).toUpperCase(), emisorX, y);
+  // Receptor name
+  doc.text(receiver.name.toUpperCase(), receptorX, y);
+  y += 4;
+
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.dark);
-  y += 5;
-  if (empresa.razon_social && empresa.razon_social !== empresa.nombre) {
-    doc.text(empresa.razon_social, leftStartX, y); y += 3.5;
-  }
-  if (empresa.rfc) { doc.text(`RFC: ${empresa.rfc}`, leftStartX, y); y += 3.5; }
-  if (empresa.regimen_fiscal) {
-    const label = regimenEmisorLabel || empresa.regimen_fiscal;
-    doc.text(`Régimen: ${label}`, leftStartX, y); y += 3.5;
-  }
-  if (empresa.cp) { doc.text(`C.P. ${empresa.cp}`, leftStartX, y); y += 3.5; }
+  doc.text(empresa.rfc || '', emisorX, y);
+  doc.text(receiver.rfc || '', receptorX, y);
+  y += 6;
 
-  // Right side — "FACTURA" text (no badge, just bold text) + folio + date
-  doc.setTextColor(...PDF.black);
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('FACTURA', rightX, 16, { align: 'right' });
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text(folioDisplay, rightX, 22, { align: 'right' });
-
-  // Date
+  // Emisor details
   doc.setFontSize(7);
-  doc.setTextColor(...PDF.muted);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Lugar de Expedición: ', emisorX, y);
   doc.setFont('helvetica', 'normal');
-  const dateStr = (() => {
-    try {
-      return new Date(cfdi.created_at).toLocaleString('es-MX', {
-        day: 'numeric', month: 'long', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      });
-    } catch { return cfdi.created_at; }
-  })();
-  doc.text(dateStr, rightX, 26, { align: 'right' });
+  doc.setTextColor(...black);
+  doc.text(cfdi.expedition_place || empresa.cp || '', emisorX + 33, y);
 
-  // UUID under date
-  if (cfdi.folio_fiscal) {
-    doc.setFontSize(6);
-    doc.setTextColor(...PDF.muted);
-    doc.text(`UUID: ${cfdi.folio_fiscal}`, rightX, 30, { align: 'right' });
-  }
+  // Receptor CP
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Código postal: ', receptorX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(receiver.tax_zip_code || '', receptorX + 24, y);
+  y += 4;
 
-  // Separator
-  y = Math.max(y, 34) + 3;
-  doc.setDrawColor(...PDF.border);
+  // Regimen fiscal emisor
+  const regimenEmisorText = regimenEmisorLabel || `${empresa.regimen_fiscal || ''}`;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Régimen Fiscal: ', emisorX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  const regimenEmisorVal = `${empresa.regimen_fiscal || ''} - ${regimenEmisorText}`;
+  doc.text(regimenEmisorVal, emisorX + 25, y);
+
+  // Uso CFDI receptor
+  const usoCfdiText = usoCfdiLabel || receiver.cfdi_use || '';
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Uso del CFDI: ', receptorX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(`${receiver.cfdi_use || ''} - ${usoCfdiText}`, receptorX + 22, y);
+  y += 4;
+
+  // Efecto del comprobante
+  const cfdiTypeLabel = cfdi.cfdi_type === 'I' ? 'I - Ingreso' : cfdi.cfdi_type === 'E' ? 'E - Egreso' : cfdi.cfdi_type || '';
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Efecto del comprobante: ', emisorX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(cfdiTypeLabel, emisorX + 37, y);
+
+  // Regimen fiscal receptor
+  const regimenRecText = regimenReceptorLabel || receiver.fiscal_regime || '';
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Regimen Fiscal: ', receptorX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(`${receiver.fiscal_regime || ''} - ${regimenRecText}`, receptorX + 25, y);
+
+  y = Math.max(y, 28) + 2;
+  // Ensure y is below logo
+  if (logoBase64) y = Math.max(y, 32);
+  y += 6;
+
+  // ═══════════════════════════════════════════
+  // SECOND INFO ROW: Folio Fiscal | Fecha | No. Certificado
+  // ═══════════════════════════════════════════
+  // Thin separator
+  doc.setDrawColor(...borderColor);
   doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
-  y += 7;
-
-  // ═══════════════════════════════════════════
-  // RECEPTOR — Clean label:value pairs
-  // ═══════════════════════════════════════════
-  const sectionTitle = (title: string) => {
-    doc.setTextColor(...PDF.black);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(title, ML, y);
-    y += 5;
-  };
-
-  const fieldRow = (label: string, value: string, x = ML) => {
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...PDF.muted);
-    doc.text(label, x, y);
-    doc.setTextColor(...PDF.black);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.text(value || '—', x + 30, y);
-    y += 4.5;
-  };
-
-  const fieldRowWide = (label: string, value: string, x = ML) => {
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...PDF.muted);
-    doc.text(label, x, y);
-    y += 3.5;
-    doc.setTextColor(...PDF.black);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.text(value || '—', x, y);
-    y += 5;
-  };
-
-  sectionTitle('Receptor');
-  fieldRowWide('Razón Social', receiver.name);
-
-  // RFC and CP on same row
-  const midCol = ML + 80;
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.muted);
-  doc.text('RFC', ML, y);
-  doc.text('C.P. Fiscal', midCol, y);
-  y += 3.5;
-  doc.setTextColor(...PDF.black);
-  doc.setFontSize(7.5);
-  doc.text(receiver.rfc || '—', ML, y);
-  doc.text(receiver.tax_zip_code || '—', midCol, y);
   y += 5;
 
-  fieldRowWide('Régimen Fiscal', regimenReceptorLabel || receiver.fiscal_regime || '—');
+  const col1 = ML;
+  const col2 = ML + 70;
+  const col3 = ML + 130;
 
-  // Thin separator
-  doc.setDrawColor(...PDF.border);
-  doc.setLineWidth(0.2);
+  // Folio Fiscal
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Folio Fiscal:', col1, y);
+  y += 3.5;
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.setFontSize(6.5);
+  doc.text(cfdi.folio_fiscal || '—', col1, y);
+
+  // Fecha / Hora de Emisión
+  const dateStr = formatCfdiDate(cfdi.fecha_timbrado || cfdi.created_at);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Fecha / Hora de Emisión:', col2, y - 3.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(dateStr, col2, y);
+
+  // No. de Certificado Digital
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('No. de Certificado Digital:', col3, y - 3.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.setFontSize(6.5);
+  doc.text(cfdi.no_certificado_emisor || cfdi.folio_fiscal || '—', col3, y);
+  y += 5;
+
+  // Exportación
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Exportación:', col1, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text('01 - No aplica', col1 + 20, y);
+  y += 5;
+
+  // Separator
+  doc.setDrawColor(...borderColor);
+  doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
-  y += 6;
+  y += 2;
 
   // ═══════════════════════════════════════════
-  // DATOS DEL COMPROBANTE
+  // CONCEPTOS TABLE — matching Facturama layout
+  // Each row shows product, then tax detail below
   // ═══════════════════════════════════════════
-  sectionTitle('Datos del Comprobante');
-  fieldRow('Uso CFDI', usoCfdiLabel || receiver.cfdi_use || '—');
-  fieldRow('Forma de Pago', formasPagoLabel || cfdi.payment_form || '—');
-  fieldRow('Método de Pago', metodoPagoLabel || cfdi.payment_method || '—');
+  const tableHead = [['Producto', 'Cantidad', 'Unidad', 'Concepto(s)', 'Precio U', 'Importe']];
+  const tableBody: any[][] = [];
 
-  doc.setDrawColor(...PDF.border);
-  doc.setLineWidth(0.2);
-  doc.line(ML, y, rightX, y);
-  y += 6;
-
-  // ═══════════════════════════════════════════
-  // CONCEPTOS TABLE — Neutral header
-  // ═══════════════════════════════════════════
-  sectionTitle('Conceptos');
+  for (const l of lineas) {
+    // Main row
+    tableBody.push([
+      { content: l.product_code, styles: { fontStyle: 'normal' } },
+      { content: String(l.cantidad), styles: { halign: 'center' } },
+      { content: `${l.unit_code} -\n${l.unit_name}`, styles: { fontSize: 6.5 } },
+      {
+        content: `${l.descripcion}\n02 - Con objeto de impuesto\nTraslados:\nIVA: 002, Base: $${fmtCurrency(l.subtotal)}, Tasa: ${(l.iva_pct / 100).toFixed(6)}, Importe: $${fmtCurrency(l.iva_monto)}${l.ieps_pct > 0 ? `\nIEPS: 003, Base: $${fmtCurrency(l.subtotal)}, Tasa: ${(l.ieps_pct / 100).toFixed(6)}, Importe: $${fmtCurrency(l.ieps_monto)}` : ''}`,
+        styles: { fontSize: 6.5 }
+      },
+      { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
+      { content: `$${fmtCurrency(l.subtotal)}`, styles: { halign: 'right' } },
+    ]);
+  }
 
   autoTable(doc, {
     startY: y,
     margin: { left: ML, right: MR },
-    head: [['Clave SAT', 'Descripción', 'Unidad', 'Cantidad', 'P. Unitario', 'IVA', 'IEPS', 'Importe']],
-    body: lineas.map(l => [
-      l.product_code,
-      l.descripcion,
-      `${l.unit_code} - ${l.unit_name}`,
-      String(l.cantidad),
-      `$${fmtCurrency(l.precio_unitario)}`,
-      l.iva_pct > 0 ? `${l.iva_pct}%` : '—',
-      l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—',
-      `$${fmtCurrency(l.subtotal)}`,
-    ]),
+    head: tableHead,
+    body: tableBody,
     headStyles: {
-      ...TABLE_HEAD_STYLE,
-      fontSize: 6.5,
+      fillColor: [245, 245, 245],
+      textColor: [52, 58, 64],
+      fontSize: 7,
+      fontStyle: 'bold',
+      cellPadding: 2,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.3,
     },
-    bodyStyles: { ...TABLE_BODY_STYLE, fontSize: 6.5 },
-    alternateRowStyles: TABLE_ALT_STYLE,
+    bodyStyles: {
+      fontSize: 7,
+      cellPadding: 2.5,
+      textColor: [33, 37, 41],
+      lineColor: [230, 230, 230],
+      lineWidth: 0.15,
+    },
     columnStyles: {
-      0: { cellWidth: 18, fontStyle: 'bold', halign: 'center' },
-      1: { cellWidth: 'auto' },
-      2: { cellWidth: 22 },
-      3: { cellWidth: 16, halign: 'right' },
+      0: { cellWidth: 20, halign: 'center' },
+      1: { cellWidth: 18, halign: 'center' },
+      2: { cellWidth: 20 },
+      3: { cellWidth: 'auto' },
       4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 14, halign: 'right' },
-      6: { cellWidth: 14, halign: 'right' },
-      7: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
+      5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
+    },
+    didDrawCell: (data: any) => {
+      // Draw bottom border for each row
+      if (data.section === 'body') {
+        doc.setDrawColor(...borderColor);
+        doc.setLineWidth(0.3);
+      }
     },
   });
 
   y = (doc as any).lastAutoTable.finalY + 6;
 
   // ═══════════════════════════════════════════
-  // TOTALS — right aligned, clean
+  // TOTALS — right aligned
   // ═══════════════════════════════════════════
-  const totalsX = rightX - 60;
+  const totalsLabelX = rightX - 55;
 
-  const drawTotalRow = (label: string, value: string, bold = false) => {
+  const drawTotal = (label: string, value: string, bold = false) => {
     doc.setFontSize(bold ? 9 : 7.5);
     doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setTextColor(...(bold ? PDF.black : PDF.muted));
-    doc.text(label, totalsX, y);
-    doc.setTextColor(...PDF.black);
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    doc.setTextColor(...(bold ? black : gray));
+    doc.text(label, totalsLabelX, y, { align: 'right' });
+    doc.setTextColor(...black);
     doc.text(value, rightX, y, { align: 'right' });
-    y += bold ? 6 : 5;
+    y += bold ? 7 : 5;
   };
 
-  drawTotalRow('Subtotal:', `$${fmtCurrency(cfdi.subtotal)}`);
-  if (cfdi.ieps_total > 0) drawTotalRow('IEPS:', `$${fmtCurrency(cfdi.ieps_total)}`);
-  if (cfdi.iva_total > 0) drawTotalRow('IVA 16%:', `$${fmtCurrency(cfdi.iva_total)}`);
-  if (cfdi.retenciones_total > 0) drawTotalRow('Retenciones:', `-$${fmtCurrency(cfdi.retenciones_total)}`);
+  drawTotal('Subtotal:', `$${fmtCurrency(cfdi.subtotal)}`);
+  if (cfdi.ieps_total > 0) drawTotal('IEPS:', `$${fmtCurrency(cfdi.ieps_total)}`);
+  drawTotal('IVA 16%:', `$${fmtCurrency(cfdi.iva_total)}`);
+  if (cfdi.retenciones_total > 0) drawTotal('Retenciones:', `-$${fmtCurrency(cfdi.retenciones_total)}`);
 
-  // Total separator
-  doc.setDrawColor(...PDF.border);
+  // Total line
+  doc.setDrawColor(...borderColor);
   doc.setLineWidth(0.3);
-  doc.line(totalsX, y - 1, rightX, y - 1);
-  y += 2;
-  drawTotalRow('Total:', `$${fmtCurrency(cfdi.total)}`, true);
-
-  // Amount in words
+  doc.line(totalsLabelX - 10, y - 2, rightX, y - 2);
   y += 1;
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(...PDF.muted);
-  doc.text(numberToWords(cfdi.total), ML, y);
-  y += 4;
+  drawTotal('Total:', `$${fmtCurrency(cfdi.total)}`, true);
+
+  // ═══════════════════════════════════════════
+  // AMOUNT IN WORDS + MONEDA ROW
+  // ═══════════════════════════════════════════
+  y += 2;
+  const wordsY = y;
+
+  // Moneda left
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF.dark);
-  doc.text(`Moneda: ${cfdi.currency || 'MXN'} — Peso Mexicano`, ML, y);
-  y += 8;
+  doc.setTextColor(...gray);
+  doc.text('Moneda: MXN -', ML, wordsY);
+  doc.text('Peso Mexicano', ML, wordsY + 4);
+
+  // Amount in words center
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  const words = numberToWords(cfdi.total);
+  const wordsWidth = doc.getTextWidth(words);
+  doc.text(words, midX - wordsWidth / 2 + 10, wordsY + 2);
+
+  y = wordsY + 10;
 
   // ═══════════════════════════════════════════
-  // TAX DETAIL TABLE
+  // FORMA/MÉTODO DE PAGO ROW
   // ═══════════════════════════════════════════
-  y = checkPageBreak(doc, y, 30);
-
-  doc.setTextColor(...PDF.black);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Desglose de Impuestos', ML, y);
+  doc.setDrawColor(...borderColor);
+  doc.setLineWidth(0.2);
+  doc.line(ML, y, rightX, y);
   y += 5;
 
-  const taxRows = lineas.flatMap(l => {
-    const rows: string[][] = [];
-    if (l.iva_pct > 0) {
-      rows.push(['IVA', 'Traslado', `$${fmtCurrency(l.subtotal)}`, `${(l.iva_pct / 100).toFixed(6)}`, `$${fmtCurrency(l.iva_monto)}`]);
-    }
-    if (l.ieps_pct > 0) {
-      rows.push(['IEPS', 'Traslado', `$${fmtCurrency(l.subtotal)}`, `${(l.ieps_pct / 100).toFixed(6)}`, `$${fmtCurrency(l.ieps_monto)}`]);
-    }
-    return rows;
-  });
+  // Forma de Pago (left)
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Forma de Pago:', ML, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(formasPagoLabel || cfdi.payment_form || '—', ML, y + 4);
 
-  if (taxRows.length > 0) {
-    autoTable(doc, {
-      startY: y,
-      margin: { left: ML, right: MR },
-      head: [['Impuesto', 'Tipo', 'Base', 'Tasa', 'Importe']],
-      body: taxRows,
-      headStyles: { ...TABLE_HEAD_STYLE, fontSize: 6.5 },
-      bodyStyles: { ...TABLE_BODY_STYLE, fontSize: 6.5 },
-      alternateRowStyles: TABLE_ALT_STYLE,
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 20 },
-        1: { cellWidth: 20 },
-        2: { halign: 'right', cellWidth: 30 },
-        3: { halign: 'right', cellWidth: 25 },
-        4: { halign: 'right', fontStyle: 'bold', cellWidth: 25 },
-      },
-    });
-    y = (doc as any).lastAutoTable.finalY + 8;
-  }
+  // Método de Pago (right of center)
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...gray);
+  doc.text('Método de Pago:', midX - 10, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...black);
+  doc.text(metodoPagoLabel || cfdi.payment_method || '—', midX - 10, y + 4);
+
+  y += 12;
 
   // ═══════════════════════════════════════════
-  // SELLO / CADENA / QR — Clean bottom section
+  // QR + CADENA + SELLOS
   // ═══════════════════════════════════════════
   if (cfdi.folio_fiscal) {
-    y = checkPageBreak(doc, y, 55);
+    y = checkPageBreak(doc, y, 80);
 
-    // Thin top border
-    doc.setDrawColor(...PDF.border);
+    doc.setDrawColor(...borderColor);
     doc.setLineWidth(0.3);
     doc.line(ML, y, rightX, y);
-    y += 5;
+    y += 4;
 
-    // QR on the left
-    const qrSize = 32;
+    // QR on left
+    const qrSize = 30;
     const qrUrl = `https://verificacfdi.facturaelectronica.sat.gob.mx/default.aspx?id=${cfdi.folio_fiscal}&re=${empresa.rfc || ''}&rr=${receiver.rfc || ''}&tt=${cfdi.total.toFixed(6)}`;
     const qrDataUrl = await generateQrDataUrl(qrUrl);
 
     if (qrDataUrl) {
       try {
-        doc.addImage(qrDataUrl, 'PNG', ML, y - 2, qrSize, qrSize);
+        doc.addImage(qrDataUrl, 'PNG', ML, y, qrSize, qrSize);
       } catch { /* ignore */ }
     }
 
-    // Info right of QR
-    const infoX = ML + qrSize + 5;
+    const infoX = ML + qrSize + 6;
+    const maxTextW = rightX - infoX;
 
-    const stampLabel = (lbl: string, val: string, ly: number) => {
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PDF.dark);
-      doc.text(lbl, infoX, ly);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...PDF.black);
-      doc.setFontSize(6.5);
-      // Wrap the value to fit
-      const maxW = rightX - infoX;
-      const split = doc.splitTextToSize(val, maxW);
-      doc.text(split, infoX, ly + 3.5);
-      return ly + 3.5 + split.length * 3;
-    };
-
-    let sy = y;
-    sy = stampLabel('Folio Fiscal (UUID):', cfdi.folio_fiscal, sy);
-    sy += 1;
-    sy = stampLabel('Lugar de Expedición:', cfdi.expedition_place || '—', sy);
-    sy += 1;
-    sy = stampLabel('Efecto del comprobante:', cfdi.cfdi_type === 'I' ? 'I - Ingreso' : cfdi.cfdi_type === 'E' ? 'E - Egreso' : cfdi.cfdi_type || '—', sy);
-    sy += 1;
-    sy = stampLabel('Exportación:', '01 - No aplica', sy);
-
-    y = Math.max(y + qrSize + 3, sy + 4);
-
-    // Cadena original del complemento de certificación digital
-    y = checkPageBreak(doc, y, 20);
-    doc.setFontSize(6);
+    // Cadena Original
+    doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...PDF.dark);
-    doc.text('Cadena Original del Complemento de Certificación Digital del SAT:', ML, y);
-    y += 3.5;
+    doc.setTextColor(...gray);
+    doc.text('Cadena Original del complemento de Certificación Digital del SAT', infoX, y + 2);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...PDF.muted);
-    doc.setFontSize(5.5);
+    doc.setTextColor(...black);
+    doc.setFontSize(5);
     const cadenaText = cfdi.cadena_original || `||1.1|${cfdi.folio_fiscal}|...||`;
-    const cadenaLines = doc.splitTextToSize(cadenaText, rightX - ML);
-    doc.text(cadenaLines, ML, y);
-    y += cadenaLines.length * 2.5 + 3;
+    const cadenaLines = doc.splitTextToSize(cadenaText, maxTextW);
+    doc.text(cadenaLines, infoX, y + 6);
+    let infoY = y + 6 + cadenaLines.length * 2.2 + 2;
 
-    // No. Certificado del Emisor y SAT
-    if (cfdi.no_certificado_emisor || cfdi.no_certificado_sat) {
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PDF.dark);
-      if (cfdi.no_certificado_emisor) {
-        doc.text(`No. Certificado del Emisor: `, ML, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(cfdi.no_certificado_emisor, ML + 42, y);
-      }
-      if (cfdi.no_certificado_sat) {
-        const satX = cfdi.no_certificado_emisor ? ML + 100 : ML;
-        doc.setFont('helvetica', 'bold');
-        doc.text(`No. Certificado SAT: `, satX, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(cfdi.no_certificado_sat, satX + 35, y);
-      }
-      y += 4;
-    }
-
-    if (cfdi.fecha_timbrado) {
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...PDF.dark);
-      doc.text('Fecha y Hora de Certificación: ', ML, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(cfdi.fecha_timbrado, ML + 48, y);
-      y += 5;
-    }
-
-    // Sello digital del CFDI
-    doc.setFontSize(6);
+    // Sello Digital del CFDI
+    doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...PDF.dark);
-    doc.text('Sello Digital del CFDI:', ML, y);
-    y += 3.5;
+    doc.setTextColor(...gray);
+    doc.text('Sello Digital del CFDI', infoX, infoY);
+    infoY += 3.5;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...PDF.muted);
-    doc.setFontSize(5.5);
+    doc.setTextColor(...black);
+    doc.setFontSize(5);
     const selloCfdiText = cfdi.sello_cfdi || 'Disponible en el archivo XML';
-    const selloCfdiLines = doc.splitTextToSize(selloCfdiText, rightX - ML);
-    doc.text(selloCfdiLines, ML, y);
-    y += selloCfdiLines.length * 2.5 + 3;
+    const selloCfdiLines = doc.splitTextToSize(selloCfdiText, maxTextW);
+    doc.text(selloCfdiLines, infoX, infoY);
+    infoY += selloCfdiLines.length * 2.2 + 2;
 
-    // Sello del SAT
-    doc.setFontSize(6);
+    // Sello Digital del SAT
+    doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...PDF.dark);
-    doc.text('Sello del SAT:', ML, y);
-    y += 3.5;
+    doc.setTextColor(...gray);
+    doc.text('Sello Digital del SAT', infoX, infoY);
+    infoY += 3.5;
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...PDF.muted);
-    doc.setFontSize(5.5);
+    doc.setTextColor(...black);
+    doc.setFontSize(5);
     const selloSatText = cfdi.sello_sat || 'Disponible en el archivo XML';
-    const selloSatLines = doc.splitTextToSize(selloSatText, rightX - ML);
-    doc.text(selloSatLines, ML, y);
-    y += selloSatLines.length * 2.5 + 4;
+    const selloSatLines = doc.splitTextToSize(selloSatText, maxTextW);
+    doc.text(selloSatLines, infoX, infoY);
+    infoY += selloSatLines.length * 2.2 + 3;
 
-    // Legal notice
-    doc.setFontSize(6);
-    doc.setTextColor(...PDF.muted);
-    doc.setFont('helvetica', 'italic');
-    doc.text('Este documento es una representación impresa de un CFDI.', ML, y);
+    y = Math.max(y + qrSize + 4, infoY);
+
+    // Bottom info row: Fecha certificación | No. Serie Cert SAT | RFC del PAC
+    doc.setDrawColor(...borderColor);
+    doc.setLineWidth(0.2);
+    doc.line(ML, y, rightX, y);
+    y += 4;
+
+    // QR continued below - second QR row
+    if (qrDataUrl) {
+      try {
+        doc.addImage(qrDataUrl, 'PNG', ML, y - 2, 18, 18);
+      } catch { /* ignore */ }
+    }
+
+    const bottomInfoX = ML + 22;
+
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...gray);
+    doc.text('Fecha / Hora de Certificación:', bottomInfoX, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...black);
+    doc.text(formatCfdiDate(cfdi.fecha_timbrado || cfdi.created_at), bottomInfoX, y + 3.5);
+
+    const certCol = bottomInfoX + 55;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...gray);
+    doc.text('Número de Serie Certificado del SAT:', certCol, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...black);
+    doc.text(cfdi.no_certificado_sat || '—', certCol, y + 3.5);
+
+    const pacCol = certCol + 60;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...gray);
+    doc.text('RFC del PAC:', pacCol, y);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...black);
+    doc.text('SPR190613I52', pacCol, y + 3.5);
+
+    y += 14;
   }
 
   // ═══════════════════════════════════════════
-  // FOOTER
+  // LEGAL NOTICE + FOOTER
   // ═══════════════════════════════════════════
+  y = checkPageBreak(doc, y, 20);
+  doc.setFontSize(7);
+  doc.setTextColor(...lightGray);
+  doc.setFont('helvetica', 'normal');
+  const legalText = 'Este documento es una representación impresa de un CFDI.';
+  const legalW = doc.getTextWidth(legalText);
+  doc.text(legalText, midX - legalW / 2, y);
+
   drawFooter(doc, `${empresa.nombre} — Factura generada por Rutapp`);
 
   return doc.output('blob');
