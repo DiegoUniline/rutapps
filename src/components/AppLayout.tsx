@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useSetupComplete } from '@/pages/ConfiguracionInicialPage';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -200,7 +201,7 @@ function Breadcrumb() {
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
-    configuracion: 'Configuración', descargas: 'Descargas de ruta',
+    configuracion: 'Configuración', 'configuracion-inicial': 'Configuración inicial', descargas: 'Descargas de ruta',
     usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
     'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
     logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
@@ -235,6 +236,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
+  const { data: setupComplete } = useSetupComplete();
+  const location = useLocation();
+  const setupActive = location.pathname === '/configuracion-inicial';
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -256,6 +260,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          {setupComplete === false && (
+            <Link
+              to="/configuracion-inicial"
+              className={cn(
+                "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mb-1",
+                collapsed ? "justify-center px-2" : "",
+                setupActive
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-primary/80 hover:bg-primary/5 hover:text-primary"
+              )}
+              title={collapsed ? 'Configuración inicial' : undefined}
+            >
+              <Sparkles className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Configuración inicial</span>}
+            </Link>
+          )}
           {navItems.map(item => (
             <SidebarItem key={item.path} item={item} collapsed={collapsed} />
           ))}

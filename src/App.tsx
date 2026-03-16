@@ -66,6 +66,7 @@ const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
+const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
 
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
@@ -258,6 +259,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
               <Route path="/reportes" element={<ReportesPage />} />
               <Route path="/configuracion" element={<ConfiguracionPage />} />
+              <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
               <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
               <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
               <Route path="/facturacion" element={<FacturacionPage />} />
