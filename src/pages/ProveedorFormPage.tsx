@@ -106,12 +106,14 @@ export default function ProveedorFormPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('proveedores').delete().eq('id', id!);
+      // Soft delete: set status to 'baja' instead of deleting
+      const { error } = await supabase.from('proveedores').update({ status: 'baja' }).eq('id', id!);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['proveedores'] });
-      toast.success('Proveedor eliminado');
+      qc.invalidateQueries({ queryKey: ['proveedores-full'] });
+      toast.success('Proveedor dado de baja');
       navigate('/proveedores');
     },
     onError: (err: any) => toast.error(err.message),

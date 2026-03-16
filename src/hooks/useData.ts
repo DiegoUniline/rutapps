@@ -58,7 +58,8 @@ export function useDeleteProducto() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('productos').delete().eq('id', id);
+      // Soft delete: set status to 'baja' instead of deleting
+      const { error } = await supabase.from('productos').update({ status: 'inactivo' }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['productos'] }),
@@ -151,19 +152,19 @@ export function useDeleteTarifaLinea() {
 
 // Catalogs — all with 5 min staleTime and explicit columns
 export function useMarcas() {
-  return useQuery({ queryKey: ['marcas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').order('nombre'); return data as Marca[]; }});
+  return useQuery({ queryKey: ['marcas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('activo', true).order('nombre'); return data as Marca[]; }});
 }
 export function useProveedores() {
-  return useQuery({ queryKey: ['proveedores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre').order('nombre'); return data as Proveedor[]; }});
+  return useQuery({ queryKey: ['proveedores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre').neq('status', 'baja').order('nombre'); return data as Proveedor[]; }});
 }
 export function useClasificaciones() {
-  return useQuery({ queryKey: ['clasificaciones'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').order('nombre'); return data as Clasificacion[]; }});
+  return useQuery({ queryKey: ['clasificaciones'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('activo', true).order('nombre'); return data as Clasificacion[]; }});
 }
 export function useListas() {
-  return useQuery({ queryKey: ['listas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').order('nombre'); return data as Lista[]; }});
+  return useQuery({ queryKey: ['listas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').eq('activo', true).order('nombre'); return data as Lista[]; }});
 }
 export function useUnidades() {
-  return useQuery({ queryKey: ['unidades'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').order('nombre'); return data as Unidad[]; }});
+  return useQuery({ queryKey: ['unidades'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').eq('activo', true).order('nombre'); return data as Unidad[]; }});
 }
 export function useTasasIva() {
   return useQuery({ queryKey: ['tasas_iva'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('id, nombre, porcentaje').order('nombre'); return data as TasaIva[]; }});
@@ -172,7 +173,7 @@ export function useTasasIeps() {
   return useQuery({ queryKey: ['tasas_ieps'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').order('nombre'); return data as TasaIeps[]; }});
 }
 export function useAlmacenes() {
-  return useQuery({ queryKey: ['almacenes'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('almacenes').select('id, nombre').order('nombre'); return data as Almacen[]; }});
+  return useQuery({ queryKey: ['almacenes'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('almacenes').select('id, nombre').eq('activo', true).order('nombre'); return data as Almacen[]; }});
 }
 export function useUnidadesSat() {
   return useQuery({ queryKey: ['unidades_sat'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('id, clave, nombre').order('nombre'); return data as UnidadSat[]; }});

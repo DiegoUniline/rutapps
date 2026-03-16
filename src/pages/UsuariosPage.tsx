@@ -4,10 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { MODULOS, ACCIONES, getModuloGroups } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; }
+interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; }
 interface RolePermiso { id: string; role_id: string; modulo: string; accion: string; permitido: boolean; }
 interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; }
 interface UserRole { id: string; user_id: string; role_id: string; }
@@ -19,6 +19,7 @@ export default function UsuariosPage() {
   const { empresa } = useAuth();
   const subscription = useSubscription();
   const [tab, setTab] = useState<'usuarios' | 'roles'>('usuarios');
+  const [rolesTab, setRolesTab] = useState<'activos' | 'inactivos'>('activos');
   const [roles, setRoles] = useState<Role[]>([]);
   const [permisos, setPermisos] = useState<RolePermiso[]>([]);
   const [profiles, setProfiles] = useState<ProfileUser[]>([]);
@@ -97,10 +98,11 @@ export default function UsuariosPage() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const deleteRole = async (id: string) => {
-    if (!confirm('¿Eliminar este rol?')) return;
-    await supabase.from('roles').delete().eq('id', id);
-    toast.success('Rol eliminado'); load();
+  const toggleRoleActivo = async (id: string, currentActivo: boolean) => {
+    const newVal = !currentActivo;
+    await supabase.from('roles').update({ activo: newVal }).eq('id', id);
+    toast.success(newVal ? 'Rol reactivado' : 'Rol dado de baja');
+    load();
   };
 
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
@@ -203,6 +205,9 @@ export default function UsuariosPage() {
   // ── Create user ──
   const activeUsers = profiles.filter(p => p.estado === 'activo').length;
   const availableSlots = subscription.maxUsuarios - activeUsers;
+  const displayRoles = rolesTab === 'activos' ? roles.filter(r => r.activo !== false) : roles.filter(r => r.activo === false);
+  // Only show active roles in user role selector
+  const activeRoles = roles.filter(r => r.activo !== false);
 
   const createUser = async () => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
@@ -357,7 +362,7 @@ export default function UsuariosPage() {
                         {isEditing ? (
                           <select className="input-odoo text-xs py-1" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
                             <option value="">Sin rol</option>
-                            {roles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                            {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
                           </select>
                         ) : (
                           <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
@@ -414,7 +419,21 @@ export default function UsuariosPage() {
 
       {tab === 'roles' && (
         <div className="space-y-4">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1 border-b border-border">
+              <button
+                onClick={() => setRolesTab('activos')}
+                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", rolesTab === 'activos' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              >
+                Activos ({roles.filter(r => r.activo !== false).length})
+              </button>
+              <button
+                onClick={() => setRolesTab('inactivos')}
+                className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", rolesTab === 'inactivos' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+              >
+                Inactivos ({roles.filter(r => r.activo === false).length})
+              </button>
+            </div>
             <button onClick={() => { setShowRoleForm(true); setEditingRole(null); setRoleName(''); setRoleDesc(''); setRoleMovil(false); }} className="btn-odoo-primary text-xs">
               <Plus className="h-3.5 w-3.5 mr-1" /> Nuevo rol
             </button>
@@ -435,10 +454,10 @@ export default function UsuariosPage() {
               </div>
             </div>
           )}
-          {roles.map(role => (
+          {displayRoles.map(role => (
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
               onEdit={() => { setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil); setShowRoleForm(true); }}
-              onDelete={() => deleteRole(role.id)}
+              onToggleActivo={() => toggleRoleActivo(role.id, role.activo !== false)}
               onTogglePermiso={(mod, acc) => togglePermiso(role.id, mod, acc)}
               onToggleAll={(mod) => toggleAllModule(role.id, mod)}
               onToggleGroup={(group) => toggleAllGroup(role.id, group)} />
@@ -468,16 +487,17 @@ export default function UsuariosPage() {
   );
 }
 
-function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleAll, onToggleGroup }: {
-  role: Role; permisos: RolePermiso[]; onEdit: () => void; onDelete: () => void;
+function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
+  role: Role; permisos: RolePermiso[]; onEdit: () => void; onToggleActivo: () => void;
   onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const groups = getModuloGroups();
+  const isInactive = role.activo === false;
 
   return (
-    <div className="bg-card border border-border rounded-lg overflow-hidden">
+    <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isInactive && "opacity-60")}>
       <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
         <div className="flex items-center gap-3">
           {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
@@ -486,11 +506,14 @@ function RoleCard({ role, permisos, onEdit, onDelete, onTogglePermiso, onToggleA
             <span className="text-sm font-semibold text-foreground">{role.nombre}</span>
             {role.descripcion && <span className="text-xs text-muted-foreground ml-2">{role.descripcion}</span>}
             {role.acceso_ruta_movil && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Ruta móvil</span>}
+            {isInactive && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">Inactivo</span>}
           </div>
         </div>
         <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-          <button onClick={onEdit} className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground"><Edit2 className="h-3.5 w-3.5" /></button>
-          <button onClick={onDelete} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          <button onClick={onEdit} className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
+          <button onClick={onToggleActivo} className={cn("p-1.5 rounded", isInactive ? "hover:bg-success/10 text-success" : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive")} title={isInactive ? 'Reactivar' : 'Dar de baja'}>
+            {isInactive ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
       {open && (

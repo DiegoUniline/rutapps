@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { InlineEditCell } from '@/components/InlineEditCell';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { cn } from '@/lib/utils';
 
 export interface CatalogColumn {
   key: string;
@@ -22,15 +23,23 @@ interface CatalogCRUDProps {
 export default function CatalogCRUD({ title, tableName, columns, queryKey }: CatalogCRUDProps) {
   const qc = useQueryClient();
   const [newRow, setNewRow] = useState<Record<string, string | number>>({});
+  const [showInactive, setShowInactive] = useState(false);
 
   const { data: items, isLoading } = useQuery({
-    queryKey: [queryKey],
+    queryKey: [queryKey, showInactive],
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)(tableName).select('*').order('nombre');
+      let q = (supabase.from as any)(tableName).select('*').order('nombre');
+      // Only filter by activo if column exists (we added it to all catalog tables)
+      if (!showInactive) q = q.eq('activo', true);
+      const { data, error } = await q;
       if (error) throw error;
       return data as any[];
     },
   });
+
+  const activeItems = items?.filter(i => i.activo !== false) ?? [];
+  const inactiveItems = items?.filter(i => i.activo === false) ?? [];
+  const displayItems = showInactive ? inactiveItems : activeItems;
 
   const handleAdd = async () => {
     if (!newRow.nombre || (newRow.nombre as string).trim() === '') {
@@ -50,26 +59,24 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar este registro?')) return;
+  const handleToggleActivo = async (id: string, currentActivo: boolean) => {
+    const newVal = !currentActivo;
     try {
-      const { error } = await (supabase.from as any)(tableName).delete().eq('id', id);
+      const { error } = await (supabase.from as any)(tableName).update({ activo: newVal }).eq('id', id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: [queryKey] });
-      toast.success('Eliminado');
+      toast.success(newVal ? 'Activado' : 'Dado de baja');
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  // Inline save a single field
   const handleInlineSave = async (id: string, field: string, val: string, type?: string) => {
     try {
       const updateVal = type === 'number' ? Number(val) : val;
       const { error } = await (supabase.from as any)(tableName).update({ [field]: updateVal }).eq('id', id);
       if (error) throw error;
-      // Optimistic: update local cache
-      qc.setQueryData([queryKey], (old: any[] | undefined) =>
+      qc.setQueryData([queryKey, showInactive], (old: any[] | undefined) =>
         old?.map(item => item.id === id ? { ...item, [field]: updateVal } : item)
       );
       toast.success('Actualizado');
@@ -81,6 +88,22 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
 
   return (
     <div className="space-y-3">
+      {/* Tabs: Activos / Inactivos */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          onClick={() => setShowInactive(false)}
+          className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", !showInactive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+        >
+          Activos ({activeItems.length})
+        </button>
+        <button
+          onClick={() => setShowInactive(true)}
+          className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", showInactive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}
+        >
+          Inactivos ({inactiveItems.length})
+        </button>
+      </div>
+
       <div className="bg-card border border-border rounded overflow-x-auto">
         {isLoading ? (
           <div className="p-4"><TableSkeleton rows={4} cols={columns.length + 1} /></div>
@@ -91,12 +114,12 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                 {columns.map(c => (
                   <th key={c.key} className="th-odoo text-left">{c.label}</th>
                 ))}
-                <th className="th-odoo w-16 text-right">Acciones</th>
+                <th className="th-odoo w-20 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {items?.map(item => (
-                <tr key={item.id} className="border-b border-table-border last:border-0 hover:bg-table-hover transition-colors group">
+              {displayItems.map(item => (
+                <tr key={item.id} className={cn("border-b border-table-border last:border-0 hover:bg-table-hover transition-colors group", item.activo === false && "opacity-60")}>
                   {columns.map(c => (
                     <td key={c.key} className="py-0.5 px-3">
                       <InlineEditCell
@@ -109,34 +132,47 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
                   ))}
                   <td className="py-1.5 px-3 text-right">
                     <button
-                      className="text-muted-foreground hover:text-destructive p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleDelete(item.id)}
+                      className={cn(
+                        "p-1 transition-opacity",
+                        item.activo === false
+                          ? "text-success hover:text-success/80"
+                          : "text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100"
+                      )}
+                      onClick={() => handleToggleActivo(item.id, item.activo !== false)}
+                      title={item.activo === false ? 'Reactivar' : 'Dar de baja'}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      {item.activo === false ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                     </button>
                   </td>
                 </tr>
               ))}
-              {/* Add row */}
-              <tr className="bg-table-hover">
-                {columns.map(c => (
-                  <td key={c.key} className="py-1.5 px-3">
-                    <input
-                      type={c.type === 'number' ? 'number' : 'text'}
-                      placeholder={c.label}
-                      value={newRow[c.key] ?? ''}
-                      onChange={e => setNewRow(prev => ({ ...prev, [c.key]: c.type === 'number' ? +e.target.value : e.target.value }))}
-                      onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
-                      className="inline-edit-input text-xs"
-                    />
+              {displayItems.length === 0 && (
+                <tr><td colSpan={columns.length + 1} className="px-4 py-8 text-center text-muted-foreground text-sm">
+                  {showInactive ? 'No hay registros inactivos' : 'No hay registros activos'}
+                </td></tr>
+              )}
+              {/* Add row - only on active tab */}
+              {!showInactive && (
+                <tr className="bg-table-hover">
+                  {columns.map(c => (
+                    <td key={c.key} className="py-1.5 px-3">
+                      <input
+                        type={c.type === 'number' ? 'number' : 'text'}
+                        placeholder={c.label}
+                        value={newRow[c.key] ?? ''}
+                        onChange={e => setNewRow(prev => ({ ...prev, [c.key]: c.type === 'number' ? +e.target.value : e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
+                        className="inline-edit-input text-xs"
+                      />
+                    </td>
+                  ))}
+                  <td className="py-1.5 px-3 text-right">
+                    <button className="text-primary hover:text-primary/80 p-1" onClick={handleAdd}>
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
                   </td>
-                ))}
-                <td className="py-1.5 px-3 text-right">
-                  <button className="text-primary hover:text-primary/80 p-1" onClick={handleAdd}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                </td>
-              </tr>
+                </tr>
+              )}
             </tbody>
           </table>
         )}
