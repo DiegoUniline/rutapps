@@ -539,9 +539,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     let sY = y;
 
     // Cadena Original
-    doc.setFontSize(6.5);
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.cfdiLabel);
+    doc.setTextColor(...C.text);
     doc.text('Cadena original del complemento de certificación digital del SAT', infoX, sY);
     sY += 3;
     doc.setFont('helvetica', 'normal');
