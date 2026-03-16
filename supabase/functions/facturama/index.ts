@@ -82,7 +82,7 @@ async function verificarConexion() {
 // ========================================
 async function timbrar(supabase: any, userId: string, body: any) {
   const auth = getAuth();
-  const { venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
+  const { cfdi_id, venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
 
   // Auto-generate folio if not provided
   let folio = body.folio;
