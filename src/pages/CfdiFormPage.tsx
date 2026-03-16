@@ -620,6 +620,24 @@ export default function CfdiFormPage() {
           </Button>
         </div>
       )}
+
+      {/* Error dialog */}
+      <Dialog open={!!errorDialog} onOpenChange={() => setErrorDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Error al timbrar
+            </DialogTitle>
+          </DialogHeader>
+          <div className="whitespace-pre-wrap text-sm text-muted-foreground bg-destructive/5 border border-destructive/20 rounded-lg p-4 max-h-[300px] overflow-y-auto">
+            {errorDialog}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialog(null)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
