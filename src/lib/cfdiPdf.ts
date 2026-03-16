@@ -301,11 +301,11 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // ── RIGHT COLUMN: Información del documento ──
   let ry = gridTopY + 3;
 
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.sublabel);
+  doc.setTextColor(...C.text);
   doc.text('INFORMACIÓN DEL DOCUMENTO', colR, ry);
-  ry += 5;
+  ry += 6;
 
   // Info rows as table
   const infoRows: [string, string][] = [
