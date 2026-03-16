@@ -35,7 +35,7 @@ interface Proveedor {
 const defaultProv: Proveedor = {
   nombre: '', contacto: '', telefono: '', email: '', rfc: '', razon_social: '',
   direccion: '', colonia: '', ciudad: '', estado: '', cp: '', notas: '', sitio_web: '',
-  condicion_pago: 'contado', dias_credito: 0, limite_credito: 0,
+  condicion_pago: 'contado', dias_credito: 0, limite_credito: 0, tiempo_entrega_dias: 0,
   banco: '', cuenta_banco: '', clabe: '', status: 'activo',
 };
 
