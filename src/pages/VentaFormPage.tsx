@@ -580,10 +580,16 @@ export default function VentaFormPage() {
               <FileText className="h-3.5 w-3.5" /> Documento
             </button>
           )}
+          {/* Factura button — visible when requiere_factura and has pending lines */}
+          {!isNew && (form as any).requiere_factura && lineas.some(l => l.producto_id && !l.facturado) && (
+            <button onClick={() => setShowFacturaDrawer(true)} className="btn-odoo-primary text-xs">
+              <Receipt className="h-3.5 w-3.5" /> Facturar • {lineas.filter(l => l.producto_id && !l.facturado).length} pendientes
+            </button>
+          )}
           {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
             <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
           )}
-          {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && (
+          {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && !(form as any).requiere_factura && (
             <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
           )}
           {!readOnly && !isNew && (
