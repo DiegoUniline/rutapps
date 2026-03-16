@@ -116,7 +116,7 @@ export function ConfigEmisorCard() {
           <SearchableSelect
             options={regimenOptions}
             value={form.regimen_fiscal}
-            onValueChange={(val) => setForm({ ...form, regimen_fiscal: val })}
+            onChange={(val) => setForm({ ...form, regimen_fiscal: val })}
             placeholder="Selecciona régimen..."
           />
         </div>

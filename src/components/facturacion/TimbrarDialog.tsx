@@ -260,7 +260,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Uso CFDI</Label>
-                    <SearchableSelect options={usoOptions} value={receiver.cfdi_use} onValueChange={(v) => setReceiver({ ...receiver, cfdi_use: v })} placeholder="Uso CFDI" />
+                    <SearchableSelect options={usoOptions} value={receiver.cfdi_use} onChange={(v) => setReceiver({ ...receiver, cfdi_use: v })} placeholder="Uso CFDI" />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Régimen Fiscal</Label>
