@@ -619,6 +619,7 @@ export default function MapaVentasPage() {
             )}
           </GoogleMap>
         )}
+        <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
         {/* Route order sidebar */}
         {orderedItems && orderedItems.length > 0 && (
