@@ -70,9 +70,9 @@ export default function UsuariosPage() {
     } catch { /* ignore */ }
   }, []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (showLoader = true) => {
     if (!empresa?.id) return;
-    setLoading(true);
+    if (showLoader) setLoading(true);
     const [r, p, pr, ur, a, v] = await Promise.all([
       supabase.from('roles').select('*').eq('empresa_id', empresa.id).order('nombre'),
       supabase.from('role_permisos').select('*'),
