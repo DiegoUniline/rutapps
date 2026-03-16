@@ -41,7 +41,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
   };
 
   const handleSaveRule = async () => {
-    if (!newRule.tarifa_id) { toast.error('Selecciona una lista de precios'); return; }
+    if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
