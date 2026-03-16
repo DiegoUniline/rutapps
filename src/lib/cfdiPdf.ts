@@ -326,21 +326,25 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // CONCEPTOS TABLE — matching Facturama layout
   // Each row shows product, then tax detail below
   // ═══════════════════════════════════════════
-  const tableHead = [['Producto', 'Cantidad', 'Unidad', 'Concepto(s)', 'Precio U', 'Importe']];
+  const tableHead = [['Clave', 'Descripción', 'Cant.', 'Unidad', 'P. Unit.', 'Obj. Imp.', 'Impuesto', 'Importe']];
   const tableBody: any[][] = [];
 
   for (const l of lineas) {
-    // Main row
+    // Build tax string concisely
+    let impuestoStr = '';
+    if (l.iva_pct > 0) impuestoStr += `IVA ${l.iva_pct}%`;
+    if (l.ieps_pct > 0) impuestoStr += (impuestoStr ? '\n' : '') + `IEPS ${l.ieps_pct}%`;
+    if (!impuestoStr) impuestoStr = '—';
+
     tableBody.push([
-      { content: l.product_code, styles: { fontStyle: 'normal' } },
+      { content: l.product_code, styles: { halign: 'center', fontSize: 6.5 } },
+      l.descripcion,
       { content: String(l.cantidad), styles: { halign: 'center' } },
-      { content: `${l.unit_code} -\n${l.unit_name}`, styles: { fontSize: 6.5 } },
-      {
-        content: `${l.descripcion}\n02 - Con objeto de impuesto\nTraslados:\nIVA: 002, Base: $${fmtCurrency(l.subtotal)}, Tasa: ${(l.iva_pct / 100).toFixed(6)}, Importe: $${fmtCurrency(l.iva_monto)}${l.ieps_pct > 0 ? `\nIEPS: 003, Base: $${fmtCurrency(l.subtotal)}, Tasa: ${(l.ieps_pct / 100).toFixed(6)}, Importe: $${fmtCurrency(l.ieps_monto)}` : ''}`,
-        styles: { fontSize: 6.5 }
-      },
+      { content: `${l.unit_code}\n${l.unit_name}`, styles: { fontSize: 6.5 } },
       { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
-      { content: `$${fmtCurrency(l.subtotal)}`, styles: { halign: 'right' } },
+      { content: '02', styles: { halign: 'center', fontSize: 6.5 } },
+      { content: impuestoStr, styles: { halign: 'center', fontSize: 6.5 } },
+      { content: `$${fmtCurrency(l.subtotal)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]);
   }
 
@@ -355,6 +359,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       textColor: [33, 37, 41],
       lineColor: [210, 210, 210],
       lineWidth: 0.2,
+      fontSize: 7,
     },
     headStyles: {
       fillColor: [255, 255, 255],
@@ -362,27 +367,27 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       fontSize: 7,
       fontStyle: 'bold',
       cellPadding: 2,
-      lineColor: [200, 200, 200],
+      lineColor: [180, 180, 180],
       lineWidth: 0.3,
     },
     bodyStyles: {
       fillColor: [255, 255, 255],
-      fontSize: 7,
-      cellPadding: 2.5,
-      textColor: [33, 37, 41],
+      cellPadding: 2,
       lineColor: [220, 220, 220],
-      lineWidth: 0.2,
+      lineWidth: 0.15,
     },
     alternateRowStyles: {
       fillColor: [255, 255, 255],
     },
     columnStyles: {
-      0: { cellWidth: 20, halign: 'center' },
-      1: { cellWidth: 18, halign: 'center' },
-      2: { cellWidth: 20 },
-      3: { cellWidth: 'auto' },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
+      0: { cellWidth: 18 },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 14 },
+      3: { cellWidth: 18 },
+      4: { cellWidth: 22 },
+      5: { cellWidth: 14 },
+      6: { cellWidth: 20 },
+      7: { cellWidth: 22 },
     },
     didParseCell: (data: any) => {
       data.cell.styles.fillColor = [255, 255, 255];
