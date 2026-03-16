@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Building2, Save, Loader2 } from 'lucide-react';
-import { SearchableSelect } from '@/components/SearchableSelect';
+import SearchableSelect from '@/components/SearchableSelect';
 
 export function ConfigEmisorCard() {
   const { empresa } = useAuth();

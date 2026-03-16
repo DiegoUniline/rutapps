@@ -45,7 +45,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
         .from('ventas')
         .select('id, folio, fecha, total, status, clientes(nombre, rfc, regimen_fiscal, uso_cfdi, cp)')
         .eq('empresa_id', empresa!.id)
-        .in('status', ['confirmada', 'entregada', 'cobrada'])
+        .in('status', ['confirmado', 'entregado', 'facturado'])
         .order('fecha', { ascending: false })
         .limit(100);
       return data || [];
