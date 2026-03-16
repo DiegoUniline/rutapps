@@ -41,7 +41,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
   };
 
   const handleSaveRule = async () => {
-    if (!newRule.tarifa_id) { toast.error('Selecciona una lista de precios'); return; }
+    if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
@@ -84,7 +84,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-table-border">
-              <th className="th-odoo text-left">Lista de precios</th>
+              <th className="th-odoo text-left">Tarifa</th>
               <th className="th-odoo text-left">Tipo</th>
               <th className="th-odoo text-right">Costo</th>
               <th className="th-odoo text-right">Precio</th>
@@ -134,7 +134,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
           <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-[600px]" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="text-[15px] font-semibold">Crear Regla de lista de precios</h3>
+              <h3 className="text-[15px] font-semibold">Crear regla de tarifa</h3>
               <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
@@ -165,12 +165,12 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
                   </div>
                 </div>
                 <div className="odoo-field-row">
-                  <span className="odoo-field-label">Lista de precios</span>
+                  <span className="odoo-field-label">Tarifa</span>
                   <SearchableSelect
                     options={(tarifasDisp ?? []).map((t: any) => ({ value: t.id, label: t.nombre }))}
                     value={newRule.tarifa_id}
                     onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
-                    placeholder="Buscar lista..."
+                    placeholder="Buscar tarifa..."
                   />
                 </div>
               </div>
@@ -623,7 +623,7 @@ export default function ProductoFormPage() {
               onChange={v => set('calculo_costo', v)}
               format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
             />
-            <OdooField label="Lista" value={form.lista_id} type="select"
+            <OdooField label="Tarifa" value={form.lista_id} type="select"
               options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []}
               onChange={v => set('lista_id', v || null)}
               format={() => findName(listas, form.lista_id ?? undefined)}

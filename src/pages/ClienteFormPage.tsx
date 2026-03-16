@@ -8,7 +8,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
-import { useListas, useTarifasForSelect, useProductosForSelect } from '@/hooks/useData';
+import { useTarifasForSelect, useProductosForSelect } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 
@@ -38,7 +38,6 @@ export default function ClienteFormPage() {
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
   const { data: cobradores } = useCobradores();
-  const { data: listas } = useListas();
   const { data: tarifas } = useTarifasForSelect();
   const { data: productosSelect } = useProductosForSelect();
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
@@ -302,9 +301,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Lista de Precios" value={form.lista_id} onChange={v => set('lista_id', v || null)} type="select"
-                    options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []} />
-                  <OdooField label="Tarifa Principal" value={form.tarifa_id} onChange={v => set('tarifa_id', v || null)} type="select"
+                  <OdooField label="Tarifa" value={form.tarifa_id} onChange={v => set('tarifa_id', v || null)} type="select"
                     options={tarifas?.map(t => ({ value: t.id, label: t.nombre })) ?? []} />
                 </OdooSection>
                 <OdooSection title="Visitas">
