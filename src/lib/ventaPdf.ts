@@ -44,6 +44,8 @@ interface VentaPdfParams {
     unidad?: string;
     precio_unitario: number;
     descuento_pct: number;
+    iva_pct: number;
+    ieps_pct: number;
     total: number;
   }[];
   pagos: {
@@ -97,7 +99,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
 
   // ── PRODUCTS TABLE ──
   y = drawCleanTable(doc, y,
-    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'Importe'],
+    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
     lineas.map(l => [
       { content: l.codigo, styles: { textColor: C.sublabel, fontStyle: 'normal', fontSize: 7 } },
       l.nombre,
@@ -107,15 +109,19 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
       l.descuento_pct > 0
         ? { content: `${l.descuento_pct}%`, styles: { halign: 'center', textColor: C.red } }
         : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
+      { content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } },
+      { content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } },
       { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 22 },
+      0: { cellWidth: 20 },
       2: { cellWidth: 14, halign: 'center' },
       3: { cellWidth: 18 },
       4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 16, halign: 'center' },
-      6: { cellWidth: 24, halign: 'right' },
+      5: { cellWidth: 14, halign: 'center' },
+      6: { cellWidth: 14, halign: 'center' },
+      7: { cellWidth: 14, halign: 'center' },
+      8: { cellWidth: 24, halign: 'right' },
     },
   );
 
