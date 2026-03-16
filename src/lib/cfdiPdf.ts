@@ -33,6 +33,12 @@ export interface CfdiPdfParams {
     total: number;
     created_at: string;
     status: string;
+    cadena_original?: string | null;
+    sello_cfdi?: string | null;
+    sello_sat?: string | null;
+    no_certificado_sat?: string | null;
+    no_certificado_emisor?: string | null;
+    fecha_timbrado?: string | null;
   };
   receiver: {
     rfc: string;
