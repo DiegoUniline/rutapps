@@ -400,16 +400,16 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     styles: {
       fillColor: C.white,
       textColor: C.text,
-      fontSize: 7.5,
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      fontSize: 8.5,
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
       lineWidth: 0,
     },
     headStyles: {
       fillColor: C.headBg,
       textColor: C.text,
-      fontSize: 7.5,
+      fontSize: 8.5,
       fontStyle: 'bold',
-      cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+      cellPadding: { top: 3.5, bottom: 3.5, left: 4, right: 4 },
     },
     bodyStyles: {
       fillColor: C.white,
