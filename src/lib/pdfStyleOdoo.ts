@@ -11,10 +11,10 @@ export const MR = 14;
 // ── Colors matching the HTML design exactly ──
 export const C = {
   text: [26, 26, 26] as [number, number, number],
-  label: [85, 85, 85] as [number, number, number],
-  muted: [102, 102, 102] as [number, number, number],
-  sublabel: [136, 136, 136] as [number, number, number],
-  light: [170, 170, 170] as [number, number, number],
+  label: [26, 26, 26] as [number, number, number],
+  muted: [26, 26, 26] as [number, number, number],
+  sublabel: [26, 26, 26] as [number, number, number],
+  light: [26, 26, 26] as [number, number, number],
   border: [224, 224, 224] as [number, number, number],
   borderLight: [238, 238, 238] as [number, number, number],
   headBg: [247, 247, 247] as [number, number, number],
