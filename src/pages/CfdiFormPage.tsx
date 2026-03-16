@@ -645,7 +645,7 @@ export default function CfdiFormPage() {
                         regimen_fiscal: empresa?.regimen_fiscal,
                       },
                       logoBase64: logo,
-                      cfdi: {
+                    cfdi: {
                         serie: cfdi.serie,
                         folio: cfdi.folio,
                         folio_fiscal: cfdi.folio_fiscal,
@@ -661,6 +661,12 @@ export default function CfdiFormPage() {
                         total: Number(cfdi.total),
                         created_at: cfdi.created_at,
                         status: cfdi.status,
+                        cadena_original: cfdi.cadena_original,
+                        sello_cfdi: cfdi.sello_cfdi,
+                        sello_sat: cfdi.sello_sat,
+                        no_certificado_sat: cfdi.no_certificado_sat,
+                        no_certificado_emisor: cfdi.no_certificado_emisor,
+                        fecha_timbrado: cfdi.fecha_timbrado,
                       },
                       receiver: {
                         rfc: cfdi.receiver_rfc || '',
