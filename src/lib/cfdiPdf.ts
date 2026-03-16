@@ -350,8 +350,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     head: tableHead,
     body: tableBody,
     headStyles: {
-      fillColor: [245, 245, 245],
-      textColor: [52, 58, 64],
+      fillColor: [255, 255, 255],
+      textColor: [33, 37, 41],
       fontSize: 7,
       fontStyle: 'bold',
       cellPadding: 2,
@@ -362,8 +362,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       fontSize: 7,
       cellPadding: 2.5,
       textColor: [33, 37, 41],
-      lineColor: [230, 230, 230],
-      lineWidth: 0.15,
+      lineColor: [220, 220, 220],
+      lineWidth: 0.2,
     },
     columnStyles: {
       0: { cellWidth: 20, halign: 'center' },
@@ -535,14 +535,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.line(ML, y, rightX, y);
     y += 4;
 
-    // QR continued below - second QR row
-    if (qrDataUrl) {
-      try {
-        doc.addImage(qrDataUrl, 'PNG', ML, y - 2, 18, 18);
-      } catch { /* ignore */ }
-    }
-
-    const bottomInfoX = ML + 22;
+    const bottomInfoX = ML;
 
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
