@@ -317,13 +317,13 @@ export default function ClienteFormPage() {
               <div className="space-y-1">
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">¿Requiere factura?</span>
-                  <input type="checkbox" checked={!!form.requiere_factura} onChange={e => set('requiere_factura' as any, e.target.checked)} className="rounded border-input" />
+                  <input type="checkbox" checked={!!form.requiere_factura} onChange={e => set('requiere_factura', e.target.checked)} className="rounded border-input" />
                 </div>
                 {form.requiere_factura && (
                   <>
-                    <OdooField label="RFC Fiscal" value={(form as any).facturama_rfc} onChange={v => set('facturama_rfc' as any, v?.toUpperCase())} placeholder="RFC del receptor" />
-                    <OdooField label="Razón Social" value={(form as any).facturama_razon_social} onChange={v => set('facturama_razon_social' as any, v)} placeholder="Razón social como aparece en constancia" />
-                    <OdooField label="Régimen Fiscal" value={(form as any).facturama_regimen_fiscal} onChange={v => set('facturama_regimen_fiscal' as any, v)} type="select"
+                    <OdooField label="RFC Fiscal" value={form.facturama_rfc} onChange={v => set('facturama_rfc', v?.toUpperCase())} placeholder="RFC del receptor" />
+                    <OdooField label="Razón Social" value={form.facturama_razon_social} onChange={v => set('facturama_razon_social', v)} placeholder="Razón social como aparece en constancia" />
+                    <OdooField label="Régimen Fiscal" value={form.facturama_regimen_fiscal} onChange={v => set('facturama_regimen_fiscal', v)} type="select"
                       options={(catRegimen ?? []).map(r => ({ value: r.clave, label: `${r.clave} - ${r.descripcion}` }))} />
                   </>
                 )}
@@ -331,10 +331,10 @@ export default function ClienteFormPage() {
               <div className="space-y-1">
                 {form.requiere_factura && (
                   <>
-                    <OdooField label="Uso CFDI" value={(form as any).facturama_uso_cfdi} onChange={v => set('facturama_uso_cfdi' as any, v)} type="select"
+                    <OdooField label="Uso CFDI" value={form.facturama_uso_cfdi} onChange={v => set('facturama_uso_cfdi', v)} type="select"
                       options={(catUsoCfdi ?? []).map(u => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }))} />
-                    <OdooField label="Código Postal" value={(form as any).facturama_cp} onChange={v => set('facturama_cp' as any, v)} placeholder="C.P. fiscal del receptor" />
-                    <OdooField label="Correo Facturación" value={(form as any).facturama_correo_facturacion} onChange={v => set('facturama_correo_facturacion' as any, v)} placeholder="email@ejemplo.com" />
+                    <OdooField label="Código Postal" value={form.facturama_cp} onChange={v => set('facturama_cp', v)} placeholder="C.P. fiscal del receptor" />
+                    <OdooField label="Correo Facturación" value={form.facturama_correo_facturacion} onChange={v => set('facturama_correo_facturacion', v)} placeholder="email@ejemplo.com" />
                   </>
                 )}
               </div>
