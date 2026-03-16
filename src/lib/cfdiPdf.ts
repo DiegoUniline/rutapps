@@ -260,11 +260,11 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const gridTopY = y - 3;
 
   // ── LEFT COLUMN: Receptor ──
-  doc.setFontSize(7);
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.sublabel);
+  doc.setTextColor(...C.text);
   doc.text('RECEPTOR', colL, y);
-  y += 5;
+  y += 6;
 
   // Receptor name
   doc.setFontSize(8.5);
