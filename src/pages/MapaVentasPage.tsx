@@ -175,6 +175,15 @@ export default function MapaVentasPage() {
     }
   }, [markersForBounds, originPoint]);
 
+  const handleRecenter = useCallback(() => {
+    if (mapRef.current && markersForBounds.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      markersForBounds.forEach((v: any) => bounds.extend({ lat: v.clientes.gps_lat, lng: v.clientes.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
+      mapRef.current.fitBounds(bounds, 50);
+    }
+  }, [markersForBounds, originPoint]);
+
   const polylinePoints = useMemo(() => {
     if (!routeResult?.polyline) return null;
     return decodePolyline(routeResult.polyline);
