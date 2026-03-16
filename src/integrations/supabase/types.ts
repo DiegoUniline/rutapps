@@ -80,18 +80,21 @@ export type Database = {
       }
       almacenes: {
         Row: {
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
@@ -808,18 +811,21 @@ export type Database = {
       }
       clasificaciones: {
         Row: {
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
@@ -1048,18 +1054,21 @@ export type Database = {
       }
       cobradores: {
         Row: {
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
@@ -1822,18 +1831,21 @@ export type Database = {
       }
       listas: {
         Row: {
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
@@ -1851,18 +1863,21 @@ export type Database = {
       }
       marcas: {
         Row: {
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
@@ -2800,6 +2815,7 @@ export type Database = {
       roles: {
         Row: {
           acceso_ruta_movil: boolean
+          activo: boolean
           created_at: string
           descripcion: string | null
           empresa_id: string
@@ -2809,6 +2825,7 @@ export type Database = {
         }
         Insert: {
           acceso_ruta_movil?: boolean
+          activo?: boolean
           created_at?: string
           descripcion?: string | null
           empresa_id: string
@@ -2818,6 +2835,7 @@ export type Database = {
         }
         Update: {
           acceso_ruta_movil?: boolean
+          activo?: boolean
           created_at?: string
           descripcion?: string | null
           empresa_id?: string
@@ -3376,6 +3394,7 @@ export type Database = {
       unidades: {
         Row: {
           abreviatura: string | null
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
@@ -3383,6 +3402,7 @@ export type Database = {
         }
         Insert: {
           abreviatura?: string | null
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
@@ -3390,6 +3410,7 @@ export type Database = {
         }
         Update: {
           abreviatura?: string | null
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
@@ -3922,18 +3943,21 @@ export type Database = {
       }
       zonas: {
         Row: {
+          activo: boolean
           created_at: string
           empresa_id: string
           id: string
           nombre: string
         }
         Insert: {
+          activo?: boolean
           created_at?: string
           empresa_id: string
           id?: string
           nombre: string
         }
         Update: {
+          activo?: boolean
           created_at?: string
           empresa_id?: string
           id?: string
