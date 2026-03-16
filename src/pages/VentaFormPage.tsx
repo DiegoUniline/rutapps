@@ -213,7 +213,7 @@ export default function VentaFormPage() {
         direccion: clienteData?.direccion,
         rfc: clienteData?.rfc,
         email: clienteData?.email,
-        cp: clienteData?.cp,
+        cp: clienteData?.facturama_cp,
         colonia: clienteData?.colonia,
       },
       vendedor: vendedorName,
