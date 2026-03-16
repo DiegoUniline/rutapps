@@ -175,7 +175,7 @@ export default function VentaFormPage() {
 
   const handleGenerarPdf = async () => {
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
-    const vendedorName = profile?.nombre || profile?.email || '';
+    const vendedorName = profile?.nombre || user?.email || '';
     const almacenName = almacenesList?.find((a: any) => a.id === form.almacen_id)?.nombre;
     const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
 
