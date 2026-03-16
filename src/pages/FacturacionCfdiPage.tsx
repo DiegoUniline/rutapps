@@ -54,7 +54,7 @@ export default function FacturacionCfdiPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cfdis')
-        .select('*')
+        .select('*, ventas(folio)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -176,13 +176,14 @@ export default function FacturacionCfdiPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead className="w-[100px]">Folio</TableHead>
-                    <TableHead>Receptor</TableHead>
-                    <TableHead className="w-[120px]">RFC</TableHead>
-                    <TableHead className="w-[100px] text-right">Total</TableHead>
-                    <TableHead className="w-[110px]">Status</TableHead>
-                    <TableHead className="w-[100px]">Fecha</TableHead>
-                    <TableHead className="w-[120px]">Acciones</TableHead>
+                     <TableHead className="w-[100px]">Folio</TableHead>
+                     <TableHead>Receptor</TableHead>
+                     <TableHead className="w-[120px]">RFC</TableHead>
+                     <TableHead className="w-[90px]">Venta</TableHead>
+                     <TableHead className="w-[100px] text-right">Total</TableHead>
+                     <TableHead className="w-[110px]">Status</TableHead>
+                     <TableHead className="w-[100px]">Fecha</TableHead>
+                     <TableHead className="w-[120px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -192,7 +193,10 @@ export default function FacturacionCfdiPage() {
                         {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || '—'}
                       </TableCell>
                       <TableCell className="truncate max-w-[200px]">{cfdi.receiver_name || '—'}</TableCell>
-                      <TableCell className="font-mono text-xs">{cfdi.receiver_rfc || '—'}</TableCell>
+                       <TableCell className="font-mono text-xs">{cfdi.receiver_rfc || '—'}</TableCell>
+                       <TableCell className="font-mono text-xs text-primary">
+                         {(cfdi.ventas as any)?.folio || '—'}
+                       </TableCell>
                       <TableCell className="text-right font-medium">
                         ${Number(cfdi.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                       </TableCell>
