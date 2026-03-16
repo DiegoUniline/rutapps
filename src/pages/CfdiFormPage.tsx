@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, FileCheck, Loader2, Trash2, Save, AlertTriangle } from 'lucide-react';
@@ -11,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -314,10 +315,26 @@ export default function CfdiFormPage() {
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
       navigate('/facturacion-cfdi');
     } catch (e: any) {
-      // Parse Facturama error for user-friendly display
-      let errorMsg = e.message || 'Error al timbrar';
+      let errorMsg = 'No se pudo timbrar la factura.';
+
       try {
-        // Try to extract ModelState details from nested JSON
+        if (e instanceof FunctionsHttpError) {
+          const responseBody = await e.context.json();
+          if (responseBody?.error) {
+            errorMsg = responseBody.error;
+          } else if (responseBody?.Message) {
+            errorMsg = responseBody.Message;
+          } else {
+            errorMsg = JSON.stringify(responseBody);
+          }
+        } else if (e?.data?.error) {
+          errorMsg = e.data.error;
+        } else if (e?.error?.Message) {
+          errorMsg = e.error.Message;
+        } else if (e?.message) {
+          errorMsg = e.message;
+        }
+
         const match = errorMsg.match(/Facturama rechazó: (.*)/);
         if (match) {
           const parsed = JSON.parse(match[1]);
@@ -333,7 +350,10 @@ export default function CfdiFormPage() {
             errorMsg = parsed.Message;
           }
         }
-      } catch { /* use raw message */ }
+      } catch {
+        errorMsg = e?.message || errorMsg;
+      }
+
       setErrorDialog(errorMsg);
     } finally {
       setTimbring(false);
@@ -631,13 +651,16 @@ export default function CfdiFormPage() {
               <AlertTriangle className="h-5 w-5" />
               Error al timbrar
             </DialogTitle>
+            <DialogDescription>
+              Revisa el detalle exacto que devolvió el sistema de facturación.
+            </DialogDescription>
           </DialogHeader>
           <div className="whitespace-pre-wrap text-sm text-muted-foreground bg-destructive/5 border border-destructive/20 rounded-lg p-4 max-h-[300px] overflow-y-auto">
             {errorDialog}
           </div>
-          <DialogFooter>
+          <div className="flex justify-end">
             <Button onClick={() => setErrorDialog(null)}>Cerrar</Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
