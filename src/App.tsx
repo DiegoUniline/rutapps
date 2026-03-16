@@ -1,11 +1,12 @@
 import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { GoogleMapsProvider } from "@/hooks/useGoogleMapsKey";
 import { useSubscription } from "@/hooks/useSubscription";
+import { PermissionGuard } from "@/components/PermissionGuard";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
