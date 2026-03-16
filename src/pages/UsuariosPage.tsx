@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { MODULOS, ACCIONES, getModuloGroups } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, Save, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; }
