@@ -125,6 +125,7 @@ export default function CfdiFormPage() {
   const [saving, setSaving] = useState(false);
   const [timbring, setTimbring] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<string | null>(null);
 
   const readOnly = cfdi?.status !== 'borrador';
 
