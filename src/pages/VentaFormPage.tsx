@@ -664,6 +664,13 @@ export default function VentaFormPage() {
                       set('cliente_id', cId);
                       const c = clientesList?.find(cl => cl.id === cId);
                       if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
+                      // Inherit requiere_factura from client
+                      if (c?.requiere_factura) set('requiere_factura', true);
+                    }}
+                    placeholder="Buscar cliente..."
+                  />
+                      const c = clientesList?.find(cl => cl.id === cId);
+                      if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
                     }}
                     placeholder="Buscar cliente..."
                   />
