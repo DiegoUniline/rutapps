@@ -81,7 +81,7 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
         <Badge variant="secondary" className="text-xs">{filtered.length} registros</Badge>
       </div>
 
-      <div className="border rounded-lg overflow-hidden max-h-[600px] overflow-y-auto">
+      <div className="border rounded-lg overflow-hidden flex-1 overflow-y-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
