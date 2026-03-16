@@ -18,6 +18,9 @@ const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', email: '', direccion: '',
   rfc: '', notas: '', colonia: '', frecuencia: 'semanal', dia_visita: [],
   credito: false, limite_credito: 0, dias_credito: 0, orden: 0, status: 'activo',
+  requiere_factura: false, facturama_rfc: '', facturama_razon_social: '',
+  facturama_regimen_fiscal: '', facturama_uso_cfdi: '', facturama_cp: '',
+  facturama_correo_facturacion: '',
 };
 
 const statusSteps = [
