@@ -1,10 +1,10 @@
 /**
- * Entrega PDF — Clean Odoo-style layout
+ * Entrega PDF — Professional clean layout
  */
 import {
-  createDoc, C, fmtDate,
+  createDoc, ML, MR, C, fmtDate,
   drawDocHeader, drawInfoGrid, drawCleanTable,
-  drawNotes, drawSignatures, drawFooter, checkPageBreak,
+  drawNotes, drawSignatures, drawFooter,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
 
@@ -67,21 +67,21 @@ export function generarEntregaPdf(params: EntregaPdfParams): Blob {
   y = drawCleanTable(doc, y,
     ['Código', 'Producto', 'Unidad', 'Almacén', 'Pedida', 'Surtida', 'Estado'],
     lineas.map(l => [
-      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.codigo,
       l.nombre,
-      { content: l.unidad || '—', styles: { textColor: C.muted } },
-      { content: l.almacen_origen || '—', styles: { textColor: C.muted, fontSize: 7 } },
+      l.unidad || '—',
+      l.almacen_origen || '—',
       { content: String(l.cantidad_pedida), styles: { halign: 'right' } },
       { content: String(l.cantidad_entregada), styles: { halign: 'right', fontStyle: 'bold' } },
       { content: l.hecho ? '✓ Surtido' : 'Pendiente', styles: { fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 22 },
-      2: { cellWidth: 16 },
-      3: { cellWidth: 26 },
-      4: { cellWidth: 16, halign: 'right' },
-      5: { cellWidth: 16, halign: 'right' },
-      6: { cellWidth: 22 },
+      0: { cellWidth: 24 },
+      2: { cellWidth: 18 },
+      3: { cellWidth: 28 },
+      4: { cellWidth: 18, halign: 'right' },
+      5: { cellWidth: 18, halign: 'right' },
+      6: { cellWidth: 24 },
     },
     (data: any) => {
       if (data.section === 'body' && data.column.index === 6) {
@@ -100,14 +100,13 @@ export function generarEntregaPdf(params: EntregaPdfParams): Blob {
   const totalEntregada = lineas.reduce((s, l) => s + l.cantidad_entregada, 0);
   const pendientes = lineas.filter(l => !l.hecho).length;
 
-  doc.setFontSize(7.5);
+  const pageW = doc.internal.pageSize.getWidth();
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
-  const pageW = doc.internal.pageSize.getWidth();
-  doc.text(`Pedida: ${totalPedida}  ·  Surtida: ${totalEntregada}  ·  Pendientes: ${pendientes}`, pageW - 14, y - 2, { align: 'right' });
-  y += 12;
+  doc.text(`Pedida: ${totalPedida}  ·  Surtida: ${totalEntregada}  ·  Pendientes: ${pendientes}`, pageW - MR, y - 3, { align: 'right' });
+  y += 14;
 
-  // Signatures
   y = drawSignatures(doc, y, 'Entrega', 'Recibe');
 
   if (entrega.notas) {

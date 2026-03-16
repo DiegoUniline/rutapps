@@ -1,5 +1,5 @@
 /**
- * Ajuste de Inventario PDF — Clean Odoo-style layout
+ * Ajuste de Inventario PDF — Professional clean layout
  */
 import {
   createDoc, C, fmtDate,
@@ -55,17 +55,17 @@ export function generarAjusteInventarioPdf(params: AjusteInventarioPdfParams): B
   y = drawCleanTable(doc, y,
     ['Código', 'Producto', 'Anterior', 'Nueva', 'Diferencia'],
     lineas.map(l => [
-      { content: l.codigo, styles: { textColor: C.muted, fontSize: 7 } },
+      l.codigo,
       l.nombre,
       { content: String(l.cantidad_anterior), styles: { halign: 'right' } },
       { content: String(l.cantidad_nueva), styles: { halign: 'right', fontStyle: 'bold' } },
       { content: l.diferencia > 0 ? `+${l.diferencia}` : String(l.diferencia), styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
-      0: { cellWidth: 24 },
-      2: { cellWidth: 20, halign: 'right' },
-      3: { cellWidth: 20, halign: 'right' },
-      4: { cellWidth: 22, halign: 'right' },
+      0: { cellWidth: 26 },
+      2: { cellWidth: 22, halign: 'right' },
+      3: { cellWidth: 22, halign: 'right' },
+      4: { cellWidth: 24, halign: 'right' },
     },
     (data: any) => {
       if (data.section === 'body' && data.column.index === 4) {
