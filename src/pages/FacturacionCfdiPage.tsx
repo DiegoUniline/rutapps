@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function FacturacionCfdiPage() {
   const { empresa } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showTimbrar, setShowTimbrar] = useState(false);
@@ -185,7 +187,7 @@ export default function FacturacionCfdiPage() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((cfdi: any) => (
-                    <TableRow key={cfdi.id} className="text-[13px]">
+                    <TableRow key={cfdi.id} className="text-[13px] cursor-pointer" onClick={() => navigate(`/facturacion-cfdi/${cfdi.id}`)}>
                       <TableCell className="font-mono text-xs font-semibold">
                         {cfdi.serie ? `${cfdi.serie}-` : ''}{cfdi.folio || '—'}
                       </TableCell>

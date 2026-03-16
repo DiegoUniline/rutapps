@@ -589,6 +589,88 @@ export type Database = {
         }
         Relationships: []
       }
+      cfdi_lineas: {
+        Row: {
+          cantidad: number
+          cfdi_id: string
+          created_at: string
+          descripcion: string
+          id: string
+          ieps_monto: number
+          ieps_pct: number
+          iva_monto: number
+          iva_pct: number
+          precio_unitario: number
+          product_code: string
+          producto_id: string | null
+          subtotal: number
+          total: number
+          unit_code: string
+          unit_name: string
+          venta_linea_id: string | null
+        }
+        Insert: {
+          cantidad?: number
+          cfdi_id: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          ieps_monto?: number
+          ieps_pct?: number
+          iva_monto?: number
+          iva_pct?: number
+          precio_unitario?: number
+          product_code?: string
+          producto_id?: string | null
+          subtotal?: number
+          total?: number
+          unit_code?: string
+          unit_name?: string
+          venta_linea_id?: string | null
+        }
+        Update: {
+          cantidad?: number
+          cfdi_id?: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          ieps_monto?: number
+          ieps_pct?: number
+          iva_monto?: number
+          iva_pct?: number
+          precio_unitario?: number
+          product_code?: string
+          producto_id?: string | null
+          subtotal?: number
+          total?: number
+          unit_code?: string
+          unit_name?: string
+          venta_linea_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cfdi_lineas_cfdi_id_fkey"
+            columns: ["cfdi_id"]
+            isOneToOne: false
+            referencedRelation: "cfdis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cfdi_lineas_venta_linea_id_fkey"
+            columns: ["venta_linea_id"]
+            isOneToOne: false
+            referencedRelation: "venta_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cfdis: {
         Row: {
           cancel_date: string | null

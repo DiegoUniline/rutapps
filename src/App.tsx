@@ -66,6 +66,7 @@ const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
+const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
 
@@ -266,6 +267,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/facturacion" element={<FacturacionPage />} />
               <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
               <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
+              <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
