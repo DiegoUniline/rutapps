@@ -8,7 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -102,6 +102,14 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    label: 'Facturación',
+    icon: FileText,
+    path: '/facturacion-cfdi',
+    children: [
+      { label: 'Catálogos SAT', path: '/facturacion-cfdi' },
+    ],
+  },
+  {
     label: 'Configuración',
     icon: Settings,
     path: '/configuracion',
@@ -109,7 +117,7 @@ const navItems: NavItem[] = [
       { label: 'General', path: '/configuracion' },
       { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
-      { label: 'Facturación', path: '/facturacion' },
+      { label: 'Mi suscripción', path: '/facturacion' },
     ],
   },
 ];
@@ -206,6 +214,7 @@ function Breadcrumb() {
     'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
     logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
     asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
+    'facturacion-cfdi': 'Facturación',
   };
 
   if (segments.length <= 1) return null;

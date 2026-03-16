@@ -65,6 +65,7 @@ const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
+const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
 
@@ -263,6 +264,7 @@ function renderAuthenticatedRoutes() {
               <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
               <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
               <Route path="/facturacion" element={<FacturacionPage />} />
+              <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
