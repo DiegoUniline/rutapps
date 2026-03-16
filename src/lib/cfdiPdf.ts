@@ -602,13 +602,13 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   y = checkPageBreak(doc, y, 16);
 
   doc.setDrawColor(...C.borderLight);
-  doc.setLineWidth(0.2);
+  doc.setLineWidth(0.3);
   doc.line(ML, y, rightX, y);
   y += 5;
 
-  doc.setFontSize(6.5);
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...C.light);
+  doc.setTextColor(...C.text);
   doc.text('Este documento es una representación impresa de un CFDI · Generado por tu sistema', midX, y, { align: 'center' });
 
   drawFooter(doc, `${empresa.nombre} — Factura generada por Rutapp`);
