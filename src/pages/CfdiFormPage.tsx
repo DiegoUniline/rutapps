@@ -129,6 +129,10 @@ export default function CfdiFormPage() {
   const [timbring, setTimbring] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [errorDialog, setErrorDialog] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelMotivo, setCancelMotivo] = useState('02');
+  const [cancelUuidSustitucion, setCancelUuidSustitucion] = useState('');
+  const [canceling, setCanceling] = useState(false);
 
   const readOnly = cfdi?.status !== 'borrador';
 
