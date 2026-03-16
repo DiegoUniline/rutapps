@@ -206,6 +206,70 @@ export default function TarifaFormPage() {
     return (order[a.aplica_a] ?? 2) - (order[b.aplica_a] ?? 2);
   });
 
+  // ── Used IDs tracking (for duplicate prevention) ──
+  const usedCatIds = new Set<string>();
+  const usedProdIds = new Set<string>();
+  lineas.forEach(l => {
+    if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => usedCatIds.add(id));
+    if (l.aplica_a === 'producto') l.producto_ids.forEach(id => usedProdIds.add(id));
+  });
+
+  // Available items (excluding already used, but include current editing line's items)
+  const getAvailableClas = (currentIds: string[]) =>
+    clasItems.filter(c => !usedCatIds.has(c.id) || currentIds.includes(c.id));
+  const getAvailableProds = (currentIds: string[]) =>
+    prodItems.filter(p => !usedProdIds.has(p.id) || currentIds.includes(p.id));
+
+  // Validation helper
+  const validateNoDuplicates = (aplica_a: string, prodIds: string[], clasIds: string[], excludeLineaId?: string) => {
+    const otherLineas = lineas.filter(l => l.id !== excludeLineaId);
+    if (aplica_a === 'categoria') {
+      const otherCatIds = new Set<string>();
+      otherLineas.forEach(l => { if (l.aplica_a === 'categoria') l.clasificacion_ids.forEach(id => otherCatIds.add(id)); });
+      const dupes = clasIds.filter(id => otherCatIds.has(id));
+      if (dupes.length > 0) {
+        const names = dupes.map(id => clasMap.get(id) ?? id).join(', ');
+        toast.error(`Categoría(s) ya en otra regla: ${names}`);
+        return false;
+      }
+    }
+    if (aplica_a === 'producto') {
+      const otherProdIds = new Set<string>();
+      otherLineas.forEach(l => { if (l.aplica_a === 'producto') l.producto_ids.forEach(id => otherProdIds.add(id)); });
+      const dupes = prodIds.filter(id => otherProdIds.has(id));
+      if (dupes.length > 0) {
+        const names = dupes.map(id => prodMap.get(id) ?? id).join(', ');
+        toast.error(`Producto(s) ya en otra regla: ${names}`);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // ── Load all categories button ──
+  const [loadingAllCats, setLoadingAllCats] = useState(false);
+  const handleLoadAllCategories = async () => {
+    if (!id || isNew || !clasificaciones) return;
+    const unusedCats = clasificaciones.filter(c => !usedCatIds.has(c.id));
+    if (unusedCats.length === 0) { toast.info('Todas las categorías ya tienen regla'); return; }
+    setLoadingAllCats(true);
+    try {
+      for (const cat of unusedCats) {
+        await saveLinea.mutateAsync({
+          tarifa_id: id,
+          aplica_a: 'categoria',
+          tipo_calculo: 'margen_costo',
+          precio: 0, precio_minimo: 0, descuento_max: 0, margen_pct: 0, descuento_pct: 0,
+          producto_ids: [],
+          clasificacion_ids: [cat.id],
+        } as any);
+      }
+      refetch();
+      toast.success(`${unusedCats.length} categorías agregadas`);
+    } catch (err: any) { toast.error(err.message); }
+    setLoadingAllCats(false);
+  };
+
   const getCalculoDisplay = (l: TarifaLinea) => {
     if (l.tipo_calculo === 'margen_costo') return `+${l.margen_pct}% s/costo`;
     if (l.tipo_calculo === 'descuento_precio') return `-${l.descuento_pct}% s/precio`;
