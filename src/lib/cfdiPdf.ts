@@ -535,14 +535,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     doc.line(ML, y, rightX, y);
     y += 4;
 
-    // QR continued below - second QR row
-    if (qrDataUrl) {
-      try {
-        doc.addImage(qrDataUrl, 'PNG', ML, y - 2, 18, 18);
-      } catch { /* ignore */ }
-    }
-
-    const bottomInfoX = ML + 22;
+    const bottomInfoX = ML;
 
     doc.setFontSize(6.5);
     doc.setFont('helvetica', 'bold');
