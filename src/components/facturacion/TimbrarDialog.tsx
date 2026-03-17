@@ -20,6 +20,7 @@ interface Props {
 
 export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   const { empresa, user } = useAuth();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [selectedVentaId, setSelectedVentaId] = useState<string | null>(null);
   const [ventaSearch, setVentaSearch] = useState('');
