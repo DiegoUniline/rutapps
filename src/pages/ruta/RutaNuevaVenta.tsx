@@ -429,8 +429,8 @@ export default function RutaNuevaVenta() {
     ));
   };
 
-  // Offline-safe save (queues everything locally)
-  const handleSaveOnly = async () => {
+  // Unified save handler — applies payment if totalACobrar > 0
+  const handleSave = async () => {
     if (!empresa || !user) return;
     setSaving(true);
     try {
@@ -453,7 +453,11 @@ export default function RutaNuevaVenta() {
         }
       }
 
-      // 2. Create sale
+      // Determine if payment is being applied
+      const applyPayment = totalACobrar > 0;
+      const saldoPendienteVenta = applyPayment && condicionPago === 'contado' ? 0 : totals.total;
+
+      // 2. Create the sale
       const saveCliente = clientes?.find(c => c.id === clienteId);
       const tarifaId = saveCliente?.tarifa_id || null;
       const almacenId = profile?.almacen_id || null;
@@ -464,8 +468,9 @@ export default function RutaNuevaVenta() {
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: 'confirmado', notas: notas || null,
         tarifa_id: tarifaId, almacen_id: almacenId,
-        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento,
-        total: totals.total, saldo_pendiente: totals.total,
+        subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps,
+        descuento_total: totals.descuento, total: totals.total,
+        saldo_pendiente: saldoPendienteVenta,
         fecha: new Date().toISOString().split('T')[0],
         created_at: new Date().toISOString(),
       });
@@ -488,77 +493,8 @@ export default function RutaNuevaVenta() {
         });
       }
 
-      // 4. Update carga
-      await updateCargaVendidaOffline(cart);
-
-      toast.success('Venta guardada (se sincronizará automáticamente)');
-      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
-      queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
-      setTicketInfo({ folio: ventaId.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
-    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
-  };
-
-  const handleSave = async () => {
-    if (!empresa || !user) return;
-    setSaving(true);
-    try {
-      const ventaId = crypto.randomUUID();
-
-      // 1. Save devoluciones
-      if (devoluciones.length > 0 && clienteId) {
-        const devId = crypto.randomUUID();
-        await queueOperation('devoluciones', 'insert', {
-          id: devId, empresa_id: empresa.id, user_id: user.id,
-          cliente_id: clienteId, tipo: 'tienda', fecha: new Date().toISOString().split('T')[0],
-          created_at: new Date().toISOString(),
-        });
-        for (const d of devoluciones) {
-          await queueOperation('devolucion_lineas', 'insert', {
-            id: crypto.randomUUID(), devolucion_id: devId,
-            producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo,
-            created_at: new Date().toISOString(),
-          });
-        }
-      }
-
-      // 2. Create the sale
-      const selectedCliente2 = clientes?.find(c => c.id === clienteId);
-      const tarifaId2 = selectedCliente2?.tarifa_id || null;
-      const almacenId2 = profile?.almacen_id || null;
-      await queueOperation('ventas', 'insert', {
-        id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
-        vendedor_id: profile?.vendedor_id || profile?.id || null,
-        condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
-        fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
-        status: 'confirmado',
-        notas: notas || null, subtotal: totals.subtotal, iva_total: totals.iva,
-        tarifa_id: tarifaId2, almacen_id: almacenId2,
-        ieps_total: totals.ieps, descuento_total: 0, total: totals.total,
-        saldo_pendiente: condicionPago === 'contado' ? 0 : totals.total,
-        fecha: new Date().toISOString().split('T')[0],
-        created_at: new Date().toISOString(),
-      });
-
-      // 3. Insert lines
-      for (const item of cart) {
-        const lineSub = item.precio_unitario * item.cantidad;
-        const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
-        const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
-        await queueOperation('venta_lineas', 'insert', {
-          id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id,
-          descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario,
-          unidad_id: item.unidad_id || null,
-          subtotal: lineSub,
-          iva_pct: item.iva_pct, iva_monto: lineIva,
-          ieps_pct: item.ieps_pct, ieps_monto: lineIeps, descuento_pct: 0,
-          total: lineSub + lineIeps + lineIva,
-          notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null,
-          created_at: new Date().toISOString(),
-        });
-      }
-
-      // 4. Cobro
-      if (totalACobrar > 0 && clienteId) {
+      // 4. Cobro — only if there's something to collect
+      if (applyPayment && clienteId) {
         const cobroId = crypto.randomUUID();
         await queueOperation('cobros', 'insert', {
           id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id,
@@ -574,7 +510,6 @@ export default function RutaNuevaVenta() {
         for (const cuenta of cuentasPendientes) {
           if (cuenta.montoAplicar > 0) {
             aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar });
-            // Update saldo_pendiente locally
             await queueOperation('ventas', 'update', {
               id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar,
             });
