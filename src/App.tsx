@@ -79,6 +79,7 @@ const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
 const RutaVentas = lazy(() => import("@/pages/ruta/RutaVentas"));
+const RutaVentasTab = lazy(() => import("@/pages/ruta/RutaVentasTab"));
 const RutaClientesEntregas = lazy(() => import("@/pages/ruta/RutaClientesEntregas"));
 const RutaStock = lazy(() => import("@/pages/ruta/RutaStock"));
 const RutaGastos = lazy(() => import("@/pages/ruta/RutaGastos"));
