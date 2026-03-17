@@ -197,8 +197,13 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-x-8">
               <div className="odoo-field-row">
-                <span className="odoo-field-label">Producto</span>
-                <span className="text-[13px] font-medium">{form.nombre ?? '—'}</span>
+                <span className="odoo-field-label">Aplica a</span>
+                <select className="input-odoo py-1 text-[13px]" value={newRule.aplica_a}
+                  onChange={e => setNewRule(p => ({ ...p, aplica_a: e.target.value as any, clasificacion_ids: [] }))}>
+                  <option value="producto">Este producto</option>
+                  <option value="categoria">Categoría</option>
+                  <option value="todos">Todos los productos</option>
+                </select>
               </div>
               <div className="odoo-field-row">
                 <span className="odoo-field-label">Precio mínimo</span>
@@ -206,6 +211,44 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
               </div>
             </div>
+            {newRule.aplica_a === 'producto' && (
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Producto</span>
+                <span className="text-[13px] font-medium">{form.nombre ?? '—'}</span>
+              </div>
+            )}
+            {newRule.aplica_a === 'categoria' && (
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Categorías</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(clasificaciones ?? []).map(c => {
+                    const selected = newRule.clasificacion_ids.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setNewRule(p => ({
+                          ...p,
+                          clasificacion_ids: selected
+                            ? p.clasificacion_ids.filter(id => id !== c.id)
+                            : [...p.clasificacion_ids, c.id],
+                        }))}
+                        className={`text-[12px] px-2 py-0.5 rounded-full border transition-colors ${
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {c.nombre}
+                      </button>
+                    );
+                  })}
+                  {(clasificaciones ?? []).length === 0 && (
+                    <span className="text-[12px] text-muted-foreground">No hay categorías creadas</span>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-x-8">
               <div className="odoo-field-row">
                 <span className="odoo-field-label">Tipo de precio</span>
