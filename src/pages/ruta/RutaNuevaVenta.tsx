@@ -599,7 +599,7 @@ export default function RutaNuevaVenta() {
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
-      setTicketInfo({ folio: ventaId.slice(0, 8).toUpperCase(), fecha: new Date().toLocaleDateString('es-MX') });
+      setTicketInfo({ folio: localFolio, fecha: new Date().toLocaleDateString('es-MX') });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
