@@ -112,7 +112,7 @@ export default function RutaDevolucion() {
     try {
       await saveDevolucion.mutateAsync({
         devolucion: {
-          vendedor_id: vendedor?.id,
+          vendedor_id: vendedorId,
           cliente_id: tipo === 'tienda' ? clienteId! : undefined,
           carga_id: carga?.id,
           tipo,
