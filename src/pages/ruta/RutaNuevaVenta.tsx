@@ -188,21 +188,19 @@ export default function RutaNuevaVenta() {
     }
   }, [urlClienteId, clientes]);
 
-  const { data: ventasPendientes } = useQuery({
-    queryKey: ['ruta-cuentas-pendientes', clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
-        .eq('cliente_id', clienteId!)
-        .eq('condicion_pago', 'credito')
-        .gt('saldo_pendiente', 0)
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .order('fecha', { ascending: true });
-      return data ?? [];
-    },
-  });
+  // Offline-compatible: filter ventas from local cache for cuentas pendientes
+  const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const ventasPendientes = useMemo(() => {
+    if (!allVentas || !clienteId) return [];
+    return (allVentas as any[])
+      .filter(v =>
+        v.cliente_id === clienteId &&
+        v.condicion_pago === 'credito' &&
+        (v.saldo_pendiente ?? 0) > 0 &&
+        ['confirmado', 'entregado', 'facturado'].includes(v.status)
+      )
+      .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  }, [allVentas, clienteId]);
 
   const saldoPendienteTotal = useMemo(() =>
     (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
