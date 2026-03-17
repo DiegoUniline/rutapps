@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned, Crosshair, Loader2, CheckCircle2 } from 'lucide-react';
+import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { cn } from '@/lib/utils';
