@@ -285,6 +285,7 @@ Deno.serve(async (req) => {
         empresa_id, empresa_nombre, empresa_email, empresa_telefono, empresa_rfc,
         items, concepto, days_until_due, plan_nombre, num_usuarios, timbres,
         descuento_plan_pct, descuento_extra_pct, total_centavos, mensaje_personal,
+        enviar_email, enviar_whatsapp, telefono_envio, correo_envio,
       } = body;
 
       if (!empresa_id) throw new Error("empresa_id requerido");
@@ -497,57 +498,53 @@ Sistema de Gestión de Rutas<br>
 </td></tr></table>
 </body></html>`;
 
-      // Send professional email via Stripe (which also sends its own notification)
-      // Plus send our custom professional email
-      try {
-        await stripe.invoices.sendInvoice(invoice.id);
-      } catch (_) { /* Stripe may auto-send */ }
+      // Send via channels based on frontend flags
+      const sendResults: { email?: boolean; whatsapp?: boolean } = {};
 
-      // Log
-      await supabase.from("billing_notifications").insert({
-        customer_email: clientEmail,
-        channel: "email",
-        tipo: "factura",
-        mensaje: `Factura ${folio} - ${concepto}`,
-        stripe_invoice_id: finalizedInv.id,
-        stripe_invoice_url: payUrl,
-        monto_centavos: total_centavos,
-        status: "sent",
-      });
+      // EMAIL
+      if (enviar_email !== false) {
+        try {
+          await stripe.invoices.sendInvoice(invoice.id);
+          sendResults.email = true;
+        } catch (_) { sendResults.email = false; }
 
-      // Also try WhatsApp notification
-      const { data: profileForWa } = await supabase
-        .from("profiles")
-        .select("telefono, empresa_id")
-        .eq("empresa_id", empresa_id)
-        .limit(1)
-        .maybeSingle();
+        await supabase.from("billing_notifications").insert({
+          customer_email: correo_envio || clientEmail,
+          channel: "email",
+          tipo: "factura",
+          mensaje: `Factura ${folio} - ${concepto}`,
+          stripe_invoice_id: finalizedInv.id,
+          stripe_invoice_url: payUrl,
+          monto_centavos: total_centavos,
+          status: "sent",
+        });
+      }
 
-      if (profileForWa?.telefono) {
-        const phone = profileForWa.telefono.replace(/[\s\-\(\)]/g, "");
+      // WHATSAPP
+      if (enviar_whatsapp && telefono_envio) {
+        const phone = telefono_envio.replace(/[\s\-\(\)]/g, "");
         const waMsg = `📋 *Factura Rutapp — ${folio}*\n\nHola *${empresa_nombre}* 👋\n\nSe ha generado tu factura:\n\n📦 *Plan:* ${plan_nombre}\n👥 *Usuarios:* ${num_usuarios}${timbres > 0 ? `\n🔖 *Timbres:* ${timbres}` : ''}${descuento_plan_pct > 0 ? `\n💚 *Descuento plan:* ${descuento_plan_pct}%` : ''}${descuento_extra_pct > 0 ? `\n🎁 *Descuento extra:* ${descuento_extra_pct}%` : ''}\n\n💰 *Total: ${totalFmt}*\n\n💳 *Paga aquí:*\n${payUrl}\n\n⏰ Vigencia: ${vigencia} días\n\nGracias por confiar en Rutapp 🚀`;
 
+        // Get any available WA token
         const { data: waConfig } = await supabase
           .from("whatsapp_config")
           .select("api_token")
-          .eq("empresa_id", empresa_id)
+          .order("created_at", { ascending: true })
+          .limit(1)
           .maybeSingle();
 
-        const waToken = waConfig?.api_token || (() => {
-          // Try first available token
-          return null;
-        })();
-
+        const waToken = waConfig?.api_token;
         if (waToken) {
           try {
-            await fetch(WHATSAPI_URL, {
+            const waRes = await fetch(WHATSAPI_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-api-token": waToken },
               body: JSON.stringify({ action: "send-text", phone, message: waMsg }),
             });
+            sendResults.whatsapp = waRes.ok;
 
             await supabase.from("billing_notifications").insert({
-              customer_email: clientEmail,
+              customer_email: correo_envio || clientEmail,
               customer_phone: phone,
               channel: "whatsapp",
               tipo: "factura",
@@ -555,9 +552,9 @@ Sistema de Gestión de Rutas<br>
               stripe_invoice_id: finalizedInv.id,
               stripe_invoice_url: payUrl,
               monto_centavos: total_centavos,
-              status: "sent",
+              status: waRes.ok ? "sent" : "error",
             });
-          } catch (_) { /* WhatsApp optional */ }
+          } catch (_) { sendResults.whatsapp = false; }
         }
       }
 
@@ -566,7 +563,8 @@ Sistema de Gestión de Rutas<br>
         hosted_url: payUrl,
         status: finalizedInv.status,
         folio,
-        email_sent: true,
+        email_sent: sendResults.email ?? false,
+        whatsapp_sent: sendResults.whatsapp ?? false,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
