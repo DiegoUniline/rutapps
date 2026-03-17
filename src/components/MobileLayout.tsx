@@ -13,13 +13,13 @@ const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
   { label: 'Stock', icon: Package, path: '/ruta/stock' },
+  { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
+  { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
+  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
 ];
 
 const menuItems = [
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
-  { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
-  { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
-  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
 ];
 
 export default function MobileLayout() {
