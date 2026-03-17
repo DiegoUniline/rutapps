@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, ChangeEvent } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera, Plus, Crown } from 'lucide-react';
@@ -7,7 +7,7 @@ import { calcTax } from '@/lib/taxUtils';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
-import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea, useProductoProveedores, useSaveProductoProveedor, useDeleteProductoProveedor } from '@/hooks/useData';
+import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea, useProductoProveedores, useSaveProductoProveedor, useDeleteProductoProveedor, useSaveTarifa, useAllListasPrecios, useSaveListaPrecio } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -53,18 +53,53 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
 }) {
   const saveLinea = useSaveTarifaLinea();
   const deleteLineaMut = useDeleteTarifaLinea();
+  const saveTarifaMut = useSaveTarifa();
+  const { data: allListas } = useAllListasPrecios();
+  const saveListaMut = useSaveListaPrecio();
+  const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCol, setEditingCol] = useState<string | null>(null);
   const [editVal, setEditVal] = useState<any>({});
   const [newRule, setNewRule] = useState({
     tarifa_id: '',
+    lista_precio_id: '',
     tipo_calculo: 'precio_fijo' as TipoCalculoTarifa,
     precio: 0,
     margen_pct: 0,
     descuento_pct: 0,
     precio_minimo: 0,
   });
+
+  // When tarifa changes, auto-select the principal lista for that tarifa
+  const listasForTarifa = useMemo(() =>
+    (allListas ?? []).filter(l => l.tarifa_id === newRule.tarifa_id),
+    [allListas, newRule.tarifa_id]
+  );
+
+  useEffect(() => {
+    if (newRule.tarifa_id) {
+      const principal = listasForTarifa.find(l => l.es_principal);
+      setNewRule(p => ({ ...p, lista_precio_id: principal?.id ?? listasForTarifa[0]?.id ?? '' }));
+    }
+  }, [newRule.tarifa_id, listasForTarifa]);
+
+  const handleCreateTarifa = async (name: string) => {
+    try {
+      const res = await saveTarifaMut.mutateAsync({ nombre: name, tipo: 'general', activa: true } as any);
+      qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+      return res.id;
+    } catch { return undefined; }
+  };
+
+  const handleCreateLista = async (name: string) => {
+    if (!newRule.tarifa_id) { toast.error('Selecciona primero una tarifa'); return undefined; }
+    try {
+      const res = await saveListaMut.mutateAsync({ tarifa_id: newRule.tarifa_id, nombre: name, es_principal: false });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+      return res.id;
+    } catch { return undefined; }
+  };
 
   const calcPrice = (linea: any) => {
     const c = form.costo ?? 0, pr = form.precio_principal ?? 0;
@@ -80,6 +115,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
+        lista_precio_id: newRule.lista_precio_id || null,
         aplica_a: 'producto',
         tipo_calculo: newRule.tipo_calculo,
         precio: newRule.precio,
@@ -91,7 +127,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
       } as any);
       toast.success('Precio agregado');
       setShowModal(false);
-      setNewRule({ tarifa_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
+      setNewRule({ tarifa_id: '', lista_precio_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -174,6 +210,17 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   value={newRule.tarifa_id}
                   onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
                   placeholder="Buscar tarifa..."
+                  onCreateNew={handleCreateTarifa}
+                />
+              </div>
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Lista de precios</span>
+                <SearchableSelect
+                  options={listasForTarifa.map(l => ({ value: l.id, label: `${l.es_principal ? '★ ' : ''}${l.nombre}` }))}
+                  value={newRule.lista_precio_id}
+                  onChange={val => setNewRule(p => ({ ...p, lista_precio_id: val }))}
+                  placeholder={newRule.tarifa_id ? 'Buscar lista...' : 'Selecciona tarifa primero'}
+                  onCreateNew={handleCreateLista}
                 />
               </div>
             </div>
