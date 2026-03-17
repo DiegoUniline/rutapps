@@ -438,6 +438,28 @@ export default function ProductoFormPage() {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
 
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresa?.id) return;
+    setUploadingImage(true);
+    try {
+      const compressed = await compressPhoto(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
+      const productId = id && !isNew ? id : crypto.randomUUID();
+      const path = `${empresa.id}/productos/${productId}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
+      set('imagen_url', urlData.publicUrl + '?t=' + Date.now());
+      toast.success('Imagen cargada');
+    } catch (err: any) {
+      toast.error('Error al subir imagen: ' + err.message);
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
   const set = (key: keyof Producto, value: any) => setForm(prev => ({ ...prev, [key]: value }));
