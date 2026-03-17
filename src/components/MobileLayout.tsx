@@ -19,9 +19,7 @@ const menuItems = [
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
   { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
-  { label: 'Devoluciones', icon: RotateCcw, path: '/ruta/devolucion' },
   { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
-  { label: 'Navegación guiada', icon: Navigation, path: '/ruta/navegacion?modo=clientes' },
 ];
 
 export default function MobileLayout() {
