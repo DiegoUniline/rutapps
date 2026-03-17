@@ -138,6 +138,10 @@ export default function AjustesInventarioPage() {
 
   // ─── Export template ─────────────────────────────────────────
   const exportTemplate = () => {
+    if (!almacenId) {
+      toast.error('Selecciona un almacén primero');
+      return;
+    }
     if (!productos || productos.length === 0) {
       toast.info('No hay productos para exportar');
       return;
