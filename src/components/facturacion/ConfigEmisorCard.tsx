@@ -24,6 +24,7 @@ export function ConfigEmisorCard() {
     estado: '',
   });
   const [saving, setSaving] = useState(false);
+  const [initialForm, setInitialForm] = useState(form);
 
   // CSF upload
   const csfInputRef = useRef<HTMLInputElement>(null);
@@ -63,7 +64,7 @@ export function ConfigEmisorCard() {
 
   useEffect(() => {
     if (empresa) {
-      setForm({
+      const initial = {
         rfc: empresa.rfc || '',
         razon_social: empresa.razon_social || '',
         regimen_fiscal: empresa.regimen_fiscal || '',
@@ -72,9 +73,13 @@ export function ConfigEmisorCard() {
         colonia: empresa.colonia || '',
         ciudad: empresa.ciudad || '',
         estado: empresa.estado || '',
-      });
+      };
+      setForm(initial);
+      setInitialForm(initial);
     }
   }, [empresa]);
+
+  const hasChanges = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   async function handleSave() {
     if (!empresa?.id) return;
@@ -101,6 +106,7 @@ export function ConfigEmisorCard() {
       toast.error('Error al guardar: ' + error.message);
     } else {
       toast.success('Datos fiscales guardados');
+      setInitialForm(form);
     }
     setSaving(false);
   }
@@ -350,9 +356,14 @@ export function ConfigEmisorCard() {
               />
             </div>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+            variant={hasChanges ? "default" : "secondary"}
+            className="w-full sm:w-auto"
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
-            Guardar datos fiscales
+            {hasChanges ? 'Guardar datos fiscales' : 'Sin cambios'}
           </Button>
         </CardContent>
       </Card>
