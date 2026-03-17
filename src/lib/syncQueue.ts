@@ -2,7 +2,6 @@ import { offlineDb, type SyncQueueItem, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
 import { markAsSynced } from './syncVerify';
 import { isDataSaverEnabled } from './dataSaver';
-import { markAsSynced } from './syncVerify';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
