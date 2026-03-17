@@ -118,6 +118,13 @@ export function useOfflineQuery<T = any>(
     loadData();
   }, [loadData]);
 
+  // Re-fetch when sync completes (server may have generated folios, etc.)
+  useEffect(() => {
+    const handler = () => loadData();
+    window.addEventListener('uniline:sync-complete', handler);
+    return () => window.removeEventListener('uniline:sync-complete', handler);
+  }, [loadData]);
+
   return { data, isLoading, refetch: loadData };
 }
 

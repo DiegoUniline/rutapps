@@ -4,6 +4,7 @@ import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle, Moo
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
+import UpdateBanner from '@/components/ruta/UpdateBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -64,6 +65,7 @@ export default function MobileLayout() {
         </div>
       </header>
 
+      <UpdateBanner />
       <OfflineBanner />
 
       {/* Content area */}
