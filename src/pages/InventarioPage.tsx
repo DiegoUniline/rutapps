@@ -293,7 +293,7 @@ export default function InventarioPage() {
               ))}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
+                  <TableCell colSpan={3} className="sticky left-0 bg-muted/50">Totales</TableCell>
                   <TableCell className="text-center">{data.totales.stockAlmacen}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
