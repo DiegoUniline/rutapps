@@ -4051,6 +4051,10 @@ export type Database = {
         Args: { p_empresa_id: string; prefix: string }
         Returns: string
       }
+      recalc_producto_costo: {
+        Args: { p_producto_id: string }
+        Returns: undefined
+      }
       user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
     }
     Enums: {
