@@ -29,26 +29,6 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) throw new Error("No autenticado");
 
-    const { action, new_quantity } = await req.json();
-
-    // Get user's empresa
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("empresa_id")
-      .eq("user_id", userData.user.id)
-      .maybeSingle();
-    if (!profile?.empresa_id) throw new Error("Sin empresa");
-
-    // Get subscription
-    const { data: sub } = await supabase
-      .from("subscriptions")
-      .select("id, stripe_subscription_id, stripe_customer_id, max_usuarios")
-      .eq("empresa_id", profile.empresa_id)
-      .maybeSingle();
-    if (!sub) throw new Error("Sin suscripción");
-
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-
     const { action, new_quantity, new_price_id } = await req.json();
 
     // Get user's empresa
