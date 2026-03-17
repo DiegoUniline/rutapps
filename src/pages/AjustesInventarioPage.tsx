@@ -461,7 +461,7 @@ export default function AjustesInventarioPage() {
               <Button variant="outline" size="sm" onClick={exportTemplate} disabled={!almacenId || !productos || productos.length === 0} className="gap-1.5">
                 <Download className="h-4 w-4" /> Descargar plantilla
               </Button>
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={!almacenId} className="gap-1.5">
                 <Upload className="h-4 w-4" /> Cargar archivo
               </Button>
               <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
