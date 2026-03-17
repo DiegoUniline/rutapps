@@ -192,6 +192,8 @@ export default function SearchableSelect({
           <div className="overflow-y-auto flex-1">
             {filtered.length === 0 && !onCreateNew ? (
               <div className="px-3 py-3 text-[12px] text-muted-foreground text-center">Sin resultados</div>
+            ) : filtered.length === 0 && onCreateNew && !search.trim() ? (
+              <div className="px-3 py-3 text-[12px] text-muted-foreground text-center">Escribe un nombre para crear</div>
             ) : (
               <>
                 {filtered.map((o, i) => (
