@@ -102,19 +102,45 @@ export default function AjustesInventarioPage() {
     },
   });
 
-  // Load history
+  // Load history (grouped)
   const { data: historial, isLoading: loadingHistorial } = useQuery({
     queryKey: ['ajustes-historial', empresa?.id],
     enabled: !!empresa?.id && tab === 'historial',
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ajustes_inventario')
-        .select('*, productos(codigo, nombre)')
+        .select('*, productos(codigo, nombre), almacenes(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) throw error;
-      return data ?? [];
+
+      // Fetch profile names for user_ids
+      const userIds = [...new Set((data ?? []).map((a: any) => a.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, nombre')
+        .in('user_id', userIds);
+      const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+
+      // Group by fecha + user_id + motivo + almacen_id
+      const groups = new Map<string, { key: string; fecha: string; userName: string; almacenName: string; motivo: string; created_at: string; items: any[] }>();
+      for (const a of (data ?? [])) {
+        const gKey = `${a.fecha}_${a.user_id}_${a.motivo ?? ''}_${a.almacen_id ?? ''}`;
+        if (!groups.has(gKey)) {
+          groups.set(gKey, {
+            key: gKey,
+            fecha: a.fecha,
+            userName: profileMap.get(a.user_id) ?? 'Usuario',
+            almacenName: (a.almacenes as any)?.nombre ?? 'Sin almacén',
+            motivo: a.motivo ?? '',
+            created_at: a.created_at,
+            items: [],
+          });
+        }
+        groups.get(gKey)!.items.push(a);
+      }
+      return Array.from(groups.values());
     },
   });
 
