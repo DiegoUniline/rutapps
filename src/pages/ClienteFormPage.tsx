@@ -537,7 +537,7 @@ export default function ClienteFormPage() {
                   <OdooField label="Frecuencia *" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
                     options={frecuenciaOpts} />
                   <div className="odoo-field-row">
-                    <span className="odoo-field-label">Días de visita</span>
+                    <span className="odoo-field-label">Días de visita *</span>
                     <div className="flex flex-wrap gap-1">
                       {DIAS.map(d => (
                         <button key={d} onClick={() => toggleDia(d)}
