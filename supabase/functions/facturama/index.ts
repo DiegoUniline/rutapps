@@ -169,7 +169,15 @@ async function listCsds() {
 // ========================================
 async function timbrar(supabase: any, userId: string, body: any) {
   const auth = getAuth();
+  const serviceDb = getServiceSupabase();
   const { cfdi_id, venta_id, empresa_id, issuer, receiver, items, cfdi_type, currency, payment_form, payment_method, expedition_place, serie, name_id } = body;
+
+  // Check timbre balance before proceeding
+  const { data: saldoRow } = await serviceDb.from("timbres_saldo").select("saldo").eq("empresa_id", empresa_id).single();
+  const saldoActual = saldoRow?.saldo ?? 0;
+  if (saldoActual < 1) {
+    throw new Error("No tienes timbres disponibles. Contacta al administrador para adquirir más timbres.");
+  }
 
   // Auto-generate folio if not provided
   let folio = body.folio;
