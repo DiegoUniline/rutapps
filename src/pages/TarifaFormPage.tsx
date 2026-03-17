@@ -4,8 +4,10 @@ import { Save, X, Trash2, Plus, Star, Layers, Crown } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
+import SearchableSelect from '@/components/SearchableSelect';
 import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones, useListasPrecioByTarifa, useSaveListaPrecio, useDeleteListaPrecio } from '@/hooks/useData';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
@@ -41,6 +43,7 @@ const EMPTY_LINEA = {
   base_precio: 'sin_impuestos' as 'sin_impuestos' | 'con_impuestos',
   redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
+  lista_precio_id: '' as string,
 };
 
 /* ── Multi-select chips ─────────────────────────── */
@@ -197,6 +200,26 @@ export default function TarifaFormPage() {
   const deleteLinea = useDeleteTarifaLinea();
   const { data: productosDisp } = useProductosForSelect();
   const { data: clasificaciones } = useClasificaciones();
+  const { data: listasPrecios, refetch: refetchListas } = useListasPrecioByTarifa(isNew ? undefined : id);
+  const saveListaPrecio = useSaveListaPrecio();
+  const qc = useQueryClient();
+
+  // Map for lista display
+  const listaMap = new Map((listasPrecios ?? []).map(l => [l.id, l.nombre]));
+  const listaOptions = (listasPrecios ?? []).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
+
+  // Quick-create lista de precios
+  const handleCreateLista = async (name: string): Promise<string | undefined> => {
+    if (!id) return undefined;
+    try {
+      const { data: profile } = await (await import('@/lib/supabase')).supabase.from('profiles').select('empresa_id').maybeSingle();
+      if (!profile?.empresa_id) { toast.error('Sin empresa'); return undefined; }
+      const result = await saveListaPrecio.mutateAsync({ tarifa_id: id, nombre: name, es_principal: (listasPrecios ?? []).length === 0 });
+      refetchListas();
+      toast.success(`Lista "${name}" creada`);
+      return result.id;
+    } catch (err: any) { toast.error(err.message); return undefined; }
+  };
 
   const [form, setForm] = useState<Partial<Tarifa>>({
     nombre: '', descripcion: '', tipo: 'general', moneda: 'MXN', activa: true,
@@ -255,6 +278,7 @@ export default function TarifaFormPage() {
         base_precio: newLinea.base_precio,
         redondeo: newLinea.redondeo,
         notas: newLinea.notas || null,
+        lista_precio_id: newLinea.lista_precio_id || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
         clasificacion_ids: newLinea.aplica_a === 'categoria' ? newLinea.clasificacion_ids : [],
       } as any);
@@ -290,6 +314,7 @@ export default function TarifaFormPage() {
         base_precio: (l as any).base_precio ?? 'sin_impuestos',
         redondeo: (l as any).redondeo ?? 'ninguno',
         notas: (l as any).notas ?? '',
+        lista_precio_id: (l as any).lista_precio_id ?? '',
       });
     }
     setEditingLineaId(l.id);
@@ -315,6 +340,7 @@ export default function TarifaFormPage() {
         base_precio: editLinea.base_precio,
         redondeo: editLinea.redondeo,
         notas: editLinea.notas || null,
+        lista_precio_id: editLinea.lista_precio_id || null,
         producto_ids: editLinea.aplica_a === 'producto' ? editLinea.producto_ids : [],
         clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
       } as any);
@@ -516,6 +542,7 @@ export default function TarifaFormPage() {
                          <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
+                          <th className="th-odoo text-left">Lista de precios</th>
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-left">Base</th>
                           <th className="th-odoo text-right">Valor</th>
@@ -570,6 +597,20 @@ export default function TarifaFormPage() {
                                   {l.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">Todos</span>}
                                 </div>
                               )}
+                            </td>
+                            {/* Lista de precios */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('lista_precio')}>
+                              {ec('lista_precio') ? (
+                                <SearchableSelect
+                                  options={listaOptions}
+                                  value={editLinea.lista_precio_id}
+                                  onChange={val => { setEditLinea(p => ({ ...p, lista_precio_id: val })); setTimeout(blurSave, 50); }}
+                                  onClose={blurSave}
+                                  placeholder="Seleccionar lista..."
+                                  autoOpen
+                                  onCreateNew={handleCreateLista}
+                                />
+                              ) : <span className="text-xs">{listaMap.get((l as any).lista_precio_id) || <span className="text-muted-foreground">—</span>}</span>}
                             </td>
                             {/* Cálculo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('tipo_calculo')}>
@@ -639,7 +680,7 @@ export default function TarifaFormPage() {
                           );
                         })}
                         {sortedLineas.length === 0 && !showAddRow && (
-                          <tr><td colSpan={9} className="py-6 text-center text-[12px] text-muted-foreground">
+                          <tr><td colSpan={10} className="py-6 text-center text-[12px] text-muted-foreground">
                             Sin reglas de precio. Haz clic en "Agregar un precio" para empezar.
                           </td></tr>
                         )}
@@ -666,6 +707,15 @@ export default function TarifaFormPage() {
                                     onChange={ids => setNewLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
                                 )}
                                 {newLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
+                              </td>
+                              <td className="py-2 px-3">
+                                <SearchableSelect
+                                  options={listaOptions}
+                                  value={newLinea.lista_precio_id}
+                                  onChange={val => setNewLinea(p => ({ ...p, lista_precio_id: val }))}
+                                  placeholder="Seleccionar lista..."
+                                  onCreateNew={handleCreateLista}
+                                />
                               </td>
                               <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.tipo_calculo}
@@ -703,7 +753,7 @@ export default function TarifaFormPage() {
                               <td className="py-2 px-3"></td>
                             </tr>
                             <tr className="bg-primary/5">
-                              <td colSpan={9} className="py-2 px-3">
+                              <td colSpan={10} className="py-2 px-3">
                                 <div className="flex items-center gap-2">
                                   <button onClick={handleAddLinea} disabled={saveLinea.isPending} className="btn-odoo-primary text-[12px] py-1 px-3">
                                     <Plus className="h-3 w-3" /> Agregar
