@@ -3268,6 +3268,82 @@ export type Database = {
           },
         ]
       }
+      timbres_movimientos: {
+        Row: {
+          cantidad: number
+          created_at: string
+          empresa_id: string
+          id: string
+          notas: string | null
+          referencia_id: string | null
+          saldo_anterior: number
+          saldo_nuevo: number
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          empresa_id: string
+          id?: string
+          notas?: string | null
+          referencia_id?: string | null
+          saldo_anterior?: number
+          saldo_nuevo?: number
+          tipo?: string
+          user_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          notas?: string | null
+          referencia_id?: string | null
+          saldo_anterior?: number
+          saldo_nuevo?: number
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timbres_movimientos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timbres_saldo: {
+        Row: {
+          empresa_id: string
+          id: string
+          saldo: number
+          updated_at: string
+        }
+        Insert: {
+          empresa_id: string
+          id?: string
+          saldo?: number
+          updated_at?: string
+        }
+        Update: {
+          empresa_id?: string
+          id?: string
+          saldo?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timbres_saldo_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: true
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       traspaso_lineas: {
         Row: {
           cantidad: number
@@ -4045,6 +4121,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_timbres: {
+        Args: {
+          p_cantidad: number
+          p_empresa_id: string
+          p_notas?: string
+          p_user_id: string
+        }
+        Returns: number
+      }
+      deduct_timbre: {
+        Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
+        Returns: boolean
+      }
       get_my_empresa_id: { Args: never; Returns: string }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {

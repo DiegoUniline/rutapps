@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw } from 'lucide-react';
+import { FileText, Search, Plus, Download, X, Eye, CheckCircle, XCircle, Loader2, Settings2, RefreshCw, Stamp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,20 @@ export default function FacturacionCfdiPage() {
   const [selectedCfdi, setSelectedCfdi] = useState<any>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
+
+  // Load timbre balance
+  const { data: timbreSaldo } = useQuery({
+    queryKey: ['timbres-saldo', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('timbres_saldo')
+        .select('saldo')
+        .eq('empresa_id', empresa!.id)
+        .single();
+      return data?.saldo ?? 0;
+    },
+  });
 
   // Load CFDIs
   const { data: cfdis, isLoading } = useQuery({
@@ -127,6 +141,10 @@ export default function FacturacionCfdiPage() {
             <h1 className="text-xl font-bold text-foreground">Facturación</h1>
             <p className="text-xs text-muted-foreground">CFDI 4.0 · Facturama</p>
           </div>
+          <Badge variant={(timbreSaldo ?? 0) > 0 ? 'secondary' : 'destructive'} className="text-xs flex items-center gap-1">
+            <Stamp className="h-3 w-3" />
+            {timbreSaldo ?? 0} timbres
+          </Badge>
         </div>
         <div className="flex gap-2">
           <Button

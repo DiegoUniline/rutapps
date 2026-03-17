@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ interface Props {
 
 export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   const { empresa, user } = useAuth();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [selectedVentaId, setSelectedVentaId] = useState<string | null>(null);
   const [ventaSearch, setVentaSearch] = useState('');
@@ -35,6 +36,20 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   });
   const [paymentForm, setPaymentForm] = useState('01');
   const [paymentMethod, setPaymentMethod] = useState('PUE');
+
+  // Check timbre balance
+  const { data: timbreSaldo } = useQuery({
+    queryKey: ['timbres-saldo', empresa?.id],
+    enabled: !!empresa?.id && open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('timbres_saldo')
+        .select('saldo')
+        .eq('empresa_id', empresa!.id)
+        .single();
+      return data?.saldo ?? 0;
+    },
+  });
 
   // Load ventas without CFDI
   const { data: ventas } = useQuery({
@@ -119,6 +134,11 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
 
   async function handleTimbrar() {
     if (!empresa || !selectedVentaId || !ventaLineas) return;
+
+    if ((timbreSaldo ?? 0) < 1) {
+      toast.error('No tienes timbres disponibles. Contacta al administrador para adquirir más.');
+      return;
+    }
 
     if (!empresa.rfc || !empresa.razon_social || !empresa.regimen_fiscal || !empresa.cp) {
       toast.error('Configura los datos fiscales del emisor primero');
@@ -213,6 +233,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
       }
 
       toast.success(`Factura timbrada · UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
+      queryClient.invalidateQueries({ queryKey: ['timbres-saldo'] });
       onSuccess();
       resetForm();
     } catch (e: any) {
@@ -237,7 +258,12 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Timbrar CFDI</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Timbrar CFDI</DialogTitle>
+            <Badge variant={(timbreSaldo ?? 0) > 0 ? 'secondary' : 'destructive'} className="text-xs">
+              {timbreSaldo ?? 0} timbres disponibles
+            </Badge>
+          </div>
           <DialogDescription>
             {step === 'select' ? 'Selecciona la venta a facturar' : 'Verifica los datos y timbra'}
           </DialogDescription>
