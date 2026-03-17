@@ -346,6 +346,16 @@ Deno.serve(async (req) => {
 
       const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
 
+      // Auto-credit timbres if included in invoice
+      if (timbres && timbres > 0) {
+        await supabase.rpc("add_timbres", {
+          p_empresa_id: empresa_id,
+          p_cantidad: timbres,
+          p_user_id: userData.user.id,
+          p_notas: `Factura ${finalizedInv.number || finalizedInv.id.slice(-8)} — ${timbres} timbres`,
+        });
+      }
+
       // Build professional email HTML
       const primaryColor = "#6461E8";
       const folio = finalizedInv.number || finalizedInv.id.slice(-8).toUpperCase();
