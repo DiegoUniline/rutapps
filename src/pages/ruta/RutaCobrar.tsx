@@ -41,70 +41,34 @@ export default function RutaCobrar() {
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Fetch clients with pending balance
-  const { data: clientes } = useQuery({
-    queryKey: ['ruta-clientes-cobro', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data: clientesData } = await supabase
-        .from('clientes')
-        .select('id, codigo, nombre, telefono')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('nombre');
+  // Offline-compatible: read clients and ventas from local cache
+  const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
+  const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
-      if (!clientesData) return [];
+  const clientes = useMemo(() => {
+    if (!clientesRaw) return [];
+    const saldosPorCliente: Record<string, number> = {};
+    (allVentas ?? []).forEach((v: any) => {
+      if (v.cliente_id && v.condicion_pago === 'credito' && ['confirmado', 'entregado', 'facturado'].includes(v.status) && (v.saldo_pendiente ?? 0) > 0) {
+        saldosPorCliente[v.cliente_id] = (saldosPorCliente[v.cliente_id] ?? 0) + (v.saldo_pendiente ?? 0);
+      }
+    });
+    return clientesRaw.map((c: any) => ({ ...c, saldoPendiente: saldosPorCliente[c.id] ?? 0 }));
+  }, [clientesRaw, allVentas]);
 
-      const { data: ventasData } = await supabase
-        .from('ventas')
-        .select('cliente_id, saldo_pendiente')
-        .eq('empresa_id', empresa!.id)
-        .eq('condicion_pago', 'credito')
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .gt('saldo_pendiente', 0);
-
-      const saldosPorCliente: Record<string, number> = {};
-      (ventasData ?? []).forEach(v => {
-        if (v.cliente_id) {
-          saldosPorCliente[v.cliente_id] = (saldosPorCliente[v.cliente_id] ?? 0) + (v.saldo_pendiente ?? 0);
-        }
-      });
-
-      return clientesData.map(c => ({
-        ...c,
-        saldoPendiente: saldosPorCliente[c.id] ?? 0,
-      }));
-    },
-  });
-
-  const clientesConSaldo = clientes?.filter(c => c.saldoPendiente > 0) ?? [];
-  const clientesSinSaldo = clientes?.filter(c => c.saldoPendiente === 0) ?? [];
-
-  const filteredConSaldo = clientesConSaldo.filter(c =>
-    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
-    c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
-  );
-  const filteredSinSaldo = clientesSinSaldo.filter(c =>
-    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
-    c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
-  );
-
-  // Fetch pending invoices for selected client (ordered oldest first)
-  const { data: ventasPendientes, isLoading: loadingVentas } = useQuery({
-    queryKey: ['ruta-ventas-pendientes', clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
-        .eq('cliente_id', clienteId!)
-        .eq('condicion_pago', 'credito')
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .gt('saldo_pendiente', 0)
-        .order('fecha', { ascending: true }); // Oldest first!
-      return data ?? [];
-    },
-  });
+  // Offline-compatible: filter pending ventas for selected client
+  const ventasPendientes = useMemo(() => {
+    if (!allVentas || !clienteId) return [];
+    return (allVentas as any[])
+      .filter(v =>
+        v.cliente_id === clienteId &&
+        v.condicion_pago === 'credito' &&
+        (v.saldo_pendiente ?? 0) > 0 &&
+        ['confirmado', 'entregado', 'facturado'].includes(v.status)
+      )
+      .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  }, [allVentas, clienteId]);
+  const loadingVentas = false;
 
   const selectCliente = (c: any) => {
     setClienteId(c.id);
