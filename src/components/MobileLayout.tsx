@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle, Moon, Sun, Menu, X, MapPinned, RotateCcw, FileText, PackageCheck, Navigation, RefreshCw } from 'lucide-react';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, Menu, X, FileText, PackageCheck, RefreshCw, MoreHorizontal } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -13,33 +13,33 @@ const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
   { label: 'Stock', icon: Package, path: '/ruta/stock' },
-  { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
-  { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
-  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
 ];
 
-const menuItems = [
+const moreItems = [
+  { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
+  { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
+  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
 ];
 
+const morePaths = moreItems.map(i => i.path);
+
 export default function MobileLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top bar */}
       <header className="flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-card border-b border-border">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="flex items-center justify-center w-10 h-10 rounded-full text-foreground hover:bg-accent transition-colors"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <span className="text-sm font-bold text-foreground">Ruta</span>
+          <span className="text-sm font-bold text-foreground pl-2">Ruta</span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -81,56 +81,46 @@ export default function MobileLayout() {
                 "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
+              onClick={() => setMoreOpen(false)}
             >
               <tab.icon className="h-5 w-5" />
               <span className="text-[10px] font-medium">{tab.label}</span>
             </NavLink>
           ))}
+          {/* More button */}
+          <button
+            onClick={() => setMoreOpen(v => !v)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+              isMoreActive || moreOpen ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Más</span>
+          </button>
         </div>
       </nav>
 
-      {/* Hamburger drawer */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-[60]">
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
-          {/* Drawer */}
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-card shadow-xl flex flex-col animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-border">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <UserCircle className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{profile?.nombre ?? 'Vendedor'}</p>
-                  <p className="text-[11px] text-muted-foreground">Ruta móvil</p>
-                </div>
-              </div>
-              <button onClick={() => setMenuOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-accent">
-                <X className="h-5 w-5 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="flex-1 py-2">
-              {menuItems.map(item => (
-                <button
-                  key={item.path}
-                  onClick={() => { navigate(item.path); setMenuOpen(false); }}
-                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-foreground hover:bg-accent transition-colors"
-                >
-                  <item.icon className="h-5 w-5 text-muted-foreground" />
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <div className="px-4 py-3 border-t border-border">
+      {/* More popup */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-[55]" onClick={() => setMoreOpen(false)}>
+          <div
+            className="absolute bottom-16 right-2 w-48 bg-card border border-border rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            onClick={e => e.stopPropagation()}
+          >
+            {moreItems.map(item => (
               <button
-                onClick={() => { navigate('/'); setMenuOpen(false); }}
-                className="flex items-center gap-3 w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                key={item.path}
+                onClick={() => { navigate(item.path); setMoreOpen(false); }}
+                className={cn(
+                  "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
+                  location.pathname.startsWith(item.path) ? "text-primary bg-primary/5" : "text-foreground hover:bg-accent"
+                )}
               >
-                <Monitor className="h-5 w-5" />
-                Ir a escritorio
+                <item.icon className="h-4 w-4" />
+                {item.label}
               </button>
-            </div>
+            ))}
           </div>
         </div>
       )}
