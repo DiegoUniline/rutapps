@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2 } from 'lucide-react';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import GpsMapPicker from '@/components/GpsMapPicker';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
@@ -440,39 +441,73 @@ export default function ClienteFormPage() {
                 <OdooField label="Colonia" value={form.colonia} onChange={v => set('colonia', v)} />
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Ubicación GPS</span>
-                  <div className="flex items-center gap-2 flex-1">
-                    {form.gps_lat && form.gps_lng ? (
-                      <span className="text-[11px] text-muted-foreground">
-                        {Number(form.gps_lat).toFixed(6)}, {Number(form.gps_lng).toFixed(6)}
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground">Sin ubicación</span>
-                    )}
-                    <button
-                      onClick={captureGps}
-                      disabled={capturingGps}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60"
-                    >
-                      {capturingGps ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Crosshair className="h-3.5 w-3.5" />
-                      )}
-                      {form.gps_lat && form.gps_lng ? 'Actualizar GPS' : 'Capturar GPS'}
-                    </button>
-                    <GpsMapPicker
-                      lat={form.gps_lat ? Number(form.gps_lat) : null}
-                      lng={form.gps_lng ? Number(form.gps_lng) : null}
-                      onChange={(lat, lng) => setForm(prev => ({ ...prev, gps_lat: lat, gps_lng: lng }))}
-                      isLoaded={mapsLoaded}
-                    />
-                    {form.gps_lat && form.gps_lng && (
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[11px] text-muted-foreground font-medium">Lat</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={form.gps_lat ?? ''}
+                          onChange={e => set('gps_lat', e.target.value ? parseFloat(e.target.value) : null)}
+                          placeholder="23.634500"
+                          className="w-[130px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[11px] text-muted-foreground font-medium">Lng</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={form.gps_lng ?? ''}
+                          onChange={e => set('gps_lng', e.target.value ? parseFloat(e.target.value) : null)}
+                          placeholder="-102.552800"
+                          className="w-[130px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </div>
                       <button
-                        onClick={() => setForm(prev => ({ ...prev, gps_lat: undefined, gps_lng: undefined }))}
-                        className="text-[11px] text-destructive hover:underline"
+                        onClick={captureGps}
+                        disabled={capturingGps}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-[12px] font-medium hover:bg-primary/90 active:scale-95 transition-all disabled:opacity-60"
                       >
-                        Quitar
+                        {capturingGps ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Crosshair className="h-3.5 w-3.5" />
+                        )}
+                        Mi ubicación
                       </button>
+                      <GpsMapPicker
+                        lat={form.gps_lat ? Number(form.gps_lat) : null}
+                        lng={form.gps_lng ? Number(form.gps_lng) : null}
+                        onChange={(lat, lng) => setForm(prev => ({ ...prev, gps_lat: lat, gps_lng: lng }))}
+                        isLoaded={mapsLoaded}
+                      />
+                      {form.gps_lat && form.gps_lng && (
+                        <button
+                          onClick={() => setForm(prev => ({ ...prev, gps_lat: undefined, gps_lng: undefined }))}
+                          className="text-[11px] text-destructive hover:underline"
+                        >
+                          Quitar
+                        </button>
+                      )}
+                    </div>
+                    {form.gps_lat && form.gps_lng && mapsLoaded && (
+                      <div className="rounded-lg overflow-hidden border border-border" style={{ height: 180 }}>
+                        <GoogleMap
+                          mapContainerStyle={{ width: '100%', height: '100%' }}
+                          center={{ lat: Number(form.gps_lat), lng: Number(form.gps_lng) }}
+                          zoom={16}
+                          options={{
+                            disableDefaultUI: true,
+                            zoomControl: true,
+                            draggable: false,
+                            styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+                          }}
+                        >
+                          <Marker position={{ lat: Number(form.gps_lat), lng: Number(form.gps_lng) }} />
+                        </GoogleMap>
+                      </div>
                     )}
                   </div>
                 </div>
