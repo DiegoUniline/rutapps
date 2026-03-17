@@ -53,6 +53,7 @@ export default function AjustesInventarioPage() {
   const [tab, setTab] = useState('ajuste');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerarPdf = () => {
