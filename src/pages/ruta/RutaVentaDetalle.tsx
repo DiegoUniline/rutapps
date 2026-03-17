@@ -469,7 +469,6 @@ export default function RutaVentaDetalle() {
       <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">Elaborado por Uniline — Innovación en la nube</div>
     </div>`;
   };
-  };
 
   if (isLoading) {
     return (
