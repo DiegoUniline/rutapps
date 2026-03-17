@@ -421,7 +421,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Se asigna automáticamente" readOnly={!isNew} />
-                <OdooField label="Nombre" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
+                <OdooField label="Nombre *" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
                 <OdooField label="Persona de Contacto" value={form.contacto} onChange={v => set('contacto', v)} />
                 <OdooField label="Teléfono" value={form.telefono} onChange={v => {
                   const digits = v.replace(/\D/g, '');
