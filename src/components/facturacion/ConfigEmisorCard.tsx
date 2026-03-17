@@ -106,6 +106,7 @@ export function ConfigEmisorCard() {
       toast.error('Error al guardar: ' + error.message);
     } else {
       toast.success('Datos fiscales guardados');
+      setInitialForm(form);
     }
     setSaving(false);
   }
