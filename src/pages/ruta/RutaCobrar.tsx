@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queueOperation } from '@/lib/syncQueue';
+import { useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
