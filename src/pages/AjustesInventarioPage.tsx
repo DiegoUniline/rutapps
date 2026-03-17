@@ -160,7 +160,8 @@ export default function AjustesInventarioPage() {
     })));
   };
 
-  useMemo(() => { initRows(); }, [productos]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { initRows(); }, [productos]);
 
   const filteredRows = useMemo(() => {
     let result = rows;
