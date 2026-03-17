@@ -160,7 +160,8 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/facturacion" element={<FacturacionPage />} />
-          <Route path="*" element={<Navigate to="/facturacion" replace />} />
+          <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
+          <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
         </Routes>
       </Suspense>
     );
