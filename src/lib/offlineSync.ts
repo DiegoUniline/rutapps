@@ -81,7 +81,7 @@ const TABLES_WITH_EMPRESA = new Set([
 // Tables limited to recent data
 const RECENT_TABLES = new Set([
   'ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos',
-  'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas',
+  'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas', 'visitas',
 ]);
 
 export interface SyncProgress {
