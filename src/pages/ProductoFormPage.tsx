@@ -63,6 +63,8 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   const [editingCol, setEditingCol] = useState<string | null>(null);
   const [editVal, setEditVal] = useState<any>({});
   const [newRule, setNewRule] = useState({
+    aplica_a: 'producto' as 'producto' | 'categoria' | 'todos',
+    clasificacion_ids: [] as string[],
     tarifa_id: '',
     lista_precio_id: '',
     tipo_calculo: 'precio_fijo' as TipoCalculoTarifa,
@@ -113,22 +115,23 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
 
   const handleSaveRule = async () => {
     if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
+    if (newRule.aplica_a === 'categoria' && newRule.clasificacion_ids.length === 0) { toast.error('Selecciona al menos una categoría'); return; }
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
         lista_precio_id: newRule.lista_precio_id || null,
-        aplica_a: 'producto',
+        aplica_a: newRule.aplica_a,
         tipo_calculo: newRule.tipo_calculo,
         precio: newRule.precio,
         margen_pct: newRule.margen_pct,
         descuento_pct: newRule.descuento_pct,
         precio_minimo: newRule.precio_minimo,
-        producto_ids: [productoId!],
-        clasificacion_ids: [],
+        producto_ids: newRule.aplica_a === 'producto' ? [productoId!] : [],
+        clasificacion_ids: newRule.aplica_a === 'categoria' ? newRule.clasificacion_ids : [],
       } as any);
       toast.success('Precio agregado');
       setShowModal(false);
-      setNewRule({ tarifa_id: '', lista_precio_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
+      setNewRule({ aplica_a: 'producto', clasificacion_ids: [], tarifa_id: '', lista_precio_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -194,8 +197,13 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
           <div className="p-5 space-y-4">
             <div className="grid grid-cols-2 gap-x-8">
               <div className="odoo-field-row">
-                <span className="odoo-field-label">Producto</span>
-                <span className="text-[13px] font-medium">{form.nombre ?? '—'}</span>
+                <span className="odoo-field-label">Aplica a</span>
+                <select className="input-odoo py-1 text-[13px]" value={newRule.aplica_a}
+                  onChange={e => setNewRule(p => ({ ...p, aplica_a: e.target.value as any, clasificacion_ids: [] }))}>
+                  <option value="producto">Este producto</option>
+                  <option value="categoria">Categoría</option>
+                  <option value="todos">Todos los productos</option>
+                </select>
               </div>
               <div className="odoo-field-row">
                 <span className="odoo-field-label">Precio mínimo</span>
@@ -203,6 +211,44 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
               </div>
             </div>
+            {newRule.aplica_a === 'producto' && (
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Producto</span>
+                <span className="text-[13px] font-medium">{form.nombre ?? '—'}</span>
+              </div>
+            )}
+            {newRule.aplica_a === 'categoria' && (
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Categorías</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {(clasificaciones ?? []).map(c => {
+                    const selected = newRule.clasificacion_ids.includes(c.id);
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setNewRule(p => ({
+                          ...p,
+                          clasificacion_ids: selected
+                            ? p.clasificacion_ids.filter(id => id !== c.id)
+                            : [...p.clasificacion_ids, c.id],
+                        }))}
+                        className={`text-[12px] px-2 py-0.5 rounded-full border transition-colors ${
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted text-muted-foreground border-border hover:border-primary/50'
+                        }`}
+                      >
+                        {c.nombre}
+                      </button>
+                    );
+                  })}
+                  {(clasificaciones ?? []).length === 0 && (
+                    <span className="text-[12px] text-muted-foreground">No hay categorías creadas</span>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-x-8">
               <div className="odoo-field-row">
                 <span className="odoo-field-label">Tipo de precio</span>
