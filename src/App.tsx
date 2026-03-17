@@ -71,6 +71,8 @@ const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
+const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
+const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
