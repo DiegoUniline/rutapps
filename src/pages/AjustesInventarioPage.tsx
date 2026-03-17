@@ -589,8 +589,9 @@ export default function AjustesInventarioPage() {
           )}
           {(historial ?? []).map((group: any) => {
             const isOpen = expandedGroup === group.key;
-            const totalItems = group.items.length;
-            const totalDiff = group.items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
+            const items = group?.items ?? [];
+            const totalItems = items.length;
+            const totalDiff = items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
             return (
               <div key={group.key} className="border border-border rounded-lg overflow-hidden">
                 {/* Group header */}
