@@ -312,7 +312,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
               </div>
             </div>
             <div className="grid grid-cols-2 gap-x-8">
-              {newRule.tipo_calculo === 'precio_fijo' && (
+              {newRule.tipo_calculo === 'precio_fijo' && newRule.aplica_a === 'producto' && (
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Precio fijo</span>
                   <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio}
@@ -368,6 +368,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   <th className="th-odoo text-right">Precio</th>
                   <th className="th-odoo text-right">Ganancia $</th>
                   <th className="th-odoo text-right">Ganancia %</th>
+                  <th className="th-odoo text-right">Comisión %</th>
                   <th className="th-odoo w-10"></th>
                 </tr>
               </thead>
@@ -463,6 +464,9 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs text-primary">
+                        {(linea as any).comision_pct ? `${(linea as any).comision_pct}%` : '—'}
+                      </td>
                       <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
                           <Trash2 className="h-3.5 w-3.5" />
@@ -480,7 +484,10 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
         <p className="text-sm text-muted-foreground py-2">Sin reglas de precio aplicables a este producto.</p>
       )}
       {!isNew && (
-        <button className="odoo-link" onClick={() => setShowModal(true)}>
+        <button className="odoo-link" onClick={() => {
+          setNewRule(p => ({ ...p, precio_minimo: form.costo ?? 0 }));
+          setShowModal(true);
+        }}>
           Agregar un precio
         </button>
       )}
