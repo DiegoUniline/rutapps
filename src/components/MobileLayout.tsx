@@ -116,7 +116,7 @@ export default function MobileLayout() {
       {moreOpen && (
         <div className="fixed inset-0 z-[55]" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute bottom-16 right-2 w-48 bg-card border border-border rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            className="absolute bottom-16 right-2 w-52 bg-card border border-border rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
             onClick={e => e.stopPropagation()}
           >
             {moreItems.map(item => (
@@ -132,6 +132,19 @@ export default function MobileLayout() {
                 {item.label}
               </button>
             ))}
+            {/* Separator + version info */}
+            <div className="border-t border-border mt-1 pt-1">
+              <button
+                onClick={() => { forceUpdate(); setMoreOpen(false); }}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-primary hover:bg-accent transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Actualizar app
+              </button>
+              <div className="px-4 py-2 text-[10px] text-muted-foreground">
+                v{APP_VERSION} · {APP_BUILD_DATE}
+              </div>
+            </div>
           </div>
         </div>
       )}
