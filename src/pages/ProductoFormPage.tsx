@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera, Plus, Crown } from 'lucide-react';
+import KardexTab from '@/components/KardexTab';
 import { calcTax } from '@/lib/taxUtils';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
