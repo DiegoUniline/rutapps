@@ -76,6 +76,9 @@ export default function SuperAdminPage() {
             <TabsTrigger value="notifications" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Bell className="h-4 w-4" /> Historial
             </TabsTrigger>
+            <TabsTrigger value="payment_requests" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BanknoteIcon className="h-4 w-4" /> Pagos transferencia
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
@@ -84,6 +87,7 @@ export default function SuperAdminPage() {
           <TabsContent value="invoices"><AdminInvoicesTab /></TabsContent>
           <TabsContent value="whatsapp"><AdminWhatsAppTab /></TabsContent>
           <TabsContent value="notifications"><AdminNotificationsTab /></TabsContent>
+          <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
         </Tabs>
       </div>
     </div>

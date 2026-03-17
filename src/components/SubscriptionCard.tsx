@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { CreditCard, Users, FileText, Loader2, Crown, Plus, Minus, ExternalLink, Stamp } from 'lucide-react';
+import { CreditCard, Users, Loader2, Crown, Plus, Minus, ExternalLink, Stamp, BanknoteIcon, Building2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSearchParams } from 'react-router-dom';
 
@@ -16,10 +17,11 @@ const PLANS = [
   { id: 'anual', label: 'Anual', price: 255, priceId: 'price_1TBGxQCUpJnsv7iltBEy18AC', desc: '$255/usuario/mes (15% desc.)' },
 ] as const;
 
-const PRODUCT_TO_PLAN: Record<string, string> = {
-  'prod_U9a56wjBGbKv4B': 'mensual',
-  'prod_U9a6TsdjaGp99L': 'semestral',
-  'prod_U9a7Ap6nbM6kPV': 'anual',
+const BANK_INFO = {
+  banco: 'BBVA Bancomer',
+  titular: 'Diego Alonso León de Dios',
+  cuenta: '116 755 1576',
+  clabe: '012 333 01167551576 8',
 };
 
 export default function SubscriptionCard() {
@@ -35,6 +37,8 @@ export default function SubscriptionCard() {
   const [showUsers, setShowUsers] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
   const [showTimbres, setShowTimbres] = useState(false);
+  const [showPayMethod, setShowPayMethod] = useState(false);
+  const [showTransferInfo, setShowTransferInfo] = useState(false);
 
   // Form states
   const [newQty, setNewQty] = useState(3);
@@ -44,12 +48,19 @@ export default function SubscriptionCard() {
   const [timbresPacks, setTimbresPacks] = useState(1);
   const [buyingTimbres, setBuyingTimbres] = useState(false);
 
+  // Payment context: what is being paid for
+  const [payContext, setPayContext] = useState<'plan' | 'timbres'>('plan');
+  const [transferNotes, setTransferNotes] = useState('');
+  const [sendingTransfer, setSendingTransfer] = useState(false);
+
+  // Pending solicitudes
+  const [pendingSolicitudes, setPendingSolicitudes] = useState<any[]>([]);
+
   useEffect(() => {
     if (!empresa?.id) return;
     loadData();
   }, [empresa?.id]);
 
-  // Verify timbres purchase on return from Stripe
   useEffect(() => {
     const sessionId = searchParams.get('timbres_session');
     if (sessionId) {
@@ -61,12 +72,14 @@ export default function SubscriptionCard() {
 
   async function loadData() {
     setLoading(true);
-    const [subRes, timbresRes] = await Promise.all([
+    const [subRes, timbresRes, solRes] = await Promise.all([
       supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
+      supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
+    setPendingSolicitudes(solRes.data || []);
     if (subRes.data) setNewQty(subRes.data.max_usuarios || 3);
     setLoading(false);
   }
@@ -105,75 +118,109 @@ export default function SubscriptionCard() {
     }
   }
 
-  // ─── Change Plan ───
-  async function handleChangePlan() {
+  // ─── Pay with Card (Stripe) ───
+  async function handlePayWithCard() {
     setSavingPlan(true);
     try {
-      const { data, error } = await supabase.functions.invoke('manage-subscription', {
-        body: { action: 'change_plan', new_price_id: selectedPlan },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success('Plan actualizado exitosamente');
+      if (payContext === 'plan') {
+        if (subData?.stripe_subscription_id) {
+          // Change existing plan
+          const { data, error } = await supabase.functions.invoke('manage-subscription', {
+            body: { action: 'change_plan', new_price_id: selectedPlan },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          toast.success('Plan actualizado exitosamente');
+        } else {
+          // New subscription checkout
+          const { data, error } = await supabase.functions.invoke('create-checkout', {
+            body: { price_id: selectedPlan, quantity: newQty, empresa_id: empresa?.id },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          if (data?.url) window.open(data.url, '_blank');
+        }
+      } else {
+        // Timbres
+        const { data, error } = await supabase.functions.invoke('purchase-timbres', {
+          body: { action: 'create_checkout', quantity: timbresPacks },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (data?.url) window.open(data.url, '_blank');
+      }
+      setShowPayMethod(false);
       setShowPlan(false);
+      setShowTimbres(false);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingPlan(false);
+    }
+  }
+
+  // ─── Pay with Transfer ───
+  async function handleSubmitTransfer() {
+    if (!empresa?.id || !user) return;
+    setSendingTransfer(true);
+    try {
+      const plan = PLANS.find(p => p.priceId === selectedPlan);
+      const isTimbresPay = payContext === 'timbres';
+
+      const monto = isTimbresPay
+        ? timbresPacks * 100 * 100 // cents
+        : (plan ? plan.price * newQty * 100 : 0);
+
+      const concepto = isTimbresPay
+        ? `Compra de ${timbresPacks * 100} timbres CFDI`
+        : `Suscripción ${plan?.label || ''} — ${newQty} usuarios`;
+
+      const { error } = await supabase.from('solicitudes_pago').insert({
+        empresa_id: empresa.id,
+        user_id: user.id,
+        tipo: isTimbresPay ? 'timbres' : 'suscripcion',
+        concepto,
+        monto_centavos: monto,
+        metodo: 'transferencia',
+        notas: transferNotes || null,
+        plan_price_id: isTimbresPay ? null : selectedPlan,
+        cantidad_usuarios: isTimbresPay ? null : newQty,
+        cantidad_timbres: isTimbresPay ? timbresPacks * 100 : null,
+      } as any);
+
+      if (error) throw error;
+      toast.success('Solicitud de pago enviada. Te avisaremos cuando sea aprobada.');
+      setShowTransferInfo(false);
+      setShowPayMethod(false);
+      setShowPlan(false);
+      setShowTimbres(false);
+      setTransferNotes('');
       loadData();
     } catch (e: any) {
       toast.error(e.message);
     } finally {
-      setSavingPlan(false);
+      setSendingTransfer(false);
     }
   }
 
-  // ─── Buy Timbres ───
-  async function handleBuyTimbres() {
-    setBuyingTimbres(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('purchase-timbres', {
-        body: { action: 'create_checkout', quantity: timbresPacks },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data?.url) window.open(data.url, '_blank');
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setBuyingTimbres(false);
-    }
+  function openPayMethodDialog(context: 'plan' | 'timbres') {
+    setPayContext(context);
+    setShowPayMethod(true);
   }
 
-  // ─── Subscribe (new) ───
-  async function handleNewSubscription(priceId: string) {
-    setSavingPlan(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { price_id: priceId, quantity: newQty, empresa_id: empresa?.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      if (data?.url) window.open(data.url, '_blank');
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setSavingPlan(false);
-    }
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text.replace(/\s/g, ''));
+    toast.success('Copiado al portapapeles');
   }
 
-  const currentPlanId = subData?.stripe_subscription_id ? 
-    (subData?.stripe_price_id ? PRODUCT_TO_PLAN[subData.stripe_price_id] : null) : null;
+  const statusLabel: Record<string, string> = {
+    trial: 'Prueba gratuita', active: 'Activa', past_due: 'Pago pendiente', suspended: 'Suspendida',
+  };
 
-  const statusLabel = {
-    trial: 'Prueba gratuita',
-    active: 'Activa',
-    past_due: 'Pago pendiente',
-    suspended: 'Suspendida',
-  }[sub.status || ''] || sub.status || 'Sin suscripción';
-
-  const statusColor = {
-    trial: 'bg-blue-100 text-blue-700',
-    active: 'bg-green-100 text-green-700',
-    past_due: 'bg-amber-100 text-amber-700',
-    suspended: 'bg-red-100 text-red-700',
-  }[sub.status || ''] || 'bg-muted text-muted-foreground';
+  const statusColor: Record<string, string> = {
+    trial: 'bg-blue-100 text-blue-700', active: 'bg-green-100 text-green-700',
+    past_due: 'bg-amber-100 text-amber-700', suspended: 'bg-red-100 text-red-700',
+  };
 
   if (loading) {
     return (
@@ -185,7 +232,6 @@ export default function SubscriptionCard() {
     );
   }
 
-  // Calculate proration info for display
   const today = new Date();
   const daysInMonth = 30;
   const dayOfMonth = today.getDate();
@@ -202,8 +248,8 @@ export default function SubscriptionCard() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusColor}`}>
-                {statusLabel}
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusColor[sub.status || ''] || 'bg-muted text-muted-foreground'}`}>
+                {statusLabel[sub.status || ''] || sub.status || 'Sin suscripción'}
               </span>
               {sub.daysLeft !== null && sub.daysLeft < 999 && (
                 <span className="text-[11px] text-muted-foreground">
@@ -214,9 +260,17 @@ export default function SubscriptionCard() {
           </div>
         </div>
 
+        {/* Pending transfer requests */}
+        {pendingSolicitudes.length > 0 && (
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
+            <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+              ⏳ Tienes {pendingSolicitudes.length} solicitud(es) de pago por transferencia pendiente(s) de aprobación.
+            </p>
+          </div>
+        )}
+
         {/* Cards grid */}
         <div className="grid grid-cols-3 gap-3">
-          {/* Users card */}
           <button
             onClick={() => setShowUsers(true)}
             className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-center"
@@ -226,12 +280,8 @@ export default function SubscriptionCard() {
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Usuarios</span>
           </button>
 
-          {/* Plan card */}
           <button
-            onClick={() => {
-              setSelectedPlan('');
-              setShowPlan(true);
-            }}
+            onClick={() => { setSelectedPlan(''); setShowPlan(true); }}
             className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-center"
           >
             <CreditCard className="h-5 w-5 text-primary" />
@@ -241,12 +291,8 @@ export default function SubscriptionCard() {
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Cambiar plan</span>
           </button>
 
-          {/* Timbres card */}
           <button
-            onClick={() => {
-              setTimbresPacks(1);
-              setShowTimbres(true);
-            }}
+            onClick={() => { setTimbresPacks(1); setShowTimbres(true); }}
             className="flex flex-col items-center gap-1.5 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-center"
           >
             <Stamp className="h-5 w-5 text-primary" />
@@ -262,7 +308,7 @@ export default function SubscriptionCard() {
           <DialogHeader>
             <DialogTitle>Cambiar cantidad de usuarios</DialogTitle>
             <DialogDescription>
-              Se prorrateará el cobro de hoy al día 30 ({remainingDays} días). A partir del 1° del siguiente mes se cobrará el precio completo.
+              Se prorrateará el cobro de hoy al día 30 ({remainingDays} días).
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center gap-4 py-4">
@@ -305,9 +351,7 @@ export default function SubscriptionCard() {
                   key={plan.id}
                   onClick={() => setSelectedPlan(plan.priceId)}
                   className={`flex items-center justify-between p-4 rounded-lg border-2 transition-colors text-left ${
-                    selectedPlan === plan.priceId
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:border-primary/30'
+                    selectedPlan === plan.priceId ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'
                   }`}
                 >
                   <div>
@@ -324,23 +368,12 @@ export default function SubscriptionCard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPlan(false)}>Cancelar</Button>
-            {subData?.stripe_subscription_id ? (
-              <Button onClick={handleChangePlan} disabled={savingPlan || !selectedPlan}>
-                {savingPlan && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                Cambiar plan
-              </Button>
-            ) : (
-              <Button
-                onClick={() => {
-                  const plan = PLANS.find(p => p.priceId === selectedPlan);
-                  if (plan) handleNewSubscription(plan.priceId);
-                }}
-                disabled={savingPlan || !selectedPlan}
-              >
-                {savingPlan && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                <ExternalLink className="h-4 w-4 mr-1" /> Contratar
-              </Button>
-            )}
+            <Button
+              onClick={() => { if (selectedPlan) openPayMethodDialog('plan'); }}
+              disabled={!selectedPlan}
+            >
+              Continuar al pago
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -372,9 +405,112 @@ export default function SubscriptionCard() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTimbres(false)}>Cancelar</Button>
-            <Button onClick={handleBuyTimbres} disabled={buyingTimbres}>
-              {buyingTimbres && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-              <ExternalLink className="h-4 w-4 mr-1" /> Pagar con Stripe
+            <Button onClick={() => openPayMethodDialog('timbres')}>
+              Continuar al pago
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Dialog: Payment Method Choice ─── */}
+      <Dialog open={showPayMethod} onOpenChange={setShowPayMethod}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>¿Cómo deseas pagar?</DialogTitle>
+            <DialogDescription>
+              Elige tu método de pago preferido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-4">
+            <button
+              onClick={handlePayWithCard}
+              disabled={savingPlan}
+              className="flex items-center gap-4 p-4 rounded-lg border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left"
+            >
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <CreditCard className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <div className="font-semibold text-foreground">Pagar con tarjeta</div>
+                <div className="text-xs text-muted-foreground">Crédito o débito — se procesa al instante vía Stripe</div>
+              </div>
+              {savingPlan && <Loader2 className="h-5 w-5 animate-spin ml-auto" />}
+            </button>
+
+            <button
+              onClick={() => { setShowPayMethod(false); setTransferNotes(''); setShowTransferInfo(true); }}
+              className="flex items-center gap-4 p-4 rounded-lg border-2 border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-left"
+            >
+              <div className="h-12 w-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                <Building2 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <div className="font-semibold text-foreground">Pagar con transferencia</div>
+                <div className="text-xs text-muted-foreground">Transferencia bancaria BBVA — se activa al confirmar el pago</div>
+              </div>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Dialog: Transfer Bank Info ─── */}
+      <Dialog open={showTransferInfo} onOpenChange={setShowTransferInfo}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Datos para transferencia</DialogTitle>
+            <DialogDescription>
+              Realiza la transferencia y envía tu solicitud. Tu plan se activará cuando confirmemos el pago.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Bank card */}
+            <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-gradient-to-b from-blue-50 to-white dark:from-blue-950/30 dark:to-card p-5 space-y-3 text-center">
+              <div className="text-lg font-bold text-blue-800 dark:text-blue-300">{BANK_INFO.banco}</div>
+              <div className="text-muted-foreground">{BANK_INFO.titular}</div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cuenta:</div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-mono font-semibold text-foreground">{BANK_INFO.cuenta}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(BANK_INFO.cuenta)}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">CLABE:</div>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-lg font-mono font-semibold text-foreground">{BANK_INFO.clabe}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyToClipboard(BANK_INFO.clabe)}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-blue-100 dark:border-blue-800">
+                <span className="text-xs text-muted-foreground">Monto a transferir: </span>
+                <span className="font-bold text-foreground">
+                  {payContext === 'timbres'
+                    ? `$${(timbresPacks * 100).toLocaleString()} MXN`
+                    : `$${((PLANS.find(p => p.priceId === selectedPlan)?.price || 0) * newQty).toLocaleString()} MXN`
+                  }
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Notas (opcional — referencia de transferencia, etc.)</label>
+              <Textarea
+                value={transferNotes}
+                onChange={e => setTransferNotes(e.target.value)}
+                placeholder="Ej: Referencia #12345, fecha de transferencia..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTransferInfo(false)}>Cancelar</Button>
+            <Button onClick={handleSubmitTransfer} disabled={sendingTransfer}>
+              {sendingTransfer && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              <BanknoteIcon className="h-4 w-4 mr-1" /> Ya transferí, enviar solicitud
             </Button>
           </DialogFooter>
         </DialogContent>
