@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ChevronDown, X } from 'lucide-react';
+import { Search, ChevronDown, X, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Option {
@@ -15,6 +15,8 @@ interface SearchableSelectProps {
   onClose?: () => void;
   placeholder?: string;
   autoOpen?: boolean;
+  /** When provided, shows a "Crear nuevo" option. Should return the new item's id. */
+  onCreateNew?: (name: string) => Promise<string | undefined>;
 }
 
 export default function SearchableSelect({
