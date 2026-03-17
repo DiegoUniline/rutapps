@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useClasificaciones } from '@/hooks/useData';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload } from 'lucide-react';
+import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload, ChevronDown, ChevronRight, User, Calendar, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -53,6 +53,7 @@ export default function AjustesInventarioPage() {
   const [tab, setTab] = useState('ajuste');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerarPdf = () => {
@@ -101,19 +102,45 @@ export default function AjustesInventarioPage() {
     },
   });
 
-  // Load history
+  // Load history (grouped)
   const { data: historial, isLoading: loadingHistorial } = useQuery({
     queryKey: ['ajustes-historial', empresa?.id],
     enabled: !!empresa?.id && tab === 'historial',
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ajustes_inventario')
-        .select('*, productos(codigo, nombre)')
+        .select('*, productos(codigo, nombre), almacenes(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) throw error;
-      return data ?? [];
+
+      // Fetch profile names for user_ids
+      const userIds = [...new Set((data ?? []).map((a: any) => a.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, nombre')
+        .in('user_id', userIds);
+      const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
+
+      // Group by fecha + user_id + motivo + almacen_id
+      const groups = new Map<string, { key: string; fecha: string; userName: string; almacenName: string; motivo: string; created_at: string; items: any[] }>();
+      for (const a of (data ?? [])) {
+        const gKey = `${a.fecha}_${a.user_id}_${a.motivo ?? ''}_${a.almacen_id ?? ''}`;
+        if (!groups.has(gKey)) {
+          groups.set(gKey, {
+            key: gKey,
+            fecha: a.fecha,
+            userName: profileMap.get(a.user_id) ?? 'Usuario',
+            almacenName: (a.almacenes as any)?.nombre ?? 'Sin almacén',
+            motivo: a.motivo ?? '',
+            created_at: a.created_at,
+            items: [],
+          });
+        }
+        groups.get(gKey)!.items.push(a);
+      }
+      return Array.from(groups.values());
     },
   });
 
@@ -549,41 +576,81 @@ export default function AjustesInventarioPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="historial" className="mt-4">
-          <div className="border border-border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="text-right">Anterior</TableHead>
-                  <TableHead className="text-right">Nueva</TableHead>
-                  <TableHead className="text-right">Diferencia</TableHead>
-                  <TableHead>Motivo</TableHead>
-                  <TableHead>Fecha</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loadingHistorial && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>}
-                {!loadingHistorial && (historial ?? []).length === 0 && (
-                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">
-                    <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay ajustes registrados
-                  </TableCell></TableRow>
+         <TabsContent value="historial" className="mt-4 space-y-2">
+          {loadingHistorial && <div className="text-center text-muted-foreground py-8">Cargando...</div>}
+          {!loadingHistorial && (historial ?? []).length === 0 && (
+            <div className="text-center text-muted-foreground py-12">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay ajustes registrados
+            </div>
+          )}
+          {(historial ?? []).map((group: any) => {
+            const isOpen = expandedGroup === group.key;
+            const totalItems = group.items.length;
+            const totalDiff = group.items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
+            return (
+              <div key={group.key} className="border border-border rounded-lg overflow-hidden">
+                {/* Group header */}
+                <button
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                  onClick={() => setExpandedGroup(isOpen ? null : group.key)}
+                >
+                  {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <div className="flex items-center gap-4 flex-1 flex-wrap">
+                    <span className="flex items-center gap-1.5 text-sm font-medium">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      {fmtDate(group.fecha)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <User className="h-3.5 w-3.5" />
+                      {group.userName}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {group.almacenName}
+                    </span>
+                    <span className="text-xs text-muted-foreground italic flex-1 truncate max-w-[250px]">
+                      {group.motivo || 'Sin motivo'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <Badge variant="outline" className="text-xs">{totalItems} producto{totalItems !== 1 ? 's' : ''}</Badge>
+                    <span className={`font-mono text-sm font-semibold ${totalDiff > 0 ? 'text-green-600' : totalDiff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {totalDiff > 0 ? '+' : ''}{totalDiff}
+                    </span>
+                  </div>
+                </button>
+                {/* Expanded detail */}
+                {isOpen && (
+                  <div className="border-t border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Código</TableHead>
+                          <TableHead>Producto</TableHead>
+                          <TableHead className="text-right">Anterior</TableHead>
+                          <TableHead className="text-right">Nueva</TableHead>
+                          <TableHead className="text-right">Diferencia</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.items.map((a: any) => (
+                          <TableRow key={a.id}>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{a.productos?.codigo}</TableCell>
+                            <TableCell className="text-sm">{a.productos?.nombre}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
+                            <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
+                            <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
+                              {a.diferencia > 0 ? '+' : ''}{a.diferencia}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
-                {(historial ?? []).map((a: any) => (
-                  <TableRow key={a.id}>
-                    <TableCell className="text-sm">{a.productos?.codigo} - {a.productos?.nombre}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
-                    <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
-                      {a.diferencia > 0 ? '+' : ''}{a.diferencia}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{a.motivo}</TableCell>
-                    <TableCell className="text-xs">{fmtDate(a.fecha)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              </div>
+            );
+          })}
         </TabsContent>
       </Tabs>
 
