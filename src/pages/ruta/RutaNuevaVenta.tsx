@@ -1263,35 +1263,17 @@ export default function RutaNuevaVenta() {
             </section>
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom space-y-1.5">
-            {/* Primary action: Save with or without payment */}
-            {totalACobrar > 0 ? (
-              <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito}
-                className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-                <Banknote className="h-4 w-4" />
-                {saving ? 'Guardando...' : `Cobrar y guardar $${fmt(totalACobrar)}`}
-              </button>
-            ) : null}
-            {/* Secondary: Save without payment when there IS something to collect */}
-            {totalACobrar > 0 && (
-              <button onClick={handleSaveOnly} disabled={saving || cart.length === 0}
-                className="w-full bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
-                <Save className="h-4 w-4 text-muted-foreground" />
-                Guardar sin cobrar
-              </button>
-            )}
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
             <div className="flex gap-2">
               <button onClick={() => navigate(-1)}
                 className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
                 Cancelar
               </button>
-              {totalACobrar <= 0 && (
-                <button onClick={handleSaveOnly} disabled={saving || cart.length === 0 || excedeCredito}
-                  className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5">
-                  <Save className="h-4 w-4" />
-                  {saving ? 'Guardando...' : 'Guardar'}
-                </button>
-              )}
+              <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito}
+                className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5">
+                <Save className="h-4 w-4" />
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
             </div>
           </div>
         </div>
