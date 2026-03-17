@@ -493,7 +493,12 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-center text-xs text-muted-foreground">{redondeoLabel}</td>
+                      <td className="py-1.5 px-3 text-center">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${basePrecio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{baseLabel}</span>
+                      </td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {precioSinImp.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {precioConImp.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
                       <td className="py-1.5 px-3 text-right" onClick={cellClick('comision')}>
