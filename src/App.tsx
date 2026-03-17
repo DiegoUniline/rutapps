@@ -136,6 +136,8 @@ function AppRoutes() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/terminos" element={<TerminosPage />} />
+          <Route path="/privacidad" element={<PrivacidadPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
