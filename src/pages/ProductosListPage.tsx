@@ -127,7 +127,7 @@ export default function ProductosListPage() {
               <tbody>
                 {pageData.length === 0 && (
                   <tr>
-                    <td colSpan={13} className="text-center py-12 text-muted-foreground text-sm">
+                    <td colSpan={16} className="text-center py-12 text-muted-foreground text-sm">
                       No hay productos. Crea el primero.
                     </td>
                   </tr>
