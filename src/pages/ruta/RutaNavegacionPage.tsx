@@ -568,7 +568,7 @@ function NavegacionContent() {
   );
 }
 
-export default function RutaNavegacionPage() {
+export default function RutaNavegacionPage({ embedded }: { embedded?: boolean }) {
   return (
     <GoogleMapsProvider>
       <NavegacionContent />
