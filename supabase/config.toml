@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.subscription-cleanup]
 verify_jwt = false
+
+[functions.purchase-timbres]
+verify_jwt = false
+
+[functions.manage-subscription]
+verify_jwt = false

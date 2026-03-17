@@ -490,6 +490,9 @@ export default function ConfiguracionPage() {
           {hasChanges ? 'Guardar configuración' : 'Sin cambios'}
         </Button>
 
+        {/* Mi Suscripción */}
+        <SubscriptionCard />
+
         {/* Cambiar contraseña */}
         <ChangePasswordCard />
       </div>
