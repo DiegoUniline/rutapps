@@ -199,6 +199,85 @@ function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
   );
 }
 
+/* ─── Change Password Card ─── */
+
+function ChangePasswordCard() {
+  const [open, setOpen] = useState(false);
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleSave = async () => {
+    if (newPass.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (newPass !== confirmPass) { toast.error('Las contraseñas no coinciden'); return; }
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({ password: newPass });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Contraseña actualizada');
+    setOpen(false);
+    setNewPass('');
+    setConfirmPass('');
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-5">
+      <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+        <KeyRound className="h-4 w-4" /> Seguridad
+      </h3>
+      {!open ? (
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          <KeyRound className="h-3.5 w-3.5 mr-1" /> Cambiar contraseña
+        </Button>
+      ) : (
+        <div className="space-y-3 max-w-sm">
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Nueva contraseña</label>
+            <div className="relative">
+              <Input
+                type={showNew ? 'text' : 'password'}
+                value={newPass}
+                onChange={e => setNewPass(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="text-[13px] pr-9"
+              />
+              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowNew(v => !v)}>
+                {showNew ? <EyeOff className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Confirmar contraseña</label>
+            <div className="relative">
+              <Input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPass}
+                onChange={e => setConfirmPass(e.target.value)}
+                placeholder="Repetir contraseña"
+                className="text-[13px] pr-9"
+              />
+              <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowConfirm(v => !v)}>
+                {showConfirm ? <EyeOff className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+              Guardar
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setNewPass(''); setConfirmPass(''); }}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export default function ConfiguracionPage() {
