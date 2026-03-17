@@ -1107,10 +1107,10 @@ export default function RutaVentaDetalle() {
       {/* Bottom actions */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
-          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && (
-            <button onClick={initCobrar}
-              className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-              <Banknote className="h-5 w-5" /> Cobrar ${fmt(venta.saldo_pendiente ?? 0)}
+          {(venta.status === 'confirmado' || venta.status === 'entregado') && (
+            <button onClick={handleCancelar} disabled={saving}
+              className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 disabled:opacity-40">
+              <X className="h-4 w-4" /> Cancelar
             </button>
           )}
           {venta.status === 'borrador' && (
@@ -1119,10 +1119,10 @@ export default function RutaVentaDetalle() {
               <Pencil className="h-4 w-4" /> Editar
             </button>
           )}
-          {(venta.status === 'confirmado' || venta.status === 'entregado') && (
-            <button onClick={handleCancelar} disabled={saving}
-              className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 disabled:opacity-40">
-              <X className="h-4 w-4" /> Cancelar
+          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && (
+            <button onClick={initCobrar}
+              className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
+              <Banknote className="h-5 w-5" /> Cobrar ${fmt(venta.saldo_pendiente ?? 0)}
             </button>
           )}
         </div>
