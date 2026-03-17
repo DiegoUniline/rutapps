@@ -403,7 +403,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   );
 }
 
-
+export default function TarifaFormPage() {
   const { id, productoId } = useParams();
   const navigate = useNavigate();
   const backUrl = productoId ? `/productos/${productoId}` : '/tarifas';
