@@ -18,6 +18,8 @@ interface OdooFieldProps {
   readOnly?: boolean;
   alwaysEdit?: boolean;
   required?: boolean;
+  /** Quick-create handler for select fields. Should return the new item's id. */
+  onCreateNew?: (name: string) => Promise<string | undefined>;
 }
 
 export function OdooField({
