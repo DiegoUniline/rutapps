@@ -261,7 +261,10 @@ export default function AjustesInventarioPage() {
 
         const idx = newRows.findIndex(r => r.codigo.toLowerCase() === codigo.toLowerCase());
         if (idx !== -1) {
-          newRows[idx] = { ...newRows[idx], cantidadReal: Number(cantidadNueva), touched: true };
+          const numVal = Number(cantidadNueva);
+          // Only mark as touched if the value actually differs from system
+          const differs = numVal !== newRows[idx].cantidadSistema;
+          newRows[idx] = { ...newRows[idx], cantidadReal: numVal, touched: differs };
           matched++;
         }
       }
