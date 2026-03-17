@@ -157,6 +157,7 @@ export default function UsuariosPage() {
       }
     }
     load(false);
+    notifyPermisosChanged();
   };
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
