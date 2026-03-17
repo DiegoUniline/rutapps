@@ -480,7 +480,10 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
         <p className="text-sm text-muted-foreground py-2">Sin reglas de precio aplicables a este producto.</p>
       )}
       {!isNew && (
-        <button className="odoo-link" onClick={() => setShowModal(true)}>
+        <button className="odoo-link" onClick={() => {
+          setNewRule(p => ({ ...p, precio_minimo: form.costo ?? 0 }));
+          setShowModal(true);
+        }}>
           Agregar un precio
         </button>
       )}
