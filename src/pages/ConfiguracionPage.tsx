@@ -371,14 +371,9 @@ export default function ConfiguracionPage() {
     <div className="p-4 flex gap-6 min-h-full">
       {/* Left: Form */}
       <div className="flex-1 space-y-5 max-w-xl">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-            <Settings className="h-5 w-5" /> Configuración de empresa
-          </h1>
-          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} size="sm">
-            <Save className="h-3.5 w-3.5 mr-1" /> Guardar
-          </Button>
-        </div>
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <Settings className="h-5 w-5" /> Configuración de empresa
+        </h1>
 
         {/* Logo */}
         <div className="bg-card border border-border rounded-lg p-5">
@@ -465,6 +460,12 @@ export default function ConfiguracionPage() {
             className="input-odoo min-h-[70px] text-[13px] w-full"
           />
         </div>
+
+        {/* Guardar */}
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="w-full">
+          {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          Guardar configuración
+        </Button>
 
         {/* Cambiar contraseña */}
         <ChangePasswordCard />
