@@ -93,6 +93,7 @@ const RutaDescarga = lazy(() => import("@/pages/ruta/RutaDescarga"));
 const RutaMapaPage = lazy(() => import("@/pages/ruta/RutaMapaPage"));
 const RutaNavegacionPage = lazy(() => import("@/pages/ruta/RutaNavegacionPage"));
 const RutaPerfil = lazy(() => import("@/pages/ruta/RutaPerfil"));
+const RutaSincronizarPage = lazy(() => import("@/pages/ruta/RutaSincronizarPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
