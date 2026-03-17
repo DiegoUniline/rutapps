@@ -409,24 +409,66 @@ export default function RutaVentaDetalle() {
 
   const buildTicketHTML = () => {
     if (!venta) return '';
-    const ls = ((venta as any).venta_lineas ?? []).map((l: any) =>
-      `<tr><td style="padding:2px 0;font-size:11px">${l.productos?.nombre ?? l.descripcion ?? '—'}</td><td style="text-align:right;font-size:11px">${l.cantidad}</td><td style="text-align:right;font-size:11px">$${(l.precio_unitario ?? 0).toFixed(2)}</td><td style="text-align:right;font-size:11px;font-weight:600">$${(l.total ?? 0).toFixed(2)}</td></tr>`
-    ).join('');
-    return `<div style="width:380px;padding:16px;font-family:'Courier New',monospace;background:#fff;color:#000">
-      <div style="text-align:center"><div style="font-size:14px;font-weight:bold">${empresa?.nombre ?? ''}</div></div>
-      <div style="text-align:center;margin:10px 0;padding:4px 8px;background:#2563eb;color:#fff;border-radius:4px;font-size:12px;font-weight:bold">TICKET DE VENTA</div>
-      <div style="border-top:1px dashed #999;padding:6px 0;font-size:11px">
-        <div style="display:flex;justify-content:space-between"><span>Folio:</span><span style="font-weight:bold">${venta.folio ?? '—'}</span></div>
-        <div style="display:flex;justify-content:space-between"><span>Fecha:</span><span>${fmtDate(venta.fecha)}</span></div>
-        <div style="display:flex;justify-content:space-between"><span>Cliente:</span><span>${(venta as any).clientes?.nombre ?? '—'}</span></div>
+    const ls = ((venta as any).venta_lineas ?? []).map((l: any) => {
+      const nombre = l.productos?.nombre ?? l.descripcion ?? '—';
+      const qty = l.cantidad;
+      const pu = (l.precio_unitario ?? 0).toFixed(2);
+      const ivaMonto = (l.iva_monto ?? 0);
+      const iepsMonto = (l.ieps_monto ?? 0);
+      const descPct = (l.descuento_porcentaje ?? l.descuento_pct ?? 0);
+      const total = (l.total ?? 0).toFixed(2);
+      let detailParts: string[] = [`$${pu} c/u`];
+      if (descPct > 0) detailParts.push(`<span style="color:#3b82f6">-${descPct}% dto</span>`);
+      if (ivaMonto > 0) detailParts.push(`IVA $${ivaMonto.toFixed(2)}`);
+      if (iepsMonto > 0) detailParts.push(`IEPS $${iepsMonto.toFixed(2)}`);
+      return `<div style="padding:2px 0">
+        <div style="display:flex;justify-content:space-between;font-size:11px">
+          <span style="flex:1;margin-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">${qty}x ${nombre}</span>
+          <span style="font-weight:600;white-space:nowrap">$${total}</span>
+        </div>
+        <div style="font-size:8px;color:#888;margin-top:1px">${detailParts.join(' &middot; ')}</div>
+      </div>`;
+    }).join('');
+
+    const rfc = empresa && (empresa as any).rfc ? `<div style="font-size:9px;color:#888">RFC: ${(empresa as any).rfc}</div>` : '';
+    const dir = empresa?.direccion ? `<div style="font-size:8px;color:#888">${empresa.direccion}</div>` : '';
+    const tel = empresa?.telefono ? `<div style="font-size:8px;color:#888">Tel: ${empresa.telefono}</div>` : '';
+    const logoImg = empresa?.logo_url ? `<img src="${empresa.logo_url}" style="max-height:32px;max-width:120px;margin:0 auto 4px;display:block" />` : '';
+
+    const pagoLabel = venta.condicion_pago === 'credito' ? 'Crédito' : venta.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
+    const ivaTotal = (venta.iva_total ?? 0);
+    const iepsTotal = (venta.ieps_total ?? 0);
+
+    return `<div style="width:320px;padding:12px 16px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4">
+      <div style="text-align:center;padding-bottom:6px">
+        ${logoImg}
+        <div style="font-size:12px;font-weight:700">${empresa?.nombre ?? ''}</div>
+        ${rfc}${dir}${tel}
       </div>
-      <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px dashed #ccc"><th style="text-align:left;font-size:10px;color:#666">Producto</th><th style="text-align:right;font-size:10px;color:#666">Cant</th><th style="text-align:right;font-size:10px;color:#666">P.U.</th><th style="text-align:right;font-size:10px;color:#666">Total</th></tr></thead><tbody>${ls}</tbody></table>
-      <div style="border-top:1px dashed #999;margin-top:6px;padding-top:6px;font-size:11px">
-        <div style="display:flex;justify-content:space-between"><span>Subtotal:</span><span>$${(venta.subtotal ?? 0).toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between"><span>IVA:</span><span>$${(venta.iva_total ?? 0).toFixed(2)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:bold;margin-top:4px;border-top:2px solid #000;padding-top:4px"><span>TOTAL:</span><span>$${(venta.total ?? 0).toFixed(2)}</span></div>
+      <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
+      <div style="font-size:10px;padding:4px 0">
+        <div style="display:flex;gap:12px">
+          <span><b>Folio</b> <span style="font-family:monospace;color:#666">${venta.folio ?? '—'}</span></span>
+          <span><b>Fecha</b> <span style="color:#666">${fmtDate(venta.fecha)}</span></span>
+        </div>
+        <div><b>Cliente</b> <span style="color:#666">${(venta as any).clientes?.nombre ?? '—'}</span></div>
+        <div><b>Pago</b> <span style="color:#666">${pagoLabel}</span></div>
       </div>
+      <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
+      <div style="padding:4px 0">
+        <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Productos</div>
+        ${ls}
+      </div>
+      <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
+      <div style="padding:4px 0">
+        <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>$${(venta.subtotal ?? 0).toFixed(2)}</span></div>
+        ${ivaTotal > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>$${ivaTotal.toFixed(2)}</span></div>` : ''}
+        ${iepsTotal > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>$${iepsTotal.toFixed(2)}</span></div>` : ''}
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px dashed #aaa;padding-top:4px;margin-top:4px"><span>Total</span><span>$${(venta.total ?? 0).toFixed(2)}</span></div>
+      </div>
+      <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">Elaborado por Uniline — Innovación en la nube</div>
     </div>`;
+  };
   };
 
   if (isLoading) {
