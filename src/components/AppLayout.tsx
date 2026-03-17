@@ -58,6 +58,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Productos', path: '/productos' },
       { label: 'Tarifas', path: '/tarifas' },
+      { label: 'Listas de Precios', path: '/listas-precio' },
       { label: 'Categorías', path: '/catalogo/clasificaciones' },
       { label: 'Marcas', path: '/catalogo/marcas' },
       { label: 'Proveedores', path: '/proveedores' },

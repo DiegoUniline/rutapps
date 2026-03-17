@@ -291,6 +291,20 @@ export interface ListaPrecioLinea {
   productos?: { codigo: string; nombre: string };
 }
 
+export function useAllListasPrecios() {
+  return useQuery({
+    queryKey: ['lista_precios_all'],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lista_precios')
+        .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at')
+        .order('nombre');
+      if (error) throw error;
+      return data as ListaPrecio[];
+    },
+  });
+}
+
 export function useListasPrecioByTarifa(tarifaId?: string) {
   return useQuery({
     queryKey: ['lista_precios', tarifaId],

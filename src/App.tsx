@@ -19,6 +19,7 @@ const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
 const ProductoFormPage = lazy(() => import("@/pages/ProductoFormPage"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
+const ListasPrecioListPage = lazy(() => import("@/pages/ListasPrecioListPage"));
 const ProveedoresListPage = lazy(() => import("@/pages/ProveedoresListPage"));
 const ProveedorFormPage = lazy(() => import("@/pages/ProveedorFormPage"));
 const TarifaFormPage = lazy(() => import("@/pages/TarifaFormPage"));
@@ -250,6 +251,7 @@ function desktopRoutes() {
       <Route path="/productos/:id" element={<ProductoFormPage />} />
       <Route path="/tarifas" element={<TarifasListPage />} />
       <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+      <Route path="/listas-precio" element={<ListasPrecioListPage />} />
       <Route path="/proveedores" element={<ProveedoresListPage />} />
       <Route path="/proveedores/:id" element={<ProveedorFormPage />} />
       <Route path="/clientes" element={<ClientesListPage />} />
