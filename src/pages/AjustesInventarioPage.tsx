@@ -359,6 +359,32 @@ export default function AjustesInventarioPage() {
               <Label className="text-xs text-muted-foreground">Motivo del ajuste</Label>
               <Input value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej: Conteo físico..." />
             </div>
+            <div className="space-y-1 min-w-[200px]">
+              <Label className="text-xs text-muted-foreground">Categorías</Label>
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] items-center border border-input rounded-md px-2 py-1 bg-background">
+                {selectedCats.length === 0 && <span className="text-sm text-muted-foreground">Todas</span>}
+                {selectedCats.length <= 3
+                  ? selectedCats.map(cid => {
+                      const cat = (clasificaciones ?? []).find((c: any) => c.id === cid);
+                      return (
+                        <Badge key={cid} variant="secondary" className="text-xs cursor-pointer gap-1" onClick={() => setSelectedCats(prev => prev.filter(x => x !== cid))}>
+                          {cat?.nombre ?? '?'} ✕
+                        </Badge>
+                      );
+                    })
+                  : <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSelectedCats([])}>
+                      {selectedCats.length} categorías ✕
+                    </Badge>
+                }
+              </div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(clasificaciones ?? []).filter((c: any) => !selectedCats.includes(c.id)).map((c: any) => (
+                  <Badge key={c.id} variant="outline" className="text-xs cursor-pointer hover:bg-accent" onClick={() => setSelectedCats(prev => [...prev, c.id])}>
+                    + {c.nombre}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Action bar */}
