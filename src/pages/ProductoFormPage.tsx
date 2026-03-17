@@ -536,7 +536,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                             <option value="con_impuestos">Con impuestos</option>
                           </select>
                         ) : (
-                          <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium ${basePrecio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{baseLabel}</span>
+                          <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium ${basePrecio === 'con_impuestos' ? 'bg-primary/10 text-primary' : 'bg-primary/10 text-primary'}`}>{baseLabel}</span>
                         )}
                       </td>
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {precioSinImp.toFixed(2)}</td>
