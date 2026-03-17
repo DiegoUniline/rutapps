@@ -467,11 +467,13 @@ export default function AjustesInventarioPage() {
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                   <TableRow>
-                    <TableHead className="w-[100px]">Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead className="text-right w-[110px]">En sistema</TableHead>
-                    <TableHead className="text-right w-[130px]">Cantidad real</TableHead>
-                    <TableHead className="text-right w-[100px]">Diferencia</TableHead>
+                     <TableHead className="w-[100px]">Código</TableHead>
+                     <TableHead>Producto</TableHead>
+                     <TableHead className="w-[80px]">Unidad</TableHead>
+                     <TableHead className="w-[140px]">Categoría</TableHead>
+                     <TableHead className="text-right w-[110px]">En sistema</TableHead>
+                     <TableHead className="text-right w-[130px]">Cantidad real</TableHead>
+                     <TableHead className="text-right w-[100px]">Diferencia</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
