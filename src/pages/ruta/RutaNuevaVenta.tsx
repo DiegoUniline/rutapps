@@ -681,6 +681,11 @@ export default function RutaNuevaVenta() {
         metodoPago={metodoPago}
         montoRecibido={montoRecibidoNum}
         cambio={cambio}
+        saldoAnterior={saldoPendienteTotal}
+        pagoAplicado={totalAplicarCuentas}
+        saldoNuevo={
+          saldoPendienteTotal - totalAplicarCuentas + (condicionPago === 'credito' ? totals.total : 0)
+        }
         onClose={() => navigate('/ruta')}
       />
     );
