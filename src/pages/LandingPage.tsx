@@ -41,8 +41,8 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden">
       {/* Nav */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-16">
+      <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 pt-[env(safe-area-inset-top)]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-[max(1.5rem,env(safe-area-inset-left))] h-16">
           <span className="text-xl font-black tracking-tight" style={{ color: 'hsl(230, 55%, 52%)' }}>Rutapp</span>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
             <a href="#features" className="hover:text-gray-900 transition-colors">Funciones</a>
