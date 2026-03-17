@@ -26,9 +26,11 @@ export default function SearchableSelect({
   onClose,
   placeholder = 'Buscar...',
   autoOpen = false,
+  onCreateNew,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(autoOpen);
   const [search, setSearch] = useState('');
+  const [creating, setCreating] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
 
   const triggerRef = useRef<HTMLDivElement>(null);
