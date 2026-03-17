@@ -53,18 +53,53 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
 }) {
   const saveLinea = useSaveTarifaLinea();
   const deleteLineaMut = useDeleteTarifaLinea();
+  const saveTarifaMut = useSaveTarifa();
+  const { data: allListas } = useAllListasPrecios();
+  const saveListaMut = useSaveListaPrecio();
+  const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingCol, setEditingCol] = useState<string | null>(null);
   const [editVal, setEditVal] = useState<any>({});
   const [newRule, setNewRule] = useState({
     tarifa_id: '',
+    lista_precio_id: '',
     tipo_calculo: 'precio_fijo' as TipoCalculoTarifa,
     precio: 0,
     margen_pct: 0,
     descuento_pct: 0,
     precio_minimo: 0,
   });
+
+  // When tarifa changes, auto-select the principal lista for that tarifa
+  const listasForTarifa = useMemo(() =>
+    (allListas ?? []).filter(l => l.tarifa_id === newRule.tarifa_id),
+    [allListas, newRule.tarifa_id]
+  );
+
+  useEffect(() => {
+    if (newRule.tarifa_id) {
+      const principal = listasForTarifa.find(l => l.es_principal);
+      setNewRule(p => ({ ...p, lista_precio_id: principal?.id ?? listasForTarifa[0]?.id ?? '' }));
+    }
+  }, [newRule.tarifa_id, listasForTarifa]);
+
+  const handleCreateTarifa = async (name: string) => {
+    try {
+      const res = await saveTarifaMut.mutateAsync({ nombre: name, tipo: 'general', activa: true } as any);
+      qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+      return res.id;
+    } catch { return undefined; }
+  };
+
+  const handleCreateLista = async (name: string) => {
+    if (!newRule.tarifa_id) { toast.error('Selecciona primero una tarifa'); return undefined; }
+    try {
+      const res = await saveListaMut.mutateAsync({ tarifa_id: newRule.tarifa_id, nombre: name, es_principal: false });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+      return res.id;
+    } catch { return undefined; }
+  };
 
   const calcPrice = (linea: any) => {
     const c = form.costo ?? 0, pr = form.precio_principal ?? 0;
