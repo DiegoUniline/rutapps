@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,18 +11,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAlmacenes } from '@/hooks/useData';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import * as XLSX from 'xlsx';
 
 interface ProductRow {
   id: string;
   codigo: string;
   nombre: string;
   cantidadSistema: number;
-  cantidadReal: number | null; // null = not edited
+  cantidadReal: number | null;
   touched: boolean;
 }
 
@@ -38,9 +40,10 @@ export default function AjustesInventarioPage() {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [resetMotivo, setResetMotivo] = useState('Reinicio general de stock');
   const [resetting, setResetting] = useState(false);
-  const [tab, setTab] = useState<'ajuste' | 'historial'>('ajuste');
+  const [tab, setTab] = useState('ajuste');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerarPdf = () => {
     if (changedRows.length === 0 && rows.length === 0) return;
@@ -72,14 +75,14 @@ export default function AjustesInventarioPage() {
     setShowPdfModal(true);
   };
 
-  // Load products for selected almacen
+  // Load products
   const { data: productos, isLoading: loadingProducts } = useQuery({
     queryKey: ['productos-ajuste', empresa?.id, almacenId],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status')
+        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['activo'] as any[])
         .order('nombre');
@@ -104,7 +107,7 @@ export default function AjustesInventarioPage() {
     },
   });
 
-  // Initialize rows when products load or almacen changes
+  // Initialize rows when products load
   const initRows = () => {
     if (!productos) return;
     setRows(productos.map((p: any) => ({
@@ -117,7 +120,6 @@ export default function AjustesInventarioPage() {
     })));
   };
 
-  // Re-init when products change
   useMemo(() => { initRows(); }, [productos]);
 
   const filteredRows = useMemo(() => {
@@ -132,6 +134,70 @@ export default function AjustesInventarioPage() {
     setRows(prev => prev.map(r =>
       r.id === id ? { ...r, cantidadReal, touched: true } : r
     ));
+  };
+
+  // ─── Export template ─────────────────────────────────────────
+  const exportTemplate = () => {
+    if (!productos || productos.length === 0) {
+      toast.info('No hay productos para exportar');
+      return;
+    }
+    const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre ?? 'General';
+    const wsData = productos.map((p: any) => ({
+      'Código': p.codigo,
+      'Producto': p.nombre,
+      'Unidad': (p.unidades as any)?.abreviatura ?? 'PZA',
+      'Stock actual': p.cantidad ?? 0,
+      'Cantidad nueva': '',
+    }));
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    // Set column widths
+    ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ajuste');
+    XLSX.writeFile(wb, `plantilla-ajuste-${almacenNombre}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success('Plantilla descargada');
+  };
+
+  // ─── Import from file ────────────────────────────────────────
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const ab = await file.arrayBuffer();
+      const wb = XLSX.read(ab, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json<any>(ws);
+
+      if (data.length === 0) {
+        toast.error('El archivo está vacío');
+        return;
+      }
+
+      let matched = 0;
+      const newRows = [...rows];
+      for (const row of data) {
+        const codigo = String(row['Código'] ?? row['codigo'] ?? '').trim();
+        const cantidadNueva = row['Cantidad nueva'] ?? row['cantidad_nueva'] ?? row['Cantidad'];
+        if (!codigo || cantidadNueva === undefined || cantidadNueva === '' || cantidadNueva === null) continue;
+
+        const idx = newRows.findIndex(r => r.codigo === codigo);
+        if (idx !== -1) {
+          newRows[idx] = { ...newRows[idx], cantidadReal: Number(cantidadNueva), touched: true };
+          matched++;
+        }
+      }
+
+      setRows(newRows);
+      toast.success(`${matched} producto(s) actualizados desde el archivo`);
+      if (matched === 0) {
+        toast.info('No se encontraron coincidencias por código. Verifica que los códigos coincidan.');
+      }
+    } catch (err: any) {
+      toast.error('Error al leer el archivo: ' + (err.message || ''));
+    }
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   // Apply all changes
@@ -239,20 +305,15 @@ export default function AjustesInventarioPage() {
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Settings2 className="h-5 w-5" /> Ajustes de inventario
         </h1>
-        <div className="flex gap-2">
-          {rows.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
-              <FileText className="h-4 w-4 mr-1" /> PDF
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setTab(tab === 'ajuste' ? 'historial' : 'ajuste')}>
-            {tab === 'ajuste' ? 'Ver historial' : 'Volver a ajuste'}
-          </Button>
-        </div>
       </div>
 
-      {tab === 'ajuste' ? (
-        <>
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="ajuste">Ajuste masivo</TabsTrigger>
+          <TabsTrigger value="historial">Historial</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ajuste" className="space-y-4 mt-4">
           {/* Controls */}
           <div className="flex flex-wrap gap-3 items-end">
             <div className="space-y-1 min-w-[200px]">
@@ -281,7 +342,7 @@ export default function AjustesInventarioPage() {
             </div>
           </div>
 
-          {/* Summary bar */}
+          {/* Action bar */}
           <div className="flex items-center justify-between flex-wrap gap-3 bg-muted/40 border border-border/40 rounded-lg px-4 py-2.5">
             <div className="flex items-center gap-4 text-sm">
               <span className="text-muted-foreground">{filteredRows.length} productos</span>
@@ -291,7 +352,19 @@ export default function AjustesInventarioPage() {
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={exportTemplate} disabled={!productos || productos.length === 0} className="gap-1.5">
+                <Download className="h-4 w-4" /> Descargar plantilla
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5">
+                <Upload className="h-4 w-4" /> Cargar archivo
+              </Button>
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImport} />
+              {rows.length > 0 && (
+                <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
+                  <FileText className="h-4 w-4 mr-1" /> PDF
+                </Button>
+              )}
               <Button
                 variant="destructive"
                 size="sm"
@@ -314,7 +387,7 @@ export default function AjustesInventarioPage() {
 
           {/* Products table */}
           <div className="border border-border rounded-lg overflow-hidden">
-            <div className="max-h-[calc(100vh-320px)] overflow-auto">
+            <div className="max-h-[calc(100vh-380px)] overflow-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                   <TableRow>
@@ -365,44 +438,45 @@ export default function AjustesInventarioPage() {
               </Table>
             </div>
           </div>
-        </>
-      ) : (
-        /* Historial tab */
-        <div className="border border-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead className="text-right">Anterior</TableHead>
-                <TableHead className="text-right">Nueva</TableHead>
-                <TableHead className="text-right">Diferencia</TableHead>
-                <TableHead>Motivo</TableHead>
-                <TableHead>Fecha</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loadingHistorial && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>}
-              {!loadingHistorial && (historial ?? []).length === 0 && (
-                <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">
-                  <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay ajustes registrados
-                </TableCell></TableRow>
-              )}
-              {(historial ?? []).map((a: any) => (
-                <TableRow key={a.id}>
-                  <TableCell className="text-sm">{a.productos?.codigo} - {a.productos?.nombre}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
-                  <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
-                    {a.diferencia > 0 ? '+' : ''}{a.diferencia}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{a.motivo}</TableCell>
-                  <TableCell className="text-xs">{fmtDate(a.fecha)}</TableCell>
+        </TabsContent>
+
+        <TabsContent value="historial" className="mt-4">
+          <div className="border border-border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead className="text-right">Anterior</TableHead>
+                  <TableHead className="text-right">Nueva</TableHead>
+                  <TableHead className="text-right">Diferencia</TableHead>
+                  <TableHead>Motivo</TableHead>
+                  <TableHead>Fecha</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+              </TableHeader>
+              <TableBody>
+                {loadingHistorial && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Cargando...</TableCell></TableRow>}
+                {!loadingHistorial && (historial ?? []).length === 0 && (
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                    <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay ajustes registrados
+                  </TableCell></TableRow>
+                )}
+                {(historial ?? []).map((a: any) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="text-sm">{a.productos?.codigo} - {a.productos?.nombre}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
+                    <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
+                      {a.diferencia > 0 ? '+' : ''}{a.diferencia}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">{a.motivo}</TableCell>
+                    <TableCell className="text-xs">{fmtDate(a.fecha)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Reset Dialog */}
       <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
