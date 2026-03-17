@@ -63,6 +63,8 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   const [editingCol, setEditingCol] = useState<string | null>(null);
   const [editVal, setEditVal] = useState<any>({});
   const [newRule, setNewRule] = useState({
+    aplica_a: 'producto' as 'producto' | 'categoria' | 'todos',
+    clasificacion_ids: [] as string[],
     tarifa_id: '',
     lista_precio_id: '',
     tipo_calculo: 'precio_fijo' as TipoCalculoTarifa,
