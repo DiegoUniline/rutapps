@@ -1245,10 +1245,10 @@ export default function RutaNuevaVenta() {
               </section>
             )}
 
-            {/* Payment method */}
-            {totalACobrar > 0 && (
+            {/* Payment method — only show when contado or has cuentas */}
+            {(condicionPago === 'contado' || totalAplicarCuentas > 0) && (
               <section className="bg-card rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Método de pago</p>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recibir pago</p>
                 <div className="flex gap-1.5">
                   {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
                     <button key={val} onClick={() => setMetodoPago(val as typeof metodoPago)}
@@ -1296,6 +1296,7 @@ export default function RutaNuevaVenta() {
               <div className="space-y-1">
                 <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Venta actual</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.total)}</span></div>
                 {condicionPago === 'credito' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Se deja a crédito</span><span className="text-muted-foreground italic">$0.00 hoy</span></div>}
+                {condicionPago === 'por_definir' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Pago por definir</span><span className="text-muted-foreground italic">$0.00 hoy</span></div>}
                 {totalAplicarCuentas > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">${fmt(totalAplicarCuentas)}</span></div>}
               </div>
               {totalACobrar > 0 && (
@@ -1314,12 +1315,29 @@ export default function RutaNuevaVenta() {
             </section>
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
-            <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito}
-              className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-              <Check className="h-4 w-4" />
-              {saving ? 'Guardando...' : totalACobrar > 0 ? `Confirmar y cobrar $${fmt(totalACobrar)}` : 'Confirmar venta'}
-            </button>
+          <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom space-y-1.5">
+            {/* Primary action: Save with or without payment */}
+            {totalACobrar > 0 ? (
+              <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito}
+                className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
+                <Banknote className="h-4 w-4" />
+                {saving ? 'Guardando...' : `Cobrar y guardar $${fmt(totalACobrar)}`}
+              </button>
+            ) : (
+              <button onClick={handleSaveOnly} disabled={saving || cart.length === 0 || excedeCredito}
+                className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5">
+                <Save className="h-4 w-4" />
+                {saving ? 'Guardando...' : 'Guardar venta'}
+              </button>
+            )}
+            {/* Secondary: Save without payment when there IS something to collect */}
+            {totalACobrar > 0 && (
+              <button onClick={handleSaveOnly} disabled={saving || cart.length === 0}
+                className="w-full bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+                <Save className="h-4 w-4 text-muted-foreground" />
+                Guardar sin cobrar
+              </button>
+            )}
           </div>
         </div>
       )}
