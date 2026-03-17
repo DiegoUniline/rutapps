@@ -104,11 +104,20 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
     } catch { return undefined; }
   };
 
+  const applyRedondeo = (precio: number, redondeo: string) => {
+    if (!redondeo || redondeo === 'ninguno') return precio;
+    if (redondeo === 'arriba') return Math.ceil(precio);
+    if (redondeo === 'abajo') return Math.floor(precio);
+    return Math.round(precio);
+  };
+
   const calcPrice = (linea: any) => {
     const c = form.costo ?? 0, pr = form.precio_principal ?? 0;
-    if (linea.tipo_calculo === 'margen_costo') return Math.max(c * (1 + (linea.margen_pct ?? 0) / 100), linea.precio_minimo ?? 0);
-    if (linea.tipo_calculo === 'descuento_precio') return Math.max(pr * (1 - (linea.descuento_pct ?? 0) / 100), linea.precio_minimo ?? 0);
-    return Math.max(linea.precio ?? 0, linea.precio_minimo ?? 0);
+    let p = 0;
+    if (linea.tipo_calculo === 'margen_costo') p = Math.max(c * (1 + (linea.margen_pct ?? 0) / 100), linea.precio_minimo ?? 0);
+    else if (linea.tipo_calculo === 'descuento_precio') p = Math.max(pr * (1 - (linea.descuento_pct ?? 0) / 100), linea.precio_minimo ?? 0);
+    else p = Math.max(linea.precio ?? 0, linea.precio_minimo ?? 0);
+    return applyRedondeo(p, linea.redondeo ?? 'ninguno');
   };
 
   const calcLabel = (l: any) => l.tipo_calculo === 'margen_costo' ? `+${l.margen_pct}% s/costo` : l.tipo_calculo === 'descuento_precio' ? `-${l.descuento_pct}% s/precio` : 'Precio fijo';

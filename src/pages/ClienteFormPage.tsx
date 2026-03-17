@@ -31,6 +31,14 @@ const statusSteps = [
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
+/* ── Helpers ─────────────────────── */
+const applyRedondeo = (precio: number, redondeo: string) => {
+  if (!redondeo || redondeo === 'ninguno') return precio;
+  if (redondeo === 'arriba') return Math.ceil(precio);
+  if (redondeo === 'abajo') return Math.floor(precio);
+  return Math.round(precio); // cercano
+};
+
 /* ── Precios tab component ─────────────────────── */
 function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; listaPrecioId?: string }) {
   const [search, setSearch] = useState('');
@@ -45,7 +53,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
         .eq('tarifa_id', tarifaId!);
 
       const { data: prods } = await supabase.from('productos')
-        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status')
+        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
         .eq('status', 'activo')
         .order('nombre');
 
@@ -64,18 +72,38 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
           l.aplica_a === 'todos'
         );
 
-        if (!rule) return { ...p, precio_lista: p.precio_principal, regla: null, comision_pct: 0 };
+        if (!rule) return { ...p, precio_lista: p.precio_principal, precio_con_imp: p.precio_principal, regla: null, comision_pct: 0, base_precio: 'sin_impuestos', redondeo: 'ninguno' };
 
         let precio = 0;
         if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
         else if (rule.tipo_calculo === 'margen_costo') precio = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
         else if (rule.tipo_calculo === 'descuento_precio') precio = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
 
+        // Apply rounding
+        precio = applyRedondeo(precio, rule.redondeo ?? 'ninguno');
+
+        // If base_precio is 'con_impuestos', add taxes to the price for display
+        const basePrecio = rule.base_precio ?? 'sin_impuestos';
+        let precioConImp = precio;
+        if (basePrecio === 'con_impuestos') {
+          // Price already includes taxes — precioConImp = precio
+          // precio sin imp = precio / (1 + iva + ieps)
+        } else {
+          // Price is without taxes, calculate with taxes for display
+          const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
+          const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
+          const baseIva = precio + (p.ieps_tipo === 'porcentaje' ? precio * iepsPct / 100 : 0);
+          precioConImp = baseIva + baseIva * ivaPct / 100;
+        }
+
         return {
           ...p,
           precio_lista: precio,
+          precio_con_imp: precioConImp,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
           comision_pct: rule.comision_pct ?? 0,
+          base_precio: basePrecio,
+          redondeo: rule.redondeo ?? 'ninguno',
         };
       });
     },
@@ -115,8 +143,10 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
               <th className="th-odoo text-left">Producto</th>
               <th className="th-odoo text-right">Costo</th>
               <th className="th-odoo text-right">Precio base</th>
-              <th className="th-odoo text-right">Precio lista</th>
+              <th className="th-odoo text-right">Precio s/imp</th>
+              <th className="th-odoo text-right">Precio c/imp</th>
               <th className="th-odoo text-left">Regla</th>
+              <th className="th-odoo text-center">Base</th>
               <th className="th-odoo text-right">Ganancia</th>
               <th className="th-odoo text-right">Margen %</th>
               <th className="th-odoo text-right">Comisión %</th>
@@ -133,7 +163,13 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toFixed(2)}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toFixed(2)}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {(p.precio_con_imp ?? p.precio_lista).toFixed(2)}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{p.regla ?? '—'}</td>
+                  <td className="py-1.5 px-3 text-center">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
+                      {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
+                    </span>
+                  </td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
                   <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
@@ -141,7 +177,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+              <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
             )}
           </tbody>
         </table>
