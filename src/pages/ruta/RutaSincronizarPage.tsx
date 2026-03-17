@@ -32,6 +32,11 @@ export default function RutaSincronizarPage() {
   const [deadLetters, setDeadLetters] = useState(0);
   const [uploadResult, setUploadResult] = useState<{ success: number; failed: number } | null>(null);
   const [downloadResult, setDownloadResult] = useState<{ total: number } | null>(null);
+  const [backupTs, setBackupTs] = useState<number | null>(getBackupTimestamp());
+  const [backupCount, setBackupCount] = useState(getBackupItemCount());
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load local data summary
   const loadSummary = useCallback(async () => {
