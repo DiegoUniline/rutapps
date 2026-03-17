@@ -24,6 +24,7 @@ export function ConfigEmisorCard() {
     estado: '',
   });
   const [saving, setSaving] = useState(false);
+  const [initialForm, setInitialForm] = useState(form);
 
   // CSF upload
   const csfInputRef = useRef<HTMLInputElement>(null);
