@@ -66,6 +66,7 @@ const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
+const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
 const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
