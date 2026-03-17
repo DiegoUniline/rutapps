@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, X, Trash2, Star, Camera, Plus, Crown } from 'lucide-react';
@@ -10,6 +10,9 @@ import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea, useProductoProveedores, useSaveProductoProveedor, useDeleteProductoProveedor } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { compressPhoto } from '@/lib/imageCompressor';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 /* ── Precios Tab Component ── */
@@ -378,6 +381,7 @@ const statusSteps = [
 ];
 
 export default function ProductoFormPage() {
+  const { empresa } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
@@ -400,7 +404,9 @@ export default function ProductoFormPage() {
   const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
   const [starred, setStarred] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
   const { data: prodProveedores } = useProductoProveedores(isNew ? undefined : id);
@@ -431,6 +437,28 @@ export default function ProductoFormPage() {
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
+
+  const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !empresa?.id) return;
+    setUploadingImage(true);
+    try {
+      const compressed = await compressPhoto(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
+      const productId = id && !isNew ? id : crypto.randomUUID();
+      const path = `${empresa.id}/productos/${productId}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
+      set('imagen_url', urlData.publicUrl + '?t=' + Date.now());
+      toast.success('Imagen cargada');
+    } catch (err: any) {
+      toast.error('Error al subir imagen: ' + err.message);
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
 
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
@@ -562,10 +590,19 @@ export default function ProductoFormPage() {
 
         {/* Image */}
         <div className="hidden sm:block shrink-0">
+          <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           {form.imagen_url ? (
-            <img src={form.imagen_url} alt="" className="w-[100px] h-[100px] rounded object-cover border border-border" />
+            <div className="relative group cursor-pointer" onClick={() => imageInputRef.current?.click()}>
+              <img src={form.imagen_url} alt="" className="w-[100px] h-[100px] rounded object-cover border border-border" />
+              <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="h-6 w-6 text-white" />
+              </div>
+            </div>
           ) : (
-            <div className="w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-muted/30 cursor-pointer hover:border-primary/40 transition-colors">
+            <div
+              onClick={() => imageInputRef.current?.click()}
+              className={`w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-muted/30 cursor-pointer hover:border-primary/40 transition-colors ${uploadingImage ? 'animate-pulse' : ''}`}
+            >
               <Camera className="h-7 w-7 text-muted-foreground/40" />
             </div>
           )}
