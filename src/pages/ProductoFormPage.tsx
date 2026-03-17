@@ -13,6 +13,32 @@ import type { Producto, TipoCalculoTarifa } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+
+/** Quick-create a catalog item (marcas, clasificaciones, unidades, listas, proveedores) */
+async function quickCreateCatalog(
+  tableName: string,
+  nombre: string,
+  queryKey: string,
+  qc: ReturnType<typeof useQueryClient>,
+  extra?: Record<string, any>,
+): Promise<string | undefined> {
+  try {
+    const { data: profile } = await supabase.from('profiles').select('empresa_id').maybeSingle();
+    if (!profile?.empresa_id) { toast.error('Sin perfil de empresa'); return undefined; }
+    const { data, error } = await (supabase.from as any)(tableName)
+      .insert({ nombre, empresa_id: profile.empresa_id, ...extra })
+      .select('id')
+      .single();
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: [queryKey] });
+    toast.success(`"${nombre}" creado`);
+    return data.id as string;
+  } catch (err: any) {
+    toast.error(err.message);
+    return undefined;
+  }
+}
 
 
 /* ── Precios Tab Component ── */
@@ -221,7 +247,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
 }
 
 /* ── Proveedores Tab Component ── */
-function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSave, onDelete, saving }: {
+function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSave, onDelete, saving, onCreateProveedor }: {
   productoId?: string;
   isNew: boolean;
   proveedores: { id: string; nombre: string }[];
@@ -229,6 +255,7 @@ function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSav
   onSave: (row: any) => Promise<any>;
   onDelete: (row: { id: string; producto_id: string }) => Promise<any>;
   saving: boolean;
+  onCreateProveedor?: (name: string) => Promise<string | undefined>;
 }) {
   const [adding, setAdding] = useState(false);
   const [newProv, setNewProv] = useState({ proveedor_id: '', precio_compra: 0, tiempo_entrega_dias: 0 });
@@ -328,6 +355,7 @@ function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSav
                     value={newProv.proveedor_id}
                     onChange={val => setNewProv(p => ({ ...p, proveedor_id: val }))}
                     placeholder="Buscar proveedor..."
+                    onCreateNew={onCreateProveedor}
                   />
                 </td>
                 <td className="py-1.5 px-3">
@@ -382,12 +410,19 @@ const statusSteps = [
 
 export default function ProductoFormPage() {
   const { empresa } = useAuth();
+  const qc = useQueryClient();
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
   const { data: existing } = useProducto(isNew ? undefined : id);
   const saveMutation = useSaveProducto();
   const deleteMutation = useDeleteProducto();
+
+  const createMarca = (name: string) => quickCreateCatalog('marcas', name, 'marcas', qc);
+  const createClasificacion = (name: string) => quickCreateCatalog('clasificaciones', name, 'clasificaciones', qc);
+  const createUnidad = (name: string) => quickCreateCatalog('unidades', name, 'unidades', qc);
+  const createLista = (name: string) => quickCreateCatalog('listas', name, 'listas', qc);
+  const createProveedor = (name: string) => quickCreateCatalog('proveedores', name, 'proveedores', qc);
 
   const { data: marcas } = useMarcas();
   const { data: proveedores } = useProveedores();
@@ -622,21 +657,25 @@ export default function ProductoFormPage() {
               options={marcas?.map(m => ({ value: m.id, label: m.nombre })) ?? []}
               onChange={v => set('marca_id', v || null)}
               format={() => findName(marcas, form.marca_id ?? undefined)}
+              onCreateNew={createMarca}
             />
             <OdooField label="Categoría" value={form.clasificacion_id} type="select"
               options={clasificaciones?.map(c => ({ value: c.id, label: c.nombre })) ?? []}
               onChange={v => set('clasificacion_id', v || null)}
               format={() => findName(clasificaciones, form.clasificacion_id ?? undefined)}
+              onCreateNew={createClasificacion}
             />
             <OdooField label="Unid. venta" value={form.unidad_venta_id} type="select"
               options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []}
               onChange={v => set('unidad_venta_id', v || null)}
               format={() => findUnit(unidades, form.unidad_venta_id ?? undefined)}
+              onCreateNew={createUnidad}
             />
             <OdooField label="Unid. compra" value={form.unidad_compra_id} type="select"
               options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []}
               onChange={v => set('unidad_compra_id', v || null)}
               format={() => findUnit(unidades, form.unidad_compra_id ?? undefined)}
+              onCreateNew={createUnidad}
             />
           </div>
           {/* Right column */}
@@ -665,6 +704,7 @@ export default function ProductoFormPage() {
               options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []}
               onChange={v => set('lista_id', v || null)}
               format={() => findName(listas, form.lista_id ?? undefined)}
+              onCreateNew={createLista}
             />
             <OdooField label="Min / Max stock" value={`${form.min ?? 0} / ${form.max ?? 0}`}
               format={() => `${form.min ?? 0} / ${form.max ?? 0}`}
@@ -896,6 +936,7 @@ export default function ProductoFormPage() {
                   onSave={saveProvMut.mutateAsync}
                   onDelete={deleteProvMut.mutateAsync}
                   saving={saveProvMut.isPending}
+                  onCreateProveedor={createProveedor}
                 />
               ),
             },

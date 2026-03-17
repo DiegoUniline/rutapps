@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, ChevronDown, X } from 'lucide-react';
+import { Search, ChevronDown, X, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Option {
@@ -15,6 +15,8 @@ interface SearchableSelectProps {
   onClose?: () => void;
   placeholder?: string;
   autoOpen?: boolean;
+  /** When provided, shows a "Crear nuevo" option. Should return the new item's id. */
+  onCreateNew?: (name: string) => Promise<string | undefined>;
 }
 
 export default function SearchableSelect({
@@ -24,9 +26,11 @@ export default function SearchableSelect({
   onClose,
   placeholder = 'Buscar...',
   autoOpen = false,
+  onCreateNew,
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(autoOpen);
   const [search, setSearch] = useState('');
+  const [creating, setCreating] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
 
   const triggerRef = useRef<HTMLDivElement>(null);
@@ -186,24 +190,52 @@ export default function SearchableSelect({
 
           {/* Options list */}
           <div className="overflow-y-auto flex-1">
-            {filtered.length === 0 ? (
+            {filtered.length === 0 && !onCreateNew ? (
               <div className="px-3 py-3 text-[12px] text-muted-foreground text-center">Sin resultados</div>
             ) : (
-              filtered.map((o, i) => (
-                <div
-                  key={o.value}
-                  onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
-                  onMouseUp={() => select(o.value)}
-                  onMouseEnter={() => setHighlightIdx(i)}
-                  className={cn(
-                    'px-3 py-2 text-[13px] cursor-pointer transition-colors truncate',
-                    i === highlightIdx ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent/50',
-                    o.value === value && 'font-semibold'
-                  )}
-                >
-                  {highlightMatch(o.label, search)}
-                </div>
-              ))
+              <>
+                {filtered.map((o, i) => (
+                  <div
+                    key={o.value}
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
+                    onMouseUp={() => select(o.value)}
+                    onMouseEnter={() => setHighlightIdx(i)}
+                    className={cn(
+                      'px-3 py-2 text-[13px] cursor-pointer transition-colors truncate',
+                      i === highlightIdx ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent/50',
+                      o.value === value && 'font-semibold'
+                    )}
+                  >
+                    {highlightMatch(o.label, search)}
+                  </div>
+                ))}
+                {/* Quick-create option */}
+                {onCreateNew && search.trim() && !filtered.some(o => o.label.toLowerCase() === search.trim().toLowerCase()) && (
+                  <div
+                    onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
+                    onMouseUp={async () => {
+                      if (creating) return;
+                      setCreating(true);
+                      try {
+                        const newId = await onCreateNew(search.trim());
+                        if (newId) {
+                          select(newId);
+                        }
+                      } finally {
+                        setCreating(false);
+                      }
+                    }}
+                    className="px-3 py-2 text-[13px] cursor-pointer transition-colors flex items-center gap-1.5 text-primary font-medium hover:bg-accent/50 border-t border-border"
+                  >
+                    {creating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5" />
+                    )}
+                    Crear "{search.trim()}"
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>,

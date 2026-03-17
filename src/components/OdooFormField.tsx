@@ -18,11 +18,13 @@ interface OdooFieldProps {
   readOnly?: boolean;
   alwaysEdit?: boolean;
   required?: boolean;
+  /** Quick-create handler for select fields. Should return the new item's id. */
+  onCreateNew?: (name: string) => Promise<string | undefined>;
 }
 
 export function OdooField({
   label, value, onChange, type = 'text', options, placeholder,
-  help, teal, format, readOnly, alwaysEdit, required,
+  help, teal, format, readOnly, alwaysEdit, required, onCreateNew,
 }: OdooFieldProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -141,6 +143,7 @@ export function OdooField({
               onClose={() => setEditing(false)}
               placeholder={placeholder || 'Buscar...'}
               autoOpen
+              onCreateNew={onCreateNew}
             />
           </div>
         ) : (
