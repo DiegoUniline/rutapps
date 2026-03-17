@@ -228,6 +228,38 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               )}
             </div>
 
+            {/* Balance / Saldo */}
+            {(saldoAnterior != null && saldoAnterior > 0) || (saldoNuevo != null && saldoNuevo > 0) ? (
+              <>
+                <div className="tk-dash mx-5 border-t border-dashed border-border" />
+                <div className="px-5 py-2 space-y-0.5">
+                  <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Estado de cuenta</p>
+                  {saldoAnterior != null && saldoAnterior > 0 && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground">Saldo anterior</span>
+                      <span className="text-foreground tabular-nums">${fmt(saldoAnterior)}</span>
+                    </div>
+                  )}
+                  {pagoAplicado != null && pagoAplicado > 0 && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground">Pago aplicado</span>
+                      <span className="text-green-600 font-medium tabular-nums">-${fmt(pagoAplicado)}</span>
+                    </div>
+                  )}
+                  {condicionPago === 'credito' && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground">+ Esta venta (crédito)</span>
+                      <span className="text-foreground tabular-nums">${fmt(total)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[11px] font-bold pt-1 border-t border-dashed border-border">
+                    <span className="text-foreground">Nuevo saldo</span>
+                    <span className={`tabular-nums ${(saldoNuevo ?? 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>${fmt(saldoNuevo ?? 0)}</span>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
             {/* Footer */}
             <div className="tk-footer px-5 py-2.5 border-t border-dashed border-border text-center">
               <p className="text-[8px] text-muted-foreground">Elaborado por Uniline — Innovación en la nube</p>
