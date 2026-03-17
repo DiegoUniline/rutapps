@@ -37,7 +37,9 @@ export default function AjustesInventarioPage() {
   const { data: almacenes } = useAlmacenes();
   const [almacenId, setAlmacenId] = useState('');
   const [search, setSearch] = useState('');
+  const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [rows, setRows] = useState<ProductRow[]>([]);
+  const { data: clasificaciones } = useClasificaciones();
   const [motivo, setMotivo] = useState('Conteo físico');
   const [applying, setApplying] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
