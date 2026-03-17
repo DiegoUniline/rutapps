@@ -15,6 +15,9 @@ interface TicketVentaProps {
   metodoPago?: string;
   montoRecibido?: number;
   cambio?: number;
+  saldoAnterior?: number;
+  pagoAplicado?: number;
+  saldoNuevo?: number;
   onClose: () => void;
 }
 
