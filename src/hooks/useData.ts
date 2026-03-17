@@ -213,7 +213,8 @@ export function useTarifaLineasForProducto(productoId?: string, clasificacionId?
       const { data, error } = await supabase
         .from('tarifa_lineas')
         .select('*, tarifas(id, nombre, activa), lista_precios(id, nombre, es_principal)')
-        .or(filters.join(','));
+        .or(filters.join(','))
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return data as (TarifaLinea & { tarifas: { id: string; nombre: string; activa: boolean } })[];
     },
