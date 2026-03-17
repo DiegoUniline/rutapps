@@ -44,6 +44,7 @@ export default function ClienteFormPage() {
   const { data: vendedores } = useVendedores();
   const { data: cobradores } = useCobradores();
   const { data: tarifas } = useTarifasForSelect();
+  const { data: listasPrecios } = useListasPrecioForSelect(form.tarifa_id ?? undefined);
   const { data: productosSelect } = useProductosForSelect();
   const { data: pedidoSugerido } = usePedidoSugerido(isNew ? undefined : id);
   const savePedidoMutation = useSavePedidoSugerido();
