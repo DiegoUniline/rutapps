@@ -164,9 +164,10 @@ export function useSubscription(): SubscriptionState {
 
       const endDate = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
       const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
+      // Block after 3 grace days past expiration
       const isBlocked = (sub.status === 'suspended') ||
-        (sub.status === 'past_due' && daysLeft !== null && daysLeft < 0) ||
-        (sub.status === 'trial' && daysLeft !== null && daysLeft < 0);
+        (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||
+        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3);
 
       const nextState: SubscriptionState = {
         loading: false,
