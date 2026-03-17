@@ -449,7 +449,7 @@ export default function TarifaFormPage() {
     <div className="p-4 min-h-full">
       {/* Breadcrumb + status */}
       <div className="flex items-center justify-between mb-0.5">
-        <Link to="/tarifas" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Tarifas</Link>
+        <Link to={backUrl} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">{backLabel}</Link>
         <div className="flex items-center gap-1">
           {['activa', 'inactiva'].map(s => (
             <button
