@@ -153,7 +153,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
   );
 }
 
-
+export default function ClienteFormPage() {
   const { id } = useParams();
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
