@@ -188,7 +188,7 @@ function renderAuthenticatedRoutes() {
         <Route path="cobros" element={<RutaCobros />} />
         <Route path="stock" element={<RutaStock />} />
         <Route path="gastos" element={<RutaGastos />} />
-        <Route path="entregas" element={<RutaEntregas />} />
+        <Route path="entregas" element={<RutaClientesEntregas />} />
         <Route path="perfil" element={<RutaPerfil />} />
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
