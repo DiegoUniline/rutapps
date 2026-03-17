@@ -329,7 +329,6 @@ export default function ClienteFormPage() {
         rfc: d.rfc || prev.rfc,
         direccion: d.direccion || prev.direccion,
         colonia: d.colonia || prev.colonia,
-        cp: d.cp || prev.cp,
       }));
       toast.success('Datos fiscales extraídos de la CSF');
     } catch (err: any) {
