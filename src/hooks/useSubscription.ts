@@ -84,7 +84,9 @@ export function useSubscription(): SubscriptionState {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (sa) {
+      const isSuperAdmin = !!sa;
+
+      if (isSuperAdmin && !empresa?.id) {
         const nextState: SubscriptionState = {
           loading: false,
           status: 'active',
@@ -93,7 +95,6 @@ export function useSubscription(): SubscriptionState {
           isSuperAdmin: true,
           maxUsuarios: 999,
         };
-
         setState(nextState);
         writeCachedSubscriptionState(user.id, {
           status: nextState.status,
