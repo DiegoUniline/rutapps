@@ -55,6 +55,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   const deleteLineaMut = useDeleteTarifaLinea();
   const saveTarifaMut = useSaveTarifa();
   const { data: allListas } = useAllListasPrecios();
+  const { data: clasificaciones } = useClasificaciones();
   const saveListaMut = useSaveListaPrecio();
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
