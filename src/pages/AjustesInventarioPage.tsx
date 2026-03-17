@@ -478,7 +478,7 @@ export default function AjustesInventarioPage() {
                 </TableHeader>
                 <TableBody>
                   {loadingProducts && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
                   )}
                   {!loadingProducts && filteredRows.length === 0 && (
                     <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">
