@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2 } from 'lucide-react';
+import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import GpsMapPicker from '@/components/GpsMapPicker';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
@@ -221,6 +221,7 @@ export default function ClienteFormPage() {
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
+  const [parsingCsf, setParsingCsf] = useState(false);
   const { data: listasPrecios } = useListasPrecioForSelect(form.tarifa_id ?? undefined);
 
   // Pedido sugerido state
@@ -295,6 +296,47 @@ export default function ClienteFormPage() {
       toast.success('Cliente eliminado');
       navigate('/clientes');
     } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleCsfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      toast.error('Solo se permiten archivos PDF');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('El archivo no debe superar 10MB');
+      return;
+    }
+    setParsingCsf(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const { data, error } = await supabase.functions.invoke('parse-csf', {
+        body: { pdf_base64: base64 },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error al procesar CSF');
+      const d = data.data;
+      setForm(prev => ({
+        ...prev,
+        requiere_factura: true,
+        facturama_rfc: d.rfc || prev.facturama_rfc,
+        facturama_razon_social: d.razon_social || prev.facturama_razon_social,
+        facturama_regimen_fiscal: d.regimen_fiscal || prev.facturama_regimen_fiscal,
+        facturama_cp: d.cp || prev.facturama_cp,
+        rfc: d.rfc || prev.rfc,
+        direccion: d.direccion || prev.direccion,
+        colonia: d.colonia || prev.colonia,
+      }));
+      toast.success('Datos fiscales extraídos de la CSF');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al procesar la constancia');
+    } finally {
+      setParsingCsf(false);
+      e.target.value = '';
+    }
   };
 
   const captureGps = () => {
@@ -532,9 +574,20 @@ export default function ClienteFormPage() {
           content: (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
-                <div className="odoo-field-row">
-                  <span className="odoo-field-label">¿Requiere factura?</span>
-                  <input type="checkbox" checked={!!form.requiere_factura} onChange={e => set('requiere_factura', e.target.checked)} className="rounded border-input" />
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="odoo-field-row flex-1">
+                    <span className="odoo-field-label">¿Requiere factura?</span>
+                    <input type="checkbox" checked={!!form.requiere_factura} onChange={e => set('requiere_factura', e.target.checked)} className="rounded border-input" />
+                  </div>
+                  <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-dashed border-primary/40 text-[12px] font-medium cursor-pointer hover:bg-primary/5 active:scale-95 transition-all ${parsingCsf ? 'opacity-60 pointer-events-none' : ''}`}>
+                    {parsingCsf ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                    ) : (
+                      <FileText className="h-3.5 w-3.5 text-primary" />
+                    )}
+                    <span className="text-primary">{parsingCsf ? 'Procesando CSF...' : 'Subir CSF (PDF)'}</span>
+                    <input type="file" accept="application/pdf" className="hidden" onChange={handleCsfUpload} disabled={parsingCsf} />
+                  </label>
                 </div>
                 {form.requiere_factura && (
                   <>
