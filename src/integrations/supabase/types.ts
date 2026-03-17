@@ -2853,6 +2853,74 @@ export type Database = {
           },
         ]
       }
+      solicitudes_pago: {
+        Row: {
+          aprobado_por: string | null
+          cantidad_timbres: number | null
+          cantidad_usuarios: number | null
+          comprobante_url: string | null
+          concepto: string
+          created_at: string
+          empresa_id: string
+          fecha_aprobacion: string | null
+          id: string
+          metodo: string
+          monto_centavos: number
+          notas: string | null
+          notas_admin: string | null
+          plan_price_id: string | null
+          status: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          aprobado_por?: string | null
+          cantidad_timbres?: number | null
+          cantidad_usuarios?: number | null
+          comprobante_url?: string | null
+          concepto?: string
+          created_at?: string
+          empresa_id: string
+          fecha_aprobacion?: string | null
+          id?: string
+          metodo?: string
+          monto_centavos?: number
+          notas?: string | null
+          notas_admin?: string | null
+          plan_price_id?: string | null
+          status?: string
+          tipo?: string
+          user_id: string
+        }
+        Update: {
+          aprobado_por?: string | null
+          cantidad_timbres?: number | null
+          cantidad_usuarios?: number | null
+          comprobante_url?: string | null
+          concepto?: string
+          created_at?: string
+          empresa_id?: string
+          fecha_aprobacion?: string | null
+          id?: string
+          metodo?: string
+          monto_centavos?: number
+          notas?: string | null
+          notas_admin?: string | null
+          plan_price_id?: string | null
+          status?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_pago_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_camion: {
         Row: {
           cantidad_actual: number
