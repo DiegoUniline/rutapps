@@ -16,10 +16,10 @@ const tabs = [
 ];
 
 const menuItems = [
-  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
   { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
   { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
+  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
 ];
 
 export default function MobileLayout() {
