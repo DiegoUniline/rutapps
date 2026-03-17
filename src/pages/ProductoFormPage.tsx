@@ -370,12 +370,15 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
           <div className="overflow-x-auto border border-border rounded">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-table-border">
+               <tr className="border-b border-table-border">
                   <th className="th-odoo text-left">Aplica</th>
                   <th className="th-odoo text-left">Lista</th>
                   <th className="th-odoo text-left">Tipo</th>
                   <th className="th-odoo text-right">Valor</th>
-                  <th className="th-odoo text-right">Precio</th>
+                  <th className="th-odoo text-center">Redondeo</th>
+                  <th className="th-odoo text-center">Base</th>
+                  <th className="th-odoo text-right">Precio s/imp</th>
+                  <th className="th-odoo text-right">Precio c/imp</th>
                   <th className="th-odoo text-right">Ganancia $</th>
                   <th className="th-odoo text-right">Ganancia %</th>
                   <th className="th-odoo text-right">Comisión %</th>
@@ -386,9 +389,28 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                 {rules.map((linea: any) => {
                   const isEditing = editingId === linea.id;
                   const currentVals = isEditing ? editVal : linea;
-                  const precio = isEditing ? calcPrice({ ...linea, ...editVal }) : calcPrice(linea);
+                  const precioBase = isEditing ? calcPrice({ ...linea, ...editVal }) : calcPrice(linea);
                   const costo = form.costo ?? 0;
-                  const ganancia = precio - costo;
+                  const ivaPct = form.tiene_iva ? (form.iva_pct ?? 16) : 0;
+                  const iepsPct = form.tiene_ieps ? (form.ieps_pct ?? 0) : 0;
+                  const basePrecio = linea.base_precio ?? 'sin_impuestos';
+                  const redondeoLabel = { arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' }[linea.redondeo as string] ?? '— Ninguno';
+                  const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
+
+                  // Calculate prices with and without taxes
+                  let precioSinImp = precioBase;
+                  let precioConImp = precioBase;
+                  if (basePrecio === 'con_impuestos') {
+                    // Price already includes taxes, derive sin imp
+                    precioConImp = precioBase;
+                    precioSinImp = precioBase / (1 + (ivaPct + iepsPct) / 100);
+                  } else {
+                    // Price is without taxes, derive con imp
+                    precioSinImp = precioBase;
+                    precioConImp = precioBase * (1 + (ivaPct + iepsPct) / 100);
+                  }
+
+                  const ganancia = precioSinImp - costo;
                   const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
                   const listaName = linea.lista_precios?.nombre;
                   const esPrincipal = linea.lista_precios?.es_principal;
@@ -471,7 +493,12 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-center text-xs text-muted-foreground">{redondeoLabel}</td>
+                      <td className="py-1.5 px-3 text-center">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${basePrecio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{baseLabel}</span>
+                      </td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {precioSinImp.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {precioConImp.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
                       <td className="py-1.5 px-3 text-right" onClick={cellClick('comision')}>
