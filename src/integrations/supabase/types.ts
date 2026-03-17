@@ -3809,6 +3809,73 @@ export type Database = {
           },
         ]
       }
+      visitas: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          empresa_id: string
+          fecha: string
+          gps_lat: number | null
+          gps_lng: number | null
+          id: string
+          motivo: string | null
+          notas: string | null
+          tipo: string
+          user_id: string
+          venta_id: string | null
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id: string
+          fecha?: string
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          motivo?: string | null
+          notas?: string | null
+          tipo?: string
+          user_id: string
+          venta_id?: string | null
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          empresa_id?: string
+          fecha?: string
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          motivo?: string | null
+          notas?: string | null
+          tipo?: string
+          user_id?: string
+          venta_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitas_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_config: {
         Row: {
           activo: boolean
