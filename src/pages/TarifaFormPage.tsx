@@ -604,8 +604,21 @@ export default function TarifaFormPage() {
                                 <SearchableSelect
                                   options={listaOptions}
                                   value={editLinea.lista_precio_id}
-                                  onChange={val => { setEditLinea(p => ({ ...p, lista_precio_id: val })); setTimeout(blurSave, 50); }}
-                                  onClose={blurSave}
+                                  onChange={val => {
+                                    setEditLinea(p => ({ ...p, lista_precio_id: val }));
+                                    // Save directly with the new value to avoid stale state
+                                    const payload: any = {
+                                      id: editingLineaId,
+                                      tarifa_id: id,
+                                      lista_precio_id: val || null,
+                                    };
+                                    saveLinea.mutateAsync(payload).then(() => {
+                                      setEditingLineaId(null);
+                                      setEditingCol(null);
+                                      refetch();
+                                    }).catch((err: any) => toast.error(err.message));
+                                  }}
+                                  onClose={() => { setEditingLineaId(null); setEditingCol(null); }}
                                   placeholder="Seleccionar lista..."
                                   autoOpen
                                   onCreateNew={handleCreateLista}
