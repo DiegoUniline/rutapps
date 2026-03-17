@@ -444,25 +444,28 @@ export default function ClienteFormPage() {
                   <div className="flex flex-col gap-2 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1.5">
-                        <label className="text-[11px] text-muted-foreground font-medium">Lat</label>
+                        <label className="text-[11px] text-muted-foreground font-medium">Coords</label>
                         <input
-                          type="number"
-                          step="any"
-                          value={form.gps_lat ?? ''}
-                          onChange={e => set('gps_lat', e.target.value ? parseFloat(e.target.value) : null)}
-                          placeholder="23.634500"
-                          className="w-[130px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-[11px] text-muted-foreground font-medium">Lng</label>
-                        <input
-                          type="number"
-                          step="any"
-                          value={form.gps_lng ?? ''}
-                          onChange={e => set('gps_lng', e.target.value ? parseFloat(e.target.value) : null)}
-                          placeholder="-102.552800"
-                          className="w-[130px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
+                          type="text"
+                          value={form.gps_lat && form.gps_lng ? `${form.gps_lat}, ${form.gps_lng}` : ''}
+                          onChange={e => {
+                            const raw = e.target.value;
+                            const parts = raw.split(',').map(s => s.trim());
+                            if (parts.length === 2) {
+                              const lat = parseFloat(parts[0]);
+                              const lng = parseFloat(parts[1]);
+                              if (!isNaN(lat) && !isNaN(lng)) {
+                                setForm(prev => ({ ...prev, gps_lat: lat, gps_lng: lng }));
+                                return;
+                              }
+                            }
+                            // Allow typing freely — clear if invalid
+                            if (raw === '') {
+                              setForm(prev => ({ ...prev, gps_lat: undefined, gps_lng: undefined }));
+                            }
+                          }}
+                          placeholder="19.763610, -104.355636"
+                          className="w-[240px] h-8 px-2 rounded-md border border-input bg-background text-[12px] focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
                       <button
@@ -493,7 +496,7 @@ export default function ClienteFormPage() {
                       )}
                     </div>
                     {form.gps_lat && form.gps_lng && mapsLoaded && (
-                      <div className="rounded-lg overflow-hidden border border-border" style={{ height: 180 }}>
+                      <div className="rounded-lg overflow-hidden border border-border w-[300px] h-[200px]">
                         <GoogleMap
                           mapContainerStyle={{ width: '100%', height: '100%' }}
                           center={{ lat: Number(form.gps_lat), lng: Number(form.gps_lng) }}
