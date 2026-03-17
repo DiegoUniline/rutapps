@@ -26,6 +26,7 @@ interface ProductRow {
   id: string;
   codigo: string;
   nombre: string;
+  clasificacionId: string | null;
   cantidadSistema: number;
   cantidadReal: number | null;
   touched: boolean;
