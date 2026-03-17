@@ -681,10 +681,32 @@ export default function ProductoFormPage() {
           </div>
           {/* Right column */}
           <div>
-            <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
-              onChange={v => set('precio_principal', +v)}
-              format={v => `$ ${(v ?? 0).toFixed(2)}`}
-            />
+            {/* Toggle: precio directo vs listas */}
+            <div className="odoo-field-row">
+              <span className="odoo-field-label">Modo de precio</span>
+              <div className="flex items-center gap-1">
+                {['directo', 'listas'].map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, usa_listas_precio: mode === 'listas' }))}
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-colors ${
+                      ((form as any).usa_listas_precio ? 'listas' : 'directo') === mode
+                        ? 'bg-primary text-primary-foreground border-primary font-medium'
+                        : 'border-border text-muted-foreground hover:border-primary/40'
+                    }`}
+                  >
+                    {mode === 'directo' ? 'Precio directo' : 'Listas de precio'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {!(form as any).usa_listas_precio && (
+              <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
+                onChange={v => set('precio_principal', +v)}
+                format={v => `$ ${(v ?? 0).toFixed(2)}`}
+              />
+            )}
             <OdooField label="Costo" value={form.costo} type="number" teal help
               onChange={v => set('costo', +v)}
               format={v => `$ ${(v ?? 0).toFixed(2)}`}
@@ -720,16 +742,18 @@ export default function ProductoFormPage() {
           tabs={[
             {
               key: 'precios',
-              label: 'Precios',
-              content: <PreciosTab
-                form={form}
-                set={set}
-                tarifaLineas={tarifaLineas}
-                tarifasDisp={tarifasDisp}
-                productoId={id}
-                isNew={isNew}
-                navigate={navigate}
-              />,
+              label: (form as any).usa_listas_precio ? 'Listas de Precios' : 'Precios por Tarifa',
+              content: (form as any).usa_listas_precio
+                ? <ListasPrecioProductoTab productoId={id} isNew={isNew} tarifasDisp={tarifasDisp} />
+                : <PreciosTab
+                    form={form}
+                    set={set}
+                    tarifaLineas={tarifaLineas}
+                    tarifasDisp={tarifasDisp}
+                    productoId={id}
+                    isNew={isNew}
+                    navigate={navigate}
+                  />,
             },
             {
               key: 'fiscal',
