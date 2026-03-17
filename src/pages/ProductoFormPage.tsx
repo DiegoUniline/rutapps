@@ -955,15 +955,21 @@ export default function ProductoFormPage() {
                       </label>
                     </div>
                     {form.tiene_comision && (
-                      <>
-                        <OdooField label="Tipo comisión" value={form.tipo_comision} type="select"
-                          options={[{ value: 'porcentaje', label: 'Porcentaje' }, { value: 'monto_fijo', label: 'Monto Fijo' }]}
-                          onChange={v => set('tipo_comision', v)}
-                          format={() => comisionLabels[form.tipo_comision ?? 'porcentaje'] ?? ''} />
-                        <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : '$'})`}
-                          value={form.pct_comision} type="number" teal onChange={v => set('pct_comision', +v)}
-                          format={v => (v ?? 0).toString()} />
-                      </>
+                      (form as any).usa_listas_precio ? (
+                        <div className="text-[12px] text-muted-foreground bg-accent/30 border border-accent/50 rounded px-3 py-2 mt-1">
+                          💡 La comisión se calcula automáticamente desde las reglas de las listas de precios.
+                        </div>
+                      ) : (
+                        <>
+                          <OdooField label="Tipo comisión" value={form.tipo_comision} type="select"
+                            options={[{ value: 'porcentaje', label: 'Porcentaje' }, { value: 'monto_fijo', label: 'Monto Fijo' }]}
+                            onChange={v => set('tipo_comision', v)}
+                            format={() => comisionLabels[form.tipo_comision ?? 'porcentaje'] ?? ''} />
+                          <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : '$'})`}
+                            value={form.pct_comision} type="number" teal onChange={v => set('pct_comision', +v)}
+                            format={v => (v ?? 0).toString()} />
+                        </>
+                      )
                     )}
                   </div>
                 </div>
