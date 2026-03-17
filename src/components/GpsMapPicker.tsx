@@ -117,29 +117,24 @@ export default function GpsMapPicker({ lat, lng, onChange, isLoaded }: GpsMapPic
 
             <div className="flex items-center justify-between px-4 py-3 border-t border-border gap-3">
               <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-muted-foreground font-medium">Lat</label>
+                <label className="text-[10px] text-muted-foreground font-medium">Coords</label>
                 <input
-                  type="number"
-                  step="any"
-                  value={tempPos?.lat ?? ''}
+                  type="text"
+                  value={tempPos ? `${tempPos.lat}, ${tempPos.lng}` : ''}
                   onChange={e => {
-                    const v = e.target.value ? parseFloat(e.target.value) : null;
-                    if (v !== null) setTempPos(prev => ({ lat: v, lng: prev?.lng ?? 0 }));
+                    const parts = e.target.value.split(',').map(s => s.trim());
+                    if (parts.length === 2) {
+                      const lat = parseFloat(parts[0]);
+                      const lng = parseFloat(parts[1]);
+                      if (!isNaN(lat) && !isNaN(lng)) {
+                        setTempPos({ lat, lng });
+                        mapRef.current?.panTo({ lat, lng });
+                      }
+                    }
+                    if (e.target.value === '') setTempPos(null);
                   }}
-                  className="w-[110px] h-7 px-2 rounded-md border border-input bg-background text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="23.634500"
-                />
-                <label className="text-[10px] text-muted-foreground font-medium ml-1">Lng</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={tempPos?.lng ?? ''}
-                  onChange={e => {
-                    const v = e.target.value ? parseFloat(e.target.value) : null;
-                    if (v !== null) setTempPos(prev => ({ lat: prev?.lat ?? 0, lng: v }));
-                  }}
-                  className="w-[110px] h-7 px-2 rounded-md border border-input bg-background text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder="-102.552800"
+                  className="w-[220px] h-7 px-2 rounded-md border border-input bg-background text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="19.763610, -104.355636"
                 />
               </div>
               <div className="flex items-center gap-2">
