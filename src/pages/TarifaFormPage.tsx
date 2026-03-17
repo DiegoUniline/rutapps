@@ -293,6 +293,7 @@ export default function TarifaFormPage() {
         base_precio: (l as any).base_precio ?? 'sin_impuestos',
         redondeo: (l as any).redondeo ?? 'ninguno',
         notas: (l as any).notas ?? '',
+        lista_precio_id: (l as any).lista_precio_id ?? '',
       });
     }
     setEditingLineaId(l.id);
