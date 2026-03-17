@@ -389,25 +389,32 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                 {rules.map((linea: any) => {
                   const isEditing = editingId === linea.id;
                   const currentVals = isEditing ? editVal : linea;
-                  const precioBase = isEditing ? calcPrice({ ...linea, ...editVal }) : calcPrice(linea);
                   const costo = form.costo ?? 0;
                   const ivaPct = form.tiene_iva ? (form.iva_pct ?? 16) : 0;
                   const iepsPct = form.tiene_ieps ? (form.ieps_pct ?? 0) : 0;
+                  const taxMult = 1 + (ivaPct + iepsPct) / 100;
                   const basePrecio = linea.base_precio ?? 'sin_impuestos';
                   const redondeoLabel = { arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' }[linea.redondeo as string] ?? '— Ninguno';
                   const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
 
-                  // Calculate prices with and without taxes
-                  let precioSinImp = precioBase;
-                  let precioConImp = precioBase;
+                  // 1. Calculate raw price (sin impuestos, sin redondeo)
+                  const srcLinea = isEditing ? { ...linea, ...editVal } : linea;
+                  const pr = form.precio_principal ?? 0;
+                  let rawSinImp = 0;
+                  if (srcLinea.tipo_calculo === 'margen_costo') rawSinImp = Math.max(costo * (1 + (srcLinea.margen_pct ?? 0) / 100), srcLinea.precio_minimo ?? 0);
+                  else if (srcLinea.tipo_calculo === 'descuento_precio') rawSinImp = Math.max(pr * (1 - (srcLinea.descuento_pct ?? 0) / 100), srcLinea.precio_minimo ?? 0);
+                  else rawSinImp = Math.max(srcLinea.precio ?? 0, srcLinea.precio_minimo ?? 0);
+
+                  // 2. Apply rounding on the final consumer-facing price
+                  let precioSinImp: number, precioConImp: number;
                   if (basePrecio === 'con_impuestos') {
-                    // Price already includes taxes, derive sin imp
-                    precioConImp = precioBase;
-                    precioSinImp = precioBase / (1 + (ivaPct + iepsPct) / 100);
+                    // Round the price WITH taxes (what the customer sees)
+                    precioConImp = applyRedondeo(rawSinImp * taxMult, srcLinea.redondeo ?? 'ninguno');
+                    precioSinImp = precioConImp / taxMult;
                   } else {
-                    // Price is without taxes, derive con imp
-                    precioSinImp = precioBase;
-                    precioConImp = precioBase * (1 + (ivaPct + iepsPct) / 100);
+                    // Round the price WITHOUT taxes
+                    precioSinImp = applyRedondeo(rawSinImp, srcLinea.redondeo ?? 'ninguno');
+                    precioConImp = precioSinImp * taxMult;
                   }
 
                   const ganancia = precioSinImp - costo;
