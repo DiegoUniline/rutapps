@@ -1,6 +1,7 @@
 import { offlineDb, type SyncQueueItem, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
 import { markAsSynced } from './syncVerify';
+import { isDataSaverEnabled } from './dataSaver';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -53,8 +54,8 @@ export async function queueOperation(
     });
   }
 
-  // 3. Try to sync immediately if online
-  if (navigator.onLine) {
+  // 3. Try to sync immediately if online AND data saver is off
+  if (navigator.onLine && !isDataSaverEnabled()) {
     processSyncQueue().catch(console.warn);
   }
 }

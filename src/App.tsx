@@ -93,6 +93,7 @@ const RutaDescarga = lazy(() => import("@/pages/ruta/RutaDescarga"));
 const RutaMapaPage = lazy(() => import("@/pages/ruta/RutaMapaPage"));
 const RutaNavegacionPage = lazy(() => import("@/pages/ruta/RutaNavegacionPage"));
 const RutaPerfil = lazy(() => import("@/pages/ruta/RutaPerfil"));
+const RutaSincronizarPage = lazy(() => import("@/pages/ruta/RutaSincronizarPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -197,6 +198,7 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta/descarga" element={<RutaDescarga />} />
       <Route path="/ruta/mapa" element={<RutaMapaPage />} />
       <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
+      <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
 
       {/* Desktop POS */}
       <Route path="/pos" element={<PuntoVentaPage />} />

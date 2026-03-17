@@ -1,6 +1,7 @@
 /**
  * Master sync: downloads only CHANGED data from the server into IndexedDB.
- * Uses updated_at/created_at timestamps for delta sync to minimize data usage.
+ * Uses created_at timestamps for delta sync to minimize data usage.
+ * Reports per-table progress via callback.
  */
 import { offlineDb, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
@@ -42,6 +43,32 @@ const COLUMN_SELECTS: Record<string, string> = {
   entrega_lineas: 'id,entrega_id,producto_id,cantidad_pedida,cantidad_entregada,hecho,almacen_origen_id,unidad_id,created_at',
 };
 
+// Friendly names for UI display
+export const TABLE_LABELS: Record<string, string> = {
+  clientes: 'Clientes',
+  productos: 'Productos',
+  vendedores: 'Vendedores',
+  cargas: 'Cargas',
+  carga_lineas: 'Líneas de carga',
+  ventas: 'Ventas',
+  venta_lineas: 'Líneas de venta',
+  cobros: 'Cobros',
+  cobro_aplicaciones: 'Aplicaciones de cobro',
+  gastos: 'Gastos',
+  devoluciones: 'Devoluciones',
+  devolucion_lineas: 'Líneas de devolución',
+  profiles: 'Perfiles',
+  empresas: 'Empresa',
+  cliente_pedido_sugerido: 'Pedidos sugeridos',
+  unidades: 'Unidades',
+  tasas_iva: 'Tasas IVA',
+  descarga_ruta: 'Descargas de ruta',
+  descarga_ruta_lineas: 'Líneas de descarga',
+  promociones: 'Promociones',
+  entregas: 'Entregas',
+  entrega_lineas: 'Líneas de entrega',
+};
+
 // Tables that have empresa_id for filtering
 const TABLES_WITH_EMPRESA = new Set([
   'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
@@ -55,86 +82,150 @@ const RECENT_TABLES = new Set([
   'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas',
 ]);
 
+export interface SyncProgress {
+  table: string;
+  label: string;
+  status: 'waiting' | 'downloading' | 'done' | 'error';
+  rowCount: number;
+  error?: string;
+}
+
+export interface DownloadResult {
+  rowsDownloaded: number;
+  tableResults: SyncProgress[];
+}
+
 /**
- * Delta sync: only downloads records created/updated since lastSync.
- * First sync downloads everything; subsequent syncs only get changes.
+ * Download all data with progress reporting.
+ * forceFullSync = true ignores delta timestamps and re-downloads everything.
  */
-export async function downloadAllData(empresaId: string, forceFullSync = false): Promise<{ rowsDownloaded: number }> {
+export async function downloadAllData(
+  empresaId: string,
+  forceFullSync = false,
+  onProgress?: (progress: SyncProgress[]) => void,
+): Promise<DownloadResult> {
   let totalRows = 0;
 
-  const promises = TABLES_TO_CACHE.map(async (table) => {
-    try {
-      // Get last sync time for this specific table
-      const cacheEntry = await offlineDb.cacheTimestamps.get(table);
-      const lastTableSync = (!forceFullSync && cacheEntry?.lastSync) ? cacheEntry.lastSync : null;
+  // Initialize progress
+  const progress: SyncProgress[] = TABLES_TO_CACHE.map(table => ({
+    table,
+    label: TABLE_LABELS[table] || table,
+    status: 'waiting',
+    rowCount: 0,
+  }));
 
-      const selectStr = COLUMN_SELECTS[table] || '*';
-      let query = (supabase.from as any)(table).select(selectStr);
+  const notify = () => onProgress?.([...progress]);
+  notify();
 
-      // Filter by empresa
-      if (TABLES_WITH_EMPRESA.has(table)) {
-        if (table === 'empresas') {
-          query = query.eq('id', empresaId);
-        } else {
-          query = query.eq('empresa_id', empresaId);
+  // Process tables sequentially for progress visibility (parallel within batches)
+  const BATCH_SIZE = 4;
+  for (let i = 0; i < TABLES_TO_CACHE.length; i += BATCH_SIZE) {
+    const batch = TABLES_TO_CACHE.slice(i, i + BATCH_SIZE);
+
+    await Promise.all(batch.map(async (table) => {
+      const idx = TABLES_TO_CACHE.indexOf(table);
+      progress[idx].status = 'downloading';
+      notify();
+
+      try {
+        const cacheEntry = await offlineDb.cacheTimestamps.get(table);
+        const lastTableSync = (!forceFullSync && cacheEntry?.lastSync) ? cacheEntry.lastSync : null;
+
+        const selectStr = COLUMN_SELECTS[table] || '*';
+        let query = (supabase.from as any)(table).select(selectStr);
+
+        if (TABLES_WITH_EMPRESA.has(table)) {
+          if (table === 'empresas') {
+            query = query.eq('id', empresaId);
+          } else {
+            query = query.eq('empresa_id', empresaId);
+          }
         }
-      }
 
-      // Limit large tables to recent data (only on full sync)
-      if (RECENT_TABLES.has(table) && !lastTableSync) {
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        query = query.gte('created_at', thirtyDaysAgo.toISOString());
-      }
-
-      // DELTA SYNC: only get records modified since last sync
-      if (lastTableSync) {
-        const sinceDate = new Date(lastTableSync - 5000).toISOString(); // 5s buffer
-        query = query.gte('created_at', sinceDate);
-      }
-
-      // Paginate to avoid the 1000 row limit
-      let allData: any[] = [];
-      let from = 0;
-      const pageSize = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await query.range(from, from + pageSize - 1);
-        if (error) {
-          console.error(`Error downloading ${table}:`, error);
-          break;
+        if (RECENT_TABLES.has(table) && !lastTableSync) {
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          query = query.gte('created_at', thirtyDaysAgo.toISOString());
         }
-        if (data && data.length > 0) {
-          allData = allData.concat(data);
-          from += pageSize;
-          hasMore = data.length === pageSize;
-        } else {
-          hasMore = false;
-        }
-      }
 
-      // Write to IndexedDB
-      const localTable = getOfflineTable(table);
-      if (localTable && allData.length > 0) {
-        if (!lastTableSync) {
-          // Full sync: clear and replace
-          await localTable.clear();
+        // Delta sync
+        if (lastTableSync) {
+          const sinceDate = new Date(lastTableSync - 5000).toISOString();
+          query = query.gte('created_at', sinceDate);
         }
-        // Delta or full: upsert
-        await localTable.bulkPut(allData);
-        totalRows += allData.length;
-      }
 
-      // Update cache timestamp
-      await offlineDb.cacheTimestamps.put({ table, lastSync: Date.now() });
-    } catch (err) {
-      console.error(`Failed to cache ${table}:`, err);
+        // Paginate
+        let allData: any[] = [];
+        let from = 0;
+        const pageSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await query.range(from, from + pageSize - 1);
+          if (error) {
+            console.error(`Error downloading ${table}:`, error);
+            break;
+          }
+          if (data && data.length > 0) {
+            allData = allData.concat(data);
+            from += pageSize;
+            hasMore = data.length === pageSize;
+            progress[idx].rowCount = allData.length;
+            notify();
+          } else {
+            hasMore = false;
+          }
+        }
+
+        // Write to IndexedDB
+        const localTable = getOfflineTable(table);
+        if (localTable && allData.length > 0) {
+          if (!lastTableSync) {
+            await localTable.clear();
+          }
+          await localTable.bulkPut(allData);
+          totalRows += allData.length;
+        }
+
+        await offlineDb.cacheTimestamps.put({ table, lastSync: Date.now() });
+
+        progress[idx].status = 'done';
+        progress[idx].rowCount = allData.length;
+        notify();
+      } catch (err: any) {
+        console.error(`Failed to cache ${table}:`, err);
+        progress[idx].status = 'error';
+        progress[idx].error = err?.message || 'Error desconocido';
+        notify();
+      }
+    }));
+  }
+
+  return { rowsDownloaded: totalRows, tableResults: progress };
+}
+
+/**
+ * Get a summary of what's stored locally in IndexedDB.
+ */
+export async function getLocalDataSummary(): Promise<{ table: string; label: string; count: number; lastSync: number | null }[]> {
+  const results: { table: string; label: string; count: number; lastSync: number | null }[] = [];
+
+  for (const table of TABLES_TO_CACHE) {
+    const localTable = getOfflineTable(table);
+    let count = 0;
+    if (localTable) {
+      try { count = await localTable.count(); } catch { /* ignore */ }
     }
-  });
+    const ts = await offlineDb.cacheTimestamps.get(table);
+    results.push({
+      table,
+      label: TABLE_LABELS[table] || table,
+      count,
+      lastSync: ts?.lastSync || null,
+    });
+  }
 
-  await Promise.all(promises);
-  return { rowsDownloaded: totalRows };
+  return results;
 }
 
 export async function getLastSyncTime(): Promise<number | null> {
