@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2 } from 'lucide-react';
+import SubscriptionCard from '@/components/SubscriptionCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -488,6 +489,9 @@ export default function ConfiguracionPage() {
           {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           {hasChanges ? 'Guardar configuración' : 'Sin cambios'}
         </Button>
+
+        {/* Mi Suscripción */}
+        <SubscriptionCard />
 
         {/* Cambiar contraseña */}
         <ChangePasswordCard />

@@ -49,12 +49,31 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
+    const { action, new_quantity, new_price_id } = await req.json();
+
+    // Get user's empresa
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("empresa_id")
+      .eq("user_id", userData.user.id)
+      .maybeSingle();
+    if (!profile?.empresa_id) throw new Error("Sin empresa");
+
+    // Get subscription
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("id, stripe_subscription_id, stripe_customer_id, max_usuarios")
+      .eq("empresa_id", profile.empresa_id)
+      .maybeSingle();
+    if (!sub) throw new Error("Sin suscripción");
+
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+
     if (action === "update_quantity") {
       const qty = parseInt(new_quantity);
       if (!qty || qty < 3) throw new Error("Mínimo 3 usuarios");
 
       if (sub.stripe_subscription_id) {
-        // Update existing Stripe subscription quantity
         const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
         const itemId = stripeSub.items.data[0]?.id;
         if (!itemId) throw new Error("No subscription item found");
@@ -65,13 +84,30 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Update local DB
       await supabase
         .from("subscriptions")
         .update({ max_usuarios: qty, updated_at: new Date().toISOString() })
         .eq("id", sub.id);
 
       return new Response(JSON.stringify({ success: true, max_usuarios: qty }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "change_plan") {
+      if (!new_price_id) throw new Error("new_price_id requerido");
+      if (!sub.stripe_subscription_id) throw new Error("No hay suscripción activa en Stripe para cambiar");
+
+      const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+      const itemId = stripeSub.items.data[0]?.id;
+      if (!itemId) throw new Error("No subscription item found");
+
+      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        items: [{ id: itemId, price: new_price_id }],
+        proration_behavior: "create_prorations",
+      });
+
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
