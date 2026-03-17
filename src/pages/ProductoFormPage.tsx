@@ -370,12 +370,15 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
           <div className="overflow-x-auto border border-border rounded">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-table-border">
+               <tr className="border-b border-table-border">
                   <th className="th-odoo text-left">Aplica</th>
                   <th className="th-odoo text-left">Lista</th>
                   <th className="th-odoo text-left">Tipo</th>
                   <th className="th-odoo text-right">Valor</th>
-                  <th className="th-odoo text-right">Precio</th>
+                  <th className="th-odoo text-center">Redondeo</th>
+                  <th className="th-odoo text-center">Base</th>
+                  <th className="th-odoo text-right">Precio s/imp</th>
+                  <th className="th-odoo text-right">Precio c/imp</th>
                   <th className="th-odoo text-right">Ganancia $</th>
                   <th className="th-odoo text-right">Ganancia %</th>
                   <th className="th-odoo text-right">Comisión %</th>
