@@ -62,6 +62,7 @@ export default function ClienteFormPage() {
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
+  const { data: listasPrecios } = useListasPrecioForSelect(form.tarifa_id ?? undefined);
 
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
