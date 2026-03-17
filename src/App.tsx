@@ -251,6 +251,7 @@ function desktopRoutes() {
       <Route path="/productos/:id" element={<ProductoFormPage />} />
       <Route path="/tarifas" element={<TarifasListPage />} />
       <Route path="/tarifas/:id" element={<TarifaFormPage />} />
+      <Route path="/listas-precio" element={<ListasPrecioListPage />} />
       <Route path="/proveedores" element={<ProveedoresListPage />} />
       <Route path="/proveedores/:id" element={<ProveedorFormPage />} />
       <Route path="/clientes" element={<ClientesListPage />} />
