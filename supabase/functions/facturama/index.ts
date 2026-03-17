@@ -54,6 +54,8 @@ serve(async (req) => {
       return await uploadCsd(body);
     } else if (action === "descargar") {
       return await descargar(body);
+    } else if (action === "suscription_plan") {
+      return await getSuscriptionPlan();
     }
 
     // Actions that require user auth
