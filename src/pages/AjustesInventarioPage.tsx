@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClasificaciones } from '@/hooks/useData';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload } from 'lucide-react';
