@@ -115,9 +115,32 @@ export default function GpsMapPicker({ lat, lng, onChange, isLoaded }: GpsMapPic
               )}
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              <div className="text-[11px] text-muted-foreground">
-                {tempPos ? `${tempPos.lat.toFixed(6)}, ${tempPos.lng.toFixed(6)}` : 'Sin posición seleccionada'}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-border gap-3">
+              <div className="flex items-center gap-1.5">
+                <label className="text-[10px] text-muted-foreground font-medium">Lat</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={tempPos?.lat ?? ''}
+                  onChange={e => {
+                    const v = e.target.value ? parseFloat(e.target.value) : null;
+                    if (v !== null) setTempPos(prev => ({ lat: v, lng: prev?.lng ?? 0 }));
+                  }}
+                  className="w-[110px] h-7 px-2 rounded-md border border-input bg-background text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="23.634500"
+                />
+                <label className="text-[10px] text-muted-foreground font-medium ml-1">Lng</label>
+                <input
+                  type="number"
+                  step="any"
+                  value={tempPos?.lng ?? ''}
+                  onChange={e => {
+                    const v = e.target.value ? parseFloat(e.target.value) : null;
+                    if (v !== null) setTempPos(prev => ({ lat: prev?.lat ?? 0, lng: v }));
+                  }}
+                  className="w-[110px] h-7 px-2 rounded-md border border-input bg-background text-[11px] focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder="-102.552800"
+                />
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setOpen(false)} className="px-3 py-1.5 rounded-md border border-border text-[12px] text-muted-foreground hover:bg-accent">
