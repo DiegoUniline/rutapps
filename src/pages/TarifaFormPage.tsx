@@ -252,7 +252,10 @@ export default function TarifaFormPage() {
       const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
       toast.success('Tarifa guardada');
       setOriginalForm({ ...form });
-      if (isNew) navigate(`/tarifas/${result.id}`, { replace: true });
+      if (isNew) {
+        const newPath = productoId ? `/productos/${productoId}/tarifas/${result.id}` : `/tarifas/${result.id}`;
+        navigate(newPath, { replace: true });
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
