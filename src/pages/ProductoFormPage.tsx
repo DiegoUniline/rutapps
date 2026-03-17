@@ -936,6 +936,7 @@ export default function ProductoFormPage() {
                   onSave={saveProvMut.mutateAsync}
                   onDelete={deleteProvMut.mutateAsync}
                   saving={saveProvMut.isPending}
+                  onCreateProveedor={createProveedor}
                 />
               ),
             },
