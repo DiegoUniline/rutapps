@@ -233,6 +233,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
       }
 
       toast.success(`Factura timbrada · UUID: ${data.folio_fiscal?.substring(0, 8)}...`);
+      queryClient.invalidateQueries({ queryKey: ['timbres-saldo'] });
       onSuccess();
       resetForm();
     } catch (e: any) {
