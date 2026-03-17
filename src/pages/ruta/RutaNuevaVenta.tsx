@@ -477,6 +477,27 @@ export default function RutaNuevaVenta() {
     try {
       const ventaId = crypto.randomUUID();
 
+      // Generate local folio based on existing local ventas
+      let localFolio = '';
+      try {
+        const ventasTable = getOfflineTable('ventas');
+        if (ventasTable) {
+          const allVentas = await ventasTable.toArray();
+          const prefix = tipoVenta === 'pedido' ? 'PED' : 'VTA';
+          const empresaVentas = allVentas.filter((v: any) => v.empresa_id === empresa.id);
+          let maxNum = 0;
+          for (const v of empresaVentas) {
+            const f = v.folio ?? '';
+            const match = f.match(new RegExp(`^${prefix}-(\\d+)$`));
+            if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
+          }
+          localFolio = `${prefix}-${String(maxNum + 1).padStart(4, '0')}`;
+        }
+      } catch { /* fallback below */ }
+      if (!localFolio) {
+        localFolio = `${tipoVenta === 'pedido' ? 'PED' : 'VTA'}-${ventaId.slice(0, 6).toUpperCase()}`;
+      }
+
       // 1. Save devoluciones if any
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();
@@ -508,6 +529,7 @@ export default function RutaNuevaVenta() {
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
         status: 'confirmado', notas: notas || null,
+        folio: localFolio,
         tarifa_id: tarifaId, almacen_id: almacenId,
         subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps,
         descuento_total: totals.descuento, total: totals.total,
