@@ -270,3 +270,168 @@ export function useDeleteProductoProveedor() {
     onSuccess: (productoId) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', productoId] }); },
   });
 }
+
+/* ── Lista de Precios (within tarifa) ── */
+export interface ListaPrecio {
+  id: string;
+  tarifa_id: string;
+  empresa_id: string;
+  nombre: string;
+  es_principal: boolean;
+  activa: boolean;
+  created_at: string;
+}
+
+export interface ListaPrecioLinea {
+  id: string;
+  lista_precio_id: string;
+  producto_id: string;
+  precio: number;
+  created_at: string;
+  productos?: { codigo: string; nombre: string };
+}
+
+export function useListasPrecioByTarifa(tarifaId?: string) {
+  return useQuery({
+    queryKey: ['lista_precios', tarifaId],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lista_precios')
+        .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at')
+        .eq('tarifa_id', tarifaId!)
+        .order('es_principal', { ascending: false })
+        .order('nombre');
+      if (error) throw error;
+      return data as ListaPrecio[];
+    },
+    enabled: !!tarifaId,
+  });
+}
+
+export function useListasPrecioForSelect(tarifaId?: string) {
+  return useQuery({
+    queryKey: ['lista_precios_select', tarifaId],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lista_precios')
+        .select('id, nombre, es_principal')
+        .eq('tarifa_id', tarifaId!)
+        .eq('activa', true)
+        .order('es_principal', { ascending: false })
+        .order('nombre');
+      if (error) throw error;
+      return data as { id: string; nombre: string; es_principal: boolean }[];
+    },
+    enabled: !!tarifaId,
+  });
+}
+
+export function useSaveListaPrecio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (lp: { id?: string; tarifa_id: string; nombre: string; es_principal?: boolean; activa?: boolean }) => {
+      const { id, ...rest } = lp;
+      if (id) {
+        // If setting as principal, unset others first
+        if (rest.es_principal) {
+          await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', rest.tarifa_id);
+        }
+        const { data, error } = await supabase.from('lista_precios').update(rest).eq('id', id).select('id').single();
+        if (error) throw error;
+        return data;
+      } else {
+        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+        // If setting as principal, unset others first
+        if (rest.es_principal) {
+          await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', rest.tarifa_id);
+        }
+        const { data, error } = await supabase.from('lista_precios').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lista_precios'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_select'] });
+    },
+  });
+}
+
+export function useDeleteListaPrecio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('lista_precios').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lista_precios'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_select'] });
+    },
+  });
+}
+
+export function useListaPrecioLineas(listaPrecioId?: string) {
+  return useQuery({
+    queryKey: ['lista_precios_lineas', listaPrecioId],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lista_precios_lineas')
+        .select('id, lista_precio_id, producto_id, precio, created_at, productos(codigo, nombre)')
+        .eq('lista_precio_id', listaPrecioId!)
+        .order('created_at');
+      if (error) throw error;
+      return data as ListaPrecioLinea[];
+    },
+    enabled: !!listaPrecioId,
+  });
+}
+
+export function useListaPrecioLineasForProducto(productoId?: string) {
+  return useQuery({
+    queryKey: ['lista_precios_lineas_producto', productoId],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lista_precios_lineas')
+        .select('id, lista_precio_id, producto_id, precio, lista_precios(id, nombre, tarifa_id, es_principal, tarifas(id, nombre))')
+        .eq('producto_id', productoId!);
+      if (error) throw error;
+      return data as any[];
+    },
+    enabled: !!productoId,
+  });
+}
+
+export function useSaveListaPrecioLinea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: { id?: string; lista_precio_id: string; producto_id: string; precio: number }) => {
+      const { id, ...rest } = row;
+      if (id) {
+        const { error } = await supabase.from('lista_precios_lineas').update({ precio: rest.precio }).eq('id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('lista_precios_lineas').upsert(rest, { onConflict: 'lista_precio_id,producto_id' });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lista_precios_lineas'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_lineas_producto'] });
+    },
+  });
+}
+
+export function useDeleteListaPrecioLinea() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('lista_precios_lineas').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lista_precios_lineas'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_lineas_producto'] });
+    },
+  });
+}

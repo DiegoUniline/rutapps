@@ -628,6 +628,11 @@ export default function TarifaFormPage() {
               ),
             },
             {
+              key: 'listas',
+              label: 'Listas de Precios',
+              content: <ListasPrecioTab tarifaId={id} isNew={isNew} />,
+            },
+            {
               key: 'info',
               label: 'Otra información',
               content: (
