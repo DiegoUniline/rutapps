@@ -12,7 +12,6 @@ import { cn } from '@/lib/utils';
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
-  { label: 'Entregas', icon: Truck, path: '/ruta/entregas' },
   { label: 'Stock', icon: Package, path: '/ruta/stock' },
   { label: 'Cobros', icon: Banknote, path: '/ruta/cobros' },
 ];
