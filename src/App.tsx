@@ -79,6 +79,7 @@ const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
 // Mobile ruta pages
 const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
 const RutaVentas = lazy(() => import("@/pages/ruta/RutaVentas"));
+const RutaVentasTab = lazy(() => import("@/pages/ruta/RutaVentasTab"));
 const RutaClientesEntregas = lazy(() => import("@/pages/ruta/RutaClientesEntregas"));
 const RutaStock = lazy(() => import("@/pages/ruta/RutaStock"));
 const RutaGastos = lazy(() => import("@/pages/ruta/RutaGastos"));
@@ -183,7 +184,7 @@ function renderAuthenticatedRoutes() {
       <Route path="/ruta" element={<MobileLayout />}>
         <Route index element={<RutaClientesEntregas />} />
         <Route path="dashboard" element={<RutaDashboard />} />
-        <Route path="ventas" element={<RutaVentas />} />
+        <Route path="ventas" element={<RutaVentasTab />} />
         <Route path="carga" element={<RutaMiCarga />} />
         <Route path="cobros" element={<RutaCobros />} />
         <Route path="stock" element={<RutaStock />} />
