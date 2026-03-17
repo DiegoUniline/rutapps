@@ -134,6 +134,11 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   async function handleTimbrar() {
     if (!empresa || !selectedVentaId || !ventaLineas) return;
 
+    if ((timbreSaldo ?? 0) < 1) {
+      toast.error('No tienes timbres disponibles. Contacta al administrador para adquirir más.');
+      return;
+    }
+
     if (!empresa.rfc || !empresa.razon_social || !empresa.regimen_fiscal || !empresa.cp) {
       toast.error('Configura los datos fiscales del emisor primero');
       return;
