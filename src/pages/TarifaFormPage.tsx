@@ -278,6 +278,7 @@ export default function TarifaFormPage() {
         base_precio: newLinea.base_precio,
         redondeo: newLinea.redondeo,
         notas: newLinea.notas || null,
+        lista_precio_id: newLinea.lista_precio_id || null,
         producto_ids: newLinea.aplica_a === 'producto' ? newLinea.producto_ids : [],
         clasificacion_ids: newLinea.aplica_a === 'categoria' ? newLinea.clasificacion_ids : [],
       } as any);
