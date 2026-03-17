@@ -462,7 +462,7 @@ export default function RutaNuevaVenta() {
         vendedor_id: profile?.vendedor_id || profile?.id || null,
         condicion_pago: condicionPago, entrega_inmediata: entregaInmediata,
         fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null,
-        status: 'borrador', notas: notas || null,
+        status: 'confirmado', notas: notas || null,
         tarifa_id: tarifaId, almacen_id: almacenId,
         subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento,
         total: totals.total, saldo_pendiente: totals.total,
