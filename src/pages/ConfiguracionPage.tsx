@@ -461,6 +461,12 @@ export default function ConfiguracionPage() {
           />
         </div>
 
+        {/* Guardar */}
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="w-full">
+          {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          Guardar configuración
+        </Button>
+
         {/* Cambiar contraseña */}
         <ChangePasswordCard />
       </div>
