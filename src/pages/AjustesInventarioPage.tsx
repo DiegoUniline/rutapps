@@ -28,7 +28,9 @@ interface ProductRow {
   id: string;
   codigo: string;
   nombre: string;
+  unidad: string;
   clasificacionId: string | null;
+  clasificacionNombre: string;
   cantidadSistema: number;
   cantidadReal: number | null;
   touched: boolean;
@@ -90,7 +92,7 @@ export default function AjustesInventarioPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
+        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['activo'] as any[])
         .order('nombre');
@@ -122,7 +124,9 @@ export default function AjustesInventarioPage() {
       id: p.id,
       codigo: p.codigo,
       nombre: p.nombre,
+      unidad: (p.unidades as any)?.abreviatura ?? 'PZA',
       clasificacionId: p.clasificacion_id ?? null,
+      clasificacionNombre: (p.clasificaciones as any)?.nombre ?? '',
       cantidadSistema: p.cantidad ?? 0,
       cantidadReal: null,
       touched: false,
@@ -463,22 +467,24 @@ export default function AjustesInventarioPage() {
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                   <TableRow>
-                    <TableHead className="w-[100px]">Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead className="text-right w-[110px]">En sistema</TableHead>
-                    <TableHead className="text-right w-[130px]">Cantidad real</TableHead>
-                    <TableHead className="text-right w-[100px]">Diferencia</TableHead>
+                     <TableHead className="w-[100px]">Código</TableHead>
+                     <TableHead>Producto</TableHead>
+                     <TableHead className="w-[80px]">Unidad</TableHead>
+                     <TableHead className="w-[140px]">Categoría</TableHead>
+                     <TableHead className="text-right w-[110px]">En sistema</TableHead>
+                     <TableHead className="text-right w-[130px]">Cantidad real</TableHead>
+                     <TableHead className="text-right w-[100px]">Diferencia</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingProducts && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
                   )}
                   {!loadingProducts && filteredRows.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                      <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      {almacenId ? 'No hay productos' : 'Selecciona un almacén'}
-                    </TableCell></TableRow>
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                       <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                       {almacenId ? 'No hay productos' : 'Selecciona un almacén'}
+                     </TableCell></TableRow>
                   )}
                   {filteredRows.map(row => {
                     const diff = row.touched && row.cantidadReal !== null ? row.cantidadReal - row.cantidadSistema : 0;
@@ -487,8 +493,10 @@ export default function AjustesInventarioPage() {
                         key={row.id}
                         className={row.touched && diff !== 0 ? 'bg-primary/5' : ''}
                       >
-                        <TableCell className="font-mono text-xs text-muted-foreground">{row.codigo}</TableCell>
-                        <TableCell className="text-sm">{row.nombre}</TableCell>
+                         <TableCell className="font-mono text-xs text-muted-foreground">{row.codigo}</TableCell>
+                         <TableCell className="text-sm">{row.nombre}</TableCell>
+                         <TableCell className="text-xs text-muted-foreground">{row.unidad}</TableCell>
+                         <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">{row.clasificacionNombre || '—'}</TableCell>
                         <TableCell className="text-right font-mono text-sm">{row.cantidadSistema}</TableCell>
                         <TableCell className="text-right">
                           <Input
