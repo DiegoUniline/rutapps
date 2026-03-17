@@ -355,6 +355,7 @@ function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSav
                     value={newProv.proveedor_id}
                     onChange={val => setNewProv(p => ({ ...p, proveedor_id: val }))}
                     placeholder="Buscar proveedor..."
+                    onCreateNew={onCreateProveedor}
                   />
                 </td>
                 <td className="py-1.5 px-3">
