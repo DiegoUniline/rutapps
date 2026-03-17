@@ -298,20 +298,6 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
   );
   }
 
-  // DIRECTO MODE: best rule per tarifa (original behavior)
-  const byTarifa = new Map<string, { nombre: string; activa: boolean; linea: any }>();
-  const priorityOrder: Record<string, number> = { producto: 0, categoria: 1, todos: 2 };
-  allLineas.forEach((tl: any) => {
-    if (!tl.tarifas) return;
-    const tarifaId = tl.tarifas.id;
-    const ex = byTarifa.get(tarifaId);
-    const p = priorityOrder[tl.aplica_a] ?? 99;
-    if (!ex || p < priorityOrder[ex.linea.aplica_a]) {
-      byTarifa.set(tarifaId, { nombre: tl.tarifas.nombre, activa: tl.tarifas.activa, linea: tl });
-    }
-  });
-  const entries = Array.from(byTarifa.entries());
-
 }
 
 /* ── Proveedores Tab Component ── */
