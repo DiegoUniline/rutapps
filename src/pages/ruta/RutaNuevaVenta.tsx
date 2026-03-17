@@ -1336,13 +1336,7 @@ export default function RutaNuevaVenta() {
                 <Banknote className="h-4 w-4" />
                 {saving ? 'Guardando...' : `Cobrar y guardar $${fmt(totalACobrar)}`}
               </button>
-            ) : (
-              <button onClick={handleSaveOnly} disabled={saving || cart.length === 0 || excedeCredito}
-                className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5">
-                <Save className="h-4 w-4" />
-                {saving ? 'Guardando...' : 'Guardar venta'}
-              </button>
-            )}
+            ) : null}
             {/* Secondary: Save without payment when there IS something to collect */}
             {totalACobrar > 0 && (
               <button onClick={handleSaveOnly} disabled={saving || cart.length === 0}
@@ -1351,10 +1345,19 @@ export default function RutaNuevaVenta() {
                 Guardar sin cobrar
               </button>
             )}
-            <button onClick={() => navigate(-1)}
-              className="w-full bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
-              Cancelar
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => navigate(-1)}
+                className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+                Cancelar
+              </button>
+              {totalACobrar <= 0 && (
+                <button onClick={handleSaveOnly} disabled={saving || cart.length === 0 || excedeCredito}
+                  className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5">
+                  <Save className="h-4 w-4" />
+                  {saving ? 'Guardando...' : 'Guardar'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
