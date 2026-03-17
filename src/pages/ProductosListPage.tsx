@@ -156,9 +156,15 @@ export default function ProductosListPage() {
                     <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
                     <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
                     <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
-                    <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_compra?.abreviatura ?? '—'}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-center font-mono text-xs">{p.factor_conversion ?? 1}</td>
+                     <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
+                     <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+                     <td className="py-1.5 px-3 text-right hidden xl:table-cell text-muted-foreground tabular-nums font-mono text-xs">
+                       {fmt((p.costo ?? 0) / (p.factor_conversion || 1))}
+                     </td>
                     <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
                       <span className={cn(
                         "font-medium",
