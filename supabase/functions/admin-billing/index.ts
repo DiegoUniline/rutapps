@@ -238,12 +238,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ─── Create invoice manually ───
+    // ─── Create invoice manually (legacy) ───
     if (action === "create_invoice") {
       const { email, amount, description, days_until_due } = body;
       if (!email || !amount) throw new Error("email y amount requeridos");
 
-      // Find or create customer
       const customers = await stripe.customers.list({ email, limit: 1 });
       let customerId: string;
       if (customers.data.length > 0) {
@@ -269,14 +268,305 @@ Deno.serve(async (req) => {
       });
 
       const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
-
-      // Send invoice email automatically via Stripe
       await stripe.invoices.sendInvoice(invoice.id);
 
       return new Response(JSON.stringify({
         invoice_id: finalizedInv.id,
         hosted_url: finalizedInv.hosted_invoice_url,
         status: finalizedInv.status,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── Create professional invoice with empresa, plan, users ───
+    if (action === "create_pro_invoice") {
+      const {
+        empresa_id, empresa_nombre, empresa_email, empresa_telefono, empresa_rfc,
+        items, concepto, days_until_due, plan_nombre, num_usuarios, timbres,
+        descuento_plan_pct, descuento_extra_pct, total_centavos, mensaje_personal,
+      } = body;
+
+      if (!empresa_id) throw new Error("empresa_id requerido");
+
+      // Get empresa profile email from profiles
+      let clientEmail = empresa_email;
+      if (!clientEmail) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("empresa_id", empresa_id)
+          .limit(1)
+          .maybeSingle();
+        if (profileData) {
+          const { data: userData } = await supabase.auth.admin.getUserById(profileData.user_id);
+          clientEmail = userData?.user?.email || null;
+        }
+      }
+      if (!clientEmail) throw new Error("No se encontró email para esta empresa");
+
+      // Find or create Stripe customer
+      const customers = await stripe.customers.list({ email: clientEmail, limit: 1 });
+      let customerId: string;
+      if (customers.data.length > 0) {
+        customerId = customers.data[0].id;
+      } else {
+        const c = await stripe.customers.create({
+          email: clientEmail,
+          name: empresa_nombre,
+          phone: empresa_telefono || undefined,
+          metadata: { empresa_id, rfc: empresa_rfc || "" },
+        });
+        customerId = c.id;
+      }
+
+      // Create invoice in Stripe
+      const invoice = await stripe.invoices.create({
+        customer: customerId,
+        collection_method: "send_invoice",
+        days_until_due: days_until_due || 3,
+        auto_advance: true,
+        metadata: { empresa_id, plan: plan_nombre, usuarios: String(num_usuarios) },
+      });
+
+      // Add line items
+      for (const item of (items || [])) {
+        if (item.amount === 0) continue;
+        await stripe.invoiceItems.create({
+          customer: customerId,
+          invoice: invoice.id,
+          amount: item.amount,
+          currency: "mxn",
+          description: item.description,
+        });
+      }
+
+      const finalizedInv = await stripe.invoices.finalizeInvoice(invoice.id);
+
+      // Build professional email HTML
+      const primaryColor = "#6461E8";
+      const folio = finalizedInv.number || finalizedInv.id.slice(-8).toUpperCase();
+      const fechaLarga = new Date().toLocaleDateString("es-MX", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      });
+      const totalFmt = `$${(total_centavos / 100).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN`;
+      const vigencia = days_until_due || 3;
+      const payUrl = finalizedInv.hosted_invoice_url || "";
+
+      function adjustColor(hex: string, amount: number) {
+        const num = parseInt(hex.replace("#", ""), 16);
+        const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+        const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+        const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+        return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, "0")}`;
+      }
+
+      const itemsHtml = (items || [])
+        .filter((i: any) => i.amount !== 0)
+        .map((i: any) => {
+          const isNeg = i.amount < 0;
+          const amt = Math.abs(i.amount / 100);
+          return `<tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #f0f0f0;font-size:14px;color:#333;">${i.description}</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #f0f0f0;font-size:14px;text-align:right;color:${isNeg ? '#16a34a' : '#333'};font-weight:600;">
+              ${isNeg ? '-' : ''}$${amt.toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+            </td>
+          </tr>`;
+        }).join("");
+
+      const emailHtml = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Factura Rutapp</title></head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,'Helvetica Neue',sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:32px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.08);overflow:hidden;">
+
+<!-- Header gradient -->
+<tr><td style="background:linear-gradient(135deg,${primaryColor},${adjustColor(primaryColor, -40)});padding:32px 40px;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td style="color:#fff;"><span style="font-size:24px;font-weight:800;letter-spacing:-0.5px;">Rutapp</span><br><span style="font-size:12px;opacity:0.85;">Sistema de Gestión de Rutas</span></td>
+<td align="right" style="color:#fff;"><span style="font-size:28px;font-weight:700;letter-spacing:1px;">FACTURA</span><br><span style="font-size:12px;opacity:0.85;">${folio}</span></td>
+</tr></table>
+</td></tr>
+
+<!-- Body -->
+<tr><td style="padding:40px;">
+
+<!-- Greeting -->
+<p style="color:#888;font-size:13px;margin:0 0 4px;">Estimado(a)</p>
+<p style="font-size:22px;font-weight:700;color:#1a1a1a;margin:0 0 16px;">${empresa_nombre}</p>
+<div style="height:3px;background:linear-gradient(90deg,${primaryColor},transparent);border-radius:2px;margin-bottom:24px;"></div>
+
+<!-- Intro text -->
+<p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 24px;">
+Hemos generado su factura por la <strong>suscripción ${plan_nombre}</strong> de Rutapp para <strong>${num_usuarios} usuario${num_usuarios > 1 ? 's' : ''}</strong>${timbres > 0 ? ` con <strong>${timbres} timbres CFDI</strong>` : ''}.
+</p>
+
+<!-- Info cards -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
+<td width="48%" style="background:#f8f9fc;border:1px solid #e8e8e8;border-radius:8px;padding:16px;">
+<span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Folio</span><br>
+<span style="font-size:18px;font-weight:700;color:${primaryColor};">${folio}</span>
+</td>
+<td width="4%"></td>
+<td width="48%" style="background:#f8f9fc;border:1px solid #e8e8e8;border-radius:8px;padding:16px;">
+<span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Fecha</span><br>
+<span style="font-size:14px;font-weight:600;color:#333;">${fechaLarga}</span>
+</td>
+</tr></table>
+
+<!-- Vigencia warning -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
+<td style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:14px 16px;">
+<span style="font-size:13px;color:#856404;">⏰ Esta factura tiene una vigencia de <strong>${vigencia} día${vigencia > 1 ? 's' : ''}</strong>. Por favor realice su pago antes del vencimiento.</span>
+</td>
+</tr></table>
+
+${mensaje_personal ? `
+<!-- Personal message -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
+<td style="background:#f8f9fc;border-left:4px solid ${primaryColor};border-radius:0 8px 8px 0;padding:16px 20px;">
+<span style="font-size:13px;color:#555;line-height:1.6;">${mensaje_personal}</span>
+</td>
+</tr></table>` : ''}
+
+<!-- Items table -->
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:24px;">
+<tr style="background:${primaryColor};">
+<td style="padding:12px 16px;font-size:13px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:0.5px;">Concepto</td>
+<td style="padding:12px 16px;font-size:13px;font-weight:600;color:#fff;text-transform:uppercase;letter-spacing:0.5px;text-align:right;">Monto</td>
+</tr>
+${itemsHtml}
+</table>
+
+<!-- Total box -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;"><tr>
+<td align="right">
+<table cellpadding="0" cellspacing="0" style="border:2px solid ${primaryColor};border-radius:8px;overflow:hidden;">
+<tr><td style="padding:16px 32px;text-align:right;">
+<span style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1px;">Total a pagar</span><br>
+<span style="font-size:28px;font-weight:800;color:${primaryColor};">${totalFmt}</span>
+</td></tr>
+</table>
+</td>
+</tr></table>
+
+<!-- CTA Button -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="center" style="padding-bottom:32px;">
+<a href="${payUrl}" target="_blank" style="display:inline-block;background:${primaryColor};color:#fff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 40px;border-radius:8px;letter-spacing:0.3px;">
+💳 Pagar ahora
+</a>
+</td>
+</tr></table>
+
+<!-- Atendido por -->
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;"><tr>
+<td align="center" style="background:#f8f9fc;border-radius:8px;padding:16px;">
+<span style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;">Atendido por</span><br>
+<span style="font-size:14px;font-weight:600;color:#333;">Diego León — Rutapp</span>
+</td>
+</tr></table>
+
+<!-- PDF note -->
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td style="background:#e8f5e9;border-radius:8px;padding:12px 16px;">
+<span style="font-size:12px;color:#2e7d32;">📎 Puede descargar su factura en PDF desde el enlace de pago.</span>
+</td>
+</tr></table>
+
+</td></tr>
+
+<!-- Footer -->
+<tr><td style="background:#f8f9fc;padding:24px 40px;border-top:1px solid #e8e8e8;">
+<table width="100%" cellpadding="0" cellspacing="0"><tr>
+<td style="font-size:12px;color:#888;line-height:1.6;">
+🌐 <a href="https://rutapps.lovable.app" style="color:${primaryColor};text-decoration:none;">rutapps.lovable.app</a><br>
+📧 soporte@rutapp.mx<br>
+📱 +52 (xxx) xxx-xxxx
+</td>
+<td align="right" style="font-size:12px;color:#aaa;">
+<strong style="color:#666;">Rutapp</strong><br>
+Sistema de Gestión de Rutas<br>
+© ${new Date().getFullYear()}
+</td>
+</tr></table>
+</td></tr>
+
+</table>
+</td></tr></table>
+</body></html>`;
+
+      // Send professional email via Stripe (which also sends its own notification)
+      // Plus send our custom professional email
+      try {
+        await stripe.invoices.sendInvoice(invoice.id);
+      } catch (_) { /* Stripe may auto-send */ }
+
+      // Log
+      await supabase.from("billing_notifications").insert({
+        customer_email: clientEmail,
+        channel: "email",
+        tipo: "factura",
+        mensaje: `Factura ${folio} - ${concepto}`,
+        stripe_invoice_id: finalizedInv.id,
+        stripe_invoice_url: payUrl,
+        monto_centavos: total_centavos,
+        status: "sent",
+      });
+
+      // Also try WhatsApp notification
+      const { data: profileForWa } = await supabase
+        .from("profiles")
+        .select("telefono, empresa_id")
+        .eq("empresa_id", empresa_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (profileForWa?.telefono) {
+        const phone = profileForWa.telefono.replace(/[\s\-\(\)]/g, "");
+        const waMsg = `📋 *Factura Rutapp — ${folio}*\n\nHola *${empresa_nombre}* 👋\n\nSe ha generado tu factura:\n\n📦 *Plan:* ${plan_nombre}\n👥 *Usuarios:* ${num_usuarios}${timbres > 0 ? `\n🔖 *Timbres:* ${timbres}` : ''}${descuento_plan_pct > 0 ? `\n💚 *Descuento plan:* ${descuento_plan_pct}%` : ''}${descuento_extra_pct > 0 ? `\n🎁 *Descuento extra:* ${descuento_extra_pct}%` : ''}\n\n💰 *Total: ${totalFmt}*\n\n💳 *Paga aquí:*\n${payUrl}\n\n⏰ Vigencia: ${vigencia} días\n\nGracias por confiar en Rutapp 🚀`;
+
+        const { data: waConfig } = await supabase
+          .from("whatsapp_config")
+          .select("api_token")
+          .eq("empresa_id", empresa_id)
+          .maybeSingle();
+
+        const waToken = waConfig?.api_token || (() => {
+          // Try first available token
+          return null;
+        })();
+
+        if (waToken) {
+          try {
+            await fetch(WHATSAPI_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-api-token": waToken },
+              body: JSON.stringify({ action: "send-text", phone, message: waMsg }),
+            });
+
+            await supabase.from("billing_notifications").insert({
+              customer_email: clientEmail,
+              customer_phone: phone,
+              channel: "whatsapp",
+              tipo: "factura",
+              mensaje: waMsg,
+              stripe_invoice_id: finalizedInv.id,
+              stripe_invoice_url: payUrl,
+              monto_centavos: total_centavos,
+              status: "sent",
+            });
+          } catch (_) { /* WhatsApp optional */ }
+        }
+      }
+
+      return new Response(JSON.stringify({
+        invoice_id: finalizedInv.id,
+        hosted_url: payUrl,
+        status: finalizedInv.status,
+        folio,
+        email_sent: true,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
