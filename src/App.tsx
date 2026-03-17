@@ -181,7 +181,7 @@ function renderAuthenticatedRoutes() {
     <>
       {/* Mobile route sales module */}
       <Route path="/ruta" element={<MobileLayout />}>
-        <Route index element={<RutaClientes />} />
+        <Route index element={<RutaClientesEntregas />} />
         <Route path="dashboard" element={<RutaDashboard />} />
         <Route path="ventas" element={<RutaVentas />} />
         <Route path="carga" element={<RutaMiCarga />} />
