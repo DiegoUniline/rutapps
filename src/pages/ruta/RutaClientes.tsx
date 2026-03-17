@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, MapPinned, Crosshair, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
@@ -28,6 +28,7 @@ function saveVisitedSet(set: Set<string>) {
 
 export default function RutaClientes() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { empresa } = useAuth();
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
@@ -37,8 +38,23 @@ export default function RutaClientes() {
   const [visited, setVisited] = useState<Set<string>>(getVisitedSet);
   const { mutate: offlineMutate } = useOfflineMutation();
 
-  // Sync visited set from localStorage on mount
-  useEffect(() => { setVisited(getVisitedSet()); }, []);
+  // Sync visited set from localStorage on mount, navigation back, and focus
+  useEffect(() => {
+    setVisited(getVisitedSet());
+  }, [location.key]);
+
+  useEffect(() => {
+    const onFocus = () => setVisited(getVisitedSet());
+    window.addEventListener('focus', onFocus);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setVisited(getVisitedSet());
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   const markVisited = useCallback((clienteId: string) => {
     setVisited(prev => {
