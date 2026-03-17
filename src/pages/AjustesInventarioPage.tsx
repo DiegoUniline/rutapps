@@ -175,7 +175,7 @@ export default function AjustesInventarioPage() {
     return result;
   }, [rows, search, selectedCats]);
 
-  const changedRows = rows.filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
+  const changedRows = (rows ?? []).filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
 
   const updateRow = (id: string, cantidadReal: number) => {
     setRows(prev => prev.map(r =>
