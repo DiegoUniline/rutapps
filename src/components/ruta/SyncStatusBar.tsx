@@ -1,11 +1,14 @@
-import { RefreshCw, Wifi, WifiOff, Check, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, Check, AlertTriangle, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 export default function SyncStatusBar() {
-  const { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync } = useNetworkStatus();
+  const {
+    isOnline, pendingCount, isSyncing, lastSync, syncNow,
+    autoSync, setAutoSync, lastSyncRows, dataSaver, setDataSaver,
+  } = useNetworkStatus();
   const [expanded, setExpanded] = useState(false);
 
   const formatLastSync = (ts: number | null) => {
@@ -30,7 +33,6 @@ export default function SyncStatusBar() {
               : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
         )}
       >
-        {/* Status icon */}
         {!isOnline ? (
           <WifiOff className="h-3.5 w-3.5 shrink-0" />
         ) : pendingCount > 0 ? (
@@ -39,7 +41,6 @@ export default function SyncStatusBar() {
           <Check className="h-3.5 w-3.5 shrink-0" />
         )}
 
-        {/* Status text */}
         <span className="flex-1 truncate text-left">
           {!isOnline
             ? `Sin conexión · ${pendingCount} pendientes`
@@ -49,8 +50,14 @@ export default function SyncStatusBar() {
           }
         </span>
 
-        {/* Auto-sync indicator */}
-        {autoSync && isOnline && (
+        {dataSaver && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400 font-semibold shrink-0 flex items-center gap-0.5">
+            <Zap className="h-2.5 w-2.5" />
+            AHORRO
+          </span>
+        )}
+
+        {autoSync && isOnline && !dataSaver && (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-semibold shrink-0">
             AUTO
           </span>
@@ -66,12 +73,32 @@ export default function SyncStatusBar() {
       {/* Expanded panel */}
       {expanded && (
         <div className="px-3 py-3 bg-muted/50 space-y-3">
+          {/* Data saver toggle */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-foreground flex items-center gap-1">
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+                Ahorro de datos
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                Reduce consumo de internet al mínimo
+              </p>
+            </div>
+            <Switch
+              checked={dataSaver}
+              onCheckedChange={setDataSaver}
+            />
+          </div>
+
           {/* Auto-sync toggle */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-foreground">Sincronización automática</p>
               <p className="text-[10px] text-muted-foreground">
-                Envía cambios cada 30s mientras haya internet
+                {dataSaver
+                  ? 'Envía cambios cada 2min mientras haya internet'
+                  : 'Envía cambios cada 30s mientras haya internet'
+                }
               </p>
             </div>
             <Switch
@@ -93,7 +120,7 @@ export default function SyncStatusBar() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 gap-2 text-[11px]">
+          <div className="grid grid-cols-3 gap-2 text-[11px]">
             <div className="bg-background rounded-md p-2 text-center">
               <p className="text-lg font-bold text-foreground">{pendingCount}</p>
               <p className="text-muted-foreground">Pendientes</p>
@@ -102,7 +129,18 @@ export default function SyncStatusBar() {
               <p className="text-lg font-bold text-foreground">{formatLastSync(lastSync)}</p>
               <p className="text-muted-foreground">Última sync</p>
             </div>
+            <div className="bg-background rounded-md p-2 text-center">
+              <p className="text-lg font-bold text-foreground">{lastSyncRows}</p>
+              <p className="text-muted-foreground">Registros</p>
+            </div>
           </div>
+
+          {dataSaver && (
+            <div className="bg-amber-500/10 rounded-lg p-2 text-[10px] text-amber-700 dark:text-amber-300">
+              <strong>Modo ahorro activo:</strong> Las imágenes se comprimen antes de subir. 
+              Los datos se sincronizan con menor frecuencia. Usa "Sincronizar ahora" para forzar una actualización.
+            </div>
+          )}
 
           {/* Manual sync button */}
           <button

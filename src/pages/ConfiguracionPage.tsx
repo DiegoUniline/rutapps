@@ -247,9 +247,11 @@ export default function ConfiguracionPage() {
     mutationFn: async () => {
       let logo_url = (config as any)?.logo_url ?? null;
       if (logoFile && empresa) {
-        const ext = logoFile.name.split('.').pop();
+        const { compressLogo } = await import('@/lib/imageCompressor');
+        const compressed = await compressLogo(logoFile);
+        const ext = compressed.name.split('.').pop();
         const path = `${empresa.id}/logo.${ext}`;
-        const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, logoFile, { upsert: true });
+        const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
         logo_url = urlData.publicUrl;

@@ -3,6 +3,7 @@ import { getPendingCount, processSyncQueue } from '@/lib/syncQueue';
 import { downloadAllData, getLastSyncTime, isCacheStale } from '@/lib/offlineSync';
 import { verifySyncedItems } from '@/lib/syncVerify';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSyncConfig, isDataSaverEnabled, setDataSaverMode } from '@/lib/dataSaver';
 
 const AUTO_SYNC_KEY = 'uniline_auto_sync';
 
@@ -12,6 +13,8 @@ export function useNetworkStatus() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<number | null>(null);
   const [verified, setVerified] = useState(false);
+  const [lastSyncRows, setLastSyncRows] = useState(0);
+  const [dataSaver, setDataSaverState] = useState(isDataSaverEnabled);
   const [autoSync, setAutoSyncState] = useState(() => {
     const saved = localStorage.getItem(AUTO_SYNC_KEY);
     return saved === null ? true : saved === 'true';
@@ -21,6 +24,11 @@ export function useNetworkStatus() {
   const setAutoSync = useCallback((value: boolean) => {
     setAutoSyncState(value);
     localStorage.setItem(AUTO_SYNC_KEY, String(value));
+  }, []);
+
+  const setDataSaver = useCallback((value: boolean) => {
+    setDataSaverMode(value);
+    setDataSaverState(value);
   }, []);
 
   // Track online/offline
@@ -35,12 +43,12 @@ export function useNetworkStatus() {
     };
   }, []);
 
-  // Refresh pending count periodically
+  // Refresh pending count periodically (respects data saver)
   useEffect(() => {
+    const config = getSyncConfig();
     const refresh = async () => {
       const count = await getPendingCount();
       setPendingCount(count);
-      // If nothing pending, verify last batch
       if (count === 0 && isOnline && empresa?.id) {
         const isVerified = await verifySyncedItems(empresa.id);
         setVerified(isVerified);
@@ -49,9 +57,9 @@ export function useNetworkStatus() {
       }
     };
     refresh();
-    const interval = setInterval(refresh, 3000);
+    const interval = setInterval(refresh, config.pendingCheckInterval);
     return () => clearInterval(interval);
-  }, [isOnline, empresa?.id]);
+  }, [isOnline, empresa?.id, dataSaver]);
 
   // Load last sync time
   useEffect(() => {
@@ -65,16 +73,17 @@ export function useNetworkStatus() {
     }
   }, [isOnline, autoSync]);
 
-  // Auto-sync interval when enabled (every 30s)
+  // Auto-sync interval when enabled (respects data saver)
   useEffect(() => {
     if (!autoSync || !isOnline || !empresa?.id) return;
+    const config = getSyncConfig();
     const interval = setInterval(() => {
       getPendingCount().then(count => {
         if (count > 0) syncNow();
       });
-    }, 30000);
+    }, config.autoSyncInterval);
     return () => clearInterval(interval);
-  }, [autoSync, isOnline, empresa?.id]);
+  }, [autoSync, isOnline, empresa?.id, dataSaver]);
 
   // Full sync
   const syncNow = useCallback(async () => {
@@ -83,13 +92,13 @@ export function useNetworkStatus() {
     try {
       const result = await processSyncQueue();
       console.log(`Sync: ${result.success} uploaded, ${result.failed} failed`);
-      await downloadAllData(empresa.id);
+      const { rowsDownloaded } = await downloadAllData(empresa.id);
+      setLastSyncRows(rowsDownloaded);
       const count = await getPendingCount();
       setPendingCount(count);
       const time = await getLastSyncTime();
       setLastSync(time);
       
-      // Verify after sync
       if (count === 0) {
         const isVerified = await verifySyncedItems(empresa.id);
         setVerified(isVerified);
@@ -101,14 +110,19 @@ export function useNetworkStatus() {
     }
   }, [empresa?.id]);
 
-  // Initial data download if cache is stale
+  // Initial data download if cache is stale (respects data saver)
   useEffect(() => {
     if (isOnline && empresa?.id) {
-      isCacheStale(15).then(stale => {
+      const config = getSyncConfig();
+      isCacheStale(config.cacheStaleMinutes).then(stale => {
         if (stale) syncNow();
       });
     }
   }, [isOnline, empresa?.id]);
 
-  return { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync, verified };
+  return {
+    isOnline, pendingCount, isSyncing, lastSync, syncNow,
+    autoSync, setAutoSync, verified, lastSyncRows,
+    dataSaver, setDataSaver,
+  };
 }
