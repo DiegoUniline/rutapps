@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Layers } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Layers, Crown } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones } from '@/hooks/useData';
+import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, useProductosForSelect, useClasificaciones, useListasPrecioByTarifa, useSaveListaPrecio, useDeleteListaPrecio } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
 
@@ -71,6 +71,117 @@ function ChipSelect({ items, selectedIds, onChange, placeholder }: {
           <option value="">{placeholder}</option>
           {available.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
         </select>
+      )}
+    </div>
+  );
+}
+
+/* ── Listas de Precios Tab ─────────────────────────── */
+function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolean }) {
+  const { data: listas, refetch } = useListasPrecioByTarifa(isNew ? undefined : tarifaId);
+  const saveLista = useSaveListaPrecio();
+  const deleteLista = useDeleteListaPrecio();
+  const [newName, setNewName] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+
+  if (isNew) return <div className="text-[12px] text-muted-foreground py-4 bg-accent/30 border border-accent/50 rounded px-3">💡 Guarda la tarifa primero para poder agregar listas de precios.</div>;
+
+  const handleAdd = async () => {
+    if (!newName.trim() || !tarifaId) return;
+    try {
+      await saveLista.mutateAsync({ tarifa_id: tarifaId, nombre: newName.trim(), es_principal: (listas ?? []).length === 0 });
+      setNewName(''); setAdding(false); refetch();
+      toast.success('Lista creada');
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleSetPrincipal = async (listaId: string) => {
+    if (!tarifaId) return;
+    try {
+      await saveLista.mutateAsync({ id: listaId, tarifa_id: tarifaId, nombre: (listas ?? []).find(l => l.id === listaId)?.nombre ?? '', es_principal: true });
+      refetch(); toast.success('Lista marcada como principal');
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleRename = async (listaId: string) => {
+    if (!editName.trim() || !tarifaId) return;
+    try {
+      await saveLista.mutateAsync({ id: listaId, tarifa_id: tarifaId, nombre: editName.trim() });
+      setEditId(null); refetch();
+    } catch (err: any) { toast.error(err.message); }
+  };
+
+  const handleDelete = async (listaId: string) => {
+    if (!confirm('¿Eliminar esta lista y todos sus precios?')) return;
+    try { await deleteLista.mutateAsync(listaId); refetch(); toast.success('Lista eliminada'); } catch (err: any) { toast.error(err.message); }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto border border-border rounded">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-table-border">
+              <th className="th-odoo text-left">Nombre</th>
+              <th className="th-odoo text-center w-24">Principal</th>
+              <th className="th-odoo w-16"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {(listas ?? []).map(l => (
+              <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                <td className="py-1.5 px-3 cursor-pointer" onClick={() => { setEditId(l.id); setEditName(l.nombre); }}>
+                  {editId === l.id ? (
+                    <input autoFocus className="inline-edit-input" value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      onBlur={() => handleRename(l.id)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleRename(l.id); if (e.key === 'Escape') setEditId(null); }} />
+                  ) : (
+                    <span className="font-medium">{l.nombre}</span>
+                  )}
+                </td>
+                <td className="py-1.5 px-3 text-center">
+                  {l.es_principal ? (
+                    <Crown className="h-4 w-4 text-primary mx-auto" />
+                  ) : (
+                    <button onClick={() => handleSetPrincipal(l.id)} className="text-[11px] text-muted-foreground hover:text-primary transition-colors">
+                      Hacer principal
+                    </button>
+                  )}
+                </td>
+                <td className="py-1.5 px-3 text-center">
+                  {!l.es_principal && (
+                    <button onClick={() => handleDelete(l.id)} className="text-destructive hover:text-destructive/80">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {(listas ?? []).length === 0 && !adding && (
+              <tr><td colSpan={3} className="py-6 text-center text-[12px] text-muted-foreground">Sin listas de precios. Crea una para empezar.</td></tr>
+            )}
+            {adding && (
+              <tr className="bg-primary/5">
+                <td className="py-2 px-3" colSpan={2}>
+                  <input autoFocus className="inline-edit-input w-full" placeholder="Nombre de la lista (ej. Precio Público)" value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAdding(false); setNewName(''); } }} />
+                </td>
+                <td className="py-2 px-3 text-center">
+                  <button onClick={handleAdd} disabled={saveLista.isPending} className="btn-odoo-primary text-[11px] py-0.5 px-2"><Plus className="h-3 w-3" /></button>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {!adding && (
+        <button className="odoo-link" onClick={() => setAdding(true)}>
+          <Plus className="h-3.5 w-3.5 inline mr-1" />Agregar lista de precios
+        </button>
       )}
     </div>
   );
@@ -626,6 +737,11 @@ export default function TarifaFormPage() {
                   )}
                 </div>
               ),
+            },
+            {
+              key: 'listas',
+              label: 'Listas de Precios',
+              content: <ListasPrecioTab tarifaId={id} isNew={isNew} />,
             },
             {
               key: 'info',

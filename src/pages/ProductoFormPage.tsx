@@ -7,7 +7,7 @@ import { calcTax } from '@/lib/taxUtils';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
-import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea, useProductoProveedores, useSaveProductoProveedor, useDeleteProductoProveedor } from '@/hooks/useData';
+import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea, useProductoProveedores, useSaveProductoProveedor, useDeleteProductoProveedor, useListaPrecioLineasForProducto, useSaveListaPrecioLinea, useDeleteListaPrecioLinea, useListasPrecioByTarifa } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -390,7 +390,7 @@ function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSav
   );
 }
 
-const defaultProduct: Partial<Producto> = {
+const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }> = {
   codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0,
   se_puede_comprar: true, se_puede_vender: true, vender_sin_stock: false,
   se_puede_inventariar: true, es_combo: false, min: 0, max: 0,
@@ -400,6 +400,7 @@ const defaultProduct: Partial<Producto> = {
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
   iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje', costo_incluye_impuestos: false,
+  usa_listas_precio: false,
 };
 
 const statusSteps = [
@@ -645,9 +646,8 @@ export default function ProductoFormPage() {
       </div>
 
 
-      {/* ── Form body ── */}
       <div className="bg-card border border-border rounded px-4 pb-4 pt-3">
-        {/* General info fields ABOVE tabs (like Odoo screenshot) */}
+        {/* General info fields ABOVE tabs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 mb-4 pb-4 border-b border-border">
           {/* Left column */}
           <div>
@@ -680,14 +680,28 @@ export default function ProductoFormPage() {
           </div>
           {/* Right column */}
           <div>
-            <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
-              onChange={v => set('precio_principal', +v)}
-              format={v => `$ ${(v ?? 0).toFixed(2)}`}
-            />
+            <div className="odoo-field-row">
+              <span className="odoo-field-label">Modo de precio</span>
+              <div className="flex items-center gap-1">
+                {['directo', 'listas'].map(mode => (
+                  <button key={mode} type="button"
+                    onClick={() => setForm(f => ({ ...f, usa_listas_precio: mode === 'listas' }))}
+                    className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-colors ${
+                      ((form as any).usa_listas_precio ? 'listas' : 'directo') === mode
+                        ? 'bg-primary text-primary-foreground border-primary font-medium'
+                        : 'border-border text-muted-foreground hover:border-primary/40'
+                    }`}>
+                    {mode === 'directo' ? 'Precio directo' : 'Listas de precio'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {!(form as any).usa_listas_precio && (
+              <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
+                onChange={v => set('precio_principal', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+            )}
             <OdooField label="Costo" value={form.costo} type="number" teal help
-              onChange={v => set('costo', +v)}
-              format={v => `$ ${(v ?? 0).toFixed(2)}`}
-            />
+              onChange={v => set('costo', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
             <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
               options={[
                 { value: 'manual', label: 'Manual' },
@@ -713,22 +727,23 @@ export default function ProductoFormPage() {
           </div>
         </div>
 
-
         {/* Tabs below general info */}
         <OdooTabs
           tabs={[
             {
               key: 'precios',
-              label: 'Precios',
-              content: <PreciosTab
-                form={form}
-                set={set}
-                tarifaLineas={tarifaLineas}
-                tarifasDisp={tarifasDisp}
-                productoId={id}
-                isNew={isNew}
-                navigate={navigate}
-              />,
+              label: (form as any).usa_listas_precio ? 'Listas de Precios' : 'Precios por Tarifa',
+              content: (form as any).usa_listas_precio
+                ? <ListasPrecioProductoTab productoId={id} isNew={isNew} tarifasDisp={tarifasDisp} />
+                : <PreciosTab
+                    form={form}
+                    set={set}
+                    tarifaLineas={tarifaLineas}
+                    tarifasDisp={tarifasDisp}
+                    productoId={id}
+                    isNew={isNew}
+                    navigate={navigate}
+                  />,
             },
             {
               key: 'fiscal',

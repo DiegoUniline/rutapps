@@ -910,6 +910,7 @@ export type Database = {
           id: string
           limite_credito: number | null
           lista_id: string | null
+          lista_precio_id: string | null
           nombre: string
           notas: string | null
           orden: number | null
@@ -952,6 +953,7 @@ export type Database = {
           id?: string
           limite_credito?: number | null
           lista_id?: string | null
+          lista_precio_id?: string | null
           nombre: string
           notas?: string | null
           orden?: number | null
@@ -994,6 +996,7 @@ export type Database = {
           id?: string
           limite_credito?: number | null
           lista_id?: string | null
+          lista_precio_id?: string | null
           nombre?: string
           notas?: string | null
           orden?: number | null
@@ -1027,6 +1030,13 @@ export type Database = {
             columns: ["lista_id"]
             isOneToOne: false
             referencedRelation: "listas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_lista_precio_id_fkey"
+            columns: ["lista_precio_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
             referencedColumns: ["id"]
           },
           {
@@ -1829,6 +1839,90 @@ export type Database = {
           },
         ]
       }
+      lista_precios: {
+        Row: {
+          activa: boolean
+          created_at: string
+          empresa_id: string
+          es_principal: boolean
+          id: string
+          nombre: string
+          tarifa_id: string
+        }
+        Insert: {
+          activa?: boolean
+          created_at?: string
+          empresa_id: string
+          es_principal?: boolean
+          id?: string
+          nombre: string
+          tarifa_id: string
+        }
+        Update: {
+          activa?: boolean
+          created_at?: string
+          empresa_id?: string
+          es_principal?: boolean
+          id?: string
+          nombre?: string
+          tarifa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lista_precios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lista_precios_tarifa_id_fkey"
+            columns: ["tarifa_id"]
+            isOneToOne: false
+            referencedRelation: "tarifas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lista_precios_lineas: {
+        Row: {
+          created_at: string
+          id: string
+          lista_precio_id: string
+          precio: number
+          producto_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lista_precio_id: string
+          precio?: number
+          producto_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lista_precio_id?: string
+          precio?: number
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lista_precios_lineas_lista_precio_id_fkey"
+            columns: ["lista_precio_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lista_precios_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listas: {
         Row: {
           activo: boolean
@@ -2352,6 +2446,7 @@ export type Database = {
           udem_sat_id: string | null
           unidad_compra_id: string | null
           unidad_venta_id: string | null
+          usa_listas_precio: boolean
           vender_sin_stock: boolean | null
         }
         Insert: {
@@ -2399,6 +2494,7 @@ export type Database = {
           udem_sat_id?: string | null
           unidad_compra_id?: string | null
           unidad_venta_id?: string | null
+          usa_listas_precio?: boolean
           vender_sin_stock?: boolean | null
         }
         Update: {
@@ -2446,6 +2542,7 @@ export type Database = {
           udem_sat_id?: string | null
           unidad_compra_id?: string | null
           unidad_venta_id?: string | null
+          usa_listas_precio?: boolean
           vender_sin_stock?: boolean | null
         }
         Relationships: [
