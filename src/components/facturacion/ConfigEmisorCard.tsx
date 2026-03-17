@@ -64,7 +64,7 @@ export function ConfigEmisorCard() {
 
   useEffect(() => {
     if (empresa) {
-      setForm({
+      const initial = {
         rfc: empresa.rfc || '',
         razon_social: empresa.razon_social || '',
         regimen_fiscal: empresa.regimen_fiscal || '',
@@ -73,9 +73,13 @@ export function ConfigEmisorCard() {
         colonia: empresa.colonia || '',
         ciudad: empresa.ciudad || '',
         estado: empresa.estado || '',
-      });
+      };
+      setForm(initial);
+      setInitialForm(initial);
     }
   }, [empresa]);
+
+  const hasChanges = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   async function handleSave() {
     if (!empresa?.id) return;
