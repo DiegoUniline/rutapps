@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle, Moon, Sun, Menu, X, MapPinned, RotateCcw, FileText, PackageCheck, Navigation } from 'lucide-react';
+import { ShoppingCart, Users, Truck, Banknote, Package, Monitor, UserCircle, Moon, Sun, Menu, X, MapPinned, RotateCcw, FileText, PackageCheck, Navigation, RefreshCw } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
