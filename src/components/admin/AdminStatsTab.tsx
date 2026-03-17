@@ -94,7 +94,7 @@ export default function AdminStatsTab() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} label="Balance disponible" value={fmt(stats.balance_available)} accent="success" />
+        <StatCard icon={DollarSign} label="Ingresos cobrados" value={fmt(stats.total_paid)} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
         <StatCard icon={CreditCard} label="Facturas abiertas" value={fmt(stats.total_open)} accent="destructive" />
         <StatCard icon={Receipt} label="Total cobrado" value={fmt(stats.total_paid)} accent="success" />
