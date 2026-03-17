@@ -76,6 +76,7 @@ export function useSubscription(): SubscriptionState {
     if (!user) return;
 
     const applyOfflineFallback = () => setState(getOfflineFallbackState(user.id));
+    let isSuperAdmin = false;
 
     try {
       const { data: sa, error: saError } = await supabase
@@ -84,7 +85,7 @@ export function useSubscription(): SubscriptionState {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const isSuperAdmin = !!sa;
+      isSuperAdmin = !!sa;
 
       if (isSuperAdmin && !empresa?.id) {
         const nextState: SubscriptionState = {
