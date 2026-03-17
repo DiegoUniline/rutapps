@@ -375,7 +375,17 @@ export default function MiSuscripcionPage() {
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => Math.max(3, q - 1))} disabled={planQty <= 3}>
                       <Minus className="h-3.5 w-3.5" />
                     </Button>
-                    <span className="text-lg font-bold w-8 text-center">{planQty}</span>
+                    <Input
+                      type="number"
+                      min={3}
+                      value={planQty}
+                      onChange={e => {
+                        const v = parseInt(e.target.value);
+                        if (!isNaN(v) && v >= 3) setPlanQty(v);
+                        else if (e.target.value === '') setPlanQty(3);
+                      }}
+                      className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
                     <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => q + 1)}>
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
