@@ -404,7 +404,9 @@ export default function ProductoFormPage() {
   const [originalForm, setOriginalForm] = useState<Partial<Producto>>(defaultProduct);
   const [starred, setStarred] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, form.clasificacion_id);
   const { data: prodProveedores } = useProductoProveedores(isNew ? undefined : id);
