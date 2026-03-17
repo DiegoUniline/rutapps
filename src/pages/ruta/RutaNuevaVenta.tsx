@@ -1245,10 +1245,9 @@ export default function RutaNuevaVenta() {
               </section>
             )}
 
-            {/* Payment method — only show when contado or has cuentas */}
-            {(condicionPago === 'contado' || totalAplicarCuentas > 0) && (
-              <section className="bg-card rounded-lg p-3">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recibir pago</p>
+            {/* Payment method — always visible for advance payments or past debt */}
+            <section className="bg-card rounded-lg p-3">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recibir pago</p>
                 <div className="flex gap-1.5">
                   {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
                     <button key={val} onClick={() => setMetodoPago(val as typeof metodoPago)}
