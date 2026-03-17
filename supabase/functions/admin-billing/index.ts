@@ -285,6 +285,7 @@ Deno.serve(async (req) => {
         empresa_id, empresa_nombre, empresa_email, empresa_telefono, empresa_rfc,
         items, concepto, days_until_due, plan_nombre, num_usuarios, timbres,
         descuento_plan_pct, descuento_extra_pct, total_centavos, mensaje_personal,
+        enviar_email, enviar_whatsapp, telefono_envio, correo_envio,
       } = body;
 
       if (!empresa_id) throw new Error("empresa_id requerido");
