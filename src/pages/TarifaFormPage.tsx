@@ -191,8 +191,10 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 export default function TarifaFormPage() {
-  const { id } = useParams();
+  const { id, productoId } = useParams();
   const navigate = useNavigate();
+  const backUrl = productoId ? `/productos/${productoId}` : '/tarifas';
+  const backLabel = productoId ? 'Producto' : 'Tarifas';
   const isNew = id === 'nueva';
   const { data: existing, refetch } = useTarifa(isNew ? undefined : id);
   const saveMutation = useSaveTarifa();
@@ -250,7 +252,10 @@ export default function TarifaFormPage() {
       const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
       toast.success('Tarifa guardada');
       setOriginalForm({ ...form });
-      if (isNew) navigate(`/tarifas/${result.id}`, { replace: true });
+      if (isNew) {
+        const newPath = productoId ? `/productos/${productoId}/tarifas/${result.id}` : `/tarifas/${result.id}`;
+        navigate(newPath, { replace: true });
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -447,7 +452,7 @@ export default function TarifaFormPage() {
     <div className="p-4 min-h-full">
       {/* Breadcrumb + status */}
       <div className="flex items-center justify-between mb-0.5">
-        <Link to="/tarifas" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Tarifas</Link>
+        <Link to={backUrl} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">{backLabel}</Link>
         <div className="flex items-center gap-1">
           {['activa', 'inactiva'].map(s => (
             <button
@@ -492,7 +497,7 @@ export default function TarifaFormPage() {
           <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
             <Save className="h-3.5 w-3.5" /> Guardar
           </button>
-          <button onClick={() => navigate('/tarifas')} className="btn-odoo-secondary">
+          <button onClick={() => navigate(backUrl)} className="btn-odoo-secondary">
             <X className="h-3.5 w-3.5" /> Descartar
           </button>
         </div>

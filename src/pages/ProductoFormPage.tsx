@@ -269,7 +269,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
       {Array.from(grouped.entries()).map(([tarifaId, { nombre, rules }]) => (
         <div key={tarifaId}>
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 cursor-pointer hover:text-foreground"
-            onClick={() => navigate(`/tarifas/${tarifaId}`)}>{nombre}</h4>
+            onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>{nombre}</h4>
           <div className="overflow-x-auto border border-border rounded">
             <table className="w-full text-sm">
               <thead>
@@ -295,7 +295,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   return (
                     <tr key={linea.id}
                       className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
-                      onClick={() => navigate(`/tarifas/${tarifaId}`)}
+                      onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}
                     >
                       <td className="py-1.5 px-3">
                         <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
