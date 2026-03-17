@@ -63,8 +63,6 @@ const navItems: NavItem[] = [
       { label: 'Marcas', path: '/catalogo/marcas' },
       { label: 'Proveedores', path: '/proveedores' },
       { label: 'Unidades', path: '/catalogo/unidades' },
-      { label: 'Tasas IVA', path: '/catalogo/tasas-iva' },
-      { label: 'Tasas IEPS', path: '/catalogo/tasas-ieps' },
     ],
   },
   {
