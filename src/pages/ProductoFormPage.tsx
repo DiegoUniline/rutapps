@@ -13,6 +13,32 @@ import type { Producto, TipoCalculoTarifa } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+
+/** Quick-create a catalog item (marcas, clasificaciones, unidades, listas, proveedores) */
+async function quickCreateCatalog(
+  tableName: string,
+  nombre: string,
+  queryKey: string,
+  qc: ReturnType<typeof useQueryClient>,
+  extra?: Record<string, any>,
+): Promise<string | undefined> {
+  try {
+    const { data: profile } = await supabase.from('profiles').select('empresa_id').maybeSingle();
+    if (!profile?.empresa_id) { toast.error('Sin perfil de empresa'); return undefined; }
+    const { data, error } = await (supabase.from as any)(tableName)
+      .insert({ nombre, empresa_id: profile.empresa_id, ...extra })
+      .select('id')
+      .single();
+    if (error) throw error;
+    qc.invalidateQueries({ queryKey: [queryKey] });
+    toast.success(`"${nombre}" creado`);
+    return data.id as string;
+  } catch (err: any) {
+    toast.error(err.message);
+    return undefined;
+  }
+}
 
 
 /* ── Precios Tab Component ── */
