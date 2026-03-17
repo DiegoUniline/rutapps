@@ -35,6 +35,16 @@ export default function MobileLayout() {
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
 
+  const forceUpdate = () => {
+    navigator.serviceWorker?.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        window.location.reload();
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Top bar */}
