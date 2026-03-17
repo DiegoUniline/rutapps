@@ -411,12 +411,22 @@ export default function MiSuscripcionPage() {
               </p>
 
               <div className="flex items-center gap-4 bg-muted/50 rounded-xl p-4">
-                <span className="text-sm text-muted-foreground shrink-0">Paquetes:</span>
+                <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
                     <Minus className="h-3.5 w-3.5" />
                   </Button>
-                  <span className="text-lg font-bold w-8 text-center">{timbresPacks}</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={timbresPacks}
+                    onChange={e => {
+                      const v = parseInt(e.target.value);
+                      if (!isNaN(v) && v >= 1) setTimbresPacks(v);
+                      else if (e.target.value === '') setTimbresPacks(1);
+                    }}
+                    className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => p + 1)}>
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
