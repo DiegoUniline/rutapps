@@ -367,8 +367,16 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
     <div className="space-y-3">
       {Array.from(grouped.entries()).map(([tarifaId, { nombre, rules }]) => (
         <div key={tarifaId}>
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 cursor-pointer hover:text-foreground"
-            onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>{nombre}</h4>
+          <div className="flex items-center gap-4 mb-1">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground"
+              onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>{nombre}</h4>
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span>Costo: <strong className="text-foreground">${(form.costo ?? 0).toFixed(2)}</strong></span>
+              {form.tiene_iva && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IVA {form.iva_pct ?? 16}%</span>}
+              {form.tiene_ieps && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IEPS {form.ieps_pct ?? 0}%</span>}
+              {!form.tiene_iva && !form.tiene_ieps && <span>Sin impuestos</span>}
+            </div>
+          </div>
           <div className="overflow-x-auto border border-border rounded">
             <table className="w-full text-sm">
               <thead>
