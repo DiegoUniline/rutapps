@@ -141,6 +141,10 @@ export default function FacturacionCfdiPage() {
             <h1 className="text-xl font-bold text-foreground">Facturación</h1>
             <p className="text-xs text-muted-foreground">CFDI 4.0 · Facturama</p>
           </div>
+          <Badge variant={(timbreSaldo ?? 0) > 0 ? 'secondary' : 'destructive'} className="text-xs flex items-center gap-1">
+            <Stamp className="h-3 w-3" />
+            {timbreSaldo ?? 0} timbres
+          </Badge>
         </div>
         <div className="flex gap-2">
           <Button
