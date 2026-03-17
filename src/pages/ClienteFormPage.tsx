@@ -228,6 +228,22 @@ export default function ClienteFormPage() {
   const [showPedidoSearch, setShowPedidoSearch] = useState(false);
   const [pedidoDirty, setPedidoDirty] = useState(false);
 
+  // Auto-assign default tarifa & lista for new clients
+  useEffect(() => {
+    if (isNew && tarifas && tarifas.length > 0 && !form.tarifa_id) {
+      const general = tarifas.find(t => t.tipo === 'general') ?? tarifas[0];
+      if (general) set('tarifa_id', general.id);
+    }
+  }, [isNew, tarifas]);
+
+  // Auto-assign principal lista when tarifa changes and listasPrecios loads
+  useEffect(() => {
+    if (isNew && listasPrecios && listasPrecios.length > 0 && !(form as any).lista_precio_id) {
+      const principal = listasPrecios.find(l => l.es_principal) ?? listasPrecios[0];
+      if (principal) set('lista_precio_id' as any, principal.id);
+    }
+  }, [isNew, listasPrecios]);
+
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
@@ -249,6 +265,10 @@ export default function ClienteFormPage() {
 
   const handleSave = async () => {
     if (!form.nombre) { toast.error('Nombre es obligatorio'); return; }
+    if (!form.tarifa_id) { toast.error('Tarifa es obligatoria'); return; }
+    if (!(form as any).lista_precio_id) { toast.error('Lista de precios es obligatoria'); return; }
+    if (!form.frecuencia) { toast.error('Frecuencia de visita es obligatoria'); return; }
+    if (!form.dia_visita || form.dia_visita.length === 0) { toast.error('Selecciona al menos un día de visita'); return; }
     try {
       const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
       // Save pedido sugerido
@@ -401,7 +421,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Se asigna automáticamente" readOnly={!isNew} />
-                <OdooField label="Nombre" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
+                <OdooField label="Nombre *" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
                 <OdooField label="Persona de Contacto" value={form.contacto} onChange={v => set('contacto', v)} />
                 <OdooField label="Teléfono" value={form.telefono} onChange={v => {
                   const digits = v.replace(/\D/g, '');
@@ -506,18 +526,18 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Tarifa" value={form.tarifa_id} onChange={v => { set('tarifa_id', v || null); set('lista_precio_id' as any, null); }} type="select"
+                  <OdooField label="Tarifa *" value={form.tarifa_id} onChange={v => { set('tarifa_id', v || null); set('lista_precio_id' as any, null); }} type="select"
                     options={tarifas?.map(t => ({ value: t.id, label: t.nombre })) ?? []} />
-                  <OdooField label="Lista de precios" value={(form as any).lista_precio_id} onChange={v => set('lista_precio_id' as any, v || null)} type="select"
+                  <OdooField label="Lista de precios *" value={(form as any).lista_precio_id} onChange={v => set('lista_precio_id' as any, v || null)} type="select"
                     options={listasPrecios?.map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` })) ?? []}
                     placeholder={form.tarifa_id ? 'Seleccionar lista...' : 'Selecciona una tarifa primero'}
                     readOnly={!form.tarifa_id} />
                 </OdooSection>
                 <OdooSection title="Visitas">
-                  <OdooField label="Frecuencia" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
+                  <OdooField label="Frecuencia *" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
                     options={frecuenciaOpts} />
                   <div className="odoo-field-row">
-                    <span className="odoo-field-label">Días de visita</span>
+                    <span className="odoo-field-label">Días de visita *</span>
                     <div className="flex flex-wrap gap-1">
                       {DIAS.map(d => (
                         <button key={d} onClick={() => toggleDia(d)}
