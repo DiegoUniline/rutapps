@@ -356,7 +356,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-gray-100 py-10 px-6">
+      <footer className="border-t border-gray-100 py-10 px-[max(1.5rem,env(safe-area-inset-left))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <span className="text-lg font-black" style={{ color: 'hsl(230, 55%, 52%)' }}>Rutapp</span>
           <div className="flex items-center gap-6 text-sm text-gray-500">
