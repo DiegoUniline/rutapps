@@ -247,7 +247,7 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
 }
 
 /* ── Proveedores Tab Component ── */
-function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSave, onDelete, saving }: {
+function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSave, onDelete, saving, onCreateProveedor }: {
   productoId?: string;
   isNew: boolean;
   proveedores: { id: string; nombre: string }[];
@@ -255,6 +255,7 @@ function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSav
   onSave: (row: any) => Promise<any>;
   onDelete: (row: { id: string; producto_id: string }) => Promise<any>;
   saving: boolean;
+  onCreateProveedor?: (name: string) => Promise<string | undefined>;
 }) {
   const [adding, setAdding] = useState(false);
   const [newProv, setNewProv] = useState({ proveedor_id: '', precio_compra: 0, tiempo_entrega_dias: 0 });
