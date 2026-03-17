@@ -441,6 +441,7 @@ async function timbrar(supabase: any, userId: string, body: any) {
     }
   }
 
+  return new Response(
     JSON.stringify({
       success: true,
       cfdi: cfdiRecord,
