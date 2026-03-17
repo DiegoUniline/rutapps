@@ -115,6 +115,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
+        lista_precio_id: newRule.lista_precio_id || null,
         aplica_a: 'producto',
         tipo_calculo: newRule.tipo_calculo,
         precio: newRule.precio,
