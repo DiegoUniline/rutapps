@@ -13,6 +13,8 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { useClientes } from '@/hooks/useClientes';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 10 },

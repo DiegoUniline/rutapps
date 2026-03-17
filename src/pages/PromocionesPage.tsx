@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { usePromociones, useSavePromocion, useDeletePromocion, type Promocion } from '@/hooks/usePromociones';
 import { Plus, Pencil, Trash2, Tag, Percent, DollarSign, Gift, BarChart3, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
