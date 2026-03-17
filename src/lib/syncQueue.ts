@@ -117,8 +117,12 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
     }
   }
 
+  // Clear backup if everything succeeded
+  if (failed === 0 && success > 0) {
+    clearStorageBackup();
+  }
+
   return { success, failed };
-}
 
 async function processItem(item: SyncQueueItem) {
   const { table, operation, data, keyField, keyValue } = item;
