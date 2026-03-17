@@ -340,6 +340,7 @@ export default function TarifaFormPage() {
         base_precio: editLinea.base_precio,
         redondeo: editLinea.redondeo,
         notas: editLinea.notas || null,
+        lista_precio_id: editLinea.lista_precio_id || null,
         producto_ids: editLinea.aplica_a === 'producto' ? editLinea.producto_ids : [],
         clasificacion_ids: editLinea.aplica_a === 'categoria' ? editLinea.clasificacion_ids : [],
       } as any);
