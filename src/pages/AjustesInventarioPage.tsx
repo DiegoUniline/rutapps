@@ -261,7 +261,10 @@ export default function AjustesInventarioPage() {
 
         const idx = newRows.findIndex(r => r.codigo.toLowerCase() === codigo.toLowerCase());
         if (idx !== -1) {
-          newRows[idx] = { ...newRows[idx], cantidadReal: Number(cantidadNueva), touched: true };
+          const numVal = Number(cantidadNueva);
+          // Only mark as touched if the value actually differs from system
+          const differs = numVal !== newRows[idx].cantidadSistema;
+          newRows[idx] = { ...newRows[idx], cantidadReal: numVal, touched: differs };
           matched++;
         }
       }
@@ -586,8 +589,9 @@ export default function AjustesInventarioPage() {
           )}
           {(historial ?? []).map((group: any) => {
             const isOpen = expandedGroup === group.key;
-            const totalItems = group.items.length;
-            const totalDiff = group.items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
+            const items = group?.items ?? [];
+            const totalItems = items.length;
+            const totalDiff = items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
             return (
               <div key={group.key} className="border border-border rounded-lg overflow-hidden">
                 {/* Group header */}
@@ -634,7 +638,7 @@ export default function AjustesInventarioPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {group.items.map((a: any) => (
+                        {(group?.items ?? []).map((a: any) => (
                           <TableRow key={a.id}>
                             <TableCell className="font-mono text-xs text-muted-foreground">{a.productos?.codigo}</TableCell>
                             <TableCell className="text-sm">{a.productos?.nombre}</TableCell>
