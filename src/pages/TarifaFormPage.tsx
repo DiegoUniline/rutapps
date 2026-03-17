@@ -542,6 +542,7 @@ export default function TarifaFormPage() {
                          <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
+                          <th className="th-odoo text-left">Lista de precios</th>
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-left">Base</th>
                           <th className="th-odoo text-right">Valor</th>
