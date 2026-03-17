@@ -598,6 +598,20 @@ export default function TarifaFormPage() {
                                 </div>
                               )}
                             </td>
+                            {/* Lista de precios */}
+                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('lista_precio')}>
+                              {ec('lista_precio') ? (
+                                <SearchableSelect
+                                  options={listaOptions}
+                                  value={editLinea.lista_precio_id}
+                                  onChange={val => { setEditLinea(p => ({ ...p, lista_precio_id: val })); setTimeout(blurSave, 50); }}
+                                  onClose={blurSave}
+                                  placeholder="Seleccionar lista..."
+                                  autoOpen
+                                  onCreateNew={handleCreateLista}
+                                />
+                              ) : <span className="text-xs">{listaMap.get((l as any).lista_precio_id) || <span className="text-muted-foreground">—</span>}</span>}
+                            </td>
                             {/* Cálculo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('tipo_calculo')}>
                               {ec('tipo_calculo') ? (
