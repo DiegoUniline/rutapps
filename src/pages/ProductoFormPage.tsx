@@ -166,7 +166,19 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
     grouped.get(tid)!.rules.push(tl);
   });
 
-  const aplica_label = (l: any) => l.aplica_a === 'producto' ? 'Producto' : l.aplica_a === 'categoria' ? 'Categoría' : 'Todos';
+  const aplica_label = (l: any) => {
+    if (l.aplica_a === 'producto') {
+      return 'Este producto';
+    }
+    if (l.aplica_a === 'categoria') {
+      const names = (l.clasificacion_ids ?? []).map((cid: string) => {
+        const c = clasificaciones?.find((cl: any) => cl.id === cid);
+        return c?.nombre ?? cid.slice(0, 6);
+      });
+      return names.length ? names.join(', ') : 'Categoría';
+    }
+    return 'Todos';
+  };
 
   function renderModal() {
     if (!showModal) return null;
