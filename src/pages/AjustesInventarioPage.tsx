@@ -119,6 +119,7 @@ export default function AjustesInventarioPage() {
       id: p.id,
       codigo: p.codigo,
       nombre: p.nombre,
+      clasificacionId: p.clasificacion_id ?? null,
       cantidadSistema: p.cantidad ?? 0,
       cantidadReal: null,
       touched: false,
