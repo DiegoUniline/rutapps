@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle,
   Database, Wifi, WifiOff, Shield, Zap, Loader2, ChevronDown, ChevronUp,
-  HardDrive, CloudUpload, Clock, BarChart3,
+  HardDrive, CloudUpload, Clock, BarChart3, FileDown, FileUp, Save,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -14,6 +14,10 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
+import {
+  exportFullBackup, importFullBackup,
+  getBackupTimestamp, getBackupItemCount, backupSyncQueueToStorage,
+} from '@/lib/offlineBackup';
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();

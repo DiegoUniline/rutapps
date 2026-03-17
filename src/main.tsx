@@ -1,6 +1,13 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { startAutoBackup, restoreFromStorageBackup } from "./lib/offlineBackup";
+
+// Start auto-backup of pending sync items & restore if needed
+restoreFromStorageBackup().then(count => {
+  if (count > 0) console.log(`Restored ${count} sync items from backup`);
+});
+startAutoBackup();
 
 // Apply saved theme before first paint
 (function() {
