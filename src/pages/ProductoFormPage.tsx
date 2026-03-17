@@ -706,9 +706,10 @@ export default function ProductoFormPage() {
               format={() => findName(listas, form.lista_id ?? undefined)}
               onCreateNew={createLista}
             />
-            <OdooField label="Min / Max stock" value={`${form.min ?? 0} / ${form.max ?? 0}`}
-              format={() => `${form.min ?? 0} / ${form.max ?? 0}`}
-              onChange={() => {}} />
+            <OdooField label="Stock mínimo" value={form.min ?? 0} type="number"
+              onChange={v => setForm(f => ({ ...f, min: Number(v) }))} placeholder="0" />
+            <OdooField label="Stock máximo" value={form.max ?? 0} type="number"
+              onChange={v => setForm(f => ({ ...f, max: Number(v) }))} placeholder="0" />
           </div>
         </div>
 
