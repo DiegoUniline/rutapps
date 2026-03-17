@@ -43,6 +43,7 @@ const EMPTY_LINEA = {
   base_precio: 'sin_impuestos' as 'sin_impuestos' | 'con_impuestos',
   redondeo: 'ninguno' as RedondeoTarifa,
   notas: '',
+  lista_precio_id: '' as string,
 };
 
 /* ── Multi-select chips ─────────────────────────── */
