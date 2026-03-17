@@ -321,14 +321,14 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
               )}
               {newRule.tipo_calculo === 'margen_costo' && (
                 <div className="odoo-field-row">
-                  <span className="odoo-field-label">Margen %</span>
+                  <span className="odoo-field-label">Margen % <span className="text-muted-foreground text-[10px]">(sobre costo: ${(form.costo ?? 0).toFixed(2)})</span></span>
                   <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.margen_pct}
                     onChange={e => setNewRule(p => ({ ...p, margen_pct: +e.target.value }))} />
                 </div>
               )}
               {newRule.tipo_calculo === 'descuento_precio' && (
                 <div className="odoo-field-row">
-                  <span className="odoo-field-label">Descuento %</span>
+                  <span className="odoo-field-label">Descuento % <span className="text-muted-foreground text-[10px]">(sobre precio: ${(form.precio_principal ?? 0).toFixed(2)})</span></span>
                   <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.descuento_pct}
                     onChange={e => setNewRule(p => ({ ...p, descuento_pct: +e.target.value }))} />
                 </div>
