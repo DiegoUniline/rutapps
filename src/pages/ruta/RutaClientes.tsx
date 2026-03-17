@@ -155,19 +155,18 @@ export default function RutaClientes() {
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-background px-4 pt-2 pb-1 space-y-2">
 
-        <div className="flex gap-1 bg-muted rounded-xl p-1">
+        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
           <button
             onClick={() => setModo('visitas')}
             className={cn(
-              "flex-1 py-2.5 rounded-lg text-xs font-semibold transition-colors relative",
+              "flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors relative",
               modo === 'visitas' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
-            <Calendar className="h-3.5 w-3.5 inline mr-1" />
             Pendientes
             {pendientesCount > 0 && (
               <span className={cn(
-                "ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                "ml-0.5 text-[9px] px-1 py-px rounded-full font-bold",
                 modo === 'visitas' ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"
               )}>{pendientesCount}</span>
             )}
@@ -175,15 +174,14 @@ export default function RutaClientes() {
           <button
             onClick={() => setModo('visitados')}
             className={cn(
-              "flex-1 py-2.5 rounded-lg text-xs font-semibold transition-colors relative",
+              "flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors relative",
               modo === 'visitados' ? "bg-emerald-600 text-white shadow-sm" : "text-muted-foreground"
             )}
           >
-            <CheckCircle2 className="h-3.5 w-3.5 inline mr-1" />
             Visitados
             {visitadosCount > 0 && (
               <span className={cn(
-                "ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                "ml-0.5 text-[9px] px-1 py-px rounded-full font-bold",
                 modo === 'visitados' ? "bg-white/20 text-white" : "bg-emerald-500/10 text-emerald-600"
               )}>{visitadosCount}</span>
             )}
@@ -191,7 +189,7 @@ export default function RutaClientes() {
           <button
             onClick={() => setModo('todos')}
             className={cn(
-              "flex-1 py-2.5 rounded-lg text-xs font-semibold transition-colors",
+              "flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
               modo === 'todos' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
