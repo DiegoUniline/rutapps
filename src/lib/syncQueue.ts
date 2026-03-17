@@ -2,6 +2,7 @@ import { offlineDb, type SyncQueueItem, getOfflineTable } from './offlineDb';
 import { supabase } from './supabase';
 import { markAsSynced } from './syncVerify';
 import { isDataSaverEnabled } from './dataSaver';
+import { backupSyncQueueToStorage, clearStorageBackup } from './offlineBackup';
 
 const MAX_RETRIES = 5;
 const BASE_DELAY_MS = 1000;
@@ -62,6 +63,9 @@ export async function queueOperation(
 
 // Process all pending items in the sync queue
 export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
+  // Backup before processing as safety net
+  await backupSyncQueueToStorage();
+  
   const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
   let success = 0;
   let failed = 0;
@@ -111,6 +115,11 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
       }
       failed++;
     }
+  }
+
+  // Clear backup if everything succeeded
+  if (failed === 0 && success > 0) {
+    clearStorageBackup();
   }
 
   return { success, failed };

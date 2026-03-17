@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Download, Upload, RefreshCw, CheckCircle2, AlertTriangle,
   Database, Wifi, WifiOff, Shield, Zap, Loader2, ChevronDown, ChevronUp,
-  HardDrive, CloudUpload, Clock, BarChart3,
+  HardDrive, CloudUpload, Clock, BarChart3, FileDown, FileUp, Save,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -14,6 +14,10 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
+import {
+  exportFullBackup, importFullBackup,
+  getBackupTimestamp, getBackupItemCount, backupSyncQueueToStorage,
+} from '@/lib/offlineBackup';
 
 export default function RutaSincronizarPage() {
   const navigate = useNavigate();
@@ -28,6 +32,11 @@ export default function RutaSincronizarPage() {
   const [deadLetters, setDeadLetters] = useState(0);
   const [uploadResult, setUploadResult] = useState<{ success: number; failed: number } | null>(null);
   const [downloadResult, setDownloadResult] = useState<{ total: number } | null>(null);
+  const [backupTs, setBackupTs] = useState<number | null>(getBackupTimestamp());
+  const [backupCount, setBackupCount] = useState(getBackupItemCount());
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load local data summary
   const loadSummary = useCallback(async () => {
@@ -389,6 +398,93 @@ export default function RutaSincronizarPage() {
           )}
         </div>
 
+        {/* ── STEP 4: BACKUP / RESTORE ── */}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <Save className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-foreground">4. Respaldo de seguridad</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Exporta todos tus datos a un archivo JSON como copia de seguridad
+                </p>
+              </div>
+            </div>
+
+            {/* Auto-backup status */}
+            <div className="bg-muted/50 rounded-xl p-3 mb-3 text-[11px] text-muted-foreground space-y-1">
+              <p className="flex items-center gap-1.5">
+                <Shield className="h-3 w-3 text-emerald-500" />
+                <span>Respaldo automático activo (cada 30s en segundo plano)</span>
+              </p>
+              {backupTs && (
+                <p>Último respaldo: <strong>{new Date(backupTs).toLocaleString('es-MX', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}</strong> · {backupCount} elementos pendientes respaldados</p>
+              )}
+            </div>
+
+            {/* Export button */}
+            <button
+              onClick={async () => {
+                setExporting(true);
+                try {
+                  const { blob, filename, recordCount } = await exportFullBackup();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = filename;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success(`📦 Respaldo exportado: ${recordCount.toLocaleString()} registros`);
+                } catch (err: any) {
+                  toast.error('Error al exportar: ' + err.message);
+                } finally {
+                  setExporting(false);
+                }
+              }}
+              disabled={exporting}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-blue-600 text-white transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+              {exporting ? 'Exportando...' : 'Exportar respaldo completo'}
+            </button>
+
+            {/* Import button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImporting(true);
+                try {
+                  const result = await importFullBackup(file);
+                  toast.success(`✅ Respaldo restaurado: ${result.recordCount.toLocaleString()} registros en ${result.tablesRestored} tablas, ${result.syncQueueCount} pendientes`);
+                  await loadSummary();
+                  setBackupTs(getBackupTimestamp());
+                  setBackupCount(getBackupItemCount());
+                } catch (err: any) {
+                  toast.error('Error al importar: ' + err.message);
+                } finally {
+                  setImporting(false);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-border text-foreground bg-background transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+              {importing ? 'Importando...' : 'Restaurar desde archivo'}
+            </button>
+          </div>
+        </div>
+
         {/* Tips */}
         <div className="bg-muted/30 rounded-2xl p-4 space-y-2">
           <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -400,6 +496,7 @@ export default function RutaSincronizarPage() {
             <li>📱 <strong>En ruta:</strong> Trabaja sin internet, todo se guarda aquí</li>
             <li>📤 <strong>Al regresar:</strong> Conéctate al WiFi y envía todos los cambios</li>
             <li>🔒 Los datos persisten aunque cierres la app o reinicies el celular</li>
+            <li>💾 <strong>Respaldo:</strong> Exporta un respaldo antes de borrar datos del navegador</li>
             <li>⚡ Activa "Ahorro de datos" para gastar menos internet</li>
           </ul>
         </div>
