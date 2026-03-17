@@ -113,7 +113,7 @@ export default function ComisionesPage() {
   return (
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-xl font-semibold text-foreground">Comisiones</h1>
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Comisiones <HelpButton title={HELP.comisiones.title} sections={HELP.comisiones.sections} /></h1>
         <button onClick={() => setShowPayForm(true)} className="btn-odoo-primary">
           <DollarSign className="h-4 w-4" /> Pagar comisiones
         </button>
