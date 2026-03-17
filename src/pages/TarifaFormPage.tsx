@@ -191,8 +191,10 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 export default function TarifaFormPage() {
-  const { id } = useParams();
+  const { id, productoId } = useParams();
   const navigate = useNavigate();
+  const backUrl = productoId ? `/productos/${productoId}` : '/tarifas';
+  const backLabel = productoId ? 'Producto' : 'Tarifas';
   const isNew = id === 'nueva';
   const { data: existing, refetch } = useTarifa(isNew ? undefined : id);
   const saveMutation = useSaveTarifa();
