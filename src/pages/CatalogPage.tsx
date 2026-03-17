@@ -8,8 +8,6 @@ const CATALOGS: Record<string, { title: string; tableName: string; queryKey: str
   unidades: { title: 'Unidades', tableName: 'unidades', queryKey: 'unidades', columns: [{ key: 'nombre', label: 'Nombre' }, { key: 'abreviatura', label: 'Abreviatura' }] },
   listas: { title: 'Listas de precios', tableName: 'listas', queryKey: 'listas', columns: [{ key: 'nombre', label: 'Nombre' }] },
   almacenes: { title: 'Almacenes', tableName: 'almacenes', queryKey: 'almacenes', columns: [{ key: 'nombre', label: 'Nombre' }] },
-  'tasas-iva': { title: 'Tasas IVA', tableName: 'tasas_iva', queryKey: 'tasas_iva', columns: [{ key: 'nombre', label: 'Nombre' }, { key: 'porcentaje', label: 'Porcentaje %', type: 'number' }] },
-  'tasas-ieps': { title: 'Tasas IEPS', tableName: 'tasas_ieps', queryKey: 'tasas_ieps', columns: [{ key: 'nombre', label: 'Nombre' }, { key: 'porcentaje', label: 'Porcentaje %', type: 'number' }] },
 };
 
 export default function CatalogPage() {
