@@ -145,12 +145,15 @@ function AppRoutes() {
   // Super admin always has access
   if (subscription.isSuperAdmin) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/super-admin" element={<SuperAdminPage />} />
-          {renderAuthenticatedRoutes()}
-        </Routes>
-      </Suspense>
+      <>
+        <SubscriptionBanner />
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/super-admin" element={<SuperAdminPage />} />
+            {renderAuthenticatedRoutes()}
+          </Routes>
+        </Suspense>
+      </>
     );
   }
 

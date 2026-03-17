@@ -4,9 +4,8 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export default function SubscriptionBanner() {
-  const { daysLeft, status, isSuperAdmin } = useSubscription();
+  const { daysLeft, status } = useSubscription();
 
-  if (isSuperAdmin) return null;
   if (daysLeft === null || daysLeft > 7) return null;
   if (status === 'active' && daysLeft > 7) return null;
 
