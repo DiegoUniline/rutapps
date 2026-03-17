@@ -70,6 +70,18 @@ export default function RutaCobrar() {
   }, [allVentas, clienteId]);
   const loadingVentas = false;
 
+  const clientesConSaldo = clientes?.filter((c: any) => c.saldoPendiente > 0) ?? [];
+  const clientesSinSaldo = clientes?.filter((c: any) => c.saldoPendiente === 0) ?? [];
+
+  const filteredConSaldo = clientesConSaldo.filter((c: any) =>
+    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
+    c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
+  );
+  const filteredSinSaldo = clientesSinSaldo.filter((c: any) =>
+    !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
+    c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
+  );
+
   const selectCliente = (c: any) => {
     setClienteId(c.id);
     setClienteNombre(c.nombre);
