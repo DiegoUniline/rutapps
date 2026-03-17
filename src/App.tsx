@@ -66,6 +66,7 @@ const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
+const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
 const FacturacionCfdiPage = lazy(() => import("@/pages/FacturacionCfdiPage"));
 const CfdiFormPage = lazy(() => import("@/pages/CfdiFormPage"));
 const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
@@ -159,7 +160,8 @@ function AppRoutes() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/facturacion" element={<FacturacionPage />} />
-          <Route path="*" element={<Navigate to="/facturacion" replace />} />
+          <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
+          <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
         </Routes>
       </Suspense>
     );
@@ -290,6 +292,7 @@ function desktopRoutes() {
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/facturacion" element={<FacturacionPage />} />
+      <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
       <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
