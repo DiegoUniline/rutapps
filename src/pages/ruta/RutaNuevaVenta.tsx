@@ -791,8 +791,12 @@ export default function RutaNuevaVenta() {
                 setSavingSinCompra(true);
                 try {
                   const cId = clienteId || urlClienteId;
+                  // Save visita record with GPS + motivo
+                  await saveVisita('sin_compra', {
+                    motivo: motivoSinCompra,
+                    notasVisita: motivoSinCompra === 'Otro' ? notas : undefined,
+                  });
                   if (cId) markVisited(cId);
-                  // Optionally save a note/log — we store it as a gasto-like record or just toast
                   toast.success('Visita registrada sin compra');
                   navigate(-1);
                 } catch { toast.error('Error al registrar'); } finally { setSavingSinCompra(false); }
