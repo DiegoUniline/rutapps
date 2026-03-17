@@ -246,7 +246,6 @@ export default function AjustesInventarioPage() {
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-  };
 
   // Apply all changes
   const applyAdjustments = async () => {
