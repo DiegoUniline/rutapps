@@ -183,6 +183,22 @@ export default function AjustesInventarioPage() {
   };
 
   // ─── Import from file ────────────────────────────────────────
+  const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[_\s]+/g, ' ').trim();
+
+  const findKey = (obj: any, aliases: string[]): any => {
+    const keys = Object.keys(obj);
+    const normAliases = aliases.map(normalize);
+    for (const alias of normAliases) {
+      const found = keys.find(k => normalize(k) === alias);
+      if (found !== undefined) return obj[found];
+    }
+    for (const alias of normAliases) {
+      const found = keys.find(k => normalize(k).includes(alias));
+      if (found !== undefined) return obj[found];
+    }
+    return undefined;
+  };
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -198,13 +214,19 @@ export default function AjustesInventarioPage() {
       }
 
       let matched = 0;
+      let skippedEmpty = 0;
       const newRows = [...rows];
       for (const row of data) {
-        const codigo = String(row['Código'] ?? row['codigo'] ?? '').trim();
-        const cantidadNueva = row['Cantidad nueva'] ?? row['cantidad_nueva'] ?? row['Cantidad'];
-        if (!codigo || cantidadNueva === undefined || cantidadNueva === '' || cantidadNueva === null) continue;
+        const codigo = String(findKey(row, ['Código', 'codigo', 'code', 'clave', 'sku']) ?? '').trim();
+        const cantidadNueva = findKey(row, ['Cantidad nueva', 'cantidad_nueva', 'cantidad', 'qty', 'stock nuevo', 'nuevo']);
 
-        const idx = newRows.findIndex(r => r.codigo === codigo);
+        if (!codigo) continue;
+        if (cantidadNueva === undefined || cantidadNueva === '' || cantidadNueva === null) {
+          skippedEmpty++;
+          continue;
+        }
+
+        const idx = newRows.findIndex(r => r.codigo.toLowerCase() === codigo.toLowerCase());
         if (idx !== -1) {
           newRows[idx] = { ...newRows[idx], cantidadReal: Number(cantidadNueva), touched: true };
           matched++;
@@ -212,15 +234,18 @@ export default function AjustesInventarioPage() {
       }
 
       setRows(newRows);
-      toast.success(`${matched} producto(s) actualizados desde el archivo`);
-      if (matched === 0) {
-        toast.info('No se encontraron coincidencias por código. Verifica que los códigos coincidan.');
+      if (matched > 0) {
+        toast.success(`${matched} producto(s) actualizados desde el archivo`);
+      } else if (skippedEmpty === data.length || skippedEmpty > 0) {
+        toast.info('La columna "Cantidad nueva" está vacía. Llénala en el archivo antes de subirlo.');
+      } else {
+        toast.error('No se encontraron coincidencias por código. Verifica que los códigos coincidan.');
       }
     } catch (err: any) {
       toast.error('Error al leer el archivo: ' + (err.message || ''));
     }
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
   };
 
   // Apply all changes
