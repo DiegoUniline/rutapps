@@ -1,8 +1,5 @@
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import satori from "npm:satori@0.12.1";
-import { Resvg } from "npm:@aspect-build/resvg-wasm@2.4.0";
-import { initWasm } from "npm:@aspect-build/resvg-wasm@2.4.0";
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
 
