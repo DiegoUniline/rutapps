@@ -169,6 +169,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
       margen_pct: linea.margen_pct,
       descuento_pct: linea.descuento_pct,
       precio_minimo: linea.precio_minimo,
+      comision_pct: linea.comision_pct ?? 0,
     });
   };
 
