@@ -381,6 +381,7 @@ const statusSteps = [
 ];
 
 export default function ProductoFormPage() {
+  const { empresa } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
