@@ -210,6 +210,17 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   value={newRule.tarifa_id}
                   onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
                   placeholder="Buscar tarifa..."
+                  onCreateNew={handleCreateTarifa}
+                />
+              </div>
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Lista de precios</span>
+                <SearchableSelect
+                  options={listasForTarifa.map(l => ({ value: l.id, label: `${l.es_principal ? '★ ' : ''}${l.nombre}` }))}
+                  value={newRule.lista_precio_id}
+                  onChange={val => setNewRule(p => ({ ...p, lista_precio_id: val }))}
+                  placeholder={newRule.tarifa_id ? 'Buscar lista...' : 'Selecciona tarifa primero'}
+                  onCreateNew={handleCreateLista}
                 />
               </div>
             </div>
