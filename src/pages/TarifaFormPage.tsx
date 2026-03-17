@@ -494,7 +494,7 @@ export default function TarifaFormPage() {
           <button onClick={handleSave} disabled={saveMutation.isPending || !isDirty} className={isDirty ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
             <Save className="h-3.5 w-3.5" /> Guardar
           </button>
-          <button onClick={() => navigate('/tarifas')} className="btn-odoo-secondary">
+          <button onClick={() => navigate(backUrl)} className="btn-odoo-secondary">
             <X className="h-3.5 w-3.5" /> Descartar
           </button>
         </div>
