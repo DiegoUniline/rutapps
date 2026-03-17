@@ -110,6 +110,38 @@ export default function RutaNuevaVenta() {
     } catch {}
   };
 
+  // Capture current GPS (best-effort, non-blocking)
+  const captureGps = (): Promise<{ lat: number; lng: number } | null> =>
+    new Promise(resolve => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
+      );
+    });
+
+  // Save a visita record (GPS + fecha + usuario + tipo)
+  const saveVisita = async (tipo: string, opts?: { ventaId?: string; motivo?: string; notasVisita?: string }) => {
+    if (!empresa || !user) return;
+    const cId = clienteId || urlClienteId;
+    const gps = await captureGps();
+    await queueOperation('visitas', 'insert', {
+      id: crypto.randomUUID(),
+      empresa_id: empresa.id,
+      cliente_id: cId,
+      user_id: user.id,
+      tipo,
+      motivo: opts?.motivo || null,
+      notas: opts?.notasVisita || null,
+      gps_lat: gps?.lat ?? null,
+      gps_lng: gps?.lng ?? null,
+      venta_id: opts?.ventaId || null,
+      fecha: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    });
+  };
+
   const entregaInmediata = tipoVenta === 'venta_directa';
 
   // Load carga data for stock-aboard (venta directa)
