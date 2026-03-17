@@ -36,6 +36,20 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   const [paymentForm, setPaymentForm] = useState('01');
   const [paymentMethod, setPaymentMethod] = useState('PUE');
 
+  // Check timbre balance
+  const { data: timbreSaldo } = useQuery({
+    queryKey: ['timbres-saldo', empresa?.id],
+    enabled: !!empresa?.id && open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('timbres_saldo')
+        .select('saldo')
+        .eq('empresa_id', empresa!.id)
+        .single();
+      return data?.saldo ?? 0;
+    },
+  });
+
   // Load ventas without CFDI
   const { data: ventas } = useQuery({
     queryKey: ['ventas-sin-cfdi', empresa?.id],
