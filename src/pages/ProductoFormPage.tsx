@@ -628,11 +628,48 @@ export default function ProductoFormPage() {
               onChange={v => set('lista_id', v || null)}
               format={() => findName(listas, form.lista_id ?? undefined)}
             />
-            <OdooField label="Factor conv." value={form.factor_conversion} type="number" teal
-              onChange={v => set('factor_conversion', +v)} format={v => (v ?? 1).toString()} />
             <OdooField label="Min / Max stock" value={`${form.min ?? 0} / ${form.max ?? 0}`}
               format={() => `${form.min ?? 0} / ${form.max ?? 0}`}
               onChange={() => {}} />
+          </div>
+        </div>
+
+        {/* Conversion & Cost Table */}
+        <div className="border border-border rounded-lg overflow-hidden mt-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/30 border-b border-border">
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Unid. compra</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Unid. venta</th>
+                <th className="text-center px-3 py-2 font-medium text-muted-foreground">Factor conv.</th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground">Costo compra</th>
+                <th className="text-right px-3 py-2 font-medium text-muted-foreground">Costo x unid. venta</th>
+                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Cálculo costo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="px-3 py-2.5">{findUnit(unidades, form.unidad_compra_id ?? undefined) || '—'}</td>
+                <td className="px-3 py-2.5">{findUnit(unidades, form.unidad_venta_id ?? undefined) || '—'}</td>
+                <td className="px-3 py-2.5 text-center">
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-16 text-center border border-input rounded px-1 py-0.5 text-sm bg-background"
+                    value={form.factor_conversion ?? 1}
+                    onChange={e => set('factor_conversion', Number(e.target.value) || 1)}
+                  />
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono font-medium">$ {(form.costo ?? 0).toFixed(2)}</td>
+                <td className="px-3 py-2.5 text-right font-mono font-medium text-primary">
+                  $ {((form.costo ?? 0) / (form.factor_conversion || 1)).toFixed(2)}
+                </td>
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">{costLabels[form.calculo_costo ?? 'promedio'] ?? ''}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="px-3 py-1.5 bg-muted/20 text-xs text-muted-foreground border-t border-border">
+            1 {findUnit(unidades, form.unidad_compra_id ?? undefined) || 'unid. compra'} = {form.factor_conversion ?? 1} {findUnit(unidades, form.unidad_venta_id ?? undefined) || 'unid. venta'} → Costo por pieza: <strong className="text-foreground">$ {((form.costo ?? 0) / (form.factor_conversion || 1)).toFixed(2)}</strong>
           </div>
         </div>
 
