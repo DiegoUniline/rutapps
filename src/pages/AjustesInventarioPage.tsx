@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAlmacenes } from '@/hooks/useData';
 import { fmtDate } from '@/lib/utils';
@@ -361,29 +363,54 @@ export default function AjustesInventarioPage() {
             </div>
             <div className="space-y-1 min-w-[200px]">
               <Label className="text-xs text-muted-foreground">Categorías</Label>
-              <div className="flex flex-wrap gap-1.5 min-h-[36px] items-center border border-input rounded-md px-2 py-1 bg-background">
-                {selectedCats.length === 0 && <span className="text-sm text-muted-foreground">Todas</span>}
-                {selectedCats.length <= 3
-                  ? selectedCats.map(cid => {
-                      const cat = (clasificaciones ?? []).find((c: any) => c.id === cid);
-                      return (
-                        <Badge key={cid} variant="secondary" className="text-xs cursor-pointer gap-1" onClick={() => setSelectedCats(prev => prev.filter(x => x !== cid))}>
-                          {cat?.nombre ?? '?'} ✕
-                        </Badge>
-                      );
-                    })
-                  : <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSelectedCats([])}>
-                      {selectedCats.length} categorías ✕
-                    </Badge>
-                }
-              </div>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {(clasificaciones ?? []).filter((c: any) => !selectedCats.includes(c.id)).map((c: any) => (
-                  <Badge key={c.id} variant="outline" className="text-xs cursor-pointer hover:bg-accent" onClick={() => setSelectedCats(prev => [...prev, c.id])}>
-                    + {c.nombre}
-                  </Badge>
-                ))}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-[220px] justify-between font-normal">
+                    {selectedCats.length === 0
+                      ? <span className="text-muted-foreground">Todas</span>
+                      : selectedCats.length <= 3
+                        ? selectedCats.map(cid => (clasificaciones ?? []).find((c: any) => c.id === cid)?.nombre ?? '?').join(', ')
+                        : `${selectedCats.length} categorías`
+                    }
+                    <Search className="h-3.5 w-3.5 ml-1 shrink-0 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[260px] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar categoría..." />
+                    <CommandList>
+                      <CommandEmpty>Sin resultados</CommandEmpty>
+                      <CommandGroup>
+                        {(clasificaciones ?? []).map((c: any) => {
+                          const selected = selectedCats.includes(c.id);
+                          return (
+                            <CommandItem
+                              key={c.id}
+                              onSelect={() => {
+                                setSelectedCats(prev =>
+                                  selected ? prev.filter(x => x !== c.id) : [...prev, c.id]
+                                );
+                              }}
+                            >
+                              <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${selected ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/40'}`}>
+                                {selected && <span className="text-[10px]">✓</span>}
+                              </div>
+                              {c.nombre}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedCats.length > 0 && (
+                    <div className="border-t p-1">
+                      <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setSelectedCats([])}>
+                        Limpiar filtros
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
