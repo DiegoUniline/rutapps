@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClasificaciones } from '@/hooks/useData';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Settings2, Search, Package, RotateCcw, Save, AlertTriangle, FileText, Download, Upload } from 'lucide-react';
@@ -25,6 +26,7 @@ interface ProductRow {
   id: string;
   codigo: string;
   nombre: string;
+  clasificacionId: string | null;
   cantidadSistema: number;
   cantidadReal: number | null;
   touched: boolean;
@@ -36,7 +38,9 @@ export default function AjustesInventarioPage() {
   const { data: almacenes } = useAlmacenes();
   const [almacenId, setAlmacenId] = useState('');
   const [search, setSearch] = useState('');
+  const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [rows, setRows] = useState<ProductRow[]>([]);
+  const { data: clasificaciones } = useClasificaciones();
   const [motivo, setMotivo] = useState('Conteo físico');
   const [applying, setApplying] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -84,7 +88,7 @@ export default function AjustesInventarioPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
+        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['activo'] as any[])
         .order('nombre');
@@ -116,6 +120,7 @@ export default function AjustesInventarioPage() {
       id: p.id,
       codigo: p.codigo,
       nombre: p.nombre,
+      clasificacionId: p.clasificacion_id ?? null,
       cantidadSistema: p.cantidad ?? 0,
       cantidadReal: null,
       touched: false,
@@ -125,10 +130,16 @@ export default function AjustesInventarioPage() {
   useMemo(() => { initRows(); }, [productos]);
 
   const filteredRows = useMemo(() => {
-    if (!search) return rows;
-    const s = search.toLowerCase();
-    return rows.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
-  }, [rows, search]);
+    let result = rows;
+    if (selectedCats.length > 0) {
+      result = result.filter(r => r.clasificacionId && selectedCats.includes(r.clasificacionId));
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
+    }
+    return result;
+  }, [rows, search, selectedCats]);
 
   const changedRows = rows.filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
 
@@ -208,6 +219,7 @@ export default function AjustesInventarioPage() {
 
   // Apply all changes
   const applyAdjustments = async () => {
+    if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
     if (changedRows.length === 0) { toast.info('No hay cambios'); return; }
     if (!motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
     setApplying(true);
@@ -347,6 +359,32 @@ export default function AjustesInventarioPage() {
               <Label className="text-xs text-muted-foreground">Motivo del ajuste</Label>
               <Input value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ej: Conteo físico..." />
             </div>
+            <div className="space-y-1 min-w-[200px]">
+              <Label className="text-xs text-muted-foreground">Categorías</Label>
+              <div className="flex flex-wrap gap-1.5 min-h-[36px] items-center border border-input rounded-md px-2 py-1 bg-background">
+                {selectedCats.length === 0 && <span className="text-sm text-muted-foreground">Todas</span>}
+                {selectedCats.length <= 3
+                  ? selectedCats.map(cid => {
+                      const cat = (clasificaciones ?? []).find((c: any) => c.id === cid);
+                      return (
+                        <Badge key={cid} variant="secondary" className="text-xs cursor-pointer gap-1" onClick={() => setSelectedCats(prev => prev.filter(x => x !== cid))}>
+                          {cat?.nombre ?? '?'} ✕
+                        </Badge>
+                      );
+                    })
+                  : <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setSelectedCats([])}>
+                      {selectedCats.length} categorías ✕
+                    </Badge>
+                }
+              </div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {(clasificaciones ?? []).filter((c: any) => !selectedCats.includes(c.id)).map((c: any) => (
+                  <Badge key={c.id} variant="outline" className="text-xs cursor-pointer hover:bg-accent" onClick={() => setSelectedCats(prev => [...prev, c.id])}>
+                    + {c.nombre}
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Action bar */}
@@ -383,7 +421,7 @@ export default function AjustesInventarioPage() {
               <Button
                 size="sm"
                 onClick={applyAdjustments}
-                disabled={applying || changedRows.length === 0}
+                disabled={applying || changedRows.length === 0 || !almacenId}
                 className="gap-1.5"
               >
                 <Save className="h-4 w-4" />
