@@ -106,24 +106,28 @@ export default function ProductosListPage() {
                   <th className="th-odoo w-10 text-center">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
                   </th>
-                  <th className="th-odoo w-10">Img</th>
-                  <th className="th-odoo text-left">Código</th>
-                  <th className="th-odoo text-left">Nombre</th>
-                  <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
-                  <th className="th-odoo text-left hidden md:table-cell">Marca</th>
-                  <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
-                  <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
-                  <th className="th-odoo text-right">Precio</th>
-                  <th className="th-odoo text-right hidden md:table-cell">Costo</th>
-                  <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
-                  <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
-                  <th className="th-odoo text-center">Status</th>
+                   <th className="th-odoo w-10">Img</th>
+                   <th className="th-odoo text-left">Código</th>
+                   <th className="th-odoo text-left">Nombre</th>
+                   <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
+                   <th className="th-odoo text-left hidden md:table-cell">Marca</th>
+                   <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
+                   <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
+                   <th className="th-odoo text-center hidden xl:table-cell">U. compra</th>
+                   <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
+                   <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
+                   <th className="th-odoo text-right">Precio</th>
+                   <th className="th-odoo text-right hidden md:table-cell">Costo</th>
+                   <th className="th-odoo text-right hidden xl:table-cell">Costo/u</th>
+                   <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
+                   <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
+                   <th className="th-odoo text-center">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {pageData.length === 0 && (
                   <tr>
-                    <td colSpan={13} className="text-center py-12 text-muted-foreground text-sm">
+                    <td colSpan={16} className="text-center py-12 text-muted-foreground text-sm">
                       No hay productos. Crea el primero.
                     </td>
                   </tr>
@@ -152,9 +156,15 @@ export default function ProductosListPage() {
                     <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
                     <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
                     <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
-                    <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_compra?.abreviatura ?? '—'}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>
+                     <td className="py-1.5 px-3 hidden xl:table-cell text-center font-mono text-xs">{p.factor_conversion ?? 1}</td>
+                     <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
+                     <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+                     <td className="py-1.5 px-3 text-right hidden xl:table-cell text-muted-foreground tabular-nums font-mono text-xs">
+                       {fmt((p.costo ?? 0) / (p.factor_conversion || 1))}
+                     </td>
                     <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
                       <span className={cn(
                         "font-medium",
