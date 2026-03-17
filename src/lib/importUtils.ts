@@ -155,6 +155,20 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
   const result: ImportResult = { total: rows.length, created: 0, updated: 0, errors: [] };
   const cache = new Map<string, Map<string, string>>();
 
+  // Get current user for audit trail
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+
+  // Get default almacén for adjustments
+  const { data: defaultAlmacen } = await supabase
+    .from('almacenes')
+    .select('id')
+    .eq('empresa_id', empresaId)
+    .eq('activo', true)
+    .order('created_at')
+    .limit(1)
+    .maybeSingle();
+
   for (let i = 0; i < rows.length; i++) {
     const raw = mapHeaders(rows[i], PRODUCT_IMPORT_COLUMNS);
     const rowNum = i + 2; // +2 for header + 0-index
@@ -177,13 +191,15 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
       const unidad_venta_id = await resolveOrCreate('unidades', raw.unidad_venta, empresaId, cache);
       const unidad_compra_id = await resolveOrCreate('unidades', raw.unidad_compra, empresaId, cache);
 
+      const importedStock = raw.cantidad ? Number(raw.cantidad) : 0;
+
       const productData: any = {
         empresa_id: empresaId,
         codigo: raw.codigo?.toString().trim() || '',
         nombre: raw.nombre?.toString().trim(),
         precio_principal: raw.precio_principal ? Number(raw.precio_principal) : 0,
         costo: raw.costo ? Number(raw.costo) : 0,
-        cantidad: raw.cantidad ? Number(raw.cantidad) : 0,
+        cantidad: importedStock,
         clave_alterna: raw.clave_alterna?.toString().trim() || null,
         tiene_iva: raw.tiene_iva ? toBool(raw.tiene_iva) : false,
         status: ['activo', 'inactivo', 'borrador'].includes(raw.status?.toLowerCase?.()) ? raw.status.toLowerCase() : 'activo',
@@ -195,29 +211,66 @@ export async function importProducts(rows: Record<string, any>[], empresaId: str
         ...(unidad_compra_id && { unidad_compra_id }),
       };
 
+      let productId: string | null = null;
+      let previousStock = 0;
+
       // Check if exists by codigo
       if (productData.codigo) {
         const { data: existing } = await supabase
           .from('productos')
-          .select('id')
+          .select('id, cantidad')
           .eq('empresa_id', empresaId)
           .eq('codigo', productData.codigo)
           .maybeSingle();
 
         if (existing) {
+          productId = existing.id;
+          previousStock = existing.cantidad ?? 0;
           const { empresa_id: _, ...updateData } = productData;
           const { error } = await supabase.from('productos').update(updateData).eq('id', existing.id);
           if (error) throw error;
           result.updated++;
         } else {
-          const { error } = await supabase.from('productos').insert(productData);
+          const { data: inserted, error } = await supabase.from('productos').insert(productData).select('id').single();
           if (error) throw error;
+          productId = inserted.id;
           result.created++;
         }
       } else {
-        const { error } = await supabase.from('productos').insert(productData);
+        const { data: inserted, error } = await supabase.from('productos').insert(productData).select('id').single();
         if (error) throw error;
+        productId = inserted.id;
         result.created++;
+      }
+
+      // Create inventory adjustment & movement when stock differs
+      const stockDiff = importedStock - previousStock;
+      if (productId && userId && stockDiff !== 0) {
+        // Ajuste de inventario
+        await supabase.from('ajustes_inventario').insert({
+          empresa_id: empresaId,
+          producto_id: productId,
+          user_id: userId,
+          cantidad_anterior: previousStock,
+          cantidad_nueva: importedStock,
+          diferencia: stockDiff,
+          motivo: 'Importación masiva de productos',
+          almacen_id: defaultAlmacen?.id ?? null,
+        });
+
+        // Movimiento de inventario
+        await supabase.from('movimientos_inventario').insert({
+          empresa_id: empresaId,
+          producto_id: productId,
+          tipo: stockDiff > 0 ? 'entrada' : 'salida',
+          cantidad: Math.abs(stockDiff),
+          fecha: new Date().toISOString().split('T')[0],
+          referencia_tipo: 'ajuste',
+          notas: 'Importación masiva de productos',
+          user_id: userId,
+          almacen_destino_id: stockDiff > 0 ? (defaultAlmacen?.id ?? null) : null,
+          almacen_origen_id: stockDiff < 0 ? (defaultAlmacen?.id ?? null) : null,
+        });
       }
     } catch (err: any) {
       result.errors.push({ row: rowNum, message: err.message || 'Error desconocido' });
