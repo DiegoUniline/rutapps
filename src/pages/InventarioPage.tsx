@@ -276,7 +276,8 @@ export default function InventarioPage() {
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
-                  <TableCell className="text-center">{p.stockAlmacen} {(p.unidades as any)?.abreviatura ?? ''}</TableCell>
+                  <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
+                  <TableCell className="text-center">{p.stockAlmacen}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const qty = r.stockByProduct[p.id] ?? 0;
                     return (
