@@ -390,7 +390,7 @@ function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores, onSav
   );
 }
 
-const defaultProduct: Partial<Producto> = {
+const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }> = {
   codigo: '', nombre: '', clave_alterna: '', costo: 0, precio_principal: 0,
   se_puede_comprar: true, se_puede_vender: true, vender_sin_stock: false,
   se_puede_inventariar: true, es_combo: false, min: 0, max: 0,
@@ -400,6 +400,7 @@ const defaultProduct: Partial<Producto> = {
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
   iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje', costo_incluye_impuestos: false,
+  usa_listas_precio: false,
 };
 
 const statusSteps = [
