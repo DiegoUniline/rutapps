@@ -219,6 +219,7 @@ export default function AjustesInventarioPage() {
 
   // Apply all changes
   const applyAdjustments = async () => {
+    if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
     if (changedRows.length === 0) { toast.info('No hay cambios'); return; }
     if (!motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
     setApplying(true);
