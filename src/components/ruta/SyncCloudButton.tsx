@@ -1,11 +1,14 @@
 import { Cloud, CloudOff, CloudUpload, Check, Loader2 } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 
 export default function SyncCloudButton() {
   const { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync, verified } = useNetworkStatus();
   const [showPanel, setShowPanel] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
 
   const formatLastSync = (ts: number | null) => {
     if (!ts) return 'Nunca';
@@ -15,7 +18,6 @@ export default function SyncCloudButton() {
     return `${Math.floor(diff / 60)}h`;
   };
 
-  // Determine cloud state
   const getCloudState = () => {
     if (!isOnline) return 'offline';
     if (isSyncing) return 'syncing';
@@ -25,6 +27,45 @@ export default function SyncCloudButton() {
   };
 
   const state = getCloudState();
+
+  const handleTap = useCallback(() => {
+    if (didLongPress.current) return;
+    if (!isOnline) {
+      toast.error('Sin conexión');
+      return;
+    }
+    if (isSyncing) return;
+    toast.promise(syncNow(), {
+      loading: 'Sincronizando...',
+      success: '✓ Sincronizado',
+      error: 'Error al sincronizar',
+    });
+  }, [isOnline, isSyncing, syncNow]);
+
+  const handlePointerDown = useCallback(() => {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      setShowPanel(true);
+    }, 500);
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (!didLongPress.current) {
+      handleTap();
+    }
+  }, [handleTap]);
+
+  const handlePointerCancel = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   const cloudIcon = () => {
     switch (state) {
@@ -56,16 +97,18 @@ export default function SyncCloudButton() {
 
   return (
     <div className="relative">
-      {/* Cloud button */}
+      {/* Cloud button — tap = sync, long press = panel */}
       <button
-        onClick={() => setShowPanel(!showPanel)}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onContextMenu={(e) => e.preventDefault()}
         className={cn(
-          "relative flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90",
+          "relative flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90 select-none touch-none",
           stateColors[state]
         )}
       >
         {cloudIcon()}
-        {/* Pending badge */}
         {pendingCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-orange-500 text-[9px] font-bold text-white px-1">
             {pendingCount > 99 ? '99+' : pendingCount}
@@ -73,15 +116,12 @@ export default function SyncCloudButton() {
         )}
       </button>
 
-      {/* Dropdown panel */}
+      {/* Dropdown panel (long press) */}
       {showPanel && (
         <>
-          {/* Backdrop */}
           <div className="fixed inset-0 z-40" onClick={() => setShowPanel(false)} />
           
-          {/* Panel */}
           <div className="absolute right-0 top-12 z-50 w-72 bg-card border border-border rounded-xl shadow-xl overflow-hidden">
-            {/* Header */}
             <div className={cn(
               "px-4 py-3 flex items-center gap-3",
               state === 'offline' ? 'bg-destructive/10' :
@@ -111,7 +151,6 @@ export default function SyncCloudButton() {
               </div>
             </div>
 
-            {/* Auto-sync toggle */}
             <div className="px-4 py-3 flex items-center justify-between border-b border-border">
               <div>
                 <p className="text-xs font-semibold text-foreground">Sync automático</p>
@@ -131,7 +170,6 @@ export default function SyncCloudButton() {
               </button>
             </div>
 
-            {/* Verification status */}
             <div className="px-4 py-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className={cn(
@@ -154,25 +192,9 @@ export default function SyncCloudButton() {
               </div>
             </div>
 
-            {/* Sync button */}
-            <div className="p-3">
-              <button
-                onClick={() => { syncNow(); }}
-                disabled={isSyncing || !isOnline}
-                className={cn(
-                  "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all active:scale-[0.98]",
-                  !isOnline
-                    ? "bg-muted text-muted-foreground cursor-not-allowed"
-                    : "bg-primary text-primary-foreground"
-                )}
-              >
-                {isSyncing ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CloudUpload className="h-4 w-4" />
-                )}
-                {isSyncing ? 'Sincronizando...' : !isOnline ? 'Sin conexión' : 'Sincronizar ahora'}
-              </button>
+            <div className="p-3 flex items-center gap-2 text-[10px] text-muted-foreground">
+              <Cloud className="h-3 w-3 shrink-0" />
+              <span>Toque = sincronizar · Toque largo = este panel</span>
             </div>
           </div>
         </>
