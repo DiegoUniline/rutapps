@@ -665,6 +665,10 @@ export default function RutaNuevaVenta() {
             nombre: item.nombre,
             cantidad: item.cantidad,
             precio: item.precio_unitario,
+            subtotal: lineSub,
+            iva_monto: lineIva,
+            ieps_monto: lineIeps,
+            descuento_pct: 0,
             total: lineSub + lineIeps + lineIva,
             esCambio: item.es_cambio,
           };
