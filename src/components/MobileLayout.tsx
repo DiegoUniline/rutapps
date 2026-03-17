@@ -17,6 +17,7 @@ const tabs = [
 ];
 
 const menuItems = [
+  { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },
   { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
   { label: 'Devoluciones', icon: RotateCcw, path: '/ruta/devolucion' },
