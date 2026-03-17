@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
@@ -160,7 +160,8 @@ export default function AjustesInventarioPage() {
     })));
   };
 
-  useMemo(() => { initRows(); }, [productos]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { initRows(); }, [productos]);
 
   const filteredRows = useMemo(() => {
     let result = rows;
@@ -174,7 +175,7 @@ export default function AjustesInventarioPage() {
     return result;
   }, [rows, search, selectedCats]);
 
-  const changedRows = rows.filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
+  const changedRows = (rows ?? []).filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
 
   const updateRow = (id: string, cantidadReal: number) => {
     setRows(prev => prev.map(r =>
