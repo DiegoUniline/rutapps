@@ -27,7 +27,7 @@ export default function TicketVenta(props: TicketVentaProps) {
   const {
     empresa, folio, fecha, clienteNombre, lineas,
     subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
-    montoRecibido, cambio, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onClose,
   } = props;
 
   const ticketRef = useRef<HTMLDivElement>(null);
