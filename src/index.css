@@ -376,6 +376,6 @@
 
 /* Safe area for mobile bottom nav */
 .safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
