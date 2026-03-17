@@ -395,8 +395,9 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   const ivaPct = form.tiene_iva ? (form.iva_pct ?? 16) : 0;
                   const iepsPct = form.tiene_ieps ? (form.ieps_pct ?? 0) : 0;
                   const taxMult = 1 + (ivaPct + iepsPct) / 100;
-                  const basePrecio = linea.base_precio ?? 'sin_impuestos';
-                  const redondeoLabel = { arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' }[linea.redondeo as string] ?? '— Ninguno';
+                  const basePrecio = (isEditing ? (editVal.base_precio ?? linea.base_precio) : linea.base_precio) ?? 'sin_impuestos';
+                  const redondeoVal = (isEditing ? (editVal.redondeo ?? linea.redondeo) : linea.redondeo) ?? 'ninguno';
+                  const redondeoLabel = { arriba: '⬆ Arriba', abajo: '⬇ Abajo', cercano: '↕ Cercano', ninguno: '— Ninguno' }[redondeoVal as string] ?? '— Ninguno';
                   const baseLabel = basePrecio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.';
 
                   // 1. Calculate raw price (sin impuestos, sin redondeo)
