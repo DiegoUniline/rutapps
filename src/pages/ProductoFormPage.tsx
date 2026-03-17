@@ -368,6 +368,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   <th className="th-odoo text-right">Precio</th>
                   <th className="th-odoo text-right">Ganancia $</th>
                   <th className="th-odoo text-right">Ganancia %</th>
+                  <th className="th-odoo text-right">Comisión %</th>
                   <th className="th-odoo w-10"></th>
                 </tr>
               </thead>
