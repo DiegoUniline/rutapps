@@ -106,18 +106,22 @@ export default function ProductosListPage() {
                   <th className="th-odoo w-10 text-center">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
                   </th>
-                  <th className="th-odoo w-10">Img</th>
-                  <th className="th-odoo text-left">Código</th>
-                  <th className="th-odoo text-left">Nombre</th>
-                  <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
-                  <th className="th-odoo text-left hidden md:table-cell">Marca</th>
-                  <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
-                  <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
-                  <th className="th-odoo text-right">Precio</th>
-                  <th className="th-odoo text-right hidden md:table-cell">Costo</th>
-                  <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
-                  <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
-                  <th className="th-odoo text-center">Status</th>
+                   <th className="th-odoo w-10">Img</th>
+                   <th className="th-odoo text-left">Código</th>
+                   <th className="th-odoo text-left">Nombre</th>
+                   <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
+                   <th className="th-odoo text-left hidden md:table-cell">Marca</th>
+                   <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
+                   <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
+                   <th className="th-odoo text-center hidden xl:table-cell">U. compra</th>
+                   <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
+                   <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
+                   <th className="th-odoo text-right">Precio</th>
+                   <th className="th-odoo text-right hidden md:table-cell">Costo</th>
+                   <th className="th-odoo text-right hidden xl:table-cell">Costo/u</th>
+                   <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
+                   <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
+                   <th className="th-odoo text-center">Status</th>
                 </tr>
               </thead>
               <tbody>
