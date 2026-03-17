@@ -55,8 +55,8 @@ export async function queueOperation(
     });
   }
 
-  // 3. Try to sync immediately if online
-  if (navigator.onLine) {
+  // 3. Try to sync immediately if online AND data saver is off
+  if (navigator.onLine && !isDataSaverEnabled()) {
     processSyncQueue().catch(console.warn);
   }
 }
