@@ -312,7 +312,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
               </div>
             </div>
             <div className="grid grid-cols-2 gap-x-8">
-              {newRule.tipo_calculo === 'precio_fijo' && (
+              {newRule.tipo_calculo === 'precio_fijo' && newRule.aplica_a === 'producto' && (
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Precio fijo</span>
                   <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio}
