@@ -51,7 +51,7 @@ export default function ProductosListPage() {
 
   return (
     <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground">Productos</h1>
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /></h1>
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -162,6 +162,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" /> Dashboard
+            <HelpButton title={HELP.dashboard.title} sections={HELP.dashboard.sections} />
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             {format(dateRange.from, "d MMM", { locale: es })} — {format(dateRange.to, "d MMM yyyy", { locale: es })}
