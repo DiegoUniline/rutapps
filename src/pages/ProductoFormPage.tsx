@@ -500,9 +500,41 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                           </span>
                         )}
                       </td>
-                      <td className="py-1.5 px-3 text-center text-xs text-muted-foreground">{redondeoLabel}</td>
-                      <td className="py-1.5 px-3 text-center">
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${basePrecio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{baseLabel}</span>
+                      {/* Redondeo — inline editable */}
+                      <td className="py-1.5 px-3 text-center text-xs" onClick={cellClick('redondeo')}>
+                        {isEditing && editingCol === 'redondeo' ? (
+                          <select
+                            autoFocus
+                            className="input-odoo py-0.5 text-[12px] w-full"
+                            value={currentVals.redondeo ?? 'ninguno'}
+                            onChange={e => setEditVal((p: any) => ({ ...p, redondeo: e.target.value }))}
+                            onBlur={handleBlur}
+                          >
+                            <option value="ninguno">Ninguno</option>
+                            <option value="arriba">Arriba</option>
+                            <option value="abajo">Abajo</option>
+                            <option value="cercano">Cercano</option>
+                          </select>
+                        ) : (
+                          <span className="inline-edit-idle text-muted-foreground">{redondeoLabel}</span>
+                        )}
+                      </td>
+                      {/* Base precio — inline editable */}
+                      <td className="py-1.5 px-3 text-center" onClick={cellClick('base')}>
+                        {isEditing && editingCol === 'base' ? (
+                          <select
+                            autoFocus
+                            className="input-odoo py-0.5 text-[12px] w-full"
+                            value={currentVals.base_precio ?? 'sin_impuestos'}
+                            onChange={e => setEditVal((p: any) => ({ ...p, base_precio: e.target.value }))}
+                            onBlur={handleBlur}
+                          >
+                            <option value="sin_impuestos">Sin impuestos</option>
+                            <option value="con_impuestos">Con impuestos</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium ${basePrecio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>{baseLabel}</span>
+                        )}
                       </td>
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {precioSinImp.toFixed(2)}</td>
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {precioConImp.toFixed(2)}</td>
