@@ -199,7 +199,14 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
               <div className="odoo-field-row">
                 <span className="odoo-field-label">Aplica a</span>
                 <select className="input-odoo py-1 text-[13px]" value={newRule.aplica_a}
-                  onChange={e => setNewRule(p => ({ ...p, aplica_a: e.target.value as any, clasificacion_ids: [] }))}>
+                  onChange={e => {
+                    const val = e.target.value as 'producto' | 'categoria' | 'todos';
+                    setNewRule(p => ({
+                      ...p,
+                      aplica_a: val,
+                      clasificacion_ids: val === 'categoria' && form.clasificacion_id ? [form.clasificacion_id] : [],
+                    }));
+                  }}>
                   <option value="producto">Este producto</option>
                   <option value="categoria">Categoría</option>
                   <option value="todos">Todos los productos</option>
