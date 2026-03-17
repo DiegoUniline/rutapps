@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, Menu, X, FileText, PackageCheck, RefreshCw, MoreHorizontal } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -8,6 +8,7 @@ import UpdateBanner from '@/components/ruta/UpdateBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
@@ -33,6 +34,16 @@ export default function MobileLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
+
+  const forceUpdate = () => {
+    navigator.serviceWorker?.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        window.location.reload();
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -105,7 +116,7 @@ export default function MobileLayout() {
       {moreOpen && (
         <div className="fixed inset-0 z-[55]" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute bottom-16 right-2 w-48 bg-card border border-border rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
+            className="absolute bottom-16 right-2 w-52 bg-card border border-border rounded-xl shadow-lg py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
             onClick={e => e.stopPropagation()}
           >
             {moreItems.map(item => (
@@ -121,6 +132,19 @@ export default function MobileLayout() {
                 {item.label}
               </button>
             ))}
+            {/* Separator + version info */}
+            <div className="border-t border-border mt-1 pt-1">
+              <button
+                onClick={() => { forceUpdate(); setMoreOpen(false); }}
+                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-primary hover:bg-accent transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                Actualizar app
+              </button>
+              <div className="px-4 py-2 text-[10px] text-muted-foreground">
+                v{APP_VERSION} · {APP_BUILD_DATE}
+              </div>
+            </div>
           </div>
         </div>
       )}
