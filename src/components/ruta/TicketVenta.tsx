@@ -122,14 +122,6 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
       <div className="flex-1 p-4 flex flex-col items-center">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          {/* Screen-only hero */}
-          <div className="bg-primary px-5 py-5 text-center print:hidden">
-            <div className="w-11 h-11 bg-primary-foreground/20 rounded-full flex items-center justify-center mx-auto mb-2">
-              <Check className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <p className="text-primary-foreground/80 text-[12px] font-medium">Venta registrada</p>
-            <p className="text-primary-foreground text-[28px] font-bold mt-0.5">$ {fmt(total)}</p>
-          </div>
 
           {/* ─── Printable ticket ─── */}
           <div ref={ticketRef}>
