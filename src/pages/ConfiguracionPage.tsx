@@ -315,6 +315,20 @@ export default function ConfiguracionPage() {
     setInitialized(true);
   }
 
+  const hasChanges = !!logoFile || (initialized && config && (() => {
+    const orig: Record<string, string> = {
+      nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
+      rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
+      direccion: (config as any).direccion ?? '', colonia: (config as any).colonia ?? '',
+      ciudad: (config as any).ciudad ?? '', estado: (config as any).estado ?? '',
+      cp: (config as any).cp ?? '', telefono: (config as any).telefono ?? '',
+      email: (config as any).email ?? '', notas_ticket: (config as any).notas_ticket ?? '',
+    };
+    const origCampos = { ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean> ?? {}) };
+    return Object.keys(orig).some(k => (form[k] ?? '') !== orig[k]) ||
+      Object.keys(CAMPO_LABELS).some(k => (campos[k] ?? true) !== (origCampos[k] ?? true));
+  })());
+
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
