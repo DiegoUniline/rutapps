@@ -187,6 +187,7 @@ export default function UsuariosPage() {
       }
     }
     load(false);
+    notifyPermisosChanged();
   };
 
   // ── User edit ──
