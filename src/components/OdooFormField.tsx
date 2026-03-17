@@ -24,7 +24,7 @@ interface OdooFieldProps {
 
 export function OdooField({
   label, value, onChange, type = 'text', options, placeholder,
-  help, teal, format, readOnly, alwaysEdit, required,
+  help, teal, format, readOnly, alwaysEdit, required, onCreateNew,
 }: OdooFieldProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
