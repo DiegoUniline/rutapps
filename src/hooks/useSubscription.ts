@@ -76,6 +76,7 @@ export function useSubscription(): SubscriptionState {
     if (!user) return;
 
     const applyOfflineFallback = () => setState(getOfflineFallbackState(user.id));
+    let isSuperAdmin = false;
 
     try {
       const { data: sa, error: saError } = await supabase
@@ -84,7 +85,9 @@ export function useSubscription(): SubscriptionState {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (sa) {
+      isSuperAdmin = !!sa;
+
+      if (isSuperAdmin && !empresa?.id) {
         const nextState: SubscriptionState = {
           loading: false,
           status: 'active',
@@ -93,7 +96,6 @@ export function useSubscription(): SubscriptionState {
           isSuperAdmin: true,
           maxUsuarios: 999,
         };
-
         setState(nextState);
         writeCachedSubscriptionState(user.id, {
           status: nextState.status,
@@ -165,17 +167,19 @@ export function useSubscription(): SubscriptionState {
       const endDate = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
       const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
       // Block after 3 grace days past expiration
-      const isBlocked = (sub.status === 'suspended') ||
+      const isBlocked = !isSuperAdmin && (
+        (sub.status === 'suspended') ||
         (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||
-        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3);
+        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3)
+      );
 
       const nextState: SubscriptionState = {
         loading: false,
         status: sub.status,
         daysLeft,
         isBlocked,
-        isSuperAdmin: false,
-        maxUsuarios: sub.max_usuarios,
+        isSuperAdmin,
+        maxUsuarios: isSuperAdmin ? 999 : sub.max_usuarios,
       };
 
       setState(nextState);
