@@ -63,6 +63,9 @@ export async function queueOperation(
 
 // Process all pending items in the sync queue
 export async function processSyncQueue(): Promise<{ success: number; failed: number }> {
+  // Backup before processing as safety net
+  await backupSyncQueueToStorage();
+  
   const items = await offlineDb.syncQueue.orderBy('createdAt').toArray();
   let success = 0;
   let failed = 0;
