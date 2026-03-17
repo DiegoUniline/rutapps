@@ -22,7 +22,6 @@ const menuItems = [
   { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
   { label: 'Devoluciones', icon: RotateCcw, path: '/ruta/devolucion' },
   { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
-  { label: 'Mapa de ruta', icon: MapPinned, path: '/ruta/mapa' },
   { label: 'Navegación guiada', icon: Navigation, path: '/ruta/navegacion?modo=clientes' },
 ];
 
