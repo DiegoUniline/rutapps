@@ -213,18 +213,15 @@ export default function RutaNuevaVenta() {
     status: 'activo',
   }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
-  // Pedido sugerido for selected client
-  const { data: pedidoSugerido } = useQuery({
-    queryKey: ['pedido-sugerido', clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('cliente_pedido_sugerido')
-        .select('*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, tasa_iva_id, tasa_ieps_id, unidad_venta_id, unidades:unidad_venta_id(id, nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje), tasas_ieps:tasa_ieps_id(porcentaje))')
-        .eq('cliente_id', clienteId!);
-      return data ?? [];
-    },
-  });
+  // Pedido sugerido for selected client (offline-compatible)
+  const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
+  const pedidoSugerido = useMemo(() => {
+    if (!pedidoSugeridoRaw || !productos) return [];
+    return (pedidoSugeridoRaw as any[]).map(ps => {
+      const prod = productos.find((p: any) => p.id === ps.producto_id);
+      return prod ? { ...ps, productos: prod } : null;
+    }).filter(Boolean);
+  }, [pedidoSugeridoRaw, productos]);
 
   const filteredClientes = clientes?.filter(c =>
     !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
