@@ -428,7 +428,19 @@ async function timbrar(supabase: any, userId: string, body: any) {
     cfdiRecord = data;
   }
 
-  return new Response(
+  // Deduct timbre after successful timbrado
+  const cfdiIdForDeduct = cfdiRecord?.id || cfdi_id;
+  if (cfdiIdForDeduct) {
+    const { data: deducted } = await serviceDb.rpc("deduct_timbre", {
+      p_empresa_id: empresa_id,
+      p_cfdi_id: cfdiIdForDeduct,
+      p_user_id: userId,
+    });
+    if (!deducted) {
+      console.error("Warning: Could not deduct timbre after successful timbrado");
+    }
+  }
+
     JSON.stringify({
       success: true,
       cfdi: cfdiRecord,
