@@ -10,26 +10,26 @@ export default function RutaClientesEntregas() {
   return (
     <div className="flex flex-col h-full">
       {/* Tabs */}
-      <div className="sticky top-0 z-20 bg-background px-4 pt-3 pb-1">
-        <div className="flex gap-1 bg-muted rounded-xl p-1">
+      <div className="sticky top-0 z-20 bg-background px-4 pt-2 pb-0.5">
+        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
           <button
             onClick={() => setTab('clientes')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-colors",
+              "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
               tab === 'clientes' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
-            <Users className="h-3.5 w-3.5" />
+            <Users className="h-3 w-3" />
             Clientes
           </button>
           <button
             onClick={() => setTab('entregas')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-colors",
+              "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
               tab === 'entregas' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
-            <Truck className="h-3.5 w-3.5" />
+            <Truck className="h-3 w-3" />
             Entregas
           </button>
         </div>
