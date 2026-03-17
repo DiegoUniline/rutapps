@@ -87,7 +87,7 @@ export default function AjustesInventarioPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
+        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
         .eq('empresa_id', empresa!.id)
         .in('status', ['activo'] as any[])
         .order('nombre');
