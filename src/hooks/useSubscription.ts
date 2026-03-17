@@ -12,70 +12,182 @@ interface SubscriptionState {
   maxUsuarios: number;
 }
 
+type CachedSubscriptionState = Omit<SubscriptionState, 'loading'>;
+
+const INITIAL_STATE: SubscriptionState = {
+  loading: true,
+  status: null,
+  daysLeft: null,
+  isBlocked: false,
+  isSuperAdmin: false,
+  maxUsuarios: 3,
+};
+
+function getSubscriptionCacheKey(userId: string) {
+  return `uniline_subscription_state:${userId}`;
+}
+
+function readCachedSubscriptionState(userId?: string | null): CachedSubscriptionState | null {
+  if (!userId) return null;
+
+  try {
+    const raw = localStorage.getItem(getSubscriptionCacheKey(userId));
+    return raw ? JSON.parse(raw) as CachedSubscriptionState : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedSubscriptionState(userId: string, state: CachedSubscriptionState) {
+  try {
+    localStorage.setItem(getSubscriptionCacheKey(userId), JSON.stringify(state));
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function getOfflineFallbackState(userId?: string | null): SubscriptionState {
+  const cached = readCachedSubscriptionState(userId);
+
+  return {
+    loading: false,
+    status: cached?.status ?? 'offline',
+    daysLeft: cached?.daysLeft ?? null,
+    isBlocked: false,
+    isSuperAdmin: cached?.isSuperAdmin ?? false,
+    maxUsuarios: cached?.maxUsuarios ?? 3,
+  };
+}
+
 export function useSubscription(): SubscriptionState {
   const { user, empresa } = useAuth();
-  const [state, setState] = useState<SubscriptionState>({
-    loading: true,
-    status: null,
-    daysLeft: null,
-    isBlocked: false,
-    isSuperAdmin: false,
-    maxUsuarios: 3,
-  });
+  const [state, setState] = useState<SubscriptionState>(INITIAL_STATE);
 
   useEffect(() => {
     if (!user) {
-      setState(s => ({ ...s, loading: false }));
+      setState({ ...INITIAL_STATE, loading: false });
       return;
     }
+
     check();
-  }, [user, empresa?.id]);
+  }, [user?.id, empresa?.id]);
 
   async function check() {
-    // Check if super admin first — does NOT require empresa
-    const { data: sa } = await supabase
-      .from('super_admins')
-      .select('id')
-      .eq('user_id', user!.id)
-      .maybeSingle();
+    if (!user) return;
 
-    if (sa) {
-      setState({ loading: false, status: 'active', daysLeft: 999, isBlocked: false, isSuperAdmin: true, maxUsuarios: 999 });
+    const applyOfflineFallback = () => setState(getOfflineFallbackState(user.id));
+
+    try {
+      const { data: sa, error: saError } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (sa) {
+        const nextState: SubscriptionState = {
+          loading: false,
+          status: 'active',
+          daysLeft: 999,
+          isBlocked: false,
+          isSuperAdmin: true,
+          maxUsuarios: 999,
+        };
+
+        setState(nextState);
+        writeCachedSubscriptionState(user.id, {
+          status: nextState.status,
+          daysLeft: nextState.daysLeft,
+          isBlocked: nextState.isBlocked,
+          isSuperAdmin: nextState.isSuperAdmin,
+          maxUsuarios: nextState.maxUsuarios,
+        });
+        return;
+      }
+
+      if (saError && !navigator.onLine) {
+        applyOfflineFallback();
+        return;
+      }
+    } catch {
+      applyOfflineFallback();
       return;
     }
 
-    // For subscription check, we need empresa
     if (!empresa?.id) {
-      setState(s => ({ ...s, loading: false }));
+      if (!navigator.onLine) {
+        applyOfflineFallback();
+        return;
+      }
+
+      setState(current => ({ ...current, loading: false }));
       return;
     }
 
-    const { data: sub } = await supabase
-      .from('subscriptions')
-      .select('status, trial_ends_at, current_period_end, max_usuarios')
-      .eq('empresa_id', empresa!.id)
-      .maybeSingle();
+    try {
+      const { data: sub, error } = await supabase
+        .from('subscriptions')
+        .select('status, trial_ends_at, current_period_end, max_usuarios')
+        .eq('empresa_id', empresa.id)
+        .maybeSingle();
 
-    if (!sub) {
-      // No subscription = blocked (unless just created, handled by trigger)
-      setState({ loading: false, status: null, daysLeft: null, isBlocked: true, isSuperAdmin: false, maxUsuarios: 0 });
-      return;
+      if (error) {
+        if (!navigator.onLine) {
+          applyOfflineFallback();
+          return;
+        }
+
+        setState(current => ({ ...current, loading: false }));
+        return;
+      }
+
+      if (!sub) {
+        const nextState: SubscriptionState = {
+          loading: false,
+          status: null,
+          daysLeft: null,
+          isBlocked: true,
+          isSuperAdmin: false,
+          maxUsuarios: 0,
+        };
+
+        setState(nextState);
+        writeCachedSubscriptionState(user.id, {
+          status: nextState.status,
+          daysLeft: nextState.daysLeft,
+          isBlocked: nextState.isBlocked,
+          isSuperAdmin: nextState.isSuperAdmin,
+          maxUsuarios: nextState.maxUsuarios,
+        });
+        return;
+      }
+
+      const endDate = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
+      const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
+      const isBlocked = (sub.status === 'suspended') ||
+        (sub.status === 'past_due' && daysLeft !== null && daysLeft < 0) ||
+        (sub.status === 'trial' && daysLeft !== null && daysLeft < 0);
+
+      const nextState: SubscriptionState = {
+        loading: false,
+        status: sub.status,
+        daysLeft,
+        isBlocked,
+        isSuperAdmin: false,
+        maxUsuarios: sub.max_usuarios,
+      };
+
+      setState(nextState);
+      writeCachedSubscriptionState(user.id, {
+        status: nextState.status,
+        daysLeft: nextState.daysLeft,
+        isBlocked: nextState.isBlocked,
+        isSuperAdmin: nextState.isSuperAdmin,
+        maxUsuarios: nextState.maxUsuarios,
+      });
+    } catch {
+      applyOfflineFallback();
     }
-
-    const endDate = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
-    const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
-    const isBlocked = (sub.status === 'suspended') ||
-      (sub.status === 'past_due' && daysLeft !== null && daysLeft < 0) ||
-      (sub.status === 'trial' && daysLeft !== null && daysLeft < 0);
-
-    setState({
-      loading: false,
-      status: sub.status,
-      daysLeft,
-      isBlocked,
-      isSuperAdmin: false,
-      maxUsuarios: sub.max_usuarios,
-    });
   }
 
   return state;
