@@ -638,7 +638,7 @@ export default function AjustesInventarioPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {group.items.map((a: any) => (
+                        {(group?.items ?? []).map((a: any) => (
                           <TableRow key={a.id}>
                             <TableCell className="font-mono text-xs text-muted-foreground">{a.productos?.codigo}</TableCell>
                             <TableCell className="text-sm">{a.productos?.nombre}</TableCell>
