@@ -202,6 +202,11 @@ export default function AjustesInventarioPage() {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!almacenId) {
+      toast.error('Selecciona un almacén antes de cargar la plantilla');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
     try {
       const ab = await file.arrayBuffer();
       const wb = XLSX.read(ab, { type: 'array' });
