@@ -10,6 +10,9 @@ import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveTarifaLinea, useDeleteTarifaLinea, useProductoProveedores, useSaveProductoProveedor, useDeleteProductoProveedor } from '@/hooks/useData';
 import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
+import { supabase } from '@/lib/supabase';
+import { compressPhoto } from '@/lib/imageCompressor';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 /* ── Precios Tab Component ── */
