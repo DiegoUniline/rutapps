@@ -143,6 +143,7 @@ export function OdooField({
               onClose={() => setEditing(false)}
               placeholder={placeholder || 'Buscar...'}
               autoOpen
+              onCreateNew={onCreateNew}
             />
           </div>
         ) : (
