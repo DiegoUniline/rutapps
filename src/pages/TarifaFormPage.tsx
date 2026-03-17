@@ -1030,6 +1030,7 @@ export default function TarifaFormPage() {
               content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} />,
             },
             {
+              key: 'info',
               label: 'Otra información',
               content: (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1 py-2">
