@@ -116,6 +116,27 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   const handleSaveRule = async () => {
     if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
     if (newRule.aplica_a === 'categoria' && newRule.clasificacion_ids.length === 0) { toast.error('Selecciona al menos una categoría'); return; }
+
+    // Duplicate validation: check existing rules for same tarifa + lista + aplica_a overlap
+    const existing = (tarifaLineas ?? []) as any[];
+    const listaId = newRule.lista_precio_id || null;
+    const duplicate = existing.find((l: any) => {
+      if (l.tarifas?.id !== newRule.tarifa_id) return false;
+      const existLista = l.lista_precios?.id ?? l.lista_precio_id ?? null;
+      if (existLista !== listaId) return false;
+      if (newRule.aplica_a === 'producto' && l.aplica_a === 'producto' && (l.producto_ids ?? []).includes(productoId)) return true;
+      if (newRule.aplica_a === 'categoria' && l.aplica_a === 'categoria') {
+        const overlap = newRule.clasificacion_ids.some((cid: string) => (l.clasificacion_ids ?? []).includes(cid));
+        if (overlap) return true;
+      }
+      if (newRule.aplica_a === 'todos' && l.aplica_a === 'todos') return true;
+      return false;
+    });
+    if (duplicate) {
+      toast.error('Ya existe una regla con la misma tarifa, lista y alcance. Edita la existente.');
+      return;
+    }
+
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
@@ -199,7 +220,14 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
               <div className="odoo-field-row">
                 <span className="odoo-field-label">Aplica a</span>
                 <select className="input-odoo py-1 text-[13px]" value={newRule.aplica_a}
-                  onChange={e => setNewRule(p => ({ ...p, aplica_a: e.target.value as any, clasificacion_ids: [] }))}>
+                  onChange={e => {
+                    const val = e.target.value as 'producto' | 'categoria' | 'todos';
+                    setNewRule(p => ({
+                      ...p,
+                      aplica_a: val,
+                      clasificacion_ids: val === 'categoria' && form.clasificacion_id ? [form.clasificacion_id] : [],
+                    }));
+                  }}>
                   <option value="producto">Este producto</option>
                   <option value="categoria">Categoría</option>
                   <option value="todos">Todos los productos</option>
