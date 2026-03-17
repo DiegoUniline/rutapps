@@ -499,6 +499,7 @@ export default function ClienteFormPage() {
         {
           key: 'precios', label: 'Precios',
           content: <ClientePreciosTab tarifaId={form.tarifa_id} listaPrecioId={(form as any).lista_precio_id} />,
+        },
         {
           key: 'notas', label: 'Notas',
           content: (
