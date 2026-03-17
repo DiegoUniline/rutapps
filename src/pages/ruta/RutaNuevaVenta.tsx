@@ -540,6 +540,8 @@ export default function RutaNuevaVenta() {
       // 5. Update carga
       await updateCargaVendidaOffline(cart);
 
+      // Mark client as visited
+      if (clienteId) markVisited(clienteId);
       toast.success('¡Venta registrada! Se sincronizará automáticamente');
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
