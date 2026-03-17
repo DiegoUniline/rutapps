@@ -138,7 +138,9 @@ export default function RutaCobrar() {
     if (!empresa || !user || totalAplicado <= 0) return;
     setSaving(true);
     try {
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
+      const cobroId = crypto.randomUUID();
+      await queueOperation('cobros', 'insert', {
+        id: cobroId,
         empresa_id: empresa.id,
         cliente_id: clienteId!,
         monto: totalAplicado,
@@ -146,31 +148,28 @@ export default function RutaCobrar() {
         referencia: referencia || null,
         notas: notas || null,
         user_id: user.id,
-      }).select('id').single();
-      if (cobroErr) throw cobroErr;
+        fecha: new Date().toISOString().slice(0, 10),
+        created_at: new Date().toISOString(),
+      });
 
-      const aplicaciones = cuentas
-        .filter(c => c.montoAplicar > 0)
-        .map(c => ({
-          cobro_id: cobro.id,
-          venta_id: c.id,
-          monto_aplicado: c.montoAplicar,
-        }));
-
-      if (aplicaciones.length > 0) {
-        const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones);
-        if (appErr) throw appErr;
-
-        for (const app of aplicaciones) {
-          const cuenta = cuentas.find(c => c.id === app.venta_id)!;
-          const nuevoSaldo = Math.round((cuenta.saldo_pendiente - app.monto_aplicado) * 100) / 100;
-          await supabase.from('ventas').update({ saldo_pendiente: nuevoSaldo }).eq('id', app.venta_id);
+      const aplicaciones = cuentas.filter(c => c.montoAplicar > 0);
+      for (const app of aplicaciones) {
+        await queueOperation('cobro_aplicaciones', 'insert', {
+          id: crypto.randomUUID(),
+          cobro_id: cobroId,
+          venta_id: app.id,
+          monto_aplicado: app.montoAplicar,
+          created_at: new Date().toISOString(),
+        });
+        // Update local venta saldo
+        const venta = (allVentas as any[])?.find(v => v.id === app.id);
+        if (venta) {
+          const nuevoSaldo = Math.round((app.saldo_pendiente - app.montoAplicar) * 100) / 100;
+          await queueOperation('ventas', 'update', { ...venta, saldo_pendiente: nuevoSaldo });
         }
       }
 
       toast.success(`¡Cobro de $${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} registrado!`);
-      queryClient.invalidateQueries({ queryKey: ['ruta-clientes-cobro'] });
-      queryClient.invalidateQueries({ queryKey: ['ruta-ventas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       navigate('/ruta/cobros');
     } catch (err: any) {
