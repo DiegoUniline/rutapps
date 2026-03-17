@@ -72,10 +72,10 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   });
 
   // When tarifa changes, auto-select the principal lista for that tarifa
-  const listasForTarifa = useMemo(() =>
-    (allListas ?? []).filter(l => l.tarifa_id === newRule.tarifa_id),
-    [allListas, newRule.tarifa_id]
-  );
+  const listasForTarifa = useMemo(() => {
+    if (!newRule.tarifa_id) return allListas ?? [];
+    return (allListas ?? []).filter(l => l.tarifa_id === newRule.tarifa_id);
+  }, [allListas, newRule.tarifa_id]);
 
   useEffect(() => {
     if (newRule.tarifa_id) {
