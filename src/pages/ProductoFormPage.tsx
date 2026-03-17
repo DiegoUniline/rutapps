@@ -900,6 +900,13 @@ export default function ProductoFormPage() {
                 />
               ),
             },
+            {
+              key: 'kardex',
+              label: 'Kardex',
+              content: (
+                <KardexTab productoId={id} isNew={isNew} />
+              ),
+            },
           ]}
         />
 
