@@ -74,6 +74,7 @@ const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicial
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 
+
 // Logistica pages
 const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDashboardPage"));
 // PedidosPendientesPage removed — consolidated into DemandaPage under /logistica/pedidos
