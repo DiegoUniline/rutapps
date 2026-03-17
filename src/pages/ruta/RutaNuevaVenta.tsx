@@ -1281,7 +1281,6 @@ export default function RutaNuevaVenta() {
                   </div>
                 )}
               </section>
-            )}
 
             {/* Notas */}
             <section className="bg-card rounded-lg p-3">
