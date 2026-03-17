@@ -782,16 +782,14 @@ export default function ProductoFormPage() {
           tabs={[
             {
               key: 'precios',
-              label: (form as any).usa_listas_precio ? 'Precios por Tarifa' : 'Precios por Tarifa',
+              label: 'Precios por Tarifa',
               content: <PreciosTab
                   form={form}
-                  set={set}
                   tarifaLineas={tarifaLineas}
                   tarifasDisp={tarifasDisp}
                   productoId={id}
                   isNew={isNew}
                   navigate={navigate}
-                  usaListas={!!(form as any).usa_listas_precio}
                 />,
             },
             {
