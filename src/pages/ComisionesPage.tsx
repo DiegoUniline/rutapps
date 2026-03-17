@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,12 +10,14 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Check, DollarSign } from 'lucide-react';
+import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
 const PAGE_SIZE = 20;
 
 export default function ComisionesPage() {
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
+  const [tab, setTab] = useState<'historial' | 'reglas'>('historial');
   const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
   const [page, setPage] = useState(0);
@@ -114,142 +116,168 @@ export default function ComisionesPage() {
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Comisiones <HelpButton title={HELP.comisiones.title} sections={HELP.comisiones.sections} /></h1>
-        <button onClick={() => setShowPayForm(true)} className="btn-odoo-primary">
-          <DollarSign className="h-4 w-4" /> Pagar comisiones
-        </button>
+        {tab === 'historial' && (
+          <button onClick={() => setShowPayForm(true)} className="btn-odoo-primary">
+            <DollarSign className="h-4 w-4" /> Pagar comisiones
+          </button>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="w-48">
-          <SearchableSelect
-            options={vendedorOpts}
-            value={vendedorFilter}
-            onChange={v => { setVendedorFilter(v); setPage(0); }}
-            placeholder="Vendedor"
-          />
-        </div>
-        <div className="flex border border-border rounded overflow-hidden">
-          {(['pendientes', 'pagadas', 'todas'] as const).map(s => (
-            <button
-              key={s}
-              onClick={() => { setStatusFilter(s); setPage(0); }}
-              className={cn(
-                'px-3 py-1.5 text-xs capitalize transition-colors',
-                statusFilter === s ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
-              )}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-        <div className="ml-auto text-sm font-semibold text-foreground">
-          Total: <span className="text-odoo-teal font-mono">$ {totalMonto.toFixed(2)}</span>
-        </div>
+      {/* Tabs */}
+      <div className="flex border-b border-border">
+        {([['historial', 'Comisiones generadas'], ['reglas', 'Reglas de comisión']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key as any)}
+            className={cn(
+              'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+              tab === key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Pay form */}
-      {showPayForm && (
-        <div className="bg-card border border-primary/30 rounded-lg p-4 shadow-lg space-y-3">
-          <h2 className="text-base font-semibold flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-primary" /> Pagar comisiones pendientes
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor</label>
+      {tab === 'reglas' ? (
+        <ComisionesReglasTab />
+      ) : (
+        <>
+          {/* Filters */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="w-48">
               <SearchableSelect
-                options={vendedorPayOpts}
-                value={payVendedor}
-                onChange={setPayVendedor}
-                placeholder="Seleccionar vendedor"
+                options={vendedorOpts}
+                value={vendedorFilter}
+                onChange={v => { setVendedorFilter(v); setPage(0); }}
+                placeholder="Vendedor"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Pagar hasta fecha</label>
-              <input
-                type="date"
-                className="input-odoo w-full"
-                value={payFechaCorte}
-                onChange={e => setPayFechaCorte(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col justify-end">
-              <div className="text-xs text-muted-foreground mb-1">
-                {(pendingForPay ?? []).length} comisiones pendientes
-              </div>
-              <div className="text-lg font-bold text-odoo-teal font-mono">
-                $ {totalPendiente.toFixed(2)}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => payMut.mutate()}
-              disabled={payMut.isPending || !payVendedor || totalPendiente <= 0}
-              className="btn-odoo-primary"
-            >
-              <Check className="h-4 w-4" /> Pagar $ {totalPendiente.toFixed(2)}
-            </button>
-            <button onClick={() => setShowPayForm(false)} className="btn-odoo-secondary">
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Table */}
-      {isLoading ? <TableSkeleton /> : (
-        <div className="overflow-x-auto border border-border rounded">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-table-border">
-                <th className="th-odoo text-left">Fecha</th>
-                <th className="th-odoo text-left">Folio</th>
-                <th className="th-odoo text-left">Vendedor</th>
-                <th className="th-odoo text-left">Producto</th>
-                <th className="th-odoo text-right">Venta</th>
-                <th className="th-odoo text-right">% Com.</th>
-                <th className="th-odoo text-right">Comisión</th>
-                <th className="th-odoo text-center">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paged.map((c: any) => (
-                <tr key={c.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                  <td className="py-1.5 px-3 text-xs">{c.fecha_venta}</td>
-                  <td className="py-1.5 px-3 text-xs font-mono">{c.ventas?.folio ?? '—'}</td>
-                  <td className="py-1.5 px-3 text-xs">{c.vendedores?.nombre ?? '—'}</td>
-                  <td className="py-1.5 px-3 text-xs">{c.productos?.nombre ?? '—'}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-xs">$ {c.monto_venta?.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-xs">{c.comision_pct}%</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {c.comision_monto?.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-center">
-                    {c.pagada ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
-                    ) : (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
-                    )}
-                  </td>
-                </tr>
+            <div className="flex border border-border rounded overflow-hidden">
+              {(['pendientes', 'pagadas', 'todas'] as const).map(s => (
+                <button
+                  key={s}
+                  onClick={() => { setStatusFilter(s); setPage(0); }}
+                  className={cn(
+                    'px-3 py-1.5 text-xs capitalize transition-colors',
+                    statusFilter === s ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {s}
+                </button>
               ))}
-              {paged.length === 0 && (
-                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-sm">
-                  Sin comisiones {statusFilter !== 'todas' ? statusFilter : ''}
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
+            <div className="ml-auto text-sm font-semibold text-foreground">
+              Total: <span className="text-odoo-teal font-mono">$ {totalMonto.toFixed(2)}</span>
+            </div>
+          </div>
 
-      {total > PAGE_SIZE && (
-        <OdooPagination
-          from={from}
-          to={to}
-          total={total}
-          onPrev={() => setPage(p => Math.max(0, p - 1))}
-          onNext={() => setPage(p => p + 1)}
-        />
+          {/* Pay form */}
+          {showPayForm && (
+            <div className="bg-card border border-primary/30 rounded-lg p-4 shadow-lg space-y-3">
+              <h2 className="text-base font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-primary" /> Pagar comisiones pendientes
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Vendedor</label>
+                  <SearchableSelect
+                    options={vendedorPayOpts}
+                    value={payVendedor}
+                    onChange={setPayVendedor}
+                    placeholder="Seleccionar vendedor"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1 block">Pagar hasta fecha</label>
+                  <input
+                    type="date"
+                    className="input-odoo w-full"
+                    value={payFechaCorte}
+                    onChange={e => setPayFechaCorte(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col justify-end">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    {(pendingForPay ?? []).length} comisiones pendientes
+                  </div>
+                  <div className="text-lg font-bold text-odoo-teal font-mono">
+                    $ {totalPendiente.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => payMut.mutate()}
+                  disabled={payMut.isPending || !payVendedor || totalPendiente <= 0}
+                  className="btn-odoo-primary"
+                >
+                  <Check className="h-4 w-4" /> Pagar $ {totalPendiente.toFixed(2)}
+                </button>
+                <button onClick={() => setShowPayForm(false)} className="btn-odoo-secondary">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Table */}
+          {isLoading ? <TableSkeleton /> : (
+            <div className="overflow-x-auto border border-border rounded">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-table-border">
+                    <th className="th-odoo text-left">Fecha</th>
+                    <th className="th-odoo text-left">Folio</th>
+                    <th className="th-odoo text-left">Vendedor</th>
+                    <th className="th-odoo text-left">Producto</th>
+                    <th className="th-odoo text-right">Venta</th>
+                    <th className="th-odoo text-right">% Com.</th>
+                    <th className="th-odoo text-right">Comisión</th>
+                    <th className="th-odoo text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paged.map((c: any) => (
+                    <tr key={c.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
+                      <td className="py-1.5 px-3 text-xs">{c.fecha_venta}</td>
+                      <td className="py-1.5 px-3 text-xs font-mono">{c.ventas?.folio ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-xs">{c.vendedores?.nombre ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-xs">{c.productos?.nombre ?? '—'}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs">$ {c.monto_venta?.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs">{c.comision_pct}%</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {c.comision_monto?.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-center">
+                        {c.pagada ? (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>
+                        ) : (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent text-accent-foreground">Pendiente</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {paged.length === 0 && (
+                    <tr><td colSpan={8} className="py-8 text-center text-muted-foreground text-sm">
+                      Sin comisiones {statusFilter !== 'todas' ? statusFilter : ''}
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {total > PAGE_SIZE && (
+            <OdooPagination
+              from={from}
+              to={to}
+              total={total}
+              onPrev={() => setPage(p => Math.max(0, p - 1))}
+              onNext={() => setPage(p => p + 1)}
+            />
+          )}
+        </>
       )}
     </div>
   );
