@@ -139,31 +139,18 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
             {/* Sale details */}
-            <div className="px-5 py-2 space-y-0.5">
-              <div className="flex gap-3 text-[10px]">
-                <div className="flex-1 flex justify-between">
-                  <span className="lbl font-bold text-foreground">Folio</span>
-                  <span className="val text-muted-foreground font-mono">{folio}</span>
-                </div>
-                <div className="flex-1 flex justify-between">
-                  <span className="lbl font-bold text-foreground">Fecha</span>
-                  <span className="val text-muted-foreground">{fecha}</span>
-                </div>
+            <div className="px-5 py-2 space-y-0.5 text-[10px]">
+              <div className="flex gap-4">
+                <span><span className="font-bold text-foreground">Folio </span><span className="text-muted-foreground font-mono">{folio}</span></span>
+                <span><span className="font-bold text-foreground">Fecha </span><span className="text-muted-foreground">{fecha}</span></span>
               </div>
-              <div className="tk-row flex justify-between text-[10px]">
-                <span className="lbl font-bold text-foreground">Cliente</span>
-                <span className="val text-muted-foreground truncate ml-3 text-right">{clienteNombre}</span>
+              <div>
+                <span className="font-bold text-foreground">Cliente </span><span className="text-muted-foreground">{clienteNombre}</span>
               </div>
-              <div className="flex gap-3 text-[10px]">
-                <div className="flex-1 flex justify-between">
-                  <span className="lbl font-bold text-foreground">Pago</span>
-                  <span className="val text-muted-foreground">{pagoLabel}</span>
-                </div>
+              <div className="flex gap-4">
+                <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
                 {metodoPago && (
-                  <div className="flex-1 flex justify-between">
-                    <span className="lbl font-bold text-foreground">Método</span>
-                    <span className="val text-muted-foreground capitalize">{metodoPago}</span>
-                  </div>
+                  <span><span className="font-bold text-foreground">Método </span><span className="text-muted-foreground capitalize">{metodoPago}</span></span>
                 )}
               </div>
             </div>
