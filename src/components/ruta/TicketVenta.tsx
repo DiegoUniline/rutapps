@@ -160,16 +160,26 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             {/* Products — main section */}
             <div className="px-5 py-2">
               <p className="tk-section text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Productos</p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {lineas.map((l, i) => (
-                  <div key={i} className={`tk-prod flex justify-between items-baseline text-[11px] py-px ${l.esCambio ? 'cambio' : ''}`}>
-                    <span className="nm text-foreground font-medium flex-1 mr-2 truncate">
-                      {l.cantidad}x {l.nombre}
-                      {l.esCambio && <span className="text-muted-foreground text-[9px] ml-1 italic">(cambio)</span>}
-                    </span>
-                    <span className="pr text-foreground font-semibold tabular-nums shrink-0">
-                      ${fmt(l.total)}
-                    </span>
+                  <div key={i} className={`py-0.5 ${l.esCambio ? 'opacity-60' : ''}`}>
+                    <div className="flex justify-between items-baseline text-[11px]">
+                      <span className="text-foreground font-medium flex-1 mr-2 truncate">
+                        {l.cantidad}x {l.nombre}
+                        {l.esCambio && <span className="text-muted-foreground text-[9px] ml-1 italic">(cambio)</span>}
+                      </span>
+                      <span className="text-foreground font-semibold tabular-nums shrink-0">
+                        ${fmt(l.total)}
+                      </span>
+                    </div>
+                    {!l.esCambio && (
+                      <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
+                        <span>${fmt(l.precio)} c/u</span>
+                        {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
+                        {(l.iva_monto ?? 0) > 0 && <span>IVA ${fmt(l.iva_monto!)}</span>}
+                        {(l.ieps_monto ?? 0) > 0 && <span>IEPS ${fmt(l.ieps_monto!)}</span>}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
