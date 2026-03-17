@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportesData } from '@/hooks/useReportesData';
@@ -207,6 +209,7 @@ export default function ReportesPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <BarChart3 className="h-5 w-5" /> Reportes
+          <HelpButton title={HELP.reportes.title} sections={HELP.reportes.sections} />
         </h1>
         <div className="flex items-center gap-2 flex-wrap">
           <input type="date" value={desde} onChange={e => setDesde(e.target.value)} className="input-odoo text-[13px] w-36" />

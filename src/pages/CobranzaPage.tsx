@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -69,6 +71,7 @@ export default function CobranzaPage() {
     <div className="p-4 space-y-4 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Banknote className="h-5 w-5" /> Cobranza
+        <HelpButton title={HELP.cobranza.title} sections={HELP.cobranza.sections} />
       </h1>
 
       {/* Summary */}

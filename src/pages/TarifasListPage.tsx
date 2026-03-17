@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -29,7 +31,7 @@ export default function TarifasListPage() {
   return (
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-foreground">Tarifas</h1>
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Tarifas <HelpButton title={HELP.tarifas.title} sections={HELP.tarifas.sections} /></h1>
         <button onClick={() => navigate('/tarifas/nueva')} className="btn-odoo-primary shrink-0">
           <Plus className="h-3.5 w-3.5" /> Nuevo
         </button>

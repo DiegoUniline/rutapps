@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -265,6 +267,7 @@ export default function UsuariosPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold text-foreground flex items-center gap-2">
           <Users className="h-5 w-5" /> Usuarios y Permisos
+          <HelpButton title={HELP.usuarios.title} sections={HELP.usuarios.sections} />
         </h1>
       </div>
 

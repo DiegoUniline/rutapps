@@ -11,6 +11,8 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate } from '@/lib/utils';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 
 const CARGAS_COLUMNS: ExportColumn[] = [
   { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
@@ -40,6 +42,7 @@ export default function CargasListPage() {
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <Truck className="h-5 w-5" /> Cargas / Traspasos
+            <HelpButton title={HELP.cargas.title} sections={HELP.cargas.sections} />
           </h1>
           <p className="text-sm text-muted-foreground">Transfiere producto entre almacenes y camionetas</p>
         </div>

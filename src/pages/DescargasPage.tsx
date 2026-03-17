@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -893,6 +895,7 @@ export default function DescargasPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <PackageCheck className="h-5 w-5" /> Descargas de ruta
+          <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
         </h1>
         <div className="flex items-center gap-2">
           <div className="flex gap-1">

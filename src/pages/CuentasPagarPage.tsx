@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -77,6 +79,7 @@ export default function CuentasPagarPage() {
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <TrendingDown className="h-5 w-5" /> Cuentas por pagar
+        <HelpButton title={HELP.cuentasPagar.title} sections={HELP.cuentasPagar.sections} />
       </h1>
 
       <div className="grid grid-cols-3 gap-3">

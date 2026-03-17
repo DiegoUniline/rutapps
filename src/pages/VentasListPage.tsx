@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
@@ -78,7 +80,7 @@ export default function VentasListPage() {
 
   return (
     <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground">Ventas</h1>
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /></h1>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar

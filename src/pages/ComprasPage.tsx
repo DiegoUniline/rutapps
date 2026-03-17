@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import HelpButton from '@/components/HelpButton';
+import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
@@ -89,7 +91,7 @@ export default function ComprasPage() {
 
   return (
     <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground">Compras</h1>
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Compras <HelpButton title={HELP.compras.title} sections={HELP.compras.sections} /></h1>
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-3">
