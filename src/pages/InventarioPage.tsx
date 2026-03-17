@@ -257,6 +257,7 @@ export default function InventarioPage() {
               <TableRow>
                 <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
                 <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
+                <TableHead className="text-[11px] text-center">Ud.</TableHead>
                 <TableHead className="text-[11px] text-center">
                   <Warehouse className="h-3 w-3 inline mr-0.5" />Almacén
                 </TableHead>
