@@ -545,3 +545,18 @@ async function descargar(body: any) {
     { headers: { ...corsHeaders, "Content-Type": "application/json" } }
   );
 }
+
+async function getSuscriptionPlan() {
+  const res = await fetch(`${FACTURAMA_API}/SuscriptionPlan`, {
+    headers: { Authorization: getAuth() },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error al consultar plan Facturama: ${res.status} - ${text}`);
+  }
+  const data = await res.json();
+  return new Response(
+    JSON.stringify(data),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
