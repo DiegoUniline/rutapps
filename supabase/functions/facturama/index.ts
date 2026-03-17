@@ -25,6 +25,13 @@ function getSupabase(authHeader: string) {
   );
 }
 
+function getServiceSupabase() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+}
+
 // Round to 2 decimals
 function r2(n: number) { return Math.round(n * 100) / 100; }
 function r6(n: number) { return Math.round(n * 1000000) / 1000000; }
