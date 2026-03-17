@@ -121,122 +121,181 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
     } catch (err: any) { toast.error(err.message); }
   };
 
-  // Determine display based on mode
+  // Group ALL rules by tarifa
   const allLineas = (tarifaLineas ?? []) as any[];
+  const grouped = new Map<string, { nombre: string; rules: any[] }>();
+  allLineas.forEach((tl: any) => {
+    if (!tl.tarifas) return;
+    const tid = tl.tarifas.id;
+    if (!grouped.has(tid)) grouped.set(tid, { nombre: tl.tarifas.nombre, rules: [] });
+    grouped.get(tid)!.rules.push(tl);
+  });
 
-  if (usaListas) {
-    // Show ALL rules that apply, grouped by tarifa, with lista and full details
-    const grouped = new Map<string, { nombre: string; rules: any[] }>();
-    allLineas.forEach((tl: any) => {
-      if (!tl.tarifas) return;
-      const tid = tl.tarifas.id;
-      if (!grouped.has(tid)) grouped.set(tid, { nombre: tl.tarifas.nombre, rules: [] });
-      grouped.get(tid)!.rules.push(tl);
-    });
+  const aplica_label = (l: any) => l.aplica_a === 'producto' ? 'Producto' : l.aplica_a === 'categoria' ? 'Categoría' : 'Todos';
 
-    const aplica_label = (l: any) => l.aplica_a === 'producto' ? 'Producto' : l.aplica_a === 'categoria' ? 'Categoría' : 'Todos';
-
+  function renderModal() {
+    if (!showModal) return null;
     return (
-      <div className="space-y-2">
-        {Array.from(grouped.entries()).map(([tarifaId, { nombre, rules }]) => (
-          <div key={tarifaId}>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 cursor-pointer hover:text-foreground" onClick={() => navigate(`/tarifas/${tarifaId}`)}>{nombre}</h4>
-            <div className="overflow-x-auto border border-border rounded">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-table-border">
-                    <th className="th-odoo text-left">Aplica</th>
-                    <th className="th-odoo text-left">Lista</th>
-                    <th className="th-odoo text-left">Tipo</th>
-                    <th className="th-odoo text-right">Costo</th>
-                    <th className="th-odoo text-right">Precio</th>
-                    <th className="th-odoo text-right">Ganancia $</th>
-                    <th className="th-odoo text-right">Ganancia %</th>
-                    <th className="th-odoo w-10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rules.map((linea: any) => {
-                    const precio = calcPrice(linea);
-                    const costo = form.costo ?? 0;
-                    const ganancia = precio - costo;
-                    const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
-                    const isEd = editingId === linea.id;
-                    const listaName = linea.lista_precios?.nombre;
-                    const esPrincipal = linea.lista_precios?.es_principal;
-                    return (
-                      <tr key={linea.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                        <td className="py-1.5 px-3">
-                          <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
-                            linea.aplica_a === 'producto' ? 'bg-primary/10 text-primary' : linea.aplica_a === 'categoria' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
-                          }`}>{aplica_label(linea)}</span>
-                        </td>
-                        <td className="py-1.5 px-3 text-xs">
-                          {listaName ? (
-                            <span className="flex items-center gap-1">
-                              {esPrincipal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
-                              {listaName}
-                            </span>
-                          ) : <span className="text-muted-foreground">—</span>}
-                        </td>
-                        <td className="py-1.5 px-3 text-xs text-muted-foreground cursor-pointer" onClick={() => startEdit(linea, 'tipo')}>
-                          {isEd && editingCol === 'tipo' ? (
-                            <select autoFocus className="input-odoo text-xs w-full" value={editVal.tipo_calculo}
-                              onBlur={() => saveEdit(linea.id)}
-                              onChange={e => setEditVal((p: any) => ({ ...p, tipo_calculo: e.target.value }))}>
-                              <option value="margen_costo">Margen % s/costo</option>
-                              <option value="descuento_precio">Descuento % s/precio</option>
-                              <option value="precio_fijo">Precio fijo</option>
-                            </select>
-                          ) : calcLabel(linea)}
-                        </td>
-                        <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {costo.toFixed(2)}</td>
-                        <td className="py-1.5 px-3 text-right font-mono cursor-pointer" onClick={() => startEdit(linea, 'valor')}>
-                          {isEd && editingCol === 'valor' ? (
-                            <input autoFocus type="number" className="input-odoo text-right text-xs w-24"
-                              value={editVal.tipo_calculo === 'margen_costo' ? editVal.margen_pct : editVal.tipo_calculo === 'descuento_precio' ? editVal.descuento_pct : editVal.precio}
-                              onBlur={() => saveEdit(linea.id)}
-                              onKeyDown={e => { if (e.key === 'Enter') saveEdit(linea.id); if (e.key === 'Escape') setEditingId(null); }}
-                              onChange={e => {
-                                const v = +e.target.value;
-                                setEditVal((p: any) => ({
-                                  ...p,
-                                  ...(p.tipo_calculo === 'margen_costo' ? { margen_pct: v } : p.tipo_calculo === 'descuento_precio' ? { descuento_pct: v } : { precio: v }),
-                                }));
-                              }}
-                            />
-                          ) : (
-                            <span className="text-odoo-teal font-semibold">$ {precio.toFixed(2)}</span>
-                          )}
-                        </td>
-                        <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
-                        <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
-                        <td className="py-1.5 px-3 text-center">
-                          {linea.aplica_a === 'producto' && (
-                            <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
+        <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-[600px]" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <h3 className="text-[15px] font-semibold">Crear regla de tarifa</h3>
+            <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-2 gap-x-8">
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Producto</span>
+                <span className="text-[13px] font-medium">{form.nombre ?? '—'}</span>
+              </div>
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Precio mínimo</span>
+                <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio_minimo}
+                  onChange={e => setNewRule(p => ({ ...p, precio_minimo: +e.target.value }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8">
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Tipo de precio</span>
+                <div className="flex flex-col gap-1.5 text-[13px]">
+                  {(['descuento_precio', 'margen_costo', 'precio_fijo'] as TipoCalculoTarifa[]).map(t => (
+                    <label key={t} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="radio" name="tipo_calc" checked={newRule.tipo_calculo === t}
+                        onChange={() => setNewRule(p => ({ ...p, tipo_calculo: t }))} className="h-3.5 w-3.5" />
+                      {t === 'descuento_precio' ? 'Descuento' : t === 'margen_costo' ? 'Fórmula' : 'Precio fijo'}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="odoo-field-row">
+                <span className="odoo-field-label">Tarifa</span>
+                <SearchableSelect
+                  options={(tarifasDisp ?? []).map((t: any) => ({ value: t.id, label: t.nombre }))}
+                  value={newRule.tarifa_id}
+                  onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
+                  placeholder="Buscar tarifa..."
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-x-8">
+              {newRule.tipo_calculo === 'precio_fijo' && (
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Precio fijo</span>
+                  <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.precio}
+                    onChange={e => setNewRule(p => ({ ...p, precio: +e.target.value }))} />
+                </div>
+              )}
+              {newRule.tipo_calculo === 'margen_costo' && (
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Margen %</span>
+                  <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.margen_pct}
+                    onChange={e => setNewRule(p => ({ ...p, margen_pct: +e.target.value }))} />
+                </div>
+              )}
+              {newRule.tipo_calculo === 'descuento_precio' && (
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Descuento %</span>
+                  <input type="number" className="input-odoo py-1 text-[13px] w-28" value={newRule.descuento_pct}
+                    onChange={e => setNewRule(p => ({ ...p, descuento_pct: +e.target.value }))} />
+                </div>
+              )}
+            </div>
+            <div className="mt-3 bg-accent/30 border border-accent/50 rounded px-3 py-2 text-[12px] text-muted-foreground">
+              Para precios con fórmula o fijos, el precio original no aparece en las órdenes de venta ni en el pago.
             </div>
           </div>
-        ))}
-        {grouped.size === 0 && (
-          <p className="text-sm text-muted-foreground py-2">Sin reglas de precio aplicables a este producto.</p>
-        )}
-        {!isNew && (
-          <button className="odoo-link" onClick={() => setShowModal(true)}>
-            Agregar un precio
-          </button>
-        )}
-        {renderModal()}
+          <div className="flex items-center gap-2 px-4 py-3 border-t border-border">
+            <button onClick={handleSaveRule} disabled={saveLinea.isPending} className="btn-odoo-primary">
+              Guardar y cerrar
+            </button>
+            <button onClick={() => setShowModal(false)} className="btn-odoo-secondary">
+              Descartar
+            </button>
+          </div>
+        </div>
       </div>
     );
+  }
+
+  return (
+    <div className="space-y-3">
+      {Array.from(grouped.entries()).map(([tarifaId, { nombre, rules }]) => (
+        <div key={tarifaId}>
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1 cursor-pointer hover:text-foreground"
+            onClick={() => navigate(`/tarifas/${tarifaId}`)}>{nombre}</h4>
+          <div className="overflow-x-auto border border-border rounded">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-table-border">
+                  <th className="th-odoo text-left">Aplica</th>
+                  <th className="th-odoo text-left">Lista</th>
+                  <th className="th-odoo text-left">Tipo</th>
+                  <th className="th-odoo text-right">Costo</th>
+                  <th className="th-odoo text-right">Precio</th>
+                  <th className="th-odoo text-right">Ganancia $</th>
+                  <th className="th-odoo text-right">Ganancia %</th>
+                  <th className="th-odoo w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((linea: any) => {
+                  const precio = calcPrice(linea);
+                  const costo = form.costo ?? 0;
+                  const ganancia = precio - costo;
+                  const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
+                  const listaName = linea.lista_precios?.nombre;
+                  const esPrincipal = linea.lista_precios?.es_principal;
+                  return (
+                    <tr key={linea.id}
+                      className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
+                      onClick={() => navigate(`/tarifas/${tarifaId}`)}
+                    >
+                      <td className="py-1.5 px-3">
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
+                          linea.aplica_a === 'producto' ? 'bg-primary/10 text-primary' : linea.aplica_a === 'categoria' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
+                        }`}>{aplica_label(linea)}</span>
+                      </td>
+                      <td className="py-1.5 px-3 text-xs">
+                        {listaName ? (
+                          <span className="flex items-center gap-1">
+                            {esPrincipal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
+                            {listaName}
+                          </span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {costo.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">$ {precio.toFixed(2)}</td>
+                      <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                      <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
+                      <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
+                        {linea.aplica_a === 'producto' && (
+                          <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+      {grouped.size === 0 && (
+        <p className="text-sm text-muted-foreground py-2">Sin reglas de precio aplicables a este producto.</p>
+      )}
+      {!isNew && (
+        <button className="odoo-link" onClick={() => setShowModal(true)}>
+          Agregar un precio
+        </button>
+      )}
+      {renderModal()}
+    </div>
+  );
   }
 
   // DIRECTO MODE: best rule per tarifa (original behavior)
