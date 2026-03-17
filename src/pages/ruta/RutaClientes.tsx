@@ -277,12 +277,48 @@ export default function RutaClientes() {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className={cn(
-                    "text-sm font-semibold truncate text-left underline-offset-2 active:underline",
-                    isVisited ? "text-emerald-700 dark:text-emerald-300" : "text-foreground"
-                  )}>{c.nombre}</button>
-                  {c.codigo && <span className="text-[11px] text-muted-foreground font-mono ml-1.5">{c.codigo}</span>}
-                  {isVisited && <span className="text-[10px] ml-2 text-emerald-600 dark:text-emerald-400 font-semibold">✓ Visitado</span>}
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className={cn(
+                      "text-sm font-semibold truncate text-left underline-offset-2 active:underline flex-1 min-w-0",
+                      isVisited ? "text-emerald-700 dark:text-emerald-300" : "text-foreground"
+                    )}>{c.nombre}</button>
+                    {c.codigo && <span className="text-[11px] text-muted-foreground font-mono shrink-0">{c.codigo}</span>}
+                    <button onClick={() => {
+                      markVisited(c.id);
+                      navigate(`/ruta/ventas/nueva?clienteId=${c.id}`);
+                    }}
+                      className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform shrink-0">
+                      <ShoppingCart className="h-3.5 w-3.5" />
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground active:bg-muted shrink-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-[160px]">
+                        <DropdownMenuItem onClick={() => captureGps(c)} disabled={capturingGpsId === c.id}>
+                          {capturingGpsId === c.id
+                            ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            : <Crosshair className="h-4 w-4 mr-2" />}
+                          {c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
+                        </DropdownMenuItem>
+                        {c.gps_lat && c.gps_lng && (
+                          <DropdownMenuItem onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}>
+                            <Navigation className="h-4 w-4 mr-2" />
+                            Navegar
+                          </DropdownMenuItem>
+                        )}
+                        {c.telefono && (
+                          <DropdownMenuItem onClick={() => window.open(`tel:${c.telefono}`)}>
+                            <Phone className="h-4 w-4 mr-2" />
+                            Llamar
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {isVisited && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">✓ Visitado</span>}
                   {c.direccion && (
                     <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5 truncate">
                       <MapPin className="h-3 w-3 shrink-0" /> {c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
@@ -300,44 +336,6 @@ export default function RutaClientes() {
                       ))}
                     </div>
                   )}
-
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1.5 mt-2">
-                    <button
-                      onClick={() => captureGps(c)}
-                      disabled={capturingGpsId === c.id}
-                      className={cn(
-                        "h-9 w-9 rounded-lg flex items-center justify-center active:scale-90 transition-transform",
-                        c.gps_lat && c.gps_lng
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                          : "bg-orange-500/10 text-orange-600 dark:text-orange-400"
-                      )}
-                      title={c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
-                    >
-                      {capturingGpsId === c.id
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <Crosshair className="h-4 w-4" />}
-                    </button>
-                    {c.gps_lat && c.gps_lng && (
-                      <button onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}
-                        className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform">
-                        <Navigation className="h-4 w-4" />
-                      </button>
-                    )}
-                    {c.telefono && (
-                      <a href={`tel:${c.telefono}`}
-                        className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform">
-                        <Phone className="h-4 w-4" />
-                      </a>
-                    )}
-                    <button onClick={() => {
-                      markVisited(c.id);
-                      navigate(`/ruta/ventas/nueva?clienteId=${c.id}`);
-                    }}
-                      className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform ml-auto">
-                      <ShoppingCart className="h-4 w-4" />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
