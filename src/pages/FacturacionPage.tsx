@@ -34,75 +34,26 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
   uncollectible: { label: 'Incobrable', variant: 'outline' },
 };
 
-// Price per user per month depending on plan
-const PRICE_PER_USER = 300; // default MXN
-
 export default function FacturacionPage() {
   const { signOut, empresa } = useAuth();
   const subscription = useSubscription();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [subData, setSubData] = useState<{ max_usuarios: number; status: string; plan_nombre: string } | null>(null);
-  const [showAddUsers, setShowAddUsers] = useState(false);
-  const [newQty, setNewQty] = useState(3);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadAll();
+    loadInvoices();
   }, [empresa?.id]);
 
-  async function loadAll() {
-    setLoading(true);
-    await Promise.all([loadInvoices(), loadSubscription()]);
-    setLoading(false);
-  }
-
   async function loadInvoices() {
+    setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('list-invoices');
       if (error) throw error;
       setInvoices(data?.invoices || []);
     } catch (err) {
       console.error('Error loading invoices:', err);
-    }
-  }
-
-  async function loadSubscription() {
-    if (!empresa?.id) return;
-    const { data } = await supabase
-      .from('subscriptions')
-      .select('max_usuarios, status, subscription_plans(nombre)')
-      .eq('empresa_id', empresa.id)
-      .maybeSingle();
-    if (data) {
-      setSubData({
-        max_usuarios: data.max_usuarios,
-        status: data.status,
-        plan_nombre: (data as any).subscription_plans?.nombre || 'Sin plan',
-      });
-      setNewQty(data.max_usuarios);
-    }
-  }
-
-  async function handleUpdateUsers() {
-    if (newQty < 3) {
-      toast.error('El mínimo son 3 usuarios');
-      return;
-    }
-    setSaving(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('manage-subscription', {
-        body: { action: 'update_quantity', new_quantity: newQty },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      toast.success(`Usuarios actualizados a ${newQty}`);
-      setShowAddUsers(false);
-      loadSubscription();
-    } catch (err: any) {
-      toast.error(err.message || 'Error al actualizar');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   }
 
