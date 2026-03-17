@@ -43,15 +43,13 @@ async function quickCreateCatalog(
 
 
 /* ── Precios Tab Component ── */
-function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, navigate, usaListas }: {
+function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, navigate }: {
   form: Partial<Producto>;
-  set: (key: keyof Producto, value: any) => void;
   tarifaLineas: any;
   tarifasDisp: any;
   productoId?: string;
   isNew: boolean;
   navigate: (path: string) => void;
-  usaListas: boolean;
 }) {
   const saveLinea = useSaveTarifaLinea();
   const deleteLineaMut = useDeleteTarifaLinea();
