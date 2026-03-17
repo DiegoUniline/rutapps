@@ -827,7 +827,7 @@ export default function ProductoFormPage() {
         {/* Tabs below general info */}
         <OdooTabs
           tabs={[
-            {
+            ...((form as any).usa_listas_precio ? [{
               key: 'precios',
               label: 'Precios por Tarifa',
               content: <PreciosTab
@@ -838,7 +838,7 @@ export default function ProductoFormPage() {
                   isNew={isNew}
                   navigate={navigate}
                 />,
-            },
+            }] : []),
             {
               key: 'fiscal',
               label: 'Fiscal',
