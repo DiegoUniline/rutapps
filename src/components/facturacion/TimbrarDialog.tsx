@@ -256,7 +256,12 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
     <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); onOpenChange(v); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Timbrar CFDI</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Timbrar CFDI</DialogTitle>
+            <Badge variant={(timbreSaldo ?? 0) > 0 ? 'secondary' : 'destructive'} className="text-xs">
+              {timbreSaldo ?? 0} timbres disponibles
+            </Badge>
+          </div>
           <DialogDescription>
             {step === 'select' ? 'Selecciona la venta a facturar' : 'Verifica los datos y timbra'}
           </DialogDescription>
