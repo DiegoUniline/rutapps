@@ -421,7 +421,7 @@ export default function AjustesInventarioPage() {
               <Button
                 size="sm"
                 onClick={applyAdjustments}
-                disabled={applying || changedRows.length === 0}
+                disabled={applying || changedRows.length === 0 || !almacenId}
                 className="gap-1.5"
               >
                 <Save className="h-4 w-4" />
