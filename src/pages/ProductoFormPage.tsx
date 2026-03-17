@@ -296,8 +296,6 @@ function PreciosTab({ form, set, tarifaLineas, tarifasDisp, productoId, isNew, n
       {renderModal()}
     </div>
   );
-  }
-
 }
 
 /* ── Proveedores Tab Component ── */
