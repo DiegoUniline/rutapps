@@ -57,9 +57,15 @@ export default function LandingPage() {
               Probar gratis
             </Link>
           </div>
-          <button onClick={() => setMobileMenu(!mobileMenu)} className="md:hidden p-2">
-            {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex md:hidden items-center gap-2">
+            <Link to="/login" className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg"
+              style={{ background: 'hsl(230, 55%, 52%)' }}>
+              Iniciar sesión
+            </Link>
+            <button onClick={() => setMobileMenu(!mobileMenu)} className="p-2">
+              {mobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
         {mobileMenu && (
           <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-3">
