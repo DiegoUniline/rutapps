@@ -38,13 +38,54 @@ export function useVenta(id?: string) {
   return useQuery({
     queryKey: ['venta', id],
     queryFn: async () => {
+      // Try server first
       const { data, error } = await supabase
         .from('ventas')
         .select('*, clientes(nombre), vendedores(nombre), tarifas(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, unidad_venta_id), unidades(nombre, abreviatura))')
         .eq('id', id!)
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as Venta;
+      if (data) return data as Venta;
+
+      // Fallback: try local IndexedDB (sale not yet synced)
+      try {
+        const { getOfflineTable } = await import('@/lib/offlineDb');
+        const table = getOfflineTable('ventas');
+        if (table) {
+          const local = await table.get(id!);
+          if (local) {
+            // Enrich with local venta_lineas if available
+            const lineasTable = getOfflineTable('venta_lineas');
+            let venta_lineas: any[] = [];
+            if (lineasTable) {
+              const allLineas = await lineasTable.toArray();
+              venta_lineas = allLineas.filter((l: any) => l.venta_id === id);
+              // Try to enrich with product names from local productos
+              const prodTable = getOfflineTable('productos');
+              if (prodTable) {
+                const prods = await prodTable.toArray();
+                const prodMap = new Map(prods.map((p: any) => [p.id, p]));
+                venta_lineas = venta_lineas.map((l: any) => ({
+                  ...l,
+                  productos: prodMap.get(l.producto_id) || { id: l.producto_id, codigo: '', nombre: l.descripcion ?? '—' },
+                }));
+              }
+            }
+            // Try to get client name
+            let clientes: any = { nombre: 'Sin cliente' };
+            if (local.cliente_id) {
+              const cliTable = getOfflineTable('clientes');
+              if (cliTable) {
+                const cli = await cliTable.get(local.cliente_id);
+                if (cli) clientes = { nombre: cli.nombre };
+              }
+            }
+            return { ...local, clientes, vendedores: null, tarifas: null, almacenes: null, venta_lineas } as unknown as Venta;
+          }
+        }
+      } catch { /* IndexedDB not available */ }
+
+      return null as unknown as Venta;
     },
     enabled: !!id,
   });
