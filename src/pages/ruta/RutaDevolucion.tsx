@@ -29,7 +29,7 @@ type Step = 'tipo' | 'cliente' | 'items' | 'confirm';
 
 export default function RutaDevolucion() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, empresa } = useAuth();
   const [tipo, setTipo] = useState<Tipo>('almacen');
   const [items, setItems] = useState<DevItem[]>([]);
   const [notas, setNotas] = useState('');
@@ -42,35 +42,13 @@ export default function RutaDevolucion() {
 
   const saveDevolucion = useSaveDevolucion();
 
-  const { data: profile } = useQuery({
-    queryKey: ['my-profile-dev', user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('empresa_id, nombre').eq('user_id', user!.id).single();
-      return data;
-    },
-  });
+  const vendedorId = profile?.vendedor_id || profile?.id;
+  const { data: carga } = useCargaActiva(vendedorId);
 
-  const { data: vendedor } = useQuery({
-    queryKey: ['my-vendedor-dev', profile?.empresa_id],
-    enabled: !!profile?.empresa_id,
-    queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', profile!.empresa_id).limit(10);
-      const match = data?.find(v => v.nombre.toLowerCase() === profile?.nombre?.toLowerCase());
-      return match ?? data?.[0] ?? null;
-    },
-  });
-
-  const { data: carga } = useCargaActiva(vendedor?.id);
-
-  const { data: clientes } = useQuery({
-    queryKey: ['ruta-clientes-dev', profile?.empresa_id],
-    enabled: !!profile?.empresa_id && tipo === 'tienda',
-    queryFn: async () => {
-      const { data } = await supabase.from('clientes').select('id, codigo, nombre').eq('empresa_id', profile!.empresa_id).eq('status', 'activo').order('nombre');
-      return data ?? [];
-    },
-  });
+  const { data: clientes } = useOfflineQuery('clientes', {
+    empresa_id: empresa?.id,
+    status: 'activo',
+  }, { enabled: !!empresa?.id && tipo === 'tienda', orderBy: 'nombre' });
 
   const productosDisponibles = useMemo(() => {
     if (!carga?.carga_lineas) return [];
