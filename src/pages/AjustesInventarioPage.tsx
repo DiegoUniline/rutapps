@@ -130,10 +130,16 @@ export default function AjustesInventarioPage() {
   useMemo(() => { initRows(); }, [productos]);
 
   const filteredRows = useMemo(() => {
-    if (!search) return rows;
-    const s = search.toLowerCase();
-    return rows.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
-  }, [rows, search]);
+    let result = rows;
+    if (selectedCats.length > 0) {
+      result = result.filter(r => r.clasificacionId && selectedCats.includes(r.clasificacionId));
+    }
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(r => r.nombre.toLowerCase().includes(s) || r.codigo.toLowerCase().includes(s));
+    }
+    return result;
+  }, [rows, search, selectedCats]);
 
   const changedRows = rows.filter(r => r.touched && r.cantidadReal !== null && r.cantidadReal !== r.cantidadSistema);
 
