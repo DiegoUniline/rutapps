@@ -667,7 +667,7 @@ export default function RutaNuevaVenta() {
       </header>
 
       {/* ─── STEP 0: Tipo ─── */}
-      {step === 'tipo' && (
+      {step === 'tipo' && !sinCompra && (
         <div className="flex-1 flex flex-col items-center justify-center px-6 gap-6">
           <div className="text-center">
             <h2 className="text-[18px] font-bold text-foreground mb-1">¿Qué tipo de operación?</h2>
@@ -701,6 +701,69 @@ export default function RutaNuevaVenta() {
                   <p className="text-[11px] text-muted-foreground mt-0.5">Se entrega después · Todos los productos disponibles</p>
                 </div>
               </div>
+            </button>
+            <button
+              onClick={() => setSinCompra(true)}
+              className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-muted-foreground/40"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                  <EyeOff className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-[14px] font-bold text-foreground">Sin compra</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">Se visitó pero no compró · Registrar motivo</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Sin compra motivo ─── */}
+      {step === 'tipo' && sinCompra && (
+        <div className="flex-1 flex flex-col px-6 pt-8 gap-5">
+          <div className="text-center">
+            <h2 className="text-[18px] font-bold text-foreground mb-1">¿Por qué no compró?</h2>
+            <p className="text-[12px] text-muted-foreground">{clienteNombre || 'Cliente'}</p>
+          </div>
+          <div className="w-full max-w-xs mx-auto space-y-2">
+            {['No necesita producto', 'No hay stock de lo que pide', 'Cerrado / no encontrado', 'Sin dinero', 'Precio alto', 'Otro'].map(m => (
+              <button key={m} onClick={() => setMotivoSinCompra(m)}
+                className={`w-full rounded-xl border-2 px-4 py-3 text-left text-[13px] font-medium active:scale-[0.98] transition-all ${
+                  motivoSinCompra === m ? 'border-primary bg-primary/5 text-foreground' : 'border-border bg-card text-foreground hover:border-primary/30'
+                }`}>
+                {m}
+              </button>
+            ))}
+          </div>
+          {motivoSinCompra === 'Otro' && (
+            <div className="w-full max-w-xs mx-auto">
+              <textarea
+                className="w-full bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none"
+                rows={2} placeholder="Describe el motivo..." value={notas} onChange={e => setNotas(e.target.value)} autoFocus
+              />
+            </div>
+          )}
+          <div className="w-full max-w-xs mx-auto flex gap-2 mt-2">
+            <button onClick={() => { setSinCompra(false); setMotivoSinCompra(''); }}
+              className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform">
+              Cancelar
+            </button>
+            <button
+              disabled={!motivoSinCompra || savingSinCompra}
+              onClick={async () => {
+                setSavingSinCompra(true);
+                try {
+                  const cId = clienteId || urlClienteId;
+                  if (cId) markVisited(cId);
+                  // Optionally save a note/log — we store it as a gasto-like record or just toast
+                  toast.success('Visita registrada sin compra');
+                  navigate(-1);
+                } catch { toast.error('Error al registrar'); } finally { setSavingSinCompra(false); }
+              }}
+              className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20">
+              {savingSinCompra ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
         </div>
