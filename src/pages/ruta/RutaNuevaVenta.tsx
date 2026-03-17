@@ -572,6 +572,9 @@ export default function RutaNuevaVenta() {
       // 5. Update carga
       await updateCargaVendidaOffline(cart);
 
+      // 6. Save visita record with GPS
+      await saveVisita(tipoVenta === 'pedido' ? 'pedido' : 'venta', { ventaId });
+
       // Mark client as visited
       if (clienteId) markVisited(clienteId);
       toast.success('¡Venta registrada! Se sincronizará automáticamente');
