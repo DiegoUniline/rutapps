@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Layers, Crown } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { ExportButton } from '@/components/ExportButton';
+import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
