@@ -194,7 +194,216 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
   );
 }
 
-export default function TarifaFormPage() {
+/* ── Precios Preview Tab ─────────────────────────── */
+function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
+  const [search, setSearch] = useState('');
+  const [listaFilter, setListaFilter] = useState<string>('');
+
+  const { data: listas } = useQuery({
+    queryKey: ['lista_precios_tarifa_preview', tarifaId],
+    enabled: !!tarifaId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from('lista_precios').select('id, nombre, es_principal').eq('tarifa_id', tarifaId!).order('es_principal', { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  const { data: productos } = useQuery({
+    queryKey: ['precios_preview_tarifa', tarifaId, listaFilter],
+    enabled: !!tarifaId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data: lineas } = await supabase.from('tarifa_lineas')
+        .select('*')
+        .eq('tarifa_id', tarifaId!);
+
+      const { data: prods } = await supabase.from('productos')
+        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
+        .eq('status', 'activo')
+        .order('nombre');
+
+      if (!prods || !lineas) return [];
+
+      const filteredLineas = listaFilter
+        ? lineas.filter((l: any) => l.lista_precio_id === listaFilter)
+        : lineas;
+
+      const applyRedondeo = (precio: number, redondeo: string) => {
+        if (!redondeo || redondeo === 'ninguno') return precio;
+        if (redondeo === 'arriba') return Math.ceil(precio);
+        if (redondeo === 'abajo') return Math.floor(precio);
+        return Math.round(precio);
+      };
+
+      return prods.map(p => {
+        const rule = filteredLineas.find((l: any) =>
+          l.aplica_a === 'producto' && (l.producto_ids ?? []).includes(p.id)
+        ) ?? filteredLineas.find((l: any) =>
+          l.aplica_a === 'categoria' && (l.clasificacion_ids ?? []).includes(p.clasificacion_id)
+        ) ?? filteredLineas.find((l: any) =>
+          l.aplica_a === 'todos'
+        );
+
+        if (!rule) return { ...p, precio_lista: p.precio_principal, precio_con_imp: p.precio_principal, regla: '—', comision_pct: 0, base_precio: 'sin_impuestos' };
+
+        let precio = 0;
+        if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'margen_costo') precio = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'descuento_precio') precio = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
+
+        precio = applyRedondeo(precio, rule.redondeo ?? 'ninguno');
+
+        const basePrecio = rule.base_precio ?? 'sin_impuestos';
+        let precioConImp = precio;
+        if (basePrecio !== 'con_impuestos') {
+          const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
+          const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
+          const baseIva = precio + (p.ieps_tipo === 'porcentaje' ? precio * iepsPct / 100 : 0);
+          precioConImp = baseIva + baseIva * ivaPct / 100;
+        }
+
+        return {
+          ...p,
+          precio_lista: precio,
+          precio_con_imp: precioConImp,
+          regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
+          comision_pct: rule.comision_pct ?? 0,
+          base_precio: basePrecio,
+        };
+      });
+    },
+  });
+
+  if (!tarifaId) return <p className="text-[12px] text-muted-foreground py-4">Guarda la tarifa primero.</p>;
+
+  const filtered = (productos ?? []).filter(p =>
+    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const listaLabel = listas?.find(l => l.id === listaFilter)?.nombre ?? 'Todas';
+
+  const exportColumns = [
+    { key: 'codigo', header: 'Código', width: 12, format: 'text' as const },
+    { key: 'nombre', header: 'Producto', width: 30, format: 'text' as const },
+    { key: 'costo', header: 'Costo', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'precio_principal', header: 'Precio base', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'precio_lista', header: 'Precio lista', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'precio_con_imp', header: 'Precio c/imp', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'regla', header: 'Regla', width: 10, format: 'text' as const },
+    { key: 'ganancia', header: 'Ganancia', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'margen', header: 'Margen %', width: 10, format: 'percent' as const, align: 'right' as const },
+    { key: 'comision_pct', header: 'Comisión %', width: 10, format: 'percent' as const, align: 'right' as const },
+  ];
+
+  const exportData = filtered.map(p => ({
+    ...p,
+    ganancia: p.precio_lista - p.costo,
+    margen: p.costo > 0 ? ((p.precio_lista - p.costo) / p.costo) * 100 : 0,
+  }));
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      fileName: `Precios_${tarifaNombre}_${listaLabel}`,
+      title: `Lista de Precios — ${tarifaNombre}`,
+      subtitle: listaFilter ? `Lista: ${listaLabel}` : 'Todas las listas',
+      columns: exportColumns,
+      data: exportData,
+    });
+  };
+
+  const handleExportPDF = () => {
+    exportToPDF({
+      fileName: `Precios_${tarifaNombre}_${listaLabel}`,
+      title: `Lista de Precios — ${tarifaNombre}`,
+      subtitle: listaFilter ? `Lista: ${listaLabel}` : 'Todas las listas',
+      columns: exportColumns,
+      data: exportData,
+    });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <div className="relative flex-1 max-w-sm min-w-[200px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            className="w-full bg-background rounded-md pl-8 pr-3 py-1.5 text-[12px] border border-input text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+            placeholder="Buscar producto..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          className="input-odoo text-[12px] py-1.5 w-48"
+          value={listaFilter}
+          onChange={e => setListaFilter(e.target.value)}
+        >
+          <option value="">Todas las listas</option>
+          {(listas ?? []).map(l => (
+            <option key={l.id} value={l.id}>{l.es_principal ? '★ ' : ''}{l.nombre}</option>
+          ))}
+        </select>
+        <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
+        <div className="ml-auto">
+          <ExportButton onExcel={handleExportExcel} onPDF={handleExportPDF} />
+        </div>
+      </div>
+      <div className="overflow-x-auto border border-border rounded">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="th-odoo text-left">Código</th>
+              <th className="th-odoo text-left">Producto</th>
+              <th className="th-odoo text-right">Costo</th>
+              <th className="th-odoo text-right">Precio base</th>
+              <th className="th-odoo text-right">Precio s/imp</th>
+              <th className="th-odoo text-right">Precio c/imp</th>
+              <th className="th-odoo text-left">Regla</th>
+              <th className="th-odoo text-center">Base</th>
+              <th className="th-odoo text-right">Ganancia</th>
+              <th className="th-odoo text-right">Margen %</th>
+              <th className="th-odoo text-right">Comisión %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.slice(0, 200).map(p => {
+              const ganancia = p.precio_lista - p.costo;
+              const margen = p.costo > 0 ? (ganancia / p.costo) * 100 : 0;
+              return (
+                <tr key={p.id} className="border-b border-border/40 hover:bg-muted/20">
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
+                  <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {p.precio_con_imp.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground">{p.regla}</td>
+                  <td className="py-1.5 px-3 text-center">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
+                      {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
+                    </span>
+                  </td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {filtered.length > 200 && (
+        <p className="text-[11px] text-muted-foreground mt-2">Mostrando 200 de {filtered.length}. Usa el buscador para filtrar.</p>
+      )}
+    </div>
+  );
+}
+
+
   const { id, productoId } = useParams();
   const navigate = useNavigate();
   const backUrl = productoId ? `/productos/${productoId}` : '/tarifas';
