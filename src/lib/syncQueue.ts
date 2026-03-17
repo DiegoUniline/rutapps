@@ -123,6 +123,7 @@ export async function processSyncQueue(): Promise<{ success: number; failed: num
   }
 
   return { success, failed };
+}
 
 async function processItem(item: SyncQueueItem) {
   const { table, operation, data, keyField, keyValue } = item;
