@@ -126,7 +126,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
       } as any);
       toast.success('Precio agregado');
       setShowModal(false);
-      setNewRule({ tarifa_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
+      setNewRule({ tarifa_id: '', lista_precio_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
     } catch (err: any) { toast.error(err.message); }
   };
 
