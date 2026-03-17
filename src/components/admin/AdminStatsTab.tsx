@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { DollarSign, TrendingUp, CreditCard, Receipt, Users } from 'lucide-react';
+import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, Loader2 } from 'lucide-react';
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
@@ -9,11 +9,22 @@ interface DashboardStats {
   total_customers: number; mrr: number;
 }
 
+interface FacturamaPlan {
+  Plan: string;
+  CurrentFolios: string;
+  CreationDate: string;
+  ExpirationDate: string;
+  Amount: number;
+  Id: string;
+  Type: string;
+}
+
 export default function AdminStatsTab() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [facturamaPlan, setFacturamaPlan] = useState<FacturamaPlan | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => { loadStats(); loadFacturamaPlan(); }, []);
 
   async function loadStats() {
     try {
@@ -34,6 +45,18 @@ export default function AdminStatsTab() {
     }
   }
 
+  async function loadFacturamaPlan() {
+    try {
+      const { data, error } = await supabase.functions.invoke('facturama', {
+        body: { action: 'suscription_plan' },
+      });
+      if (error) throw error;
+      setFacturamaPlan(data);
+    } catch (err) {
+      console.error('Facturama plan error:', err);
+    }
+  }
+
   const fmt = (cents: number) => `$${(cents / 100).toLocaleString('es-MX')}`;
 
   if (loading) return <div className="text-muted-foreground text-center py-10">Cargando estadísticas...</div>;
@@ -41,6 +64,35 @@ export default function AdminStatsTab() {
 
   return (
     <div className="space-y-6">
+      {/* Facturama plan card */}
+      {facturamaPlan && (
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Stamp className="h-4 w-4 text-primary" /> Cuenta Facturama (Desarrollador)
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-2xl font-bold text-primary">{facturamaPlan.CurrentFolios}</div>
+              <div className="text-xs text-muted-foreground">Folios disponibles</div>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-foreground">{facturamaPlan.Plan}</div>
+              <div className="text-xs text-muted-foreground">Plan activo</div>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-foreground">
+                {facturamaPlan.ExpirationDate ? new Date(facturamaPlan.ExpirationDate).toLocaleDateString('es-MX') : '—'}
+              </div>
+              <div className="text-xs text-muted-foreground">Vencimiento</div>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-foreground">{facturamaPlan.Type || '—'}</div>
+              <div className="text-xs text-muted-foreground">Tipo</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={DollarSign} label="Balance disponible" value={fmt(stats.balance_available)} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
