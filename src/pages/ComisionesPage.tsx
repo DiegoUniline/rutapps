@@ -17,6 +17,7 @@ const PAGE_SIZE = 20;
 export default function ComisionesPage() {
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
+  const [tab, setTab] = useState<'historial' | 'reglas'>('historial');
   const [vendedorFilter, setVendedorFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'pendientes' | 'pagadas' | 'todas'>('pendientes');
   const [page, setPage] = useState(0);
