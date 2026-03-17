@@ -357,7 +357,7 @@ export default function AjustesInventarioPage() {
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={exportTemplate} disabled={!productos || productos.length === 0} className="gap-1.5">
+              <Button variant="outline" size="sm" onClick={exportTemplate} disabled={!almacenId || !productos || productos.length === 0} className="gap-1.5">
                 <Download className="h-4 w-4" /> Descargar plantilla
               </Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-1.5">
