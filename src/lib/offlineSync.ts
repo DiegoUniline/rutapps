@@ -29,12 +29,13 @@ const TABLES_TO_CACHE = [
   'promociones',
   'entregas',
   'entrega_lineas',
+  'visitas',
 ] as const;
 
 // Minimal column selects per table to reduce payload size
 const COLUMN_SELECTS: Record<string, string> = {
   clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,requiere_factura,foto_url,foto_fachada_url,created_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
-  productos: 'id,empresa_id,codigo,nombre,descripcion,precio_venta,costo,stock,stock_minimo,status,unidad_venta_id,tasa_iva_id,marca_id,clasificacion_id,codigo_sat,unidad_sat,peso,ieps_tasa,ieps_cuota,foto_url,created_at,unidades:unidad_venta_id(nombre,abreviatura),tasas_iva:tasa_iva_id(porcentaje)',
+  productos: 'id,empresa_id,codigo,clave_alterna,nombre,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,tasa_iva_id,tasa_ieps_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,almacenes,proveedor_id,manejar_lotes,created_at',
   venta_lineas: 'id,venta_id,producto_id,cantidad,precio_unitario,descuento_porcentaje,subtotal,iva,ieps,total,notas,unidad_id,facturado,created_at',
   carga_lineas: 'id,carga_id,producto_id,cantidad_cargada,cantidad_vendida,cantidad_devuelta,created_at',
   cobro_aplicaciones: 'id,cobro_id,venta_id,monto_aplicado,created_at',
@@ -67,19 +68,20 @@ export const TABLE_LABELS: Record<string, string> = {
   promociones: 'Promociones',
   entregas: 'Entregas',
   entrega_lineas: 'Líneas de entrega',
+  visitas: 'Visitas',
 };
 
 // Tables that have empresa_id for filtering
 const TABLES_WITH_EMPRESA = new Set([
   'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
   'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
-  'tasas_iva', 'descarga_ruta', 'promociones', 'entregas',
+  'tasas_iva', 'descarga_ruta', 'promociones', 'entregas', 'visitas',
 ]);
 
 // Tables limited to recent data
 const RECENT_TABLES = new Set([
   'ventas', 'venta_lineas', 'cobros', 'cobro_aplicaciones', 'gastos',
-  'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas',
+  'devoluciones', 'devolucion_lineas', 'entregas', 'entrega_lineas', 'visitas',
 ]);
 
 export interface SyncProgress {

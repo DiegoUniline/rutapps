@@ -2,11 +2,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Plus, Minus, Trash2, ShoppingCart, Check, Package, ChevronRight, CalendarDays, Banknote, CreditCard, Wallet, Receipt, Save, RotateCcw, ArrowRightLeft, Tag, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+
 import { queueOperation } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
 import TicketVenta from '@/components/ruta/TicketVenta';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
@@ -188,21 +188,19 @@ export default function RutaNuevaVenta() {
     }
   }, [urlClienteId, clientes]);
 
-  const { data: ventasPendientes } = useQuery({
-    queryKey: ['ruta-cuentas-pendientes', clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
-        .eq('cliente_id', clienteId!)
-        .eq('condicion_pago', 'credito')
-        .gt('saldo_pendiente', 0)
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .order('fecha', { ascending: true });
-      return data ?? [];
-    },
-  });
+  // Offline-compatible: filter ventas from local cache for cuentas pendientes
+  const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
+  const ventasPendientes = useMemo(() => {
+    if (!allVentas || !clienteId) return [];
+    return (allVentas as any[])
+      .filter(v =>
+        v.cliente_id === clienteId &&
+        v.condicion_pago === 'credito' &&
+        (v.saldo_pendiente ?? 0) > 0 &&
+        ['confirmado', 'entregado', 'facturado'].includes(v.status)
+      )
+      .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  }, [allVentas, clienteId]);
 
   const saldoPendienteTotal = useMemo(() =>
     (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0),
@@ -215,18 +213,15 @@ export default function RutaNuevaVenta() {
     status: 'activo',
   }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
-  // Pedido sugerido for selected client
-  const { data: pedidoSugerido } = useQuery({
-    queryKey: ['pedido-sugerido', clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('cliente_pedido_sugerido')
-        .select('*, productos(id, codigo, nombre, precio_principal, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo, tasa_iva_id, tasa_ieps_id, unidad_venta_id, unidades:unidad_venta_id(id, nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje), tasas_ieps:tasa_ieps_id(porcentaje))')
-        .eq('cliente_id', clienteId!);
-      return data ?? [];
-    },
-  });
+  // Pedido sugerido for selected client (offline-compatible)
+  const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
+  const pedidoSugerido = useMemo(() => {
+    if (!pedidoSugeridoRaw || !productos) return [];
+    return (pedidoSugeridoRaw as any[]).map(ps => {
+      const prod = productos.find((p: any) => p.id === ps.producto_id);
+      return prod ? { ...ps, productos: prod } : null;
+    }).filter(Boolean);
+  }, [pedidoSugeridoRaw, productos]);
 
   const filteredClientes = clientes?.filter(c =>
     !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||

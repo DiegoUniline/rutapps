@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queueOperation } from '@/lib/syncQueue';
+import { useQueryClient } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
@@ -40,70 +41,46 @@ export default function RutaCobrar() {
   const [notas, setNotas] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Fetch clients with pending balance
-  const { data: clientes } = useQuery({
-    queryKey: ['ruta-clientes-cobro', empresa?.id],
-    enabled: !!empresa?.id,
-    queryFn: async () => {
-      const { data: clientesData } = await supabase
-        .from('clientes')
-        .select('id, codigo, nombre, telefono')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo')
-        .order('nombre');
+  // Offline-compatible: read clients and ventas from local cache
+  const { data: clientesRaw } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
+  const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
 
-      if (!clientesData) return [];
+  const clientes = useMemo(() => {
+    if (!clientesRaw) return [];
+    const saldosPorCliente: Record<string, number> = {};
+    (allVentas ?? []).forEach((v: any) => {
+      if (v.cliente_id && v.condicion_pago === 'credito' && ['confirmado', 'entregado', 'facturado'].includes(v.status) && (v.saldo_pendiente ?? 0) > 0) {
+        saldosPorCliente[v.cliente_id] = (saldosPorCliente[v.cliente_id] ?? 0) + (v.saldo_pendiente ?? 0);
+      }
+    });
+    return clientesRaw.map((c: any) => ({ ...c, saldoPendiente: saldosPorCliente[c.id] ?? 0 }));
+  }, [clientesRaw, allVentas]);
 
-      const { data: ventasData } = await supabase
-        .from('ventas')
-        .select('cliente_id, saldo_pendiente')
-        .eq('empresa_id', empresa!.id)
-        .eq('condicion_pago', 'credito')
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .gt('saldo_pendiente', 0);
+  // Offline-compatible: filter pending ventas for selected client
+  const ventasPendientes = useMemo(() => {
+    if (!allVentas || !clienteId) return [];
+    return (allVentas as any[])
+      .filter(v =>
+        v.cliente_id === clienteId &&
+        v.condicion_pago === 'credito' &&
+        (v.saldo_pendiente ?? 0) > 0 &&
+        ['confirmado', 'entregado', 'facturado'].includes(v.status)
+      )
+      .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  }, [allVentas, clienteId]);
+  const loadingVentas = false;
 
-      const saldosPorCliente: Record<string, number> = {};
-      (ventasData ?? []).forEach(v => {
-        if (v.cliente_id) {
-          saldosPorCliente[v.cliente_id] = (saldosPorCliente[v.cliente_id] ?? 0) + (v.saldo_pendiente ?? 0);
-        }
-      });
+  const clientesConSaldo = clientes?.filter((c: any) => c.saldoPendiente > 0) ?? [];
+  const clientesSinSaldo = clientes?.filter((c: any) => c.saldoPendiente === 0) ?? [];
 
-      return clientesData.map(c => ({
-        ...c,
-        saldoPendiente: saldosPorCliente[c.id] ?? 0,
-      }));
-    },
-  });
-
-  const clientesConSaldo = clientes?.filter(c => c.saldoPendiente > 0) ?? [];
-  const clientesSinSaldo = clientes?.filter(c => c.saldoPendiente === 0) ?? [];
-
-  const filteredConSaldo = clientesConSaldo.filter(c =>
+  const filteredConSaldo = clientesConSaldo.filter((c: any) =>
     !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
     c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
   );
-  const filteredSinSaldo = clientesSinSaldo.filter(c =>
+  const filteredSinSaldo = clientesSinSaldo.filter((c: any) =>
     !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) ||
     c.codigo?.toLowerCase().includes(searchCliente.toLowerCase())
   );
-
-  // Fetch pending invoices for selected client (ordered oldest first)
-  const { data: ventasPendientes, isLoading: loadingVentas } = useQuery({
-    queryKey: ['ruta-ventas-pendientes', clienteId],
-    enabled: !!clienteId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente')
-        .eq('cliente_id', clienteId!)
-        .eq('condicion_pago', 'credito')
-        .in('status', ['confirmado', 'entregado', 'facturado'])
-        .gt('saldo_pendiente', 0)
-        .order('fecha', { ascending: true }); // Oldest first!
-      return data ?? [];
-    },
-  });
 
   const selectCliente = (c: any) => {
     setClienteId(c.id);
@@ -161,7 +138,9 @@ export default function RutaCobrar() {
     if (!empresa || !user || totalAplicado <= 0) return;
     setSaving(true);
     try {
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
+      const cobroId = crypto.randomUUID();
+      await queueOperation('cobros', 'insert', {
+        id: cobroId,
         empresa_id: empresa.id,
         cliente_id: clienteId!,
         monto: totalAplicado,
@@ -169,31 +148,28 @@ export default function RutaCobrar() {
         referencia: referencia || null,
         notas: notas || null,
         user_id: user.id,
-      }).select('id').single();
-      if (cobroErr) throw cobroErr;
+        fecha: new Date().toISOString().slice(0, 10),
+        created_at: new Date().toISOString(),
+      });
 
-      const aplicaciones = cuentas
-        .filter(c => c.montoAplicar > 0)
-        .map(c => ({
-          cobro_id: cobro.id,
-          venta_id: c.id,
-          monto_aplicado: c.montoAplicar,
-        }));
-
-      if (aplicaciones.length > 0) {
-        const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones);
-        if (appErr) throw appErr;
-
-        for (const app of aplicaciones) {
-          const cuenta = cuentas.find(c => c.id === app.venta_id)!;
-          const nuevoSaldo = Math.round((cuenta.saldo_pendiente - app.monto_aplicado) * 100) / 100;
-          await supabase.from('ventas').update({ saldo_pendiente: nuevoSaldo }).eq('id', app.venta_id);
+      const aplicaciones = cuentas.filter(c => c.montoAplicar > 0);
+      for (const app of aplicaciones) {
+        await queueOperation('cobro_aplicaciones', 'insert', {
+          id: crypto.randomUUID(),
+          cobro_id: cobroId,
+          venta_id: app.id,
+          monto_aplicado: app.montoAplicar,
+          created_at: new Date().toISOString(),
+        });
+        // Update local venta saldo
+        const venta = (allVentas as any[])?.find(v => v.id === app.id);
+        if (venta) {
+          const nuevoSaldo = Math.round((app.saldo_pendiente - app.montoAplicar) * 100) / 100;
+          await queueOperation('ventas', 'update', { ...venta, saldo_pendiente: nuevoSaldo });
         }
       }
 
       toast.success(`¡Cobro de $${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} registrado!`);
-      queryClient.invalidateQueries({ queryKey: ['ruta-clientes-cobro'] });
-      queryClient.invalidateQueries({ queryKey: ['ruta-ventas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       navigate('/ruta/cobros');
     } catch (err: any) {
