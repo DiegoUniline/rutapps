@@ -200,6 +200,26 @@ export default function TarifaFormPage() {
   const deleteLinea = useDeleteTarifaLinea();
   const { data: productosDisp } = useProductosForSelect();
   const { data: clasificaciones } = useClasificaciones();
+  const { data: listasPrecios, refetch: refetchListas } = useListasPrecioByTarifa(isNew ? undefined : id);
+  const saveListaPrecio = useSaveListaPrecio();
+  const qc = useQueryClient();
+
+  // Map for lista display
+  const listaMap = new Map((listasPrecios ?? []).map(l => [l.id, l.nombre]));
+  const listaOptions = (listasPrecios ?? []).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` }));
+
+  // Quick-create lista de precios
+  const handleCreateLista = async (name: string): Promise<string | undefined> => {
+    if (!id) return undefined;
+    try {
+      const { data: profile } = await (await import('@/lib/supabase')).supabase.from('profiles').select('empresa_id').maybeSingle();
+      if (!profile?.empresa_id) { toast.error('Sin empresa'); return undefined; }
+      const result = await saveListaPrecio.mutateAsync({ tarifa_id: id, nombre: name, es_principal: (listasPrecios ?? []).length === 0 });
+      refetchListas();
+      toast.success(`Lista "${name}" creada`);
+      return result.id;
+    } catch (err: any) { toast.error(err.message); return undefined; }
+  };
 
   const [form, setForm] = useState<Partial<Tarifa>>({
     nombre: '', descripcion: '', tipo: 'general', moneda: 'MXN', activa: true,
