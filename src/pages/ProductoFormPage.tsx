@@ -299,23 +299,36 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
               </thead>
               <tbody>
                 {rules.map((linea: any) => {
-                  const precio = calcPrice(linea);
+                  const isEditing = editingId === linea.id;
+                  const currentVals = isEditing ? editVal : linea;
+                  const precio = isEditing ? calcPrice({ ...linea, ...editVal }) : calcPrice(linea);
                   const costo = form.costo ?? 0;
                   const ganancia = precio - costo;
                   const ganPct = costo > 0 ? (ganancia / costo) * 100 : 0;
                   const listaName = linea.lista_precios?.nombre;
                   const esPrincipal = linea.lista_precios?.es_principal;
+
+                  const cellClick = (col: string) => (e: React.MouseEvent) => {
+                    e.stopPropagation();
+                    if (editingId === linea.id && editingCol === col) return;
+                    if (editingId && editingId !== linea.id) saveEdit(editingId);
+                    startEdit(linea, col);
+                  };
+
+                  const handleBlur = () => {
+                    setTimeout(() => saveEdit(linea.id), 150);
+                  };
+
                   return (
                     <tr key={linea.id}
-                      className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
-                      onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}
+                      className="border-b border-table-border last:border-0 hover:bg-table-hover"
                     >
-                      <td className="py-1.5 px-3">
+                      <td className="py-1.5 px-3 cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>
                         <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
                           linea.aplica_a === 'producto' ? 'bg-primary/10 text-primary' : linea.aplica_a === 'categoria' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'
                         }`}>{aplica_label(linea)}</span>
                       </td>
-                      <td className="py-1.5 px-3 text-xs">
+                      <td className="py-1.5 px-3 text-xs cursor-pointer" onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>
                         {listaName ? (
                           <span className="flex items-center gap-1">
                             {esPrincipal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
@@ -323,17 +336,63 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                           </span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
-                      <td className="py-1.5 px-3 text-xs text-muted-foreground">{calcLabel(linea)}</td>
-                      <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {costo.toFixed(2)}</td>
-                      <td className="py-1.5 px-3 text-right font-mono text-odoo-teal font-semibold">$ {precio.toFixed(2)}</td>
+                      {/* Tipo — inline editable */}
+                      <td className="py-1.5 px-3 text-xs" onClick={cellClick('tipo')}>
+                        {isEditing && editingCol === 'tipo' ? (
+                          <select
+                            autoFocus
+                            className="input-odoo py-0.5 text-[12px] w-full"
+                            value={currentVals.tipo_calculo}
+                            onChange={e => setEditVal((p: any) => ({ ...p, tipo_calculo: e.target.value }))}
+                            onBlur={handleBlur}
+                          >
+                            <option value="precio_fijo">Precio fijo</option>
+                            <option value="margen_costo">Fórmula (margen)</option>
+                            <option value="descuento_precio">Descuento</option>
+                          </select>
+                        ) : (
+                          <span className="inline-edit-idle text-muted-foreground">{calcLabel(isEditing ? { ...linea, ...editVal } : linea)}</span>
+                        )}
+                      </td>
+                      {/* Valor — inline editable */}
+                      <td className="py-1.5 px-3 text-right" onClick={cellClick('valor')}>
+                        {isEditing && editingCol === 'valor' ? (
+                          <input
+                            autoFocus
+                            type="number"
+                            className="input-odoo py-0.5 text-[12px] w-20 text-right"
+                            value={
+                              currentVals.tipo_calculo === 'precio_fijo' ? currentVals.precio :
+                              currentVals.tipo_calculo === 'margen_costo' ? currentVals.margen_pct :
+                              currentVals.descuento_pct
+                            }
+                            onChange={e => {
+                              const v = +e.target.value;
+                              setEditVal((p: any) => ({
+                                ...p,
+                                ...(p.tipo_calculo === 'precio_fijo' ? { precio: v } :
+                                    p.tipo_calculo === 'margen_costo' ? { margen_pct: v } :
+                                    { descuento_pct: v }),
+                              }));
+                            }}
+                            onBlur={handleBlur}
+                            onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }}
+                          />
+                        ) : (
+                          <span className="inline-edit-idle font-mono text-muted-foreground">
+                            {linea.tipo_calculo === 'precio_fijo' ? `$ ${(linea.precio ?? 0).toFixed(2)}` :
+                             linea.tipo_calculo === 'margen_costo' ? `${linea.margen_pct}%` :
+                             `${linea.descuento_pct}%`}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
                       <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
-                        {linea.aplica_a === 'producto' && (
-                          <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
+                        <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </td>
                     </tr>
                   );
