@@ -340,8 +340,8 @@ export default function ClienteFormPage() {
     }
   };
 
-
-    const captureGps = () => {
+  const captureGps = () => {
+    if (!navigator.geolocation) {
       toast.error('Tu navegador no soporta GPS');
       return;
     }
