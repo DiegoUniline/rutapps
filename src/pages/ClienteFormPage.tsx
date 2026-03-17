@@ -298,7 +298,49 @@ export default function ClienteFormPage() {
     } catch (err: any) { toast.error(err.message); }
   };
 
-  const captureGps = () => {
+  const handleCsfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      toast.error('Solo se permiten archivos PDF');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('El archivo no debe superar 10MB');
+      return;
+    }
+    setParsingCsf(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const { data, error } = await supabase.functions.invoke('parse-csf', {
+        body: { pdf_base64: base64 },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Error al procesar CSF');
+      const d = data.data;
+      setForm(prev => ({
+        ...prev,
+        requiere_factura: true,
+        facturama_rfc: d.rfc || prev.facturama_rfc,
+        facturama_razon_social: d.razon_social || prev.facturama_razon_social,
+        facturama_regimen_fiscal: d.regimen_fiscal || prev.facturama_regimen_fiscal,
+        facturama_cp: d.cp || prev.facturama_cp,
+        rfc: d.rfc || prev.rfc,
+        direccion: d.direccion || prev.direccion,
+        colonia: d.colonia || prev.colonia,
+        cp: d.cp || prev.cp,
+      }));
+      toast.success('Datos fiscales extraídos de la CSF');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al procesar la constancia');
+    } finally {
+      setParsingCsf(false);
+      e.target.value = '';
+    }
+  };
+
+
     if (!navigator.geolocation) {
       toast.error('Tu navegador no soporta GPS');
       return;
