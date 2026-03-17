@@ -4,8 +4,7 @@ import { ArrowLeft, Search, Plus, Minus, Trash2, RotateCcw, ChevronRight } from 
 import { useAuth } from '@/contexts/AuthContext';
 import { useCargaActiva } from '@/hooks/useCargas';
 import { useSaveDevolucion } from '@/hooks/useDevoluciones';
-import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 interface DevItem {
