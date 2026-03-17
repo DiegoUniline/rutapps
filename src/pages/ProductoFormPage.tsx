@@ -408,12 +408,19 @@ const statusSteps = [
 
 export default function ProductoFormPage() {
   const { empresa } = useAuth();
+  const qc = useQueryClient();
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
   const { data: existing } = useProducto(isNew ? undefined : id);
   const saveMutation = useSaveProducto();
   const deleteMutation = useDeleteProducto();
+
+  const createMarca = (name: string) => quickCreateCatalog('marcas', name, 'marcas', qc);
+  const createClasificacion = (name: string) => quickCreateCatalog('clasificaciones', name, 'clasificaciones', qc);
+  const createUnidad = (name: string) => quickCreateCatalog('unidades', name, 'unidades', qc);
+  const createLista = (name: string) => quickCreateCatalog('listas', name, 'listas', qc);
+  const createProveedor = (name: string) => quickCreateCatalog('proveedores', name, 'proveedores', qc);
 
   const { data: marcas } = useMarcas();
   const { data: proveedores } = useProveedores();
