@@ -95,6 +95,20 @@ export default function RutaNuevaVenta() {
   const [showReemplazoFor, setShowReemplazoFor] = useState<string | null>(null);
   const [searchReemplazo, setSearchReemplazo] = useState('');
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
+  const [sinCompra, setSinCompra] = useState(false);
+  const [motivoSinCompra, setMotivoSinCompra] = useState('');
+  const [savingSinCompra, setSavingSinCompra] = useState(false);
+
+  // Visited localStorage helpers (shared with RutaClientes)
+  const VISITED_KEY = `rutapp_visited_${new Date().toISOString().slice(0, 10)}`;
+  const markVisited = (cId: string) => {
+    try {
+      const raw = localStorage.getItem(VISITED_KEY);
+      const set = raw ? new Set(JSON.parse(raw)) : new Set();
+      set.add(cId);
+      localStorage.setItem(VISITED_KEY, JSON.stringify([...set]));
+    } catch {}
+  };
 
   const entregaInmediata = tipoVenta === 'venta_directa';
 
