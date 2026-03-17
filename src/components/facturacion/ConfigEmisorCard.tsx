@@ -355,9 +355,14 @@ export function ConfigEmisorCard() {
               />
             </div>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+          <Button
+            onClick={handleSave}
+            disabled={saving || !hasChanges}
+            variant={hasChanges ? "default" : "secondary"}
+            className="w-full sm:w-auto"
+          >
             {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Save className="h-4 w-4 mr-1.5" />}
-            Guardar datos fiscales
+            {hasChanges ? 'Guardar datos fiscales' : 'Sin cambios'}
           </Button>
         </CardContent>
       </Card>
