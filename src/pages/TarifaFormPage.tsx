@@ -709,6 +709,15 @@ export default function TarifaFormPage() {
                                 {newLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
                               </td>
                               <td className="py-2 px-3">
+                                <SearchableSelect
+                                  options={listaOptions}
+                                  value={newLinea.lista_precio_id}
+                                  onChange={val => setNewLinea(p => ({ ...p, lista_precio_id: val }))}
+                                  placeholder="Seleccionar lista..."
+                                  onCreateNew={handleCreateLista}
+                                />
+                              </td>
+                              <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.tipo_calculo}
                                   onChange={e => setNewLinea(p => ({ ...p, tipo_calculo: e.target.value as TipoCalculoTarifa }))}>
                                   <option value="margen_costo">Margen % s/costo</option>
