@@ -47,6 +47,20 @@ export default function FacturacionCfdiPage() {
   const [showCancel, setShowCancel] = useState(false);
   const [cancelingId, setCancelingId] = useState<string | null>(null);
 
+  // Load timbre balance
+  const { data: timbreSaldo } = useQuery({
+    queryKey: ['timbres-saldo', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('timbres_saldo')
+        .select('saldo')
+        .eq('empresa_id', empresa!.id)
+        .single();
+      return data?.saldo ?? 0;
+    },
+  });
+
   // Load CFDIs
   const { data: cfdis, isLoading } = useQuery({
     queryKey: ['cfdis', empresa?.id],
