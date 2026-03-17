@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, Menu, X, FileText, PackageCheck, RefreshCw, MoreHorizontal } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -8,6 +8,7 @@ import UpdateBanner from '@/components/ruta/UpdateBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
