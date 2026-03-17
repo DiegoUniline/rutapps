@@ -481,10 +481,10 @@ export default function AjustesInventarioPage() {
                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Cargando productos...</TableCell></TableRow>
                   )}
                   {!loadingProducts && filteredRows.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                      <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                      {almacenId ? 'No hay productos' : 'Selecciona un almacén'}
-                    </TableCell></TableRow>
+                     <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                       <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                       {almacenId ? 'No hay productos' : 'Selecciona un almacén'}
+                     </TableCell></TableRow>
                   )}
                   {filteredRows.map(row => {
                     const diff = row.touched && row.cantidadReal !== null ? row.cantidadReal - row.cantidadSistema : 0;
