@@ -29,6 +29,7 @@ const TABLES_TO_CACHE = [
   'promociones',
   'entregas',
   'entrega_lineas',
+  'visitas',
 ] as const;
 
 // Minimal column selects per table to reduce payload size
