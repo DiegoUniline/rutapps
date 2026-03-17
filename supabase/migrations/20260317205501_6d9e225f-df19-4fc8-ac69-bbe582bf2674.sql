@@ -1,0 +1,1 @@
+ALTER TABLE public.tarifa_lineas ADD COLUMN lista_precio_id uuid REFERENCES public.lista_precios(id) ON DELETE SET NULL;

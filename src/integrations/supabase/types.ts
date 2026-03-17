@@ -3230,6 +3230,7 @@ export type Database = {
           descuento_max: number | null
           descuento_pct: number | null
           id: string
+          lista_precio_id: string | null
           margen_pct: number | null
           notas: string | null
           precio: number
@@ -3248,6 +3249,7 @@ export type Database = {
           descuento_max?: number | null
           descuento_pct?: number | null
           id?: string
+          lista_precio_id?: string | null
           margen_pct?: number | null
           notas?: string | null
           precio?: number
@@ -3266,6 +3268,7 @@ export type Database = {
           descuento_max?: number | null
           descuento_pct?: number | null
           id?: string
+          lista_precio_id?: string | null
           margen_pct?: number | null
           notas?: string | null
           precio?: number
@@ -3276,6 +3279,13 @@ export type Database = {
           tipo_calculo?: Database["public"]["Enums"]["tipo_calculo_tarifa"]
         }
         Relationships: [
+          {
+            foreignKeyName: "tarifa_lineas_lista_precio_id_fkey"
+            columns: ["lista_precio_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tarifa_lineas_tarifa_id_fkey"
             columns: ["tarifa_id"]
