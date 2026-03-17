@@ -115,22 +115,23 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
 
   const handleSaveRule = async () => {
     if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
+    if (newRule.aplica_a === 'categoria' && newRule.clasificacion_ids.length === 0) { toast.error('Selecciona al menos una categoría'); return; }
     try {
       await saveLinea.mutateAsync({
         tarifa_id: newRule.tarifa_id,
         lista_precio_id: newRule.lista_precio_id || null,
-        aplica_a: 'producto',
+        aplica_a: newRule.aplica_a,
         tipo_calculo: newRule.tipo_calculo,
         precio: newRule.precio,
         margen_pct: newRule.margen_pct,
         descuento_pct: newRule.descuento_pct,
         precio_minimo: newRule.precio_minimo,
-        producto_ids: [productoId!],
-        clasificacion_ids: [],
+        producto_ids: newRule.aplica_a === 'producto' ? [productoId!] : [],
+        clasificacion_ids: newRule.aplica_a === 'categoria' ? newRule.clasificacion_ids : [],
       } as any);
       toast.success('Precio agregado');
       setShowModal(false);
-      setNewRule({ tarifa_id: '', lista_precio_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
+      setNewRule({ aplica_a: 'producto', clasificacion_ids: [], tarifa_id: '', lista_precio_id: '', tipo_calculo: 'precio_fijo', precio: 0, margen_pct: 0, descuento_pct: 0, precio_minimo: 0 });
     } catch (err: any) { toast.error(err.message); }
   };
 
