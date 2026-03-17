@@ -295,7 +295,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                   return (
                     <tr key={linea.id}
                       className="border-b border-table-border last:border-0 hover:bg-table-hover cursor-pointer"
-                      onClick={() => navigate(`/tarifas/${tarifaId}`)}
+                      onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}
                     >
                       <td className="py-1.5 px-3">
                         <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${
