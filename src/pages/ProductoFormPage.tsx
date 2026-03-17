@@ -465,8 +465,22 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
-                      <td className="py-1.5 px-3 text-right font-mono text-xs text-primary">
-                        {(linea as any).comision_pct ? `${(linea as any).comision_pct}%` : '—'}
+                      <td className="py-1.5 px-3 text-right" onClick={cellClick('comision')}>
+                        {isEditing && editingCol === 'comision' ? (
+                          <input
+                            autoFocus
+                            type="number"
+                            className="input-odoo py-0.5 text-[12px] w-16 text-right"
+                            value={currentVals.comision_pct || ''}
+                            onChange={e => setEditVal((p: any) => ({ ...p, comision_pct: +e.target.value }))}
+                            onBlur={handleBlur}
+                            onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }}
+                          />
+                        ) : (
+                          <span className="inline-edit-idle font-mono text-xs text-primary">
+                            {(linea as any).comision_pct ? `${(linea as any).comision_pct}%` : '—'}
+                          </span>
+                        )}
                       </td>
                       <td className="py-1.5 px-3 text-center" onClick={e => e.stopPropagation()}>
                         <button onClick={() => handleDeleteRule(linea.id)} className="text-destructive hover:text-destructive/80">
