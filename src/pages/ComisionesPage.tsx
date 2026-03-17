@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Check, DollarSign } from 'lucide-react';
+import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
 const PAGE_SIZE = 20;
 
