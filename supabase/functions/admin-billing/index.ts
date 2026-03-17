@@ -35,6 +35,8 @@ function isRutappSubscription(sub: any): boolean {
 }
 
 function isRutappInvoice(inv: any): boolean {
+  // Match invoices created manually (have empresa_id in metadata)
+  if (inv?.metadata?.empresa_id) return true;
   if (!inv?.lines?.data?.length) return false;
   return inv.lines.data.some((line: any) => {
     const productId = getProductId(line?.price?.product);
