@@ -2,10 +2,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { supabase } from '@/lib/supabase';
 import { queueOperation } from '@/lib/syncQueue';
+import { getSyncConfig } from '@/lib/dataSaver';
 
 /**
- * Hook that reads from IndexedDB first (instant), then from Supabase if online.
- * Returns cached data immediately, updates when server responds.
+ * Hook that reads from IndexedDB first (instant), then from Supabase if online
+ * AND cache is stale or data saver is off.
  */
 export function useOfflineQuery<T = any>(
   table: string,
@@ -28,13 +29,13 @@ export function useOfflineQuery<T = any>(
     }
 
     setIsLoading(true);
+    let hasLocalData = false;
 
     // 1. Read from IndexedDB immediately
     const localTable = getOfflineTable(table);
     if (localTable) {
       try {
-        let collection = localTable.toCollection();
-        let localData = await collection.toArray();
+        let localData = await localTable.toArray();
 
         // Apply filters locally
         if (filters) {
@@ -61,6 +62,7 @@ export function useOfflineQuery<T = any>(
 
         if (localData.length > 0) {
           setData(localData as T[]);
+          hasLocalData = true;
           setIsLoading(false);
         }
       } catch (err) {
@@ -68,7 +70,14 @@ export function useOfflineQuery<T = any>(
       }
     }
 
-    // 2. If online, fetch fresh data from server and update cache
+    // 2. If data saver is ON and we have local data, skip server fetch
+    const config = getSyncConfig();
+    if (config.enabled && hasLocalData) {
+      setIsLoading(false);
+      return;
+    }
+
+    // 3. If online, fetch fresh data from server and update cache
     if (navigator.onLine) {
       try {
         let query = (supabase.from as any)(table).select(options?.select || '*');
@@ -126,7 +135,6 @@ export function useOfflineMutation() {
   ) => {
     setIsPending(true);
     try {
-      // Generate UUID for new inserts if no id
       if (operation === 'insert' && !data.id) {
         data.id = crypto.randomUUID();
       }
