@@ -209,6 +209,7 @@ export default function InventarioPage() {
     <div className="p-4 space-y-4 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Warehouse className="h-5 w-5" /> Inventario
+        <HelpButton title={HELP.inventario.title} sections={HELP.inventario.sections} />
       </h1>
 
       {/* Summary cards */}

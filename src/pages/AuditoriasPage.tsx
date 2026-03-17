@@ -125,6 +125,7 @@ export default function AuditoriasPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <ClipboardCheck className="h-5 w-5" /> Auditorías de inventario
+          <HelpButton title={HELP.auditorias.title} sections={HELP.auditorias.sections} />
         </h1>
         <Button onClick={() => setShowDialog(true)} className="gap-1.5">
           <Plus className="h-4 w-4" /> Nueva auditoría

@@ -83,6 +83,7 @@ export default function GastosDesktopPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Receipt className="h-5 w-5" /> Gastos
+          <HelpButton title={HELP.gastos.title} sections={HELP.gastos.sections} />
         </h1>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Nuevo gasto

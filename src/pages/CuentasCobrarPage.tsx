@@ -61,6 +61,7 @@ export default function CuentasCobrarPage() {
     <div className="p-4 space-y-4 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <CreditCard className="h-5 w-5" /> Cuentas por cobrar
+        <HelpButton title={HELP.cuentasCobrar.title} sections={HELP.cuentasCobrar.sections} />
       </h1>
 
       {/* Summary */}

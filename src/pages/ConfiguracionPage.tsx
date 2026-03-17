@@ -387,6 +387,7 @@ export default function ConfiguracionPage() {
       <div className="flex-1 space-y-5 max-w-xl">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Settings className="h-5 w-5" /> Configuración de empresa
+          <HelpButton title={HELP.configuracion.title} sections={HELP.configuracion.sections} />
         </h1>
 
         {/* Logo */}

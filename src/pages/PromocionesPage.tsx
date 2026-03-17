@@ -72,7 +72,7 @@ export default function PromocionesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Promociones</h1>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">Promociones <HelpButton title={HELP.promociones.title} sections={HELP.promociones.sections} /></h1>
         <Button onClick={() => setEditing({ ...emptyPromo })} size="sm">
           <Plus className="h-4 w-4 mr-1.5" /> Nueva promoción
         </Button>

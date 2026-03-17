@@ -109,6 +109,7 @@ export default function LotesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Layers className="h-5 w-5" /> Lotes
+          <HelpButton title={HELP.lotes.title} sections={HELP.lotes.sections} />
         </h1>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
           <Plus className="h-3.5 w-3.5 mr-1" /> Nuevo lote

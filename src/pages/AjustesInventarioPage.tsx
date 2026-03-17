@@ -308,6 +308,7 @@ export default function AjustesInventarioPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <Settings2 className="h-5 w-5" /> Ajustes de inventario
+          <HelpButton title={HELP.ajustesInventario.title} sections={HELP.ajustesInventario.sections} />
         </h1>
       </div>
 
