@@ -62,6 +62,7 @@ export default function ClienteFormPage() {
   const [originalForm, setOriginalForm] = useState<Partial<Cliente>>(defaultCliente);
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
+  const { data: listasPrecios } = useListasPrecioForSelect(form.tarifa_id ?? undefined);
 
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
@@ -347,8 +348,12 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Tarifa" value={form.tarifa_id} onChange={v => set('tarifa_id', v || null)} type="select"
+                  <OdooField label="Tarifa" value={form.tarifa_id} onChange={v => { set('tarifa_id', v || null); set('lista_precio_id' as any, null); }} type="select"
                     options={tarifas?.map(t => ({ value: t.id, label: t.nombre })) ?? []} />
+                  <OdooField label="Lista de precios" value={(form as any).lista_precio_id} onChange={v => set('lista_precio_id' as any, v || null)} type="select"
+                    options={listasPrecios?.map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` })) ?? []}
+                    placeholder={form.tarifa_id ? 'Seleccionar lista...' : 'Selecciona una tarifa primero'}
+                    readOnly={!form.tarifa_id} />
                 </OdooSection>
                 <OdooSection title="Visitas">
                   <OdooField label="Frecuencia" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
