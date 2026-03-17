@@ -166,17 +166,19 @@ export function useSubscription(): SubscriptionState {
       const endDate = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
       const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
       // Block after 3 grace days past expiration
-      const isBlocked = (sub.status === 'suspended') ||
+      const isBlocked = !isSuperAdmin && (
+        (sub.status === 'suspended') ||
         (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||
-        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3);
+        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3)
+      );
 
       const nextState: SubscriptionState = {
         loading: false,
         status: sub.status,
         daysLeft,
         isBlocked,
-        isSuperAdmin: false,
-        maxUsuarios: sub.max_usuarios,
+        isSuperAdmin,
+        maxUsuarios: isSuperAdmin ? 999 : sub.max_usuarios,
       };
 
       setState(nextState);
