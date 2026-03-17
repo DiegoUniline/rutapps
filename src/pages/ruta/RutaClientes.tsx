@@ -38,22 +38,21 @@ export default function RutaClientes() {
   const [visited, setVisited] = useState<Set<string>>(getVisitedSet);
   const { mutate: offlineMutate } = useOfflineMutation();
 
-  // Sync visited set from localStorage on mount AND when navigating back
+  // Sync visited set from localStorage on mount, navigation back, and focus
   useEffect(() => {
     setVisited(getVisitedSet());
+  }, [location.key]);
+
+  useEffect(() => {
     const onFocus = () => setVisited(getVisitedSet());
     window.addEventListener('focus', onFocus);
-    // Also listen for visibility change (covers mobile tab switches & navigation)
     const onVisible = () => {
       if (document.visibilityState === 'visible') setVisited(getVisitedSet());
     };
     document.addEventListener('visibilitychange', onVisible);
-    // Also listen for popstate (back/forward navigation)
-    window.addEventListener('popstate', onFocus);
     return () => {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('popstate', onFocus);
     };
   }, []);
 
