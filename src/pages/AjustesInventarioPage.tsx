@@ -493,8 +493,10 @@ export default function AjustesInventarioPage() {
                         key={row.id}
                         className={row.touched && diff !== 0 ? 'bg-primary/5' : ''}
                       >
-                        <TableCell className="font-mono text-xs text-muted-foreground">{row.codigo}</TableCell>
-                        <TableCell className="text-sm">{row.nombre}</TableCell>
+                         <TableCell className="font-mono text-xs text-muted-foreground">{row.codigo}</TableCell>
+                         <TableCell className="text-sm">{row.nombre}</TableCell>
+                         <TableCell className="text-xs text-muted-foreground">{row.unidad}</TableCell>
+                         <TableCell className="text-xs text-muted-foreground truncate max-w-[140px]">{row.clasificacionNombre || '—'}</TableCell>
                         <TableCell className="text-right font-mono text-sm">{row.cantidadSistema}</TableCell>
                         <TableCell className="text-right">
                           <Input
