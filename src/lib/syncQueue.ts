@@ -142,14 +142,27 @@ async function processItem(item: SyncQueueItem) {
 
   switch (operation) {
     case 'insert': {
-      const { error } = await (supabase.from as any)(table).upsert(cleanData);
+      const { data: returned, error } = await (supabase.from as any)(table).upsert(cleanData).select();
       if (error) throw error;
+      // Update local cache with server-generated fields (folio, codigo, etc.)
+      if (returned && returned.length > 0) {
+        const localTable = getOfflineTable(table);
+        if (localTable) {
+          await localTable.put(returned[0]);
+        }
+      }
       break;
     }
     case 'update': {
       const { [keyField]: _, ...updateData } = cleanData;
-      const { error } = await (supabase.from as any)(table).update(updateData).eq(keyField, keyValue);
+      const { data: returned, error } = await (supabase.from as any)(table).update(updateData).eq(keyField, keyValue).select();
       if (error) throw error;
+      if (returned && returned.length > 0) {
+        const localTable = getOfflineTable(table);
+        if (localTable) {
+          await localTable.put(returned[0]);
+        }
+      }
       break;
     }
     case 'delete': {
