@@ -1340,6 +1340,10 @@ export default function RutaNuevaVenta() {
                 Guardar sin cobrar
               </button>
             )}
+            <button onClick={() => navigate(-1)}
+              className="w-full bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+              Cancelar
+            </button>
           </div>
         </div>
       )}
