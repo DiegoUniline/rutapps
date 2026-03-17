@@ -20,7 +20,27 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.getRegistration().then((registration) => {
       if (!registration) return;
+      // Check for updates every 60s
       setInterval(() => registration.update(), 60_000);
+
+      // When a new SW is waiting, show update banner
+      const showUpdateBanner = () => {
+        window.dispatchEvent(new Event('uniline:sw-update-available'));
+      };
+
+      if (registration.waiting) {
+        showUpdateBanner();
+      }
+
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBanner();
+          }
+        });
+      });
     });
 
     let refreshing = false;

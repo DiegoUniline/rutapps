@@ -103,6 +103,9 @@ export function useNetworkStatus() {
         const isVerified = await verifySyncedItems(empresa.id);
         setVerified(isVerified);
       }
+
+      // Notify all useOfflineQuery hooks to refetch (folios, server-generated fields)
+      window.dispatchEvent(new Event('uniline:sync-complete'));
     } catch (err) {
       console.error('Sync error:', err);
     } finally {
