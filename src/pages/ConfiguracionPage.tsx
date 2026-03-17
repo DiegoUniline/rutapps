@@ -386,6 +386,9 @@ export default function ConfiguracionPage() {
             className="input-odoo min-h-[70px] text-[13px] w-full"
           />
         </div>
+
+        {/* Cambiar contraseña */}
+        <ChangePasswordCard />
       </div>
 
       {/* Right: Live Preview */}
