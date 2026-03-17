@@ -197,6 +197,13 @@ export function usePermisos(): UsePermisosReturn {
 
   useEffect(() => { load(); }, [load]);
 
+  // Re-load when permissions are changed from UsuariosPage
+  useEffect(() => {
+    const handler = () => load();
+    window.addEventListener('uniline:permisos-changed', handler);
+    return () => window.removeEventListener('uniline:permisos-changed', handler);
+  }, [load]);
+
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
     if (hasRole === false) return true; // no role = owner = full access
     if (hasRole === null) return false; // loading

@@ -105,6 +105,8 @@ export default function UsuariosPage() {
     load();
   };
 
+  const notifyPermisosChanged = () => window.dispatchEvent(new Event('uniline:permisos-changed'));
+
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
     const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
     if (existing) {
@@ -118,6 +120,7 @@ export default function UsuariosPage() {
         setPermisos(prev => prev.map(p => p.id === tempId ? data : p));
       }
     }
+    notifyPermisosChanged();
   };
 
   const toggleAllGroup = async (roleId: string, group: string) => {
@@ -154,6 +157,7 @@ export default function UsuariosPage() {
       }
     }
     load(false);
+    notifyPermisosChanged();
   };
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
@@ -183,6 +187,7 @@ export default function UsuariosPage() {
       }
     }
     load(false);
+    notifyPermisosChanged();
   };
 
   // ── User edit ──
