@@ -31,7 +31,129 @@ const statusSteps = [
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-export default function ClienteFormPage() {
+/* ── Precios tab component ─────────────────────── */
+function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; listaPrecioId?: string }) {
+  const [search, setSearch] = useState('');
+
+  const { data: productos } = useQuery({
+    queryKey: ['productos_precios_cliente', tarifaId, listaPrecioId],
+    enabled: !!tarifaId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data: lineas } = await supabase.from('tarifa_lineas')
+        .select('*, tarifas(id, nombre), lista_precios(id, nombre, es_principal)')
+        .eq('tarifa_id', tarifaId!);
+
+      const { data: prods } = await supabase.from('productos')
+        .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status')
+        .eq('status', 'activo')
+        .order('nombre');
+
+      if (!prods || !lineas) return [];
+
+      const filteredLineas = listaPrecioId
+        ? lineas.filter((l: any) => l.lista_precio_id === listaPrecioId)
+        : lineas;
+
+      return prods.map(p => {
+        const rule = filteredLineas.find((l: any) =>
+          l.aplica_a === 'producto' && (l.producto_ids ?? []).includes(p.id)
+        ) ?? filteredLineas.find((l: any) =>
+          l.aplica_a === 'categoria' && (l.clasificacion_ids ?? []).includes(p.clasificacion_id)
+        ) ?? filteredLineas.find((l: any) =>
+          l.aplica_a === 'todos'
+        );
+
+        if (!rule) return { ...p, precio_lista: p.precio_principal, regla: null, comision_pct: 0 };
+
+        let precio = 0;
+        if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'margen_costo') precio = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'descuento_precio') precio = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
+
+        return {
+          ...p,
+          precio_lista: precio,
+          regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
+          comision_pct: rule.comision_pct ?? 0,
+        };
+      });
+    },
+  });
+
+  if (!tarifaId) {
+    return (
+      <p className="text-[12px] text-muted-foreground text-center py-8 border border-dashed border-border rounded-md">
+        Selecciona una tarifa en la pestaña Comercial para ver los precios que aplican a este cliente.
+      </p>
+    );
+  }
+
+  const filtered = (productos ?? []).filter(p =>
+    !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            className="w-full bg-background rounded-md pl-8 pr-3 py-1.5 text-[12px] border border-input text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+            placeholder="Buscar producto..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
+      </div>
+      <div className="overflow-x-auto border border-border rounded">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/30">
+              <th className="th-odoo text-left">Código</th>
+              <th className="th-odoo text-left">Producto</th>
+              <th className="th-odoo text-right">Costo</th>
+              <th className="th-odoo text-right">Precio base</th>
+              <th className="th-odoo text-right">Precio lista</th>
+              <th className="th-odoo text-left">Regla</th>
+              <th className="th-odoo text-right">Ganancia</th>
+              <th className="th-odoo text-right">Margen %</th>
+              <th className="th-odoo text-right">Comisión %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.slice(0, 200).map(p => {
+              const ganancia = p.precio_lista - p.costo;
+              const margen = p.costo > 0 ? (ganancia / p.costo) * 100 : 0;
+              return (
+                <tr key={p.id} className="border-b border-border/40 hover:bg-muted/20">
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
+                  <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground">{p.regla ?? '—'}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
+                </tr>
+              );
+            })}
+            {filtered.length === 0 && (
+              <tr><td colSpan={9} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {filtered.length > 200 && (
+        <p className="text-[11px] text-muted-foreground mt-2">Mostrando 200 de {filtered.length}. Usa el buscador para filtrar.</p>
+      )}
+    </div>
+  );
+}
+
+
   const { id } = useParams();
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
