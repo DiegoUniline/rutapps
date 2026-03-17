@@ -257,6 +257,7 @@ export default function InventarioPage() {
               <TableRow>
                 <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
                 <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
+                <TableHead className="text-[11px] text-center">Ud.</TableHead>
                 <TableHead className="text-[11px] text-center">
                   <Warehouse className="h-3 w-3 inline mr-0.5" />Almacén
                 </TableHead>
@@ -275,7 +276,8 @@ export default function InventarioPage() {
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
-                  <TableCell className="text-center">{p.stockAlmacen} {(p.unidades as any)?.abreviatura ?? ''}</TableCell>
+                  <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
+                  <TableCell className="text-center">{p.stockAlmacen}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const qty = r.stockByProduct[p.id] ?? 0;
                     return (
@@ -291,7 +293,7 @@ export default function InventarioPage() {
               ))}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
+                  <TableCell colSpan={3} className="sticky left-0 bg-muted/50">Totales</TableCell>
                   <TableCell className="text-center">{data.totales.stockAlmacen}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
