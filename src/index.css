@@ -379,3 +379,16 @@
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
+@keyframes banner-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes banner-pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.animate-banner-pulse {
+  animation: banner-pulse-glow 1.5s ease-in-out infinite;
+}
