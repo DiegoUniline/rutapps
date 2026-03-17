@@ -65,6 +65,7 @@ export default function MobileLayout() {
         </div>
       </header>
 
+      <UpdateBanner />
       <OfflineBanner />
 
       {/* Content area */}
