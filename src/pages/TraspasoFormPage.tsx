@@ -93,7 +93,7 @@ export default function TraspasoFormPage() {
   };
 
   const readOnly = !isNew && status !== 'borrador';
-
+  const isCancelled = status === 'cancelado';
   // Fetch existing traspaso
   const { data: existing, isLoading } = useQuery({
     queryKey: ['traspaso', id],
