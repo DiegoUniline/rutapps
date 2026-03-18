@@ -309,7 +309,7 @@ export default function UsuariosPage() {
           {showNewUser && (
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Crear nuevo usuario</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="label-odoo">Nombre</label>
                   <input className="input-odoo" value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} placeholder="Nombre completo" />
@@ -321,6 +321,13 @@ export default function UsuariosPage() {
                 <div>
                   <label className="label-odoo">Contraseña inicial</label>
                   <input className="input-odoo" type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
+                </div>
+                <div>
+                  <label className="label-odoo">Rol <span className="text-destructive">*</span></label>
+                  <select className="input-odoo" value={newUser.role_id} onChange={e => setNewUser({ ...newUser, role_id: e.target.value })}>
+                    <option value="">Seleccionar rol...</option>
+                    {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="flex gap-2">
