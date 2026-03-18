@@ -507,31 +507,137 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </CardContent>
           </Card>
 
-          {/* Timbres */}
+          {/* Timbres CFDI — Sales Panel */}
           <Card className="border border-border/60 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Saldo actual</span>
-                <span className={`text-lg font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
+                </CardTitle>
+                <Button size="sm" variant="outline" onClick={() => setShowTimbresSale(!showTimbresSale)}>
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Nueva venta
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Saldo */}
+              <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
+                <span className="text-sm text-muted-foreground">Saldo actual</span>
+                <span className={`text-2xl font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
                   {timbres}
                 </span>
               </div>
-              <Separator />
-              <div className="flex gap-2">
-                <Input
-                  type="number" min="1" value={timbresCantidad}
-                  onChange={e => setTimbresCantidad(e.target.value)}
-                  className="h-8 text-sm font-mono flex-1"
-                  placeholder="Cantidad"
-                />
-                <Button size="sm" disabled={addingTimbres} onClick={handleAddTimbres}>
-                  {addingTimbres ? '...' : `+${timbresCantidad}`}
-                </Button>
+
+              {/* Sale Form */}
+              {showTimbresSale && (
+                <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-muted/10">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1">
+                    <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Registrar venta de timbres
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Paquetes (×100)</Label>
+                      <Input type="number" min={1} value={timbresForm.paquetes}
+                        onChange={e => setTimbresForm(f => ({ ...f, paquetes: parseInt(e.target.value) || 1 }))}
+                        className="h-8 text-sm font-mono" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Precio/timbre</Label>
+                      <Input type="number" min={0} step={0.5} value={timbresForm.precio_timbre}
+                        onChange={e => setTimbresForm(f => ({ ...f, precio_timbre: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-sm font-mono" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1">
+                      <Percent className="h-3 w-3" /> Descuento (%)
+                    </Label>
+                    <Input type="number" min={0} max={100} value={timbresForm.descuento_pct}
+                      onChange={e => setTimbresForm(f => ({ ...f, descuento_pct: parseFloat(e.target.value) || 0 }))}
+                      className="h-8 text-sm font-mono" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Notas</Label>
+                    <Textarea value={timbresForm.notas}
+                      onChange={e => setTimbresForm(f => ({ ...f, notas: e.target.value }))}
+                      className="text-sm resize-none h-16" placeholder="Notas de la venta..." />
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-background border border-border/40 rounded-lg p-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{timbresCount} timbres × ${timbresForm.precio_timbre}</span>
+                      <span>{fmtMXN(timbresSubtotal)}</span>
+                    </div>
+                    {timbresForm.descuento_pct > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span>Descuento ({timbresForm.descuento_pct}%)</span>
+                        <span>-{fmtMXN(timbresDescuento)}</span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between font-bold">
+                      <span>Total</span>
+                      <span>{fmtMXN(timbresTotal)}</span>
+                    </div>
+                  </div>
+
+                  {/* Generate invoice checkbox */}
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="generar-factura"
+                      checked={timbresForm.generar_factura}
+                      onCheckedChange={v => setTimbresForm(f => ({ ...f, generar_factura: !!v }))}
+                    />
+                    <Label htmlFor="generar-factura" className="text-xs cursor-pointer">
+                      Generar factura Stripe y enviar por correo
+                    </Label>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowTimbresSale(false)}>
+                      Cancelar
+                    </Button>
+                    <Button size="sm" className="flex-1" disabled={addingTimbres} onClick={handleTimbresSale}>
+                      {addingTimbres ? 'Procesando...' : `Vender ${timbresCount} timbres`}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Historial de movimientos */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                  <History className="h-3.5 w-3.5" /> Historial de movimientos
+                </p>
+                {timbresMovimientos.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-2">Sin movimientos</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-[250px] overflow-y-auto">
+                    {timbresMovimientos.map(m => (
+                      <div key={m.id} className="flex items-start justify-between border border-border/30 rounded p-2 text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant={m.tipo === 'compra' || m.tipo === 'recarga' ? 'default' : 'secondary'} className="text-[10px] h-4">
+                              {m.tipo === 'compra' ? '🛒 Compra' : m.tipo === 'consumo' ? '📄 Uso' : m.tipo === 'recarga' ? '🔄 Recarga' : m.tipo}
+                            </Badge>
+                            <span className={`font-mono font-semibold ${m.cantidad >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                              {m.cantidad >= 0 ? '+' : ''}{m.cantidad}
+                            </span>
+                          </div>
+                          {m.notas && <p className="text-muted-foreground mt-0.5 truncate">{m.notas}</p>}
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="font-mono text-muted-foreground">→ {m.saldo_nuevo}</p>
+                          <p className="text-muted-foreground">{format(new Date(m.created_at), 'dd/MM/yy HH:mm')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
