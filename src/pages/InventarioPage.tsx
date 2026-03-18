@@ -29,6 +29,20 @@ function useInventarioData() {
         .eq('status', 'activo')
         .order('nombre');
 
+      // Almacenes
+      const { data: almacenes } = await supabase
+        .from('almacenes')
+        .select('id, nombre')
+        .eq('empresa_id', eid)
+        .eq('activo', true)
+        .order('nombre');
+
+      // Per-warehouse stock
+      const { data: stockAlmacenData } = await supabase
+        .from('stock_almacen')
+        .select('almacen_id, producto_id, cantidad')
+        .eq('empresa_id', eid);
+
       // Active cargas (en_ruta) with their lines
       const { data: cargas } = await supabase
         .from('cargas')

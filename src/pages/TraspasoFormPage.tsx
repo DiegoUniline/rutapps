@@ -490,6 +490,21 @@ export default function TraspasoFormPage() {
         for (const l of tLineas ?? []) {
           // Reverse: add back to origin
           if (traspaso.almacen_origen_id) {
+            // Restore stock_almacen at origin
+            const { data: saO } = await supabase.from('stock_almacen')
+              .select('id, cantidad')
+              .eq('almacen_id', traspaso.almacen_origen_id)
+              .eq('producto_id', l.producto_id)
+              .maybeSingle();
+            if (saO) {
+              await supabase.from('stock_almacen').update({ cantidad: (saO.cantidad ?? 0) + Number(l.cantidad), updated_at: new Date().toISOString() } as any).eq('id', saO.id);
+            } else {
+              await supabase.from('stock_almacen').insert({
+                empresa_id: empresa!.id, almacen_id: traspaso.almacen_origen_id,
+                producto_id: l.producto_id, cantidad: Number(l.cantidad),
+              } as any);
+            }
+            // Restore global stock
             const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
             await supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
             await supabase.from('movimientos_inventario').insert({
@@ -516,6 +531,16 @@ export default function TraspasoFormPage() {
 
           // Reverse: subtract from destination
           if (traspaso.almacen_destino_id) {
+            // Deduct stock_almacen at destination
+            const { data: saD } = await supabase.from('stock_almacen')
+              .select('id, cantidad')
+              .eq('almacen_id', traspaso.almacen_destino_id)
+              .eq('producto_id', l.producto_id)
+              .maybeSingle();
+            if (saD) {
+              await supabase.from('stock_almacen').update({ cantidad: Math.max(0, (saD.cantidad ?? 0) - Number(l.cantidad)), updated_at: new Date().toISOString() } as any).eq('id', saD.id);
+            }
+            // Deduct global stock
             const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
             await supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
             await supabase.from('movimientos_inventario').insert({
