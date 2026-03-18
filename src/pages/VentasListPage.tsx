@@ -60,6 +60,7 @@ export default function VentasListPage() {
   const { profile, empresa } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { fmt: fmtCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [tipoFilter, setTipoFilter] = useState('todos');
