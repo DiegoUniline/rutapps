@@ -53,6 +53,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function VentasListPage() {
+  const { profile, empresa } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
