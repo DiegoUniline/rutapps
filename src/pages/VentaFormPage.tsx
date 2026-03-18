@@ -701,7 +701,12 @@ export default function VentaFormPage() {
                     onChange={cId => {
                       set('cliente_id', cId);
                       const c = clientesList?.find(cl => cl.id === cId);
-                      if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
+                      // Always set tarifa from client; fall back to first 'general' tarifa
+                      const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
+                      if (clienteTarifa) set('tarifa_id', clienteTarifa);
+                      // Set lista_precio from client
+                      if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
+                      else set('lista_precio_id', null);
                       // Inherit requiere_factura from client
                       if (c?.requiere_factura) set('requiere_factura', true);
                     }}
