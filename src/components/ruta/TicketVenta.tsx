@@ -258,7 +258,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   )}
                   <div className="flex justify-between text-[11px] font-bold pt-1 border-t border-dashed border-border">
                     <span className="text-foreground">Nuevo saldo</span>
-                    <span className={`tabular-nums ${(saldoNuevo ?? 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>${fmt(saldoNuevo ?? 0)}</span>
+                    <span className={`tabular-nums ${(saldoNuevo ?? 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>{fmt(saldoNuevo ?? 0)}</span>
                   </div>
                 </div>
               </>
