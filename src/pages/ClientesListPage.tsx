@@ -9,8 +9,10 @@ import { OdooPagination } from '@/components/OdooPagination';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { MobileListCard } from '@/components/MobileListCard';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useClientes } from '@/hooks/useClientes';
+import { useIsMobile } from '@/hooks/use-mobile';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
@@ -33,6 +35,7 @@ const PAGE_SIZE = 80;
 
 function ClientesTable() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -77,21 +80,25 @@ function ClientesTable() {
           />
         </OdooFilterBar>
         <div className="flex items-center gap-2 shrink-0">
-          <ExportButton
-            onExcel={() => exportToExcel({
-              fileName: 'Clientes', title: 'Catálogo de Clientes',
-              columns: CLIENTES_COLUMNS,
-              data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
-            })}
-            onPDF={() => exportToPDF({
-              fileName: 'Clientes', title: 'Catálogo de Clientes',
-              columns: CLIENTES_COLUMNS,
-              data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
-            })}
-          />
-          <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
-            <Upload className="h-3.5 w-3.5" /> Importar
-          </button>
+          {!isMobile && (
+            <>
+              <ExportButton
+                onExcel={() => exportToExcel({
+                  fileName: 'Clientes', title: 'Catálogo de Clientes',
+                  columns: CLIENTES_COLUMNS,
+                  data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+                })}
+                onPDF={() => exportToPDF({
+                  fileName: 'Clientes', title: 'Catálogo de Clientes',
+                  columns: CLIENTES_COLUMNS,
+                  data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+                })}
+              />
+              <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
+                <Upload className="h-3.5 w-3.5" /> Importar
+              </button>
+            </>
+          )}
           <button onClick={() => navigate('/clientes/nuevo')} className="btn-odoo-primary shrink-0">
             <Plus className="h-3.5 w-3.5" /> Nuevo
           </button>
@@ -99,71 +106,85 @@ function ClientesTable() {
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} type="clientes" />
       </div>
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
-        {isLoading ? (
-          <div className="p-4"><TableSkeleton rows={8} cols={7} /></div>
-        ) : (
-          <>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-table-border">
-                  <th className="th-odoo w-10 text-center">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
-                  </th>
-                  <th className="th-odoo text-left">Código</th>
-                  <th className="th-odoo text-left">Nombre</th>
-                  <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
-                  <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
-                  <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
-                  <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
-                  <th className="th-odoo text-center">Status</th>
+      {isLoading ? (
+        <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 7} /></div>
+      ) : isMobile ? (
+        <div className="space-y-2">
+          {pageData.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</div>
+          )}
+          {pageData.map(c => (
+            <MobileListCard
+              key={c.id}
+              title={c.nombre}
+              subtitle={c.codigo ?? undefined}
+              badge={<StatusChip status={c.status ?? 'activo'} />}
+              onClick={() => navigate(`/clientes/${c.id}`)}
+              fields={[
+                ...(c.telefono ? [{ label: 'Tel', value: c.telefono }] : []),
+                ...(c.contacto ? [{ label: 'Contacto', value: c.contacto }] : []),
+                ...((c as any).zonas?.nombre ? [{ label: 'Zona', value: (c as any).zonas.nombre }] : []),
+                ...((c as any).vendedores?.nombre ? [{ label: 'Vendedor', value: (c as any).vendedores.nombre }] : []),
+              ]}
+            />
+          ))}
+          {total > 0 && (
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+          )}
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-table-border">
+                <th className="th-odoo w-10 text-center">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+                </th>
+                <th className="th-odoo text-left">Código</th>
+                <th className="th-odoo text-left">Nombre</th>
+                <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
+                <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
+                <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
+                <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
+                <th className="th-odoo text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageData.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {pageData.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">
-                      No hay clientes. Crea el primero.
-                    </td>
-                  </tr>
-                )}
-                {pageData.map(c => (
-                  <tr
-                    key={c.id}
-                    className={cn(
-                      "border-b border-table-border cursor-pointer transition-colors",
-                      selected.has(c.id) ? "bg-primary/5" : "hover:bg-table-hover"
-                    )}
-                    onClick={() => navigate(`/clientes/${c.id}`)}
-                  >
-                    <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
-                      <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
-                    </td>
-                    <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
-                    <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
-                    <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
-                    <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
-                    <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 text-center">
-                      <StatusChip status={c.status ?? 'activo'} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {total > 0 && (
-              <OdooPagination
-                from={from}
-                to={to}
-                total={total}
-                onPrev={() => setPage(p => Math.max(1, p - 1))}
-                onNext={() => setPage(p => p + 1)}
-              />
-            )}
-          </>
-        )}
-      </div>
+              )}
+              {pageData.map(c => (
+                <tr
+                  key={c.id}
+                  className={cn(
+                    "border-b border-table-border cursor-pointer transition-colors",
+                    selected.has(c.id) ? "bg-primary/5" : "hover:bg-table-hover"
+                  )}
+                  onClick={() => navigate(`/clientes/${c.id}`)}
+                >
+                  <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
+                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
+                  </td>
+                  <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
+                  <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
+                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
+                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
+                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{(c as any).zonas?.nombre ?? '—'}</td>
+                  <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{(c as any).vendedores?.nombre ?? '—'}</td>
+                  <td className="py-1.5 px-3 text-center">
+                    <StatusChip status={c.status ?? 'activo'} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {total > 0 && (
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
