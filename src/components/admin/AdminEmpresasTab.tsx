@@ -13,6 +13,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface ProfileRow {
+  nombre: string | null;
+  user_id: string;
+}
+
 interface SubRow {
   status: string | null;
   max_usuarios: number | null;
@@ -26,6 +31,7 @@ interface EmpresaRow {
   id: string; nombre: string; email: string | null; telefono: string | null; created_at: string;
   timbres_saldo?: { saldo: number }[];
   subscriptions?: SubRow[];
+  profiles?: ProfileRow[];
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
@@ -52,7 +58,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   async function load() {
     const { data } = await supabase
       .from('empresas')
-      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, plan_id)');
+      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, plan_id), profiles(nombre, user_id)');
     setEmpresas((data as any) || []);
     setLoading(false);
   }
@@ -131,11 +137,13 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                     const statusInfo = STATUS_MAP[status];
                     const hasStripeCustomer = !!sub?.stripe_customer_id;
                     const hasStripeSub = !!sub?.stripe_subscription_id;
+                    const usersCount = e.profiles?.length || 0;
 
                     return (
                       <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectEmpresa?.(e.id)}>
                         <TableCell>
                           <div className="font-medium">{e.nombre}</div>
+                          <div className="text-[10px] text-muted-foreground">{usersCount} usuario{usersCount !== 1 ? 's' : ''}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-xs space-y-0.5">

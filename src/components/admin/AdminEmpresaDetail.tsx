@@ -43,6 +43,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [timbres, setTimbres] = useState(0);
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [usersDetailed, setUsersDetailed] = useState<any[]>([]);
   const [stripeInvoices, setStripeInvoices] = useState<any[]>([]);
   const [timbresMovimientos, setTimbresMovimientos] = useState<any[]>([]);
 
@@ -111,6 +112,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
       });
     }
+
+    // Load detailed users via edge function
+    try {
+      const { data: usersData, error: usersErr } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'list-empresa-users', empresa_id: empresaId },
+      });
+      if (!usersErr && usersData?.users) setUsersDetailed(usersData.users);
+    } catch { /* silent */ }
 
     // Try loading Stripe invoices
     try {
@@ -351,16 +360,34 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             {/* Users */}
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" /> Usuarios ({profiles.length})
+                <Users className="h-3.5 w-3.5" /> Usuarios ({usersDetailed.length || profiles.length})
               </p>
-              {profiles.length === 0 ? (
+              {(usersDetailed.length > 0 ? usersDetailed : profiles).length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sin usuarios</p>
+              ) : usersDetailed.length > 0 ? (
+                <div className="space-y-2">
+                  {usersDetailed.map((u: any) => (
+                    <div key={u.id} className="rounded-lg border border-border/60 p-2.5 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground">{u.nombre || 'Sin nombre'}</span>
+                        <Badge variant="outline" className="text-[10px] h-5">{u.rol || 'Sin rol'}</Badge>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{u.email}</span>
+                        {u.telefono && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{u.telefono}</span>}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        Último acceso: {u.last_sign_in_at ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es }) : 'Nunca'}
+                        {' · '}Registro: {format(new Date(u.created_at), 'dd MMM yyyy', { locale: es })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="space-y-1.5">
                   {profiles.map(p => (
                     <div key={p.id} className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
-                      <Badge variant="outline" className="text-[10px] h-5">{p.rol || 'usuario'}</Badge>
                     </div>
                   ))}
                 </div>
