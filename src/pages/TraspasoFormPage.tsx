@@ -491,6 +491,8 @@ export default function TraspasoFormPage() {
         qc.refetchQueries({ queryKey: ['productos'] }),
         qc.refetchQueries({ queryKey: ['productos-select'] }),
         qc.refetchQueries({ queryKey: ['stock-camion'] }),
+        qc.refetchQueries({ queryKey: ['stock-almacen-origen'] }),
+        qc.refetchQueries({ queryKey: ['inventario-dashboard'] }),
       ]);
     },
     onError: (err: any) => toast.error(err.message),
