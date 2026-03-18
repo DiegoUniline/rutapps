@@ -37,9 +37,7 @@ const CHART_COLORS = [
   'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#f97316', '#06b6d4', '#8b5cf6'
 ];
 
-function money(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-}
+// money is now defined inside the component to use useCurrency hook
 
 function KpiCard({ title, value, subtitle, icon: Icon, trend, color }: {
   title: string; value: string; subtitle?: string; icon: React.ElementType; trend?: number; color: string;
