@@ -567,6 +567,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
         <UnilineFooter />
       </div>
+      </div>
+      <NotificationRuntime overlaysOnly />
     </div>
   );
 }
