@@ -3,14 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, Plus, Check, FileText } from 'lucide-react';
-import { OdooStatusbar } from '@/components/OdooStatusbar';
+import { ArrowLeft, Save, Trash2, Plus, Check, FileText, Ban } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { generarTraspasoPdf } from '@/lib/traspasoPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -20,10 +23,11 @@ const TIPO_LABELS: Record<string, string> = {
   ruta_almacen: 'Ruta → Almacén',
 };
 
-const STEPS = [
-  { key: 'borrador', label: 'Borrador' },
-  { key: 'confirmado', label: 'Confirmado' },
-];
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  borrador: { label: 'Borrador', color: 'bg-muted text-muted-foreground' },
+  confirmado: { label: 'Confirmado', color: 'bg-primary text-primary-foreground' },
+  cancelado: { label: 'Cancelado', color: 'bg-destructive text-destructive-foreground' },
+};
 
 interface LineaForm {
   id?: string;
@@ -54,6 +58,7 @@ export default function TraspasoFormPage() {
   const [dirty, setDirty] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
 
   const handleGenerarPdf = () => {
     const blob = generarTraspasoPdf({
@@ -88,7 +93,7 @@ export default function TraspasoFormPage() {
   };
 
   const readOnly = !isNew && status !== 'borrador';
-
+  const isCancelled = status === 'cancelado';
   // Fetch existing traspaso
   const { data: existing, isLoading } = useQuery({
     queryKey: ['traspaso', id],
@@ -432,10 +437,102 @@ export default function TraspasoFormPage() {
     onSuccess: () => {
       toast.success('Traspaso confirmado — stock actualizado');
       setStatus('confirmado');
-      qc.invalidateQueries({ queryKey: ['traspasos'] });
-      qc.invalidateQueries({ queryKey: ['traspaso', id] });
-      qc.invalidateQueries({ queryKey: ['productos'] });
-      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      Promise.all([
+        qc.refetchQueries({ queryKey: ['traspasos'] }),
+        qc.refetchQueries({ queryKey: ['traspaso', id] }),
+        qc.refetchQueries({ queryKey: ['productos'] }),
+        qc.refetchQueries({ queryKey: ['productos-select'] }),
+        qc.refetchQueries({ queryKey: ['stock-camion'] }),
+      ]);
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Cancel mutation (reverses stock)
+  const cancelarMut = useMutation({
+    mutationFn: async () => {
+      const traspasoId = id!;
+      const { data: traspaso } = await supabase.from('traspasos').select('*').eq('id', traspasoId).single();
+      if (!traspaso) throw new Error('Traspaso no encontrado');
+
+      // Only reverse stock if it was confirmed (stock was already moved)
+      if (traspaso.status === 'confirmado') {
+        const { data: tLineas } = await supabase.from('traspaso_lineas').select('*').eq('traspaso_id', traspasoId);
+        const today = new Date().toISOString().slice(0, 10);
+
+        for (const l of tLineas ?? []) {
+          // Reverse: add back to origin
+          if (traspaso.almacen_origen_id) {
+            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+            await supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
+              cantidad: l.cantidad, almacen_destino_id: traspaso.almacen_origen_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
+            } as any);
+          }
+
+          if (traspaso.vendedor_origen_id) {
+            await supabase.from('stock_camion').insert({
+              empresa_id: empresa!.id, vendedor_id: traspaso.vendedor_origen_id,
+              producto_id: l.producto_id, cantidad_inicial: l.cantidad,
+              cantidad_actual: l.cantidad, fecha: today,
+            } as any);
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
+              cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_origen_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (devuelto a ruta)`,
+            } as any);
+          }
+
+          // Reverse: subtract from destination
+          if (traspaso.almacen_destino_id) {
+            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+            await supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
+              cantidad: l.cantidad, almacen_origen_id: traspaso.almacen_destino_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
+            } as any);
+          }
+
+          if (traspaso.vendedor_destino_id) {
+            const { data: sc } = await supabase.from('stock_camion')
+              .select('id, cantidad_actual')
+              .eq('vendedor_id', traspaso.vendedor_destino_id)
+              .eq('producto_id', l.producto_id)
+              .gt('cantidad_actual', 0)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            if (sc) {
+              await supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - Number(l.cantidad)) } as any).eq('id', sc.id);
+            }
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
+              cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_destino_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (retirado de ruta)`,
+            } as any);
+          }
+        }
+      }
+
+      await supabase.from('traspasos').update({ status: 'cancelado' } as any).eq('id', traspasoId);
+    },
+    onSuccess: () => {
+      toast.success('Traspaso cancelado — stock revertido');
+      setStatus('cancelado');
+      Promise.all([
+        qc.refetchQueries({ queryKey: ['traspasos'] }),
+        qc.refetchQueries({ queryKey: ['traspaso', id] }),
+        qc.refetchQueries({ queryKey: ['productos'] }),
+        qc.refetchQueries({ queryKey: ['productos-select'] }),
+        qc.refetchQueries({ queryKey: ['stock-camion'] }),
+      ]);
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -477,14 +574,37 @@ export default function TraspasoFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!isNew && status === 'borrador' && (
-            <button onClick={() => confirmarMut.mutate()} disabled={confirmarMut.isPending} className="btn-odoo-primary">
-              <Check className="h-3.5 w-3.5" /> Confirmar
-            </button>
-          )}
           {!readOnly && (
             <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-odoo-primary">
               <Save className="h-3.5 w-3.5" /> Guardar
+            </button>
+          )}
+          {!isNew && status === 'borrador' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true, action: 'confirmar',
+                title: 'Confirmar traspaso',
+                description: '¿Confirmar este traspaso? Se moverá el stock del origen al destino.',
+              })}
+              disabled={confirmarMut.isPending}
+              className="btn-odoo-primary bg-green-600 hover:bg-green-700 border-green-600"
+            >
+              <Check className="h-3.5 w-3.5" /> Confirmar
+            </button>
+          )}
+          {!isNew && status !== 'cancelado' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true, action: 'cancelar',
+                title: 'Cancelar traspaso',
+                description: status === 'confirmado'
+                  ? '¿Cancelar este traspaso? Se revertirá todo el stock movido.'
+                  : '¿Cancelar este traspaso?',
+              })}
+              disabled={cancelarMut.isPending}
+              className="btn-odoo-secondary text-destructive"
+            >
+              <Ban className="h-3.5 w-3.5" /> Cancelar
             </button>
           )}
           {!isNew && (
@@ -500,10 +620,20 @@ export default function TraspasoFormPage() {
         </div>
       </div>
 
-      {/* Status bar */}
+      {/* Status chips */}
       {!isNew && (
-        <div className="px-5 pt-3">
-          <OdooStatusbar steps={STEPS} current={status} />
+        <div className="px-5 pt-3 flex gap-1.5">
+          {Object.entries(STATUS_LABELS).map(([key, cfg]) => (
+            <span
+              key={key}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                status === key ? cfg.color : "bg-muted/40 text-muted-foreground/50"
+              )}
+            >
+              {cfg.label}
+            </span>
+          ))}
         </div>
       )}
 
@@ -718,6 +848,29 @@ export default function TraspasoFormPage() {
         tipo="traspaso"
         referencia_id={id}
       />
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmDialog?.open} onOpenChange={open => { if (!open) setConfirmDialog(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, volver</AlertDialogCancel>
+            <AlertDialogAction
+              className={confirmDialog?.action === 'cancelar' ? 'bg-destructive hover:bg-destructive/90' : ''}
+              onClick={() => {
+                if (confirmDialog?.action === 'confirmar') confirmarMut.mutate();
+                else if (confirmDialog?.action === 'cancelar') cancelarMut.mutate();
+                setConfirmDialog(null);
+              }}
+            >
+              {confirmDialog?.action === 'cancelar' ? 'Sí, cancelar' : 'Sí, confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
