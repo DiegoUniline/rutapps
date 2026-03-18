@@ -251,16 +251,6 @@ function Breadcrumb() {
 
   if (segments.length <= 1) return null;
 
-  const forceUpdate = () => {
-    navigator.serviceWorker?.getRegistration().then((reg) => {
-      if (reg?.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } else {
-        window.location.reload();
-      }
-    });
-  };
-
   return (
     <div className="h-9 flex items-center justify-between px-5 bg-card border-b border-border text-xs text-muted-foreground">
       <div className="flex items-center gap-1.5">
@@ -280,14 +270,6 @@ function Breadcrumb() {
           );
         })}
       </div>
-      <button
-        onClick={forceUpdate}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm animate-pulse hover:animate-none transition-all"
-        title="Actualizar app (obtener últimos cambios)"
-      >
-        <RefreshCw className="h-3.5 w-3.5" />
-        Actualizar
-      </button>
     </div>
   );
 }
