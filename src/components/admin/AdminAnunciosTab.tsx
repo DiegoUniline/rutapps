@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
-  Bell, Plus, Pencil, Trash2, X, Bold, Italic, Link2, List, ListOrdered,
-  Heading2, Eye, Code, Image, Megaphone, Monitor, MessageCircle, Sparkles,
-  ArrowRight, ExternalLink, EyeOff,
+  Plus, Pencil, Trash2, Megaphone, Monitor, MessageCircle, Sparkles,
+  ArrowRight, ExternalLink, Check, Palette,
 } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -53,37 +52,90 @@ const TYPE_META = {
   },
 } as const;
 
-const emptyForm = (): Partial<AppNotification> => ({
+/* ═══ TEMPLATES ═══ */
+interface Template {
+  id: string;
+  name: string;
+  preview: string; // short visual hint
+  build: (title: string, message: string, cta: string) => string;
+}
+
+const BANNER_TEMPLATES: Template[] = [
+  {
+    id: 'simple', name: 'Simple', preview: '📢 Texto directo',
+    build: (_t, msg) => msg,
+  },
+  {
+    id: 'bold', name: 'Destacado', preview: '🔥 Con negritas',
+    build: (_t, msg) => `<b>${msg}</b>`,
+  },
+  {
+    id: 'emoji_alert', name: 'Alerta', preview: '⚠️ Emoji + texto',
+    build: (_t, msg) => `⚠️ <b>Atención:</b> ${msg}`,
+  },
+  {
+    id: 'promo', name: 'Promo', preview: '🎉 Promoción',
+    build: (_t, msg) => `🎉 <b>¡Oferta!</b> ${msg}`,
+  },
+];
+
+const MODAL_TEMPLATES: Template[] = [
+  {
+    id: 'info', name: 'Informativo', preview: '📋 Clásico',
+    build: (t, msg, cta) =>
+      `<h2 style="margin:0 0 8px">${t}</h2><p>${msg}</p>`,
+  },
+  {
+    id: 'promo_card', name: 'Promoción', preview: '🎁 Oferta especial',
+    build: (t, msg, cta) =>
+      `<div style="text-align:center;padding:8px 0"><p style="font-size:32px;margin:0">🎁</p><h2 style="margin:8px 0 4px">${t}</h2><p style="color:#666">${msg}</p></div>`,
+  },
+  {
+    id: 'warning', name: 'Aviso importante', preview: '⚠️ Llamativo',
+    build: (t, msg) =>
+      `<div style="background:#fef3c7;border-radius:12px;padding:16px;text-align:center"><p style="font-size:28px;margin:0">⚠️</p><h2 style="margin:8px 0 4px">${t}</h2><p style="margin:0;color:#92400e">${msg}</p></div>`,
+  },
+  {
+    id: 'feature', name: 'Nueva función', preview: '✨ Novedad',
+    build: (t, msg) =>
+      `<div style="text-align:center;padding:8px 0"><p style="font-size:32px;margin:0">✨</p><h2 style="margin:8px 0 4px">${t}</h2><p style="color:#666">${msg}</p><ul style="text-align:left;padding-left:20px;margin-top:12px"><li>Mejora en rendimiento</li><li>Nuevas opciones disponibles</li></ul></div>`,
+  },
+];
+
+const BUBBLE_TEMPLATES: Template[] = [
+  {
+    id: 'simple', name: 'Simple', preview: '💬 Básico',
+    build: (_t, msg) => `<p>${msg}</p>`,
+  },
+  {
+    id: 'promo', name: 'Promoción', preview: '🔥 Oferta',
+    build: (_t, msg) => `<p>🔥 <b>¡No te lo pierdas!</b></p><p>${msg}</p>`,
+  },
+  {
+    id: 'tip', name: 'Consejo', preview: '💡 Tip útil',
+    build: (_t, msg) => `<p>💡 <b>Consejo:</b> ${msg}</p>`,
+  },
+  {
+    id: 'update', name: 'Actualización', preview: '🆕 Novedad',
+    build: (_t, msg) => `<p>🆕 ${msg}</p>`,
+  },
+];
+
+function getTemplates(type: string): Template[] {
+  if (type === 'banner') return BANNER_TEMPLATES;
+  if (type === 'modal') return MODAL_TEMPLATES;
+  if (type === 'bubble') return BUBBLE_TEMPLATES;
+  return BANNER_TEMPLATES;
+}
+
+const emptyForm = (): Partial<AppNotification> & { _templateId?: string; _message?: string; _cta?: string } => ({
   title: '', body: '', type: 'banner', is_active: true,
   start_date: new Date().toISOString().slice(0, 16),
   end_date: null, redirect_url: '', redirect_type: null,
   image_url: '', bg_color: '#1e293b', text_color: '#ffffff', max_views: 0,
   empresa_id: null,
+  _templateId: 'simple', _message: '', _cta: '',
 });
-
-/* ─── HTML Toolbar ─── */
-function HtmlToolbar({ onInsert }: { onInsert: (b: string, a: string) => void }) {
-  const tools = [
-    { icon: Bold, b: '<b>', a: '</b>', t: 'Negrita' },
-    { icon: Italic, b: '<i>', a: '</i>', t: 'Cursiva' },
-    { icon: Heading2, b: '<h2>', a: '</h2>', t: 'Encabezado' },
-    { icon: Link2, b: '<a href="URL">', a: '</a>', t: 'Enlace' },
-    { icon: Image, b: '<img src="', a: '" style="max-width:100%;border-radius:8px" />', t: 'Imagen' },
-    { icon: List, b: '<ul>\n  <li>', a: '</li>\n</ul>', t: 'Lista' },
-    { icon: ListOrdered, b: '<ol>\n  <li>', a: '</li>\n</ol>', t: 'Lista numerada' },
-    { icon: Code, b: '<code>', a: '</code>', t: 'Código' },
-  ];
-  return (
-    <div className="flex items-center gap-0.5 border border-border border-b-0 rounded-t-lg bg-muted/30 px-2 py-1.5">
-      {tools.map(({ icon: Icon, b, a, t }) => (
-        <button key={t} type="button" onClick={() => onInsert(b, a)}
-          className="p-1.5 rounded-md hover:bg-muted transition-colors" title={t}>
-          <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /* ─── Live Previews ─── */
 function BannerPreview({ form }: { form: Partial<AppNotification> }) {
@@ -98,7 +150,7 @@ function BannerPreview({ form }: { form: Partial<AppNotification> }) {
         </span>
         <span className="opacity-40 text-xs">•</span>
         {form.body ? (
-          <span className="opacity-90 text-xs" dangerouslySetInnerHTML={{ __html: form.body }} />
+          <span className="opacity-90 text-xs [&_b]:font-semibold" dangerouslySetInnerHTML={{ __html: form.body }} />
         ) : (
           <span className="opacity-50 text-xs">Mensaje del banner...</span>
         )}
@@ -115,7 +167,7 @@ function ModalPreview({ form }: { form: Partial<AppNotification> }) {
       </div>
       <div className="p-4 pt-2">
         {form.image_url && <img src={form.image_url} alt="" className="w-full rounded-xl max-h-28 object-cover mb-3" />}
-        <div className="prose prose-sm dark:prose-invert max-w-none text-xs"
+        <div className="prose prose-sm dark:prose-invert max-w-none text-xs [&_h2]:text-sm [&_h2]:font-bold [&_h2]:mt-0"
           dangerouslySetInnerHTML={{ __html: form.body || '<p class="text-muted-foreground">Contenido...</p>' }} />
       </div>
       <div className="p-3 border-t border-border flex items-center justify-between">
@@ -144,7 +196,7 @@ function BubblePreview({ form }: { form: Partial<AppNotification> }) {
           <span className="text-xs font-bold text-foreground truncate">{form.title || 'Título'}</span>
         </div>
         {form.body && (
-          <div className="px-3.5 pt-0.5 pb-2.5 text-[11px] text-muted-foreground" dangerouslySetInnerHTML={{ __html: form.body }} />
+          <div className="px-3.5 pt-0.5 pb-2.5 text-[11px] text-muted-foreground [&_b]:font-semibold [&_b]:text-foreground" dangerouslySetInnerHTML={{ __html: form.body }} />
         )}
         {form.redirect_url && (
           <div className="px-3.5 pb-3">
@@ -165,9 +217,8 @@ export default function AdminAnunciosTab() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [form, setForm] = useState<Partial<AppNotification>>(emptyForm());
+  const [form, setForm] = useState<ReturnType<typeof emptyForm>>(emptyForm());
   const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -178,18 +229,25 @@ export default function AdminAnunciosTab() {
 
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm(emptyForm()); setSheetOpen(true); setShowPreview(false); };
+  const openNew = () => { setForm(emptyForm()); setSheetOpen(true); };
   const openEdit = (n: AppNotification) => {
-    setForm({ ...n, start_date: n.start_date?.slice(0, 16), end_date: n.end_date?.slice(0, 16) ?? null });
+    setForm({
+      ...n,
+      start_date: n.start_date?.slice(0, 16),
+      end_date: n.end_date?.slice(0, 16) ?? null,
+      _templateId: 'simple',
+      _message: '',
+      _cta: '',
+    });
     setSheetOpen(true);
-    setShowPreview(false);
   };
 
   const handleSave = async () => {
     if (!form.title?.trim()) { toast.error('El título es obligatorio'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, empresa_id: null };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { _templateId, _message, _cta, ...payload } = { ...form, empresa_id: null };
       if (payload.id) {
         const { id, ...rest } = payload;
         const { error } = await supabase.from('notifications').update(rest as any).eq('id', id);
@@ -218,20 +276,15 @@ export default function AdminAnunciosTab() {
 
   const set = (key: string, val: any) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const insertHtml = useCallback((before: string, after: string) => {
-    const ta = document.getElementById('body-editor') as HTMLTextAreaElement | null;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const text = form.body ?? '';
-    const selected = text.slice(start, end) || 'texto';
-    const newText = text.slice(0, start) + before + selected + after + text.slice(end);
-    set('body', newText);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + before.length, start + before.length + selected.length);
-    }, 0);
-  }, [form.body]);
+  // Rebuild body from template whenever template fields change
+  const applyTemplate = (templateId: string, message?: string, title?: string) => {
+    const templates = getTemplates(form.type ?? 'banner');
+    const tpl = templates.find(t => t.id === templateId) ?? templates[0];
+    const msg = message ?? form._message ?? '';
+    const t = title ?? form.title ?? '';
+    const body = tpl.build(t, msg, form._cta ?? '');
+    setForm(prev => ({ ...prev, _templateId: templateId, _message: message ?? prev._message, body }));
+  };
 
   /* ─── Empty State ─── */
   if (!loading && notifications.length === 0 && !sheetOpen) {
@@ -256,6 +309,9 @@ export default function AdminAnunciosTab() {
 
   /* ─── Sheet (Side Panel) ─── */
   function renderSheet() {
+    const templates = getTemplates(form.type ?? 'banner');
+    const currentTpl = templates.find(t => t.id === form._templateId) ?? templates[0];
+
     return (
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0 flex flex-col" side="right">
@@ -278,7 +334,12 @@ export default function AdminAnunciosTab() {
                     <button
                       key={t}
                       type="button"
-                      onClick={() => set('type', t)}
+                      onClick={() => {
+                        set('type', t);
+                        // Reset template when type changes
+                        const newTemplates = getTemplates(t);
+                        setTimeout(() => applyTemplate(newTemplates[0].id, form._message, form.title), 0);
+                      }}
                       className={cn(
                         'flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3.5 transition-all text-center',
                         selected ? meta.accent : 'border-border hover:border-muted-foreground/30 bg-card',
@@ -307,51 +368,66 @@ export default function AdminAnunciosTab() {
                 <label className="text-xs font-semibold text-foreground mb-1 block">Título</label>
                 <input
                   value={form.title ?? ''}
-                  onChange={e => set('title', e.target.value)}
+                  onChange={e => {
+                    set('title', e.target.value);
+                    applyTemplate(form._templateId ?? 'simple', form._message, e.target.value);
+                  }}
                   className="input-odoo w-full text-sm"
-                  placeholder="Título del anuncio"
+                  placeholder="Ej: Mantenimiento programado"
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-foreground">Contenido (HTML)</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(!showPreview)}
-                    className={cn(
-                      'flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border transition-all',
-                      showPreview
-                        ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border text-muted-foreground hover:bg-muted',
-                    )}
-                  >
-                    {showPreview ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    {showPreview ? 'Editar' : 'Preview'}
-                  </button>
-                </div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">Mensaje</label>
+                <textarea
+                  value={form._message ?? ''}
+                  onChange={e => {
+                    const msg = e.target.value;
+                    set('_message', msg);
+                    applyTemplate(form._templateId ?? 'simple', msg, form.title);
+                  }}
+                  className="input-odoo w-full text-sm min-h-[80px] resize-none"
+                  placeholder="Escribe el mensaje que verán los usuarios..."
+                />
+              </div>
 
-                {showPreview ? (
-                  <div className="border border-border rounded-lg p-4 bg-card min-h-[120px]">
-                    <div
-                      className="prose prose-sm dark:prose-invert max-w-none text-sm"
-                      dangerouslySetInnerHTML={{
-                        __html: form.body || '<p class="text-muted-foreground italic">Sin contenido...</p>',
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <HtmlToolbar onInsert={insertHtml} />
-                    <textarea
-                      id="body-editor"
-                      value={form.body ?? ''}
-                      onChange={e => set('body', e.target.value)}
-                      className="input-odoo w-full text-xs font-mono min-h-[120px] rounded-t-none border-t-0"
-                      placeholder="<p>Escribe tu contenido aquí...</p>"
-                    />
-                  </div>
-                )}
+              {/* ─── Template Selector ─── */}
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+                  Estilo visual
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {templates.map(tpl => {
+                    const selected = form._templateId === tpl.id;
+                    return (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => applyTemplate(tpl.id)}
+                        className={cn(
+                          'relative flex items-center gap-2.5 px-3 py-2.5 rounded-lg border-2 text-left transition-all',
+                          selected
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border hover:border-muted-foreground/30 bg-card',
+                        )}
+                      >
+                        <span className="text-base">{tpl.preview.split(' ')[0]}</span>
+                        <div className="min-w-0">
+                          <p className={cn('text-xs font-semibold truncate', selected ? 'text-foreground' : 'text-foreground/80')}>
+                            {tpl.name}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground truncate">
+                            {tpl.preview.split(' ').slice(1).join(' ')}
+                          </p>
+                        </div>
+                        {selected && (
+                          <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-auto" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -379,41 +455,22 @@ export default function AdminAnunciosTab() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-foreground mb-1 block">Fecha inicio</label>
-                  <input
-                    type="datetime-local"
-                    value={form.start_date ?? ''}
-                    onChange={e => set('start_date', e.target.value)}
-                    className="input-odoo w-full text-sm"
-                  />
+                  <input type="datetime-local" value={form.start_date ?? ''} onChange={e => set('start_date', e.target.value)} className="input-odoo w-full text-sm" />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-foreground mb-1 block">Fecha fin (opcional)</label>
-                  <input
-                    type="datetime-local"
-                    value={form.end_date ?? ''}
-                    onChange={e => set('end_date', e.target.value || null)}
-                    className="input-odoo w-full text-sm"
-                  />
+                  <input type="datetime-local" value={form.end_date ?? ''} onChange={e => set('end_date', e.target.value || null)} className="input-odoo w-full text-sm" />
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">URL de redirección (opcional)</label>
-                <input
-                  value={form.redirect_url ?? ''}
-                  onChange={e => set('redirect_url', e.target.value)}
-                  className="input-odoo w-full text-sm"
-                  placeholder="https://... o /ruta-interna"
-                />
+                <input value={form.redirect_url ?? ''} onChange={e => set('redirect_url', e.target.value)} className="input-odoo w-full text-sm" placeholder="https://... o /ruta-interna" />
               </div>
               {form.redirect_url && (
                 <div>
                   <label className="text-xs font-semibold text-foreground mb-1 block">Tipo de redirección</label>
-                  <select
-                    value={form.redirect_type ?? ''}
-                    onChange={e => set('redirect_type', e.target.value || null)}
-                    className="input-odoo w-full text-sm"
-                  >
+                  <select value={form.redirect_type ?? ''} onChange={e => set('redirect_type', e.target.value || null)} className="input-odoo w-full text-sm">
                     <option value="">Sin tipo</option>
                     <option value="internal">Interna</option>
                     <option value="external">Externa</option>
@@ -428,24 +485,14 @@ export default function AdminAnunciosTab() {
                   <div>
                     <label className="text-xs font-semibold text-foreground mb-1.5 block">Color de fondo</label>
                     <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={form.bg_color ?? '#1e293b'}
-                        onChange={e => set('bg_color', e.target.value)}
-                        className="w-8 h-8 rounded-lg border border-border cursor-pointer p-0.5"
-                      />
+                      <input type="color" value={form.bg_color ?? '#1e293b'} onChange={e => set('bg_color', e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer p-0.5" />
                       <span className="text-xs text-muted-foreground font-mono">{form.bg_color}</span>
                     </div>
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-foreground mb-1.5 block">Color de texto</label>
                     <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        value={form.text_color ?? '#ffffff'}
-                        onChange={e => set('text_color', e.target.value)}
-                        className="w-8 h-8 rounded-lg border border-border cursor-pointer p-0.5"
-                      />
+                      <input type="color" value={form.text_color ?? '#ffffff'} onChange={e => set('text_color', e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer p-0.5" />
                       <span className="text-xs text-muted-foreground font-mono">{form.text_color}</span>
                     </div>
                   </div>
@@ -455,35 +502,20 @@ export default function AdminAnunciosTab() {
               {/* Modal-only: max views */}
               {form.type === 'modal' && (
                 <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">
-                    Máximo de vistas por usuario
-                  </label>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Máximo de vistas por usuario</label>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      value={form.max_views ?? 0}
-                      onChange={e => set('max_views', parseInt(e.target.value) || 0)}
-                      className="input-odoo w-24 text-sm"
-                    />
+                    <input type="number" min={0} value={form.max_views ?? 0} onChange={e => set('max_views', parseInt(e.target.value) || 0)} className="input-odoo w-24 text-sm" />
                     <span className="text-[11px] text-muted-foreground">0 = ilimitado</span>
                   </div>
                 </div>
               )}
 
-              {/* Bubble-only: image */}
-              {form.type === 'bubble' && (
+              {/* Bubble/Modal: image */}
+              {(form.type === 'bubble' || form.type === 'modal') && (
                 <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">URL de imagen (icono)</label>
-                  <input
-                    value={form.image_url ?? ''}
-                    onChange={e => set('image_url', e.target.value)}
-                    className="input-odoo w-full text-sm"
-                    placeholder="https://..."
-                  />
-                  {form.image_url && (
-                    <img src={form.image_url} alt="preview" className="mt-2 w-12 h-12 rounded-lg object-cover border border-border" />
-                  )}
+                  <label className="text-xs font-semibold text-foreground mb-1 block">URL de imagen (opcional)</label>
+                  <input value={form.image_url ?? ''} onChange={e => set('image_url', e.target.value)} className="input-odoo w-full text-sm" placeholder="https://..." />
+                  {form.image_url && <img src={form.image_url} alt="preview" className="mt-2 w-12 h-12 rounded-lg object-cover border border-border" />}
                 </div>
               )}
             </div>
@@ -573,18 +605,10 @@ export default function AdminAnunciosTab() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">{n.end_date ? fmtDate(n.end_date) : '—'}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center gap-0.5 justify-end">
-                        <button
-                          onClick={() => openEdit(n)}
-                          className="p-1.5 rounded-md hover:bg-muted transition-colors"
-                          title="Editar"
-                        >
+                        <button onClick={() => openEdit(n)} className="p-1.5 rounded-md hover:bg-muted transition-colors" title="Editar">
                           <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(n.id)}
-                          className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
-                          title="Eliminar"
-                        >
+                        <button onClick={() => handleDelete(n.id)} className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors" title="Eliminar">
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </button>
                       </div>
