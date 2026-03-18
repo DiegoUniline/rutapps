@@ -297,6 +297,8 @@ export default function ConfiguracionPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  const [moneda, setMoneda] = useState('MXN');
+
   if (config && !initialized) {
     setForm({
       nombre: config.nombre ?? '',
@@ -316,6 +318,7 @@ export default function ConfiguracionPage() {
     if ((config as any).ticket_campos) {
       setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
     }
+    setMoneda((config as any).moneda ?? 'MXN');
     setInitialized(true);
   }
 
