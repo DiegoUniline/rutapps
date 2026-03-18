@@ -251,23 +251,43 @@ function Breadcrumb() {
 
   if (segments.length <= 1) return null;
 
+  const forceUpdate = () => {
+    navigator.serviceWorker?.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        window.location.reload();
+      }
+    });
+  };
+
   return (
-    <div className="h-9 flex items-center px-5 bg-card border-b border-border text-xs text-muted-foreground gap-1.5">
-      {segments.map((seg, i) => {
-        const isLast = i === segments.length - 1;
-        const label = labels[seg] || seg;
-        const path = '/' + segments.slice(0, i + 1).join('/');
-        return (
-          <span key={i} className="flex items-center gap-1.5">
-            {i > 0 && <span className="text-muted-foreground/40">/</span>}
-            {isLast ? (
-              <span className="text-foreground font-semibold">{label}</span>
-            ) : (
-              <Link to={path} className="hover:text-foreground transition-colors">{label}</Link>
-            )}
-          </span>
-        );
-      })}
+    <div className="h-9 flex items-center justify-between px-5 bg-card border-b border-border text-xs text-muted-foreground">
+      <div className="flex items-center gap-1.5">
+        {segments.map((seg, i) => {
+          const isLast = i === segments.length - 1;
+          const label = labels[seg] || seg;
+          const path = '/' + segments.slice(0, i + 1).join('/');
+          return (
+            <span key={i} className="flex items-center gap-1.5">
+              {i > 0 && <span className="text-muted-foreground/40">/</span>}
+              {isLast ? (
+                <span className="text-foreground font-semibold">{label}</span>
+              ) : (
+                <Link to={path} className="hover:text-foreground transition-colors">{label}</Link>
+              )}
+            </span>
+          );
+        })}
+      </div>
+      <button
+        onClick={forceUpdate}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+        title="Actualizar app (obtener últimos cambios)"
+      >
+        <RefreshCw className="h-3.5 w-3.5" />
+        Actualizar
+      </button>
     </div>
   );
 }
