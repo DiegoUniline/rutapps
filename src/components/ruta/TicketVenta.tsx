@@ -181,10 +181,10 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                     </div>
                     {!l.esCambio && (
                       <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
-                        <span>${fmt(l.precio)} c/u</span>
+                        <span>{fmt(l.precio)} c/u</span>
                         {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                        {(l.iva_monto ?? 0) > 0 && <span>IVA ${fmt(l.iva_monto!)}</span>}
-                        {(l.ieps_monto ?? 0) > 0 && <span>IEPS ${fmt(l.ieps_monto!)}</span>}
+                        {(l.iva_monto ?? 0) > 0 && <span>IVA {fmt(l.iva_monto!)}</span>}
+                        {(l.ieps_monto ?? 0) > 0 && <span>IEPS {fmt(l.ieps_monto!)}</span>}
                       </div>
                     )}
                   </div>
