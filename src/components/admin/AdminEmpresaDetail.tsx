@@ -43,7 +43,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [facturas, setFacturas] = useState<any[]>([]);
   const [timbres, setTimbres] = useState(0);
   const [profiles, setProfiles] = useState<any[]>([]);
-  const [usersDetailed, setUsersDetailed] = useState<any[]>([]);
+  const [stripeInvoices, setStripeInvoices] = useState<any[]>([]);
   const [timbresMovimientos, setTimbresMovimientos] = useState<any[]>([]);
 
   // Edit states
