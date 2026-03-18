@@ -293,6 +293,49 @@ export default function CompraFormPage() {
       }
       const { error } = await supabase.from('compras').update(updates).eq('id', form.id);
       if (error) throw error;
+
+      // When marking as "recibida", add stock to almacén and log movements
+      if (newStatus === 'recibida') {
+        const almacenId = form.almacen_id;
+        const today = new Date().toISOString().slice(0, 10);
+        const validLines = lineas.filter(l => l.producto_id);
+
+        for (const l of validLines) {
+          const factor = Number(l._factor_conversion) || 1;
+          const piezas = (Number(l.cantidad) || 0) * factor;
+
+          // Get current stock
+          const { data: prod } = await supabase
+            .from('productos')
+            .select('cantidad')
+            .eq('id', l.producto_id!)
+            .single();
+
+          const currentQty = Number(prod?.cantidad ?? 0);
+          await supabase
+            .from('productos')
+            .update({ cantidad: currentQty + piezas } as any)
+            .eq('id', l.producto_id!);
+
+          // Log inventory movement
+          await supabase.from('movimientos_inventario').insert({
+            empresa_id: empresa!.id,
+            tipo: 'entrada',
+            producto_id: l.producto_id!,
+            cantidad: piezas,
+            almacen_destino_id: almacenId,
+            referencia_tipo: 'compra',
+            referencia_id: form.id,
+            user_id: user?.id,
+            fecha: today,
+            notas: `Compra ${form.folio ?? form.id.slice(0, 8)} recibida`,
+          } as any);
+        }
+
+        qc.invalidateQueries({ queryKey: ['inventario'] });
+        qc.invalidateQueries({ queryKey: ['productos'] });
+      }
+
       setForm(f => ({ ...f, ...updates }));
       toast.success(`Compra ${newStatus}`);
       qc.invalidateQueries({ queryKey: ['compras'] });
