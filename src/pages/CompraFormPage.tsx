@@ -350,7 +350,7 @@ export default function CompraFormPage() {
 
   // Cancel purchase: reverse stock, delete payments, set status to cancelada
   const handleCancel = async () => {
-    if (!form.id || !confirm('¿Cancelar esta compra? Se revertirá el stock y se eliminarán los pagos.')) return;
+    if (!form.id) return;
     try {
       // If stock was already added (recibida or pagada), reverse it
       if (['recibida', 'pagada'].includes(form.status)) {
