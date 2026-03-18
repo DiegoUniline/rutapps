@@ -21,6 +21,7 @@ const COMPRA_STEPS = [
   { key: 'confirmada', label: 'Confirmada' },
   { key: 'recibida', label: 'Recibida' },
   { key: 'pagada', label: 'Pagada' },
+  { key: 'cancelada', label: 'Cancelada' },
 ];
 
 interface CompraLinea {
