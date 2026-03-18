@@ -15,7 +15,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { useVentas } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { WhatsAppPreviewDialog } from '@/components/WhatsAppPreviewDialog';
+import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { cn, fmtDate, fmtCurrency } from '@/lib/utils';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
