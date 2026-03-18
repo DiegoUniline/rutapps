@@ -1571,6 +1571,7 @@ export type Database = {
           estado: string | null
           id: string
           logo_url: string | null
+          moneda: string
           nombre: string
           notas_ticket: string | null
           razon_social: string | null
@@ -1589,6 +1590,7 @@ export type Database = {
           estado?: string | null
           id?: string
           logo_url?: string | null
+          moneda?: string
           nombre: string
           notas_ticket?: string | null
           razon_social?: string | null
@@ -1607,6 +1609,7 @@ export type Database = {
           estado?: string | null
           id?: string
           logo_url?: string | null
+          moneda?: string
           nombre?: string
           notas_ticket?: string | null
           razon_social?: string | null
