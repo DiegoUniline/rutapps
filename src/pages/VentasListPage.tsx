@@ -3,17 +3,20 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentas } from '@/hooks/useVentas';
+import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn, fmtDate } from '@/lib/utils';
+import { WhatsAppPreviewDialog } from '@/components/WhatsAppPreviewDialog';
+import { cn, fmtDate, fmtCurrency } from '@/lib/utils';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
