@@ -123,6 +123,14 @@ const navItems: NavItem[] = [
   },
 ];
 
+const mobileBottomTabs = [
+  { label: 'Inicio', icon: BarChart3, path: '/dashboard' },
+  { label: 'Ventas', icon: ShoppingCart, path: '/ventas' },
+  { label: 'Clientes', icon: Users, path: '/clientes' },
+  { label: 'Almacén', icon: Warehouse, path: '/almacen/inventario' },
+  { label: 'Ajustes', icon: Settings, path: '/configuracion' },
+];
+
 /** Filter nav items based on granular sub-module permissions */
 function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean) {
   if (isSuperAdmin) return navItems;
@@ -324,6 +332,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: setupComplete } = useSetupComplete();
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
+  const location = useLocation();
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
@@ -398,10 +407,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <Breadcrumb />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto pb-16">
           {children}
         </main>
-        <UnilineFooter />
+
+        {/* Bottom navigation – app style */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
+          <div className="flex items-center justify-around h-14">
+            {mobileBottomTabs.map(tab => {
+              const active = location.pathname === tab.path || location.pathname.startsWith(tab.path + '/');
+              return (
+                <Link
+                  key={tab.path}
+                  to={tab.path}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors",
+                    active ? "text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  <tab.icon className="h-5 w-5" />
+                  <span className="text-[10px] font-medium">{tab.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
     );
   }
