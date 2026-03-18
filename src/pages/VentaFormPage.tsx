@@ -303,13 +303,28 @@ export default function VentaFormPage() {
     }
     const impuestosLabel = taxes.join(', ');
 
+    // Resolve price from tarifa rules (falls back to precio_principal)
+    const resolvedPrice = tarifaRules && tarifaRules.length > 0
+      ? resolveProductPrice(tarifaRules, {
+          id: productoId,
+          precio_principal: Number(producto.precio_principal) || 0,
+          costo: Number(producto.costo) || 0,
+          clasificacion_id: producto.clasificacion_id,
+          tiene_iva: producto.tiene_iva,
+          iva_pct: Number(producto.iva_pct ?? 16),
+          tiene_ieps: producto.tiene_ieps,
+          ieps_pct: Number(producto.ieps_pct ?? 0),
+          ieps_tipo: producto.ieps_tipo,
+        } as ProductForPricing, (form as any).lista_precio_id)
+      : Number(producto.precio_principal) || 0;
+
     setLineas(prev => {
       const next = [...prev];
       next[idx] = {
         ...next[idx],
         producto_id: productoId,
         descripcion: producto.nombre,
-        precio_unitario: Number(producto.precio_principal) || 0,
+        precio_unitario: resolvedPrice,
         unidad_id: unidadId,
         iva_pct: ivaPct,
         ieps_pct: iepsPct,
