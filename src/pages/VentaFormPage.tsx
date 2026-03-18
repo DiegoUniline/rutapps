@@ -1328,39 +1328,63 @@ export default function VentaFormPage() {
               key: 'entregas',
               label: `Entregas (${entregasActivas.length})`,
               content: (
-                <div className="p-4 space-y-4">
+                <div className="p-3 sm:p-4 space-y-4">
                   {/* Per-line delivery summary */}
                   {lineas.filter(l => l.producto_id).length > 0 && (
                     <div>
                       <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Resumen por producto</h4>
-                      <table className="w-full text-[13px]">
-                        <thead>
-                          <tr className="border-b border-table-border text-left">
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Pedida</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Surtida</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Faltante</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                      {isMobile ? (
+                        <div className="space-y-2">
                           {lineas.filter(l => l.producto_id).map((l, idx) => {
                             const prod = productosList?.find((p: any) => p.id === l.producto_id);
                             const pedida = Number(l.cantidad) || 0;
                             const surtida = lineDeliverySummary[l.producto_id!] ?? 0;
                             const faltante = Math.max(0, pedida - surtida);
                             return (
-                              <tr key={idx} className={cn("border-b border-table-border", faltante > 0 && "bg-warning/5")}>
-                                <td className="py-1.5 px-2 text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</td>
-                                <td className="py-1.5 px-2 text-right text-[12px]">{pedida}</td>
-                                <td className="py-1.5 px-2 text-right text-[12px] font-medium text-primary">{surtida}</td>
-                                <td className={cn("py-1.5 px-2 text-right text-[12px] font-bold", faltante > 0 ? "text-destructive" : "text-muted-foreground")}>
-                                  {faltante > 0 ? faltante : <Check className="h-3.5 w-3.5 inline text-primary" />}
-                                </td>
-                              </tr>
+                              <div key={idx} className={cn("border border-border rounded-lg p-3 bg-card", faltante > 0 && "border-warning/50")}>
+                                <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</div>
+                                <div className="grid grid-cols-3 gap-2 mt-1 text-xs">
+                                  <div><span className="text-muted-foreground">Pedida: </span><span className="font-medium">{pedida}</span></div>
+                                  <div><span className="text-muted-foreground">Surtida: </span><span className="font-medium text-primary">{surtida}</span></div>
+                                  <div>
+                                    <span className="text-muted-foreground">Faltante: </span>
+                                    {faltante > 0 ? <span className="font-bold text-destructive">{faltante}</span> : <Check className="h-3.5 w-3.5 inline text-primary" />}
+                                  </div>
+                                </div>
+                              </div>
                             );
                           })}
-                        </tbody>
-                      </table>
+                        </div>
+                      ) : (
+                        <table className="w-full text-[13px]">
+                          <thead>
+                            <tr className="border-b border-table-border text-left">
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Pedida</th>
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Surtida</th>
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Faltante</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lineas.filter(l => l.producto_id).map((l, idx) => {
+                              const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                              const pedida = Number(l.cantidad) || 0;
+                              const surtida = lineDeliverySummary[l.producto_id!] ?? 0;
+                              const faltante = Math.max(0, pedida - surtida);
+                              return (
+                                <tr key={idx} className={cn("border-b border-table-border", faltante > 0 && "bg-warning/5")}>
+                                  <td className="py-1.5 px-2 text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</td>
+                                  <td className="py-1.5 px-2 text-right text-[12px]">{pedida}</td>
+                                  <td className="py-1.5 px-2 text-right text-[12px] font-medium text-primary">{surtida}</td>
+                                  <td className={cn("py-1.5 px-2 text-right text-[12px] font-bold", faltante > 0 ? "text-destructive" : "text-muted-foreground")}>
+                                    {faltante > 0 ? faltante : <Check className="h-3.5 w-3.5 inline text-primary" />}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
                     </div>
                   )}
 
@@ -1369,6 +1393,32 @@ export default function VentaFormPage() {
                     <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Entregas creadas</h4>
                     {entregasActivas.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No hay entregas creadas para este pedido</p>
+                    ) : isMobile ? (
+                      <div className="space-y-2">
+                        {(entregasExistentes ?? []).map((e: any) => {
+                          const isCancelled = e.status === 'cancelado';
+                          const statusColor: Record<string, string> = {
+                            borrador: 'bg-muted text-muted-foreground',
+                            surtido: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                            asignado: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+                            cargado: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+                            en_ruta: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                            hecho: 'bg-primary/10 text-primary',
+                            cancelado: 'bg-destructive/10 text-destructive',
+                          };
+                          return (
+                            <Link key={e.id} to={`/logistica/entregas/${e.id}`} className={cn("block border border-border rounded-lg p-3 bg-card", isCancelled && "opacity-50")}>
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-sm font-bold text-primary">{e.folio ?? e.id.slice(0, 8)}</span>
+                                <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusColor[e.status] ?? 'bg-muted text-muted-foreground')}>
+                                  {e.status}
+                                </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">{(e.entrega_lineas ?? []).length} líneas</div>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     ) : (
                       <table className="w-full text-[13px]">
                         <thead>
@@ -1419,30 +1469,20 @@ export default function VentaFormPage() {
                     )}
                   </div>
 
-                  {/* Create new entrega from remaining */}
                   {canCreateEntrega && (
-                    <Button
-                      size="sm"
-                      onClick={async () => {
-                        if (!remaining || remaining.length === 0) return;
-                        try {
-                          const entrega = await crearEntrega.mutateAsync({
-                            pedidoId: form.id,
-                            vendedorId: form.vendedor_id ?? undefined,
-                            clienteId: form.cliente_id ?? undefined,
-                            almacenId: form.almacen_id ?? undefined,
-                            lineas: remaining.map(r => ({
-                              producto_id: r.producto_id,
-                              cantidad_pedida: r.cantidad_pendiente,
-                            })),
-                          });
-                          toast.success(`Entrega ${entrega.folio} creada con lo faltante`);
-                        } catch (e: any) {
-                          toast.error(e.message);
-                        }
-                      }}
-                      disabled={crearEntrega.isPending}
-                    >
+                    <Button size="sm" onClick={async () => {
+                      if (!remaining || remaining.length === 0) return;
+                      try {
+                        const entrega = await crearEntrega.mutateAsync({
+                          pedidoId: form.id,
+                          vendedorId: form.vendedor_id ?? undefined,
+                          clienteId: form.cliente_id ?? undefined,
+                          almacenId: form.almacen_id ?? undefined,
+                          lineas: remaining.map(r => ({ producto_id: r.producto_id, cantidad_pedida: r.cantidad_pendiente })),
+                        });
+                        toast.success(`Entrega ${entrega.folio} creada con lo faltante`);
+                      } catch (e: any) { toast.error(e.message); }
+                    }} disabled={crearEntrega.isPending}>
                       <Package className="h-3.5 w-3.5" /> Crear entrega con faltante
                     </Button>
                   )}
