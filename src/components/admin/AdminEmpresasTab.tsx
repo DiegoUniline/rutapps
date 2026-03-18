@@ -17,7 +17,7 @@ interface EmpresaRow {
   timbres_saldo?: { saldo: number }[];
 }
 
-export default function AdminEmpresasTab() {
+export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void }) {
   const { user } = useAuth();
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [search, setSearch] = useState('');
