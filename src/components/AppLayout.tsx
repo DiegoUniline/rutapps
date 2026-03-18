@@ -346,6 +346,7 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
@@ -353,6 +354,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
   const location = useLocation();
+
+  useEffect(() => {
+    const handler = () => setSwUpdateAvailable(true);
+    window.addEventListener('uniline:sw-update-available', handler);
+    return () => window.removeEventListener('uniline:sw-update-available', handler);
+  }, []);
+
+  const applySwUpdate = () => {
+    navigator.serviceWorker?.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        window.location.reload();
+      }
+    });
+  };
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
