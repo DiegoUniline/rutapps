@@ -19,6 +19,7 @@ export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
