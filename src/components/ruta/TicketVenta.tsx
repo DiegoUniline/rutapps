@@ -176,7 +176,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                         {l.esCambio && <span className="text-muted-foreground text-[9px] ml-1 italic">(cambio)</span>}
                       </span>
                       <span className="text-foreground font-semibold tabular-nums shrink-0">
-                        ${fmt(l.total)}
+                        {fmt(l.total)}
                       </span>
                     </div>
                     {!l.esCambio && (
