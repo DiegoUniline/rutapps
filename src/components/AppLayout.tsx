@@ -123,6 +123,14 @@ const navItems: NavItem[] = [
   },
 ];
 
+const mobileBottomTabs = [
+  { label: 'Inicio', icon: BarChart3, path: '/dashboard' },
+  { label: 'Ventas', icon: ShoppingCart, path: '/ventas' },
+  { label: 'Clientes', icon: Users, path: '/clientes' },
+  { label: 'Almacén', icon: Warehouse, path: '/almacen/inventario' },
+  { label: 'Ajustes', icon: Settings, path: '/configuracion' },
+];
+
 /** Filter nav items based on granular sub-module permissions */
 function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean) {
   if (isSuperAdmin) return navItems;
