@@ -174,12 +174,21 @@ export default function VentasListPage() {
           )}
           {pageData.map((v: any) => {
             const cliente = clientesList?.find((c: any) => c.id === v.cliente_id);
-            const openWa = (e: React.MouseEvent) => {
+            const openWa = async (e: React.MouseEvent) => {
               e.stopPropagation();
-              const msg = `📄 *${v.tipo === 'pedido' ? 'Pedido' : 'Venta'} ${v.folio || ''}*\nCliente: ${v.clientes?.nombre}\nFecha: ${fmtDate(v.fecha)}\n💰 Total: ${fmtCurrency(v.total)}${v.saldo_pendiente > 0 ? `\n⚠️ Saldo: ${fmtCurrency(v.saldo_pendiente)}` : ''}`;
-              setWaPhone(cliente?.telefono ?? '');
-              setWaMessage(msg);
-              setWaOpen(true);
+              setGeneratingPdf(v.id);
+              try {
+                const { blob, fileName, caption } = await generateVentaPdfById(v.id);
+                setWaPdfBlob(blob);
+                setWaPdfName(fileName);
+                setWaPhone(cliente?.telefono ?? '');
+                setWaMessage(caption);
+                setWaOpen(true);
+              } catch (err: any) {
+                toast.error(err.message || 'Error generando PDF');
+              } finally {
+                setGeneratingPdf(null);
+              }
             };
             return (
               <MobileListCard
