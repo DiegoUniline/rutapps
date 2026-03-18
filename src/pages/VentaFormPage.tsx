@@ -1184,8 +1184,8 @@ export default function VentaFormPage() {
                     </div>
                   </div>
                 </div>
-                </div>
               ),
+            },
             },
             // Pagos tab — only for saved sales
             ...(!isNew ? [{
