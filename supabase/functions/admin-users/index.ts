@@ -171,12 +171,12 @@ Deno.serve(async (req) => {
         if (existingProfile) {
           await adminClient
             .from("profiles")
-            .update({ empresa_id: empresaId, nombre: nombre || null })
+            .update({ empresa_id: empresaId, nombre: nombre || null, almacen_id: almacen_id || null })
             .eq("user_id", newUser.user.id);
         } else {
           await adminClient
             .from("profiles")
-            .insert({ user_id: newUser.user.id, empresa_id: empresaId, nombre: nombre || null });
+            .insert({ user_id: newUser.user.id, empresa_id: empresaId, nombre: nombre || null, almacen_id: almacen_id || null });
         }
 
         // Assign role if provided

@@ -243,7 +243,7 @@ export default function UsuariosPage() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success('Usuario creado exitosamente');
-      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '' });
+      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '', almacen_id: '' });
       load();
     } catch (e: any) { toast.error(e.message || 'Error al crear usuario'); } finally { setCreatingUser(false); }
   };
