@@ -84,6 +84,21 @@ export default function VentaFormPage() {
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
 
+  // Fetch tarifa rules for price resolution
+  const { data: tarifaRules } = useQuery({
+    queryKey: ['tarifa-rules-venta', form.tarifa_id],
+    enabled: !!form.tarifa_id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tarifa_lineas')
+        .select('aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+        .eq('tarifa_id', form.tarifa_id!);
+      if (error) throw error;
+      return (data ?? []) as TarifaLineaRule[];
+    },
+  });
+
   // Entrega integration for pedidos (1:N) — all entregas (not just hecho)
   const { data: entregasExistentes } = useEntregasByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
   const hayEntregas = (entregasExistentes ?? []).length > 0;
