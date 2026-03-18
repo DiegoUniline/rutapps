@@ -219,6 +219,7 @@ export default function UsuariosPage() {
   const createUser = async () => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
     if (newUser.password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (!newUser.role_id) { toast.error('Debes seleccionar un rol'); return; }
     if (availableSlots <= 0) {
       toast.error(`Ya alcanzaste el límite de ${subscription.maxUsuarios} usuarios de tu plan. Actualiza tu suscripción para agregar más.`);
       return;
@@ -226,12 +227,12 @@ export default function UsuariosPage() {
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre },
+        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre, role_id: newUser.role_id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success('Usuario creado exitosamente');
-      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '' });
+      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '' });
       load();
     } catch (e: any) { toast.error(e.message); } finally { setCreatingUser(false); }
   };
