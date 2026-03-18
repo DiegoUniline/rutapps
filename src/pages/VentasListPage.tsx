@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
