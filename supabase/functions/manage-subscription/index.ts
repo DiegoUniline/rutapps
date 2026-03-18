@@ -29,7 +29,8 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) throw new Error("No autenticado");
 
-    const { action, new_quantity, new_price_id } = await req.json();
+    const body = await req.json();
+    const { action, new_quantity, new_price_id, reason, reason_detail } = body;
 
     // Get user's empresa
     const { data: profile } = await supabase
@@ -49,6 +50,7 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
+    /* ─── Update quantity ─── */
     if (action === "update_quantity") {
       const qty = parseInt(new_quantity);
       if (!qty || qty < 3) throw new Error("Mínimo 3 usuarios");
@@ -74,6 +76,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    /* ─── Change plan ─── */
     if (action === "change_plan") {
       if (!new_price_id) throw new Error("new_price_id requerido");
       if (!sub.stripe_subscription_id) throw new Error("No hay suscripción activa en Stripe para cambiar");
@@ -88,6 +91,54 @@ Deno.serve(async (req) => {
       });
 
       return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    /* ─── Cancel subscription ─── */
+    if (action === "cancel_subscription") {
+      if (!sub.stripe_subscription_id) {
+        // No Stripe sub — just mark as cancelled locally
+        await supabase.from("subscriptions")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("id", sub.id);
+      } else {
+        // Cancel at period end (user keeps access until current period ends)
+        await stripe.subscriptions.update(sub.stripe_subscription_id, {
+          cancel_at_period_end: true,
+          metadata: { cancel_reason: reason || "not_specified" },
+        });
+
+        await supabase.from("subscriptions")
+          .update({ status: "cancelling", updated_at: new Date().toISOString() })
+          .eq("id", sub.id);
+      }
+
+      return new Response(JSON.stringify({ success: true, status: "cancelling" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    /* ─── Apply retention discount (15% off next invoice) ─── */
+    if (action === "apply_retention_discount") {
+      if (!sub.stripe_subscription_id) throw new Error("No hay suscripción activa en Stripe");
+      if (!sub.stripe_customer_id) throw new Error("No hay cliente Stripe");
+
+      // Create a 15% coupon for one-time use
+      const coupon = await stripe.coupons.create({
+        percent_off: 15,
+        duration: "once",
+        name: "Retención — 15% descuento",
+        metadata: { reason: reason || "retention", empresa_id: profile.empresa_id },
+      });
+
+      // Apply coupon to the subscription
+      await stripe.subscriptions.update(sub.stripe_subscription_id, {
+        coupon: coupon.id,
+        metadata: { retention_applied: "true", retention_reason: reason || "" },
+      });
+
+      return new Response(JSON.stringify({ success: true, discount: "15%" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

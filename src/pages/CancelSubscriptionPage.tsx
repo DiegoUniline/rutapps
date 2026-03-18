@@ -69,7 +69,8 @@ export default function CancelSubscriptionPage() {
   async function handleConfirmCancel() {
     setSaving(true);
     try {
-      await supabase.from('cancellation_requests').insert({
+      // @ts-ignore - table may not be in generated types yet
+      await (supabase as any).from('cancellation_requests').insert({
         empresa_id: empresa!.id,
         user_id: user!.id,
         reason,
@@ -77,7 +78,7 @@ export default function CancelSubscriptionPage() {
         offered_discount: true,
         discount_accepted: false,
         cancelled: true,
-      } as any);
+      });
 
       const { data, error } = await supabase.functions.invoke('manage-subscription', {
         body: { action: 'cancel_subscription', reason, reason_detail: detail },

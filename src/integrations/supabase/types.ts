@@ -298,6 +298,50 @@ export type Database = {
         }
         Relationships: []
       }
+      cancellation_requests: {
+        Row: {
+          cancelled: boolean
+          created_at: string
+          discount_accepted: boolean
+          empresa_id: string
+          id: string
+          offered_discount: boolean
+          reason: string
+          reason_detail: string | null
+          user_id: string
+        }
+        Insert: {
+          cancelled?: boolean
+          created_at?: string
+          discount_accepted?: boolean
+          empresa_id: string
+          id?: string
+          offered_discount?: boolean
+          reason?: string
+          reason_detail?: string | null
+          user_id: string
+        }
+        Update: {
+          cancelled?: boolean
+          created_at?: string
+          discount_accepted?: boolean
+          empresa_id?: string
+          id?: string
+          offered_discount?: boolean
+          reason?: string
+          reason_detail?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_requests_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carga_lineas: {
         Row: {
           cantidad_cargada: number
