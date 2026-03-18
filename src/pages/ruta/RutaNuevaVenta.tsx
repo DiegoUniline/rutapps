@@ -214,6 +214,32 @@ export default function RutaNuevaVenta() {
     status: 'activo',
   }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
+  // Load tarifas and tarifa_lineas for price resolution
+  const { data: tarifasOffline } = useOfflineQuery('tarifas', { empresa_id: empresa?.id, activa: true }, { enabled: !!empresa?.id });
+  const selectedClienteData = clientes?.find(c => c.id === clienteId);
+  const clienteTarifaId = selectedClienteData?.tarifa_id || tarifasOffline?.find((t: any) => t.tipo === 'general')?.id;
+  const clienteListaPrecioId = (selectedClienteData as any)?.lista_precio_id || null;
+  const { data: tarifaLineasOffline } = useOfflineQuery('tarifa_lineas', { tarifa_id: clienteTarifaId }, { enabled: !!clienteTarifaId });
+
+  // Price resolver function
+  const resolvePrice = useMemo(() => {
+    const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
+    return (producto: any): number => {
+      if (!rules.length) return producto.precio_principal ?? 0;
+      return resolveProductPrice(rules, {
+        id: producto.id,
+        precio_principal: producto.precio_principal ?? 0,
+        costo: producto.costo ?? 0,
+        clasificacion_id: producto.clasificacion_id,
+        tiene_iva: producto.tiene_iva,
+        iva_pct: producto.iva_pct ?? 16,
+        tiene_ieps: producto.tiene_ieps,
+        ieps_pct: producto.ieps_pct ?? 0,
+        ieps_tipo: producto.ieps_tipo,
+      }, clienteListaPrecioId);
+    };
+  }, [tarifaLineasOffline, clienteListaPrecioId]);
+
   // Pedido sugerido for selected client (offline-compatible)
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
   const pedidoSugerido = useMemo(() => {
