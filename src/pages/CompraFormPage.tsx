@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Plus, X, Ban } from 'lucide-react';
-import { OdooStatusbar } from '@/components/OdooStatusbar';
+import { ArrowLeft, Save, Trash2, Plus, X, Ban, CheckCircle2, PackageCheck, AlertTriangle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { TableSkeleton } from '@/components/TableSkeleton';
