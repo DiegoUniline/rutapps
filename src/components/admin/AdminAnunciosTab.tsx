@@ -1,9 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Bell, Plus, Pencil, Trash2, X, Bold, Italic, Link2, List, ListOrdered, Heading2, Eye, Code, Image } from 'lucide-react';
+import {
+  Bell, Plus, Pencil, Trash2, X, Bold, Italic, Link2, List, ListOrdered,
+  Heading2, Eye, Code, Image, Megaphone, Monitor, MessageCircle, Sparkles,
+  ArrowRight, ExternalLink, EyeOff,
+} from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
+/* ─── Types ─── */
 interface AppNotification {
   id: string;
   empresa_id: string | null;
@@ -22,39 +28,56 @@ interface AppNotification {
   created_at: string;
 }
 
-const TYPE_LABELS: Record<string, string> = { banner: 'Banner', modal: 'Modal', bubble: 'Bubble' };
-const TYPE_COLORS: Record<string, string> = {
-  banner: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  modal: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-  bubble: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-};
+/* ─── Constants ─── */
+const TYPE_META = {
+  banner: {
+    label: 'Banner',
+    desc: 'Barra fija arriba del sistema',
+    icon: Monitor,
+    badge: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
+    accent: 'border-blue-500 bg-blue-50/60 dark:bg-blue-950/30',
+  },
+  modal: {
+    label: 'Modal',
+    desc: 'Popup centrado post-login',
+    icon: MessageCircle,
+    badge: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
+    accent: 'border-purple-500 bg-purple-50/60 dark:bg-purple-950/30',
+  },
+  bubble: {
+    label: 'Bubble',
+    desc: 'Tarjeta flotante inferior derecha',
+    icon: Sparkles,
+    badge: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+    accent: 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/30',
+  },
+} as const;
 
 const emptyForm = (): Partial<AppNotification> => ({
   title: '', body: '', type: 'banner', is_active: true,
   start_date: new Date().toISOString().slice(0, 16),
   end_date: null, redirect_url: '', redirect_type: null,
-  image_url: '', bg_color: '#1d4ed8', text_color: '#ffffff', max_views: 0,
+  image_url: '', bg_color: '#1e293b', text_color: '#ffffff', max_views: 0,
   empresa_id: null,
 });
 
-/* ─── HTML toolbar helper ─── */
-function HtmlToolbar({ onInsert }: { onInsert: (before: string, after: string) => void }) {
+/* ─── HTML Toolbar ─── */
+function HtmlToolbar({ onInsert }: { onInsert: (b: string, a: string) => void }) {
   const tools = [
-    { icon: Bold, before: '<b>', after: '</b>', title: 'Negrita' },
-    { icon: Italic, before: '<i>', after: '</i>', title: 'Cursiva' },
-    { icon: Heading2, before: '<h2>', after: '</h2>', title: 'Encabezado' },
-    { icon: Link2, before: '<a href="URL">', after: '</a>', title: 'Enlace' },
-    { icon: Image, before: '<img src="', after: '" style="max-width:100%;border-radius:8px" />', title: 'Imagen' },
-    { icon: List, before: '<ul>\n  <li>', after: '</li>\n</ul>', title: 'Lista' },
-    { icon: ListOrdered, before: '<ol>\n  <li>', after: '</li>\n</ol>', title: 'Lista numerada' },
-    { icon: Code, before: '<code>', after: '</code>', title: 'Código' },
+    { icon: Bold, b: '<b>', a: '</b>', t: 'Negrita' },
+    { icon: Italic, b: '<i>', a: '</i>', t: 'Cursiva' },
+    { icon: Heading2, b: '<h2>', a: '</h2>', t: 'Encabezado' },
+    { icon: Link2, b: '<a href="URL">', a: '</a>', t: 'Enlace' },
+    { icon: Image, b: '<img src="', a: '" style="max-width:100%;border-radius:8px" />', t: 'Imagen' },
+    { icon: List, b: '<ul>\n  <li>', a: '</li>\n</ul>', t: 'Lista' },
+    { icon: ListOrdered, b: '<ol>\n  <li>', a: '</li>\n</ol>', t: 'Lista numerada' },
+    { icon: Code, b: '<code>', a: '</code>', t: 'Código' },
   ];
-
   return (
-    <div className="flex items-center gap-0.5 border border-border rounded-t-lg bg-muted/40 px-2 py-1.5">
-      {tools.map(({ icon: Icon, before, after, title }) => (
-        <button key={title} type="button" onClick={() => onInsert(before, after)}
-          className="p-1.5 rounded hover:bg-muted transition-colors" title={title}>
+    <div className="flex items-center gap-0.5 border border-border border-b-0 rounded-t-lg bg-muted/30 px-2 py-1.5">
+      {tools.map(({ icon: Icon, b, a, t }) => (
+        <button key={t} type="button" onClick={() => onInsert(b, a)}
+          className="p-1.5 rounded-md hover:bg-muted transition-colors" title={t}>
           <Icon className="h-3.5 w-3.5 text-muted-foreground" />
         </button>
       ))}
@@ -62,28 +85,103 @@ function HtmlToolbar({ onInsert }: { onInsert: (before: string, after: string) =
   );
 }
 
+/* ─── Live Previews ─── */
+function BannerPreview({ form }: { form: Partial<AppNotification> }) {
+  const bg = form.bg_color ?? '#1e293b';
+  const txt = form.text_color ?? '#ffffff';
+  return (
+    <div className="rounded-lg overflow-hidden" style={{ backgroundColor: bg, color: txt }}>
+      <div className="flex items-center gap-2.5 px-4 py-2.5 text-sm">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+          style={{ backgroundColor: `${txt}22`, color: txt }}>
+          {form.title || 'TÍTULO'}
+        </span>
+        <span className="opacity-40 text-xs">•</span>
+        {form.body ? (
+          <span className="opacity-90 text-xs" dangerouslySetInnerHTML={{ __html: form.body }} />
+        ) : (
+          <span className="opacity-50 text-xs">Mensaje del banner...</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ModalPreview({ form }: { form: Partial<AppNotification> }) {
+  return (
+    <div className="bg-card border border-border rounded-2xl shadow-lg max-w-xs mx-auto overflow-hidden">
+      <div className="p-4 pb-0">
+        <h3 className="text-sm font-bold text-foreground">{form.title || 'Título'}</h3>
+      </div>
+      <div className="p-4 pt-2">
+        {form.image_url && <img src={form.image_url} alt="" className="w-full rounded-xl max-h-28 object-cover mb-3" />}
+        <div className="prose prose-sm dark:prose-invert max-w-none text-xs"
+          dangerouslySetInnerHTML={{ __html: form.body || '<p class="text-muted-foreground">Contenido...</p>' }} />
+      </div>
+      <div className="p-3 border-t border-border flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground">☐ No volver a mostrar</span>
+        <div className="flex gap-1.5">
+          {form.redirect_url && <span className="bg-primary text-primary-foreground text-[10px] font-semibold px-2.5 py-1 rounded-md">Ver más</span>}
+          <span className="text-[10px] text-muted-foreground border border-border px-2.5 py-1 rounded-md">Cerrar</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BubblePreview({ form }: { form: Partial<AppNotification> }) {
+  return (
+    <div className="flex justify-end">
+      <div className="w-[240px] bg-card border border-border rounded-xl shadow-lg overflow-hidden">
+        <div className="flex items-center gap-2 px-3.5 pt-3 pb-1">
+          {form.image_url ? (
+            <img src={form.image_url} alt="" className="w-7 h-7 rounded-lg object-cover" />
+          ) : (
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+            </div>
+          )}
+          <span className="text-xs font-bold text-foreground truncate">{form.title || 'Título'}</span>
+        </div>
+        {form.body && (
+          <div className="px-3.5 pt-0.5 pb-2.5 text-[11px] text-muted-foreground" dangerouslySetInnerHTML={{ __html: form.body }} />
+        )}
+        {form.redirect_url && (
+          <div className="px-3.5 pb-3">
+            <div className="w-full bg-primary text-primary-foreground text-[11px] font-semibold rounded-md py-1.5 text-center">
+              Ver más
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════ */
 export default function AdminAnunciosTab() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [form, setForm] = useState<Partial<AppNotification>>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const { data: notifs } = await supabase
-      .from('notifications').select('*').order('created_at', { ascending: false });
-    setNotifications((notifs ?? []) as unknown as AppNotification[]);
+    const { data } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
+    setNotifications((data ?? []) as unknown as AppNotification[]);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  const openNew = () => { setForm(emptyForm()); setEditing(true); setShowPreview(false); };
+  const openNew = () => { setForm(emptyForm()); setSheetOpen(true); setShowPreview(false); };
   const openEdit = (n: AppNotification) => {
     setForm({ ...n, start_date: n.start_date?.slice(0, 16), end_date: n.end_date?.slice(0, 16) ?? null });
-    setEditing(true);
+    setSheetOpen(true);
     setShowPreview(false);
   };
 
@@ -91,7 +189,7 @@ export default function AdminAnunciosTab() {
     if (!form.title?.trim()) { toast.error('El título es obligatorio'); return; }
     setSaving(true);
     try {
-      const payload = { ...form, empresa_id: null }; // system-wide
+      const payload = { ...form, empresa_id: null };
       if (payload.id) {
         const { id, ...rest } = payload;
         const { error } = await supabase.from('notifications').update(rest as any).eq('id', id);
@@ -100,8 +198,8 @@ export default function AdminAnunciosTab() {
         const { error } = await supabase.from('notifications').insert(payload as any);
         if (error) throw error;
       }
-      toast.success(form.id ? 'Actualizado' : 'Creado');
-      setEditing(false);
+      toast.success(form.id ? 'Anuncio actualizado' : 'Anuncio creado');
+      setSheetOpen(false);
       load();
     } catch (e: any) { toast.error(e.message); } finally { setSaving(false); }
   };
@@ -135,261 +233,371 @@ export default function AdminAnunciosTab() {
     }, 0);
   }, [form.body]);
 
-  if (editing) {
+  /* ─── Empty State ─── */
+  if (!loading && notifications.length === 0 && !sheetOpen) {
     return (
-      <div className="max-w-3xl space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-foreground">{form.id ? 'Editar' : 'Nuevo'} Anuncio (Global)</h2>
-          <button onClick={() => setEditing(false)} className="p-2 rounded-md hover:bg-muted"><X className="h-4 w-4" /></button>
-        </div>
-
-        {/* Type */}
-        <div>
-          <label className="block text-xs font-semibold text-foreground mb-1.5">Tipo</label>
-          <div className="flex gap-2">
-            {(['banner', 'modal', 'bubble'] as const).map(t => (
-              <button key={t} onClick={() => set('type', t)}
-                className={cn('px-4 py-2 rounded-lg text-xs font-semibold border transition-all',
-                  form.type === t ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
-                )}>
-                {TYPE_LABELS[t]}
-              </button>
-            ))}
+      <>
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-5">
+            <Megaphone className="h-8 w-8 text-muted-foreground/50" />
           </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-foreground mb-1">Título</label>
-          <input value={form.title ?? ''} onChange={e => set('title', e.target.value)}
-            className="input-odoo w-full text-sm" placeholder="Título del anuncio" />
-        </div>
-
-        {/* HTML editor with toolbar */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs font-semibold text-foreground">Contenido (HTML)</label>
-            <button type="button" onClick={() => setShowPreview(!showPreview)}
-              className={cn('flex items-center gap-1 text-xs px-2 py-1 rounded-md border transition-all',
-                showPreview ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted'
-              )}>
-              <Eye className="h-3 w-3" /> Preview
-            </button>
-          </div>
-
-          {showPreview ? (
-            <div className="border border-border rounded-lg p-4 bg-card min-h-[160px]">
-              <div className="prose prose-sm dark:prose-invert max-w-none text-sm"
-                dangerouslySetInnerHTML={{ __html: form.body || '<p class="text-muted-foreground">Sin contenido...</p>' }} />
-            </div>
-          ) : (
-            <div>
-              <HtmlToolbar onInsert={insertHtml} />
-              <textarea
-                id="body-editor"
-                value={form.body ?? ''}
-                onChange={e => set('body', e.target.value)}
-                className="input-odoo w-full text-sm min-h-[160px] font-mono text-xs rounded-t-none border-t-0"
-                placeholder="<p>Escribe tu contenido aquí...</p>"
-              />
-            </div>
-          )}
-        </div>
-
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" checked={form.is_active ?? true} onChange={e => set('is_active', e.target.checked)}
-            className="accent-primary h-4 w-4" />
-          <span className="text-sm text-foreground">Activa</span>
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Fecha inicio</label>
-            <input type="datetime-local" value={form.start_date ?? ''} onChange={e => set('start_date', e.target.value)}
-              className="input-odoo w-full text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Fecha fin (opcional)</label>
-            <input type="datetime-local" value={form.end_date ?? ''} onChange={e => set('end_date', e.target.value || null)}
-              className="input-odoo w-full text-sm" />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-foreground mb-1">URL de redirección (opcional)</label>
-          <input value={form.redirect_url ?? ''} onChange={e => set('redirect_url', e.target.value)}
-            className="input-odoo w-full text-sm" placeholder="https://..." />
-        </div>
-        {form.redirect_url && (
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">Tipo de redirección</label>
-            <select value={form.redirect_type ?? ''} onChange={e => set('redirect_type', e.target.value || null)}
-              className="input-odoo w-full text-sm">
-              <option value="">Sin tipo</option>
-              <option value="internal">Interna</option>
-              <option value="external">Externa</option>
-              <option value="both">Ambas</option>
-            </select>
-          </div>
-        )}
-
-        {form.type === 'banner' && (
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Color de fondo</label>
-              <div className="flex gap-2 items-center">
-                <input type="color" value={form.bg_color ?? '#1d4ed8'} onChange={e => set('bg_color', e.target.value)}
-                  className="w-10 h-8 rounded border border-border cursor-pointer" />
-                <span className="text-xs text-muted-foreground">{form.bg_color}</span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-foreground mb-1">Color de texto</label>
-              <div className="flex gap-2 items-center">
-                <input type="color" value={form.text_color ?? '#ffffff'} onChange={e => set('text_color', e.target.value)}
-                  className="w-10 h-8 rounded border border-border cursor-pointer" />
-                <span className="text-xs text-muted-foreground">{form.text_color}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {form.type === 'modal' && (
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">
-              Máximo de vistas por usuario <span className="text-muted-foreground font-normal">(0 = ilimitado)</span>
-            </label>
-            <input type="number" min={0} value={form.max_views ?? 0} onChange={e => set('max_views', parseInt(e.target.value) || 0)}
-              className="input-odoo w-32 text-sm" />
-          </div>
-        )}
-
-        {form.type === 'bubble' && (
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-1">URL de imagen</label>
-            <input value={form.image_url ?? ''} onChange={e => set('image_url', e.target.value)}
-              className="input-odoo w-full text-sm" placeholder="https://..." />
-            {form.image_url && (
-              <img src={form.image_url} alt="preview" className="mt-2 w-16 h-16 rounded-full object-cover border border-border" />
-            )}
-          </div>
-        )}
-
-        {/* Live preview panel */}
-        {(form.title || form.body) && (
-          <div className="border border-dashed border-border rounded-lg p-4 bg-muted/20">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Vista previa</p>
-            {form.type === 'banner' && (
-              <div className="rounded-lg flex items-center justify-center gap-3 px-4 py-2.5 text-sm"
-                style={{ backgroundColor: form.bg_color ?? '#1d4ed8', color: form.text_color ?? '#ffffff' }}>
-                <span className="font-semibold">{form.title || 'Título'}</span>
-                {form.body && <span className="opacity-90" dangerouslySetInnerHTML={{ __html: form.body }} />}
-              </div>
-            )}
-            {form.type === 'modal' && (
-              <div className="bg-card border border-border rounded-xl shadow-lg max-w-sm mx-auto overflow-hidden">
-                <div className="p-4 border-b border-border">
-                  <h3 className="text-sm font-bold text-foreground">{form.title || 'Título'}</h3>
-                </div>
-                <div className="p-4">
-                  {form.image_url && <img src={form.image_url} alt="" className="w-full rounded-lg max-h-32 object-cover mb-3" />}
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-xs"
-                    dangerouslySetInnerHTML={{ __html: form.body || '<p>Contenido...</p>' }} />
-                </div>
-                <div className="p-3 border-t border-border flex justify-end gap-2">
-                  {form.redirect_url && <span className="btn-odoo-primary text-[10px] px-3 py-1">Ver más</span>}
-                  <span className="btn-odoo text-[10px] px-3 py-1">Cerrar</span>
-                </div>
-              </div>
-            )}
-            {form.type === 'bubble' && (
-              <div className="flex items-end justify-end gap-2">
-                <span className="text-xs bg-card border border-border rounded-lg px-3 py-1.5 shadow-sm">{form.title || 'Título'}</span>
-                <div className="w-12 h-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center overflow-hidden">
-                  {form.image_url
-                    ? <img src={form.image_url} alt="" className="w-full h-full object-cover" />
-                    : <Bell className="h-5 w-5 text-primary" />
-                  }
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-2 pt-2">
-          <button onClick={handleSave} disabled={saving} className="btn-odoo-primary text-sm px-5">
-            {saving ? 'Guardando...' : 'Guardar'}
+          <h3 className="text-base font-semibold text-foreground mb-1">No hay anuncios configurados</h3>
+          <p className="text-sm text-muted-foreground mb-5 max-w-sm">
+            Crea banners, modales o burbujas para comunicarte con todos los usuarios del sistema.
+          </p>
+          <button onClick={openNew} className="btn-odoo-primary text-sm flex items-center gap-1.5">
+            <Plus className="h-4 w-4" /> Crear anuncio
           </button>
-          <button onClick={() => setEditing(false)} className="btn-odoo text-sm">Cancelar</button>
         </div>
-      </div>
+        {renderSheet()}
+      </>
     );
   }
 
+  /* ─── Sheet (Side Panel) ─── */
+  function renderSheet() {
+    return (
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto p-0 flex flex-col" side="right">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border shrink-0">
+            <SheetTitle className="text-base font-bold">
+              {form.id ? 'Editar anuncio' : 'Nuevo anuncio'}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            {/* ─── Type Selector Cards ─── */}
+            <div>
+              <label className="text-xs font-semibold text-foreground mb-2.5 block">Tipo de anuncio</label>
+              <div className="grid grid-cols-3 gap-2.5">
+                {(['banner', 'modal', 'bubble'] as const).map(t => {
+                  const meta = TYPE_META[t];
+                  const Icon = meta.icon;
+                  const selected = form.type === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => set('type', t)}
+                      className={cn(
+                        'flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3.5 transition-all text-center',
+                        selected ? meta.accent : 'border-border hover:border-muted-foreground/30 bg-card',
+                      )}
+                    >
+                      <Icon className={cn('h-5 w-5', selected ? 'text-foreground' : 'text-muted-foreground')} />
+                      <span className={cn('text-xs font-semibold', selected ? 'text-foreground' : 'text-muted-foreground')}>
+                        {meta.label}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground leading-tight">{meta.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ─── Content Section ─── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Contenido</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">Título</label>
+                <input
+                  value={form.title ?? ''}
+                  onChange={e => set('title', e.target.value)}
+                  className="input-odoo w-full text-sm"
+                  placeholder="Título del anuncio"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-foreground">Contenido (HTML)</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(!showPreview)}
+                    className={cn(
+                      'flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border transition-all',
+                      showPreview
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-muted-foreground hover:bg-muted',
+                    )}
+                  >
+                    {showPreview ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    {showPreview ? 'Editar' : 'Preview'}
+                  </button>
+                </div>
+
+                {showPreview ? (
+                  <div className="border border-border rounded-lg p-4 bg-card min-h-[120px]">
+                    <div
+                      className="prose prose-sm dark:prose-invert max-w-none text-sm"
+                      dangerouslySetInnerHTML={{
+                        __html: form.body || '<p class="text-muted-foreground italic">Sin contenido...</p>',
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <HtmlToolbar onInsert={insertHtml} />
+                    <textarea
+                      id="body-editor"
+                      value={form.body ?? ''}
+                      onChange={e => set('body', e.target.value)}
+                      className="input-odoo w-full text-xs font-mono min-h-[120px] rounded-t-none border-t-0"
+                      placeholder="<p>Escribe tu contenido aquí...</p>"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ─── Settings Section ─── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Configuración</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <div className={cn(
+                  'w-9 h-5 rounded-full relative transition-colors cursor-pointer',
+                  form.is_active ? 'bg-primary' : 'bg-muted-foreground/30',
+                )} onClick={() => set('is_active', !form.is_active)}>
+                  <span className={cn(
+                    'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-sm',
+                    form.is_active ? 'left-[18px]' : 'left-0.5',
+                  )} />
+                </div>
+                <span className="text-sm text-foreground">Activo</span>
+              </label>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Fecha inicio</label>
+                  <input
+                    type="datetime-local"
+                    value={form.start_date ?? ''}
+                    onChange={e => set('start_date', e.target.value)}
+                    className="input-odoo w-full text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Fecha fin (opcional)</label>
+                  <input
+                    type="datetime-local"
+                    value={form.end_date ?? ''}
+                    onChange={e => set('end_date', e.target.value || null)}
+                    className="input-odoo w-full text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">URL de redirección (opcional)</label>
+                <input
+                  value={form.redirect_url ?? ''}
+                  onChange={e => set('redirect_url', e.target.value)}
+                  className="input-odoo w-full text-sm"
+                  placeholder="https://... o /ruta-interna"
+                />
+              </div>
+              {form.redirect_url && (
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">Tipo de redirección</label>
+                  <select
+                    value={form.redirect_type ?? ''}
+                    onChange={e => set('redirect_type', e.target.value || null)}
+                    className="input-odoo w-full text-sm"
+                  >
+                    <option value="">Sin tipo</option>
+                    <option value="internal">Interna</option>
+                    <option value="external">Externa</option>
+                    <option value="both">Ambas</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Banner-only: color pickers */}
+              {form.type === 'banner' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">Color de fondo</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={form.bg_color ?? '#1e293b'}
+                        onChange={e => set('bg_color', e.target.value)}
+                        className="w-8 h-8 rounded-lg border border-border cursor-pointer p-0.5"
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{form.bg_color}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-1.5 block">Color de texto</label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="color"
+                        value={form.text_color ?? '#ffffff'}
+                        onChange={e => set('text_color', e.target.value)}
+                        className="w-8 h-8 rounded-lg border border-border cursor-pointer p-0.5"
+                      />
+                      <span className="text-xs text-muted-foreground font-mono">{form.text_color}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Modal-only: max views */}
+              {form.type === 'modal' && (
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">
+                    Máximo de vistas por usuario
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.max_views ?? 0}
+                      onChange={e => set('max_views', parseInt(e.target.value) || 0)}
+                      className="input-odoo w-24 text-sm"
+                    />
+                    <span className="text-[11px] text-muted-foreground">0 = ilimitado</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Bubble-only: image */}
+              {form.type === 'bubble' && (
+                <div>
+                  <label className="text-xs font-semibold text-foreground mb-1 block">URL de imagen (icono)</label>
+                  <input
+                    value={form.image_url ?? ''}
+                    onChange={e => set('image_url', e.target.value)}
+                    className="input-odoo w-full text-sm"
+                    placeholder="https://..."
+                  />
+                  {form.image_url && (
+                    <img src={form.image_url} alt="preview" className="mt-2 w-12 h-12 rounded-lg object-cover border border-border" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ─── Live Preview ─── */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Vista previa</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="border border-dashed border-border rounded-xl p-4 bg-muted/10">
+                {form.type === 'banner' && <BannerPreview form={form} />}
+                {form.type === 'modal' && <ModalPreview form={form} />}
+                {form.type === 'bubble' && <BubblePreview form={form} />}
+              </div>
+            </div>
+          </div>
+
+          {/* ─── Sticky Footer ─── */}
+          <div className="border-t border-border px-6 py-4 flex gap-2 justify-end shrink-0 bg-card">
+            <button onClick={() => setSheetOpen(false)} className="btn-odoo text-sm">Cancelar</button>
+            <button onClick={handleSave} disabled={saving} className="btn-odoo-primary text-sm px-6">
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  /* ─── List View ─── */
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-          <Bell className="h-5 w-5" /> Anuncios del sistema (Global)
+          <Megaphone className="h-5 w-5 text-muted-foreground" /> Anuncios del sistema
         </h2>
         <button onClick={openNew} className="btn-odoo-primary text-xs flex items-center gap-1.5">
-          <Plus className="h-3.5 w-3.5" /> Nuevo
+          <Plus className="h-3.5 w-3.5" /> Nuevo anuncio
         </button>
       </div>
 
       {loading ? (
         <div className="text-muted-foreground text-sm py-8 text-center">Cargando...</div>
-      ) : notifications.length === 0 ? (
-        <div className="text-muted-foreground text-sm py-12 text-center">No hay anuncios.</div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card">
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/50 text-left">
-                <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Título</th>
-                <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Tipo</th>
-                <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Activa</th>
-                <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Inicio</th>
-                <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Fin</th>
-                <th className="px-4 py-2.5 font-semibold text-foreground text-xs text-right">Acciones</th>
+              <tr className="bg-muted/30">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Título</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Inicio</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Fin</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {notifications.map(n => (
-                <tr key={n.id} className="border-t border-border hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-2.5 text-foreground font-medium">{n.title}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={cn('inline-block px-2 py-0.5 rounded text-[11px] font-semibold', TYPE_COLORS[n.type])}>
-                      {TYPE_LABELS[n.type]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <button onClick={() => toggleActive(n)}
-                      className={cn('w-9 h-5 rounded-full relative transition-colors',
-                        n.is_active ? 'bg-primary' : 'bg-muted-foreground/30'
-                      )}>
-                      <span className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform shadow-sm',
-                        n.is_active ? 'left-[18px]' : 'left-0.5'
-                      )} />
-                    </button>
-                  </td>
-                  <td className="px-4 py-2.5 text-muted-foreground text-xs">{fmtDate(n.start_date)}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground text-xs">{n.end_date ? fmtDate(n.end_date) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => openEdit(n)} className="p-1.5 rounded hover:bg-muted transition-colors" title="Editar">
-                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+              {notifications.map(n => {
+                const meta = TYPE_META[n.type];
+                return (
+                  <tr key={n.id} className="border-t border-border hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border', meta.badge)}>
+                        <meta.icon className="h-3 w-3" />
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-foreground">{n.title}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => toggleActive(n)}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors cursor-pointer',
+                          n.is_active
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                            : 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        <span className={cn('w-1.5 h-1.5 rounded-full', n.is_active ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
+                        {n.is_active ? 'Activo' : 'Inactivo'}
                       </button>
-                      <button onClick={() => handleDelete(n.id)} className="p-1.5 rounded hover:bg-destructive/10 transition-colors" title="Eliminar">
-                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(n.start_date)}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{n.end_date ? fmtDate(n.end_date) : '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center gap-0.5 justify-end">
+                        <button
+                          onClick={() => openEdit(n)}
+                          className="p-1.5 rounded-md hover:bg-muted transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(n.id)}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      {renderSheet()}
     </div>
   );
 }
