@@ -44,7 +44,7 @@ export default function UsuariosPage() {
 
   // New user form
   const [showNewUser, setShowNewUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '' });
+  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: '' });
   const [creatingUser, setCreatingUser] = useState(false);
 
   // Password modal
@@ -219,6 +219,7 @@ export default function UsuariosPage() {
   const createUser = async () => {
     if (!newUser.email || !newUser.password) { toast.error('Email y contraseña son obligatorios'); return; }
     if (newUser.password.length < 6) { toast.error('La contraseña debe tener al menos 6 caracteres'); return; }
+    if (!newUser.role_id) { toast.error('Debes seleccionar un rol'); return; }
     if (availableSlots <= 0) {
       toast.error(`Ya alcanzaste el límite de ${subscription.maxUsuarios} usuarios de tu plan. Actualiza tu suscripción para agregar más.`);
       return;
@@ -226,12 +227,12 @@ export default function UsuariosPage() {
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre },
+        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre, role_id: newUser.role_id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success('Usuario creado exitosamente');
-      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '' });
+      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '' });
       load();
     } catch (e: any) { toast.error(e.message); } finally { setCreatingUser(false); }
   };
@@ -308,7 +309,7 @@ export default function UsuariosPage() {
           {showNewUser && (
             <div className="bg-card border border-border rounded-lg p-4 space-y-3">
               <h3 className="text-sm font-semibold text-foreground">Crear nuevo usuario</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="label-odoo">Nombre</label>
                   <input className="input-odoo" value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} placeholder="Nombre completo" />
@@ -320,6 +321,13 @@ export default function UsuariosPage() {
                 <div>
                   <label className="label-odoo">Contraseña inicial</label>
                   <input className="input-odoo" type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
+                </div>
+                <div>
+                  <label className="label-odoo">Rol <span className="text-destructive">*</span></label>
+                  <select className="input-odoo" value={newUser.role_id} onChange={e => setNewUser({ ...newUser, role_id: e.target.value })}>
+                    <option value="">Seleccionar rol...</option>
+                    {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="flex gap-2">

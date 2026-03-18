@@ -126,9 +126,9 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create-user") {
-      const { email, password, nombre } = params;
+      const { email, password, nombre, role_id } = params;
 
-      // Create auth user
+      // Create auth user with empresa metadata so handle_new_user trigger won't create a random empresa
       const { data: newUser, error: createError } =
         await adminClient.auth.admin.createUser({
           email,
@@ -143,13 +143,34 @@ Deno.serve(async (req) => {
         });
       }
 
-      // The trigger handle_new_user should auto-create profile,
-      // but let's update nombre if provided
-      if (newUser.user && nombre) {
-        await adminClient
+      if (newUser.user) {
+        // Wait a moment for the trigger to fire
+        await new Promise((r) => setTimeout(r, 500));
+
+        // Ensure profile points to caller's empresa (trigger may have created it under wrong empresa)
+        const { data: existingProfile } = await adminClient
           .from("profiles")
-          .update({ nombre })
-          .eq("user_id", newUser.user.id);
+          .select("id")
+          .eq("user_id", newUser.user.id)
+          .maybeSingle();
+
+        if (existingProfile) {
+          await adminClient
+            .from("profiles")
+            .update({ empresa_id: empresaId, nombre: nombre || null })
+            .eq("user_id", newUser.user.id);
+        } else {
+          await adminClient
+            .from("profiles")
+            .insert({ user_id: newUser.user.id, empresa_id: empresaId, nombre: nombre || null });
+        }
+
+        // Assign role if provided
+        if (role_id) {
+          await adminClient
+            .from("user_roles")
+            .insert({ user_id: newUser.user.id, role_id });
+        }
       }
 
       return new Response(
