@@ -113,6 +113,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       });
     }
 
+    // Load detailed users via edge function
+    try {
+      const { data: usersData, error: usersErr } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'list-empresa-users', empresa_id: empresaId },
+      });
+      if (!usersErr && usersData?.users) setUsersDetailed(usersData.users);
+    } catch { /* silent */ }
+
     // Try loading Stripe invoices
     try {
       const session = await supabase.auth.getSession();
