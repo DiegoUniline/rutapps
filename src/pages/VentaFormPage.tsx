@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink, FileText, Receipt } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
@@ -61,6 +62,7 @@ function emptyLine(): Partial<VentaLinea> & { unidad_label?: string; impuestos_l
 const COL_COUNT = 4;
 
 export default function VentaFormPage() {
+  const isMobile = useIsMobile();
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile, user, empresa } = useAuth();
@@ -558,7 +560,7 @@ export default function VentaFormPage() {
   return (
     <div className="min-h-full">
       {/* Header bar */}
-      <div className="bg-card border-b border-border px-5 py-2.5 flex items-center justify-between gap-3 sticky top-0 z-10">
+      <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <button onClick={() => navigate('/ventas')} className="btn-odoo-secondary !px-2.5">
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -572,7 +574,7 @@ export default function VentaFormPage() {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
           {!isNew && form.status === 'borrador' && (
             <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
           )}
@@ -672,7 +674,7 @@ export default function VentaFormPage() {
       )}
 
       {/* Form body */}
-      <div className="p-5 space-y-4 max-w-[1200px]">
+      <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
         {/* Header card */}
         <div className="bg-card border border-border rounded-md p-5">
           {readOnly && (
@@ -846,8 +848,110 @@ export default function VentaFormPage() {
               key: 'lineas',
               label: 'Líneas de venta',
               content: (
-                <div className="p-4 space-y-3">
-                  <div>
+                <div className="p-3 sm:p-4 space-y-3">
+                  {isMobile ? (
+                    /* Mobile: card layout for lines */
+                    <div className="space-y-2">
+                      {lineas.map((l, idx) => {
+                        const qty = Number(l.cantidad) || 0;
+                        const price = Number(l.precio_unitario) || 0;
+                        const desc = Number(l.descuento_pct) || 0;
+                        const base = qty * price * (1 - desc / 100);
+                        const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
+                        const iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+                        const lineTotal = base + ieps + iva;
+                        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                        const isEmpty = !l.producto_id;
+                        const lineData = l as any;
+                        const unidadLabel = lineData.unidad_label || 'PZA';
+
+                        if (isEmpty && readOnly) return null;
+
+                        return (
+                          <div key={idx} className="border border-border rounded-lg p-3 bg-card space-y-2">
+                            {/* Product selector or name */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                {readOnly ? (
+                                  <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</div>
+                                ) : (
+                                  <ProductSearchInput
+                                    products={(productosList ?? []).filter((p: any) => {
+                                      const usedIds = lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean);
+                                      return !usedIds.includes(p.id);
+                                    }).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
+                                    value={l.producto_id ?? ''}
+                                    displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
+                                    onSelect={pid => handleProductSelect(idx, pid)}
+                                    autoFocus={idx === lineas.length - 1 && isEmpty}
+                                    readOnly={readOnly}
+                                  />
+                                )}
+                                {/* Tax badges */}
+                                {!isEmpty && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {Number(l.iva_pct) > 0 && (
+                                      <button type="button" disabled={readOnly} onClick={() => !readOnly && updateLine(idx, 'iva_pct', 0)}
+                                        className="text-[10px] px-1.5 py-0 rounded-full bg-accent text-accent-foreground">
+                                        IVA {l.iva_pct}% ✕
+                                      </button>
+                                    )}
+                                    {Number(l.ieps_pct) > 0 && (
+                                      <button type="button" disabled={readOnly} onClick={() => !readOnly && updateLine(idx, 'ieps_pct', 0)}
+                                        className="text-[10px] px-1.5 py-0 rounded-full bg-accent text-accent-foreground">
+                                        IEPS {l.ieps_pct}% ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {!readOnly && !isEmpty && (
+                                <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive p-1">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+
+                            {!isEmpty && (
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block">Cantidad</label>
+                                  {readOnly ? (
+                                    <span className="text-sm font-medium">{l.cantidad} {unidadLabel}</span>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <input type="number" inputMode="numeric"
+                                        className="inline-edit-input text-sm text-right !py-1 w-full"
+                                        value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)}
+                                        min="0" step="1" onFocus={e => e.target.select()} />
+                                      <span className="text-[10px] text-muted-foreground shrink-0">{unidadLabel}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block">Precio</label>
+                                  {readOnly ? (
+                                    <span className="text-sm">${price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                                  ) : (
+                                    <input type="number" inputMode="decimal"
+                                      className="inline-edit-input text-sm text-right !py-1 w-full"
+                                      value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
+                                      min="0" step="0.01" onFocus={e => e.target.select()} />
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block">Total</label>
+                                  <span className="text-sm font-semibold">${lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Desktop: table layout */
+                    <div>
                     <table className="w-full text-[13px]">
                       <thead>
                         <tr className="border-b border-table-border text-left">
@@ -904,28 +1008,14 @@ export default function VentaFormPage() {
                                 {!isEmpty && (
                                   <div className="flex flex-wrap gap-1 md:hidden mt-0.5">
                                     {Number(l.iva_pct) > 0 && (
-                                      <button
-                                        type="button"
-                                        disabled={readOnly}
-                                        onClick={() => {
-                                          if (readOnly) return;
-                                          updateLine(idx, 'iva_pct', 0);
-                                        }}
-                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground"
-                                      >
+                                      <button type="button" disabled={readOnly} onClick={() => { if (readOnly) return; updateLine(idx, 'iva_pct', 0); }}
+                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground">
                                         IVA {l.iva_pct}% ✕
                                       </button>
                                     )}
                                     {Number(l.ieps_pct) > 0 && (
-                                      <button
-                                        type="button"
-                                        disabled={readOnly}
-                                        onClick={() => {
-                                          if (readOnly) return;
-                                          updateLine(idx, 'ieps_pct', 0);
-                                        }}
-                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground"
-                                      >
+                                      <button type="button" disabled={readOnly} onClick={() => { if (readOnly) return; updateLine(idx, 'ieps_pct', 0); }}
+                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground">
                                         IEPS {l.ieps_pct}% ✕
                                       </button>
                                     )}
@@ -936,32 +1026,23 @@ export default function VentaFormPage() {
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">
                                     {l.cantidad}
-                                    {/* Mobile: show unit next to quantity */}
                                     <span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span>
                                   </span>
                                 ) : (
                                   <div className="flex items-center gap-1 justify-end">
                                     <input
                                       ref={el => setCellRef(idx, 1, el)}
-                                      type="number"
-                                      inputMode="numeric"
+                                      type="number" inputMode="numeric"
                                       className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                                      value={l.cantidad ?? ''}
-                                      onChange={e => updateLine(idx, 'cantidad', e.target.value)}
-                                      onKeyDown={e => handleCellKeyDown(e, idx, 1)}
-                                      onFocus={e => e.target.select()}
-                                      min="0" step="1"
-                                    />
-                                    {/* Mobile: show unit next to input */}
+                                      value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)}
+                                      onKeyDown={e => handleCellKeyDown(e, idx, 1)} onFocus={e => e.target.select()} min="0" step="1" />
                                     {unidadLabel && <span className="text-[10px] text-muted-foreground shrink-0 md:hidden">{unidadLabel}</span>}
                                   </div>
                                 )}
                               </td>
-                              {/* Unidad column — desktop only */}
                               <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">
                                 {isEmpty ? '' : (unidadLabel || '—')}
                               </td>
-                              {/* Precio — editable inline, currency format */}
                               <td className="py-1 px-2">
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">${price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -970,25 +1051,16 @@ export default function VentaFormPage() {
                                 ) : (
                                   <input
                                     ref={el => setCellRef(idx, 2, el)}
-                                    type="number"
-                                    inputMode="decimal"
+                                    type="number" inputMode="decimal"
                                     className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                                    value={l.precio_unitario ?? ''}
-                                    onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 2)}
-                                    onFocus={e => e.target.select()}
-                                    min="0" step="0.01"
-                                  />
+                                    value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
+                                    onKeyDown={e => handleCellKeyDown(e, idx, 2)} onFocus={e => e.target.select()} min="0" step="0.01" />
                                 )}
                               </td>
-                              {/* Impuestos column — clickable to toggle */}
                               <td className="py-1.5 px-2 text-center hidden md:table-cell">
                                 {isEmpty ? '' : (
                                   <div className="inline-flex flex-wrap gap-1 justify-center">
-                                    {/* IVA toggle */}
-                                    <button
-                                      type="button"
-                                      disabled={readOnly}
+                                    <button type="button" disabled={readOnly}
                                       onClick={() => {
                                         if (readOnly) return;
                                         const currentIva = Number(l.iva_pct) || 0;
@@ -996,32 +1068,21 @@ export default function VentaFormPage() {
                                         const defaultIva = prod?.tiene_iva ? Number(prod.iva_pct ?? 16) : 16;
                                         const newIva = currentIva > 0 ? 0 : defaultIva;
                                         updateLine(idx, 'iva_pct', newIva);
-                                        // Update label
                                         const newIeps = Number(l.ieps_pct) || 0;
                                         const taxes: string[] = [];
                                         if (newIva > 0) taxes.push(`IVA ${newIva}%`);
                                         if (newIeps > 0) taxes.push(`IEPS ${newIeps}%`);
-                                        setLineas(prev => {
-                                          const next = [...prev];
-                                          (next[idx] as any).impuestos_label = taxes.join(', ');
-                                          return next;
-                                        });
+                                        setLineas(prev => { const next = [...prev]; (next[idx] as any).impuestos_label = taxes.join(', '); return next; });
                                       }}
-                                      className={cn(
-                                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
-                                        Number(l.iva_pct) > 0
-                                          ? "bg-accent text-accent-foreground"
-                                          : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                      className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
+                                        Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60"
                                       )}
                                       title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}
                                     >
                                       IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
                                     </button>
-                                    {/* IEPS toggle — only show if product originally had IEPS */}
                                     {(Number(l.ieps_pct) > 0 || (lineData.impuestos_label || '').includes('IEPS')) && (
-                                      <button
-                                        type="button"
-                                        disabled={readOnly}
+                                      <button type="button" disabled={readOnly}
                                         onClick={() => {
                                           if (readOnly) return;
                                           const currentIeps = Number(l.ieps_pct) || 0;
@@ -1033,19 +1094,11 @@ export default function VentaFormPage() {
                                           const taxes: string[] = [];
                                           if (newIva > 0) taxes.push(`IVA ${newIva}%`);
                                           if (newIeps > 0) taxes.push(`IEPS ${newIeps}%`);
-                                          setLineas(prev => {
-                                            const next = [...prev];
-                                            (next[idx] as any).impuestos_label = taxes.join(', ');
-                                            return next;
-                                          });
+                                          setLineas(prev => { const next = [...prev]; (next[idx] as any).impuestos_label = taxes.join(', '); return next; });
                                         }}
-                                        className={cn(
-                                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
-                                          Number(l.ieps_pct) > 0
-                                            ? "bg-accent text-accent-foreground"
-                                            : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                        className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
+                                          Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60"
                                         )}
-                                        title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}
                                       >
                                         IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
                                       </button>
@@ -1056,25 +1109,18 @@ export default function VentaFormPage() {
                                   </div>
                                 )}
                               </td>
-                              {/* Descuento % */}
                               <td className="py-1 px-2">
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">{l.descuento_pct ?? 0}%</span>
                                 ) : (
                                   <input
                                     ref={el => setCellRef(idx, 3, el)}
-                                    type="number"
-                                    inputMode="decimal"
+                                    type="number" inputMode="decimal"
                                     className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                                    value={l.descuento_pct ?? ''}
-                                    onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 3)}
-                                    onFocus={e => e.target.select()}
-                                    min="0" max="100" step="0.1"
-                                  />
+                                    value={l.descuento_pct ?? ''} onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
+                                    onKeyDown={e => handleCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />
                                 )}
                               </td>
-                              {/* Subtotal with taxes */}
                               <td className="py-1.5 px-2 text-right font-medium">
                                 {isEmpty ? '' : (
                                   <div>
@@ -1087,10 +1133,7 @@ export default function VentaFormPage() {
                               </td>
                               <td className="py-1.5 px-2">
                                 {!readOnly && !isEmpty && (
-                                  <button
-                                    onClick={() => removeLine(idx)}
-                                    className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                                  >
+                                  <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100">
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 )}
@@ -1100,7 +1143,8 @@ export default function VentaFormPage() {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  )}
 
                   {!readOnly && (
                     <button onClick={addLine} className="btn-odoo-secondary text-xs">
@@ -1108,9 +1152,9 @@ export default function VentaFormPage() {
                     </button>
                   )}
 
-                  {/* Totals — sticky on mobile */}
+                  {/* Totals */}
                   <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
-                    <div className="w-72 bg-accent rounded-md p-3 space-y-1.5 text-[13px]">
+                    <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-72")}>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
                         <span>${totals.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1147,89 +1191,122 @@ export default function VentaFormPage() {
               key: 'pagos',
               label: `Pagos (${(pagosData ?? []).length})`,
               content: (
-                <div className="p-4 space-y-3">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-table-border text-left">
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Fecha</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Método</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Referencia</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Monto</th>
-                        <th className="py-2 px-2 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="p-3 sm:p-4 space-y-3">
+                  {isMobile ? (
+                    /* Mobile: pagos cards */
+                    <div className="space-y-2">
                       {(pagosData ?? []).map((p: any) => (
-                        <tr key={p.id} className="border-b border-table-border hover:bg-table-hover">
-                          <td className="py-2 px-2">{p.cobros?.fecha ?? '—'}</td>
-                          <td className="py-2 px-2 capitalize">{p.cobros?.metodo_pago ?? '—'}</td>
-                          <td className="py-2 px-2 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
-                          <td className="py-2 px-2 text-right font-medium">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                          <td></td>
-                        </tr>
+                        <div key={p.id} className="border border-border rounded-lg p-3 bg-card">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium capitalize">{p.cobros?.metodo_pago ?? '—'}</div>
+                              <div className="text-xs text-muted-foreground">{p.cobros?.fecha ?? '—'}</div>
+                            </div>
+                            <span className="text-sm font-bold text-foreground">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          {p.cobros?.referencia && (
+                            <div className="text-xs text-muted-foreground mt-1">Ref: {p.cobros.referencia}</div>
+                          )}
+                        </div>
                       ))}
+                      {(pagosData ?? []).length === 0 && (
+                        <div className="text-center py-6 text-muted-foreground text-sm">Sin pagos registrados</div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Desktop: pagos table */
+                    <table className="w-full text-[13px]">
+                      <thead>
+                        <tr className="border-b border-table-border text-left">
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Fecha</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Método</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Referencia</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Monto</th>
+                          <th className="py-2 px-2 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(pagosData ?? []).map((p: any) => (
+                          <tr key={p.id} className="border-b border-table-border hover:bg-table-hover">
+                            <td className="py-2 px-2">{p.cobros?.fecha ?? '—'}</td>
+                            <td className="py-2 px-2 capitalize">{p.cobros?.metodo_pago ?? '—'}</td>
+                            <td className="py-2 px-2 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
+                            <td className="py-2 px-2 text-right font-medium">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                            <td></td>
+                          </tr>
+                        ))}
 
-                      {/* Inline new payment row */}
-                      {saldoPendiente > 0.01 && showPagoForm && (
-                        <tr className="border-b border-table-border bg-muted/30">
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="date"
-                              className="input-odoo text-xs w-full"
-                              defaultValue={new Date().toISOString().slice(0, 10)}
-                              readOnly
-                            />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <select className="input-odoo text-xs w-full" value={pagoMetodo} onChange={e => setPagoMetodo(e.target.value)}>
-                              <option value="efectivo">Efectivo</option>
-                              <option value="transferencia">Transferencia</option>
-                              <option value="tarjeta">Tarjeta</option>
-                              <option value="cheque">Cheque</option>
-                            </select>
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input
-                              className="input-odoo text-xs w-full"
-                              value={pagoRef}
-                              onChange={e => setPagoRef(e.target.value)}
-                              placeholder="Referencia..."
-                              onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }}
-                            />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="number"
-                              className="input-odoo text-xs w-full text-right"
-                              value={pagoMonto}
-                              onChange={e => setPagoMonto(e.target.value)}
-                              min="0"
-                              step="0.01"
-                              placeholder={saldoPendiente.toFixed(2)}
-                              autoFocus
-                              onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }}
-                            />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <div className="flex gap-1">
+                        {/* Inline new payment row */}
+                        {saldoPendiente > 0.01 && showPagoForm && (
+                          <tr className="border-b border-table-border bg-muted/30">
+                            <td className="py-1.5 px-2">
+                              <input type="date" className="input-odoo text-xs w-full" defaultValue={new Date().toISOString().slice(0, 10)} readOnly />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <select className="input-odoo text-xs w-full" value={pagoMetodo} onChange={e => setPagoMetodo(e.target.value)}>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="tarjeta">Tarjeta</option>
+                                <option value="cheque">Cheque</option>
+                              </select>
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input className="input-odoo text-xs w-full" value={pagoRef} onChange={e => setPagoRef(e.target.value)} placeholder="Referencia..."
+                                onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }} />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input type="number" className="input-odoo text-xs w-full text-right" value={pagoMonto} onChange={e => setPagoMonto(e.target.value)}
+                                min="0" step="0.01" placeholder={saldoPendiente.toFixed(2)} autoFocus
+                                onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }} />
+                            </td>
+                            <td className="py-1.5 px-2">
                               <button onClick={handleAddPago} disabled={pagoSaving} className="text-primary hover:text-primary/80" title="Guardar">
                                 <Check className="h-3.5 w-3.5" />
                               </button>
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                      {(pagosData ?? []).length > 0 && (
+                        <tfoot>
+                          <tr className="border-t-2 border-border">
+                            <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
+                            <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
                       )}
-                    </tbody>
-                    {(pagosData ?? []).length > 0 && (
-                      <tfoot>
-                        <tr className="border-t-2 border-border">
-                          <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
-                          <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
+                    </table>
+                  )}
+
+                  {/* Mobile inline pago form */}
+                  {isMobile && saldoPendiente > 0.01 && showPagoForm && (
+                    <div className="border border-border rounded-lg p-3 bg-muted/20 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">Método</label>
+                          <select className="input-odoo text-xs w-full" value={pagoMetodo} onChange={e => setPagoMetodo(e.target.value)}>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="cheque">Cheque</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">Monto</label>
+                          <input type="number" className="input-odoo text-xs w-full text-right" value={pagoMonto} onChange={e => setPagoMonto(e.target.value)}
+                            min="0" step="0.01" placeholder={saldoPendiente.toFixed(2)} autoFocus />
+                        </div>
+                      </div>
+                      <input className="input-odoo text-xs w-full" value={pagoRef} onChange={e => setPagoRef(e.target.value)} placeholder="Referencia..." />
+                      <div className="flex gap-2">
+                        <button onClick={handleAddPago} disabled={pagoSaving} className="btn-odoo-primary text-xs flex-1">
+                          <Check className="h-3.5 w-3.5" /> Guardar pago
+                        </button>
+                        <button onClick={() => setShowPagoForm(false)} className="btn-odoo-secondary text-xs">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
 
                   {saldoPendiente > 0.01 && !showPagoForm && (
                     <button onClick={() => { setShowPagoForm(true); setPagoMonto(''); setPagoRef(''); }} className="text-primary text-xs font-medium hover:underline flex items-center gap-1">
@@ -1251,39 +1328,63 @@ export default function VentaFormPage() {
               key: 'entregas',
               label: `Entregas (${entregasActivas.length})`,
               content: (
-                <div className="p-4 space-y-4">
+                <div className="p-3 sm:p-4 space-y-4">
                   {/* Per-line delivery summary */}
                   {lineas.filter(l => l.producto_id).length > 0 && (
                     <div>
                       <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Resumen por producto</h4>
-                      <table className="w-full text-[13px]">
-                        <thead>
-                          <tr className="border-b border-table-border text-left">
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Pedida</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Surtida</th>
-                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Faltante</th>
-                          </tr>
-                        </thead>
-                        <tbody>
+                      {isMobile ? (
+                        <div className="space-y-2">
                           {lineas.filter(l => l.producto_id).map((l, idx) => {
                             const prod = productosList?.find((p: any) => p.id === l.producto_id);
                             const pedida = Number(l.cantidad) || 0;
                             const surtida = lineDeliverySummary[l.producto_id!] ?? 0;
                             const faltante = Math.max(0, pedida - surtida);
                             return (
-                              <tr key={idx} className={cn("border-b border-table-border", faltante > 0 && "bg-warning/5")}>
-                                <td className="py-1.5 px-2 text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</td>
-                                <td className="py-1.5 px-2 text-right text-[12px]">{pedida}</td>
-                                <td className="py-1.5 px-2 text-right text-[12px] font-medium text-primary">{surtida}</td>
-                                <td className={cn("py-1.5 px-2 text-right text-[12px] font-bold", faltante > 0 ? "text-destructive" : "text-muted-foreground")}>
-                                  {faltante > 0 ? faltante : <Check className="h-3.5 w-3.5 inline text-primary" />}
-                                </td>
-                              </tr>
+                              <div key={idx} className={cn("border border-border rounded-lg p-3 bg-card", faltante > 0 && "border-warning/50")}>
+                                <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</div>
+                                <div className="grid grid-cols-3 gap-2 mt-1 text-xs">
+                                  <div><span className="text-muted-foreground">Pedida: </span><span className="font-medium">{pedida}</span></div>
+                                  <div><span className="text-muted-foreground">Surtida: </span><span className="font-medium text-primary">{surtida}</span></div>
+                                  <div>
+                                    <span className="text-muted-foreground">Faltante: </span>
+                                    {faltante > 0 ? <span className="font-bold text-destructive">{faltante}</span> : <Check className="h-3.5 w-3.5 inline text-primary" />}
+                                  </div>
+                                </div>
+                              </div>
                             );
                           })}
-                        </tbody>
-                      </table>
+                        </div>
+                      ) : (
+                        <table className="w-full text-[13px]">
+                          <thead>
+                            <tr className="border-b border-table-border text-left">
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Pedida</th>
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Surtida</th>
+                              <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right w-20">Faltante</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {lineas.filter(l => l.producto_id).map((l, idx) => {
+                              const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                              const pedida = Number(l.cantidad) || 0;
+                              const surtida = lineDeliverySummary[l.producto_id!] ?? 0;
+                              const faltante = Math.max(0, pedida - surtida);
+                              return (
+                                <tr key={idx} className={cn("border-b border-table-border", faltante > 0 && "bg-warning/5")}>
+                                  <td className="py-1.5 px-2 text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : l.producto_id}</td>
+                                  <td className="py-1.5 px-2 text-right text-[12px]">{pedida}</td>
+                                  <td className="py-1.5 px-2 text-right text-[12px] font-medium text-primary">{surtida}</td>
+                                  <td className={cn("py-1.5 px-2 text-right text-[12px] font-bold", faltante > 0 ? "text-destructive" : "text-muted-foreground")}>
+                                    {faltante > 0 ? faltante : <Check className="h-3.5 w-3.5 inline text-primary" />}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      )}
                     </div>
                   )}
 
@@ -1292,6 +1393,32 @@ export default function VentaFormPage() {
                     <h4 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Entregas creadas</h4>
                     {entregasActivas.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No hay entregas creadas para este pedido</p>
+                    ) : isMobile ? (
+                      <div className="space-y-2">
+                        {(entregasExistentes ?? []).map((e: any) => {
+                          const isCancelled = e.status === 'cancelado';
+                          const statusColor: Record<string, string> = {
+                            borrador: 'bg-muted text-muted-foreground',
+                            surtido: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                            asignado: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
+                            cargado: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+                            en_ruta: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                            hecho: 'bg-primary/10 text-primary',
+                            cancelado: 'bg-destructive/10 text-destructive',
+                          };
+                          return (
+                            <Link key={e.id} to={`/logistica/entregas/${e.id}`} className={cn("block border border-border rounded-lg p-3 bg-card", isCancelled && "opacity-50")}>
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-sm font-bold text-primary">{e.folio ?? e.id.slice(0, 8)}</span>
+                                <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", statusColor[e.status] ?? 'bg-muted text-muted-foreground')}>
+                                  {e.status}
+                                </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">{(e.entrega_lineas ?? []).length} líneas</div>
+                            </Link>
+                          );
+                        })}
+                      </div>
                     ) : (
                       <table className="w-full text-[13px]">
                         <thead>
@@ -1342,30 +1469,20 @@ export default function VentaFormPage() {
                     )}
                   </div>
 
-                  {/* Create new entrega from remaining */}
                   {canCreateEntrega && (
-                    <Button
-                      size="sm"
-                      onClick={async () => {
-                        if (!remaining || remaining.length === 0) return;
-                        try {
-                          const entrega = await crearEntrega.mutateAsync({
-                            pedidoId: form.id,
-                            vendedorId: form.vendedor_id ?? undefined,
-                            clienteId: form.cliente_id ?? undefined,
-                            almacenId: form.almacen_id ?? undefined,
-                            lineas: remaining.map(r => ({
-                              producto_id: r.producto_id,
-                              cantidad_pedida: r.cantidad_pendiente,
-                            })),
-                          });
-                          toast.success(`Entrega ${entrega.folio} creada con lo faltante`);
-                        } catch (e: any) {
-                          toast.error(e.message);
-                        }
-                      }}
-                      disabled={crearEntrega.isPending}
-                    >
+                    <Button size="sm" onClick={async () => {
+                      if (!remaining || remaining.length === 0) return;
+                      try {
+                        const entrega = await crearEntrega.mutateAsync({
+                          pedidoId: form.id,
+                          vendedorId: form.vendedor_id ?? undefined,
+                          clienteId: form.cliente_id ?? undefined,
+                          almacenId: form.almacen_id ?? undefined,
+                          lineas: remaining.map(r => ({ producto_id: r.producto_id, cantidad_pedida: r.cantidad_pendiente })),
+                        });
+                        toast.success(`Entrega ${entrega.folio} creada con lo faltante`);
+                      } catch (e: any) { toast.error(e.message); }
+                    }} disabled={crearEntrega.isPending}>
                       <Package className="h-3.5 w-3.5" /> Crear entrega con faltante
                     </Button>
                   )}
