@@ -332,6 +332,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: setupComplete } = useSetupComplete();
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
+  const location = useLocation();
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
