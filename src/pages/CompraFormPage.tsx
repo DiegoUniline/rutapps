@@ -468,6 +468,11 @@ export default function CompraFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {form.status !== 'cancelada' && !isNew && form.status !== 'borrador' && (
+            <button onClick={handleCancel} className="btn-odoo-icon text-destructive" title="Cancelar compra">
+              <Ban className="h-4 w-4" />
+            </button>
+          )}
           {form.status === 'borrador' && !isNew && (
             <button onClick={handleDelete} className="btn-odoo-icon text-destructive">
               <Trash2 className="h-4 w-4" />
