@@ -57,7 +57,6 @@ export function useActiveNotifications() {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('empresa_id', empresa!.id)
         .eq('is_active', true)
         .lte('start_date', now)
         .order('created_at', { ascending: false });
