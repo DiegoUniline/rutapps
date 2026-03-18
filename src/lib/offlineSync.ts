@@ -82,6 +82,7 @@ const TABLES_WITH_EMPRESA = new Set([
   'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
   'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
   'tasas_iva', 'descarga_ruta', 'promociones', 'entregas', 'visitas',
+  'tarifas',
 ]);
 
 // Tables limited to recent data
