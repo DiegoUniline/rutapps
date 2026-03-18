@@ -203,7 +203,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               {iva > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IVA</span>
-                  <span className="val text-foreground tabular-nums">${fmt(iva)}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
                 </div>
               )}
               {ieps > 0 && (
