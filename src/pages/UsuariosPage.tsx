@@ -224,6 +224,13 @@ export default function UsuariosPage() {
       toast.error(`Ya alcanzaste el límite de ${subscription.maxUsuarios} usuarios de tu plan. Actualiza tu suscripción para agregar más.`);
       return;
     }
+    // Client-side duplicate check
+    const emailLower = newUser.email.trim().toLowerCase();
+    const existingAuth = authUsers.find(u => u.email?.toLowerCase() === emailLower);
+    if (existingAuth) {
+      toast.error('Este correo electrónico ya está registrado. Por favor usa otro correo.');
+      return;
+    }
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
@@ -234,7 +241,7 @@ export default function UsuariosPage() {
       toast.success('Usuario creado exitosamente');
       setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '' });
       load();
-    } catch (e: any) { toast.error(e.message); } finally { setCreatingUser(false); }
+    } catch (e: any) { toast.error(e.message || 'Error al crear usuario'); } finally { setCreatingUser(false); }
   };
 
   // ── Set password ──
