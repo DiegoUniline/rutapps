@@ -23,10 +23,11 @@ const TIPO_LABELS: Record<string, string> = {
   ruta_almacen: 'Ruta → Almacén',
 };
 
-const STEPS = [
-  { key: 'borrador', label: 'Borrador' },
-  { key: 'confirmado', label: 'Confirmado' },
-];
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  borrador: { label: 'Borrador', color: 'bg-muted text-muted-foreground' },
+  confirmado: { label: 'Confirmado', color: 'bg-primary text-primary-foreground' },
+  cancelado: { label: 'Cancelado', color: 'bg-destructive text-destructive-foreground' },
+};
 
 interface LineaForm {
   id?: string;
