@@ -683,162 +683,231 @@ export default function VentaFormPage() {
               Esta venta está {form.status} y no se puede editar.
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Col 1 */}
+          {isMobile ? (
+            /* ── Mobile: compact 2-col grid ── */
             <div className="space-y-3">
+              {/* Tipo — full width */}
               <div>
                 <label className="label-odoo">Tipo</label>
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{form.tipo === 'pedido' ? 'Pedido' : 'Venta directa'}</div>
                 ) : (
                   <div className="flex gap-1">
-                    <button
-                      onClick={() => { set('tipo', 'pedido'); set('condicion_pago', 'por_definir'); }}
-                      className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
-                        form.tipo === 'pedido' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
-                      )}
+                    <button onClick={() => { set('tipo', 'pedido'); set('condicion_pago', 'por_definir'); }}
+                      className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === 'pedido' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}
                     >Pedido</button>
-                    <button
-                      onClick={() => { set('tipo', 'venta_directa'); set('condicion_pago', 'contado'); }}
-                      className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
-                        form.tipo === 'venta_directa' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
-                      )}
+                    <button onClick={() => { set('tipo', 'venta_directa'); set('condicion_pago', 'contado'); }}
+                      className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === 'venta_directa' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}
                     >Venta directa</button>
                   </div>
                 )}
               </div>
+              {/* Cliente — full width */}
               <div>
                 <label className="label-odoo">Cliente</label>
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
                 ) : (
-                  <SearchableSelect
-                    options={clienteOptions}
-                    value={form.cliente_id ?? ''}
-                    onChange={cId => {
-                      set('cliente_id', cId);
-                      const c = clientesList?.find(cl => cl.id === cId);
-                      // Always set tarifa from client; fall back to first 'general' tarifa
-                      const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
-                      if (clienteTarifa) set('tarifa_id', clienteTarifa);
-                      // Set lista_precio from client
-                      if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
-                      else set('lista_precio_id', null);
-                      // Inherit requiere_factura from client
-                      if (c?.requiere_factura) set('requiere_factura', true);
-                    }}
-                    placeholder="Buscar cliente..."
-                  />
+                  <SearchableSelect options={clienteOptions} value={form.cliente_id ?? ''} onChange={cId => {
+                    set('cliente_id', cId);
+                    const c = clientesList?.find(cl => cl.id === cId);
+                    const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
+                    if (clienteTarifa) set('tarifa_id', clienteTarifa);
+                    if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
+                    else set('lista_precio_id', null);
+                    if (c?.requiere_factura) set('requiere_factura', true);
+                  }} placeholder="Buscar cliente..." />
                 )}
               </div>
+              {/* Condición de pago — full width */}
               <div>
                 <label className="label-odoo">Condición de pago</label>
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{form.condicion_pago}</div>
                 ) : (
                   <div className="flex gap-1">
-                    {[
-                      { value: 'contado', label: 'Contado' },
-                      { value: 'credito', label: 'Crédito' },
-                      { value: 'por_definir', label: 'Por definir' },
-                    ].map(o => (
-                      <button key={o.value}
-                        onClick={() => set('condicion_pago', o.value)}
-                        className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors",
-                          form.condicion_pago === o.value ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary"
-                        )}
+                    {[{ value: 'contado', label: 'Contado' }, { value: 'credito', label: 'Crédito' }, { value: 'por_definir', label: 'Por definir' }].map(o => (
+                      <button key={o.value} onClick={() => set('condicion_pago', o.value)}
+                        className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.condicion_pago === o.value ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}
                       >{o.label}</button>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Col 2 */}
-            <div className="space-y-3">
-              <div>
-                <label className="label-odoo">Fecha</label>
-                {readOnly ? (
-                  <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha}</div>
-                ) : (
-                  <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />
-                )}
-              </div>
-              <div>
-                <label className="label-odoo flex items-center gap-2">
-                  <span>Entrega</span>
-                  {!readOnly && (
-                    <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground cursor-pointer">
-                      <input type="checkbox" checked={!!form.entrega_inmediata} onChange={e => set('entrega_inmediata', e.target.checked)} className="rounded border-input h-3 w-3" />
-                      Inmediata
-                    </label>
+              {/* 2-col row: Fecha + Entrega */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-odoo">Fecha</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha}</div>
+                  ) : (
+                    <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />
                   )}
-                </label>
-                {form.entrega_inmediata ? (
-                  <div className="text-xs text-muted-foreground py-1.5 px-2">Entrega inmediata</div>
-                ) : readOnly ? (
-                  <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega || '—'}</div>
-                ) : (
-                  <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha de entrega" />
-                )}
-              </div>
-              <div>
-                <label className="label-odoo">Folio</label>
-                <div className="text-[13px] text-muted-foreground py-1.5 px-1">
-                  {form.folio || (isNew ? 'Se asigna al guardar' : '—')}
+                </div>
+                <div>
+                  <label className="label-odoo flex items-center gap-1">
+                    <span>Entrega</span>
+                    {!readOnly && (
+                      <label className="inline-flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
+                        <input type="checkbox" checked={!!form.entrega_inmediata} onChange={e => set('entrega_inmediata', e.target.checked)} className="rounded border-input h-3 w-3" />
+                        Inm.
+                      </label>
+                    )}
+                  </label>
+                  {form.entrega_inmediata ? (
+                    <div className="text-xs text-muted-foreground py-1.5 px-1">Inmediata</div>
+                  ) : readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega || '—'}</div>
+                  ) : (
+                    <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha entrega" />
+                  )}
                 </div>
               </div>
-            </div>
-
-            {/* Col 3 */}
-            <div className="space-y-3">
-              <div>
-                <label className="label-odoo">Tarifa</label>
-                {readOnly ? (
-                  <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
-                ) : (
-                  <SearchableSelect
-                    options={tarifaOptions}
-                    value={form.tarifa_id ?? ''}
-                    onChange={val => set('tarifa_id', val || null)}
-                    placeholder="Buscar tarifa..."
-                  />
-                )}
+              {/* 2-col row: Folio + Tarifa */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label-odoo">Folio</label>
+                  <div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div>
+                </div>
+                <div>
+                  <label className="label-odoo">Tarifa</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
+                  ) : (
+                    <SearchableSelect options={tarifaOptions} value={form.tarifa_id ?? ''} onChange={val => set('tarifa_id', val || null)} placeholder="Tarifa..." />
+                  )}
+                </div>
               </div>
+              {/* Almacén — full width */}
               <div>
                 <label className="label-odoo">Almacén</label>
                 {readOnly ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenesList?.find(a => a.id === form.almacen_id)?.nombre || 'Sin almacén'}</div>
                 ) : (
-                  <SearchableSelect
-                    options={almacenOptions}
-                    value={form.almacen_id ?? ''}
-                    onChange={val => set('almacen_id', val || null)}
-                    placeholder="Buscar almacén..."
-                  />
+                  <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => set('almacen_id', val || null)} placeholder="Almacén..." />
                 )}
               </div>
-              {/* Saldo info for confirmed+ sales */}
+              {/* Saldo info */}
               {!isNew && form.status !== 'borrador' && (
-                <div className="bg-card border border-border rounded-md p-3 space-y-1 text-[13px]">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total</span>
-                    <span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pagado</span>
-                    <span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-border pt-1">
-                    <span className="font-medium">Saldo</span>
-                    <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>
-                      ${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
+                <div className="bg-muted/40 border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                  <div className="flex justify-between border-t border-border pt-0.5"><span className="font-medium">Saldo</span><span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
                 </div>
               )}
             </div>
-          </div>
+          ) : (
+            /* ── Desktop: 3-col grid ── */
+            <div className="grid grid-cols-3 gap-4">
+              {/* Col 1 */}
+              <div className="space-y-3">
+                <div>
+                  <label className="label-odoo">Tipo</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.tipo === 'pedido' ? 'Pedido' : 'Venta directa'}</div>
+                  ) : (
+                    <div className="flex gap-1">
+                      <button onClick={() => { set('tipo', 'pedido'); set('condicion_pago', 'por_definir'); }}
+                        className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === 'pedido' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}
+                      >Pedido</button>
+                      <button onClick={() => { set('tipo', 'venta_directa'); set('condicion_pago', 'contado'); }}
+                        className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === 'venta_directa' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}
+                      >Venta directa</button>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="label-odoo">Cliente</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{clienteNombre || '—'}</div>
+                  ) : (
+                    <SearchableSelect options={clienteOptions} value={form.cliente_id ?? ''} onChange={cId => {
+                      set('cliente_id', cId);
+                      const c = clientesList?.find(cl => cl.id === cId);
+                      const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
+                      if (clienteTarifa) set('tarifa_id', clienteTarifa);
+                      if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
+                      else set('lista_precio_id', null);
+                      if (c?.requiere_factura) set('requiere_factura', true);
+                    }} placeholder="Buscar cliente..." />
+                  )}
+                </div>
+                <div>
+                  <label className="label-odoo">Condición de pago</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground capitalize">{form.condicion_pago}</div>
+                  ) : (
+                    <div className="flex gap-1">
+                      {[{ value: 'contado', label: 'Contado' }, { value: 'credito', label: 'Crédito' }, { value: 'por_definir', label: 'Por definir' }].map(o => (
+                        <button key={o.value} onClick={() => set('condicion_pago', o.value)}
+                          className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.condicion_pago === o.value ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}
+                        >{o.label}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {/* Col 2 */}
+              <div className="space-y-3">
+                <div>
+                  <label className="label-odoo">Fecha</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha}</div>
+                  ) : (
+                    <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />
+                  )}
+                </div>
+                <div>
+                  <label className="label-odoo flex items-center gap-2">
+                    <span>Entrega</span>
+                    {!readOnly && (
+                      <label className="inline-flex items-center gap-1.5 text-[12px] text-muted-foreground cursor-pointer">
+                        <input type="checkbox" checked={!!form.entrega_inmediata} onChange={e => set('entrega_inmediata', e.target.checked)} className="rounded border-input h-3 w-3" />
+                        Inmediata
+                      </label>
+                    )}
+                  </label>
+                  {form.entrega_inmediata ? (
+                    <div className="text-xs text-muted-foreground py-1.5 px-2">Entrega inmediata</div>
+                  ) : readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega || '—'}</div>
+                  ) : (
+                    <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha de entrega" />
+                  )}
+                </div>
+                <div>
+                  <label className="label-odoo">Folio</label>
+                  <div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Se asigna al guardar' : '—')}</div>
+                </div>
+              </div>
+              {/* Col 3 */}
+              <div className="space-y-3">
+                <div>
+                  <label className="label-odoo">Tarifa</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
+                  ) : (
+                    <SearchableSelect options={tarifaOptions} value={form.tarifa_id ?? ''} onChange={val => set('tarifa_id', val || null)} placeholder="Buscar tarifa..." />
+                  )}
+                </div>
+                <div>
+                  <label className="label-odoo">Almacén</label>
+                  {readOnly ? (
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenesList?.find(a => a.id === form.almacen_id)?.nombre || 'Sin almacén'}</div>
+                  ) : (
+                    <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => set('almacen_id', val || null)} placeholder="Buscar almacén..." />
+                  )}
+                </div>
+                {!isNew && form.status !== 'borrador' && (
+                  <div className="bg-card border border-border rounded-md p-3 space-y-1 text-[13px]">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                    <div className="flex justify-between border-t border-border pt-1"><span className="font-medium">Saldo</span><span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tabs: Lines, Pagos, Notas */}
