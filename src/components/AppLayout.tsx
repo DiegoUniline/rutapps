@@ -361,14 +361,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('uniline:sw-update-available', handler);
   }, []);
 
-  const applySwUpdate = () => {
-    navigator.serviceWorker?.getRegistration().then((reg) => {
+  const applySwUpdate = async () => {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
       if (reg?.waiting) {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       } else {
+        // Unregister SW and clear caches for a hard refresh
+        if (reg) await reg.unregister();
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
         window.location.reload();
       }
-    });
+    } catch {
+      window.location.reload();
+    }
   };
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
