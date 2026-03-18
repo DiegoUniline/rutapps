@@ -69,13 +69,14 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
   async function load() {
     setLoading(true);
-    const [empRes, subRes, plansRes, factRes, timbresRes, profilesRes] = await Promise.all([
+    const [empRes, subRes, plansRes, factRes, timbresRes, profilesRes, movRes] = await Promise.all([
       supabase.from('empresas').select('*').eq('id', empresaId).single(),
       supabase.from('subscriptions').select('*, subscription_plans(nombre, precio_por_usuario, periodo, descuento_pct, meses)').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('subscription_plans').select('*').eq('activo', true),
       supabase.from('facturas').select('*').eq('empresa_id', empresaId).order('creado_en', { ascending: false }).limit(20),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('profiles').select('id, nombre, telefono, rol, user_id').eq('empresa_id', empresaId),
+      supabase.from('timbres_movimientos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(50),
     ]);
 
     setEmpresa(empRes.data);
@@ -84,6 +85,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setFacturas((factRes.data || []) as any[]);
     setTimbres(timbresRes.data?.saldo ?? 0);
     setProfiles((profilesRes.data || []) as any[]);
+    setTimbresMovimientos((movRes.data || []) as any[]);
 
     if (empRes.data) {
       setEmpresaForm({
@@ -155,21 +157,84 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setSavingSub(false);
   }
 
-  async function handleAddTimbres() {
+  // Timbres sale calculations
+  const timbresCount = timbresForm.paquetes * 100;
+  const timbresSubtotal = timbresCount * timbresForm.precio_timbre;
+  const timbresDescuento = timbresSubtotal * (timbresForm.descuento_pct / 100);
+  const timbresTotal = timbresSubtotal - timbresDescuento;
+
+  async function handleTimbresSale() {
     if (!user) return;
-    const cant = parseInt(timbresCantidad);
-    if (!cant || cant < 1) { toast.error('Cantidad inválida'); return; }
+    if (timbresForm.paquetes < 1) { toast.error('Mínimo 1 paquete'); return; }
     setAddingTimbres(true);
     try {
-      const { data, error } = await supabase.rpc('add_timbres', {
-        p_empresa_id: empresaId,
-        p_cantidad: cant,
-        p_user_id: user.id,
-        p_notas: `Recarga de ${cant} timbres por admin`,
-      });
-      if (error) throw error;
-      toast.success(`+${cant} timbres → saldo: ${data}`);
-      setTimbresCantidad('10');
+      const notaParts = [
+        `Venta: ${timbresCount} timbres (${timbresForm.paquetes} paq × $${timbresForm.precio_timbre}/timbre)`,
+      ];
+      if (timbresForm.descuento_pct > 0) notaParts.push(`Descuento: ${timbresForm.descuento_pct}%`);
+      notaParts.push(`Total: $${timbresTotal.toFixed(2)} MXN`);
+      if (timbresForm.notas) notaParts.push(timbresForm.notas);
+
+      // If generate invoice via admin-billing
+      if (timbresForm.generar_factura && subscription?.stripe_customer_id) {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        const items = [
+          { description: `${timbresCount} timbres CFDI × $${timbresForm.precio_timbre}/timbre`, amount: Math.round(timbresSubtotal * 100) }
+        ];
+        if (timbresDescuento > 0) {
+          items.push({ description: `Descuento (${timbresForm.descuento_pct}%)`, amount: -Math.round(timbresDescuento * 100) });
+        }
+
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=create_pro_invoice`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              empresa_id: empresaId,
+              empresa_nombre: empresa?.nombre || '',
+              empresa_email: empresa?.email || '',
+              empresa_telefono: empresa?.telefono || '',
+              empresa_rfc: empresa?.rfc || '',
+              items,
+              concepto: `Compra de ${timbresCount} timbres CFDI — ${empresa?.nombre}`,
+              days_until_due: 3,
+              plan_nombre: 'Timbres CFDI',
+              num_usuarios: 0,
+              timbres: timbresCount,
+              descuento_plan_pct: 0,
+              descuento_extra_pct: timbresForm.descuento_pct,
+              total_centavos: Math.round(timbresTotal * 100),
+              mensaje_personal: '',
+              enviar_email: !!empresa?.email,
+              enviar_whatsapp: false,
+              telefono_envio: '',
+              correo_envio: empresa?.email || '',
+            }),
+          }
+        );
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        toast.success(`Factura creada por ${timbresCount} timbres — $${timbresTotal.toFixed(2)} MXN`);
+      } else {
+        // Just credit timbres directly
+        const { data, error } = await supabase.rpc('add_timbres', {
+          p_empresa_id: empresaId,
+          p_cantidad: timbresCount,
+          p_user_id: user.id,
+          p_notas: notaParts.join(' | '),
+        });
+        if (error) throw error;
+        toast.success(`+${timbresCount} timbres acreditados. Saldo: ${data}`);
+      }
+
+      setShowTimbresSale(false);
+      setTimbresForm({ paquetes: 1, precio_timbre: 1, descuento_pct: 0, notas: '', generar_factura: false });
       load();
     } catch (e: any) {
       toast.error(e.message);
