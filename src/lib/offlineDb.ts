@@ -73,6 +73,8 @@ class OfflineDatabase extends Dexie {
       entregas: 'id, empresa_id, vendedor_ruta_id, status, pedido_id',
       entrega_lineas: 'id, entrega_id, producto_id',
       visitas: 'id, empresa_id, cliente_id, user_id, tipo, fecha',
+      tarifa_lineas: 'id, tarifa_id, lista_precio_id, aplica_a',
+      tarifas: 'id, empresa_id, tipo, activa',
       syncQueue: '++id, table, createdAt',
       cacheTimestamps: 'table',
     });
