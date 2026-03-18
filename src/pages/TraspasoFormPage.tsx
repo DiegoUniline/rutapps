@@ -848,6 +848,29 @@ export default function TraspasoFormPage() {
         tipo="traspaso"
         referencia_id={id}
       />
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmDialog?.open} onOpenChange={open => { if (!open) setConfirmDialog(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, volver</AlertDialogCancel>
+            <AlertDialogAction
+              className={confirmDialog?.action === 'cancelar' ? 'bg-destructive hover:bg-destructive/90' : ''}
+              onClick={() => {
+                if (confirmDialog?.action === 'confirmar') confirmarMut.mutate();
+                else if (confirmDialog?.action === 'cancelar') cancelarMut.mutate();
+                setConfirmDialog(null);
+              }}
+            >
+              {confirmDialog?.action === 'cancelar' ? 'Sí, cancelar' : 'Sí, confirmar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
