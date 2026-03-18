@@ -235,7 +235,8 @@ export default function SignupPage() {
     form.telefono.trim() &&
     form.empresa.trim() &&
     form.nombre.trim() &&
-    form.password.length >= 6;
+    form.password.length >= 6 &&
+    form.password === confirmPassword;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-muted/30">
