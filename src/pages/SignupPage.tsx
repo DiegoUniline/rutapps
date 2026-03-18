@@ -115,6 +115,14 @@ export default function SignupPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
 
+    if (!form.empresa.trim()) {
+      toast.error('El nombre de la empresa es obligatorio');
+      return;
+    }
+    if (!form.email.trim()) {
+      toast.error('El correo electrónico es obligatorio');
+      return;
+    }
     if (!otpVerified) {
       toast.error('Debes verificar tu número de teléfono');
       return;
@@ -130,8 +138,31 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
+      // Check if email or phone already exists in empresas
+      const { data: existingEmail } = await supabase
+        .from('empresas')
+        .select('id')
+        .eq('email', form.email.trim().toLowerCase())
+        .maybeSingle();
+      if (existingEmail) {
+        toast.error('Ya existe una empresa registrada con este correo electrónico');
+        setLoading(false);
+        return;
+      }
+
+      const { data: existingPhone } = await supabase
+        .from('empresas')
+        .select('id')
+        .eq('telefono', fullPhone)
+        .maybeSingle();
+      if (existingPhone) {
+        toast.error('Ya existe una empresa registrada con este número de teléfono');
+        setLoading(false);
+        return;
+      }
+
       const { data: signupData, error: signupError } = await supabase.auth.signUp({
-        email: form.email,
+        email: form.email.trim().toLowerCase(),
         password: form.password,
         options: {
           data: {
@@ -152,7 +183,14 @@ export default function SignupPage() {
       );
       navigate('/login');
     } catch (err: any) {
-      toast.error(err.message || 'Error al crear la cuenta');
+      const msg = err.message || 'Error al crear la cuenta';
+      if (msg.includes('duplicate') && msg.includes('email')) {
+        toast.error('Este correo electrónico ya está registrado');
+      } else if (msg.includes('duplicate') && msg.includes('telefono')) {
+        toast.error('Este número de teléfono ya está registrado');
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
