@@ -77,7 +77,7 @@ const navItems: NavItem[] = [
       { label: 'Ajustes', path: '/almacen/ajustes' },
       { label: 'Auditorías', path: '/almacen/auditorias' },
       { label: 'Compras', path: '/almacen/compras' },
-      { label: 'Lotes', path: '/almacen/lotes' },
+      // { label: 'Lotes', path: '/almacen/lotes' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
   },
