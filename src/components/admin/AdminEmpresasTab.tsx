@@ -13,6 +13,11 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface ProfileRow {
+  nombre: string | null;
+  user_id: string;
+}
+
 interface SubRow {
   status: string | null;
   max_usuarios: number | null;
@@ -26,6 +31,7 @@ interface EmpresaRow {
   id: string; nombre: string; email: string | null; telefono: string | null; created_at: string;
   timbres_saldo?: { saldo: number }[];
   subscriptions?: SubRow[];
+  profiles?: ProfileRow[];
 }
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
