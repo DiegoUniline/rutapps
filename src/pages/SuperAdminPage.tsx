@@ -91,7 +91,7 @@ export default function SuperAdminPage() {
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
-            <TabsContent value="empresas"><AdminEmpresasTab onSelectEmpresa={setSelectedEmpresaId} /></TabsContent>
+            <TabsContent value="empresas"><AdminEmpresasTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} /></TabsContent>
             <TabsContent value="subscriptions"><AdminSubscriptionsTab /></TabsContent>
             <TabsContent value="invoices"><AdminInvoicesTab /></TabsContent>
             <TabsContent value="whatsapp"><AdminWhatsAppTab /></TabsContent>
