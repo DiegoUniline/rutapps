@@ -398,7 +398,40 @@ export default function SignupPage() {
             {/* Password */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Contraseña</Label>
-              <Input type="password" required minLength={6} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirmar contraseña</Label>
+              <Input
+                type="password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Repite tu contraseña"
+              />
+              {confirmPassword && form.password !== confirmPassword && (
+                <p className="text-xs text-destructive">Las contraseñas no coinciden</p>
+              )}
             </div>
 
             {/* Terms & Privacy */}
