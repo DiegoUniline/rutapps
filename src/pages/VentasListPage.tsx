@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, MessageCircle, FileText, Banknote } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
