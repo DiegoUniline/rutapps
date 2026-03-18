@@ -88,6 +88,14 @@ export default function LoginPage() {
             </>
           )}
         </p>
+        {!isForgot && (
+          <p className="text-center text-[10px] text-muted-foreground mt-4 leading-relaxed">
+            Al registrarte o iniciar sesión aceptas los{' '}
+            <Link to="/terminos" target="_blank" className="underline hover:text-foreground">Términos de Servicio</Link>
+            {' '}y la{' '}
+            <Link to="/privacidad" target="_blank" className="underline hover:text-foreground">Política de Privacidad</Link>.
+          </p>
+        )}
       </div>
     </div>
   );
