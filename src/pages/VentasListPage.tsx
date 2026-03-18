@@ -61,6 +61,12 @@ export default function VentasListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const { data: ventas, isLoading } = useVentas(search, statusFilter, tipoFilter);
+  const { data: clientesList } = useClientes();
+
+  // WhatsApp state
+  const [waOpen, setWaOpen] = useState(false);
+  const [waPhone, setWaPhone] = useState('');
+  const [waMessage, setWaMessage] = useState('');
 
   const total = ventas?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
