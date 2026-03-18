@@ -60,14 +60,22 @@ function GoogleMapsLoaderInner({ apiKey, children }: { apiKey: string; children:
   );
 }
 
-export function GoogleMapsProvider({ children }: { children: ReactNode }) {
+export function GoogleMapsProvider({ children, blocking = false }: { children: ReactNode; blocking?: boolean }) {
   const { apiKey, loading } = useGoogleMapsKey();
 
-  if (loading || !apiKey) {
+  if (blocking && (loading || !apiKey)) {
     return (
       <div className="h-[calc(100vh-theme(spacing.9))] flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  if (!apiKey) {
+    return (
+      <GoogleMapsContext.Provider value={{ isLoaded: false }}>
+        {children}
+      </GoogleMapsContext.Provider>
     );
   }
 
