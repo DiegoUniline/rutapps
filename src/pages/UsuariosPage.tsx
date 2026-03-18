@@ -44,8 +44,12 @@ export default function UsuariosPage() {
 
   // New user form
   const [showNewUser, setShowNewUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: '' });
+  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: '', almacen_id: '' });
   const [creatingUser, setCreatingUser] = useState(false);
+  const [quickCreateRole, setQuickCreateRole] = useState(false);
+  const [quickRoleName, setQuickRoleName] = useState('');
+  const [quickCreateAlmacen, setQuickCreateAlmacen] = useState(false);
+  const [quickAlmacenName, setQuickAlmacenName] = useState('');
 
   // Password modal
   const [passwordModal, setPasswordModal] = useState<{ userId: string; nombre: string } | null>(null);

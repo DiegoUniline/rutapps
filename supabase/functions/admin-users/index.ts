@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create-user") {
-      const { email, password, nombre, role_id } = params;
+      const { email, password, nombre, role_id, almacen_id } = params;
 
       // Check if email already exists in auth system BEFORE attempting to create
       const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
