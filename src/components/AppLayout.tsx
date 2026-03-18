@@ -14,6 +14,7 @@ import {
   DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
