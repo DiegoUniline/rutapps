@@ -472,6 +472,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
+        <NotificationRuntime overlaysOnly />
       </div>
     );
   }
