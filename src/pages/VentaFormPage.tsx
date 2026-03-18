@@ -16,6 +16,7 @@ import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hook
 import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
+import { resolveProductPrice, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
