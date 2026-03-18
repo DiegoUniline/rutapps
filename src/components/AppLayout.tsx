@@ -14,6 +14,7 @@ import {
   DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
@@ -368,6 +369,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isMobile) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <NotificationRuntime bannersOnly />
         {/* Mobile top bar */}
         <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
           <div className="flex items-center gap-2">
@@ -470,13 +472,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
+        <NotificationRuntime overlaysOnly />
       </div>
     );
   }
 
   // Desktop layout with sidebar
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
+      <NotificationRuntime bannersOnly />
+      <div className="flex-1 flex">
       <aside
         className={cn(
           "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
@@ -563,6 +568,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </main>
         <UnilineFooter />
       </div>
+      </div>
+      <NotificationRuntime overlaysOnly />
     </div>
   );
 }

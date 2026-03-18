@@ -65,6 +65,7 @@ const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPa
 const MonitorRutasPage = lazy(() => import("@/pages/MonitorRutasPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
+const AdminNotificacionesPage = lazy(() => import("@/pages/AdminNotificacionesPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
@@ -303,6 +304,7 @@ function desktopRoutes() {
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/facturacion" element={<FacturacionPage />} />
+      <Route path="/admin/notificaciones" element={<AdminNotificacionesPage />} />
       <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
       <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
