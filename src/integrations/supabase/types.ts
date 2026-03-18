@@ -2087,6 +2087,106 @@ export type Database = {
           },
         ]
       }
+      notification_views: {
+        Row: {
+          id: string
+          last_seen_at: string
+          notification_id: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          id?: string
+          last_seen_at?: string
+          notification_id: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          id?: string
+          last_seen_at?: string
+          notification_id?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_views_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          bg_color: string | null
+          body: string
+          created_at: string
+          empresa_id: string
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          max_views: number
+          redirect_type:
+            | Database["public"]["Enums"]["notification_redirect_type"]
+            | null
+          redirect_url: string | null
+          start_date: string
+          text_color: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Insert: {
+          bg_color?: string | null
+          body?: string
+          created_at?: string
+          empresa_id: string
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          max_views?: number
+          redirect_type?:
+            | Database["public"]["Enums"]["notification_redirect_type"]
+            | null
+          redirect_url?: string | null
+          start_date?: string
+          text_color?: string | null
+          title: string
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Update: {
+          bg_color?: string | null
+          body?: string
+          created_at?: string
+          empresa_id?: string
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          max_views?: number
+          redirect_type?:
+            | Database["public"]["Enums"]["notification_redirect_type"]
+            | null
+          redirect_url?: string | null
+          start_date?: string
+          text_color?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       optimizacion_rutas_log: {
         Row: {
           clientes_count: number
@@ -4425,6 +4525,8 @@ export type Database = {
         | "faltante"
         | "sobrante"
         | "otro"
+      notification_redirect_type: "internal" | "external" | "both"
+      notification_type: "banner" | "modal" | "bubble"
       status_auditoria:
         | "pendiente"
         | "en_proceso"
@@ -4618,6 +4720,8 @@ export const Constants = {
         "sobrante",
         "otro",
       ],
+      notification_redirect_type: ["internal", "external", "both"],
+      notification_type: ["banner", "modal", "bubble"],
       status_auditoria: [
         "pendiente",
         "en_proceso",
