@@ -1,7 +1,7 @@
 import { Cloud, CloudOff, CloudUpload, Check, Loader2 } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
 export default function SyncCloudButton() {
