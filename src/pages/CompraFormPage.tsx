@@ -282,7 +282,7 @@ export default function CompraFormPage() {
 
   // Status change
   const handleStatusChange = async (newStatus: string) => {
-    if (isNew) return;
+    if (isNew || form.status === 'cancelada' || newStatus === 'cancelada') return;
     const order = ['borrador', 'confirmada', 'recibida', 'pagada'];
     const curIdx = order.indexOf(form.status);
     const newIdx = order.indexOf(newStatus);
