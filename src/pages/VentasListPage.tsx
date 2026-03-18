@@ -211,8 +211,9 @@ export default function VentasListPage() {
                             <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={openWa}>
-                          <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
+                        <DropdownMenuItem onClick={openWa} disabled={generatingPdf === v.id}>
+                          {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
+                          {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
