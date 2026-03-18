@@ -168,6 +168,7 @@ export interface Empresa {
   email?: string;
   logo_url?: string;
   notas_ticket?: string;
+  moneda?: string;
 }
 
 export interface Gasto {
