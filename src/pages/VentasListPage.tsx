@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, MessageCircle, FileText, Banknote } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2 } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -17,7 +17,9 @@ import { useVentas } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
+import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { cn, fmtDate, fmtCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -69,6 +71,9 @@ export default function VentasListPage() {
   const [waOpen, setWaOpen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
   const [waMessage, setWaMessage] = useState('');
+  const [waPdfBlob, setWaPdfBlob] = useState<Blob | null>(null);
+  const [waPdfName, setWaPdfName] = useState('');
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
   const total = ventas?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
@@ -169,12 +174,21 @@ export default function VentasListPage() {
           )}
           {pageData.map((v: any) => {
             const cliente = clientesList?.find((c: any) => c.id === v.cliente_id);
-            const openWa = (e: React.MouseEvent) => {
+            const openWa = async (e: React.MouseEvent) => {
               e.stopPropagation();
-              const msg = `📄 *${v.tipo === 'pedido' ? 'Pedido' : 'Venta'} ${v.folio || ''}*\nCliente: ${v.clientes?.nombre}\nFecha: ${fmtDate(v.fecha)}\n💰 Total: ${fmtCurrency(v.total)}${v.saldo_pendiente > 0 ? `\n⚠️ Saldo: ${fmtCurrency(v.saldo_pendiente)}` : ''}`;
-              setWaPhone(cliente?.telefono ?? '');
-              setWaMessage(msg);
-              setWaOpen(true);
+              setGeneratingPdf(v.id);
+              try {
+                const { blob, fileName, caption } = await generateVentaPdfById(v.id);
+                setWaPdfBlob(blob);
+                setWaPdfName(fileName);
+                setWaPhone(cliente?.telefono ?? '');
+                setWaMessage(caption);
+                setWaOpen(true);
+              } catch (err: any) {
+                toast.error(err.message || 'Error generando PDF');
+              } finally {
+                setGeneratingPdf(null);
+              }
             };
             return (
               <MobileListCard
@@ -197,8 +211,9 @@ export default function VentasListPage() {
                             <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={openWa}>
-                          <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
+                        <DropdownMenuItem onClick={openWa} disabled={generatingPdf === v.id}>
+                          {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
+                          {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -218,7 +233,7 @@ export default function VentasListPage() {
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
 
-          <WhatsAppPreviewDialog open={waOpen} onClose={() => setWaOpen(false)} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" />
+          <WhatsAppPreviewDialog open={waOpen} onClose={() => { setWaOpen(false); setWaPdfBlob(null); }} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" pdfBlob={waPdfBlob} pdfFileName={waPdfName} />
         </div>
       ) : (
         /* Desktop table */
