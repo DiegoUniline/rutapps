@@ -44,11 +44,12 @@ export default function SyncCloudButton() {
       return;
     }
     if (isSyncing) return;
-    toast.promise(syncNow(), {
-      loading: 'Sincronizando...',
-      success: '✓ Sincronizado',
-      error: 'Error al sincronizar',
-    });
+    // Instant visual feedback
+    setTapped(true);
+    toast('Sincronizando...', { icon: '🔄', duration: 1500 });
+    syncNow()
+      .then(() => toast.success('✓ Sincronizado'))
+      .catch(() => toast.error('Error al sincronizar'));
   }, [isOnline, isSyncing, syncNow]);
 
   const handlePointerDown = useCallback(() => {
