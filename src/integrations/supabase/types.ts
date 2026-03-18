@@ -2124,7 +2124,7 @@ export type Database = {
           bg_color: string | null
           body: string
           created_at: string
-          empresa_id: string
+          empresa_id: string | null
           end_date: string | null
           id: string
           image_url: string | null
@@ -2143,7 +2143,7 @@ export type Database = {
           bg_color?: string | null
           body?: string
           created_at?: string
-          empresa_id: string
+          empresa_id?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null
@@ -2162,7 +2162,7 @@ export type Database = {
           bg_color?: string | null
           body?: string
           created_at?: string
-          empresa_id?: string
+          empresa_id?: string | null
           end_date?: string | null
           id?: string
           image_url?: string | null

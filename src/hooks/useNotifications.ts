@@ -48,16 +48,15 @@ export function useAdminNotifications() {
 
 /** Fetch active notifications for runtime display */
 export function useActiveNotifications() {
-  const { empresa, user } = useAuth();
+  const { user } = useAuth();
   return useQuery({
-    queryKey: ['active-notifications', empresa?.id],
-    enabled: !!empresa?.id && !!user,
+    queryKey: ['active-notifications'],
+    enabled: !!user,
     queryFn: async () => {
       const now = new Date().toISOString();
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('empresa_id', empresa!.id)
         .eq('is_active', true)
         .lte('start_date', now)
         .order('created_at', { ascending: false });
