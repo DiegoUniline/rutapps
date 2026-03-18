@@ -128,6 +128,17 @@ Deno.serve(async (req) => {
     if (action === "create-user") {
       const { email, password, nombre, role_id } = params;
 
+      // Check if email already exists in auth system BEFORE attempting to create
+      const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      const emailLower = email.trim().toLowerCase();
+      const duplicate = existingUsers?.find((u: any) => u.email?.toLowerCase() === emailLower);
+      if (duplicate) {
+        return new Response(JSON.stringify({ error: "Este correo electrónico ya está registrado en el sistema. Por favor usa otro correo." }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Create auth user with empresa metadata so handle_new_user trigger won't create a random empresa
       const { data: newUser, error: createError } =
         await adminClient.auth.admin.createUser({
@@ -137,8 +148,11 @@ Deno.serve(async (req) => {
         });
 
       if (createError) {
-        return new Response(JSON.stringify({ error: createError.message }), {
-          status: 400,
+        const msg = createError.message?.includes("already been registered")
+          ? "Este correo electrónico ya está registrado en el sistema. Por favor usa otro correo."
+          : createError.message;
+        return new Response(JSON.stringify({ error: msg }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
