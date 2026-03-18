@@ -17,7 +17,9 @@ import { useVentas } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
+import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { cn, fmtDate, fmtCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
