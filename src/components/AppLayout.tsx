@@ -6,10 +6,12 @@ import { useSetupComplete } from '@/pages/ConfiguracionInicialPage';
 import { usePermisos, PATH_MODULE_MAP } from '@/hooks/usePermisos';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import { useTheme } from '@/hooks/useTheme';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -127,16 +129,13 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
 
   return navItems.reduce<NavItem[]>((acc, item) => {
     if (!item.children) {
-      // Top-level item without children
       const modulo = PATH_MODULE_MAP[item.path] ?? '';
       if (hasModulo(modulo)) acc.push(item);
     } else {
-      // Filter children
       const visibleChildren = item.children.filter(child => {
         const modulo = PATH_MODULE_MAP[child.path] ?? '';
         return hasModulo(modulo);
       });
-      // Only show parent if at least one child is visible
       if (visibleChildren.length > 0) {
         acc.push({ ...item, children: visibleChildren });
       }
@@ -145,7 +144,7 @@ function useFilteredNav(isSuperAdmin: boolean, hasModulo: (m: string) => boolean
   }, []);
 }
 
-function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed: boolean; onNavigate?: () => void }) {
   const location = useLocation();
   const basePath = item.path.split('?')[0];
   const isActive = location.pathname === basePath || location.pathname.startsWith(basePath + '/');
@@ -155,6 +154,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
     return (
       <Link
         to={item.path}
+        onClick={onNavigate}
         className={cn(
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
@@ -202,6 +202,7 @@ function SidebarItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
               <Link
                 key={child.path}
                 to={child.path}
+                onClick={onNavigate}
                 className={cn(
                   "block px-2.5 py-1.5 rounded-md text-[12px] transition-all",
                   childActive
@@ -263,18 +264,149 @@ function Breadcrumb() {
   );
 }
 
+function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setupComplete }: {
+  collapsed: boolean;
+  onNavigate?: () => void;
+  visibleNavItems: NavItem[];
+  isSuperAdmin: boolean;
+  setupComplete: boolean | undefined;
+}) {
+  const location = useLocation();
+  const setupActive = location.pathname === '/configuracion-inicial';
+
+  return (
+    <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      {setupComplete === false && (
+        <Link
+          to="/configuracion-inicial"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mb-1",
+            collapsed ? "justify-center px-2" : "",
+            setupActive
+              ? "bg-primary/10 text-primary font-semibold"
+              : "text-primary/80 hover:bg-primary/5 hover:text-primary"
+          )}
+          title={collapsed ? 'Configuración inicial' : undefined}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Configuración inicial</span>}
+        </Link>
+      )}
+      {visibleNavItems.map(item => (
+        <SidebarItem key={item.path} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+      ))}
+      {isSuperAdmin && (
+        <Link
+          to="/super-admin"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mt-2 border-t border-sidebar-border/30 pt-3",
+            collapsed ? "justify-center px-2" : "",
+            "text-amber-500 hover:bg-sidebar-hover"
+          )}
+          title={collapsed ? 'Panel Master' : undefined}
+        >
+          <Shield className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Panel Master</span>}
+        </Link>
+      )}
+    </nav>
+  );
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
   const { data: setupComplete } = useSetupComplete();
   const { hasModulo, loading: permisosLoading } = usePermisos();
-  const location = useLocation();
-  const setupActive = location.pathname === '/configuracion-inicial';
+  const isMobile = useIsMobile();
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
+  const closeMobile = () => setMobileOpen(false);
+
+  // Mobile layout with hamburger
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        {/* Mobile top bar */}
+        <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button className="p-2 rounded-md text-foreground hover:bg-accent transition-colors">
+                  <Menu className="h-5 w-5" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
+                <div className="h-14 flex items-center px-4 border-b border-sidebar-border/30">
+                  <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
+                </div>
+                <SidebarNav
+                  collapsed={false}
+                  onNavigate={closeMobile}
+                  visibleNavItems={visibleNavItems}
+                  isSuperAdmin={isSuperAdmin}
+                  setupComplete={setupComplete}
+                />
+                <div className="border-t border-sidebar-border/30 p-2.5">
+                  <div className="px-2 py-2 mb-1">
+                    <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
+                    <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
+                  </div>
+                  <div className="flex gap-0.5">
+                    <button
+                      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                      className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+                      title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+                    >
+                      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    </button>
+                    <Link
+                      to="/ruta"
+                      onClick={closeMobile}
+                      className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+                      title="Vista vendedor (móvil)"
+                    >
+                      <Smartphone className="h-4 w-4" />
+                    </Link>
+                    <button
+                      onClick={signOut}
+                      className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+                      title="Cerrar sesión"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+            <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+          </div>
+        </header>
+
+        <Breadcrumb />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+        <UnilineFooter />
+      </div>
+    );
+  }
+
+  // Desktop layout with sidebar
   return (
     <div className="min-h-screen flex bg-background">
       <aside
@@ -294,41 +426,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-          {setupComplete === false && (
-            <Link
-              to="/configuracion-inicial"
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mb-1",
-                collapsed ? "justify-center px-2" : "",
-                setupActive
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-primary/80 hover:bg-primary/5 hover:text-primary"
-              )}
-              title={collapsed ? 'Configuración inicial' : undefined}
-            >
-              <Sparkles className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>Configuración inicial</span>}
-            </Link>
-          )}
-          {visibleNavItems.map(item => (
-            <SidebarItem key={item.path} item={item} collapsed={collapsed} />
-          ))}
-          {isSuperAdmin && (
-            <Link
-              to="/super-admin"
-              className={cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all mt-2 border-t border-sidebar-border/30 pt-3",
-                collapsed ? "justify-center px-2" : "",
-                "text-amber-500 hover:bg-sidebar-hover"
-              )}
-              title={collapsed ? 'Panel Master' : undefined}
-            >
-              <Shield className="h-4 w-4 shrink-0" />
-              {!collapsed && <span>Panel Master</span>}
-            </Link>
-          )}
-        </nav>
+        <SidebarNav
+          collapsed={collapsed}
+          visibleNavItems={visibleNavItems}
+          isSuperAdmin={isSuperAdmin}
+          setupComplete={setupComplete}
+        />
 
         <div className="border-t border-sidebar-border/30 p-2.5">
           {!collapsed && (

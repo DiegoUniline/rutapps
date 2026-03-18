@@ -9,8 +9,10 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { MobileListCard } from '@/components/MobileListCard';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentas } from '@/hooks/useVentas';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn, fmtDate } from '@/lib/utils';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
@@ -49,6 +51,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function VentasListPage() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [tipoFilter, setTipoFilter] = useState('todos');
@@ -74,7 +77,6 @@ export default function VentasListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
 
-  // Summary totals
   const totalVentas = ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0;
   const totalSaldo = ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
 
@@ -113,20 +115,22 @@ export default function VentasListPage() {
           />
         </OdooFilterBar>
         <div className="flex items-center gap-2 shrink-0">
-          <ExportButton
-            onExcel={() => exportToExcel({
-              fileName: 'Ventas', title: 'Reporte de Ventas',
-              columns: VENTAS_COLUMNS,
-              data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
-              totals: { total: totalVentas, saldo_pendiente: totalSaldo },
-            })}
-            onPDF={() => exportToPDF({
-              fileName: 'Ventas', title: 'Reporte de Ventas',
-              columns: VENTAS_COLUMNS,
-              data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
-              totals: { total: totalVentas, saldo_pendiente: totalSaldo },
-            })}
-          />
+          {!isMobile && (
+            <ExportButton
+              onExcel={() => exportToExcel({
+                fileName: 'Ventas', title: 'Reporte de Ventas',
+                columns: VENTAS_COLUMNS,
+                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                totals: { total: totalVentas, saldo_pendiente: totalSaldo },
+              })}
+              onPDF={() => exportToPDF({
+                fileName: 'Ventas', title: 'Reporte de Ventas',
+                columns: VENTAS_COLUMNS,
+                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                totals: { total: totalVentas, saldo_pendiente: totalSaldo },
+              })}
+            />
+          )}
           <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
             <Plus className="h-3.5 w-3.5" /> Nueva venta
           </button>
@@ -135,99 +139,115 @@ export default function VentasListPage() {
 
       {/* Summary bar */}
       {!isLoading && total > 0 && (
-        <div className="flex items-center gap-6 text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
           <span><strong className="text-foreground">{total}</strong> ventas</span>
           <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
           {totalSaldo > 0 && (
-            <span>Saldo pendiente: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>
+            <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>
           )}
         </div>
       )}
 
-      <div className="bg-card border border-border rounded overflow-x-auto">
-        {isLoading ? (
-          <div className="p-4"><TableSkeleton rows={8} cols={10} /></div>
-        ) : (
-          <>
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-table-border text-left">
-                  <th className="py-2 px-3 w-10 text-center">
-                    <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
-                  </th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
-                  <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+      {isLoading ? (
+        <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 10} /></div>
+      ) : isMobile ? (
+        /* Mobile card list */
+        <div className="space-y-2">
+          {pageData.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground text-sm">No hay ventas. Crea la primera.</div>
+          )}
+          {pageData.map((v: any) => (
+            <MobileListCard
+              key={v.id}
+              title={v.clientes?.nombre ?? '—'}
+              subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
+              badge={<StatusChip status={v.status} />}
+              onClick={() => navigate(`/ventas/${v.id}`)}
+              fields={[
+                { label: 'Fecha', value: fmtDate(v.fecha) },
+                { label: 'Total', value: fmt(v.total) },
+                { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
+                ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmt(v.saldo_pendiente)}</span> }] : []),
+              ]}
+            />
+          ))}
+          {total > 0 && (
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+          )}
+        </div>
+      ) : (
+        /* Desktop table */
+        <div className="bg-card border border-border rounded overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-table-border text-left">
+                <th className="py-2 px-3 w-10 text-center">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+                </th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
+                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageData.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {pageData.length === 0 && (
-                  <tr>
-                    <td colSpan={11} className="text-center py-12 text-muted-foreground">
-                      No hay ventas. Crea la primera.
-                    </td>
-                  </tr>
-                )}
-                {pageData.map((v: any) => (
-                  <tr
-                    key={v.id}
-                    className={cn(
-                      "border-b border-table-border cursor-pointer transition-colors",
-                      selected.has(v.id) ? "bg-primary/5" : "hover:bg-table-hover"
+              )}
+              {pageData.map((v: any) => (
+                <tr
+                  key={v.id}
+                  className={cn(
+                    "border-b border-table-border cursor-pointer transition-colors",
+                    selected.has(v.id) ? "bg-primary/5" : "hover:bg-table-hover"
+                  )}
+                  onClick={() => navigate(`/ventas/${v.id}`)}
+                >
+                  <td className="py-2 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(v.id); }}>
+                    <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggleOne(v.id)} className="rounded border-input" />
+                  </td>
+                  <td className="py-2 px-3 font-mono text-xs font-medium">{v.folio || v.id.slice(0, 8)}</td>
+                  <td className="py-2 px-3">
+                    <span className={cn(
+                      "text-[11px] font-medium px-2 py-0.5 rounded",
+                      v.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
+                    )}>
+                      {TIPO_LABELS[v.tipo] || v.tipo}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre ?? '—'}</td>
+                  <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
+                  <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
+                  <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
+                  <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
+                  <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(v.total)}</td>
+                  <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+                    {(v.saldo_pendiente ?? 0) > 0 ? (
+                      <span className="text-warning font-medium">{fmt(v.saldo_pendiente)}</span>
+                    ) : (
+                      <span className="text-muted-foreground">$0.00</span>
                     )}
-                    onClick={() => navigate(`/ventas/${v.id}`)}
-                  >
-                    <td className="py-2 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(v.id); }}>
-                      <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggleOne(v.id)} className="rounded border-input" />
-                    </td>
-                    <td className="py-2 px-3 font-mono text-xs font-medium">{v.folio || v.id.slice(0, 8)}</td>
-                    <td className="py-2 px-3">
-                      <span className={cn(
-                        "text-[11px] font-medium px-2 py-0.5 rounded",
-                        v.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
-                      )}>
-                        {TIPO_LABELS[v.tipo] || v.tipo}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre ?? '—'}</td>
-                    <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
-                    <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
-                    <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
-                    <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
-                    <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(v.total)}</td>
-                    <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
-                      {(v.saldo_pendiente ?? 0) > 0 ? (
-                        <span className="text-warning font-medium">{fmt(v.saldo_pendiente)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">$0.00</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-3 text-center">
-                      <StatusChip status={v.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {total > 0 && (
-              <OdooPagination
-                from={from}
-                to={to}
-                total={total}
-                onPrev={() => setPage(p => Math.max(1, p - 1))}
-                onNext={() => setPage(p => p + 1)}
-              />
-            )}
-          </>
-        )}
-      </div>
+                  </td>
+                  <td className="py-2 px-3 text-center">
+                    <StatusChip status={v.status} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {total > 0 && (
+            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+          )}
+        </div>
+      )}
     </div>
   );
 }
