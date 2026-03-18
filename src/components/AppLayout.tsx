@@ -486,6 +486,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Smartphone className="h-4 w-4" />
             </Link>
             <button
+              onClick={() => {
+                navigator.serviceWorker?.getRegistration().then((reg) => {
+                  if (reg?.waiting) {
+                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                  } else {
+                    window.location.reload();
+                  }
+                });
+              }}
+              className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
+              title="Actualizar app"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => setCollapsed(!collapsed)}
               className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
               title={collapsed ? 'Expandir' : 'Colapsar'}
