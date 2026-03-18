@@ -549,7 +549,7 @@ export default function RutaNuevaVenta() {
 
       // 2. Create the sale
       const saveCliente = clientes?.find(c => c.id === clienteId);
-      const tarifaId = saveCliente?.tarifa_id || null;
+      const tarifaId = clienteTarifaId || saveCliente?.tarifa_id || null;
       const almacenId = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
