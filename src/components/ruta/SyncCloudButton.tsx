@@ -115,7 +115,7 @@ export default function SyncCloudButton() {
         onContextMenu={(e) => e.preventDefault()}
         className={cn(
           "relative flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90 select-none touch-none",
-          stateColors[state]
+          tapped ? 'text-primary scale-110 bg-primary/10' : stateColors[state],
         )}
       >
         {cloudIcon()}
