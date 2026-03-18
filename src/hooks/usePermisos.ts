@@ -207,8 +207,16 @@ export function usePermisos(): UsePermisosReturn {
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
     if (hasRole === false) return true; // no role = owner = full access
     if (hasRole === null) return false; // loading
+    // Exact match first
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
-    return perm?.permitido ?? false;
+    if (perm) return perm.permitido;
+    // Parent match: if checking 'catalogo.productos', also accept 'catalogo'
+    if (modulo.includes('.')) {
+      const parent = modulo.split('.')[0];
+      const parentPerm = permisos.find(p => p.modulo === parent && p.accion === accion);
+      if (parentPerm) return parentPerm.permitido;
+    }
+    return false;
   }, [permisos, hasRole]);
 
   const hasModulo = useCallback((modulo: string): boolean => {
