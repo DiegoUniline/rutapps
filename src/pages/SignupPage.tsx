@@ -43,6 +43,8 @@ export default function SignupPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
