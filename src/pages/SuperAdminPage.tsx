@@ -8,6 +8,7 @@ import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircl
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
 import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
+import AdminEmpresaDetail from '@/components/admin/AdminEmpresaDetail';
 import AdminInvoicesTab from '@/components/admin/AdminInvoicesTab';
 import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
