@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatCurrency } from "@/lib/currency";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -16,8 +17,7 @@ export function fmtDate(dateStr: string | null | undefined): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
-/** Format number as currency MXN */
-export function fmtCurrency(value: number | null | undefined): string {
-  if (value == null) return '$0.00';
-  return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Format number as currency using empresa's currency (defaults to MXN) */
+export function fmtCurrency(value: number | null | undefined, currencyCode?: string | null): string {
+  return formatCurrency(value, currencyCode);
 }

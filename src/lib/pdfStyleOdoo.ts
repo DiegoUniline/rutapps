@@ -57,6 +57,10 @@ export function createDoc(): jsPDF {
 export const fmtCurrency = (n: number) =>
   n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/** Currency-aware version — pass the empresa's currency symbol */
+export const fmtCurrencySymbol = (n: number, symbol: string = '$') =>
+  `${symbol}${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
 export const fmtDate = (d: string) => {
   try {
     const dt = new Date(d + 'T12:00:00');

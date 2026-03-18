@@ -1,8 +1,9 @@
 import { Check, Printer, Share2, X } from 'lucide-react';
 import { useRef } from 'react';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface TicketVentaProps {
-  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null };
+  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null };
   folio: string;
   fecha: string;
   clienteNombre: string;
@@ -21,7 +22,7 @@ interface TicketVentaProps {
   onClose: () => void;
 }
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
@@ -29,6 +30,9 @@ export default function TicketVenta(props: TicketVentaProps) {
     subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onClose,
   } = props;
+
+  const { symbol: cs } = useCurrency();
+  const fmt = (n: number) => `${cs}${fmtNum(n)}`;
 
   const ticketRef = useRef<HTMLDivElement>(null);
 
@@ -83,15 +87,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       metodoPago ? `Método: ${metodoPago}` : '',
       '─'.repeat(30),
       ...lineas.map(l =>
-        `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} $${fmt(l.total)}`
+        `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}`
       ),
       '─'.repeat(30),
-      `Subtotal: $${fmt(subtotal)}`,
-      iva > 0 ? `IVA: $${fmt(iva)}` : '',
-      ieps > 0 ? `IEPS: $${fmt(ieps)}` : '',
-      `TOTAL: $${fmt(total)}`,
-      montoRecibido ? `Recibido: $${fmt(montoRecibido)}` : '',
-      cambio && cambio > 0 ? `Cambio: $${fmt(cambio)}` : '',
+      `Subtotal: ${fmt(subtotal)}`,
+      iva > 0 ? `IVA: ${fmt(iva)}` : '',
+      ieps > 0 ? `IEPS: ${fmt(ieps)}` : '',
+      `TOTAL: ${fmt(total)}`,
+      montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
+      cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
       '',
       'Elaborado por Uniline — Innovación en la nube',
     ].filter(Boolean).join('\n');
@@ -172,15 +176,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                         {l.esCambio && <span className="text-muted-foreground text-[9px] ml-1 italic">(cambio)</span>}
                       </span>
                       <span className="text-foreground font-semibold tabular-nums shrink-0">
-                        ${fmt(l.total)}
+                        {fmt(l.total)}
                       </span>
                     </div>
                     {!l.esCambio && (
                       <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
-                        <span>${fmt(l.precio)} c/u</span>
+                        <span>{fmt(l.precio)} c/u</span>
                         {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                        {(l.iva_monto ?? 0) > 0 && <span>IVA ${fmt(l.iva_monto!)}</span>}
-                        {(l.ieps_monto ?? 0) > 0 && <span>IEPS ${fmt(l.ieps_monto!)}</span>}
+                        {(l.iva_monto ?? 0) > 0 && <span>IVA {fmt(l.iva_monto!)}</span>}
+                        {(l.ieps_monto ?? 0) > 0 && <span>IEPS {fmt(l.ieps_monto!)}</span>}
                       </div>
                     )}
                   </div>
@@ -194,34 +198,34 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             <div className="px-5 py-2 space-y-0.5">
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Subtotal</span>
-                <span className="val text-foreground tabular-nums">${fmt(subtotal)}</span>
+                <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
               </div>
               {iva > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IVA</span>
-                  <span className="val text-foreground tabular-nums">${fmt(iva)}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
                 </div>
               )}
               {ieps > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IEPS</span>
-                  <span className="val text-foreground tabular-nums">${fmt(ieps)}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
                 </div>
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
                 <span className="text-[12px] font-bold text-foreground">Total</span>
-                <span className="text-[15px] font-bold text-primary tabular-nums">${fmt(total)}</span>
+                <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(total)}</span>
               </div>
               {montoRecibido != null && montoRecibido > 0 && (
                 <div className="pt-1 space-y-0.5">
                   <div className="tk-tot-row flex justify-between text-[10px]">
                     <span className="lbl text-muted-foreground">Recibido</span>
-                    <span className="val text-foreground tabular-nums">${fmt(montoRecibido)}</span>
+                    <span className="val text-foreground tabular-nums">{fmt(montoRecibido)}</span>
                   </div>
                   {(cambio ?? 0) > 0 && (
                     <div className="tk-tot-row flex justify-between text-[10px]">
                       <span className="lbl text-muted-foreground">Cambio</span>
-                      <span className="val text-primary font-bold tabular-nums">${fmt(cambio!)}</span>
+                      <span className="val text-primary font-bold tabular-nums">{fmt(cambio!)}</span>
                     </div>
                   )}
                 </div>
@@ -237,24 +241,24 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   {saldoAnterior != null && saldoAnterior > 0 && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">Saldo anterior</span>
-                      <span className="text-foreground tabular-nums">${fmt(saldoAnterior)}</span>
+                      <span className="text-foreground tabular-nums">{fmt(saldoAnterior)}</span>
                     </div>
                   )}
                   {pagoAplicado != null && pagoAplicado > 0 && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">Pago aplicado</span>
-                      <span className="text-green-600 font-medium tabular-nums">-${fmt(pagoAplicado)}</span>
+                      <span className="text-green-600 font-medium tabular-nums">-{fmt(pagoAplicado)}</span>
                     </div>
                   )}
                   {condicionPago === 'credito' && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">+ Esta venta (crédito)</span>
-                      <span className="text-foreground tabular-nums">${fmt(total)}</span>
+                      <span className="text-foreground tabular-nums">{fmt(total)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-[11px] font-bold pt-1 border-t border-dashed border-border">
                     <span className="text-foreground">Nuevo saldo</span>
-                    <span className={`tabular-nums ${(saldoNuevo ?? 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>${fmt(saldoNuevo ?? 0)}</span>
+                    <span className={`tabular-nums ${(saldoNuevo ?? 0) > 0 ? 'text-destructive' : 'text-green-600'}`}>{fmt(saldoNuevo ?? 0)}</span>
                   </div>
                 </div>
               </>

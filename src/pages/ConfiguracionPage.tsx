@@ -4,7 +4,8 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2 } from 'lucide-react';
+import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe } from 'lucide-react';
+import { CURRENCIES } from '@/lib/currency';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -296,6 +297,8 @@ export default function ConfiguracionPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  const [moneda, setMoneda] = useState('MXN');
+
   if (config && !initialized) {
     setForm({
       nombre: config.nombre ?? '',
@@ -315,10 +318,11 @@ export default function ConfiguracionPage() {
     if ((config as any).ticket_campos) {
       setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
     }
+    setMoneda((config as any).moneda ?? 'MXN');
     setInitialized(true);
   }
 
-  const hasChanges = !!logoFile || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -357,7 +361,7 @@ export default function ConfiguracionPage() {
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
-        ticket_campos: campos,
+        ticket_campos: campos, moneda,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -434,6 +438,27 @@ export default function ConfiguracionPage() {
               </label>
             ))}
           </div>
+        </div>
+
+        {/* Moneda */}
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Globe className="h-4 w-4" /> Moneda del sistema
+          </h3>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            Esta moneda se usará en todos los documentos, tickets, reportes y pantallas del sistema.
+          </p>
+          <select
+            value={moneda}
+            onChange={e => setMoneda(e.target.value)}
+            className="input-odoo text-[13px] w-full max-w-xs"
+          >
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>
+                {c.symbol} — {c.name} ({c.code})
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Datos fiscales */}

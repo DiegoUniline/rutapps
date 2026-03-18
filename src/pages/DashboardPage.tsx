@@ -8,6 +8,7 @@ import {
   BarChart3, Users, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useVendedores } from '@/hooks/useClientes';
@@ -36,9 +37,7 @@ const CHART_COLORS = [
   'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#f97316', '#06b6d4', '#8b5cf6'
 ];
 
-function money(n: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
-}
+// money is now defined inside the component to use useCurrency hook
 
 function KpiCard({ title, value, subtitle, icon: Icon, trend, color }: {
   title: string; value: string; subtitle?: string; icon: React.ElementType; trend?: number; color: string;
@@ -79,6 +78,10 @@ function SectionTitle({ children, icon: Icon }: { children: string; icon: React.
 }
 
 export default function DashboardPage() {
+  const { symbol: cSym, code: cCode } = useCurrency();
+  const money = (n: number) =>
+    new Intl.NumberFormat('es-MX', { style: 'currency', currency: cCode, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+
   const [activePreset, setActivePreset] = useState(3); // Este mes
   const [dateRange, setDateRange] = useState<DateRange>(PRESETS[3].range());
   const [vendedorId, setVendedorId] = useState('');
@@ -226,7 +229,7 @@ export default function DashboardPage() {
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 tickFormatter={v => { try { return format(new Date(v + 'T12:00:00'), 'd MMM', { locale: es }); } catch { return v; }}} />
               <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                 formatter={(v: number) => [money(v), 'Total']}
