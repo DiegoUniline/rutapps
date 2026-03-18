@@ -282,7 +282,7 @@ function Breadcrumb() {
       </div>
       <button
         onClick={forceUpdate}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm animate-pulse hover:animate-none transition-all"
         title="Actualizar app (obtener últimos cambios)"
       >
         <RefreshCw className="h-3.5 w-3.5" />
