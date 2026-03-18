@@ -161,6 +161,10 @@ export default function SignupPage() {
       toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
     }
+    if (form.password !== confirmPassword) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
 
     setLoading(true);
     try {
