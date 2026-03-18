@@ -305,6 +305,7 @@ function desktopRoutes() {
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/facturacion" element={<FacturacionPage />} />
       <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
+      <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />
       <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
