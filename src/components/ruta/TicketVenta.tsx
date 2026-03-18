@@ -241,7 +241,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   {saldoAnterior != null && saldoAnterior > 0 && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">Saldo anterior</span>
-                      <span className="text-foreground tabular-nums">${fmt(saldoAnterior)}</span>
+                      <span className="text-foreground tabular-nums">{fmt(saldoAnterior)}</span>
                     </div>
                   )}
                   {pagoAplicado != null && pagoAplicado > 0 && (
