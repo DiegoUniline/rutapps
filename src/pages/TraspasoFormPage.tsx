@@ -58,6 +58,7 @@ export default function TraspasoFormPage() {
   const [dirty, setDirty] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
 
   const handleGenerarPdf = () => {
     const blob = generarTraspasoPdf({
