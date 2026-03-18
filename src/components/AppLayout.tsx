@@ -251,16 +251,6 @@ function Breadcrumb() {
 
   if (segments.length <= 1) return null;
 
-  const forceUpdate = () => {
-    navigator.serviceWorker?.getRegistration().then((reg) => {
-      if (reg?.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } else {
-        window.location.reload();
-      }
-    });
-  };
-
   return (
     <div className="h-9 flex items-center justify-between px-5 bg-card border-b border-border text-xs text-muted-foreground">
       <div className="flex items-center gap-1.5">
