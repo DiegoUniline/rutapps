@@ -44,6 +44,8 @@ const COLUMN_SELECTS: Record<string, string> = {
   devolucion_lineas: 'id,devolucion_id,producto_id,cantidad,motivo,notas,created_at',
   descarga_ruta_lineas: 'id,descarga_id,producto_id,cantidad_esperada,cantidad_real,diferencia,motivo,notas,created_at',
   entrega_lineas: 'id,entrega_id,producto_id,cantidad_pedida,cantidad_entregada,hecho,almacen_origen_id,unidad_id,created_at',
+  tarifa_lineas: 'id,tarifa_id,lista_precio_id,aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,comision_pct,created_at',
+  tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
 };
 
 // Friendly names for UI display
