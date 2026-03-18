@@ -37,7 +37,8 @@ export default function CancelSubscriptionPage() {
     setSaving(true);
     try {
       // Save cancellation request as retained
-      await supabase.from('cancellation_requests').insert({
+      // @ts-ignore - table may not be in generated types yet
+      await (supabase as any).from('cancellation_requests').insert({
         empresa_id: empresa!.id,
         user_id: user!.id,
         reason,
@@ -45,7 +46,7 @@ export default function CancelSubscriptionPage() {
         offered_discount: true,
         discount_accepted: true,
         cancelled: false,
-      } as any);
+      });
 
       // Apply discount via edge function
       const { data, error } = await supabase.functions.invoke('manage-subscription', {
