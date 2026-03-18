@@ -32,8 +32,15 @@ export default function MobileLayout() {
   const { profile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
+
+  useEffect(() => {
+    const handler = () => setSwUpdateAvailable(true);
+    window.addEventListener('uniline:sw-update-available', handler);
+    return () => window.removeEventListener('uniline:sw-update-available', handler);
+  }, []);
 
   const forceUpdate = () => {
     navigator.serviceWorker?.getRegistration().then((reg) => {
