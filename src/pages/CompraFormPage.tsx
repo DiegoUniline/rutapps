@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, X, Ban } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -21,6 +21,7 @@ const COMPRA_STEPS = [
   { key: 'confirmada', label: 'Confirmada' },
   { key: 'recibida', label: 'Recibida' },
   { key: 'pagada', label: 'Pagada' },
+  { key: 'cancelada', label: 'Cancelada' },
 ];
 
 interface CompraLinea {
@@ -281,7 +282,7 @@ export default function CompraFormPage() {
 
   // Status change
   const handleStatusChange = async (newStatus: string) => {
-    if (isNew) return;
+    if (isNew || form.status === 'cancelada' || newStatus === 'cancelada') return;
     const order = ['borrador', 'confirmada', 'recibida', 'pagada'];
     const curIdx = order.indexOf(form.status);
     const newIdx = order.indexOf(newStatus);
@@ -343,6 +344,65 @@ export default function CompraFormPage() {
       qc.invalidateQueries({ queryKey: ['compra', form.id] });
     } catch (err: any) {
       toast.error(err.message);
+    }
+  };
+
+  // Cancel purchase: reverse stock, delete payments, set status to cancelada
+  const handleCancel = async () => {
+    if (!form.id || !confirm('¿Cancelar esta compra? Se revertirá el stock y se eliminarán los pagos.')) return;
+    try {
+      // If stock was already added (recibida or pagada), reverse it
+      if (['recibida', 'pagada'].includes(form.status)) {
+        const validLines = lineas.filter(l => l.producto_id);
+        const today = new Date().toISOString().slice(0, 10);
+
+        for (const l of validLines) {
+          const factor = Number(l._factor_conversion) || 1;
+          const piezas = (Number(l.cantidad) || 0) * factor;
+
+          const { data: prod } = await supabase
+            .from('productos')
+            .select('cantidad')
+            .eq('id', l.producto_id!)
+            .single();
+
+          const currentQty = Number(prod?.cantidad ?? 0);
+          await supabase
+            .from('productos')
+            .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
+            .eq('id', l.producto_id!);
+
+          // Log reversal movement
+          await supabase.from('movimientos_inventario').insert({
+            empresa_id: empresa!.id,
+            tipo: 'salida',
+            producto_id: l.producto_id!,
+            cantidad: piezas,
+            almacen_origen_id: form.almacen_id,
+            referencia_tipo: 'compra',
+            referencia_id: form.id,
+            user_id: user?.id,
+            fecha: today,
+            notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
+          } as any);
+        }
+      }
+
+      // Delete all payments
+      await supabase.from('pago_compras').delete().eq('compra_id', form.id);
+
+      // Update status
+      await supabase.from('compras').update({ status: 'cancelada', saldo_pendiente: 0 } as any).eq('id', form.id);
+
+      setForm(f => ({ ...f, status: 'cancelada', saldo_pendiente: 0 }));
+      toast.success('Compra cancelada — stock revertido y pagos eliminados');
+      qc.invalidateQueries({ queryKey: ['compras'] });
+      qc.invalidateQueries({ queryKey: ['compra', form.id] });
+      qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] });
+      qc.invalidateQueries({ queryKey: ['inventario'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Error al cancelar');
     }
   };
 
@@ -408,6 +468,11 @@ export default function CompraFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {form.status !== 'cancelada' && !isNew && form.status !== 'borrador' && (
+            <button onClick={handleCancel} className="btn-odoo-icon text-destructive" title="Cancelar compra">
+              <Ban className="h-4 w-4" />
+            </button>
+          )}
           {form.status === 'borrador' && !isNew && (
             <button onClick={handleDelete} className="btn-odoo-icon text-destructive">
               <Trash2 className="h-4 w-4" />
