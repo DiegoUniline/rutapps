@@ -229,7 +229,7 @@ export default function DashboardPage() {
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 tickFormatter={v => { try { return format(new Date(v + 'T12:00:00'), 'd MMM', { locale: es }); } catch { return v; }}} />
               <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                tickFormatter={v => `${cSym}${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                 formatter={(v: number) => [money(v), 'Total']}
