@@ -44,6 +44,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [timbres, setTimbres] = useState(0);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [stripeInvoices, setStripeInvoices] = useState<any[]>([]);
+  const [timbresMovimientos, setTimbresMovimientos] = useState<any[]>([]);
 
   // Edit states
   const [editingEmpresa, setEditingEmpresa] = useState(false);
@@ -53,9 +54,16 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [savingEmpresa, setSavingEmpresa] = useState(false);
   const [savingSub, setSavingSub] = useState(false);
 
-  // Timbres
+  // Timbres sale form
+  const [showTimbresSale, setShowTimbresSale] = useState(false);
   const [addingTimbres, setAddingTimbres] = useState(false);
-  const [timbresCantidad, setTimbresCantidad] = useState('10');
+  const [timbresForm, setTimbresForm] = useState({
+    paquetes: 1, // each = 100 timbres
+    precio_timbre: 1,
+    descuento_pct: 0,
+    notas: '',
+    generar_factura: false,
+  });
 
   useEffect(() => { load(); }, [empresaId]);
 
