@@ -1832,6 +1832,87 @@ export type Database = {
           },
         ]
       }
+      facturas: {
+        Row: {
+          creado_en: string | null
+          descuento_porcentaje: number | null
+          empresa_id: string
+          es_prorrateo: boolean | null
+          estado: string | null
+          fecha_emision: string | null
+          fecha_pago: string | null
+          fecha_vencimiento: string | null
+          id: string
+          num_usuarios: number
+          numero_factura: string | null
+          periodo_fin: string
+          periodo_inicio: string
+          precio_unitario: number
+          stripe_invoice_id: string | null
+          stripe_payment_intent_id: string | null
+          subtotal: number
+          suscripcion_id: string | null
+          total: number
+        }
+        Insert: {
+          creado_en?: string | null
+          descuento_porcentaje?: number | null
+          empresa_id: string
+          es_prorrateo?: boolean | null
+          estado?: string | null
+          fecha_emision?: string | null
+          fecha_pago?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          num_usuarios?: number
+          numero_factura?: string | null
+          periodo_fin: string
+          periodo_inicio: string
+          precio_unitario?: number
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subtotal?: number
+          suscripcion_id?: string | null
+          total?: number
+        }
+        Update: {
+          creado_en?: string | null
+          descuento_porcentaje?: number | null
+          empresa_id?: string
+          es_prorrateo?: boolean | null
+          estado?: string | null
+          fecha_emision?: string | null
+          fecha_pago?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          num_usuarios?: number
+          numero_factura?: string | null
+          periodo_fin?: string
+          periodo_inicio?: string
+          precio_unitario?: number
+          stripe_invoice_id?: string | null
+          stripe_payment_intent_id?: string | null
+          subtotal?: number
+          suscripcion_id?: string | null
+          total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facturas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_suscripcion_id_fkey"
+            columns: ["suscripcion_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gastos: {
         Row: {
           concepto: string
@@ -2404,6 +2485,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      planes: {
+        Row: {
+          activo: boolean | null
+          creado_en: string | null
+          descripcion: string | null
+          id: string
+          nombre: string
+          precio_base_mes: number
+          precio_usuario_extra: number
+          stripe_price_id: string | null
+          stripe_product_id: string | null
+          usuarios_incluidos: number
+        }
+        Insert: {
+          activo?: boolean | null
+          creado_en?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre: string
+          precio_base_mes: number
+          precio_usuario_extra?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          usuarios_incluidos?: number
+        }
+        Update: {
+          activo?: boolean | null
+          creado_en?: string | null
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          precio_base_mes?: number
+          precio_usuario_extra?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          usuarios_incluidos?: number
+        }
+        Relationships: []
       }
       producto_lotes: {
         Row: {
@@ -3340,7 +3460,9 @@ export type Database = {
           created_at: string
           current_period_end: string | null
           current_period_start: string | null
+          descuento_porcentaje: number | null
           empresa_id: string
+          es_manual: boolean | null
           id: string
           max_usuarios: number
           plan_id: string | null
@@ -3354,7 +3476,9 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          descuento_porcentaje?: number | null
           empresa_id: string
+          es_manual?: boolean | null
           id?: string
           max_usuarios?: number
           plan_id?: string | null
@@ -3368,7 +3492,9 @@ export type Database = {
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          descuento_porcentaje?: number | null
           empresa_id?: string
+          es_manual?: boolean | null
           id?: string
           max_usuarios?: number
           plan_id?: string | null
