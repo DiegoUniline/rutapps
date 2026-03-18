@@ -366,9 +366,9 @@ export default function CompraFormPage() {
             <h1 className="text-xl font-semibold text-foreground">
               {isNew ? 'Nueva compra' : `Compra ${form.folio ?? ''}`}
             </h1>
-            {!isNew && form.condicion_pago === 'credito' && (
+            {!isNew && (
               <p className="text-xs text-muted-foreground">
-                Pagado: $ {fmt(totalPagado)} / Saldo: $ {fmt((form.saldo_pendiente ?? 0))}
+                Pagado: $ {fmt(totalPagado)} / Saldo: $ {fmt(Math.max(0, totals.total - totalPagado))}
               </p>
             )}
           </div>
