@@ -460,90 +460,65 @@ export default function TraspasoFormPage() {
         const { data: tLineas } = await supabase.from('traspaso_lineas').select('*').eq('traspaso_id', traspasoId);
         const today = new Date().toISOString().slice(0, 10);
 
-        const updates: Promise<any>[] = [];
-
         for (const l of tLineas ?? []) {
           // Reverse: add back to origin
           if (traspaso.almacen_origen_id) {
-            updates.push(
-              supabase.from('productos').select('cantidad').eq('id', l.producto_id).single().then(({ data: prod }) => {
-                return supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
-              })
-            );
-            updates.push(
-              supabase.from('movimientos_inventario').insert({
-                empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
-                cantidad: l.cantidad, almacen_destino_id: traspaso.almacen_origen_id,
-                referencia_tipo: 'traspaso', referencia_id: traspasoId,
-                user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
-              } as any)
-            );
+            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+            await supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
+              cantidad: l.cantidad, almacen_destino_id: traspaso.almacen_origen_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
+            } as any);
           }
 
           if (traspaso.vendedor_origen_id) {
-            updates.push(
-              supabase.from('stock_camion').insert({
-                empresa_id: empresa!.id, vendedor_id: traspaso.vendedor_origen_id,
-                producto_id: l.producto_id, cantidad_inicial: l.cantidad,
-                cantidad_actual: l.cantidad, fecha: today,
-              } as any)
-            );
-            updates.push(
-              supabase.from('movimientos_inventario').insert({
-                empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
-                cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_origen_id,
-                referencia_tipo: 'traspaso', referencia_id: traspasoId,
-                user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (devuelto a ruta)`,
-              } as any)
-            );
+            await supabase.from('stock_camion').insert({
+              empresa_id: empresa!.id, vendedor_id: traspaso.vendedor_origen_id,
+              producto_id: l.producto_id, cantidad_inicial: l.cantidad,
+              cantidad_actual: l.cantidad, fecha: today,
+            } as any);
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
+              cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_origen_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (devuelto a ruta)`,
+            } as any);
           }
 
           // Reverse: subtract from destination
           if (traspaso.almacen_destino_id) {
-            updates.push(
-              supabase.from('productos').select('cantidad').eq('id', l.producto_id).single().then(({ data: prod }) => {
-                return supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
-              })
-            );
-            updates.push(
-              supabase.from('movimientos_inventario').insert({
-                empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
-                cantidad: l.cantidad, almacen_origen_id: traspaso.almacen_destino_id,
-                referencia_tipo: 'traspaso', referencia_id: traspasoId,
-                user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
-              } as any)
-            );
+            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+            await supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
+              cantidad: l.cantidad, almacen_origen_id: traspaso.almacen_destino_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
+            } as any);
           }
 
           if (traspaso.vendedor_destino_id) {
-            // Remove stock from destination vendedor
-            updates.push(
-              supabase.from('stock_camion')
-                .select('id, cantidad_actual')
-                .eq('vendedor_id', traspaso.vendedor_destino_id)
-                .eq('producto_id', l.producto_id)
-                .gt('cantidad_actual', 0)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .single()
-                .then(({ data: sc }) => {
-                  if (sc) {
-                    return supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - Number(l.cantidad)) } as any).eq('id', sc.id);
-                  }
-                })
-            );
-            updates.push(
-              supabase.from('movimientos_inventario').insert({
-                empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
-                cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_destino_id,
-                referencia_tipo: 'traspaso', referencia_id: traspasoId,
-                user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (retirado de ruta)`,
-              } as any)
-            );
+            const { data: sc } = await supabase.from('stock_camion')
+              .select('id, cantidad_actual')
+              .eq('vendedor_id', traspaso.vendedor_destino_id)
+              .eq('producto_id', l.producto_id)
+              .gt('cantidad_actual', 0)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            if (sc) {
+              await supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - Number(l.cantidad)) } as any).eq('id', sc.id);
+            }
+            await supabase.from('movimientos_inventario').insert({
+              empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
+              cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_destino_id,
+              referencia_tipo: 'traspaso', referencia_id: traspasoId,
+              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (retirado de ruta)`,
+            } as any);
           }
         }
-
-        await Promise.all(updates);
       }
 
       await supabase.from('traspasos').update({ status: 'cancelado' } as any).eq('id', traspasoId);
