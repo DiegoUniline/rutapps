@@ -128,6 +128,8 @@ export default function CompraFormPage() {
   const [lineas, setLineas] = useState<Partial<CompraLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
   const [showPago, setShowPago] = useState(false);
+  const [addingPago, setAddingPago] = useState(false);
+  const [newPago, setNewPago] = useState({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
 
   // Load existing
   useEffect(() => {
