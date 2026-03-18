@@ -346,29 +346,56 @@ export default function InventarioPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[11px]">Código</TableHead>
-                <TableHead className="text-[11px]">Producto</TableHead>
-                <TableHead className="text-[11px] text-center">Stock almacén</TableHead>
+                <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
+                <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
+                {(data.almacenes ?? []).map(a => (
+                  <TableHead key={a.id} className="text-[11px] text-center whitespace-nowrap">
+                    <Warehouse className="h-3 w-3 inline mr-0.5" />{a.nombre}
+                  </TableHead>
+                ))}
+                <TableHead className="text-[11px] text-center font-bold">Total almacén</TableHead>
                 <TableHead className="text-[11px] text-right">Costo unit.</TableHead>
-                <TableHead className="text-[11px] text-right">Valor almacén</TableHead>
-                <TableHead className="text-[11px] text-right">Precio venta</TableHead>
-                <TableHead className="text-[11px] text-right">Proyección</TableHead>
+                <TableHead className="text-[11px] text-right">Valor total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts?.map(p => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-mono text-[11px] text-muted-foreground">{p.codigo}</TableCell>
-                  <TableCell className="text-[12px] font-medium">{p.nombre}</TableCell>
-                  <TableCell className={cn("text-center font-medium", p.stockAlmacen <= 0 ? "text-destructive" : "")}>
-                    {p.stockAlmacen}
-                  </TableCell>
-                  <TableCell className="text-right text-[12px]">$ {fmt(p.costo ?? 0)}</TableCell>
-                  <TableCell className="text-right text-[12px]">$ {fmt(p.valorCostoAlmacen)}</TableCell>
-                  <TableCell className="text-right text-[12px]">$ {fmt(p.precio_principal ?? 0)}</TableCell>
-                  <TableCell className="text-right text-[12px] text-success">$ {fmt(p.valorVentaAlmacen)}</TableCell>
+              {filteredProducts?.map(p => {
+                const totalAlm = (data.almacenes ?? []).reduce((s, a) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
+                return (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
+                    <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
+                    {(data.almacenes ?? []).map(a => {
+                      const qty = data.stockAlmacenMap[a.id]?.[p.id] ?? 0;
+                      return (
+                        <TableCell key={a.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : "")}>
+                          {qty || '—'}
+                        </TableCell>
+                      );
+                    })}
+                    <TableCell className={cn("text-center font-bold", totalAlm <= 0 ? "text-destructive" : "")}>
+                      {totalAlm}
+                    </TableCell>
+                    <TableCell className="text-right text-[12px]">$ {fmt(p.costo ?? 0)}</TableCell>
+                    <TableCell className="text-right text-[12px]">$ {fmt(totalAlm * (p.costo ?? 0))}</TableCell>
+                  </TableRow>
+                );
+              })}
+              {filteredProducts && filteredProducts.length > 0 && (
+                <TableRow className="bg-muted/50 font-bold">
+                  <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
+                  {(data.almacenes ?? []).map(a => {
+                    const total = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
+                    return <TableCell key={a.id} className="text-center">{total}</TableCell>;
+                  })}
+                  <TableCell className="text-center">{filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0)}</TableCell>
+                  <TableCell className="text-right">—</TableCell>
+                  <TableCell className="text-right">$ {fmt(filteredProducts.reduce((s, p) => {
+                    const totalAlm = (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
+                    return s + totalAlm * (p.costo ?? 0);
+                  }, 0))}</TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </div>
