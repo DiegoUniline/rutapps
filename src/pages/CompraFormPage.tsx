@@ -469,11 +469,6 @@ export default function CompraFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {form.status !== 'cancelada' && !isNew && form.status !== 'borrador' && (
-            <button onClick={handleCancel} className="btn-odoo-icon text-destructive" title="Cancelar compra">
-              <Ban className="h-4 w-4" />
-            </button>
-          )}
           {form.status === 'borrador' && !isNew && (
             <button onClick={handleDelete} className="btn-odoo-icon text-destructive">
               <Trash2 className="h-4 w-4" />
@@ -487,14 +482,108 @@ export default function CompraFormPage() {
         </div>
       </div>
 
-      {/* Status bar */}
+      {/* Status buttons */}
       {!isNew && (
-        <OdooStatusbar
-          steps={COMPRA_STEPS}
-          current={form.status}
-          onStepClick={handleStatusChange}
-        />
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Current status badge */}
+          <span className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide",
+            form.status === 'borrador' && "bg-muted text-muted-foreground",
+            form.status === 'confirmada' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+            form.status === 'recibida' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+            form.status === 'pagada' && "bg-primary/10 text-primary",
+            form.status === 'cancelada' && "bg-destructive/10 text-destructive",
+          )}>
+            {form.status === 'cancelada' && <Ban className="h-3 w-3" />}
+            {form.status === 'pagada' && <CheckCircle2 className="h-3 w-3" />}
+            {form.status === 'recibida' && <PackageCheck className="h-3 w-3" />}
+            {form.status}
+          </span>
+
+          {/* Action buttons */}
+          {form.status === 'borrador' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true,
+                action: 'confirmada',
+                title: 'Confirmar compra',
+                description: '¿Confirmar esta compra? Ya no podrás editar las líneas de productos.',
+              })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 transition-all"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Confirmar
+            </button>
+          )}
+
+          {form.status === 'confirmada' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true,
+                action: 'recibida',
+                title: 'Marcar como recibida',
+                description: '¿Marcar esta compra como recibida? Se sumará el stock al inventario y se registrarán los movimientos de entrada.',
+              })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all"
+            >
+              <PackageCheck className="h-4 w-4" />
+              Marcar recibida
+            </button>
+          )}
+
+          {form.status !== 'cancelada' && form.status !== 'borrador' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true,
+                action: 'cancelar',
+                title: 'Cancelar compra',
+                description: '¿Cancelar esta compra? Se revertirá el stock, se eliminarán los pagos y no se podrá revertir.',
+              })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95 transition-all"
+            >
+              <Ban className="h-4 w-4" />
+              Cancelar compra
+            </button>
+          )}
+
+          {form.status === 'pagada' && (
+            <span className="text-xs text-muted-foreground italic">Compra completada</span>
+          )}
+          {form.status === 'recibida' && saldoActual > 0 && (
+            <span className="text-xs text-muted-foreground italic flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> Se marcará como pagada automáticamente cuando el saldo sea $0
+            </span>
+          )}
+        </div>
       )}
+
+      {/* Confirm dialog */}
+      <AlertDialog open={confirmDialog?.open} onOpenChange={(open) => { if (!open) setConfirmDialog(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmDialog?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDialog?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>No, volver</AlertDialogCancel>
+            <AlertDialogAction
+              className={cn(
+                confirmDialog?.action === 'cancelar' && "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              )}
+              onClick={() => {
+                if (confirmDialog?.action === 'cancelar') {
+                  handleCancel();
+                } else if (confirmDialog?.action) {
+                  handleStatusChange(confirmDialog.action);
+                }
+                setConfirmDialog(null);
+              }}
+            >
+              Sí, continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Form fields */}
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
