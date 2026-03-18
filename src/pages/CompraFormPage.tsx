@@ -353,6 +353,41 @@ export default function CompraFormPage() {
 
   const isEditable = form.status === 'borrador';
   const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
+  const saldoActual = Math.max(0, totals.total - totalPagado);
+
+  const handleSavePago = async () => {
+    if (newPago.monto <= 0) return toast.error('Ingresa un monto válido');
+    if (newPago.monto > saldoActual + 0.01) return toast.error('El monto excede el saldo pendiente');
+    try {
+      const montoFinal = Math.min(newPago.monto, saldoActual);
+      const { error } = await supabase.from('pago_compras').insert({
+        empresa_id: empresa!.id,
+        compra_id: form.id,
+        proveedor_id: form.proveedor_id || null,
+        monto: montoFinal,
+        metodo_pago: newPago.metodo_pago,
+        fecha: newPago.fecha,
+        referencia: newPago.referencia || null,
+        notas: newPago.notas || null,
+        user_id: user?.id,
+      } as any);
+      if (error) throw error;
+
+      const nuevoSaldo = Math.max(0, saldoActual - montoFinal);
+      const updates: any = { saldo_pendiente: nuevoSaldo };
+      if (nuevoSaldo === 0) updates.status = 'pagada';
+      await supabase.from('compras').update(updates).eq('id', form.id);
+
+      setForm(f => ({ ...f, ...updates }));
+      setAddingPago(false);
+      toast.success(nuevoSaldo === 0 ? 'Pago registrado — Compra pagada' : 'Pago registrado');
+      qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] });
+      qc.invalidateQueries({ queryKey: ['compra', form.id] });
+      qc.invalidateQueries({ queryKey: ['compras'] });
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
 
   return (
     <div className="p-4 space-y-4 min-h-full">
