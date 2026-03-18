@@ -73,6 +73,8 @@ export const TABLE_LABELS: Record<string, string> = {
   entregas: 'Entregas',
   entrega_lineas: 'Líneas de entrega',
   visitas: 'Visitas',
+  tarifas: 'Tarifas',
+  tarifa_lineas: 'Reglas de tarifa',
 };
 
 // Tables that have empresa_id for filtering
