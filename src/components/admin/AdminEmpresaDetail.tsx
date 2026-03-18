@@ -392,7 +392,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   ))}
                 </div>
               )}
-              )}
             </div>
           </CardContent>
         </Card>
