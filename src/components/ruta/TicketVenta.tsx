@@ -247,7 +247,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   {pagoAplicado != null && pagoAplicado > 0 && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">Pago aplicado</span>
-                      <span className="text-green-600 font-medium tabular-nums">-${fmt(pagoAplicado)}</span>
+                      <span className="text-green-600 font-medium tabular-nums">-{fmt(pagoAplicado)}</span>
                     </div>
                   )}
                   {condicionPago === 'credito' && (
