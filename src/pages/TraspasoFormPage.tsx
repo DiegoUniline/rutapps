@@ -599,14 +599,37 @@ export default function TraspasoFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!isNew && status === 'borrador' && (
-            <button onClick={() => confirmarMut.mutate()} disabled={confirmarMut.isPending} className="btn-odoo-primary">
-              <Check className="h-3.5 w-3.5" /> Confirmar
-            </button>
-          )}
           {!readOnly && (
             <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending} className="btn-odoo-primary">
               <Save className="h-3.5 w-3.5" /> Guardar
+            </button>
+          )}
+          {!isNew && status === 'borrador' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true, action: 'confirmar',
+                title: 'Confirmar traspaso',
+                description: '¿Confirmar este traspaso? Se moverá el stock del origen al destino.',
+              })}
+              disabled={confirmarMut.isPending}
+              className="btn-odoo-primary bg-green-600 hover:bg-green-700 border-green-600"
+            >
+              <Check className="h-3.5 w-3.5" /> Confirmar
+            </button>
+          )}
+          {!isNew && status !== 'cancelado' && (
+            <button
+              onClick={() => setConfirmDialog({
+                open: true, action: 'cancelar',
+                title: 'Cancelar traspaso',
+                description: status === 'confirmado'
+                  ? '¿Cancelar este traspaso? Se revertirá todo el stock movido.'
+                  : '¿Cancelar este traspaso?',
+              })}
+              disabled={cancelarMut.isPending}
+              className="btn-odoo-secondary text-destructive"
+            >
+              <Ban className="h-3.5 w-3.5" /> Cancelar
             </button>
           )}
           {!isNew && (
@@ -622,10 +645,20 @@ export default function TraspasoFormPage() {
         </div>
       </div>
 
-      {/* Status bar */}
+      {/* Status chips */}
       {!isNew && (
-        <div className="px-5 pt-3">
-          <OdooStatusbar steps={STEPS} current={status} />
+        <div className="px-5 pt-3 flex gap-1.5">
+          {Object.entries(STATUS_LABELS).map(([key, cfg]) => (
+            <span
+              key={key}
+              className={cn(
+                "px-3 py-1 rounded-full text-xs font-medium transition-all",
+                status === key ? cfg.color : "bg-muted/40 text-muted-foreground/50"
+              )}
+            >
+              {cfg.label}
+            </span>
+          ))}
         </div>
       )}
 
