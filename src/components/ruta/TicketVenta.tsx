@@ -209,7 +209,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               {ieps > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IEPS</span>
-                  <span className="val text-foreground tabular-nums">${fmt(ieps)}</span>
+                  <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
                 </div>
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
