@@ -1611,7 +1611,7 @@ export type Database = {
           cp: string | null
           created_at: string
           direccion: string | null
-          email: string | null
+          email: string
           estado: string | null
           id: string
           logo_url: string | null
@@ -1621,7 +1621,7 @@ export type Database = {
           razon_social: string | null
           regimen_fiscal: string | null
           rfc: string | null
-          telefono: string | null
+          telefono: string
           ticket_campos: Json | null
         }
         Insert: {
@@ -1630,7 +1630,7 @@ export type Database = {
           cp?: string | null
           created_at?: string
           direccion?: string | null
-          email?: string | null
+          email: string
           estado?: string | null
           id?: string
           logo_url?: string | null
@@ -1640,7 +1640,7 @@ export type Database = {
           razon_social?: string | null
           regimen_fiscal?: string | null
           rfc?: string | null
-          telefono?: string | null
+          telefono: string
           ticket_campos?: Json | null
         }
         Update: {
@@ -1649,7 +1649,7 @@ export type Database = {
           cp?: string | null
           created_at?: string
           direccion?: string | null
-          email?: string | null
+          email?: string
           estado?: string | null
           id?: string
           logo_url?: string | null
@@ -1659,7 +1659,7 @@ export type Database = {
           razon_social?: string | null
           regimen_fiscal?: string | null
           rfc?: string | null
-          telefono?: string | null
+          telefono?: string
           ticket_campos?: Json | null
         }
         Relationships: []
