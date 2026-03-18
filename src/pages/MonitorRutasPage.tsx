@@ -760,7 +760,7 @@ function KpiCard({ icon: Icon, label, value, subtitle, color, highlight }: {
 
 export default function MonitorRutasPage() {
   return (
-    <GoogleMapsProvider>
+    <GoogleMapsProvider blocking>
       <MonitorContent />
     </GoogleMapsProvider>
   );

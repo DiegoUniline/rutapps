@@ -570,7 +570,7 @@ function NavegacionContent() {
 
 export default function RutaNavegacionPage({ embedded }: { embedded?: boolean }) {
   return (
-    <GoogleMapsProvider>
+    <GoogleMapsProvider blocking>
       <NavegacionContent />
     </GoogleMapsProvider>
   );
