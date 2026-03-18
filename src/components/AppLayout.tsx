@@ -447,17 +447,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 "p-2 rounded-md transition-colors",
                 swUpdateAvailable
                   ? "text-primary animate-pulse hover:text-primary/80"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-foreground/70 hover:text-foreground"
               )}
               title="Actualizar app"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-[18px] w-[18px]" />
             </button>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+              className="p-2 rounded-md text-foreground/70 hover:text-foreground transition-colors"
             >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
             </button>
           </div>
         </header>
