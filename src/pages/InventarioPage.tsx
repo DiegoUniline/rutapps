@@ -170,6 +170,13 @@ function useInventarioData() {
         .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
         .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
+      // Build stock_almacen map: almacen_id -> producto_id -> cantidad
+      const stockAlmacenMap: Record<string, Record<string, number>> = {};
+      for (const sa of (stockAlmacenData ?? [])) {
+        if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
+        stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
+      }
+
       // Products with enriched data
       const productosEnriquecidos = (productos ?? []).map(p => {
         const stockAlmacen = p.cantidad ?? 0;
@@ -198,7 +205,14 @@ function useInventarioData() {
         valorVentaTotal: acc.valorVentaTotal + p.valorVentaTotal,
       }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0 });
 
-      return { productos: productosEnriquecidos, cargas: cargaDetails, totales, rutas };
+      return {
+        productos: productosEnriquecidos,
+        cargas: cargaDetails,
+        totales,
+        rutas,
+        almacenes: almacenes ?? [],
+        stockAlmacenMap,
+      };
     },
   });
 }
