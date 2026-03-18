@@ -238,7 +238,7 @@ export default function UsuariosPage() {
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre, role_id: newUser.role_id },
+        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre, role_id: newUser.role_id, almacen_id: newUser.almacen_id || null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
