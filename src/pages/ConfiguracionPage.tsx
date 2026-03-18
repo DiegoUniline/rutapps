@@ -440,6 +440,27 @@ export default function ConfiguracionPage() {
           </div>
         </div>
 
+        {/* Moneda */}
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Globe className="h-4 w-4" /> Moneda del sistema
+          </h3>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            Esta moneda se usará en todos los documentos, tickets, reportes y pantallas del sistema.
+          </p>
+          <select
+            value={moneda}
+            onChange={e => setMoneda(e.target.value)}
+            className="input-odoo text-[13px] w-full max-w-xs"
+          >
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>
+                {c.symbol} — {c.name} ({c.code})
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Datos fiscales */}
         <div className="bg-card border border-border rounded-lg p-5">
           <h3 className="text-sm font-semibold text-foreground mb-3">Datos fiscales</h3>
