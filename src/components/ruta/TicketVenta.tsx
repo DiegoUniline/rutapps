@@ -22,7 +22,7 @@ interface TicketVentaProps {
   onClose: () => void;
 }
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
@@ -30,6 +30,9 @@ export default function TicketVenta(props: TicketVentaProps) {
     subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onClose,
   } = props;
+
+  const { symbol: cs } = useCurrency();
+  const fmt = (n: number) => `${cs}${fmtNum(n)}`;
 
   const ticketRef = useRef<HTMLDivElement>(null);
 
