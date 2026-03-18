@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
@@ -6,7 +7,6 @@ import { Eye, EyeOff } from 'lucide-react';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isForgot, setIsForgot] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -22,10 +22,6 @@ export default function LoginPage() {
         if (error) throw error;
         toast.success('Te enviamos un enlace para restablecer tu contraseña. Revisa tu email.');
         setIsForgot(false);
-      } else if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        toast.success('Cuenta creada. Revisa tu email para confirmar.');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -44,7 +40,7 @@ export default function LoginPage() {
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-primary">Rutapp</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            {isForgot ? 'Recuperar contraseña' : isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+            {isForgot ? 'Recuperar contraseña' : 'Iniciar sesión'}
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -68,10 +64,10 @@ export default function LoginPage() {
             </div>
           )}
           <button type="submit" className="btn-odoo-primary w-full justify-center" disabled={loading}>
-            {loading ? 'Cargando...' : isForgot ? 'Enviar enlace' : isSignUp ? 'Registrarse' : 'Entrar'}
+            {loading ? 'Cargando...' : isForgot ? 'Enviar enlace' : 'Entrar'}
           </button>
         </form>
-        {!isForgot && !isSignUp && (
+        {!isForgot && (
           <p className="text-center text-xs text-muted-foreground mt-3">
             <button onClick={() => setIsForgot(true)} className="odoo-link">
               ¿Olvidaste tu contraseña?
@@ -85,10 +81,10 @@ export default function LoginPage() {
             </button>
           ) : (
             <>
-              {isSignUp ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}{' '}
-              <button onClick={() => setIsSignUp(!isSignUp)} className="odoo-link">
-                {isSignUp ? 'Iniciar sesión' : 'Registrarse'}
-              </button>
+              ¿No tienes cuenta?{' '}
+              <Link to="/signup" className="odoo-link">
+                Crear cuenta
+              </Link>
             </>
           )}
         </p>
