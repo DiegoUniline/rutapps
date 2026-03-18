@@ -30,6 +30,8 @@ const COUNTRY_CODES = [
   { code: '+1', country: 'US', label: '🇺🇸 EE.UU. (+1)', digits: 10 },
 ];
 
+type VerificationMethod = 'whatsapp' | 'email' | null;
+
 export default function SignupPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,7 @@ export default function SignupPage() {
   const [otpCode, setOtpCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(null);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
@@ -61,24 +64,51 @@ export default function SignupPage() {
 
   const fullPhone = form.countryCode + form.telefono.replace(/\D/g, '');
 
+  function handleSelectMethod(method: VerificationMethod) {
+    setVerificationMethod(method);
+    setOtpSent(false);
+    setOtpVerified(false);
+    setOtpCode('');
+  }
+
   async function handleSendOtp() {
-    const phoneError = validatePhone();
-    if (phoneError) {
-      toast.error(phoneError);
-      return;
+    if (verificationMethod === 'whatsapp') {
+      const phoneError = validatePhone();
+      if (phoneError) {
+        toast.error(phoneError);
+        return;
+      }
+    }
+
+    if (verificationMethod === 'email') {
+      if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+        toast.error('Ingresa un correo electrónico válido');
+        return;
+      }
     }
 
     setSendingOtp(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: { action: 'send', phone: fullPhone },
-      });
+      const body: Record<string, string> = { action: 'send' };
+      if (verificationMethod === 'whatsapp') {
+        body.phone = fullPhone;
+        body.channel = 'whatsapp';
+      } else {
+        body.email = form.email.trim().toLowerCase();
+        body.channel = 'email';
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-otp', { body });
 
       if (error) throw new Error(error.message || 'Error al enviar código');
       if (data?.error) throw new Error(data.error);
 
       setOtpSent(true);
-      toast.success('Código enviado por WhatsApp 📲');
+      toast.success(
+        verificationMethod === 'whatsapp'
+          ? 'Código enviado por WhatsApp 📲'
+          : 'Código enviado a tu correo electrónico 📧'
+      );
     } catch (err: any) {
       toast.error(err.message || 'Error al enviar el código');
     } finally {
@@ -94,16 +124,27 @@ export default function SignupPage() {
 
     setVerifyingOtp(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: { action: 'verify', phone: fullPhone, code: otpCode },
-      });
+      const body: Record<string, string> = { action: 'verify', code: otpCode };
+      if (verificationMethod === 'whatsapp') {
+        body.phone = fullPhone;
+        body.channel = 'whatsapp';
+      } else {
+        body.email = form.email.trim().toLowerCase();
+        body.channel = 'email';
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-otp', { body });
 
       if (error) throw new Error(error.message || 'Error de verificación');
       if (data?.error) throw new Error(data.error);
 
       if (data?.verified) {
         setOtpVerified(true);
-        toast.success('Número verificado ✓');
+        toast.success(
+          verificationMethod === 'whatsapp'
+            ? 'Número verificado ✓'
+            : 'Correo verificado ✓'
+        );
       }
     } catch (err: any) {
       toast.error(err.message || 'Código incorrecto');
@@ -115,6 +156,10 @@ export default function SignupPage() {
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
 
+    if (!form.nombre.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
+    }
     if (!form.empresa.trim()) {
       toast.error('El nombre de la empresa es obligatorio');
       return;
@@ -123,8 +168,13 @@ export default function SignupPage() {
       toast.error('El correo electrónico es obligatorio');
       return;
     }
+    const phoneError = validatePhone();
+    if (phoneError) {
+      toast.error(phoneError);
+      return;
+    }
     if (!otpVerified) {
-      toast.error('Debes verificar tu número de teléfono');
+      toast.error('Debes verificar tu identidad con WhatsApp o correo electrónico');
       return;
     }
     if (!acceptedTerms || !acceptedPrivacy) {
@@ -138,7 +188,6 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      // Check if email or phone already exists in empresas
       const { data: existingEmail } = await supabase
         .from('empresas')
         .select('id')
@@ -161,7 +210,7 @@ export default function SignupPage() {
         return;
       }
 
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({
+      const { error: signupError } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
         options: {
@@ -170,6 +219,7 @@ export default function SignupPage() {
             phone: fullPhone,
             empresa_nombre: form.empresa,
             accepted_terms_at: new Date().toISOString(),
+            verified_via: verificationMethod,
           },
           emailRedirectTo: window.location.origin,
         },
@@ -196,6 +246,8 @@ export default function SignupPage() {
     }
   }
 
+  const isFormReady = otpVerified && acceptedTerms && acceptedPrivacy && form.email.trim() && form.telefono.trim() && form.empresa.trim() && form.nombre.trim() && form.password.length >= 6;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'hsl(220, 14%, 98%)' }}>
       <Card className="w-full max-w-md shadow-xl">
@@ -208,6 +260,7 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
+            {/* Name */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Tu nombre</Label>
               <Input
@@ -218,6 +271,7 @@ export default function SignupPage() {
               />
             </div>
 
+            {/* Company */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Nombre de tu empresa</Label>
               <Input
@@ -228,18 +282,29 @@ export default function SignupPage() {
               />
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
               <Input
                 type="email"
                 required
                 value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                onChange={e => {
+                  setForm(f => ({ ...f, email: e.target.value }));
+                  if (verificationMethod === 'email' && otpSent) {
+                    setOtpSent(false);
+                    setOtpVerified(false);
+                    setOtpCode('');
+                  }
+                }}
                 placeholder="tu@empresa.com"
               />
+              <p className="text-xs text-muted-foreground">
+                Se usará para recuperar tu contraseña
+              </p>
             </div>
 
-            {/* Phone + OTP verification */}
+            {/* Phone */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Teléfono</Label>
               <div className="flex gap-2">
@@ -247,11 +312,13 @@ export default function SignupPage() {
                   value={form.countryCode}
                   onValueChange={v => {
                     setForm(f => ({ ...f, countryCode: v }));
-                    setOtpSent(false);
-                    setOtpVerified(false);
-                    setOtpCode('');
+                    if (verificationMethod === 'whatsapp') {
+                      setOtpSent(false);
+                      setOtpVerified(false);
+                      setOtpCode('');
+                    }
                   }}
-                  disabled={otpVerified}
+                  disabled={otpVerified && verificationMethod === 'whatsapp'}
                 >
                   <SelectTrigger className="w-[180px]">
                     <SelectValue />
@@ -267,7 +334,7 @@ export default function SignupPage() {
                   value={form.telefono}
                   onChange={e => {
                     setForm(f => ({ ...f, telefono: e.target.value }));
-                    if (otpSent) {
+                    if (verificationMethod === 'whatsapp' && otpSent) {
                       setOtpSent(false);
                       setOtpVerified(false);
                       setOtpCode('');
@@ -275,37 +342,80 @@ export default function SignupPage() {
                   }}
                   placeholder={`${'0'.repeat(selectedCountry.digits)}`}
                   maxLength={selectedCountry.digits + 2}
-                  disabled={otpVerified}
+                  disabled={otpVerified && verificationMethod === 'whatsapp'}
                 />
               </div>
               <p className="text-xs text-muted-foreground">{selectedCountry.digits} dígitos para {selectedCountry.country}</p>
+            </div>
 
-              {/* OTP section */}
+            {/* Verification method selector */}
+            <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
+              <p className="text-sm font-medium text-center">¿Cómo quieres verificar tu identidad?</p>
+
               {otpVerified ? (
                 <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                   <ShieldCheck className="h-4 w-4" />
-                  Número verificado
+                  {verificationMethod === 'whatsapp' ? 'Número verificado por WhatsApp' : 'Correo verificado'}
                 </div>
               ) : !otpSent ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={verificationMethod === 'whatsapp' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      handleSelectMethod('whatsapp');
+                      // Auto-send if phone is filled
+                    }}
+                    className="flex flex-col h-auto py-3 gap-1"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    <span className="text-xs">WhatsApp</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={verificationMethod === 'email' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      handleSelectMethod('email');
+                    }}
+                    className="flex flex-col h-auto py-3 gap-1"
+                  >
+                    <Mail className="h-5 w-5" />
+                    <span className="text-xs">Correo electrónico</span>
+                  </Button>
+                </div>
+              ) : null}
+
+              {/* Send OTP button after selecting method */}
+              {verificationMethod && !otpSent && !otpVerified && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   onClick={handleSendOtp}
-                  disabled={sendingOtp || !form.telefono}
+                  disabled={sendingOtp || (verificationMethod === 'whatsapp' ? !form.telefono : !form.email)}
                   className="w-full"
                 >
                   {sendingOtp ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  ) : (
+                  ) : verificationMethod === 'whatsapp' ? (
                     <MessageCircle className="h-4 w-4 mr-1.5" />
+                  ) : (
+                    <Mail className="h-4 w-4 mr-1.5" />
                   )}
-                  Enviar código por WhatsApp
+                  {verificationMethod === 'whatsapp'
+                    ? 'Enviar código por WhatsApp'
+                    : 'Enviar código por correo'}
                 </Button>
-              ) : (
-                <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
+              )}
+
+              {/* OTP input */}
+              {otpSent && !otpVerified && (
+                <div className="space-y-3">
                   <p className="text-xs text-muted-foreground text-center">
-                    Ingresa el código de 6 dígitos enviado a tu WhatsApp
+                    Ingresa el código de 6 dígitos enviado a tu{' '}
+                    {verificationMethod === 'whatsapp' ? 'WhatsApp' : 'correo electrónico'}
                   </p>
                   <div className="flex justify-center">
                     <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
@@ -341,10 +451,18 @@ export default function SignupPage() {
                       Verificar
                     </Button>
                   </div>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground underline w-full text-center"
+                    onClick={() => handleSelectMethod(null)}
+                  >
+                    Cambiar método de verificación
+                  </button>
                 </div>
               )}
             </div>
 
+            {/* Password */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Contraseña</Label>
               <Input
@@ -391,7 +509,7 @@ export default function SignupPage() {
 
             <Button
               type="submit"
-              disabled={loading || !otpVerified || !acceptedTerms || !acceptedPrivacy}
+              disabled={loading || !isFormReady}
               className="w-full"
               size="lg"
             >
