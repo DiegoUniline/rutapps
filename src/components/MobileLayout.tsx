@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
-import UpdateBanner from '@/components/ruta/UpdateBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -32,8 +31,15 @@ export default function MobileLayout() {
   const { profile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
+
+  useEffect(() => {
+    const handler = () => setSwUpdateAvailable(true);
+    window.addEventListener('uniline:sw-update-available', handler);
+    return () => window.removeEventListener('uniline:sw-update-available', handler);
+  }, []);
 
   const forceUpdate = () => {
     navigator.serviceWorker?.getRegistration().then((reg) => {
@@ -53,6 +59,15 @@ export default function MobileLayout() {
           <span className="text-sm font-bold text-foreground pl-2">Ruta</span>
         </div>
         <div className="flex items-center gap-1">
+          {swUpdateAvailable && (
+            <button
+              onClick={forceUpdate}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-primary animate-pulse hover:text-primary/80 transition-colors"
+              title="Actualizar app"
+            >
+              <Download className="h-5 w-5" />
+            </button>
+          )}
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
@@ -71,7 +86,6 @@ export default function MobileLayout() {
         </div>
       </header>
 
-      <UpdateBanner />
       <OfflineBanner />
 
       {/* Content area */}

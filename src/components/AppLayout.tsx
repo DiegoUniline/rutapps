@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -346,6 +346,7 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
@@ -353,6 +354,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
   const location = useLocation();
+
+  useEffect(() => {
+    const handler = () => setSwUpdateAvailable(true);
+    window.addEventListener('uniline:sw-update-available', handler);
+    return () => window.removeEventListener('uniline:sw-update-available', handler);
+  }, []);
+
+  const applySwUpdate = () => {
+    navigator.serviceWorker?.getRegistration().then((reg) => {
+      if (reg?.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      } else {
+        window.location.reload();
+      }
+    });
+  };
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
 
@@ -417,6 +434,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
           <div className="flex items-center gap-1">
+            {swUpdateAvailable && (
+              <button
+                onClick={applySwUpdate}
+                className="p-2 rounded-md text-primary animate-pulse hover:text-primary/80 transition-colors"
+                title="Actualizar app"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
