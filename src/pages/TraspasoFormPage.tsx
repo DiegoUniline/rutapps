@@ -155,13 +155,25 @@ export default function TraspasoFormPage() {
     },
   });
 
+  // Fetch per-warehouse stock for the selected origin almacen
+  const { data: stockAlmacenOrigen } = useQuery({
+    queryKey: ['stock-almacen-origen', almacenOrigenId],
+    enabled: (tipo === 'almacen_almacen' || tipo === 'almacen_ruta') && !!almacenOrigenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', almacenOrigenId)
+        .gt('cantidad', 0);
+      return data ?? [];
+    },
+  });
+
   // Filtered product list: only those with stock > 0 from the selected origin
   const productosList = useMemo(() => {
     if (!allProductos) return [];
     if (readOnly) return allProductos; // show all for read-only view
 
     if (tipo === 'ruta_almacen') {
-      // Only products that have stock_camion > 0 for the selected vendedor
       if (!stockCamion || !vendedorOrigenId) return [];
       const scMap = new Map(stockCamion.map(s => [s.producto_id, s.cantidad_actual]));
       return allProductos
@@ -169,20 +181,29 @@ export default function TraspasoFormPage() {
         .map(p => ({ ...p, cantidad: scMap.get(p.id) ?? 0 }));
     }
 
-    // almacen_almacen or almacen_ruta: filter by productos.cantidad > 0
+    // almacen_almacen or almacen_ruta: filter by stock_almacen for selected origin
+    if (stockAlmacenOrigen && almacenOrigenId) {
+      const saMap = new Map(stockAlmacenOrigen.map(s => [s.producto_id, s.cantidad]));
+      return allProductos
+        .filter(p => (saMap.get(p.id) ?? 0) > 0)
+        .map(p => ({ ...p, cantidad: saMap.get(p.id) ?? 0 }));
+    }
+
     return allProductos.filter(p => (p.cantidad ?? 0) > 0);
-  }, [allProductos, stockCamion, tipo, vendedorOrigenId, readOnly]);
+  }, [allProductos, stockCamion, stockAlmacenOrigen, tipo, vendedorOrigenId, almacenOrigenId, readOnly]);
 
   // Max stock map for validation
   const maxStockMap = useMemo(() => {
     const map = new Map<string, number>();
     if (tipo === 'ruta_almacen' && stockCamion) {
       stockCamion.forEach(s => map.set(s.producto_id, s.cantidad_actual));
+    } else if (stockAlmacenOrigen && almacenOrigenId) {
+      stockAlmacenOrigen.forEach(s => map.set(s.producto_id, s.cantidad));
     } else if (allProductos) {
       allProductos.forEach(p => map.set(p.id, p.cantidad ?? 0));
     }
     return map;
-  }, [allProductos, stockCamion, tipo]);
+  }, [allProductos, stockCamion, stockAlmacenOrigen, tipo, almacenOrigenId]);
 
   const almacenOpts = (almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
