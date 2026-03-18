@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "create-user") {
-      const { email, password, nombre, role_id } = params;
+      const { email, password, nombre, role_id, almacen_id } = params;
 
       // Check if email already exists in auth system BEFORE attempting to create
       const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
@@ -171,12 +171,12 @@ Deno.serve(async (req) => {
         if (existingProfile) {
           await adminClient
             .from("profiles")
-            .update({ empresa_id: empresaId, nombre: nombre || null })
+            .update({ empresa_id: empresaId, nombre: nombre || null, almacen_id: almacen_id || null })
             .eq("user_id", newUser.user.id);
         } else {
           await adminClient
             .from("profiles")
-            .insert({ user_id: newUser.user.id, empresa_id: empresaId, nombre: nombre || null });
+            .insert({ user_id: newUser.user.id, empresa_id: empresaId, nombre: nombre || null, almacen_id: almacen_id || null });
         }
 
         // Assign role if provided

@@ -44,8 +44,12 @@ export default function UsuariosPage() {
 
   // New user form
   const [showNewUser, setShowNewUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: '' });
+  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: '', almacen_id: '' });
   const [creatingUser, setCreatingUser] = useState(false);
+  const [quickCreateRole, setQuickCreateRole] = useState(false);
+  const [quickRoleName, setQuickRoleName] = useState('');
+  const [quickCreateAlmacen, setQuickCreateAlmacen] = useState(false);
+  const [quickAlmacenName, setQuickAlmacenName] = useState('');
 
   // Password modal
   const [passwordModal, setPasswordModal] = useState<{ userId: string; nombre: string } | null>(null);
@@ -234,12 +238,12 @@ export default function UsuariosPage() {
     setCreatingUser(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre, role_id: newUser.role_id },
+        body: { action: 'create-user', email: newUser.email, password: newUser.password, nombre: newUser.nombre, role_id: newUser.role_id, almacen_id: newUser.almacen_id || null },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       toast.success('Usuario creado exitosamente');
-      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '' });
+      setShowNewUser(false); setNewUser({ email: '', password: '', nombre: '', role_id: '', almacen_id: '' });
       load();
     } catch (e: any) { toast.error(e.message || 'Error al crear usuario'); } finally { setCreatingUser(false); }
   };
@@ -313,33 +317,113 @@ export default function UsuariosPage() {
             </button>
           </div>
 
+          {/* User creation modal */}
           {showNewUser && (
-            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">Crear nuevo usuario</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                <div>
-                  <label className="label-odoo">Nombre</label>
-                  <input className="input-odoo" value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} placeholder="Nombre completo" />
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+              <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto">
+                <div className="flex items-center justify-between p-5 border-b border-border">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <UserPlus className="h-4 w-4 text-primary" /> Crear nuevo usuario
+                  </h3>
+                  <button onClick={() => setShowNewUser(false)} className="p-1.5 rounded-md hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>
                 </div>
-                <div>
-                  <label className="label-odoo">Email (usuario)</label>
-                  <input className="input-odoo" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="correo@ejemplo.com" />
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="label-odoo">Nombre</label>
+                    <input className="input-odoo w-full" value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} placeholder="Nombre completo" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label-odoo">Email (usuario) <span className="text-destructive">*</span></label>
+                      <input className="input-odoo w-full" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="correo@ejemplo.com" />
+                    </div>
+                    <div>
+                      <label className="label-odoo">Contraseña inicial <span className="text-destructive">*</span></label>
+                      <input className="input-odoo w-full" type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
+                    </div>
+                  </div>
+
+                  {/* Rol with quick-create */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="label-odoo mb-0">Rol <span className="text-destructive">*</span></label>
+                      <button type="button" onClick={() => { setQuickCreateRole(true); setQuickRoleName(''); }}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-0.5">
+                        <Plus className="h-3 w-3" /> Crear rol
+                      </button>
+                    </div>
+                    {quickCreateRole ? (
+                      <div className="flex gap-2">
+                        <input className="input-odoo flex-1 text-sm" value={quickRoleName} onChange={e => setQuickRoleName(e.target.value)}
+                          placeholder="Nombre del nuevo rol" autoFocus />
+                        <button onClick={async () => {
+                          if (!quickRoleName.trim() || !empresa?.id) return;
+                          const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, nombre: quickRoleName.trim() }).select('id').single();
+                          if (data) {
+                            setNewUser({ ...newUser, role_id: data.id });
+                            toast.success('Rol creado');
+                            load(false);
+                          }
+                          setQuickCreateRole(false);
+                        }} className="btn-odoo-primary text-xs px-3">Crear</button>
+                        <button onClick={() => setQuickCreateRole(false)} className="btn-odoo text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <select className="input-odoo w-full" value={newUser.role_id} onChange={e => setNewUser({ ...newUser, role_id: e.target.value })}>
+                        <option value="">Seleccionar rol...</option>
+                        {activeRoles.map(r => (
+                          <option key={r.id} value={r.id}>{r.nombre}{r.acceso_ruta_movil ? ' 📱' : ''}</option>
+                        ))}
+                      </select>
+                    )}
+                    {/* Vendedor hint */}
+                    {newUser.role_id && activeRoles.find(r => r.id === newUser.role_id)?.acceso_ruta_movil && (
+                      <p className="text-[11px] text-success mt-1 flex items-center gap-1">
+                        📱 Este rol tiene acceso a la vista móvil de ruta
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Almacén with quick-create */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="label-odoo mb-0">Almacén de trabajo</label>
+                      <button type="button" onClick={() => { setQuickCreateAlmacen(true); setQuickAlmacenName(''); }}
+                        className="text-[11px] text-primary hover:underline flex items-center gap-0.5">
+                        <Plus className="h-3 w-3" /> Crear almacén
+                      </button>
+                    </div>
+                    {quickCreateAlmacen ? (
+                      <div className="flex gap-2">
+                        <input className="input-odoo flex-1 text-sm" value={quickAlmacenName} onChange={e => setQuickAlmacenName(e.target.value)}
+                          placeholder="Nombre del nuevo almacén" autoFocus />
+                        <button onClick={async () => {
+                          if (!quickAlmacenName.trim() || !empresa?.id) return;
+                          const { data } = await supabase.from('almacenes').insert({ empresa_id: empresa.id, nombre: quickAlmacenName.trim() }).select('id').single();
+                          if (data) {
+                            setNewUser({ ...newUser, almacen_id: data.id });
+                            toast.success('Almacén creado');
+                            load(false);
+                          }
+                          setQuickCreateAlmacen(false);
+                        }} className="btn-odoo-primary text-xs px-3">Crear</button>
+                        <button onClick={() => setQuickCreateAlmacen(false)} className="btn-odoo text-xs">✕</button>
+                      </div>
+                    ) : (
+                      <select className="input-odoo w-full" value={newUser.almacen_id} onChange={e => setNewUser({ ...newUser, almacen_id: e.target.value })}>
+                        <option value="">Sin almacén asignado</option>
+                        {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                      </select>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <label className="label-odoo">Contraseña inicial</label>
-                  <input className="input-odoo" type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
+
+                <div className="p-5 border-t border-border flex gap-2 justify-end">
+                  <button onClick={() => setShowNewUser(false)} className="btn-odoo text-sm">Cancelar</button>
+                  <button onClick={createUser} disabled={creatingUser} className="btn-odoo-primary text-sm">
+                    {creatingUser ? 'Creando...' : 'Crear usuario'}
+                  </button>
                 </div>
-                <div>
-                  <label className="label-odoo">Rol <span className="text-destructive">*</span></label>
-                  <select className="input-odoo" value={newUser.role_id} onChange={e => setNewUser({ ...newUser, role_id: e.target.value })}>
-                    <option value="">Seleccionar rol...</option>
-                    {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={createUser} disabled={creatingUser} className="btn-odoo-primary text-xs">{creatingUser ? 'Creando...' : 'Crear usuario'}</button>
-                <button onClick={() => setShowNewUser(false)} className="btn-odoo text-xs">Cancelar</button>
               </div>
             </div>
           )}
