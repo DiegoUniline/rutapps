@@ -286,7 +286,7 @@ export default function RutaNuevaVenta() {
       producto_id: ps.productos.id,
       codigo: ps.productos.codigo,
       nombre: ps.productos.nombre,
-      precio_unitario: ps.productos.precio_principal ?? 0,
+      precio_unitario: resolvePrice(ps.productos),
       cantidad: ps.cantidad,
       unidad: (ps.productos.unidades as any)?.abreviatura || 'pz',
       unidad_id: ps.productos.unidad_venta_id ?? undefined,
