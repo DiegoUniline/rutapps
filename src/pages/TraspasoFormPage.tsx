@@ -366,14 +366,25 @@ export default function TraspasoFormPage() {
       const today = new Date().toISOString().slice(0, 10);
 
       for (const l of tLineas ?? []) {
+        // --- Deduct from origin ---
         if (traspaso.almacen_origen_id) {
-          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-          const stock = prod?.cantidad ?? 0;
-          if (l.cantidad > stock) {
+          // Deduct from stock_almacen
+          const { data: sa } = await supabase.from('stock_almacen')
+            .select('id, cantidad')
+            .eq('almacen_id', traspaso.almacen_origen_id)
+            .eq('producto_id', l.producto_id)
+            .single();
+          const stockOrigen = sa?.cantidad ?? 0;
+          if (l.cantidad > stockOrigen) {
             const { data: p } = await supabase.from('productos').select('nombre').eq('id', l.producto_id).single();
-            throw new Error(`Stock insuficiente para "${p?.nombre}". Disponible: ${stock}`);
+            throw new Error(`Stock insuficiente en origen para "${p?.nombre}". Disponible: ${stockOrigen}`);
           }
-          await supabase.from('productos').update({ cantidad: Math.max(0, stock - l.cantidad) } as any).eq('id', l.producto_id);
+          if (sa) {
+            await supabase.from('stock_almacen').update({ cantidad: Math.max(0, stockOrigen - Number(l.cantidad)), updated_at: new Date().toISOString() } as any).eq('id', sa.id);
+          }
+          // Also update global stock
+          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
+          await supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
           await supabase.from('movimientos_inventario').insert({
             empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
             cantidad: l.cantidad, almacen_origen_id: traspaso.almacen_origen_id,
@@ -406,7 +417,23 @@ export default function TraspasoFormPage() {
           } as any);
         }
 
+        // --- Add to destination ---
         if (traspaso.almacen_destino_id) {
+          // Upsert stock_almacen for destination
+          const { data: saD } = await supabase.from('stock_almacen')
+            .select('id, cantidad')
+            .eq('almacen_id', traspaso.almacen_destino_id)
+            .eq('producto_id', l.producto_id)
+            .maybeSingle();
+          if (saD) {
+            await supabase.from('stock_almacen').update({ cantidad: (saD.cantidad ?? 0) + Number(l.cantidad), updated_at: new Date().toISOString() } as any).eq('id', saD.id);
+          } else {
+            await supabase.from('stock_almacen').insert({
+              empresa_id: empresa!.id, almacen_id: traspaso.almacen_destino_id,
+              producto_id: l.producto_id, cantidad: Number(l.cantidad),
+            } as any);
+          }
+          // Also update global stock
           const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
           await supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
           await supabase.from('movimientos_inventario').insert({
