@@ -478,7 +478,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Desktop layout with sidebar
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
+      <NotificationRuntime bannersOnly />
+      <div className="flex-1 flex">
       <aside
         className={cn(
           "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
