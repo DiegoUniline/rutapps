@@ -583,6 +583,18 @@ export default function MiSuscripcionPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel subscription link */}
+      {subData && subData.status !== 'cancelled' && subData.status !== 'cancelling' && (
+        <div className="text-center pt-4 pb-8">
+          <button
+            onClick={() => navigate('/cancelar-suscripcion')}
+            className="text-xs text-muted-foreground hover:text-destructive transition-colors underline underline-offset-2"
+          >
+            Cancelar mi suscripción
+          </button>
+        </div>
+      )}
     </div>
   );
 }

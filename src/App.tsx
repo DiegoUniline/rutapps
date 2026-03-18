@@ -74,6 +74,7 @@ const ComisionesPage = lazy(() => import("@/pages/ComisionesPage"));
 const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicialPage"));
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
+const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
 
 
 // Logistica pages
@@ -304,6 +305,7 @@ function desktopRoutes() {
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/facturacion" element={<FacturacionPage />} />
       <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
+      <Route path="/cancelar-suscripcion" element={<CancelSubscriptionPage />} />
       <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
