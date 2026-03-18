@@ -674,7 +674,7 @@ export default function VentaFormPage() {
       )}
 
       {/* Form body */}
-      <div className="p-5 space-y-4 max-w-[1200px]">
+      <div className="p-3 sm:p-5 space-y-4 max-w-[1200px]">
         {/* Header card */}
         <div className="bg-card border border-border rounded-md p-5">
           {readOnly && (
