@@ -198,7 +198,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             <div className="px-5 py-2 space-y-0.5">
               <div className="tk-tot-row flex justify-between text-[10px]">
                 <span className="lbl text-muted-foreground">Subtotal</span>
-                <span className="val text-foreground tabular-nums">${fmt(subtotal)}</span>
+                <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
               </div>
               {iva > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
