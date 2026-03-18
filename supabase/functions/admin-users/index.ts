@@ -59,12 +59,26 @@ Deno.serve(async (req) => {
 
     const empresaId = callerProfile.empresa_id;
 
-    if (action === "list-users") {
+    if (action === "list-users" || action === "list-empresa-users") {
+      // Super admin can query any empresa
+      let targetEmpresaId = empresaId;
+      if (action === "list-empresa-users" && params.empresa_id) {
+        // Verify caller is super admin
+        const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+        if (!isSA) {
+          return new Response(JSON.stringify({ error: "No autorizado" }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        targetEmpresaId = params.empresa_id;
+      }
+
       // Get all profiles for this empresa
       const { data: profiles } = await adminClient
         .from("profiles")
-        .select("user_id")
-        .eq("empresa_id", empresaId);
+        .select("user_id, nombre, telefono")
+        .eq("empresa_id", targetEmpresaId);
 
       const userIds = (profiles ?? []).map((p: any) => p.user_id);
 
@@ -79,12 +93,30 @@ Deno.serve(async (req) => {
         perPage: 1000,
       });
 
+      // Get roles
+      const { data: userRoles } = await adminClient
+        .from("user_roles")
+        .select("user_id, role_id, roles(nombre)")
+        .in("user_id", userIds);
+
+      const rolesMap: Record<string, string> = {};
+      (userRoles || []).forEach((ur: any) => {
+        rolesMap[ur.user_id] = ur.roles?.nombre || 'Sin rol';
+      });
+
+      const profilesMap: Record<string, any> = {};
+      (profiles || []).forEach((p: any) => { profilesMap[p.user_id] = p; });
+
       const filtered = users
         .filter((u: any) => userIds.includes(u.id))
         .map((u: any) => ({
           id: u.id,
           email: u.email,
+          nombre: profilesMap[u.id]?.nombre || null,
+          telefono: profilesMap[u.id]?.telefono || null,
+          rol: rolesMap[u.id] || null,
           created_at: u.created_at,
+          last_sign_in_at: u.last_sign_in_at,
         }));
 
       return new Response(JSON.stringify({ users: filtered }), {
