@@ -1,19 +1,23 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentas } from '@/hooks/useVentas';
+import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn, fmtDate } from '@/lib/utils';
+import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
+import { cn, fmtDate, fmtCurrency } from '@/lib/utils';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -50,6 +54,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function VentasListPage() {
+  const { profile, empresa } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
@@ -58,6 +63,12 @@ export default function VentasListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const { data: ventas, isLoading } = useVentas(search, statusFilter, tipoFilter);
+  const { data: clientesList } = useClientes();
+
+  // WhatsApp state
+  const [waOpen, setWaOpen] = useState(false);
+  const [waPhone, setWaPhone] = useState('');
+  const [waMessage, setWaMessage] = useState('');
 
   const total = ventas?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
@@ -156,24 +167,58 @@ export default function VentasListPage() {
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay ventas. Crea la primera.</div>
           )}
-          {pageData.map((v: any) => (
-            <MobileListCard
-              key={v.id}
-              title={v.clientes?.nombre ?? '—'}
-              subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
-              badge={<StatusChip status={v.status} />}
-              onClick={() => navigate(`/ventas/${v.id}`)}
-              fields={[
-                { label: 'Fecha', value: fmtDate(v.fecha) },
-                { label: 'Total', value: fmt(v.total) },
-                { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
-                ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmt(v.saldo_pendiente)}</span> }] : []),
-              ]}
-            />
-          ))}
+          {pageData.map((v: any) => {
+            const cliente = clientesList?.find((c: any) => c.id === v.cliente_id);
+            const openWa = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              const msg = `📄 *${v.tipo === 'pedido' ? 'Pedido' : 'Venta'} ${v.folio || ''}*\nCliente: ${v.clientes?.nombre}\nFecha: ${fmtDate(v.fecha)}\n💰 Total: ${fmtCurrency(v.total)}${v.saldo_pendiente > 0 ? `\n⚠️ Saldo: ${fmtCurrency(v.saldo_pendiente)}` : ''}`;
+              setWaPhone(cliente?.telefono ?? '');
+              setWaMessage(msg);
+              setWaOpen(true);
+            };
+            return (
+              <MobileListCard
+                key={v.id}
+                title={v.clientes?.nombre ?? '—'}
+                subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
+                badge={
+                  <div className="flex items-center gap-1">
+                    <StatusChip status={v.status} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <button className="p-1 rounded hover:bg-accent"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/${v.id}`); }}>
+                          <FileText className="h-3.5 w-3.5 mr-2" /> Ver detalle
+                        </DropdownMenuItem>
+                        {v.status !== 'borrador' && v.saldo_pendiente > 0 && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/cobranza`); }}>
+                            <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={openWa}>
+                          <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                }
+                onClick={() => navigate(`/ventas/${v.id}`)}
+                fields={[
+                  { label: 'Fecha', value: fmtDate(v.fecha) },
+                  { label: 'Total', value: fmtCurrency(v.total) },
+                  { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
+                  ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(v.saldo_pendiente)}</span> }] : []),
+                ]}
+              />
+            );
+          })}
           {total > 0 && (
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
+
+          <WhatsAppPreviewDialog open={waOpen} onClose={() => setWaOpen(false)} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" />
         </div>
       ) : (
         /* Desktop table */
