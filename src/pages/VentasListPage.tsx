@@ -233,7 +233,7 @@ export default function VentasListPage() {
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
 
-          <WhatsAppPreviewDialog open={waOpen} onClose={() => setWaOpen(false)} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" />
+          <WhatsAppPreviewDialog open={waOpen} onClose={() => { setWaOpen(false); setWaPdfBlob(null); }} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" pdfBlob={waPdfBlob} pdfFileName={waPdfName} />
         </div>
       ) : (
         /* Desktop table */
