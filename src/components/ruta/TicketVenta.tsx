@@ -253,7 +253,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   {condicionPago === 'credito' && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">+ Esta venta (crédito)</span>
-                      <span className="text-foreground tabular-nums">${fmt(total)}</span>
+                      <span className="text-foreground tabular-nums">{fmt(total)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-[11px] font-bold pt-1 border-t border-dashed border-border">
