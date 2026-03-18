@@ -1,8 +1,9 @@
 import { Check, Printer, Share2, X } from 'lucide-react';
 import { useRef } from 'react';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface TicketVentaProps {
-  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null };
+  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null };
   folio: string;
   fecha: string;
   clienteNombre: string;
