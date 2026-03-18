@@ -361,14 +361,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('uniline:sw-update-available', handler);
   }, []);
 
-  const applySwUpdate = () => {
-    navigator.serviceWorker?.getRegistration().then((reg) => {
+  const applySwUpdate = async () => {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
       if (reg?.waiting) {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       } else {
+        // Unregister SW and clear caches for a hard refresh
+        if (reg) await reg.unregister();
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
         window.location.reload();
       }
-    });
+    } catch {
+      window.location.reload();
+    }
   };
 
   const visibleNavItems = useFilteredNav(isSuperAdmin, hasModulo);
@@ -434,15 +441,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
           <div className="flex items-center gap-1">
-            {swUpdateAvailable && (
-              <button
-                onClick={applySwUpdate}
-                className="p-2 rounded-md text-primary animate-pulse hover:text-primary/80 transition-colors"
-                title="Actualizar app"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              onClick={applySwUpdate}
+              className={cn(
+                "p-2 rounded-md transition-colors",
+                swUpdateAvailable
+                  ? "text-primary animate-pulse hover:text-primary/80"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              title="Actualizar app"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"

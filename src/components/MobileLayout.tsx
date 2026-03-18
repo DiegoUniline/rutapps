@@ -41,14 +41,20 @@ export default function MobileLayout() {
     return () => window.removeEventListener('uniline:sw-update-available', handler);
   }, []);
 
-  const forceUpdate = () => {
-    navigator.serviceWorker?.getRegistration().then((reg) => {
+  const forceUpdate = async () => {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
       if (reg?.waiting) {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       } else {
+        if (reg) await reg.unregister();
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
         window.location.reload();
       }
-    });
+    } catch {
+      window.location.reload();
+    }
   };
 
   return (
@@ -59,15 +65,18 @@ export default function MobileLayout() {
           <span className="text-sm font-bold text-foreground pl-2">Ruta</span>
         </div>
         <div className="flex items-center gap-1">
-          {swUpdateAvailable && (
-            <button
-              onClick={forceUpdate}
-              className="flex items-center justify-center w-10 h-10 rounded-full text-primary animate-pulse hover:text-primary/80 transition-colors"
-              title="Actualizar app"
-            >
-              <Download className="h-5 w-5" />
-            </button>
-          )}
+          <button
+            onClick={forceUpdate}
+            className={cn(
+              "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
+              swUpdateAvailable
+                ? "text-primary animate-pulse hover:text-primary/80"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            title="Actualizar app"
+          >
+            <RefreshCw className="h-5 w-5" />
+          </button>
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
