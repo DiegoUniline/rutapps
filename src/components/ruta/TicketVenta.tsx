@@ -87,15 +87,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       metodoPago ? `Método: ${metodoPago}` : '',
       '─'.repeat(30),
       ...lineas.map(l =>
-        `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} $${fmt(l.total)}`
+        `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}`
       ),
       '─'.repeat(30),
-      `Subtotal: $${fmt(subtotal)}`,
-      iva > 0 ? `IVA: $${fmt(iva)}` : '',
-      ieps > 0 ? `IEPS: $${fmt(ieps)}` : '',
-      `TOTAL: $${fmt(total)}`,
-      montoRecibido ? `Recibido: $${fmt(montoRecibido)}` : '',
-      cambio && cambio > 0 ? `Cambio: $${fmt(cambio)}` : '',
+      `Subtotal: ${fmt(subtotal)}`,
+      iva > 0 ? `IVA: ${fmt(iva)}` : '',
+      ieps > 0 ? `IEPS: ${fmt(ieps)}` : '',
+      `TOTAL: ${fmt(total)}`,
+      montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
+      cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
       '',
       'Elaborado por Uniline — Innovación en la nube',
     ].filter(Boolean).join('\n');
