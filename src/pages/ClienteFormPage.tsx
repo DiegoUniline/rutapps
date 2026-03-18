@@ -579,15 +579,17 @@ export default function ClienteFormPage() {
                     <span className="odoo-field-label">¿Requiere factura?</span>
                     <input type="checkbox" checked={!!form.requiere_factura} onChange={e => set('requiere_factura', e.target.checked)} className="rounded border-input" />
                   </div>
-                  <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-dashed border-primary/40 text-[12px] font-medium cursor-pointer hover:bg-primary/5 active:scale-95 transition-all ${parsingCsf ? 'opacity-60 pointer-events-none' : ''}`}>
-                    {parsingCsf ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                    ) : (
-                      <FileText className="h-3.5 w-3.5 text-primary" />
-                    )}
-                    <span className="text-primary">{parsingCsf ? 'Procesando CSF...' : 'Subir CSF (PDF)'}</span>
-                    <input type="file" accept="application/pdf" className="hidden" onChange={handleCsfUpload} disabled={parsingCsf} />
-                  </label>
+                  {form.requiere_factura && (
+                    <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-dashed border-primary/40 text-[12px] font-medium cursor-pointer hover:bg-primary/5 active:scale-95 transition-all ${parsingCsf ? 'opacity-60 pointer-events-none' : ''}`}>
+                      {parsingCsf ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                      ) : (
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                      )}
+                      <span className="text-primary">{parsingCsf ? 'Procesando CSF...' : 'Subir CSF (PDF)'}</span>
+                      <input type="file" accept="application/pdf" className="hidden" onChange={handleCsfUpload} disabled={parsingCsf} />
+                    </label>
+                  )}
                 </div>
                 {form.requiere_factura && (
                   <>
