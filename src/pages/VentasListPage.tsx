@@ -71,6 +71,9 @@ export default function VentasListPage() {
   const [waOpen, setWaOpen] = useState(false);
   const [waPhone, setWaPhone] = useState('');
   const [waMessage, setWaMessage] = useState('');
+  const [waPdfBlob, setWaPdfBlob] = useState<Blob | null>(null);
+  const [waPdfName, setWaPdfName] = useState('');
+  const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
   const total = ventas?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
