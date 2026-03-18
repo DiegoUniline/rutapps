@@ -214,7 +214,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
                 <span className="text-[12px] font-bold text-foreground">Total</span>
-                <span className="text-[15px] font-bold text-primary tabular-nums">${fmt(total)}</span>
+                <span className="text-[15px] font-bold text-primary tabular-nums">{fmt(total)}</span>
               </div>
               {montoRecibido != null && montoRecibido > 0 && (
                 <div className="pt-1 space-y-0.5">
