@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone } from 'lucide-react';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
 import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
@@ -12,6 +12,7 @@ import AdminInvoicesTab from '@/components/admin/AdminInvoicesTab';
 import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
+import AdminAnunciosTab from '@/components/admin/AdminAnunciosTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
