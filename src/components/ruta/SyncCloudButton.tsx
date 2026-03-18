@@ -7,8 +7,17 @@ import { toast } from 'sonner';
 export default function SyncCloudButton() {
   const { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync, verified } = useNetworkStatus();
   const [showPanel, setShowPanel] = useState(false);
+  const [tapped, setTapped] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
+
+  // Brief "tapped" pulse for instant visual feedback
+  useEffect(() => {
+    if (tapped) {
+      const t = setTimeout(() => setTapped(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [tapped]);
 
   const formatLastSync = (ts: number | null) => {
     if (!ts) return 'Nunca';
