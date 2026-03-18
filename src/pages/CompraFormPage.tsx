@@ -357,51 +357,66 @@ export default function CompraFormPage() {
         const validLines = lineas.filter(l => l.producto_id);
         const today = new Date().toISOString().slice(0, 10);
 
-        for (const l of validLines) {
+        // Fetch all product quantities in parallel
+        const prodResults = await Promise.all(
+          validLines.map(l =>
+            supabase.from('productos').select('id, cantidad').eq('id', l.producto_id!).single()
+          )
+        );
+
+        // Build all updates and movements in parallel
+        const updates: Array<Promise<any>> = [];
+        for (let i = 0; i < validLines.length; i++) {
+          const l = validLines[i];
           const factor = Number(l._factor_conversion) || 1;
           const piezas = (Number(l.cantidad) || 0) * factor;
+          const currentQty = Number(prodResults[i].data?.cantidad ?? 0);
 
-          const { data: prod } = await supabase
-            .from('productos')
-            .select('cantidad')
-            .eq('id', l.producto_id!)
-            .single();
-
-          const currentQty = Number(prod?.cantidad ?? 0);
-          await supabase
-            .from('productos')
-            .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
-            .eq('id', l.producto_id!);
-
-          // Log reversal movement
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id,
-            tipo: 'salida',
-            producto_id: l.producto_id!,
-            cantidad: piezas,
-            almacen_origen_id: form.almacen_id,
-            referencia_tipo: 'compra',
-            referencia_id: form.id,
-            user_id: user?.id,
-            fecha: today,
-            notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
-          } as any);
+          updates.push(
+            Promise.resolve(
+              supabase
+                .from('productos')
+                .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
+                .eq('id', l.producto_id!)
+            )
+          );
+          updates.push(
+            Promise.resolve(
+              supabase.from('movimientos_inventario').insert({
+                empresa_id: empresa!.id,
+                tipo: 'salida',
+                producto_id: l.producto_id!,
+                cantidad: piezas,
+                almacen_origen_id: form.almacen_id,
+                referencia_tipo: 'compra',
+                referencia_id: form.id,
+                user_id: user?.id,
+                fecha: today,
+                notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
+              } as any)
+            )
+          );
         }
+        await Promise.all(updates);
       }
 
-      // Delete all payments
-      await supabase.from('pago_compras').delete().eq('compra_id', form.id);
-
-      // Update status
-      await supabase.from('compras').update({ status: 'cancelada', saldo_pendiente: 0 } as any).eq('id', form.id);
+      // Delete all payments + update status in parallel
+      await Promise.all([
+        supabase.from('pago_compras').delete().eq('compra_id', form.id),
+        supabase.from('compras').update({ status: 'cancelada', saldo_pendiente: 0 } as any).eq('id', form.id),
+      ]);
 
       setForm(f => ({ ...f, status: 'cancelada', saldo_pendiente: 0 }));
       toast.success('Compra cancelada — stock revertido y pagos eliminados');
-      qc.invalidateQueries({ queryKey: ['compras'] });
-      qc.invalidateQueries({ queryKey: ['compra', form.id] });
-      qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] });
-      qc.invalidateQueries({ queryKey: ['inventario'] });
-      qc.invalidateQueries({ queryKey: ['productos'] });
+
+      // Force immediate refetch (not just invalidate)
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ['compra', form.id] }),
+        qc.refetchQueries({ queryKey: ['pagos-compra', form.id] }),
+        qc.refetchQueries({ queryKey: ['compras'] }),
+        qc.refetchQueries({ queryKey: ['inventario'] }),
+        qc.refetchQueries({ queryKey: ['productos'] }),
+      ]);
     } catch (err: any) {
       toast.error(err.message || 'Error al cancelar');
     }
