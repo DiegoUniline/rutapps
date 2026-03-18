@@ -9,10 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
-  Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText
+  Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
+  Plus, ShoppingCart, History, Percent
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
