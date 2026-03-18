@@ -377,6 +377,7 @@ export default function CompraFormPage() {
               .from('productos')
               .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
               .eq('id', l.producto_id!)
+              .then()
           );
           updates.push(
             supabase.from('movimientos_inventario').insert({
@@ -391,6 +392,7 @@ export default function CompraFormPage() {
               fecha: today,
               notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
             } as any)
+            .then()
           );
         }
         await Promise.all(updates);
