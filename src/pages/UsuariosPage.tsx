@@ -44,7 +44,7 @@ export default function UsuariosPage() {
 
   // New user form
   const [showNewUser, setShowNewUser] = useState(false);
-  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '' });
+  const [newUser, setNewUser] = useState({ email: '', password: '', nombre: '', role_id: '' });
   const [creatingUser, setCreatingUser] = useState(false);
 
   // Password modal
