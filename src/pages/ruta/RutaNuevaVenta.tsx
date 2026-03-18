@@ -312,11 +312,12 @@ export default function RutaNuevaVenta() {
       setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: newQty } : c));
     } else {
       if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
+      const precioResuelto = esCambio ? 0 : resolvePrice(p);
       setCart([...cart, {
         producto_id: p.id,
         codigo: p.codigo,
         nombre: p.nombre,
-        precio_unitario: esCambio ? 0 : (p.precio_principal ?? 0),
+        precio_unitario: precioResuelto,
         cantidad: 1,
         unidad: p.unidad_venta_id ? ((productos?.find(pr => pr.id === p.id) as any)?.abreviatura || 'pz') : 'pz',
         unidad_id: p.unidad_venta_id ?? undefined,
