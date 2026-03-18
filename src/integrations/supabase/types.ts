@@ -3045,6 +3045,55 @@ export type Database = {
           },
         ]
       }
+      stock_almacen: {
+        Row: {
+          almacen_id: string
+          cantidad: number
+          empresa_id: string
+          id: string
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          almacen_id: string
+          cantidad?: number
+          empresa_id: string
+          id?: string
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          almacen_id?: string
+          cantidad?: number
+          empresa_id?: string
+          id?: string
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_almacen_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_almacen_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_almacen_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_camion: {
         Row: {
           cantidad_actual: number
