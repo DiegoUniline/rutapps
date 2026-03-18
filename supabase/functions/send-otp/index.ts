@@ -35,7 +35,6 @@ Deno.serve(async (req) => {
     const normalizedPhone = phone.replace(/[\s\-\(\)]/g, "");
 
     if (action === "send") {
-      // Rate limit: max 3 codes per phone in last 10 minutes
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
       const { count } = await supabaseAdmin
         .from("otp_codes")
@@ -52,13 +51,11 @@ Deno.serve(async (req) => {
 
       const otpCode = generateCode();
 
-      // Store code
       await supabaseAdmin.from("otp_codes").insert({
         phone: normalizedPhone,
         code: otpCode,
       });
 
-      // Send via WhatsApp
       const apiToken = Deno.env.get("WHATSAPP_OTP_TOKEN");
       if (!apiToken) {
         return new Response(
@@ -107,7 +104,6 @@ Deno.serve(async (req) => {
 
       const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
 
-      // Find valid code
       const { data: otpRecord } = await supabaseAdmin
         .from("otp_codes")
         .select("*")
@@ -120,7 +116,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (!otpRecord) {
-        // Increment attempts on latest code
         const { data: latest } = await supabaseAdmin
           .from("otp_codes")
           .select("id, attempts")
@@ -150,7 +145,6 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Mark as verified
       await supabaseAdmin
         .from("otp_codes")
         .update({ verified: true })

@@ -30,6 +30,8 @@ const COUNTRY_CODES = [
   { code: '+1', country: 'US', label: '🇺🇸 EE.UU. (+1)', digits: 10 },
 ];
 
+type VerificationMethod = 'whatsapp' | 'email' | null;
+
 export default function SignupPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -40,6 +42,7 @@ export default function SignupPage() {
   const [otpCode, setOtpCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(null);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
@@ -50,6 +53,7 @@ export default function SignupPage() {
   });
 
   const selectedCountry = COUNTRY_CODES.find(c => c.code === form.countryCode) || COUNTRY_CODES[0];
+  const fullPhone = form.countryCode + form.telefono.replace(/\D/g, '');
 
   function validatePhone() {
     const digits = form.telefono.replace(/\D/g, '');
@@ -59,24 +63,31 @@ export default function SignupPage() {
     return null;
   }
 
-  const fullPhone = form.countryCode + form.telefono.replace(/\D/g, '');
+  function resetVerification() {
+    setOtpSent(false);
+    setOtpVerified(false);
+    setOtpCode('');
+  }
 
+  function handleSelectMethod(method: VerificationMethod) {
+    setVerificationMethod(method);
+    resetVerification();
+  }
+
+  // WhatsApp OTP
   async function handleSendOtp() {
     const phoneError = validatePhone();
     if (phoneError) {
       toast.error(phoneError);
       return;
     }
-
     setSendingOtp(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { action: 'send', phone: fullPhone },
       });
-
       if (error) throw new Error(error.message || 'Error al enviar código');
       if (data?.error) throw new Error(data.error);
-
       setOtpSent(true);
       toast.success('Código enviado por WhatsApp 📲');
     } catch (err: any) {
@@ -91,16 +102,13 @@ export default function SignupPage() {
       toast.error('Ingresa el código de 6 dígitos');
       return;
     }
-
     setVerifyingOtp(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { action: 'verify', phone: fullPhone, code: otpCode },
       });
-
       if (error) throw new Error(error.message || 'Error de verificación');
       if (data?.error) throw new Error(data.error);
-
       if (data?.verified) {
         setOtpVerified(true);
         toast.success('Número verificado ✓');
@@ -112,9 +120,16 @@ export default function SignupPage() {
     }
   }
 
+  // For email method, verification happens via Supabase's confirmation email after signup
+  const isVerified = verificationMethod === 'whatsapp' ? otpVerified : verificationMethod === 'email';
+
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
 
+    if (!form.nombre.trim()) {
+      toast.error('El nombre es obligatorio');
+      return;
+    }
     if (!form.empresa.trim()) {
       toast.error('El nombre de la empresa es obligatorio');
       return;
@@ -123,8 +138,17 @@ export default function SignupPage() {
       toast.error('El correo electrónico es obligatorio');
       return;
     }
-    if (!otpVerified) {
-      toast.error('Debes verificar tu número de teléfono');
+    const phoneError = validatePhone();
+    if (phoneError) {
+      toast.error(phoneError);
+      return;
+    }
+    if (!verificationMethod) {
+      toast.error('Selecciona un método de verificación');
+      return;
+    }
+    if (verificationMethod === 'whatsapp' && !otpVerified) {
+      toast.error('Debes verificar tu número de WhatsApp');
       return;
     }
     if (!acceptedTerms || !acceptedPrivacy) {
@@ -138,7 +162,6 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      // Check if email or phone already exists in empresas
       const { data: existingEmail } = await supabase
         .from('empresas')
         .select('id')
@@ -161,7 +184,7 @@ export default function SignupPage() {
         return;
       }
 
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({
+      const { error: signupError } = await supabase.auth.signUp({
         email: form.email.trim().toLowerCase(),
         password: form.password,
         options: {
@@ -170,6 +193,7 @@ export default function SignupPage() {
             phone: fullPhone,
             empresa_nombre: form.empresa,
             accepted_terms_at: new Date().toISOString(),
+            verified_via: verificationMethod,
           },
           emailRedirectTo: window.location.origin,
         },
@@ -177,10 +201,11 @@ export default function SignupPage() {
 
       if (signupError) throw signupError;
 
-      toast.success(
-        'Cuenta creada exitosamente. Revisa tu email para confirmar tu cuenta.',
-        { duration: 8000 }
-      );
+      const successMsg = verificationMethod === 'email'
+        ? '¡Cuenta creada! Revisa tu correo electrónico para confirmar tu cuenta y activarla.'
+        : '¡Cuenta creada exitosamente! Revisa tu email para confirmar tu cuenta.';
+
+      toast.success(successMsg, { duration: 8000 });
       navigate('/login');
     } catch (err: any) {
       const msg = err.message || 'Error al crear la cuenta';
@@ -196,8 +221,18 @@ export default function SignupPage() {
     }
   }
 
+  const isFormReady =
+    isVerified &&
+    acceptedTerms &&
+    acceptedPrivacy &&
+    form.email.trim() &&
+    form.telefono.trim() &&
+    form.empresa.trim() &&
+    form.nombre.trim() &&
+    form.password.length >= 6;
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'hsl(220, 14%, 98%)' }}>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-muted/30">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
@@ -208,26 +243,19 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
+            {/* Name */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><User className="h-4 w-4" /> Tu nombre</Label>
-              <Input
-                required
-                value={form.nombre}
-                onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
-                placeholder="Juan Pérez"
-              />
+              <Input required value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Juan Pérez" />
             </div>
 
+            {/* Company */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Building2 className="h-4 w-4" /> Nombre de tu empresa</Label>
-              <Input
-                required
-                value={form.empresa}
-                onChange={e => setForm(f => ({ ...f, empresa: e.target.value }))}
-                placeholder="Distribuidora Norte S.A."
-              />
+              <Input required value={form.empresa} onChange={e => setForm(f => ({ ...f, empresa: e.target.value }))} placeholder="Distribuidora Norte S.A." />
             </div>
 
+            {/* Email */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Mail className="h-4 w-4" /> Email</Label>
               <Input
@@ -237,9 +265,10 @@ export default function SignupPage() {
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 placeholder="tu@empresa.com"
               />
+              <p className="text-xs text-muted-foreground">Se usará para iniciar sesión y recuperar tu contraseña</p>
             </div>
 
-            {/* Phone + OTP verification */}
+            {/* Phone */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Phone className="h-4 w-4" /> Teléfono</Label>
               <div className="flex gap-2">
@@ -247,15 +276,11 @@ export default function SignupPage() {
                   value={form.countryCode}
                   onValueChange={v => {
                     setForm(f => ({ ...f, countryCode: v }));
-                    setOtpSent(false);
-                    setOtpVerified(false);
-                    setOtpCode('');
+                    if (verificationMethod === 'whatsapp') resetVerification();
                   }}
-                  disabled={otpVerified}
+                  disabled={otpVerified && verificationMethod === 'whatsapp'}
                 >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COUNTRY_CODES.map(c => (
                       <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
@@ -267,143 +292,132 @@ export default function SignupPage() {
                   value={form.telefono}
                   onChange={e => {
                     setForm(f => ({ ...f, telefono: e.target.value }));
-                    if (otpSent) {
-                      setOtpSent(false);
-                      setOtpVerified(false);
-                      setOtpCode('');
-                    }
+                    if (verificationMethod === 'whatsapp' && otpSent) resetVerification();
                   }}
                   placeholder={`${'0'.repeat(selectedCountry.digits)}`}
                   maxLength={selectedCountry.digits + 2}
-                  disabled={otpVerified}
+                  disabled={otpVerified && verificationMethod === 'whatsapp'}
                 />
               </div>
               <p className="text-xs text-muted-foreground">{selectedCountry.digits} dígitos para {selectedCountry.country}</p>
+            </div>
 
-              {/* OTP section */}
-              {otpVerified ? (
+            {/* Verification method */}
+            <div className="space-y-3 p-3 bg-muted/40 rounded-lg border">
+              <p className="text-sm font-medium text-center">Verifica tu identidad</p>
+
+              {otpVerified && verificationMethod === 'whatsapp' ? (
                 <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                   <ShieldCheck className="h-4 w-4" />
-                  Número verificado
+                  Número verificado por WhatsApp
                 </div>
-              ) : !otpSent ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSendOtp}
-                  disabled={sendingOtp || !form.telefono}
-                  className="w-full"
-                >
-                  {sendingOtp ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-                  ) : (
-                    <MessageCircle className="h-4 w-4 mr-1.5" />
-                  )}
-                  Enviar código por WhatsApp
-                </Button>
-              ) : (
-                <div className="space-y-3 p-3 bg-muted/50 rounded-lg border">
-                  <p className="text-xs text-muted-foreground text-center">
-                    Ingresa el código de 6 dígitos enviado a tu WhatsApp
-                  </p>
-                  <div className="flex justify-center">
-                    <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                  <div className="flex gap-2">
+              ) : verificationMethod === 'email' ? (
+                <div className="flex items-center gap-2 text-sm text-blue-600 font-medium bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                  <Mail className="h-4 w-4" />
+                  Se enviará un enlace de confirmación a tu correo al crear la cuenta
+                </div>
+              ) : null}
+
+              {/* Method selector buttons */}
+              {!(otpVerified && verificationMethod === 'whatsapp') && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={verificationMethod === 'whatsapp' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleSelectMethod('whatsapp')}
+                    className="flex flex-col h-auto py-3 gap-1"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    <span className="text-xs">WhatsApp OTP</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={verificationMethod === 'email' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleSelectMethod('email')}
+                    className="flex flex-col h-auto py-3 gap-1"
+                  >
+                    <Mail className="h-5 w-5" />
+                    <span className="text-xs">Correo electrónico</span>
+                  </Button>
+                </div>
+              )}
+
+              {/* WhatsApp OTP flow */}
+              {verificationMethod === 'whatsapp' && !otpVerified && (
+                <>
+                  {!otpSent ? (
                     <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
+                      type="button" variant="outline" size="sm"
                       onClick={handleSendOtp}
-                      disabled={sendingOtp}
-                      className="flex-1"
+                      disabled={sendingOtp || !form.telefono}
+                      className="w-full"
                     >
-                      {sendingOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Reenviar'}
+                      {sendingOtp ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <MessageCircle className="h-4 w-4 mr-1.5" />}
+                      Enviar código por WhatsApp
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleVerifyOtp}
-                      disabled={verifyingOtp || otpCode.length !== 6}
-                      className="flex-1"
-                    >
-                      {verifyingOtp ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
-                      Verificar
-                    </Button>
-                  </div>
-                </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground text-center">
+                        Ingresa el código de 6 dígitos enviado a tu WhatsApp
+                      </p>
+                      <div className="flex justify-center">
+                        <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                          <InputOTPGroup>
+                            <InputOTPSlot index={0} />
+                            <InputOTPSlot index={1} />
+                            <InputOTPSlot index={2} />
+                            <InputOTPSlot index={3} />
+                            <InputOTPSlot index={4} />
+                            <InputOTPSlot index={5} />
+                          </InputOTPGroup>
+                        </InputOTP>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button type="button" variant="outline" size="sm" onClick={handleSendOtp} disabled={sendingOtp} className="flex-1">
+                          {sendingOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Reenviar'}
+                        </Button>
+                        <Button type="button" size="sm" onClick={handleVerifyOtp} disabled={verifyingOtp || otpCode.length !== 6} className="flex-1">
+                          {verifyingOtp ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                          Verificar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
+            {/* Password */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Contraseña</Label>
-              <Input
-                type="password"
-                required
-                minLength={6}
-                value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="Mínimo 6 caracteres"
-              />
+              <Input type="password" required minLength={6} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
             </div>
 
             {/* Terms & Privacy */}
             <div className="space-y-3 pt-2 border-t">
               <div className="flex items-start gap-2">
-                <Checkbox
-                  id="terms"
-                  checked={acceptedTerms}
-                  onCheckedChange={v => setAcceptedTerms(v === true)}
-                />
+                <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={v => setAcceptedTerms(v === true)} />
                 <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                  Acepto los{' '}
-                  <Link to="/terminos" target="_blank" className="text-primary font-medium hover:underline">
-                    Términos y Condiciones
-                  </Link>{' '}
-                  del servicio.
+                  Acepto los <Link to="/terminos" target="_blank" className="text-primary font-medium hover:underline">Términos y Condiciones</Link> del servicio.
                 </label>
               </div>
               <div className="flex items-start gap-2">
-                <Checkbox
-                  id="privacy"
-                  checked={acceptedPrivacy}
-                  onCheckedChange={v => setAcceptedPrivacy(v === true)}
-                />
+                <Checkbox id="privacy" checked={acceptedPrivacy} onCheckedChange={v => setAcceptedPrivacy(v === true)} />
                 <label htmlFor="privacy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
-                  Acepto el{' '}
-                  <Link to="/privacidad" target="_blank" className="text-primary font-medium hover:underline">
-                    Aviso de Privacidad
-                  </Link>{' '}
-                  y el tratamiento de mis datos personales.
+                  Acepto el <Link to="/privacidad" target="_blank" className="text-primary font-medium hover:underline">Aviso de Privacidad</Link> y el tratamiento de mis datos personales.
                 </label>
               </div>
             </div>
 
-            <Button
-              type="submit"
-              disabled={loading || !otpVerified || !acceptedTerms || !acceptedPrivacy}
-              className="w-full"
-              size="lg"
-            >
+            <Button type="submit" disabled={loading || !isFormReady} className="w-full" size="lg">
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Crear mi cuenta
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
-              ¿Ya tienes cuenta?{' '}
-              <Link to="/login" className="text-primary font-medium hover:underline">
-                Iniciar sesión
-              </Link>
+              ¿Ya tienes cuenta? <Link to="/login" className="text-primary font-medium hover:underline">Iniciar sesión</Link>
             </p>
           </form>
         </CardContent>
