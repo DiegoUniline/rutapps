@@ -363,7 +363,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         {/* Mobile top bar */}
-        <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0">
+        <header className="h-14 flex items-center justify-between px-3 bg-card border-b border-border shrink-0 safe-area-top">
           <div className="flex items-center gap-2">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
