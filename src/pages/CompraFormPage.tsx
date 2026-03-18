@@ -365,7 +365,7 @@ export default function CompraFormPage() {
         );
 
         // Build all updates and movements in parallel
-        const updates: Promise<any>[] = [];
+        const updates: Array<Promise<any>> = [];
         for (let i = 0; i < validLines.length; i++) {
           const l = validLines[i];
           const factor = Number(l._factor_conversion) || 1;
@@ -373,26 +373,28 @@ export default function CompraFormPage() {
           const currentQty = Number(prodResults[i].data?.cantidad ?? 0);
 
           updates.push(
-            supabase
-              .from('productos')
-              .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
-              .eq('id', l.producto_id!)
-              .then()
+            Promise.resolve(
+              supabase
+                .from('productos')
+                .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
+                .eq('id', l.producto_id!)
+            )
           );
           updates.push(
-            supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id,
-              tipo: 'salida',
-              producto_id: l.producto_id!,
-              cantidad: piezas,
-              almacen_origen_id: form.almacen_id,
-              referencia_tipo: 'compra',
-              referencia_id: form.id,
-              user_id: user?.id,
-              fecha: today,
-              notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
-            } as any)
-            .then()
+            Promise.resolve(
+              supabase.from('movimientos_inventario').insert({
+                empresa_id: empresa!.id,
+                tipo: 'salida',
+                producto_id: l.producto_id!,
+                cantidad: piezas,
+                almacen_origen_id: form.almacen_id,
+                referencia_tipo: 'compra',
+                referencia_id: form.id,
+                user_id: user?.id,
+                fecha: today,
+                notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
+              } as any)
+            )
           );
         }
         await Promise.all(updates);
