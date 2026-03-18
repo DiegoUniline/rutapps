@@ -1,14 +1,23 @@
 import { Cloud, CloudOff, CloudUpload, Check, Loader2 } from 'lucide-react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { cn } from '@/lib/utils';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
 export default function SyncCloudButton() {
   const { isOnline, pendingCount, isSyncing, lastSync, syncNow, autoSync, setAutoSync, verified } = useNetworkStatus();
   const [showPanel, setShowPanel] = useState(false);
+  const [tapped, setTapped] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
+
+  // Brief "tapped" pulse for instant visual feedback
+  useEffect(() => {
+    if (tapped) {
+      const t = setTimeout(() => setTapped(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [tapped]);
 
   const formatLastSync = (ts: number | null) => {
     if (!ts) return 'Nunca';
@@ -35,11 +44,12 @@ export default function SyncCloudButton() {
       return;
     }
     if (isSyncing) return;
-    toast.promise(syncNow(), {
-      loading: 'Sincronizando...',
-      success: '✓ Sincronizado',
-      error: 'Error al sincronizar',
-    });
+    // Instant visual feedback
+    setTapped(true);
+    toast('Sincronizando...', { icon: '🔄', duration: 1500 });
+    syncNow()
+      .then(() => toast.success('✓ Sincronizado'))
+      .catch(() => toast.error('Error al sincronizar'));
   }, [isOnline, isSyncing, syncNow]);
 
   const handlePointerDown = useCallback(() => {
@@ -105,7 +115,7 @@ export default function SyncCloudButton() {
         onContextMenu={(e) => e.preventDefault()}
         className={cn(
           "relative flex items-center justify-center w-10 h-10 rounded-full transition-all active:scale-90 select-none touch-none",
-          stateColors[state]
+          tapped ? 'text-primary scale-110 bg-primary/10' : stateColors[state],
         )}
       >
         {cloudIcon()}
