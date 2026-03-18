@@ -848,8 +848,110 @@ export default function VentaFormPage() {
               key: 'lineas',
               label: 'Líneas de venta',
               content: (
-                <div className="p-4 space-y-3">
-                  <div>
+                <div className="p-3 sm:p-4 space-y-3">
+                  {isMobile ? (
+                    /* Mobile: card layout for lines */
+                    <div className="space-y-2">
+                      {lineas.map((l, idx) => {
+                        const qty = Number(l.cantidad) || 0;
+                        const price = Number(l.precio_unitario) || 0;
+                        const desc = Number(l.descuento_pct) || 0;
+                        const base = qty * price * (1 - desc / 100);
+                        const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
+                        const iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+                        const lineTotal = base + ieps + iva;
+                        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+                        const isEmpty = !l.producto_id;
+                        const lineData = l as any;
+                        const unidadLabel = lineData.unidad_label || 'PZA';
+
+                        if (isEmpty && readOnly) return null;
+
+                        return (
+                          <div key={idx} className="border border-border rounded-lg p-3 bg-card space-y-2">
+                            {/* Product selector or name */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                {readOnly ? (
+                                  <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</div>
+                                ) : (
+                                  <ProductSearchInput
+                                    products={(productosList ?? []).filter((p: any) => {
+                                      const usedIds = lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean);
+                                      return !usedIds.includes(p.id);
+                                    }).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
+                                    value={l.producto_id ?? ''}
+                                    displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
+                                    onSelect={pid => handleProductSelect(idx, pid)}
+                                    autoFocus={idx === lineas.length - 1 && isEmpty}
+                                    readOnly={readOnly}
+                                  />
+                                )}
+                                {/* Tax badges */}
+                                {!isEmpty && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {Number(l.iva_pct) > 0 && (
+                                      <button type="button" disabled={readOnly} onClick={() => !readOnly && updateLine(idx, 'iva_pct', 0)}
+                                        className="text-[10px] px-1.5 py-0 rounded-full bg-accent text-accent-foreground">
+                                        IVA {l.iva_pct}% ✕
+                                      </button>
+                                    )}
+                                    {Number(l.ieps_pct) > 0 && (
+                                      <button type="button" disabled={readOnly} onClick={() => !readOnly && updateLine(idx, 'ieps_pct', 0)}
+                                        className="text-[10px] px-1.5 py-0 rounded-full bg-accent text-accent-foreground">
+                                        IEPS {l.ieps_pct}% ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {!readOnly && !isEmpty && (
+                                <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive p-1">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+
+                            {!isEmpty && (
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block">Cantidad</label>
+                                  {readOnly ? (
+                                    <span className="text-sm font-medium">{l.cantidad} {unidadLabel}</span>
+                                  ) : (
+                                    <div className="flex items-center gap-1">
+                                      <input type="number" inputMode="numeric"
+                                        className="inline-edit-input text-sm text-right !py-1 w-full"
+                                        value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)}
+                                        min="0" step="1" onFocus={e => e.target.select()} />
+                                      <span className="text-[10px] text-muted-foreground shrink-0">{unidadLabel}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block">Precio</label>
+                                  {readOnly ? (
+                                    <span className="text-sm">${price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                                  ) : (
+                                    <input type="number" inputMode="decimal"
+                                      className="inline-edit-input text-sm text-right !py-1 w-full"
+                                      value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
+                                      min="0" step="0.01" onFocus={e => e.target.select()} />
+                                  )}
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-muted-foreground block">Total</label>
+                                  <span className="text-sm font-semibold">${lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Desktop: table layout */
+                    <div>
                     <table className="w-full text-[13px]">
                       <thead>
                         <tr className="border-b border-table-border text-left">
@@ -906,28 +1008,14 @@ export default function VentaFormPage() {
                                 {!isEmpty && (
                                   <div className="flex flex-wrap gap-1 md:hidden mt-0.5">
                                     {Number(l.iva_pct) > 0 && (
-                                      <button
-                                        type="button"
-                                        disabled={readOnly}
-                                        onClick={() => {
-                                          if (readOnly) return;
-                                          updateLine(idx, 'iva_pct', 0);
-                                        }}
-                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground"
-                                      >
+                                      <button type="button" disabled={readOnly} onClick={() => { if (readOnly) return; updateLine(idx, 'iva_pct', 0); }}
+                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground">
                                         IVA {l.iva_pct}% ✕
                                       </button>
                                     )}
                                     {Number(l.ieps_pct) > 0 && (
-                                      <button
-                                        type="button"
-                                        disabled={readOnly}
-                                        onClick={() => {
-                                          if (readOnly) return;
-                                          updateLine(idx, 'ieps_pct', 0);
-                                        }}
-                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground"
-                                      >
+                                      <button type="button" disabled={readOnly} onClick={() => { if (readOnly) return; updateLine(idx, 'ieps_pct', 0); }}
+                                        className="text-[10px] px-1 py-0 rounded-full bg-accent text-accent-foreground">
                                         IEPS {l.ieps_pct}% ✕
                                       </button>
                                     )}
@@ -938,32 +1026,23 @@ export default function VentaFormPage() {
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">
                                     {l.cantidad}
-                                    {/* Mobile: show unit next to quantity */}
                                     <span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span>
                                   </span>
                                 ) : (
                                   <div className="flex items-center gap-1 justify-end">
                                     <input
                                       ref={el => setCellRef(idx, 1, el)}
-                                      type="number"
-                                      inputMode="numeric"
+                                      type="number" inputMode="numeric"
                                       className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                                      value={l.cantidad ?? ''}
-                                      onChange={e => updateLine(idx, 'cantidad', e.target.value)}
-                                      onKeyDown={e => handleCellKeyDown(e, idx, 1)}
-                                      onFocus={e => e.target.select()}
-                                      min="0" step="1"
-                                    />
-                                    {/* Mobile: show unit next to input */}
+                                      value={l.cantidad ?? ''} onChange={e => updateLine(idx, 'cantidad', e.target.value)}
+                                      onKeyDown={e => handleCellKeyDown(e, idx, 1)} onFocus={e => e.target.select()} min="0" step="1" />
                                     {unidadLabel && <span className="text-[10px] text-muted-foreground shrink-0 md:hidden">{unidadLabel}</span>}
                                   </div>
                                 )}
                               </td>
-                              {/* Unidad column — desktop only */}
                               <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">
                                 {isEmpty ? '' : (unidadLabel || '—')}
                               </td>
-                              {/* Precio — editable inline, currency format */}
                               <td className="py-1 px-2">
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">${price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -972,25 +1051,16 @@ export default function VentaFormPage() {
                                 ) : (
                                   <input
                                     ref={el => setCellRef(idx, 2, el)}
-                                    type="number"
-                                    inputMode="decimal"
+                                    type="number" inputMode="decimal"
                                     className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                                    value={l.precio_unitario ?? ''}
-                                    onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 2)}
-                                    onFocus={e => e.target.select()}
-                                    min="0" step="0.01"
-                                  />
+                                    value={l.precio_unitario ?? ''} onChange={e => updateLine(idx, 'precio_unitario', e.target.value)}
+                                    onKeyDown={e => handleCellKeyDown(e, idx, 2)} onFocus={e => e.target.select()} min="0" step="0.01" />
                                 )}
                               </td>
-                              {/* Impuestos column — clickable to toggle */}
                               <td className="py-1.5 px-2 text-center hidden md:table-cell">
                                 {isEmpty ? '' : (
                                   <div className="inline-flex flex-wrap gap-1 justify-center">
-                                    {/* IVA toggle */}
-                                    <button
-                                      type="button"
-                                      disabled={readOnly}
+                                    <button type="button" disabled={readOnly}
                                       onClick={() => {
                                         if (readOnly) return;
                                         const currentIva = Number(l.iva_pct) || 0;
@@ -998,32 +1068,21 @@ export default function VentaFormPage() {
                                         const defaultIva = prod?.tiene_iva ? Number(prod.iva_pct ?? 16) : 16;
                                         const newIva = currentIva > 0 ? 0 : defaultIva;
                                         updateLine(idx, 'iva_pct', newIva);
-                                        // Update label
                                         const newIeps = Number(l.ieps_pct) || 0;
                                         const taxes: string[] = [];
                                         if (newIva > 0) taxes.push(`IVA ${newIva}%`);
                                         if (newIeps > 0) taxes.push(`IEPS ${newIeps}%`);
-                                        setLineas(prev => {
-                                          const next = [...prev];
-                                          (next[idx] as any).impuestos_label = taxes.join(', ');
-                                          return next;
-                                        });
+                                        setLineas(prev => { const next = [...prev]; (next[idx] as any).impuestos_label = taxes.join(', '); return next; });
                                       }}
-                                      className={cn(
-                                        "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
-                                        Number(l.iva_pct) > 0
-                                          ? "bg-accent text-accent-foreground"
-                                          : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                      className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
+                                        Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60"
                                       )}
                                       title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}
                                     >
                                       IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
                                     </button>
-                                    {/* IEPS toggle — only show if product originally had IEPS */}
                                     {(Number(l.ieps_pct) > 0 || (lineData.impuestos_label || '').includes('IEPS')) && (
-                                      <button
-                                        type="button"
-                                        disabled={readOnly}
+                                      <button type="button" disabled={readOnly}
                                         onClick={() => {
                                           if (readOnly) return;
                                           const currentIeps = Number(l.ieps_pct) || 0;
@@ -1035,19 +1094,11 @@ export default function VentaFormPage() {
                                           const taxes: string[] = [];
                                           if (newIva > 0) taxes.push(`IVA ${newIva}%`);
                                           if (newIeps > 0) taxes.push(`IEPS ${newIeps}%`);
-                                          setLineas(prev => {
-                                            const next = [...prev];
-                                            (next[idx] as any).impuestos_label = taxes.join(', ');
-                                            return next;
-                                          });
+                                          setLineas(prev => { const next = [...prev]; (next[idx] as any).impuestos_label = taxes.join(', '); return next; });
                                         }}
-                                        className={cn(
-                                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
-                                          Number(l.ieps_pct) > 0
-                                            ? "bg-accent text-accent-foreground"
-                                            : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                        className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
+                                          Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60"
                                         )}
-                                        title={Number(l.ieps_pct) > 0 ? "Clic para quitar IEPS" : "Clic para aplicar IEPS"}
                                       >
                                         IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
                                       </button>
@@ -1058,25 +1109,18 @@ export default function VentaFormPage() {
                                   </div>
                                 )}
                               </td>
-                              {/* Descuento % */}
                               <td className="py-1 px-2">
                                 {readOnly ? (
                                   <span className="text-[12px] block text-right">{l.descuento_pct ?? 0}%</span>
                                 ) : (
                                   <input
                                     ref={el => setCellRef(idx, 3, el)}
-                                    type="number"
-                                    inputMode="decimal"
+                                    type="number" inputMode="decimal"
                                     className="inline-edit-input text-[12px] text-right !py-1 w-full"
-                                    value={l.descuento_pct ?? ''}
-                                    onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
-                                    onKeyDown={e => handleCellKeyDown(e, idx, 3)}
-                                    onFocus={e => e.target.select()}
-                                    min="0" max="100" step="0.1"
-                                  />
+                                    value={l.descuento_pct ?? ''} onChange={e => updateLine(idx, 'descuento_pct', e.target.value)}
+                                    onKeyDown={e => handleCellKeyDown(e, idx, 3)} onFocus={e => e.target.select()} min="0" max="100" step="0.1" />
                                 )}
                               </td>
-                              {/* Subtotal with taxes */}
                               <td className="py-1.5 px-2 text-right font-medium">
                                 {isEmpty ? '' : (
                                   <div>
@@ -1089,10 +1133,7 @@ export default function VentaFormPage() {
                               </td>
                               <td className="py-1.5 px-2">
                                 {!readOnly && !isEmpty && (
-                                  <button
-                                    onClick={() => removeLine(idx)}
-                                    className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                                  >
+                                  <button onClick={() => removeLine(idx)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100">
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 )}
@@ -1102,7 +1143,8 @@ export default function VentaFormPage() {
                         })}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  )}
 
                   {!readOnly && (
                     <button onClick={addLine} className="btn-odoo-secondary text-xs">
@@ -1110,9 +1152,9 @@ export default function VentaFormPage() {
                     </button>
                   )}
 
-                  {/* Totals — sticky on mobile */}
+                  {/* Totals */}
                   <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
-                    <div className="w-72 bg-accent rounded-md p-3 space-y-1.5 text-[13px]">
+                    <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-72")}>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
                         <span>${totals.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1141,6 +1183,7 @@ export default function VentaFormPage() {
                       </div>
                     </div>
                   </div>
+                </div>
                 </div>
               ),
             },
