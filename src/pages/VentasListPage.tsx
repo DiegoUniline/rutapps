@@ -165,24 +165,58 @@ export default function VentasListPage() {
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay ventas. Crea la primera.</div>
           )}
-          {pageData.map((v: any) => (
-            <MobileListCard
-              key={v.id}
-              title={v.clientes?.nombre ?? '—'}
-              subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
-              badge={<StatusChip status={v.status} />}
-              onClick={() => navigate(`/ventas/${v.id}`)}
-              fields={[
-                { label: 'Fecha', value: fmtDate(v.fecha) },
-                { label: 'Total', value: fmt(v.total) },
-                { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
-                ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmt(v.saldo_pendiente)}</span> }] : []),
-              ]}
-            />
-          ))}
+          {pageData.map((v: any) => {
+            const cliente = clientesList?.find((c: any) => c.id === v.cliente_id);
+            const openWa = (e: React.MouseEvent) => {
+              e.stopPropagation();
+              const msg = `📄 *${v.tipo === 'pedido' ? 'Pedido' : 'Venta'} ${v.folio || ''}*\nCliente: ${v.clientes?.nombre}\nFecha: ${fmtDate(v.fecha)}\n💰 Total: ${fmtCurrency(v.total)}${v.saldo_pendiente > 0 ? `\n⚠️ Saldo: ${fmtCurrency(v.saldo_pendiente)}` : ''}`;
+              setWaPhone(cliente?.telefono ?? '');
+              setWaMessage(msg);
+              setWaOpen(true);
+            };
+            return (
+              <MobileListCard
+                key={v.id}
+                title={v.clientes?.nombre ?? '—'}
+                subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
+                badge={
+                  <div className="flex items-center gap-1">
+                    <StatusChip status={v.status} />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                        <button className="p-1 rounded hover:bg-accent"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/ventas/${v.id}`); }}>
+                          <FileText className="h-3.5 w-3.5 mr-2" /> Ver detalle
+                        </DropdownMenuItem>
+                        {v.status !== 'borrador' && v.saldo_pendiente > 0 && (
+                          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); navigate(`/cobranza`); }}>
+                            <Banknote className="h-3.5 w-3.5 mr-2" /> Cobrar
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={openWa}>
+                          <MessageCircle className="h-3.5 w-3.5 mr-2" /> WhatsApp
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                }
+                onClick={() => navigate(`/ventas/${v.id}`)}
+                fields={[
+                  { label: 'Fecha', value: fmtDate(v.fecha) },
+                  { label: 'Total', value: fmtCurrency(v.total) },
+                  { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
+                  ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(v.saldo_pendiente)}</span> }] : []),
+                ]}
+              />
+            );
+          })}
           {total > 0 && (
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
+
+          <WhatsAppPreviewDialog open={waOpen} onOpenChange={setWaOpen} defaultPhone={waPhone} defaultMessage={waMessage} />
         </div>
       ) : (
         /* Desktop table */
