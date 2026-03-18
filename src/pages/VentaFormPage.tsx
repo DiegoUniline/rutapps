@@ -62,6 +62,7 @@ function emptyLine(): Partial<VentaLinea> & { unidad_label?: string; impuestos_l
 const COL_COUNT = 4;
 
 export default function VentaFormPage() {
+  const isMobile = useIsMobile();
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile, user, empresa } = useAuth();
