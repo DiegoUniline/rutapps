@@ -169,8 +169,10 @@ export function useSubscription(): SubscriptionState {
       // Block after 3 grace days past expiration
       const isBlocked = !isSuperAdmin && (
         (sub.status === 'suspended') ||
+        (sub.status === 'cancelada') ||
         (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||
-        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3)
+        (sub.status === 'trial' && daysLeft !== null && daysLeft < -3) ||
+        (sub.status === 'gracia' && daysLeft !== null && daysLeft < -3)
       );
 
       const nextState: SubscriptionState = {
