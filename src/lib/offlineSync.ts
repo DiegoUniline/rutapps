@@ -30,11 +30,13 @@ const TABLES_TO_CACHE = [
   'entregas',
   'entrega_lineas',
   'visitas',
+  'tarifas',
+  'tarifa_lineas',
 ] as const;
 
 // Minimal column selects per table to reduce payload size
 const COLUMN_SELECTS: Record<string, string> = {
-  clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,requiere_factura,foto_url,foto_fachada_url,created_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
+  clientes: 'id,empresa_id,vendedor_id,cobrador_id,nombre,codigo,telefono,email,direccion,colonia,cp,gps_lat,gps_lng,status,credito,limite_credito,dias_credito,dia_visita,frecuencia,tarifa_id,lista_id,lista_precio_id,zona_id,orden,rfc,regimen_fiscal,uso_cfdi,contacto,notas,requiere_factura,foto_url,foto_fachada_url,created_at,fecha_alta,facturama_id,facturama_rfc,facturama_razon_social,facturama_regimen_fiscal,facturama_uso_cfdi,facturama_cp,facturama_correo_facturacion',
   productos: 'id,empresa_id,codigo,clave_alterna,nombre,precio_principal,costo,cantidad,min,max,status,unidad_venta_id,unidad_compra_id,tasa_iva_id,tasa_ieps_id,marca_id,clasificacion_id,lista_id,codigo_sat,udem_sat_id,imagen_url,tiene_iva,iva_pct,tiene_ieps,ieps_pct,ieps_tipo,se_puede_vender,se_puede_comprar,se_puede_inventariar,vender_sin_stock,permitir_descuento,tiene_comision,tipo_comision,pct_comision,monto_maximo,es_combo,factor_conversion,costo_incluye_impuestos,almacenes,proveedor_id,manejar_lotes,created_at',
   venta_lineas: 'id,venta_id,producto_id,cantidad,precio_unitario,descuento_porcentaje,subtotal,iva,ieps,total,notas,unidad_id,facturado,created_at',
   carga_lineas: 'id,carga_id,producto_id,cantidad_cargada,cantidad_vendida,cantidad_devuelta,created_at',
@@ -42,6 +44,8 @@ const COLUMN_SELECTS: Record<string, string> = {
   devolucion_lineas: 'id,devolucion_id,producto_id,cantidad,motivo,notas,created_at',
   descarga_ruta_lineas: 'id,descarga_id,producto_id,cantidad_esperada,cantidad_real,diferencia,motivo,notas,created_at',
   entrega_lineas: 'id,entrega_id,producto_id,cantidad_pedida,cantidad_entregada,hecho,almacen_origen_id,unidad_id,created_at',
+  tarifa_lineas: 'id,tarifa_id,lista_precio_id,aplica_a,producto_ids,clasificacion_ids,tipo_calculo,precio,precio_minimo,margen_pct,descuento_pct,redondeo,base_precio,comision_pct,created_at',
+  tarifas: 'id,empresa_id,nombre,tipo,activa,created_at',
 };
 
 // Friendly names for UI display
@@ -69,6 +73,8 @@ export const TABLE_LABELS: Record<string, string> = {
   entregas: 'Entregas',
   entrega_lineas: 'Líneas de entrega',
   visitas: 'Visitas',
+  tarifas: 'Tarifas',
+  tarifa_lineas: 'Reglas de tarifa',
 };
 
 // Tables that have empresa_id for filtering
@@ -76,6 +82,7 @@ const TABLES_WITH_EMPRESA = new Set([
   'clientes', 'productos', 'vendedores', 'cargas', 'ventas',
   'cobros', 'gastos', 'devoluciones', 'empresas', 'unidades',
   'tasas_iva', 'descarga_ruta', 'promociones', 'entregas', 'visitas',
+  'tarifas',
 ]);
 
 // Tables limited to recent data

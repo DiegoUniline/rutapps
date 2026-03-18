@@ -16,6 +16,7 @@ import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hook
 import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
+import { resolveProductPrice, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
@@ -82,6 +83,21 @@ export default function VentaFormPage() {
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+
+  // Fetch tarifa rules for price resolution
+  const { data: tarifaRules } = useQuery({
+    queryKey: ['tarifa-rules-venta', form.tarifa_id],
+    enabled: !!form.tarifa_id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tarifa_lineas')
+        .select('aplica_a, producto_ids, clasificacion_ids, tipo_calculo, precio, precio_minimo, margen_pct, descuento_pct, redondeo, base_precio, lista_precio_id')
+        .eq('tarifa_id', form.tarifa_id!);
+      if (error) throw error;
+      return (data ?? []) as TarifaLineaRule[];
+    },
+  });
 
   // Entrega integration for pedidos (1:N) — all entregas (not just hecho)
   const { data: entregasExistentes } = useEntregasByPedido(!isNew && form.tipo === 'pedido' ? form.id : undefined);
@@ -287,13 +303,28 @@ export default function VentaFormPage() {
     }
     const impuestosLabel = taxes.join(', ');
 
+    // Resolve price from tarifa rules (falls back to precio_principal)
+    const resolvedPrice = tarifaRules && tarifaRules.length > 0
+      ? resolveProductPrice(tarifaRules, {
+          id: productoId,
+          precio_principal: Number(producto.precio_principal) || 0,
+          costo: Number(producto.costo) || 0,
+          clasificacion_id: producto.clasificacion_id,
+          tiene_iva: producto.tiene_iva,
+          iva_pct: Number(producto.iva_pct ?? 16),
+          tiene_ieps: producto.tiene_ieps,
+          ieps_pct: Number(producto.ieps_pct ?? 0),
+          ieps_tipo: producto.ieps_tipo,
+        } as ProductForPricing, (form as any).lista_precio_id)
+      : Number(producto.precio_principal) || 0;
+
     setLineas(prev => {
       const next = [...prev];
       next[idx] = {
         ...next[idx],
         producto_id: productoId,
         descripcion: producto.nombre,
-        precio_unitario: Number(producto.precio_principal) || 0,
+        precio_unitario: resolvedPrice,
         unidad_id: unidadId,
         iva_pct: ivaPct,
         ieps_pct: iepsPct,
@@ -685,7 +716,12 @@ export default function VentaFormPage() {
                     onChange={cId => {
                       set('cliente_id', cId);
                       const c = clientesList?.find(cl => cl.id === cId);
-                      if (c?.tarifa_id && !form.tarifa_id) set('tarifa_id', c.tarifa_id);
+                      // Always set tarifa from client; fall back to first 'general' tarifa
+                      const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
+                      if (clienteTarifa) set('tarifa_id', clienteTarifa);
+                      // Set lista_precio from client
+                      if (c && (c as any).lista_precio_id) set('lista_precio_id', (c as any).lista_precio_id);
+                      else set('lista_precio_id', null);
                       // Inherit requiere_factura from client
                       if (c?.requiere_factura) set('requiere_factura', true);
                     }}

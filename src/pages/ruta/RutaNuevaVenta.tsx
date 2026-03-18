@@ -8,6 +8,7 @@ import { getOfflineTable } from '@/lib/offlineDb';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 
@@ -213,6 +214,32 @@ export default function RutaNuevaVenta() {
     status: 'activo',
   }, { enabled: !!empresa?.id, orderBy: 'nombre' });
 
+  // Load tarifas and tarifa_lineas for price resolution
+  const { data: tarifasOffline } = useOfflineQuery('tarifas', { empresa_id: empresa?.id, activa: true }, { enabled: !!empresa?.id });
+  const selectedClienteData = clientes?.find(c => c.id === clienteId);
+  const clienteTarifaId = selectedClienteData?.tarifa_id || tarifasOffline?.find((t: any) => t.tipo === 'general')?.id;
+  const clienteListaPrecioId = (selectedClienteData as any)?.lista_precio_id || null;
+  const { data: tarifaLineasOffline } = useOfflineQuery('tarifa_lineas', { tarifa_id: clienteTarifaId }, { enabled: !!clienteTarifaId });
+
+  // Price resolver function
+  const resolvePrice = useMemo(() => {
+    const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
+    return (producto: any): number => {
+      if (!rules.length) return producto.precio_principal ?? 0;
+      return resolveProductPrice(rules, {
+        id: producto.id,
+        precio_principal: producto.precio_principal ?? 0,
+        costo: producto.costo ?? 0,
+        clasificacion_id: producto.clasificacion_id,
+        tiene_iva: producto.tiene_iva,
+        iva_pct: producto.iva_pct ?? 16,
+        tiene_ieps: producto.tiene_ieps,
+        ieps_pct: producto.ieps_pct ?? 0,
+        ieps_tipo: producto.ieps_tipo,
+      }, clienteListaPrecioId);
+    };
+  }, [tarifaLineasOffline, clienteListaPrecioId]);
+
   // Pedido sugerido for selected client (offline-compatible)
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
   const pedidoSugerido = useMemo(() => {
@@ -259,7 +286,7 @@ export default function RutaNuevaVenta() {
       producto_id: ps.productos.id,
       codigo: ps.productos.codigo,
       nombre: ps.productos.nombre,
-      precio_unitario: ps.productos.precio_principal ?? 0,
+      precio_unitario: resolvePrice(ps.productos),
       cantidad: ps.cantidad,
       unidad: (ps.productos.unidades as any)?.abreviatura || 'pz',
       unidad_id: ps.productos.unidad_venta_id ?? undefined,
@@ -285,11 +312,12 @@ export default function RutaNuevaVenta() {
       setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: newQty } : c));
     } else {
       if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
+      const precioResuelto = esCambio ? 0 : resolvePrice(p);
       setCart([...cart, {
         producto_id: p.id,
         codigo: p.codigo,
         nombre: p.nombre,
-        precio_unitario: esCambio ? 0 : (p.precio_principal ?? 0),
+        precio_unitario: precioResuelto,
         cantidad: 1,
         unidad: p.unidad_venta_id ? ((productos?.find(pr => pr.id === p.id) as any)?.abreviatura || 'pz') : 'pz',
         unidad_id: p.unidad_venta_id ?? undefined,
@@ -372,7 +400,7 @@ export default function RutaNuevaVenta() {
         producto_id: ps.productos.id,
         codigo: ps.productos.codigo,
         nombre: ps.productos.nombre,
-        precio_unitario: ps.productos.precio_principal ?? 0,
+        precio_unitario: resolvePrice(ps.productos),
         cantidad: ps.cantidad,
         unidad: (ps.productos.unidades as any)?.abreviatura || 'pz',
         unidad_id: ps.productos.unidad_venta_id ?? undefined,
@@ -521,7 +549,7 @@ export default function RutaNuevaVenta() {
 
       // 2. Create the sale
       const saveCliente = clientes?.find(c => c.id === clienteId);
-      const tarifaId = saveCliente?.tarifa_id || null;
+      const tarifaId = clienteTarifaId || saveCliente?.tarifa_id || null;
       const almacenId = profile?.almacen_id || null;
       await queueOperation('ventas', 'insert', {
         id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta,
