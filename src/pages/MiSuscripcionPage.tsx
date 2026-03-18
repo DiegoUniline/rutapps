@@ -11,17 +11,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Separator } from '@/components/ui/separator';
 import {
   CreditCard, Users, Loader2, Crown, Plus, Minus, Stamp, BanknoteIcon,
-  Building2, Copy, ShoppingCart, Check, ArrowLeft, Sparkles, Clock, AlertTriangle, Trash2
+  Building2, Copy, ShoppingCart, Check, ArrowLeft, Sparkles, Clock, AlertTriangle, Trash2,
+  Receipt, FileText, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
-const PLANS: { id: string; label: string; price: number; priceId: string; desc: string; badge?: string; period: string }[] = [
-  { id: 'mensual', label: 'Mensual', price: 300, priceId: 'price_1TBGvcCUpJnsv7il0KmvUTCj', desc: '$300/usuario/mes', period: '1 mes' },
-  { id: 'semestral', label: 'Semestral', price: 270, priceId: 'price_1TBGwFCUpJnsv7il7iiIUPLV', desc: '$270/usuario/mes', badge: '10% desc.', period: '6 meses' },
-  { id: 'anual', label: 'Anual', price: 255, priceId: 'price_1TBGxQCUpJnsv7iltBEy18AC', desc: '$255/usuario/mes', badge: '15% desc.', period: '12 meses' },
-];
+interface PlanRow {
+  id: string;
+  nombre: string;
+  precio_base_mes: number;
+  usuarios_incluidos: number;
+  precio_usuario_extra: number;
+  stripe_price_id: string | null;
+  descripcion: string | null;
+  activo: boolean;
+}
+
+interface FacturaRow {
+  id: string;
+  numero_factura: string | null;
+  periodo_inicio: string;
+  periodo_fin: string;
+  num_usuarios: number;
+  total: number;
+  estado: string;
+  es_prorrateo: boolean;
+  fecha_emision: string;
+  fecha_pago: string | null;
+}
 
 const BANK_INFO = {
   banco: 'BBVA Bancomer',
@@ -47,6 +67,8 @@ export default function MiSuscripcionPage() {
   const [timbresBalance, setTimbresBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingSolicitudes, setPendingSolicitudes] = useState<any[]>([]);
+  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [facturas, setFacturas] = useState<FacturaRow[]>([]);
 
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -76,14 +98,18 @@ export default function MiSuscripcionPage() {
 
   async function loadData() {
     setLoading(true);
-    const [subRes, timbresRes, solRes] = await Promise.all([
+    const [subRes, timbresRes, solRes, planesRes, facturasRes] = await Promise.all([
       supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
+      supabase.from('planes').select('*').eq('activo', true).order('precio_base_mes', { ascending: true }),
+      supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
     setPendingSolicitudes(solRes.data || []);
+    setPlans((planesRes.data as any[]) || []);
+    setFacturas((facturasRes.data as any[]) || []);
     if (subRes.data) setPlanQty(subRes.data.max_usuarios || 3);
     setLoading(false);
   }
@@ -106,18 +132,17 @@ export default function MiSuscripcionPage() {
   // ─── Cart helpers ───
   function addPlanToCart() {
     if (!selectedPlan) return;
-    const plan = PLANS.find(p => p.priceId === selectedPlan);
+    const plan = plans.find(p => p.id === selectedPlan);
     if (!plan) return;
-    // Remove existing plan item
     const filtered = cart.filter(c => c.type !== 'plan' && c.type !== 'usuarios');
     filtered.push({
       type: 'plan',
-      label: `Plan ${plan.label}`,
-      detail: `${planQty} usuarios × $${plan.price}/mes`,
-      amount: plan.price * planQty * 100,
+      label: `Plan ${plan.nombre}`,
+      detail: `${planQty} usuarios × $${plan.precio_base_mes}/mes`,
+      amount: plan.precio_base_mes * planQty * 100,
     });
     setCart(filtered);
-    toast.success(`Plan ${plan.label} agregado al pedido`);
+    toast.success(`Plan ${plan.nombre} agregado al pedido`);
   }
 
   function addTimbresToCart() {
@@ -145,23 +170,26 @@ export default function MiSuscripcionPage() {
       const planItem = cart.find(c => c.type === 'plan');
       const timbresItem = cart.find(c => c.type === 'timbres');
 
-      // Handle plan
       if (planItem) {
+        const plan = plans.find(p => p.id === selectedPlan);
         if (subData?.stripe_subscription_id) {
           const { data, error } = await supabase.functions.invoke('manage-subscription', {
-            body: { action: 'change_plan', new_price_id: selectedPlan },
+            body: { action: 'change_plan', new_price_id: plan?.stripe_price_id },
           });
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
-          // Also update qty if changed
           if (planQty !== (subData?.max_usuarios || 3)) {
             await supabase.functions.invoke('manage-subscription', {
               body: { action: 'update_quantity', new_quantity: planQty },
             });
           }
         } else {
+          // First call select-plan to create invoice, then checkout
+          await supabase.functions.invoke('select-plan', {
+            body: { plan_id: selectedPlan, num_usuarios: planQty },
+          });
           const { data, error } = await supabase.functions.invoke('create-checkout', {
-            body: { price_id: selectedPlan, quantity: planQty, empresa_id: empresa?.id },
+            body: { price_id: plan?.stripe_price_id, quantity: planQty, empresa_id: empresa?.id },
           });
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
@@ -169,7 +197,6 @@ export default function MiSuscripcionPage() {
         }
       }
 
-      // Handle timbres
       if (timbresItem) {
         const { data, error } = await supabase.functions.invoke('purchase-timbres', {
           body: { action: 'create_checkout', quantity: timbresPacks },
@@ -196,9 +223,14 @@ export default function MiSuscripcionPage() {
     try {
       const planItem = cart.find(c => c.type === 'plan');
       const timbresItem = cart.find(c => c.type === 'timbres');
-      const plan = PLANS.find(p => p.priceId === selectedPlan);
-
       const concepto = cart.map(c => c.label).join(' + ');
+
+      // Create invoice via select-plan if plan selected
+      if (planItem) {
+        await supabase.functions.invoke('select-plan', {
+          body: { plan_id: selectedPlan, num_usuarios: planQty },
+        });
+      }
 
       const { error } = await supabase.from('solicitudes_pago').insert({
         empresa_id: empresa.id,
@@ -208,7 +240,7 @@ export default function MiSuscripcionPage() {
         monto_centavos: cartTotal,
         metodo: 'transferencia',
         notas: transferNotes || null,
-        plan_price_id: planItem ? selectedPlan : null,
+        plan_price_id: planItem ? (plans.find(p => p.id === selectedPlan)?.stripe_price_id || null) : null,
         cantidad_usuarios: planItem ? planQty : null,
         cantidad_timbres: timbresItem ? timbresPacks * 100 : null,
       } as any);
@@ -233,13 +265,26 @@ export default function MiSuscripcionPage() {
   }
 
   const statusLabel: Record<string, string> = {
-    trial: 'Prueba gratuita', active: 'Activa', past_due: 'Pago pendiente', suspended: 'Suspendida',
+    trial: 'Prueba gratuita', active: 'Activa', past_due: 'Pago pendiente',
+    suspended: 'Suspendida', pendiente_pago: 'Pendiente de pago', gracia: 'Periodo de gracia',
   };
   const statusColor: Record<string, string> = {
     trial: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
     active: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
     past_due: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
     suspended: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    pendiente_pago: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    gracia: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+  };
+
+  const facturaStatusLabel: Record<string, string> = {
+    pendiente: 'Pendiente', procesando: 'Procesando', pagada: 'Pagada', cancelada: 'Cancelada',
+  };
+  const facturaStatusColor: Record<string, string> = {
+    pendiente: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
+    procesando: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+    pagada: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+    cancelada: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
   };
 
   if (loading) {
@@ -252,6 +297,33 @@ export default function MiSuscripcionPage() {
 
   const endDate = sub.status === 'trial' ? subData?.trial_ends_at : subData?.current_period_end;
   const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
+
+  // Compute proration preview for selected plan
+  const selectedPlanData = plans.find(p => p.id === selectedPlan);
+  let prorationPreview: { total: number; esProrrateo: boolean; diasRestantes: number } | null = null;
+  if (selectedPlanData) {
+    const now = new Date();
+    const diasEnMes = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const diaActual = now.getDate();
+    const diasRestantes = diasEnMes - diaActual + 1;
+    const esProrrateo = diaActual !== 1;
+    const subtotal = selectedPlanData.precio_base_mes * planQty;
+    const total = esProrrateo
+      ? Math.round((subtotal / diasEnMes) * diasRestantes * 100) / 100
+      : subtotal;
+    prorationPreview = { total, esProrrateo, diasRestantes };
+  }
+
+  // Compute discount badge
+  const lowestPrice = plans.length > 0 ? plans[0].precio_base_mes : 300;
+  function getDiscount(plan: PlanRow) {
+    if (plan.precio_base_mes >= lowestPrice * 0.99) return null; // no discount on base
+    // Actually compute from highest (Mensual = first sorted by price asc, but Mensual is highest)
+    const highestPrice = plans.reduce((max, p) => Math.max(max, p.precio_base_mes), 0);
+    if (plan.precio_base_mes >= highestPrice) return null;
+    const pct = Math.round((1 - plan.precio_base_mes / highestPrice) * 100);
+    return pct > 0 ? `${pct}% desc.` : null;
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -346,54 +418,71 @@ export default function MiSuscripcionPage() {
               </p>
 
               <div className="grid sm:grid-cols-3 gap-3 mb-4">
-                {PLANS.map(plan => (
-                  <button
-                    key={plan.id}
-                    onClick={() => setSelectedPlan(plan.priceId)}
-                    className={`relative p-4 rounded-xl border-2 transition-all text-left ${
-                      selectedPlan === plan.priceId
-                        ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                        : 'border-border hover:border-primary/30'
-                    }`}
-                  >
-                    {plan.badge && (
-                      <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        {plan.badge}
-                      </span>
-                    )}
-                    <div className="text-sm font-bold text-foreground">{plan.label}</div>
-                    <div className="text-2xl font-black text-foreground mt-1">${plan.price}</div>
-                    <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
-                  </button>
-                ))}
+                {plans.map(plan => {
+                  const discount = getDiscount(plan);
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedPlan(plan.id)}
+                      className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                        selectedPlan === plan.id
+                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                          : 'border-border hover:border-primary/30'
+                      }`}
+                    >
+                      {discount && (
+                        <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          {discount}
+                        </span>
+                      )}
+                      <div className="text-sm font-bold text-foreground">{plan.nombre}</div>
+                      <div className="text-2xl font-black text-foreground mt-1">${plan.precio_base_mes}</div>
+                      <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
+                    </button>
+                  );
+                })}
               </div>
 
               {selectedPlan && (
-                <div className="flex items-center gap-4 bg-muted/50 rounded-xl p-4">
-                  <span className="text-sm text-muted-foreground shrink-0">Usuarios:</span>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => Math.max(3, q - 1))} disabled={planQty <= 3}>
-                      <Minus className="h-3.5 w-3.5" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min={3}
-                      value={planQty}
-                      onChange={e => {
-                        const v = parseInt(e.target.value);
-                        if (!isNaN(v) && v >= 3) setPlanQty(v);
-                        else if (e.target.value === '') setPlanQty(3);
-                      }}
-                      className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => q + 1)}>
-                      <Plus className="h-3.5 w-3.5" />
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4 bg-muted/50 rounded-xl p-4">
+                    <span className="text-sm text-muted-foreground shrink-0">Usuarios:</span>
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => Math.max(3, q - 1))} disabled={planQty <= 3}>
+                        <Minus className="h-3.5 w-3.5" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min={3}
+                        value={planQty}
+                        onChange={e => {
+                          const v = parseInt(e.target.value);
+                          if (!isNaN(v) && v >= 3) setPlanQty(v);
+                          else if (e.target.value === '') setPlanQty(3);
+                        }}
+                        className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      />
+                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => q + 1)}>
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <span className="text-xs text-muted-foreground">(mín. 3)</span>
+                    <Button size="sm" className="ml-auto" onClick={addPlanToCart}>
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
                     </Button>
                   </div>
-                  <span className="text-xs text-muted-foreground">(mín. 3)</span>
-                  <Button size="sm" className="ml-auto" onClick={addPlanToCart}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
-                  </Button>
+
+                  {/* Proration preview */}
+                  {prorationPreview && prorationPreview.esProrrateo && (
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 text-sm">
+                      <p className="font-medium text-blue-800 dark:text-blue-200">
+                        💡 Pago prorrateado: <strong>${prorationPreview.total.toLocaleString()} MXN</strong> por los {prorationPreview.diasRestantes} días restantes del mes.
+                      </p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                        A partir del día 1 del siguiente mes se cobra la mensualidad completa.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -438,6 +527,55 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ─── Invoice History ─── */}
+          {facturas.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
+                  <Receipt className="h-5 w-5 text-primary" /> Historial de facturas
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Factura</th>
+                        <th className="text-left py-2 px-2 font-semibold text-muted-foreground text-xs">Periodo</th>
+                        <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</th>
+                        <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
+                        <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {facturas.map(f => (
+                        <tr key={f.id} className="border-b border-border/50 hover:bg-muted/30">
+                          <td className="py-2.5 px-2">
+                            <div className="flex items-center gap-1.5">
+                              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="font-medium text-foreground">{f.numero_factura || '—'}</span>
+                              {f.es_prorrateo && (
+                                <Badge variant="outline" className="text-[9px] px-1 py-0">Prorrateo</Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-2 text-muted-foreground text-xs">
+                            {format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} — {format(new Date(f.periodo_fin), 'dd MMM yy', { locale: es })}
+                          </td>
+                          <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
+                          <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString()}</td>
+                          <td className="py-2.5 px-2 text-center">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
+                              {facturaStatusLabel[f.estado] || f.estado}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right: Cart (1 col) */}

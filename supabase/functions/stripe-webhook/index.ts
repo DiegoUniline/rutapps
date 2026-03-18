@@ -10,6 +10,107 @@ const corsHeaders = {
 const log = (step: string, details?: any) =>
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
+// ── Stripe error codes → Spanish ──
+const errorMap: Record<string, string> = {
+  card_declined: "Tu tarjeta fue rechazada por el banco",
+  insufficient_funds: "Fondos insuficientes en la tarjeta",
+  expired_card: "Tu tarjeta está vencida",
+  incorrect_cvc: "El código de seguridad (CVC) es incorrecto",
+  processing_error: "Error temporal al procesar el pago",
+  lost_card: "La tarjeta fue reportada como perdida",
+  stolen_card: "La tarjeta fue reportada como robada",
+  generic_decline: "El banco rechazó la transacción",
+  authentication_required: "Se requiere autenticación adicional (3D Secure)",
+  payment_intent_payment_attempt_failed: "No se pudo completar el cobro",
+};
+
+function getErrorMessage(code?: string): string {
+  return errorMap[code || ""] || "Error al procesar el pago";
+}
+
+// ── WhatsApp helper ──
+async function sendWhatsApp(supabase: any, empresaId: string, message: string) {
+  try {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("telefono")
+      .eq("empresa_id", empresaId)
+      .not("telefono", "is", null)
+      .limit(1);
+    const phone = profiles?.[0]?.telefono;
+    if (!phone) return;
+    await supabase.functions.invoke("whatsapp-sender", {
+      body: { action: "send_text", empresa_id: empresaId, phone, message },
+    });
+  } catch (e) {
+    log("WhatsApp non-blocking error", (e as Error).message);
+  }
+}
+
+// ── Find empresa from Stripe customer ──
+async function getEmpresaFromCustomer(
+  stripe: Stripe, supabase: any, customerId: string
+): Promise<{ empresaId: string | null; empresaNombre: string | null }> {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.deleted) return { empresaId: null, empresaNombre: null };
+    const email = (customer as Stripe.Customer).email;
+    if (!email) return { empresaId: null, empresaNombre: null };
+
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const user = users?.users?.find((u: any) => u.email === email);
+    if (!user) return { empresaId: null, empresaNombre: null };
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("empresa_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!profile?.empresa_id) return { empresaId: null, empresaNombre: null };
+
+    const { data: empresa } = await supabase
+      .from("empresas")
+      .select("nombre")
+      .eq("id", profile.empresa_id)
+      .single();
+
+    return { empresaId: profile.empresa_id, empresaNombre: empresa?.nombre || null };
+  } catch {
+    return { empresaId: null, empresaNombre: null };
+  }
+}
+
+async function getEmpresaByStripeSubId(supabase: any, stripeSubId: string) {
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("empresa_id")
+    .eq("stripe_subscription_id", stripeSubId)
+    .maybeSingle();
+  if (!sub?.empresa_id) return { empresaId: null, empresaNombre: null };
+  const { data: empresa } = await supabase
+    .from("empresas")
+    .select("nombre")
+    .eq("id", sub.empresa_id)
+    .single();
+  return { empresaId: sub.empresa_id, empresaNombre: empresa?.nombre || null };
+}
+
+async function getEmpresaByStripeCustomerId(supabase: any, customerId: string) {
+  const { data: sub } = await supabase
+    .from("subscriptions")
+    .select("empresa_id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  if (!sub?.empresa_id) return { empresaId: null, empresaNombre: null };
+  const { data: empresa } = await supabase
+    .from("empresas")
+    .select("nombre")
+    .eq("id", sub.empresa_id)
+    .single();
+  return { empresaId: sub.empresa_id, empresaNombre: empresa?.nombre || null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,7 +154,7 @@ Deno.serve(async (req) => {
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
         const empresaId = session.metadata?.empresa_id ||
-          (await getEmpresaFromCustomer(stripe, supabase, customerId));
+          (await getEmpresaFromCustomer(stripe, supabase, customerId)).empresaId;
 
         if (!empresaId) { log("No empresa_id for checkout"); break; }
 
@@ -72,6 +173,18 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString(),
         }).eq("empresa_id", empresaId);
 
+        // Mark pending invoices as paid
+        await supabase.from("facturas")
+          .update({ estado: "pagada", fecha_pago: new Date().toISOString() })
+          .eq("empresa_id", empresaId)
+          .in("estado", ["pendiente", "procesando"]);
+
+        // WhatsApp
+        const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
+        await sendWhatsApp(supabase, empresaId,
+          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${new Date(stripeSub.current_period_end * 1000).toLocaleDateString("es-MX")}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+        );
+
         log("Subscription activated", { empresaId, subscriptionId });
         break;
       }
@@ -85,6 +198,7 @@ Deno.serve(async (req) => {
           ? invoice.subscription : invoice.subscription.id;
 
         const stripeSub = await stripe.subscriptions.retrieve(subId);
+        const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, subId);
 
         const { data: sub } = await supabase
           .from("subscriptions")
@@ -99,6 +213,22 @@ Deno.serve(async (req) => {
             current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           }).eq("id", sub.id);
+
+          // Update factura
+          if (invoice.id) {
+            await supabase.from("facturas")
+              .update({ estado: "pagada", fecha_pago: new Date().toISOString(), stripe_invoice_id: invoice.id })
+              .eq("empresa_id", sub.empresa_id)
+              .eq("estado", "procesando");
+          }
+
+          // WhatsApp
+          const monto = invoice.amount_paid ? (invoice.amount_paid / 100).toLocaleString() : "N/A";
+          const proximoCobro = new Date(stripeSub.current_period_end * 1000).toLocaleDateString("es-MX");
+          await sendWhatsApp(supabase, sub.empresa_id,
+            `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+          );
+
           log("Invoice paid → subscription renewed", { subId, empresaId: sub.empresa_id });
         }
         break;
@@ -121,6 +251,28 @@ Deno.serve(async (req) => {
         break;
       }
 
+      // ── Charge failed → WhatsApp notification ──
+      case "charge.failed": {
+        const charge = event.data.object as Stripe.Charge;
+        const customerId = charge.customer as string;
+        if (!customerId) break;
+
+        const { empresaId, empresaNombre } = await getEmpresaByStripeCustomerId(supabase, customerId);
+        if (!empresaId) break;
+
+        const errorCode = charge.failure_code || "generic_decline";
+        const errorMsg = getErrorMessage(errorCode);
+        const monto = (charge.amount / 100).toLocaleString();
+        const moneda = (charge.currency || "mxn").toUpperCase();
+
+        await sendWhatsApp(supabase, empresaId,
+          `¡Hola! 👋\nNo pudimos procesar tu pago de suscripción para *${empresaNombre || "tu empresa"}*.\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n🔄 *¿Qué puedes hacer?*\n1️⃣ Verifica que tu tarjeta tenga fondos\n2️⃣ Actualiza tu método de pago desde la app\n3️⃣ Si persiste, contacta a tu banco`
+        );
+
+        log("Charge failed → WhatsApp sent", { empresaId, errorCode });
+        break;
+      }
+
       // ── Subscription deleted / cancelled ──
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
@@ -128,6 +280,13 @@ Deno.serve(async (req) => {
           status: "suspended",
           updated_at: new Date().toISOString(),
         }).eq("stripe_subscription_id", sub.id);
+
+        const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, sub.id);
+        if (empresaId) {
+          await sendWhatsApp(supabase, empresaId,
+            `¡Hola! ⚠️\nLa suscripción de *${empresaNombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`
+          );
+        }
 
         log("Subscription deleted → suspended", { subId: sub.id });
         break;
@@ -172,32 +331,3 @@ Deno.serve(async (req) => {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 });
-
-// Helper: find empresa_id from Stripe customer email
-async function getEmpresaFromCustomer(
-  stripe: Stripe,
-  supabase: any,
-  customerId: string
-): Promise<string | null> {
-  try {
-    const customer = await stripe.customers.retrieve(customerId);
-    if (customer.deleted) return null;
-    const email = (customer as Stripe.Customer).email;
-    if (!email) return null;
-
-    // Find user by email → profile → empresa_id
-    const { data: users } = await supabase.auth.admin.listUsers();
-    const user = users?.users?.find((u: any) => u.email === email);
-    if (!user) return null;
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("empresa_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    return profile?.empresa_id || null;
-  } catch {
-    return null;
-  }
-}
