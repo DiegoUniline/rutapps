@@ -137,11 +137,13 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                     const statusInfo = STATUS_MAP[status];
                     const hasStripeCustomer = !!sub?.stripe_customer_id;
                     const hasStripeSub = !!sub?.stripe_subscription_id;
+                    const usersCount = e.profiles?.length || 0;
 
                     return (
                       <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectEmpresa?.(e.id)}>
                         <TableCell>
                           <div className="font-medium">{e.nombre}</div>
+                          <div className="text-[10px] text-muted-foreground">{usersCount} usuario{usersCount !== 1 ? 's' : ''}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-xs space-y-0.5">
