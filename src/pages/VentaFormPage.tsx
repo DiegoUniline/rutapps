@@ -1186,95 +1186,127 @@ export default function VentaFormPage() {
                 </div>
               ),
             },
-            },
             // Pagos tab — only for saved sales
             ...(!isNew ? [{
               key: 'pagos',
               label: `Pagos (${(pagosData ?? []).length})`,
               content: (
-                <div className="p-4 space-y-3">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-table-border text-left">
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Fecha</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Método</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Referencia</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Monto</th>
-                        <th className="py-2 px-2 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                <div className="p-3 sm:p-4 space-y-3">
+                  {isMobile ? (
+                    /* Mobile: pagos cards */
+                    <div className="space-y-2">
                       {(pagosData ?? []).map((p: any) => (
-                        <tr key={p.id} className="border-b border-table-border hover:bg-table-hover">
-                          <td className="py-2 px-2">{p.cobros?.fecha ?? '—'}</td>
-                          <td className="py-2 px-2 capitalize">{p.cobros?.metodo_pago ?? '—'}</td>
-                          <td className="py-2 px-2 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
-                          <td className="py-2 px-2 text-right font-medium">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                          <td></td>
-                        </tr>
+                        <div key={p.id} className="border border-border rounded-lg p-3 bg-card">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="text-sm font-medium capitalize">{p.cobros?.metodo_pago ?? '—'}</div>
+                              <div className="text-xs text-muted-foreground">{p.cobros?.fecha ?? '—'}</div>
+                            </div>
+                            <span className="text-sm font-bold text-foreground">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                          {p.cobros?.referencia && (
+                            <div className="text-xs text-muted-foreground mt-1">Ref: {p.cobros.referencia}</div>
+                          )}
+                        </div>
                       ))}
+                      {(pagosData ?? []).length === 0 && (
+                        <div className="text-center py-6 text-muted-foreground text-sm">Sin pagos registrados</div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Desktop: pagos table */
+                    <table className="w-full text-[13px]">
+                      <thead>
+                        <tr className="border-b border-table-border text-left">
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Fecha</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Método</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Referencia</th>
+                          <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] text-right">Monto</th>
+                          <th className="py-2 px-2 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(pagosData ?? []).map((p: any) => (
+                          <tr key={p.id} className="border-b border-table-border hover:bg-table-hover">
+                            <td className="py-2 px-2">{p.cobros?.fecha ?? '—'}</td>
+                            <td className="py-2 px-2 capitalize">{p.cobros?.metodo_pago ?? '—'}</td>
+                            <td className="py-2 px-2 text-muted-foreground">{p.cobros?.referencia || '—'}</td>
+                            <td className="py-2 px-2 text-right font-medium">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                            <td></td>
+                          </tr>
+                        ))}
 
-                      {/* Inline new payment row */}
-                      {saldoPendiente > 0.01 && showPagoForm && (
-                        <tr className="border-b border-table-border bg-muted/30">
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="date"
-                              className="input-odoo text-xs w-full"
-                              defaultValue={new Date().toISOString().slice(0, 10)}
-                              readOnly
-                            />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <select className="input-odoo text-xs w-full" value={pagoMetodo} onChange={e => setPagoMetodo(e.target.value)}>
-                              <option value="efectivo">Efectivo</option>
-                              <option value="transferencia">Transferencia</option>
-                              <option value="tarjeta">Tarjeta</option>
-                              <option value="cheque">Cheque</option>
-                            </select>
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input
-                              className="input-odoo text-xs w-full"
-                              value={pagoRef}
-                              onChange={e => setPagoRef(e.target.value)}
-                              placeholder="Referencia..."
-                              onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }}
-                            />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <input
-                              type="number"
-                              className="input-odoo text-xs w-full text-right"
-                              value={pagoMonto}
-                              onChange={e => setPagoMonto(e.target.value)}
-                              min="0"
-                              step="0.01"
-                              placeholder={saldoPendiente.toFixed(2)}
-                              autoFocus
-                              onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }}
-                            />
-                          </td>
-                          <td className="py-1.5 px-2">
-                            <div className="flex gap-1">
+                        {/* Inline new payment row */}
+                        {saldoPendiente > 0.01 && showPagoForm && (
+                          <tr className="border-b border-table-border bg-muted/30">
+                            <td className="py-1.5 px-2">
+                              <input type="date" className="input-odoo text-xs w-full" defaultValue={new Date().toISOString().slice(0, 10)} readOnly />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <select className="input-odoo text-xs w-full" value={pagoMetodo} onChange={e => setPagoMetodo(e.target.value)}>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="tarjeta">Tarjeta</option>
+                                <option value="cheque">Cheque</option>
+                              </select>
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input className="input-odoo text-xs w-full" value={pagoRef} onChange={e => setPagoRef(e.target.value)} placeholder="Referencia..."
+                                onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }} />
+                            </td>
+                            <td className="py-1.5 px-2">
+                              <input type="number" className="input-odoo text-xs w-full text-right" value={pagoMonto} onChange={e => setPagoMonto(e.target.value)}
+                                min="0" step="0.01" placeholder={saldoPendiente.toFixed(2)} autoFocus
+                                onKeyDown={e => { if (e.key === 'Enter') handleAddPago(); if (e.key === 'Escape') setShowPagoForm(false); }} />
+                            </td>
+                            <td className="py-1.5 px-2">
                               <button onClick={handleAddPago} disabled={pagoSaving} className="text-primary hover:text-primary/80" title="Guardar">
                                 <Check className="h-3.5 w-3.5" />
                               </button>
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                      {(pagosData ?? []).length > 0 && (
+                        <tfoot>
+                          <tr className="border-t-2 border-border">
+                            <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
+                            <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
                       )}
-                    </tbody>
-                    {(pagosData ?? []).length > 0 && (
-                      <tfoot>
-                        <tr className="border-t-2 border-border">
-                          <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
-                          <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
-                          <td></td>
-                        </tr>
-                      </tfoot>
-                    )}
-                  </table>
+                    </table>
+                  )}
+
+                  {/* Mobile inline pago form */}
+                  {isMobile && saldoPendiente > 0.01 && showPagoForm && (
+                    <div className="border border-border rounded-lg p-3 bg-muted/20 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">Método</label>
+                          <select className="input-odoo text-xs w-full" value={pagoMetodo} onChange={e => setPagoMetodo(e.target.value)}>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="cheque">Cheque</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-muted-foreground">Monto</label>
+                          <input type="number" className="input-odoo text-xs w-full text-right" value={pagoMonto} onChange={e => setPagoMonto(e.target.value)}
+                            min="0" step="0.01" placeholder={saldoPendiente.toFixed(2)} autoFocus />
+                        </div>
+                      </div>
+                      <input className="input-odoo text-xs w-full" value={pagoRef} onChange={e => setPagoRef(e.target.value)} placeholder="Referencia..." />
+                      <div className="flex gap-2">
+                        <button onClick={handleAddPago} disabled={pagoSaving} className="btn-odoo-primary text-xs flex-1">
+                          <Check className="h-3.5 w-3.5" /> Guardar pago
+                        </button>
+                        <button onClick={() => setShowPagoForm(false)} className="btn-odoo-secondary text-xs">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
 
                   {saldoPendiente > 0.01 && !showPagoForm && (
                     <button onClick={() => { setShowPagoForm(true); setPagoMonto(''); setPagoRef(''); }} className="text-primary text-xs font-medium hover:underline flex items-center gap-1">
