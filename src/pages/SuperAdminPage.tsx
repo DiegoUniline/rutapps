@@ -8,6 +8,7 @@ import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircl
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
 import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
+import AdminEmpresaDetail from '@/components/admin/AdminEmpresaDetail';
 import AdminInvoicesTab from '@/components/admin/AdminInvoicesTab';
 import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
@@ -18,6 +19,7 @@ export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean | null>(null);
+  const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -57,43 +59,47 @@ export default function SuperAdminPage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="bg-card border border-border/60 p-1 h-auto flex-wrap">
-            <TabsTrigger value="dashboard" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <BarChart3 className="h-4 w-4" /> Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="empresas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Building2 className="h-4 w-4" /> Empresas
-            </TabsTrigger>
-            <TabsTrigger value="subscriptions" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <CreditCard className="h-4 w-4" /> Suscripciones
-            </TabsTrigger>
-            <TabsTrigger value="invoices" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Receipt className="h-4 w-4" /> Facturas
-            </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <MessageCircle className="h-4 w-4" /> WhatsApp
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Bell className="h-4 w-4" /> Historial
-            </TabsTrigger>
-            <TabsTrigger value="payment_requests" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <BanknoteIcon className="h-4 w-4" /> Pagos transferencia
-            </TabsTrigger>
-            <TabsTrigger value="anuncios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Megaphone className="h-4 w-4" /> Anuncios
-            </TabsTrigger>
-          </TabsList>
+        {selectedEmpresaId ? (
+          <AdminEmpresaDetail empresaId={selectedEmpresaId} onBack={() => setSelectedEmpresaId(null)} />
+        ) : (
+          <Tabs defaultValue="dashboard" className="space-y-6">
+            <TabsList className="bg-card border border-border/60 p-1 h-auto flex-wrap">
+              <TabsTrigger value="dashboard" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <BarChart3 className="h-4 w-4" /> Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="empresas" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Building2 className="h-4 w-4" /> Empresas
+              </TabsTrigger>
+              <TabsTrigger value="subscriptions" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <CreditCard className="h-4 w-4" /> Suscripciones
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Receipt className="h-4 w-4" /> Facturas
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <MessageCircle className="h-4 w-4" /> WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Bell className="h-4 w-4" /> Historial
+              </TabsTrigger>
+              <TabsTrigger value="payment_requests" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <BanknoteIcon className="h-4 w-4" /> Pagos transferencia
+              </TabsTrigger>
+              <TabsTrigger value="anuncios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Megaphone className="h-4 w-4" /> Anuncios
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
-          <TabsContent value="empresas"><AdminEmpresasTab /></TabsContent>
-          <TabsContent value="subscriptions"><AdminSubscriptionsTab /></TabsContent>
-          <TabsContent value="invoices"><AdminInvoicesTab /></TabsContent>
-          <TabsContent value="whatsapp"><AdminWhatsAppTab /></TabsContent>
-          <TabsContent value="notifications"><AdminNotificationsTab /></TabsContent>
-          <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
-          <TabsContent value="anuncios"><AdminAnunciosTab /></TabsContent>
-        </Tabs>
+            <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
+            <TabsContent value="empresas"><AdminEmpresasTab onSelectEmpresa={(id) => setSelectedEmpresaId(id)} /></TabsContent>
+            <TabsContent value="subscriptions"><AdminSubscriptionsTab /></TabsContent>
+            <TabsContent value="invoices"><AdminInvoicesTab /></TabsContent>
+            <TabsContent value="whatsapp"><AdminWhatsAppTab /></TabsContent>
+            <TabsContent value="notifications"><AdminNotificationsTab /></TabsContent>
+            <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
+            <TabsContent value="anuncios"><AdminAnunciosTab /></TabsContent>
+          </Tabs>
+        )}
       </div>
     </div>
   );

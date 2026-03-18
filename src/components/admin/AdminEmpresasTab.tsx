@@ -17,7 +17,7 @@ interface EmpresaRow {
   timbres_saldo?: { saldo: number }[];
 }
 
-export default function AdminEmpresasTab() {
+export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void }) {
   const { user } = useAuth();
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [search, setSearch] = useState('');
@@ -101,7 +101,7 @@ export default function AdminEmpresasTab() {
                 {filtered.map(e => {
                   const saldo = e.timbres_saldo?.[0]?.saldo ?? 0;
                   return (
-                    <TableRow key={e.id}>
+                    <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectEmpresa?.(e.id)}>
                       <TableCell className="font-medium">{e.nombre}</TableCell>
                       <TableCell className="text-muted-foreground">{e.email || '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{e.telefono || '—'}</TableCell>
