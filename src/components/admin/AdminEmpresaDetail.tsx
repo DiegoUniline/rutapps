@@ -9,10 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
-  Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText
+  Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
+  Plus, ShoppingCart, History, Percent
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -41,6 +44,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [timbres, setTimbres] = useState(0);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [stripeInvoices, setStripeInvoices] = useState<any[]>([]);
+  const [timbresMovimientos, setTimbresMovimientos] = useState<any[]>([]);
 
   // Edit states
   const [editingEmpresa, setEditingEmpresa] = useState(false);
@@ -50,21 +54,29 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [savingEmpresa, setSavingEmpresa] = useState(false);
   const [savingSub, setSavingSub] = useState(false);
 
-  // Timbres
+  // Timbres sale form
+  const [showTimbresSale, setShowTimbresSale] = useState(false);
   const [addingTimbres, setAddingTimbres] = useState(false);
-  const [timbresCantidad, setTimbresCantidad] = useState('10');
+  const [timbresForm, setTimbresForm] = useState({
+    paquetes: 1, // each = 100 timbres
+    precio_timbre: 1,
+    descuento_pct: 0,
+    notas: '',
+    generar_factura: false,
+  });
 
   useEffect(() => { load(); }, [empresaId]);
 
   async function load() {
     setLoading(true);
-    const [empRes, subRes, plansRes, factRes, timbresRes, profilesRes] = await Promise.all([
+    const [empRes, subRes, plansRes, factRes, timbresRes, profilesRes, movRes] = await Promise.all([
       supabase.from('empresas').select('*').eq('id', empresaId).single(),
       supabase.from('subscriptions').select('*, subscription_plans(nombre, precio_por_usuario, periodo, descuento_pct, meses)').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('subscription_plans').select('*').eq('activo', true),
       supabase.from('facturas').select('*').eq('empresa_id', empresaId).order('creado_en', { ascending: false }).limit(20),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresaId).maybeSingle(),
       supabase.from('profiles').select('id, nombre, telefono, rol, user_id').eq('empresa_id', empresaId),
+      supabase.from('timbres_movimientos').select('*').eq('empresa_id', empresaId).order('created_at', { ascending: false }).limit(50),
     ]);
 
     setEmpresa(empRes.data);
@@ -73,6 +85,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setFacturas((factRes.data || []) as any[]);
     setTimbres(timbresRes.data?.saldo ?? 0);
     setProfiles((profilesRes.data || []) as any[]);
+    setTimbresMovimientos((movRes.data || []) as any[]);
 
     if (empRes.data) {
       setEmpresaForm({
@@ -144,21 +157,84 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setSavingSub(false);
   }
 
-  async function handleAddTimbres() {
+  // Timbres sale calculations
+  const timbresCount = timbresForm.paquetes * 100;
+  const timbresSubtotal = timbresCount * timbresForm.precio_timbre;
+  const timbresDescuento = timbresSubtotal * (timbresForm.descuento_pct / 100);
+  const timbresTotal = timbresSubtotal - timbresDescuento;
+
+  async function handleTimbresSale() {
     if (!user) return;
-    const cant = parseInt(timbresCantidad);
-    if (!cant || cant < 1) { toast.error('Cantidad inválida'); return; }
+    if (timbresForm.paquetes < 1) { toast.error('Mínimo 1 paquete'); return; }
     setAddingTimbres(true);
     try {
-      const { data, error } = await supabase.rpc('add_timbres', {
-        p_empresa_id: empresaId,
-        p_cantidad: cant,
-        p_user_id: user.id,
-        p_notas: `Recarga de ${cant} timbres por admin`,
-      });
-      if (error) throw error;
-      toast.success(`+${cant} timbres → saldo: ${data}`);
-      setTimbresCantidad('10');
+      const notaParts = [
+        `Venta: ${timbresCount} timbres (${timbresForm.paquetes} paq × $${timbresForm.precio_timbre}/timbre)`,
+      ];
+      if (timbresForm.descuento_pct > 0) notaParts.push(`Descuento: ${timbresForm.descuento_pct}%`);
+      notaParts.push(`Total: $${timbresTotal.toFixed(2)} MXN`);
+      if (timbresForm.notas) notaParts.push(timbresForm.notas);
+
+      // If generate invoice via admin-billing
+      if (timbresForm.generar_factura && subscription?.stripe_customer_id) {
+        const session = await supabase.auth.getSession();
+        const token = session.data.session?.access_token;
+        const items = [
+          { description: `${timbresCount} timbres CFDI × $${timbresForm.precio_timbre}/timbre`, amount: Math.round(timbresSubtotal * 100) }
+        ];
+        if (timbresDescuento > 0) {
+          items.push({ description: `Descuento (${timbresForm.descuento_pct}%)`, amount: -Math.round(timbresDescuento * 100) });
+        }
+
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-billing?action=create_pro_invoice`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              empresa_id: empresaId,
+              empresa_nombre: empresa?.nombre || '',
+              empresa_email: empresa?.email || '',
+              empresa_telefono: empresa?.telefono || '',
+              empresa_rfc: empresa?.rfc || '',
+              items,
+              concepto: `Compra de ${timbresCount} timbres CFDI — ${empresa?.nombre}`,
+              days_until_due: 3,
+              plan_nombre: 'Timbres CFDI',
+              num_usuarios: 0,
+              timbres: timbresCount,
+              descuento_plan_pct: 0,
+              descuento_extra_pct: timbresForm.descuento_pct,
+              total_centavos: Math.round(timbresTotal * 100),
+              mensaje_personal: '',
+              enviar_email: !!empresa?.email,
+              enviar_whatsapp: false,
+              telefono_envio: '',
+              correo_envio: empresa?.email || '',
+            }),
+          }
+        );
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        toast.success(`Factura creada por ${timbresCount} timbres — $${timbresTotal.toFixed(2)} MXN`);
+      } else {
+        // Just credit timbres directly
+        const { data, error } = await supabase.rpc('add_timbres', {
+          p_empresa_id: empresaId,
+          p_cantidad: timbresCount,
+          p_user_id: user.id,
+          p_notas: notaParts.join(' | '),
+        });
+        if (error) throw error;
+        toast.success(`+${timbresCount} timbres acreditados. Saldo: ${data}`);
+      }
+
+      setShowTimbresSale(false);
+      setTimbresForm({ paquetes: 1, precio_timbre: 1, descuento_pct: 0, notas: '', generar_factura: false });
       load();
     } catch (e: any) {
       toast.error(e.message);
@@ -431,31 +507,137 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </CardContent>
           </Card>
 
-          {/* Timbres */}
+          {/* Timbres CFDI — Sales Panel */}
           <Card className="border border-border/60 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Saldo actual</span>
-                <span className={`text-lg font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
+                </CardTitle>
+                <Button size="sm" variant="outline" onClick={() => setShowTimbresSale(!showTimbresSale)}>
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Nueva venta
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Saldo */}
+              <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
+                <span className="text-sm text-muted-foreground">Saldo actual</span>
+                <span className={`text-2xl font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
                   {timbres}
                 </span>
               </div>
-              <Separator />
-              <div className="flex gap-2">
-                <Input
-                  type="number" min="1" value={timbresCantidad}
-                  onChange={e => setTimbresCantidad(e.target.value)}
-                  className="h-8 text-sm font-mono flex-1"
-                  placeholder="Cantidad"
-                />
-                <Button size="sm" disabled={addingTimbres} onClick={handleAddTimbres}>
-                  {addingTimbres ? '...' : `+${timbresCantidad}`}
-                </Button>
+
+              {/* Sale Form */}
+              {showTimbresSale && (
+                <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-muted/10">
+                  <p className="text-xs font-semibold text-foreground flex items-center gap-1">
+                    <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Registrar venta de timbres
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Paquetes (×100)</Label>
+                      <Input type="number" min={1} value={timbresForm.paquetes}
+                        onChange={e => setTimbresForm(f => ({ ...f, paquetes: parseInt(e.target.value) || 1 }))}
+                        className="h-8 text-sm font-mono" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Precio/timbre</Label>
+                      <Input type="number" min={0} step={0.5} value={timbresForm.precio_timbre}
+                        onChange={e => setTimbresForm(f => ({ ...f, precio_timbre: parseFloat(e.target.value) || 0 }))}
+                        className="h-8 text-sm font-mono" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1">
+                      <Percent className="h-3 w-3" /> Descuento (%)
+                    </Label>
+                    <Input type="number" min={0} max={100} value={timbresForm.descuento_pct}
+                      onChange={e => setTimbresForm(f => ({ ...f, descuento_pct: parseFloat(e.target.value) || 0 }))}
+                      className="h-8 text-sm font-mono" />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">Notas</Label>
+                    <Textarea value={timbresForm.notas}
+                      onChange={e => setTimbresForm(f => ({ ...f, notas: e.target.value }))}
+                      className="text-sm resize-none h-16" placeholder="Notas de la venta..." />
+                  </div>
+
+                  {/* Summary */}
+                  <div className="bg-background border border-border/40 rounded-lg p-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{timbresCount} timbres × ${timbresForm.precio_timbre}</span>
+                      <span>{fmtMXN(timbresSubtotal)}</span>
+                    </div>
+                    {timbresForm.descuento_pct > 0 && (
+                      <div className="flex justify-between text-primary">
+                        <span>Descuento ({timbresForm.descuento_pct}%)</span>
+                        <span>-{fmtMXN(timbresDescuento)}</span>
+                      </div>
+                    )}
+                    <Separator />
+                    <div className="flex justify-between font-bold">
+                      <span>Total</span>
+                      <span>{fmtMXN(timbresTotal)}</span>
+                    </div>
+                  </div>
+
+                  {/* Generate invoice checkbox */}
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="generar-factura"
+                      checked={timbresForm.generar_factura}
+                      onCheckedChange={v => setTimbresForm(f => ({ ...f, generar_factura: !!v }))}
+                    />
+                    <Label htmlFor="generar-factura" className="text-xs cursor-pointer">
+                      Generar factura Stripe y enviar por correo
+                    </Label>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowTimbresSale(false)}>
+                      Cancelar
+                    </Button>
+                    <Button size="sm" className="flex-1" disabled={addingTimbres} onClick={handleTimbresSale}>
+                      {addingTimbres ? 'Procesando...' : `Vender ${timbresCount} timbres`}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Historial de movimientos */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                  <History className="h-3.5 w-3.5" /> Historial de movimientos
+                </p>
+                {timbresMovimientos.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-2">Sin movimientos</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-[250px] overflow-y-auto">
+                    {timbresMovimientos.map(m => (
+                      <div key={m.id} className="flex items-start justify-between border border-border/30 rounded p-2 text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant={m.tipo === 'compra' || m.tipo === 'recarga' ? 'default' : 'secondary'} className="text-[10px] h-4">
+                              {m.tipo === 'compra' ? '🛒 Compra' : m.tipo === 'consumo' ? '📄 Uso' : m.tipo === 'recarga' ? '🔄 Recarga' : m.tipo}
+                            </Badge>
+                            <span className={`font-mono font-semibold ${m.cantidad >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                              {m.cantidad >= 0 ? '+' : ''}{m.cantidad}
+                            </span>
+                          </div>
+                          {m.notas && <p className="text-muted-foreground mt-0.5 truncate">{m.notas}</p>}
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="font-mono text-muted-foreground">→ {m.saldo_nuevo}</p>
+                          <p className="text-muted-foreground">{format(new Date(m.created_at), 'dd/MM/yy HH:mm')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
