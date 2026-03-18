@@ -374,11 +374,6 @@ export default function CompraFormPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {!isNew && form.condicion_pago === 'credito' && form.status !== 'borrador' && form.status !== 'cancelada' && (
-            <button onClick={() => setShowPago(true)} className="btn-odoo-secondary gap-1">
-              <CreditCard className="h-3.5 w-3.5" /> Registrar pago
-            </button>
-          )}
           {form.status === 'borrador' && !isNew && (
             <button onClick={handleDelete} className="btn-odoo-icon text-destructive">
               <Trash2 className="h-4 w-4" />
