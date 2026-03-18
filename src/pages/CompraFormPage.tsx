@@ -347,6 +347,65 @@ export default function CompraFormPage() {
     }
   };
 
+  // Cancel purchase: reverse stock, delete payments, set status to cancelada
+  const handleCancel = async () => {
+    if (!form.id || !confirm('¿Cancelar esta compra? Se revertirá el stock y se eliminarán los pagos.')) return;
+    try {
+      // If stock was already added (recibida or pagada), reverse it
+      if (['recibida', 'pagada'].includes(form.status)) {
+        const validLines = lineas.filter(l => l.producto_id);
+        const today = new Date().toISOString().slice(0, 10);
+
+        for (const l of validLines) {
+          const factor = Number(l._factor_conversion) || 1;
+          const piezas = (Number(l.cantidad) || 0) * factor;
+
+          const { data: prod } = await supabase
+            .from('productos')
+            .select('cantidad')
+            .eq('id', l.producto_id!)
+            .single();
+
+          const currentQty = Number(prod?.cantidad ?? 0);
+          await supabase
+            .from('productos')
+            .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
+            .eq('id', l.producto_id!);
+
+          // Log reversal movement
+          await supabase.from('movimientos_inventario').insert({
+            empresa_id: empresa!.id,
+            tipo: 'salida',
+            producto_id: l.producto_id!,
+            cantidad: piezas,
+            almacen_origen_id: form.almacen_id,
+            referencia_tipo: 'compra',
+            referencia_id: form.id,
+            user_id: user?.id,
+            fecha: today,
+            notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}`,
+          } as any);
+        }
+      }
+
+      // Delete all payments
+      await supabase.from('pago_compras').delete().eq('compra_id', form.id);
+
+      // Update status
+      await supabase.from('compras').update({ status: 'cancelada', saldo_pendiente: 0 } as any).eq('id', form.id);
+
+      setForm(f => ({ ...f, status: 'cancelada', saldo_pendiente: 0 }));
+      toast.success('Compra cancelada — stock revertido y pagos eliminados');
+      qc.invalidateQueries({ queryKey: ['compras'] });
+      qc.invalidateQueries({ queryKey: ['compra', form.id] });
+      qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] });
+      qc.invalidateQueries({ queryKey: ['inventario'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Error al cancelar');
+    }
+  };
+
   if (!isNew && isLoading) {
     return <div className="p-6"><TableSkeleton rows={6} cols={4} /></div>;
   }
