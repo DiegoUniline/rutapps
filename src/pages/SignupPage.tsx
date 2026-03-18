@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
@@ -43,6 +43,8 @@ export default function SignupPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(null);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
@@ -159,6 +161,10 @@ export default function SignupPage() {
       toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
     }
+    if (form.password !== confirmPassword) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -229,7 +235,8 @@ export default function SignupPage() {
     form.telefono.trim() &&
     form.empresa.trim() &&
     form.nombre.trim() &&
-    form.password.length >= 6;
+    form.password.length >= 6 &&
+    form.password === confirmPassword;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-muted/30">
@@ -392,7 +399,40 @@ export default function SignupPage() {
             {/* Password */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Contraseña</Label>
-              <Input type="password" required minLength={6} value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="Mínimo 6 caracteres"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Lock className="h-4 w-4" /> Confirmar contraseña</Label>
+              <Input
+                type="password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Repite tu contraseña"
+              />
+              {confirmPassword && form.password !== confirmPassword && (
+                <p className="text-xs text-destructive">Las contraseñas no coinciden</p>
+              )}
             </div>
 
             {/* Terms & Privacy */}
