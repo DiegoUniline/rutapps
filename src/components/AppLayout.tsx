@@ -417,6 +417,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
           <div className="flex items-center gap-1">
+            {swUpdateAvailable && (
+              <button
+                onClick={applySwUpdate}
+                className="p-2 rounded-md text-primary animate-pulse hover:text-primary/80 transition-colors"
+                title="Actualizar app"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            )}
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
