@@ -1020,11 +1020,6 @@ export default function TarifaFormPage() {
               ),
             },
             {
-              key: 'listas',
-              label: 'Listas de Precios',
-              content: <ListasPrecioTab tarifaId={id} isNew={isNew} />,
-            },
-            {
               key: 'precios',
               label: 'Vista Precios',
               content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} />,
