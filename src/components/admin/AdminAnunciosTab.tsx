@@ -326,9 +326,7 @@ function ImageUploadField({ type, imageUrl, onUrlChange }: { type: string; image
   );
 }
 
-
-   MAIN COMPONENT
-   ═══════════════════════════════════════ */
+/* ---- MAIN COMPONENT ---- */
 export default function AdminAnunciosTab() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
