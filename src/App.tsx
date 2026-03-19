@@ -75,6 +75,7 @@ const ConfiguracionInicialPage = lazy(() => import("@/pages/ConfiguracionInicial
 const TerminosPage = lazy(() => import("@/pages/TerminosPage"));
 const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
+const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 
 
 // Logistica pages
@@ -143,6 +144,7 @@ function AppRoutes() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/terminos" element={<TerminosPage />} />
           <Route path="/privacidad" element={<PrivacidadPage />} />
+          <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -309,6 +311,7 @@ function desktopRoutes() {
       <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
+      <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       <Route path="*" element={<NotFound />} />
     </>
   );

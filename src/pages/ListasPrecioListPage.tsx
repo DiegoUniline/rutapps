@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Star, Pencil, Trash2, Check, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus, Star, Pencil, Trash2, Check, X, Link2, Copy } from 'lucide-react';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -8,10 +9,12 @@ import { useAllListasPrecios, useSaveListaPrecio, useDeleteListaPrecio, useTarif
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
   const { data: listas, isLoading } = useAllListasPrecios();
+  const qc = useQueryClient();
   const { data: tarifas } = useTarifasForSelect();
   const saveMutation = useSaveListaPrecio();
   const deleteMutation = useDeleteListaPrecio();
@@ -95,10 +98,11 @@ export default function ListasPrecioListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left">Nombre</th>
+                 <th className="th-odoo text-left">Nombre</th>
                   <th className="th-odoo text-left">Tarifa</th>
                   <th className="th-odoo text-center">Principal</th>
                   <th className="th-odoo text-center">Estado</th>
+                  <th className="th-odoo text-center">Catálogo</th>
                   <th className="th-odoo text-center w-24">Acciones</th>
                 </tr>
               </thead>
@@ -123,20 +127,21 @@ export default function ListasPrecioListPage() {
                     <td className="py-1.5 px-3 text-center">
                       <input type="checkbox" checked={newPrincipal} onChange={e => setNewPrincipal(e.target.checked)} className="rounded border-input" />
                     </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <span className="status-pill status-activo">Activa</span>
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={handleCreate} className="text-primary hover:text-primary/80 p-1"><Check className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {filtered.length === 0 && !showNew && (
-                  <tr>
-                    <td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td>
+                     <td className="py-1.5 px-3 text-center">
+                       <span className="status-pill status-activo">Activa</span>
+                     </td>
+                     <td className="py-1.5 px-3 text-center text-muted-foreground text-xs">—</td>
+                     <td className="py-1.5 px-3 text-center">
+                       <div className="flex items-center justify-center gap-1">
+                         <button onClick={handleCreate} className="text-primary hover:text-primary/80 p-1"><Check className="h-3.5 w-3.5" /></button>
+                         <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
+                       </div>
+                     </td>
+                   </tr>
+                 )}
+                 {filtered.length === 0 && !showNew && (
+                   <tr>
+                     <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td>
                   </tr>
                 )}
                 {filtered.map(l => {
@@ -182,8 +187,37 @@ export default function ListasPrecioListPage() {
                           ? <span className="status-pill status-activo">Activa</span>
                           : <span className="status-pill status-borrador">Inactiva</span>
                         }
-                      </td>
-                      <td className="py-1.5 px-3 text-center">
+                       </td>
+                       <td className="py-1.5 px-3 text-center">
+                         <div className="flex items-center justify-center gap-1.5">
+                           <button
+                             title={l.share_activo ? 'Desactivar catálogo público' : 'Activar catálogo público'}
+                             onClick={async () => {
+                               const next = !l.share_activo;
+                               await supabase.from('lista_precios').update({ share_activo: next } as any).eq('id', l.id);
+                               toast.success(next ? 'Catálogo activado' : 'Catálogo desactivado');
+                               qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
+                             }}
+                             className={cn('p-1 rounded transition-colors', l.share_activo ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
+                           >
+                             <Link2 className="h-3.5 w-3.5" />
+                           </button>
+                           {l.share_activo && l.share_token && (
+                             <button
+                               title="Copiar link del catálogo"
+                               onClick={() => {
+                                 const url = `${window.location.origin}/catalogo/${l.share_token}`;
+                                 navigator.clipboard.writeText(url);
+                                 toast.success('Link copiado al portapapeles');
+                               }}
+                               className="text-muted-foreground hover:text-foreground p-1"
+                             >
+                               <Copy className="h-3.5 w-3.5" />
+                             </button>
+                           )}
+                         </div>
+                       </td>
+                       <td className="py-1.5 px-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {isEditing ? (
                             <>

@@ -1975,6 +1975,8 @@ export type Database = {
           es_principal: boolean
           id: string
           nombre: string
+          share_activo: boolean
+          share_token: string
           tarifa_id: string
         }
         Insert: {
@@ -1984,6 +1986,8 @@ export type Database = {
           es_principal?: boolean
           id?: string
           nombre: string
+          share_activo?: boolean
+          share_token?: string
           tarifa_id: string
         }
         Update: {
@@ -1993,6 +1997,8 @@ export type Database = {
           es_principal?: boolean
           id?: string
           nombre?: string
+          share_activo?: boolean
+          share_token?: string
           tarifa_id?: string
         }
         Relationships: [

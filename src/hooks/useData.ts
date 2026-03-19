@@ -281,6 +281,8 @@ export interface ListaPrecio {
   es_principal: boolean;
   activa: boolean;
   created_at: string;
+  share_token?: string;
+  share_activo?: boolean;
 }
 
 export interface ListaPrecioLinea {
@@ -298,7 +300,7 @@ export function useAllListasPrecios() {
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data, error } = await supabase.from('lista_precios')
-        .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at')
+        .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at, share_token, share_activo')
         .order('nombre');
       if (error) throw error;
       return data as ListaPrecio[];
