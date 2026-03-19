@@ -270,7 +270,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
   );
 
-  const listaLabel = listas?.find(l => l.id === listaFilter)?.nombre ?? 'Todas';
+  
 
   const exportColumns = [
     { key: 'codigo', header: 'Código', width: 12, format: 'text' as const },
