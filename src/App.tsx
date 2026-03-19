@@ -262,7 +262,7 @@ function desktopRoutes() {
       <Route path="/supervisor" element={<SupervisorDashboardPage />} />
       <Route path="/monitor-rutas" element={<MonitorRutasPage />} />
       <Route path="/productos" element={<ProductosListPage />} />
-      <Route path="/catalogo/:catalog" element={<CatalogPage />} />
+      <Route path="/catalogos/:catalog" element={<CatalogPage />} />
       <Route path="/productos/:id" element={<ProductoFormPage />} />
       <Route path="/productos/:productoId/tarifas/:id" element={<TarifaFormPage />} />
       <Route path="/tarifas" element={<Navigate to="/listas-precio" replace />} />
