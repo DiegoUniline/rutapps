@@ -130,7 +130,6 @@ function AppRoutes() {
   const subscription = useSubscription();
   
   // Global unhandled rejection → error modal
-  const { showError } = useErrorModal();
   useGlobalErrorHandler();
 
   if (loading || subscription.loading) {
