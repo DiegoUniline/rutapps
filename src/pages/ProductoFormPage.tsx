@@ -1062,7 +1062,7 @@ export default function ProductoFormPage() {
               onChange={v => set('calculo_costo', v)}
               format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
             />
-            <OdooField label="Tarifa" value={form.lista_id} type="select"
+            <OdooField label="Lista de precios" value={form.lista_id} type="select"
               options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []}
               onChange={v => set('lista_id', v || null)}
               format={() => findName(listas, form.lista_id ?? undefined)}
