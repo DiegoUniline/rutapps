@@ -1,6 +1,7 @@
-import { useState, useCallback, createContext, useContext, ReactNode } from 'react';
+import { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
 import { AlertTriangle, Wifi, ShieldAlert, Server, Database, Lock, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { translateError, getRawMessage } from '@/lib/errorTranslator';
+import { subscribeErrorModal } from '@/lib/globalError';
 
 interface ErrorState {
   title: string;
