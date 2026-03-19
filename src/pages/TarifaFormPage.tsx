@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -405,6 +405,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
 export default function TarifaFormPage() {
   const { id, productoId } = useParams();
+  const [searchParams] = useSearchParams();
+  const listaDisplayName = searchParams.get('lista');
   const navigate = useNavigate();
   const backUrl = productoId ? `/productos/${productoId}` : '/listas-precio';
   const backLabel = productoId ? 'Producto' : 'Listas de Precios';
@@ -703,7 +705,7 @@ export default function TarifaFormPage() {
             className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate"
             onClick={() => setEditingName(true)}
           >
-            {form.nombre || 'Lista de Precios'}
+            {listaDisplayName || form.nombre || 'Lista de Precios'}
           </h1>
         )}
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
