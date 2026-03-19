@@ -54,7 +54,6 @@ export default function CatalogoPublicoPage() {
       .catch(() => setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.'))
       .finally(() => setLoading(false));
   }, [token]);
-  }, [token]);
 
   const filtered = useMemo(() => {
     if (!data) return [];
