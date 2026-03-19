@@ -85,9 +85,10 @@ function ChipSelect({ items, selectedIds, onChange, placeholder }: {
 
 /* ── Listas de Precios Tab ─────────────────────────── */
 function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolean }) {
-  const { data: listas, refetch } = useListasPrecioByTarifa(isNew ? undefined : tarifaId);
+  const { data: listas } = useListasPrecioByTarifa(isNew ? undefined : tarifaId);
   const saveLista = useSaveListaPrecio();
   const deleteLista = useDeleteListaPrecio();
+  const qcTab = useQueryClient();
   const [newName, setNewName] = useState('');
   const [adding, setAdding] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
