@@ -216,9 +216,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
       if (!prods || !lineas) return [];
 
-      const filteredLineas = listaFilter
-        ? lineas.filter((l: any) => l.lista_precio_id === listaFilter)
-        : lineas;
+      const filteredLineas = lineas;
 
       const applyRedondeo = (precio: number, redondeo: string) => {
         if (!redondeo || redondeo === 'ninguno') return precio;
