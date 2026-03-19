@@ -303,21 +303,14 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                 </div>
               </div>
               <div className="odoo-field-row">
-                <span className="odoo-field-label">Tarifa</span>
-                <SearchableSelect
-                  options={(tarifasDisp ?? []).map((t: any) => ({ value: t.id, label: t.nombre }))}
-                  value={newRule.tarifa_id}
-                  onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
-                  placeholder="Buscar tarifa..."
-                  onCreateNew={handleCreateTarifa}
-                />
-              </div>
-              <div className="odoo-field-row">
                 <span className="odoo-field-label">Lista de precios</span>
                 <SearchableSelect
-                  options={listasForTarifa.map(l => ({ value: l.id, label: `${l.es_principal ? '★ ' : ''}${l.nombre}` }))}
+                  options={(allListas ?? []).map(l => ({ value: l.id, label: `${l.es_principal ? '★ ' : ''}${l.nombre}` }))}
                   value={newRule.lista_precio_id}
-                  onChange={val => setNewRule(p => ({ ...p, lista_precio_id: val }))}
+                  onChange={val => {
+                    const lista = (allListas ?? []).find(l => l.id === val);
+                    setNewRule(p => ({ ...p, lista_precio_id: val, tarifa_id: lista?.tarifa_id ?? '' }));
+                  }}
                   placeholder="Buscar lista..."
                   onCreateNew={handleCreateLista}
                 />
