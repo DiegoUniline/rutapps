@@ -2220,6 +2220,7 @@ export type Database = {
       }
       notification_views: {
         Row: {
+          dismissed: boolean
           id: string
           last_seen_at: string
           notification_id: string
@@ -2227,6 +2228,7 @@ export type Database = {
           view_count: number
         }
         Insert: {
+          dismissed?: boolean
           id?: string
           last_seen_at?: string
           notification_id: string
@@ -2234,6 +2236,7 @@ export type Database = {
           view_count?: number
         }
         Update: {
+          dismissed?: boolean
           id?: string
           last_seen_at?: string
           notification_id?: string
