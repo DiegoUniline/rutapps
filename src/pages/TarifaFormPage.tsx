@@ -406,8 +406,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 export default function TarifaFormPage() {
   const { id, productoId } = useParams();
   const navigate = useNavigate();
-  const backUrl = productoId ? `/productos/${productoId}` : '/tarifas';
-  const backLabel = productoId ? 'Producto' : 'Tarifas';
+  const backUrl = productoId ? `/productos/${productoId}` : '/listas-precio';
+  const backLabel = productoId ? 'Producto' : 'Listas de Precios';
   const isNew = id === 'nueva';
   const { data: existing, refetch } = useTarifa(isNew ? undefined : id);
   const saveMutation = useSaveTarifa();
@@ -463,7 +463,7 @@ export default function TarifaFormPage() {
     if (!form.nombre) { toast.error('El nombre es obligatorio'); return; }
     try {
       const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
-      toast.success('Tarifa guardada');
+      toast.success('Lista guardada');
       setOriginalForm({ ...form });
       if (isNew) {
         const newPath = productoId ? `/productos/${productoId}/tarifas/${result.id}` : `/tarifas/${result.id}`;
@@ -694,7 +694,7 @@ export default function TarifaFormPage() {
             onChange={e => set('nombre', e.target.value)}
             onBlur={() => { if (!isNew) setEditingName(false); }}
             onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-            placeholder="Nombre de la tarifa"
+            placeholder="Nombre de la lista de precios"
             autoFocus
             className="text-[22px] font-bold text-foreground leading-tight bg-transparent border-b border-primary/40 focus:border-primary outline-none flex-1 min-w-[180px] max-w-md placeholder:text-muted-foreground/50"
           />
@@ -703,7 +703,7 @@ export default function TarifaFormPage() {
             className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate"
             onClick={() => setEditingName(true)}
           >
-            {form.nombre || 'Tarifa'}
+            {form.nombre || 'Lista de Precios'}
           </h1>
         )}
         <div className="flex items-center gap-1.5 ml-auto shrink-0">

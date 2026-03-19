@@ -763,20 +763,10 @@ export default function VentaFormPage() {
                   )}
                 </div>
               </div>
-              {/* 2-col row: Folio + Tarifa */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label-odoo">Folio</label>
-                  <div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div>
-                </div>
-                <div>
-                  <label className="label-odoo">Tarifa</label>
-                  {readOnly ? (
-                    <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
-                  ) : (
-                    <SearchableSelect options={tarifaOptions} value={form.tarifa_id ?? ''} onChange={val => set('tarifa_id', val || null)} placeholder="Tarifa..." />
-                  )}
-                </div>
+              {/* Folio */}
+              <div>
+                <label className="label-odoo">Folio</label>
+                <div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div>
               </div>
               {/* Almacén — full width */}
               <div>
@@ -883,11 +873,11 @@ export default function VentaFormPage() {
               {/* Col 3 */}
               <div className="space-y-3">
                 <div>
-                  <label className="label-odoo">Tarifa</label>
+                  <label className="label-odoo">Almacén</label>
                   {readOnly ? (
-                    <div className="text-[13px] py-1.5 px-1 text-foreground">{tarifasList?.find(t => t.id === form.tarifa_id)?.nombre || 'Sin tarifa'}</div>
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{almacenesList?.find(a => a.id === form.almacen_id)?.nombre || 'Sin almacén'}</div>
                   ) : (
-                    <SearchableSelect options={tarifaOptions} value={form.tarifa_id ?? ''} onChange={val => set('tarifa_id', val || null)} placeholder="Buscar tarifa..." />
+                    <SearchableSelect options={almacenOptions} value={form.almacen_id ?? ''} onChange={val => set('almacen_id', val || null)} placeholder="Buscar almacén..." />
                   )}
                 </div>
                 <div>

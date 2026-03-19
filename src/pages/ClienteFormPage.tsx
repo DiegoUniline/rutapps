@@ -9,7 +9,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
-import { useTarifasForSelect, useProductosForSelect, useListasPrecioForSelect } from '@/hooks/useData';
+import { useTarifasForSelect, useProductosForSelect, useAllListasPrecios } from '@/hooks/useData';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -222,7 +222,7 @@ export default function ClienteFormPage() {
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
   const [parsingCsf, setParsingCsf] = useState(false);
-  const { data: listasPrecios } = useListasPrecioForSelect(form.tarifa_id ?? undefined);
+  const { data: allListasPrecios } = useAllListasPrecios();
 
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
@@ -230,21 +230,16 @@ export default function ClienteFormPage() {
   const [showPedidoSearch, setShowPedidoSearch] = useState(false);
   const [pedidoDirty, setPedidoDirty] = useState(false);
 
-  // Auto-assign default tarifa & lista for new clients
+  // Auto-assign default lista de precios for new clients
   useEffect(() => {
-    if (isNew && tarifas && tarifas.length > 0 && !form.tarifa_id) {
-      const general = tarifas.find(t => t.tipo === 'general') ?? tarifas[0];
-      if (general) set('tarifa_id', general.id);
+    if (isNew && allListasPrecios && allListasPrecios.length > 0 && !(form as any).lista_precio_id) {
+      const principal = allListasPrecios.find(l => l.es_principal) ?? allListasPrecios[0];
+      if (principal) {
+        set('lista_precio_id' as any, principal.id);
+        set('tarifa_id', principal.tarifa_id);
+      }
     }
-  }, [isNew, tarifas]);
-
-  // Auto-assign principal lista when tarifa changes and listasPrecios loads
-  useEffect(() => {
-    if (isNew && listasPrecios && listasPrecios.length > 0 && !(form as any).lista_precio_id) {
-      const principal = listasPrecios.find(l => l.es_principal) ?? listasPrecios[0];
-      if (principal) set('lista_precio_id' as any, principal.id);
-    }
-  }, [isNew, listasPrecios]);
+  }, [isNew, allListasPrecios]);
 
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
@@ -267,7 +262,6 @@ export default function ClienteFormPage() {
 
   const handleSave = async () => {
     if (!form.nombre) { toast.error('Nombre es obligatorio'); return; }
-    if (!form.tarifa_id) { toast.error('Tarifa es obligatoria'); return; }
     if (!(form as any).lista_precio_id) { toast.error('Lista de precios es obligatoria'); return; }
     if (!form.frecuencia) { toast.error('Frecuencia de visita es obligatoria'); return; }
     if (!form.dia_visita || form.dia_visita.length === 0) { toast.error('Selecciona al menos un día de visita'); return; }
@@ -619,12 +613,14 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Tarifa *" value={form.tarifa_id} onChange={v => { set('tarifa_id', v || null); set('lista_precio_id' as any, null); }} type="select"
-                    options={tarifas?.map(t => ({ value: t.id, label: t.nombre })) ?? []} />
-                  <OdooField label="Lista de precios *" value={(form as any).lista_precio_id} onChange={v => set('lista_precio_id' as any, v || null)} type="select"
-                    options={listasPrecios?.map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` })) ?? []}
-                    placeholder={form.tarifa_id ? 'Seleccionar lista...' : 'Selecciona una tarifa primero'}
-                    readOnly={!form.tarifa_id} />
+                  <OdooField label="Lista de precios *" value={(form as any).lista_precio_id} onChange={v => {
+                    set('lista_precio_id' as any, v || null);
+                    // Auto-resolve tarifa_id from lista
+                    const lista = allListasPrecios?.find(l => l.id === v);
+                    set('tarifa_id', lista?.tarifa_id || null);
+                  }} type="select"
+                    options={allListasPrecios?.filter(l => l.activa).map(l => ({ value: l.id, label: `${l.nombre}${l.es_principal ? ' ★' : ''}` })) ?? []}
+                    placeholder="Seleccionar lista de precios..." />
                 </OdooSection>
                 <OdooSection title="Visitas">
                   <OdooField label="Frecuencia *" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
