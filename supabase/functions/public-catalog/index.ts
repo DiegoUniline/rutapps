@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -24,17 +24,17 @@ Deno.serve(async (req) => {
       .select("id, nombre, empresa_id, tarifa_id, share_activo")
       .eq("share_token", token)
       .eq("activa", true)
-      .single();
+      .maybeSingle();
 
     if (listaErr || !lista) return new Response(JSON.stringify({ error: "Catálogo no encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    if (!lista.share_activo) return new Response(JSON.stringify({ error: "Catálogo desactivado" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    if (!lista.share_activo) return new Response(JSON.stringify({ error: "Este catálogo no está activo actualmente" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     // 2. Get empresa info
     const { data: empresa } = await supabase
       .from("empresas")
       .select("nombre, logo_url, telefono, moneda")
       .eq("id", lista.empresa_id)
-      .single();
+      .maybeSingle();
 
     // 3. Get price lines
     const { data: lineas } = await supabase
