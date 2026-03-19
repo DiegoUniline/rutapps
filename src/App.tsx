@@ -109,10 +109,15 @@ const RutaSincronizarPage = lazy(() => import("@/pages/ruta/RutaSincronizarPage"
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30s default for daily data
-      gcTime: 10 * 60 * 1000, // 10 min garbage collection
+      staleTime: 30 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
+    },
+    mutations: {
+      onError: (error) => {
+        showAppError(error);
+      },
     },
   },
 });
