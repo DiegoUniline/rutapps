@@ -1,0 +1,1 @@
+ALTER TABLE public.notification_views ADD COLUMN dismissed boolean NOT NULL DEFAULT false;

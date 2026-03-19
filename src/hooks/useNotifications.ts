@@ -26,6 +26,7 @@ export interface NotificationView {
   user_id: string;
   view_count: number;
   last_seen_at: string;
+  dismissed: boolean;
 }
 
 /** Fetch all notifications for admin CRUD */
@@ -93,7 +94,7 @@ export function useIncrementView() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (notificationId: string) => {
+    mutationFn: async ({ notificationId, dismiss = false }: { notificationId: string; dismiss?: boolean }) => {
       // Upsert
       const { data: existing } = await supabase
         .from('notification_views')
@@ -105,12 +106,21 @@ export function useIncrementView() {
       if (existing) {
         await supabase
           .from('notification_views')
-          .update({ view_count: existing.view_count + 1, last_seen_at: new Date().toISOString() } as any)
+          .update({
+            view_count: existing.view_count + (dismiss ? 0 : 1),
+            last_seen_at: new Date().toISOString(),
+            ...(dismiss ? { dismissed: true } : {}),
+          } as any)
           .eq('id', existing.id);
       } else {
         await supabase
           .from('notification_views')
-          .insert({ notification_id: notificationId, user_id: user!.id, view_count: 1 } as any);
+          .insert({
+            notification_id: notificationId,
+            user_id: user!.id,
+            view_count: dismiss ? 0 : 1,
+            ...(dismiss ? { dismissed: true } : {}),
+          } as any);
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notification-views'] }),

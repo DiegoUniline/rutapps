@@ -21,17 +21,22 @@ export default function NotificationModal({ notifications, views }: Props) {
     if (current) return;
     for (const m of modals) {
       const view = views.find(v => v.notification_id === m.id);
+      if (view?.dismissed) continue;
       const count = view?.view_count ?? 0;
       if (m.max_views > 0 && count >= m.max_views) continue;
       setCurrent(m);
-      incrementView.mutate(m.id);
+      incrementView.mutate({ notificationId: m.id, dismiss: false });
       break;
     }
   }, [modals.length, views.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = useCallback(() => {
+    if (neverShow && current) {
+      incrementView.mutate({ notificationId: current.id, dismiss: true });
+    }
     setCurrent(null);
-  }, []);
+    setNeverShow(false);
+  }, [neverShow, current, incrementView]);
 
   if (!current) return null;
 
