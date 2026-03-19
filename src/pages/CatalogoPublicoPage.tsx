@@ -6,7 +6,6 @@ import { Search, ShoppingCart, X, Send, Filter, Package } from 'lucide-react';
 interface Producto {
   id: string;
   nombre: string;
-  descripcion: string | null;
   sku: string | null;
   categoria: string | null;
   marca: string | null;
