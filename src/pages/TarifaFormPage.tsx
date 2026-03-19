@@ -417,7 +417,8 @@ export default function TarifaFormPage() {
       const { data: profile } = await (await import('@/lib/supabase')).supabase.from('profiles').select('empresa_id').maybeSingle();
       if (!profile?.empresa_id) { toast.error('Sin empresa'); return undefined; }
       const result = await saveListaPrecio.mutateAsync({ tarifa_id: id, nombre: name, es_principal: (listasPrecios ?? []).length === 0 });
-      refetchListas();
+      qc.invalidateQueries({ queryKey: ['lista_precios', id] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
       toast.success(`Lista "${name}" creada`);
       return result.id;
     } catch (err: any) { toast.error(err.message); return undefined; }
