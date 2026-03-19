@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Pencil, Trash2, Megaphone, Monitor, MessageCircle, Sparkles,
-  ArrowRight, ExternalLink, Check, Palette,
+  ArrowRight, ExternalLink, Check, Palette, Upload, ImageIcon, X as XIcon, Info,
 } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
