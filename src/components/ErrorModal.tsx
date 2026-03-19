@@ -40,6 +40,9 @@ export function ErrorModalProvider({ children }: { children: ReactNode }) {
     setShowRaw(false);
   }, []);
 
+  // Subscribe global singleton so showAppError() works from anywhere
+  useEffect(() => subscribeErrorModal(showError), [showError]);
+
   const close = () => setState(null);
 
   return (
