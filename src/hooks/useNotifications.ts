@@ -26,6 +26,7 @@ export interface NotificationView {
   user_id: string;
   view_count: number;
   last_seen_at: string;
+  dismissed: boolean;
 }
 
 /** Fetch all notifications for admin CRUD */
