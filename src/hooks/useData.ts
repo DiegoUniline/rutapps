@@ -281,6 +281,8 @@ export interface ListaPrecio {
   es_principal: boolean;
   activa: boolean;
   created_at: string;
+  share_token?: string;
+  share_activo?: boolean;
 }
 
 export interface ListaPrecioLinea {
