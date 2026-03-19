@@ -185,8 +185,38 @@ export default function ListasPrecioListPage() {
                           ? <span className="status-pill status-activo">Activa</span>
                           : <span className="status-pill status-borrador">Inactiva</span>
                         }
-                      </td>
-                      <td className="py-1.5 px-3 text-center">
+                       </td>
+                       <td className="py-1.5 px-3 text-center">
+                         <div className="flex items-center justify-center gap-1.5">
+                           <button
+                             title={l.share_activo ? 'Desactivar catálogo público' : 'Activar catálogo público'}
+                             onClick={async () => {
+                               const next = !l.share_activo;
+                               await supabase.from('lista_precios').update({ share_activo: next } as any).eq('id', l.id);
+                               toast.success(next ? 'Catálogo activado' : 'Catálogo desactivado');
+                               // refetch
+                               window.dispatchEvent(new Event('focus'));
+                             }}
+                             className={cn('p-1 rounded transition-colors', l.share_activo ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
+                           >
+                             <Link2 className="h-3.5 w-3.5" />
+                           </button>
+                           {l.share_activo && l.share_token && (
+                             <button
+                               title="Copiar link del catálogo"
+                               onClick={() => {
+                                 const url = `${window.location.origin}/catalogo/${l.share_token}`;
+                                 navigator.clipboard.writeText(url);
+                                 toast.success('Link copiado al portapapeles');
+                               }}
+                               className="text-muted-foreground hover:text-foreground p-1"
+                             >
+                               <Copy className="h-3.5 w-3.5" />
+                             </button>
+                           )}
+                         </div>
+                       </td>
+                       <td className="py-1.5 px-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {isEditing ? (
                             <>
