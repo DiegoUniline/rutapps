@@ -402,7 +402,7 @@ export default function TarifaFormPage() {
   const deleteLinea = useDeleteTarifaLinea();
   const { data: productosDisp } = useProductosForSelect();
   const { data: clasificaciones } = useClasificaciones();
-  const { data: listasPrecios, refetch: refetchListas } = useListasPrecioByTarifa(isNew ? undefined : id);
+  const { data: listasPrecios } = useListasPrecioByTarifa(isNew ? undefined : id);
   const saveListaPrecio = useSaveListaPrecio();
   const qc = useQueryClient();
 
