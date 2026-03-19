@@ -1249,14 +1249,13 @@ export default function ProductoFormPage() {
                                     const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo $${(l.precio ?? 0).toFixed(2)}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
                                     return (
                                       <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                                        <td className="py-1.5 px-3 text-xs">{l.tarifas?.nombre ?? '—'}</td>
                                         <td className="py-1.5 px-3 text-xs">
                                           {l.lista_precios ? (
                                             <span className="flex items-center gap-1">
                                               {l.lista_precios.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
                                               {l.lista_precios.nombre}
                                             </span>
-                                          ) : '—'}
+                                          ) : l.tarifas?.nombre ?? '—'}
                                         </td>
                                         <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel}</td>
                                         <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
