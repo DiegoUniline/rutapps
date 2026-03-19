@@ -311,6 +311,7 @@ function desktopRoutes() {
       <Route path="/facturacion-cfdi" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/catalogos" element={<FacturacionCfdiPage />} />
       <Route path="/facturacion-cfdi/:id" element={<CfdiFormPage />} />
+      <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
       <Route path="*" element={<NotFound />} />
     </>
   );
