@@ -30,8 +30,12 @@ export default function NotificationModal({ notifications, views }: Props) {
   }, [modals.length, views.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const close = useCallback(() => {
+    if (neverShow && current) {
+      incrementView.mutate({ notificationId: current.id, dismiss: true });
+    }
     setCurrent(null);
-  }, []);
+    setNeverShow(false);
+  }, [neverShow, current, incrementView]);
 
   if (!current) return null;
 
