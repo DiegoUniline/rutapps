@@ -96,11 +96,16 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 
   if (isNew) return <div className="text-[12px] text-muted-foreground py-4 bg-accent/30 border border-accent/50 rounded px-3">💡 Guarda la tarifa primero para poder agregar listas de precios.</div>;
 
+  const invalidateListas = () => {
+    qcTab.invalidateQueries({ queryKey: ['lista_precios', tarifaId] });
+    qcTab.invalidateQueries({ queryKey: ['lista_precios_all'] });
+  };
+
   const handleAdd = async () => {
     if (!newName.trim() || !tarifaId) return;
     try {
       await saveLista.mutateAsync({ tarifa_id: tarifaId, nombre: newName.trim(), es_principal: (listas ?? []).length === 0 });
-      setNewName(''); setAdding(false); refetch();
+      setNewName(''); setAdding(false); invalidateListas();
       toast.success('Lista creada');
     } catch (err: any) { toast.error(err.message); }
   };
@@ -109,7 +114,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
     if (!tarifaId) return;
     try {
       await saveLista.mutateAsync({ id: listaId, tarifa_id: tarifaId, nombre: (listas ?? []).find(l => l.id === listaId)?.nombre ?? '', es_principal: true });
-      refetch(); toast.success('Lista marcada como principal');
+      invalidateListas(); toast.success('Lista marcada como principal');
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -117,13 +122,13 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
     if (!editName.trim() || !tarifaId) return;
     try {
       await saveLista.mutateAsync({ id: listaId, tarifa_id: tarifaId, nombre: editName.trim() });
-      setEditId(null); refetch();
+      setEditId(null); invalidateListas();
     } catch (err: any) { toast.error(err.message); }
   };
 
   const handleDelete = async (listaId: string) => {
     if (!confirm('¿Eliminar esta lista y todos sus precios?')) return;
-    try { await deleteLista.mutateAsync(listaId); refetch(); toast.success('Lista eliminada'); } catch (err: any) { toast.error(err.message); }
+    try { await deleteLista.mutateAsync(listaId); invalidateListas(); toast.success('Lista eliminada'); } catch (err: any) { toast.error(err.message); }
   };
 
   return (
