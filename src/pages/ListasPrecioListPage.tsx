@@ -196,8 +196,7 @@ export default function ListasPrecioListPage() {
                                const next = !l.share_activo;
                                await supabase.from('lista_precios').update({ share_activo: next } as any).eq('id', l.id);
                                toast.success(next ? 'Catálogo activado' : 'Catálogo desactivado');
-                               // refetch
-                               window.dispatchEvent(new Event('focus'));
+                               qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
                              }}
                              className={cn('p-1 rounded transition-colors', l.share_activo ? 'text-primary' : 'text-muted-foreground hover:text-foreground')}
                            >
