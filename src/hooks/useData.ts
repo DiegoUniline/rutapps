@@ -346,11 +346,11 @@ export function useListasPrecioForSelect(tarifaId?: string) {
 export function useSaveListaPrecio() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (lp: { id?: string; tarifa_id: string; nombre: string; es_principal?: boolean; activa?: boolean }) => {
+    mutationFn: async (lp: { id?: string; tarifa_id?: string; nombre: string; es_principal?: boolean; activa?: boolean }) => {
       const { id, ...rest } = lp;
       if (id) {
         // If setting as principal, unset others first
-        if (rest.es_principal) {
+        if (rest.es_principal && rest.tarifa_id) {
           await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', rest.tarifa_id);
         }
         const { data, error } = await supabase.from('lista_precios').update(rest).eq('id', id).select('id').single();
@@ -358,11 +358,25 @@ export function useSaveListaPrecio() {
         return data;
       } else {
         const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+        const empresaId = profile!.empresa_id;
+        
+        // Auto-create a tarifa if none provided
+        let tarifaId = rest.tarifa_id;
+        if (!tarifaId) {
+          const { data: tarifa, error: tErr } = await supabase.from('tarifas')
+            .insert({ empresa_id: empresaId, nombre: rest.nombre, tipo: 'general', activa: true })
+            .select('id').single();
+          if (tErr) throw tErr;
+          tarifaId = tarifa.id;
+        }
+
         // If setting as principal, unset others first
         if (rest.es_principal) {
-          await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', rest.tarifa_id);
+          await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', tarifaId);
         }
-        const { data, error } = await supabase.from('lista_precios').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
+        const { data, error } = await supabase.from('lista_precios')
+          .insert({ ...rest, tarifa_id: tarifaId, empresa_id: empresaId })
+          .select('id').single();
         if (error) throw error;
         return data;
       }
@@ -370,6 +384,7 @@ export function useSaveListaPrecio() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['lista_precios'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_select'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
     },
   });
 }
