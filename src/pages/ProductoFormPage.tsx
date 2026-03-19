@@ -96,9 +96,17 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   };
 
   const handleCreateLista = async (name: string) => {
-    if (!newRule.tarifa_id) { toast.error('Selecciona primero una tarifa'); return undefined; }
+    // Auto-create a tarifa for the new lista if none selected
+    let tarifaId = newRule.tarifa_id;
+    if (!tarifaId) {
+      try {
+        const res = await saveTarifaMut.mutateAsync({ nombre: name, tipo: 'general', activa: true } as any);
+        qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+        tarifaId = res.id;
+      } catch { return undefined; }
+    }
     try {
-      const res = await saveListaMut.mutateAsync({ tarifa_id: newRule.tarifa_id, nombre: name, es_principal: false });
+      const res = await saveListaMut.mutateAsync({ tarifa_id: tarifaId, nombre: name, es_principal: false });
       qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
       return res.id;
     } catch { return undefined; }
