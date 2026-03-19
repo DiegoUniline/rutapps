@@ -1080,7 +1080,7 @@ export default function ProductoFormPage() {
           tabs={[
             ...((form as any).usa_listas_precio ? [{
               key: 'precios',
-              label: 'Precios por Tarifa',
+              label: 'Reglas de precio',
               content: <PreciosTab
                   form={form}
                   tarifaLineas={tarifaLineas}
