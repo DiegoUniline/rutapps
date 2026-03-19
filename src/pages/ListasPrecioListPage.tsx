@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Star, Pencil, Trash2, Check, X } from 'lucide-react';
+import { Plus, Star, Pencil, Trash2, Check, X, Link2, LinkIcon, Copy } from 'lucide-react';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -8,6 +8,7 @@ import { useAllListasPrecios, useSaveListaPrecio, useDeleteListaPrecio, useTarif
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
