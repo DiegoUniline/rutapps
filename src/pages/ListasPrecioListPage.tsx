@@ -155,7 +155,7 @@ export default function ListasPrecioListPage() {
                             onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') setEditId(null); }}
                           />
                         ) : (
-                          <span className="font-medium flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/tarifas/${l.tarifa_id}`)}>
+                          <span className="font-medium flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/tarifas/${l.tarifa_id}?lista=${encodeURIComponent(l.nombre)}`)}>
                             {l.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
                             {l.nombre}
                           </span>
