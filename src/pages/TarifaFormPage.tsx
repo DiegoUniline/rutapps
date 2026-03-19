@@ -760,7 +760,7 @@ export default function TarifaFormPage() {
                          <tr className="border-b border-table-border">
                           <th className="th-odoo text-left">Aplica a</th>
                           <th className="th-odoo text-left">Productos / Categorías</th>
-                          <th className="th-odoo text-left">Lista de precios</th>
+                          
                           <th className="th-odoo text-left">Cálculo</th>
                           <th className="th-odoo text-left">Base</th>
                           <th className="th-odoo text-right">Valor</th>
@@ -815,33 +815,6 @@ export default function TarifaFormPage() {
                                   {l.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">Todos</span>}
                                 </div>
                               )}
-                            </td>
-                            {/* Lista de precios */}
-                            <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('lista_precio')}>
-                              {ec('lista_precio') ? (
-                                <SearchableSelect
-                                  options={listaOptions}
-                                  value={editLinea.lista_precio_id}
-                                  onChange={val => {
-                                    setEditLinea(p => ({ ...p, lista_precio_id: val }));
-                                    // Save directly with the new value to avoid stale state
-                                    const payload: any = {
-                                      id: editingLineaId,
-                                      tarifa_id: id,
-                                      lista_precio_id: val || null,
-                                    };
-                                    saveLinea.mutateAsync(payload).then(() => {
-                                      setEditingLineaId(null);
-                                      setEditingCol(null);
-                                      refetch();
-                                    }).catch((err: any) => toast.error(err.message));
-                                  }}
-                                  onClose={() => { setEditingLineaId(null); setEditingCol(null); }}
-                                  placeholder="Seleccionar lista..."
-                                  autoOpen
-                                  onCreateNew={handleCreateLista}
-                                />
-                              ) : <span className="text-xs">{listaMap.get((l as any).lista_precio_id) || <span className="text-muted-foreground">—</span>}</span>}
                             </td>
                             {/* Cálculo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('tipo_calculo')}>
@@ -938,15 +911,6 @@ export default function TarifaFormPage() {
                                     onChange={ids => setNewLinea(p => ({ ...p, clasificacion_ids: ids }))} placeholder="+ Categoría..." />
                                 )}
                                 {newLinea.aplica_a === 'todos' && <span className="text-xs text-muted-foreground">—</span>}
-                              </td>
-                              <td className="py-2 px-3">
-                                <SearchableSelect
-                                  options={listaOptions}
-                                  value={newLinea.lista_precio_id}
-                                  onChange={val => setNewLinea(p => ({ ...p, lista_precio_id: val }))}
-                                  placeholder="Seleccionar lista..."
-                                  onCreateNew={handleCreateLista}
-                                />
                               </td>
                               <td className="py-2 px-3">
                                 <select className="input-odoo text-xs w-full" value={newLinea.tipo_calculo}
