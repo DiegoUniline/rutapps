@@ -323,16 +323,6 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select
-          className="input-odoo text-[12px] py-1.5 w-48"
-          value={listaFilter}
-          onChange={e => setListaFilter(e.target.value)}
-        >
-          <option value="">Todas las listas</option>
-          {(listas ?? []).map(l => (
-            <option key={l.id} value={l.id}>{l.es_principal ? '★ ' : ''}{l.nombre}</option>
-          ))}
-        </select>
         <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
         <div className="ml-auto">
           <ExportButton onExcel={handleExportExcel} onPDF={handleExportPDF} />
