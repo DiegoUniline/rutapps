@@ -201,7 +201,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
 
   const { data: productos } = useQuery({
-    queryKey: ['precios_preview_tarifa', tarifaId, listaFilter],
+    queryKey: ['precios_preview_tarifa', tarifaId],
     enabled: !!tarifaId,
     staleTime: 30_000,
     queryFn: async () => {
