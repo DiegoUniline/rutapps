@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
   Plus, Pencil, Trash2, Megaphone, Monitor, MessageCircle, Sparkles,
-  ArrowRight, ExternalLink, Check, Palette,
+  ArrowRight, ExternalLink, Check, Palette, Upload, ImageIcon, X as XIcon, Info,
 } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -210,9 +210,123 @@ function BubblePreview({ form }: { form: Partial<AppNotification> }) {
   );
 }
 
-/* ═══════════════════════════════════════
-   MAIN COMPONENT
-   ═══════════════════════════════════════ */
+/* ─── Image size guide ─── */
+const IMAGE_SPECS: Record<string, { w: number; h: number; label: string; tip: string }> = {
+  modal: { w: 600, h: 300, label: '600 × 300 px', tip: 'Formato horizontal 2:1 — se muestra completa arriba del texto' },
+  bubble: { w: 56, h: 56, label: '56 × 56 px', tip: 'Cuadrada — aparece como ícono junto al título' },
+};
+
+/* ─── Image Upload Component ─── */
+function ImageUploadField({ type, imageUrl, onUrlChange }: { type: string; imageUrl: string; onUrlChange: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const spec = IMAGE_SPECS[type] ?? IMAGE_SPECS.modal;
+
+  const handleUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error('Máximo 5 MB'); return; }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('notification-images').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('notification-images').getPublicUrl(path);
+      onUrlChange(urlData.publicUrl);
+      toast.success('Imagen subida');
+    } catch (e: any) {
+      toast.error(e.message ?? 'Error al subir imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <label className="text-xs font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
+        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground" />
+        Imagen (opcional)
+      </label>
+
+      {/* Dimension guide */}
+      <div className="flex items-start gap-2 mb-2.5 bg-accent/50 rounded-lg px-3 py-2">
+        <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+        <div>
+          <p className="text-[11px] font-semibold text-foreground">Medida recomendada: {spec.label}</p>
+          <p className="text-[10px] text-muted-foreground">{spec.tip}</p>
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={e => {
+          const file = e.target.files?.[0];
+          if (file) handleUpload(file);
+          e.target.value = '';
+        }}
+      />
+
+      {imageUrl ? (
+        <div className="relative group">
+          <img
+            src={imageUrl}
+            alt="preview"
+            className={cn(
+              'rounded-xl border border-border object-cover',
+              type === 'bubble' ? 'w-14 h-14' : 'w-full max-h-40',
+            )}
+          />
+          <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="bg-card/90 backdrop-blur-sm border border-border rounded-lg p-1.5 text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+              title="Cambiar imagen"
+            >
+              <Upload className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onUrlChange('')}
+              className="bg-card/90 backdrop-blur-sm border border-border rounded-lg p-1.5 text-muted-foreground hover:text-destructive transition-colors shadow-sm"
+              title="Quitar imagen"
+            >
+              <XIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          className="w-full border-2 border-dashed border-border hover:border-primary/40 rounded-xl py-6 flex flex-col items-center gap-2 transition-colors group"
+        >
+          {uploading ? (
+            <>
+              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs text-muted-foreground">Subiendo...</span>
+            </>
+          ) : (
+            <>
+              <Upload className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                Haz clic para subir imagen
+              </span>
+              <span className="text-[10px] text-muted-foreground">JPG, PNG — máx. 5 MB</span>
+            </>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ---- MAIN COMPONENT ---- */
 export default function AdminAnunciosTab() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -510,13 +624,13 @@ export default function AdminAnunciosTab() {
                 </div>
               )}
 
-              {/* Bubble/Modal: image */}
+              {/* Image upload for bubble/modal */}
               {(form.type === 'bubble' || form.type === 'modal') && (
-                <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">URL de imagen (opcional)</label>
-                  <input value={form.image_url ?? ''} onChange={e => set('image_url', e.target.value)} className="input-odoo w-full text-sm" placeholder="https://..." />
-                  {form.image_url && <img src={form.image_url} alt="preview" className="mt-2 w-12 h-12 rounded-lg object-cover border border-border" />}
-                </div>
+                <ImageUploadField
+                  type={form.type}
+                  imageUrl={form.image_url ?? ''}
+                  onUrlChange={url => set('image_url', url)}
+                />
               )}
             </div>
 
