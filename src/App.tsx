@@ -13,6 +13,7 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 import { ErrorModalProvider, useErrorModal } from "@/components/ErrorModal";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { showAppError } from "@/lib/globalError";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
