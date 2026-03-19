@@ -6,7 +6,6 @@ import { Search, ShoppingCart, X, Send, Filter, Package } from 'lucide-react';
 interface Producto {
   id: string;
   nombre: string;
-  descripcion: string | null;
   sku: string | null;
   categoria: string | null;
   marca: string | null;
@@ -231,8 +230,8 @@ export default function CatalogoPublicoPage() {
                   {/* Info */}
                   <div className="p-3">
                     <h3 className="font-semibold text-slate-800 text-xs sm:text-sm leading-tight line-clamp-2 mb-1">{p.nombre}</h3>
-                    {p.descripcion && (
-                      <p className="text-[11px] text-slate-400 line-clamp-1 mb-2">{p.descripcion}</p>
+                    {p.sku && (
+                      <p className="text-[11px] text-slate-400 line-clamp-1 mb-2">{p.sku}</p>
                     )}
                     <div className="flex items-end justify-between gap-1">
                       <div>
