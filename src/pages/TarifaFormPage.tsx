@@ -197,20 +197,11 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 /* ── Precios Preview Tab ─────────────────────────── */
 function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
   const [search, setSearch] = useState('');
-  const [listaFilter, setListaFilter] = useState<string>('');
+  
 
-  const { data: listas } = useQuery({
-    queryKey: ['lista_precios_tarifa_preview', tarifaId],
-    enabled: !!tarifaId,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const { data } = await supabase.from('lista_precios').select('id, nombre, es_principal').eq('tarifa_id', tarifaId!).order('es_principal', { ascending: false });
-      return data ?? [];
-    },
-  });
 
   const { data: productos } = useQuery({
-    queryKey: ['precios_preview_tarifa', tarifaId, listaFilter],
+    queryKey: ['precios_preview_tarifa', tarifaId],
     enabled: !!tarifaId,
     staleTime: 30_000,
     queryFn: async () => {
@@ -225,9 +216,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
       if (!prods || !lineas) return [];
 
-      const filteredLineas = listaFilter
-        ? lineas.filter((l: any) => l.lista_precio_id === listaFilter)
-        : lineas;
+      const filteredLineas = lineas;
 
       const applyRedondeo = (precio: number, redondeo: string) => {
         if (!redondeo || redondeo === 'ninguno') return precio;
@@ -245,7 +234,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           l.aplica_a === 'todos'
         );
 
-        if (!rule) return { ...p, precio_lista: p.precio_principal, precio_con_imp: p.precio_principal, regla: '—', comision_pct: 0, base_precio: 'sin_impuestos' };
+        if (!rule) return null; // Only show products that match a rule
 
         let precio = 0;
         if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
@@ -271,7 +260,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           comision_pct: rule.comision_pct ?? 0,
           base_precio: basePrecio,
         };
-      });
+      }).filter(Boolean);
     },
   });
 
@@ -281,7 +270,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
   );
 
-  const listaLabel = listas?.find(l => l.id === listaFilter)?.nombre ?? 'Todas';
+  
 
   const exportColumns = [
     { key: 'codigo', header: 'Código', width: 12, format: 'text' as const },
@@ -304,9 +293,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
   const handleExportExcel = () => {
     exportToExcel({
-      fileName: `Precios_${tarifaNombre}_${listaLabel}`,
+      fileName: `Precios_${tarifaNombre}`,
       title: `Lista de Precios — ${tarifaNombre}`,
-      subtitle: listaFilter ? `Lista: ${listaLabel}` : 'Todas las listas',
+      subtitle: '',
       columns: exportColumns,
       data: exportData,
     });
@@ -314,9 +303,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
   const handleExportPDF = () => {
     exportToPDF({
-      fileName: `Precios_${tarifaNombre}_${listaLabel}`,
+      fileName: `Precios_${tarifaNombre}`,
       title: `Lista de Precios — ${tarifaNombre}`,
-      subtitle: listaFilter ? `Lista: ${listaLabel}` : 'Todas las listas',
+      subtitle: '',
       columns: exportColumns,
       data: exportData,
     });
@@ -334,16 +323,6 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select
-          className="input-odoo text-[12px] py-1.5 w-48"
-          value={listaFilter}
-          onChange={e => setListaFilter(e.target.value)}
-        >
-          <option value="">Todas las listas</option>
-          {(listas ?? []).map(l => (
-            <option key={l.id} value={l.id}>{l.es_principal ? '★ ' : ''}{l.nombre}</option>
-          ))}
-        </select>
         <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
         <div className="ml-auto">
           <ExportButton onExcel={handleExportExcel} onPDF={handleExportPDF} />
