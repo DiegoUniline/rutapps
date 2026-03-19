@@ -96,10 +96,11 @@ export default function ListasPrecioListPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left">Nombre</th>
+                 <th className="th-odoo text-left">Nombre</th>
                   <th className="th-odoo text-left">Tarifa</th>
                   <th className="th-odoo text-center">Principal</th>
                   <th className="th-odoo text-center">Estado</th>
+                  <th className="th-odoo text-center">Catálogo</th>
                   <th className="th-odoo text-center w-24">Acciones</th>
                 </tr>
               </thead>
