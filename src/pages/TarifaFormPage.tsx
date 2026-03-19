@@ -260,7 +260,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           comision_pct: rule.comision_pct ?? 0,
           base_precio: basePrecio,
         };
-      });
+      }).filter(Boolean);
     },
   });
 
