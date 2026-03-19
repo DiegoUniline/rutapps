@@ -747,7 +747,7 @@ const defaultProduct: Partial<Producto & { usa_listas_precio?: boolean }> = {
   se_puede_inventariar: true, es_combo: false, min: 0, max: 0,
   manejar_lotes: false, factor_conversion: 1, permitir_descuento: false,
   monto_maximo: 0, cantidad: 0, tiene_comision: false, tipo_comision: 'porcentaje',
-  pct_comision: 0, status: 'borrador', almacenes: [], tiene_iva: false,
+  pct_comision: 0, status: 'activo', almacenes: [], tiene_iva: false,
   tiene_ieps: false, calculo_costo: 'promedio', codigo_sat: '', contador: 0,
   contador_tarifas: 0,
   iva_pct: 16, ieps_pct: 0, ieps_tipo: 'porcentaje', costo_incluye_impuestos: false,
