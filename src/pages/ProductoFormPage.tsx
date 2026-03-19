@@ -96,9 +96,17 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   };
 
   const handleCreateLista = async (name: string) => {
-    if (!newRule.tarifa_id) { toast.error('Selecciona primero una tarifa'); return undefined; }
+    // Auto-create a tarifa for the new lista if none selected
+    let tarifaId = newRule.tarifa_id;
+    if (!tarifaId) {
+      try {
+        const res = await saveTarifaMut.mutateAsync({ nombre: name, tipo: 'general', activa: true } as any);
+        qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+        tarifaId = res.id;
+      } catch { return undefined; }
+    }
     try {
-      const res = await saveListaMut.mutateAsync({ tarifa_id: newRule.tarifa_id, nombre: name, es_principal: false });
+      const res = await saveListaMut.mutateAsync({ tarifa_id: tarifaId, nombre: name, es_principal: false });
       qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
       return res.id;
     } catch { return undefined; }
@@ -123,7 +131,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   const calcLabel = (l: any) => l.tipo_calculo === 'margen_costo' ? `+${l.margen_pct}% s/costo` : l.tipo_calculo === 'descuento_precio' ? `-${l.descuento_pct}% s/precio` : 'Precio fijo';
 
   const handleSaveRule = async () => {
-    if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
+    if (!newRule.lista_precio_id) { toast.error('Selecciona una lista de precios'); return; }
     if (newRule.aplica_a === 'categoria' && newRule.clasificacion_ids.length === 0) { toast.error('Selecciona al menos una categoría'); return; }
 
     // Duplicate validation: check existing rules for same tarifa + lista + aplica_a overlap
@@ -222,7 +230,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowModal(false)}>
         <div className="bg-card border border-border rounded-lg shadow-lg w-full max-w-[600px]" onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-            <h3 className="text-[15px] font-semibold">Crear regla de tarifa</h3>
+            <h3 className="text-[15px] font-semibold">Crear regla de precio</h3>
             <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
@@ -303,21 +311,14 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
                 </div>
               </div>
               <div className="odoo-field-row">
-                <span className="odoo-field-label">Tarifa</span>
-                <SearchableSelect
-                  options={(tarifasDisp ?? []).map((t: any) => ({ value: t.id, label: t.nombre }))}
-                  value={newRule.tarifa_id}
-                  onChange={val => setNewRule(p => ({ ...p, tarifa_id: val }))}
-                  placeholder="Buscar tarifa..."
-                  onCreateNew={handleCreateTarifa}
-                />
-              </div>
-              <div className="odoo-field-row">
                 <span className="odoo-field-label">Lista de precios</span>
                 <SearchableSelect
-                  options={listasForTarifa.map(l => ({ value: l.id, label: `${l.es_principal ? '★ ' : ''}${l.nombre}` }))}
+                  options={(allListas ?? []).map(l => ({ value: l.id, label: `${l.es_principal ? '★ ' : ''}${l.nombre}` }))}
                   value={newRule.lista_precio_id}
-                  onChange={val => setNewRule(p => ({ ...p, lista_precio_id: val }))}
+                  onChange={val => {
+                    const lista = (allListas ?? []).find(l => l.id === val);
+                    setNewRule(p => ({ ...p, lista_precio_id: val, tarifa_id: lista?.tarifa_id ?? '' }));
+                  }}
                   placeholder="Buscar lista..."
                   onCreateNew={handleCreateLista}
                 />
@@ -1069,7 +1070,7 @@ export default function ProductoFormPage() {
               onChange={v => set('calculo_costo', v)}
               format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''}
             />
-            <OdooField label="Tarifa" value={form.lista_id} type="select"
+            <OdooField label="Lista de precios" value={form.lista_id} type="select"
               options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []}
               onChange={v => set('lista_id', v || null)}
               format={() => findName(listas, form.lista_id ?? undefined)}
@@ -1087,7 +1088,7 @@ export default function ProductoFormPage() {
           tabs={[
             ...((form as any).usa_listas_precio ? [{
               key: 'precios',
-              label: 'Precios por Tarifa',
+              label: 'Reglas de precio',
               content: <PreciosTab
                   form={form}
                   tarifaLineas={tarifaLineas}
@@ -1228,7 +1229,6 @@ export default function ProductoFormPage() {
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b border-table-border">
-                                    <th className="th-odoo text-left">Tarifa</th>
                                     <th className="th-odoo text-left">Lista</th>
                                     <th className="th-odoo text-left">Tipo precio</th>
                                     <th className="th-odoo text-right">Precio</th>
@@ -1248,14 +1248,13 @@ export default function ProductoFormPage() {
                                     const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo $${(l.precio ?? 0).toFixed(2)}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
                                     return (
                                       <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                                        <td className="py-1.5 px-3 text-xs">{l.tarifas?.nombre ?? '—'}</td>
                                         <td className="py-1.5 px-3 text-xs">
                                           {l.lista_precios ? (
                                             <span className="flex items-center gap-1">
                                               {l.lista_precios.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}
                                               {l.lista_precios.nombre}
                                             </span>
-                                          ) : '—'}
+                                          ) : l.tarifas?.nombre ?? '—'}
                                         </td>
                                         <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel}</td>
                                         <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
