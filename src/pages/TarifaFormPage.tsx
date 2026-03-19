@@ -303,9 +303,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
   const handleExportPDF = () => {
     exportToPDF({
-      fileName: `Precios_${tarifaNombre}_${listaLabel}`,
+      fileName: `Precios_${tarifaNombre}`,
       title: `Lista de Precios — ${tarifaNombre}`,
-      subtitle: listaFilter ? `Lista: ${listaLabel}` : 'Todas las listas',
+      subtitle: '',
       columns: exportColumns,
       data: exportData,
     });
