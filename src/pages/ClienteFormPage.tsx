@@ -230,21 +230,16 @@ export default function ClienteFormPage() {
   const [showPedidoSearch, setShowPedidoSearch] = useState(false);
   const [pedidoDirty, setPedidoDirty] = useState(false);
 
-  // Auto-assign default tarifa & lista for new clients
+  // Auto-assign default lista de precios for new clients
   useEffect(() => {
-    if (isNew && tarifas && tarifas.length > 0 && !form.tarifa_id) {
-      const general = tarifas.find(t => t.tipo === 'general') ?? tarifas[0];
-      if (general) set('tarifa_id', general.id);
+    if (isNew && allListasPrecios && allListasPrecios.length > 0 && !(form as any).lista_precio_id) {
+      const principal = allListasPrecios.find(l => l.es_principal) ?? allListasPrecios[0];
+      if (principal) {
+        set('lista_precio_id' as any, principal.id);
+        set('tarifa_id', principal.tarifa_id);
+      }
     }
-  }, [isNew, tarifas]);
-
-  // Auto-assign principal lista when tarifa changes and listasPrecios loads
-  useEffect(() => {
-    if (isNew && listasPrecios && listasPrecios.length > 0 && !(form as any).lista_precio_id) {
-      const principal = listasPrecios.find(l => l.es_principal) ?? listasPrecios[0];
-      if (principal) set('lista_precio_id' as any, principal.id);
-    }
-  }, [isNew, listasPrecios]);
+  }, [isNew, allListasPrecios]);
 
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
