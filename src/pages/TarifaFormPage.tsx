@@ -234,7 +234,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           l.aplica_a === 'todos'
         );
 
-        if (!rule) return { ...p, precio_lista: p.precio_principal, precio_con_imp: p.precio_principal, regla: '—', comision_pct: 0, base_precio: 'sin_impuestos' };
+        if (!rule) return null; // Only show products that match a rule
 
         let precio = 0;
         if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
