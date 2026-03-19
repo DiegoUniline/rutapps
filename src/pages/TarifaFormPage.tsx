@@ -405,6 +405,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
 export default function TarifaFormPage() {
   const { id, productoId } = useParams();
+  const [searchParams] = useSearchParams();
+  const listaDisplayName = searchParams.get('lista');
   const navigate = useNavigate();
   const backUrl = productoId ? `/productos/${productoId}` : '/listas-precio';
   const backLabel = productoId ? 'Producto' : 'Listas de Precios';
