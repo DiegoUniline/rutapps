@@ -1028,6 +1028,10 @@ export default function ProductoFormPage() {
               format={() => findUnit(unidades, form.unidad_compra_id ?? undefined)}
               onCreateNew={createUnidad}
             />
+            <OdooField label="Factor conversión" value={form.factor_conversion} type="number"
+              onChange={v => set('factor_conversion', Number(v) || 1)}
+              format={() => String(form.factor_conversion ?? 1)}
+            />
           </div>
           {/* Right column */}
           <div>
