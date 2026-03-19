@@ -197,7 +197,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 /* ── Precios Preview Tab ─────────────────────────── */
 function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
   const [search, setSearch] = useState('');
-  const [listaFilter, setListaFilter] = useState<string>('');
+  
 
   const { data: listas } = useQuery({
     queryKey: ['lista_precios_tarifa_preview', tarifaId],
