@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, ShoppingCart, X, Send, Filter, Package } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+
 
 interface Producto {
   id: string;
