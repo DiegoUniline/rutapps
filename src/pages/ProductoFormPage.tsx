@@ -1221,7 +1221,7 @@ export default function ProductoFormPage() {
                               <table className="w-full text-sm">
                                 <thead>
                                   <tr className="border-b border-table-border">
-                                    <th className="th-odoo text-left">Tarifa</th>
+                                    <th className="th-odoo text-left">Lista</th>
                                     <th className="th-odoo text-left">Lista</th>
                                     <th className="th-odoo text-left">Tipo precio</th>
                                     <th className="th-odoo text-right">Precio</th>
