@@ -463,7 +463,7 @@ export default function TarifaFormPage() {
     if (!form.nombre) { toast.error('El nombre es obligatorio'); return; }
     try {
       const result = await saveMutation.mutateAsync(isNew ? form : { ...form, id });
-      toast.success('Tarifa guardada');
+      toast.success('Lista guardada');
       setOriginalForm({ ...form });
       if (isNew) {
         const newPath = productoId ? `/productos/${productoId}/tarifas/${result.id}` : `/tarifas/${result.id}`;
