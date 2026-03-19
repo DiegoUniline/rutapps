@@ -10,6 +10,8 @@ import { PermissionGuard } from "@/components/PermissionGuard";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import { ErrorModalProvider } from "@/components/ErrorModal";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
