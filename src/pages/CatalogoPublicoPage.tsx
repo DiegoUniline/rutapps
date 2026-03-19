@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { Search, ShoppingCart, X, Send, Filter, Package } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+
 
 interface Producto {
   id: string;
@@ -43,11 +43,7 @@ export default function CatalogoPublicoPage() {
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    supabase.functions.invoke('public-catalog', { body: null, method: 'GET' })
-      .then(() => {}) // won't work with GET body
-      .catch(() => {});
-    
-    // Use fetch directly for GET with query params
+
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-catalog?token=${token}`;
     fetch(url, { headers: { 'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } })
       .then(r => r.json())
@@ -55,7 +51,7 @@ export default function CatalogoPublicoPage() {
         if (d.error) { setError(d.error); }
         else { setData(d); }
       })
-      .catch(() => setError('Error al cargar el catálogo'))
+      .catch(() => setError('No se pudo conectar con el servidor. Verifica tu conexión a internet.'))
       .finally(() => setLoading(false));
   }, [token]);
 

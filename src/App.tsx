@@ -10,6 +10,10 @@ import { PermissionGuard } from "@/components/PermissionGuard";
 import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
+import { ErrorModalProvider } from "@/components/ErrorModal";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { showAppError } from "@/lib/globalError";
 
 // Lazy-loaded pages
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
@@ -106,10 +110,15 @@ const RutaSincronizarPage = lazy(() => import("@/pages/ruta/RutaSincronizarPage"
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30 * 1000, // 30s default for daily data
-      gcTime: 10 * 60 * 1000, // 10 min garbage collection
+      staleTime: 30 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
       retry: 1,
+    },
+    mutations: {
+      onError: (error) => {
+        showAppError(error);
+      },
     },
   },
 });
@@ -125,6 +134,9 @@ function PageLoader() {
 function AppRoutes() {
   const { user, loading } = useAuth();
   const subscription = useSubscription();
+  
+  // Global unhandled rejection → error modal
+  useGlobalErrorHandler();
 
   if (loading || subscription.loading) {
     return (
@@ -318,16 +330,20 @@ function desktopRoutes() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Sonner />
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <GlobalErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ErrorModalProvider>
+        <TooltipProvider>
+          <Sonner />
+          <AuthProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </AuthProvider>
+        </TooltipProvider>
+      </ErrorModalProvider>
+    </QueryClientProvider>
+  </GlobalErrorBoundary>
 );
 
 export default App;
