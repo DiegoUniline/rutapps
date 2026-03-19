@@ -705,7 +705,7 @@ export default function TarifaFormPage() {
             className="text-[22px] font-bold text-foreground leading-tight cursor-pointer hover:text-primary transition-colors truncate"
             onClick={() => setEditingName(true)}
           >
-            {form.nombre || 'Lista de Precios'}
+            {listaDisplayName || form.nombre || 'Lista de Precios'}
           </h1>
         )}
         <div className="flex items-center gap-1.5 ml-auto shrink-0">
