@@ -510,13 +510,13 @@ export default function AdminAnunciosTab() {
                 </div>
               )}
 
-              {/* Bubble/Modal: image */}
+              {/* Image upload for bubble/modal */}
               {(form.type === 'bubble' || form.type === 'modal') && (
-                <div>
-                  <label className="text-xs font-semibold text-foreground mb-1 block">URL de imagen (opcional)</label>
-                  <input value={form.image_url ?? ''} onChange={e => set('image_url', e.target.value)} className="input-odoo w-full text-sm" placeholder="https://..." />
-                  {form.image_url && <img src={form.image_url} alt="preview" className="mt-2 w-12 h-12 rounded-lg object-cover border border-border" />}
-                </div>
+                <ImageUploadField
+                  type={form.type}
+                  imageUrl={form.image_url ?? ''}
+                  onUrlChange={url => set('image_url', url)}
+                />
               )}
             </div>
 
