@@ -199,15 +199,6 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   const [search, setSearch] = useState('');
   
 
-  const { data: listas } = useQuery({
-    queryKey: ['lista_precios_tarifa_preview', tarifaId],
-    enabled: !!tarifaId,
-    staleTime: 30_000,
-    queryFn: async () => {
-      const { data } = await supabase.from('lista_precios').select('id, nombre, es_principal').eq('tarifa_id', tarifaId!).order('es_principal', { ascending: false });
-      return data ?? [];
-    },
-  });
 
   const { data: productos } = useQuery({
     queryKey: ['precios_preview_tarifa', tarifaId, listaFilter],
