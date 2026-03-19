@@ -125,20 +125,21 @@ export default function ListasPrecioListPage() {
                     <td className="py-1.5 px-3 text-center">
                       <input type="checkbox" checked={newPrincipal} onChange={e => setNewPrincipal(e.target.checked)} className="rounded border-input" />
                     </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <span className="status-pill status-activo">Activa</span>
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        <button onClick={handleCreate} className="text-primary hover:text-primary/80 p-1"><Check className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {filtered.length === 0 && !showNew && (
-                  <tr>
-                    <td colSpan={5} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td>
+                     <td className="py-1.5 px-3 text-center">
+                       <span className="status-pill status-activo">Activa</span>
+                     </td>
+                     <td className="py-1.5 px-3 text-center text-muted-foreground text-xs">—</td>
+                     <td className="py-1.5 px-3 text-center">
+                       <div className="flex items-center justify-center gap-1">
+                         <button onClick={handleCreate} className="text-primary hover:text-primary/80 p-1"><Check className="h-3.5 w-3.5" /></button>
+                         <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-destructive p-1"><X className="h-3.5 w-3.5" /></button>
+                       </div>
+                     </td>
+                   </tr>
+                 )}
+                 {filtered.length === 0 && !showNew && (
+                   <tr>
+                     <td colSpan={6} className="text-center py-12 text-muted-foreground text-sm">No hay listas de precios.</td>
                   </tr>
                 )}
                 {filtered.map(l => {
