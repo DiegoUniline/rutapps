@@ -123,7 +123,7 @@ function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, naviga
   const calcLabel = (l: any) => l.tipo_calculo === 'margen_costo' ? `+${l.margen_pct}% s/costo` : l.tipo_calculo === 'descuento_precio' ? `-${l.descuento_pct}% s/precio` : 'Precio fijo';
 
   const handleSaveRule = async () => {
-    if (!newRule.tarifa_id) { toast.error('Selecciona una tarifa'); return; }
+    if (!newRule.lista_precio_id) { toast.error('Selecciona una lista de precios'); return; }
     if (newRule.aplica_a === 'categoria' && newRule.clasificacion_ids.length === 0) { toast.error('Selecciona al menos una categoría'); return; }
 
     // Duplicate validation: check existing rules for same tarifa + lista + aplica_a overlap
