@@ -1230,7 +1230,6 @@ export default function ProductoFormPage() {
                                 <thead>
                                   <tr className="border-b border-table-border">
                                     <th className="th-odoo text-left">Lista</th>
-                                    <th className="th-odoo text-left">Lista</th>
                                     <th className="th-odoo text-left">Tipo precio</th>
                                     <th className="th-odoo text-right">Precio</th>
                                     <th className="th-odoo text-right">% Comisión</th>
