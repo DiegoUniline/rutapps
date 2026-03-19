@@ -262,7 +262,6 @@ export default function ClienteFormPage() {
 
   const handleSave = async () => {
     if (!form.nombre) { toast.error('Nombre es obligatorio'); return; }
-    if (!form.tarifa_id) { toast.error('Tarifa es obligatoria'); return; }
     if (!(form as any).lista_precio_id) { toast.error('Lista de precios es obligatoria'); return; }
     if (!form.frecuencia) { toast.error('Frecuencia de visita es obligatoria'); return; }
     if (!form.dia_visita || form.dia_visita.length === 0) { toast.error('Selecciona al menos un día de visita'); return; }
