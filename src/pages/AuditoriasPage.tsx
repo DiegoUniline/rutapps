@@ -182,6 +182,7 @@ export default function AuditoriasPage() {
         notas: notas || null,
         user_id: user!.id,
         status: 'en_proceso',
+        almacen_id: almacenId,
       } as any).select('id').single();
       if (error) throw error;
 

@@ -195,8 +195,9 @@ export default function AuditoriaConteoPage() {
 
   const handleToggleLineCerrada = async (line: ConteoLine, cerrar: boolean) => {
     try {
-      await supabase.from('auditoria_lineas').update({ cerrada: cerrar } as any).eq('id', line.id);
-      toast.success(cerrar ? `"${line.nombre}" cerrada` : `"${line.nombre}" reabierta`);
+      // Use RPC to recalculate theoretical stock when closing
+      await supabase.rpc('close_audit_line', { p_linea_id: line.id, p_cerrada: cerrar });
+      toast.success(cerrar ? `"${line.nombre}" cerrada — stock teórico recalculado` : `"${line.nombre}" reabierta`);
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
     } catch (err: any) {
       toast.error(err.message ?? 'Error');
@@ -215,13 +216,11 @@ export default function AuditoriaConteoPage() {
   const handleCerrarAuditoria = async () => {
     setClosing(true);
     try {
-      await supabase.from('auditorias').update({
-        status: 'cerrada',
-        cerrada_por: profile?.nombre || user?.email || 'Admin',
-        cerrada_at: new Date().toISOString(),
-      } as any).eq('id', id!);
-      toast.success('Auditoría cerrada — ya no se pueden registrar conteos');
+      const cerradaPor = profile?.nombre || user?.email || 'Admin';
+      await supabase.rpc('close_full_audit', { p_auditoria_id: id!, p_cerrada_por: cerradaPor });
+      toast.success('Auditoría cerrada — stock teórico recalculado en todas las líneas');
       qc.invalidateQueries({ queryKey: ['auditoria', id] });
+      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       qc.invalidateQueries({ queryKey: ['auditorias'] });
     } catch (err: any) {
       toast.error(err.message ?? 'Error al cerrar');
