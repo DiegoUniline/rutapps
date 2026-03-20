@@ -226,7 +226,12 @@ export default function AuditoriaResultadosPage() {
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold truncate">{auditoria?.nombre ?? 'Resultados'}</h1>
             <p className="text-xs text-muted-foreground">
-              Almacén: {almacenNombre} · {fmtDate(auditoria?.fecha)}
+              Almacén: {almacenNombre}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Abierto: {auditoria?.created_at ? new Date(auditoria.created_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+              {' · '}
+              Cerrado: {auditoria?.fecha_aprobacion ? new Date(auditoria.fecha_aprobacion).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Pendiente'}
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={handleGenerarPdf}>
