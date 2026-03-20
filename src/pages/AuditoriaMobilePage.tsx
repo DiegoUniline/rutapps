@@ -34,6 +34,7 @@ interface LineaItem {
   producto_nombre: string;
   producto_codigo: string;
   cantidad_esperada: number;
+  cerrada: boolean;
 }
 
 interface ScanTotal {
