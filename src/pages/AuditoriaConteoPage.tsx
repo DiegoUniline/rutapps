@@ -33,6 +33,7 @@ export default function AuditoriaConteoPage() {
   const [search, setSearch] = useState('');
   const [conteos, setConteos] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [modalLine, setModalLine] = useState<ConteoLine | null>(null);
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
