@@ -66,7 +66,11 @@ function SuscribirEmpresaSection() {
   const [plans, setPlans] = useState<OpenPayPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [sendingWa, setSendingWa] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [search, setSearch] = useState('');
+  // Last payment result
+  const [lastPaymentResult, setLastPaymentResult] = useState<{ reference?: string; url?: string; amount?: number; planName?: string } | null>(null);
 
   // Selected empresa
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaRow | null>(null);
