@@ -174,21 +174,35 @@ serve(async (req) => {
         break;
       }
 
-      // ── Checkout link (store charge) ──
+      // ── Checkout link (store charge for OXXO) ──
       case "create_checkout": {
-        // Uses OpenPay store/redirect checkout
         const checkoutData: any = {
           method: "store",
           amount: params.amount,
           currency: params.currency || "MXN",
           description: params.description || "Pago de suscripción",
           order_id: params.order_id || `ORD-${Date.now()}`,
-          redirect_url: params.redirect_url,
         };
         const cPath = params.customer_id
           ? `customers/${params.customer_id}/charges`
           : "charges";
         result = await openpayRequest("POST", cPath, checkoutData);
+        break;
+      }
+
+      // ── Bank transfer charge (SPEI) ──
+      case "create_bank_charge": {
+        const bankData: any = {
+          method: "bank_account",
+          amount: params.amount,
+          currency: params.currency || "MXN",
+          description: params.description || "Pago por transferencia",
+          order_id: params.order_id || `ORD-${Date.now()}`,
+        };
+        const bPath = params.customer_id
+          ? `customers/${params.customer_id}/charges`
+          : "charges";
+        result = await openpayRequest("POST", bPath, bankData);
         break;
       }
 
