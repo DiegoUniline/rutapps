@@ -159,10 +159,13 @@ function SuscribirEmpresaSection() {
           order_id: `SUB-${selectedEmpresa.id.slice(0, 8)}-${Date.now()}`,
         });
 
+        const selectedPlanObj = plans.find(p => p.id === selectedPlanId);
         if (result?.payment_method?.reference) {
+          setLastPaymentResult({ reference: result.payment_method.reference, amount: selectedPlanObj?.amount, planName: selectedPlanObj?.name });
           toast.success(`Referencia de pago generada: ${result.payment_method.reference}`);
           navigator.clipboard?.writeText(result.payment_method.reference);
         } else if (result?.payment_method?.url) {
+          setLastPaymentResult({ url: result.payment_method.url, amount: selectedPlanObj?.amount, planName: selectedPlanObj?.name });
           window.open(result.payment_method.url, '_blank');
           toast.success('Link de pago abierto');
         } else {
