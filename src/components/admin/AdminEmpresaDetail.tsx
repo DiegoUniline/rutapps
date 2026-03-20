@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
-  Plus, ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2
+  ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -60,7 +61,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [showTimbresSale, setShowTimbresSale] = useState(false);
   const [addingTimbres, setAddingTimbres] = useState(false);
   const [timbresForm, setTimbresForm] = useState({
-    paquetes: 1, // each = 100 timbres
+    paquetes: 1,
     precio_timbre: 1,
     descuento_pct: 0,
     notas: '',
@@ -121,7 +122,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       });
     }
 
-    // Load detailed users via edge function
     try {
       const { data: usersData, error: usersErr } = await supabase.functions.invoke('admin-users', {
         body: { action: 'list-empresa-users', empresa_id: empresaId },
@@ -129,7 +129,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       if (!usersErr && usersData?.users) setUsersDetailed(usersData.users);
     } catch { /* silent */ }
 
-    // Try loading Stripe invoices
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
@@ -174,7 +173,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     setSavingSub(false);
   }
 
-  // Timbres sale calculations
   const timbresCount = timbresForm.paquetes * 100;
   const timbresSubtotal = timbresCount * timbresForm.precio_timbre;
   const timbresDescuento = timbresSubtotal * (timbresForm.descuento_pct / 100);
@@ -192,7 +190,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       notaParts.push(`Total: $${timbresTotal.toFixed(2)} MXN`);
       if (timbresForm.notas) notaParts.push(timbresForm.notas);
 
-      // If generate invoice via admin-billing
       if (timbresForm.generar_factura && subscription?.stripe_customer_id) {
         const session = await supabase.auth.getSession();
         const token = session.data.session?.access_token;
@@ -239,7 +236,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         if (data.error) throw new Error(data.error);
         toast.success(`Factura creada por ${timbresCount} timbres — $${timbresTotal.toFixed(2)} MXN`);
       } else {
-        // Just credit timbres directly
         const { data, error } = await supabase.rpc('add_timbres', {
           p_empresa_id: empresaId,
           p_cantidad: timbresCount,
@@ -326,8 +322,10 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       )
     : null;
 
+  const allUsers = usersDetailed.length > 0 ? usersDetailed : profiles;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
@@ -345,546 +343,592 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </p>
           </div>
         </div>
+        {subscription && (
+          <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="ml-auto text-xs">
+            {STATUS_MAP[subscription.status]?.l || subscription.status}
+          </Badge>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ── Column 1: Empresa Info ── */}
-        <Card className="border border-border/60 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" /> Datos de empresa
-              </CardTitle>
-              {!editingEmpresa ? (
-                <Button size="sm" variant="ghost" onClick={() => setEditingEmpresa(true)}>
-                  <Edit2 className="h-3.5 w-3.5" />
-                </Button>
-              ) : (
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setEditingEmpresa(false)}><X className="h-3.5 w-3.5" /></Button>
-                  <Button size="sm" variant="ghost" disabled={savingEmpresa} onClick={saveEmpresa}>
-                    <Save className="h-3.5 w-3.5 text-primary" />
+      {/* Tabs */}
+      <Tabs defaultValue="usuarios" className="space-y-4">
+        <TabsList className="border border-border/60 p-1 h-auto">
+          <TabsTrigger value="general" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Building2 className="h-4 w-4" /> General
+          </TabsTrigger>
+          <TabsTrigger value="usuarios" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Users className="h-4 w-4" /> Usuarios ({allUsers.length})
+          </TabsTrigger>
+          <TabsTrigger value="suscripcion" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <CreditCard className="h-4 w-4" /> Suscripción
+          </TabsTrigger>
+          <TabsTrigger value="timbres" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Stamp className="h-4 w-4" /> Timbres
+          </TabsTrigger>
+          <TabsTrigger value="facturacion" className="gap-1.5 text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <Receipt className="h-4 w-4" /> Facturación
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ═══ TAB: General ═══ */}
+        <TabsContent value="general">
+          <Card className="border border-border/60 shadow-sm max-w-2xl">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" /> Datos de empresa
+                </h3>
+                {!editingEmpresa ? (
+                  <Button size="sm" variant="outline" onClick={() => setEditingEmpresa(true)}>
+                    <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
                   </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {editingEmpresa ? (
-              <>
-                {[
-                  { key: 'nombre', label: 'Nombre', icon: Building2 },
-                  { key: 'email', label: 'Email', icon: Mail },
-                  { key: 'telefono', label: 'Teléfono', icon: Phone },
-                  { key: 'rfc', label: 'RFC', icon: FileText },
-                  { key: 'razon_social', label: 'Razón Social', icon: FileText },
-                  { key: 'direccion', label: 'Dirección', icon: MapPin },
-                  { key: 'cp', label: 'C.P.', icon: MapPin },
-                  { key: 'ciudad', label: 'Ciudad', icon: MapPin },
-                  { key: 'estado', label: 'Estado', icon: MapPin },
-                ].map(({ key, label }) => (
-                  <div key={key} className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">{label}</Label>
-                    <Input
-                      value={empresaForm[key] || ''}
-                      onChange={e => setEmpresaForm((f: any) => ({ ...f, [key]: e.target.value }))}
-                      className="h-8 text-sm"
-                    />
+                ) : (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditingEmpresa(false)}>
+                      <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                    </Button>
+                    <Button size="sm" disabled={savingEmpresa} onClick={saveEmpresa}>
+                      <Save className="h-3.5 w-3.5 mr-1" /> Guardar
+                    </Button>
                   </div>
-                ))}
-              </>
-            ) : (
-              <div className="space-y-2 text-sm">
-                <InfoRow icon={Mail} label="Email" value={empresa.email} />
-                <InfoRow icon={Phone} label="Teléfono" value={empresa.telefono} />
-                <InfoRow icon={FileText} label="RFC" value={empresa.rfc} />
-                <InfoRow icon={FileText} label="Razón Social" value={empresa.razon_social} />
-                <InfoRow icon={MapPin} label="Dirección" value={empresa.direccion} />
-                <InfoRow icon={MapPin} label="C.P." value={empresa.cp} />
-                <InfoRow icon={MapPin} label="Ciudad" value={[empresa.ciudad, empresa.estado].filter(Boolean).join(', ')} />
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Users */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> Usuarios ({usersDetailed.length || profiles.length})
-                </p>
-                {usersDetailed.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-6 text-[10px] gap-1"
-                    disabled={forcingAll}
-                    onClick={handleForceChangeAll}
-                  >
-                    {forcingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
-                    Forzar cambio todos
-                  </Button>
                 )}
               </div>
-              {(usersDetailed.length > 0 ? usersDetailed : profiles).length === 0 ? (
-                <p className="text-xs text-muted-foreground">Sin usuarios</p>
-              ) : usersDetailed.length > 0 ? (
-                <div className="space-y-2">
-                  {usersDetailed.map((u: any) => (
-                    <div key={u.id} className="rounded-lg border border-border/60 p-2.5 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-foreground">{u.nombre || 'Sin nombre'}</span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0"
-                            title="Resetear contraseña"
-                            onClick={() => { setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email }); setResetPassword(''); setResetForceChange(true); }}
-                          >
-                            <KeyRound className="h-3 w-3 text-muted-foreground" />
-                          </Button>
-                          <Badge variant="outline" className="text-[10px] h-5">{u.rol || 'Sin rol'}</Badge>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                        <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{u.email}</span>
-                        {u.telefono && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{u.telefono}</span>}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        Último acceso: {u.last_sign_in_at ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es }) : 'Nunca'}
-                        {' · '}Registro: {format(new Date(u.created_at), 'dd MMM yyyy', { locale: es })}
-                      </div>
+
+              {editingEmpresa ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {[
+                    { key: 'nombre', label: 'Nombre' },
+                    { key: 'email', label: 'Email' },
+                    { key: 'telefono', label: 'Teléfono' },
+                    { key: 'rfc', label: 'RFC' },
+                    { key: 'razon_social', label: 'Razón Social' },
+                    { key: 'direccion', label: 'Dirección' },
+                    { key: 'cp', label: 'C.P.' },
+                    { key: 'ciudad', label: 'Ciudad' },
+                    { key: 'estado', label: 'Estado' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="space-y-1.5">
+                      <Label className="text-sm text-muted-foreground">{label}</Label>
+                      <Input
+                        value={empresaForm[key] || ''}
+                        onChange={e => setEmpresaForm((f: any) => ({ ...f, [key]: e.target.value }))}
+                      />
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  {profiles.map(p => (
-                    <div key={p.id} className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                  <InfoRow icon={Mail} label="Email" value={empresa.email} />
+                  <InfoRow icon={Phone} label="Teléfono" value={empresa.telefono} />
+                  <InfoRow icon={FileText} label="RFC" value={empresa.rfc} />
+                  <InfoRow icon={FileText} label="Razón Social" value={empresa.razon_social} />
+                  <InfoRow icon={MapPin} label="Dirección" value={empresa.direccion} />
+                  <InfoRow icon={MapPin} label="C.P." value={empresa.cp} />
+                  <InfoRow icon={MapPin} label="Ciudad" value={[empresa.ciudad, empresa.estado].filter(Boolean).join(', ')} />
                 </div>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        {/* ── Column 2: Subscription + Timbres ── */}
-        <div className="space-y-6 lg:col-span-1">
-          {/* Subscription */}
-          <Card className="border border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
+        {/* ═══ TAB: Usuarios ═══ */}
+        <TabsContent value="usuarios">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" /> Usuarios de {empresa.nombre}
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={forcingAll || allUsers.length === 0}
+                onClick={handleForceChangeAll}
+                className="gap-1.5"
+              >
+                {forcingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                Forzar cambio de contraseña a todos
+              </Button>
+            </div>
+
+            {allUsers.length === 0 ? (
+              <Card className="border border-border/60">
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  Sin usuarios registrados
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="border border-border/60 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-semibold">Nombre</TableHead>
+                      <TableHead className="font-semibold">Email</TableHead>
+                      <TableHead className="font-semibold">Teléfono</TableHead>
+                      <TableHead className="font-semibold">Rol</TableHead>
+                      <TableHead className="font-semibold">Último acceso</TableHead>
+                      <TableHead className="font-semibold">Registro</TableHead>
+                      <TableHead className="font-semibold text-center w-28">Contraseña</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allUsers.map((u: any) => (
+                      <TableRow key={u.id} className="hover:bg-muted/20">
+                        <TableCell className="font-medium">{u.nombre || 'Sin nombre'}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.telefono || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{u.rol || 'Sin rol'}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {u.last_sign_in_at
+                            ? format(new Date(u.last_sign_in_at), 'dd MMM yyyy HH:mm', { locale: es })
+                            : 'Nunca'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {u.created_at ? format(new Date(u.created_at), 'dd MMM yyyy', { locale: es }) : '—'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => {
+                              setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email });
+                              setResetPassword('');
+                              setResetForceChange(true);
+                            }}
+                          >
+                            <KeyRound className="h-3.5 w-3.5" /> Resetear
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ═══ TAB: Suscripción ═══ */}
+        <TabsContent value="suscripcion">
+          <Card className="border border-border/60 shadow-sm max-w-2xl">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-primary" /> Suscripción
-                </CardTitle>
+                </h3>
                 {subscription && !editingSub ? (
-                  <Button size="sm" variant="ghost" onClick={() => setEditingSub(true)}>
-                    <Edit2 className="h-3.5 w-3.5" />
+                  <Button size="sm" variant="outline" onClick={() => setEditingSub(true)}>
+                    <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
                   </Button>
                 ) : subscription && editingSub ? (
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => setEditingSub(false)}><X className="h-3.5 w-3.5" /></Button>
-                    <Button size="sm" variant="ghost" disabled={savingSub} onClick={saveSub}>
-                      <Save className="h-3.5 w-3.5 text-primary" />
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => setEditingSub(false)}>
+                      <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                    </Button>
+                    <Button size="sm" disabled={savingSub} onClick={saveSub}>
+                      <Save className="h-3.5 w-3.5 mr-1" /> Guardar
                     </Button>
                   </div>
                 ) : null}
               </div>
-            </CardHeader>
-            <CardContent>
+
               {!subscription ? (
-                <p className="text-sm text-muted-foreground">Sin suscripción activa</p>
+                <p className="text-muted-foreground py-8 text-center">Sin suscripción activa</p>
               ) : editingSub ? (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Plan</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Plan</Label>
                     <Select value={subForm.plan_id} onValueChange={v => setSubForm((f: any) => ({ ...f, plan_id: v }))}>
-                      <SelectTrigger className="h-8"><SelectValue placeholder="Sin plan" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Sin plan" /></SelectTrigger>
                       <SelectContent>
                         {plans.map(p => <SelectItem key={p.id} value={p.id}>{p.nombre} — ${p.precio_por_usuario}/usr</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Status</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Status</Label>
                     <Select value={subForm.status} onValueChange={v => setSubForm((f: any) => ({ ...f, status: v }))}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {STATUSES.map(s => <SelectItem key={s} value={s}>{STATUS_MAP[s]?.l || s}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Máx. usuarios</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Máx. usuarios</Label>
                     <Input type="number" min={1} value={subForm.max_usuarios}
-                      onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} className="h-8" />
+                      onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Inicio período</Label>
-                      <Input type="date" value={subForm.current_period_start}
-                        onChange={e => setSubForm((f: any) => ({ ...f, current_period_start: e.target.value }))} className="h-8 text-xs" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Fin período</Label>
-                      <Input type="date" value={subForm.current_period_end}
-                        onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} className="h-8 text-xs" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Fin trial</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Fin trial</Label>
                     <Input type="date" value={subForm.trial_ends_at}
-                      onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))} className="h-8 text-xs" />
+                      onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Inicio período</Label>
+                    <Input type="date" value={subForm.current_period_start}
+                      onChange={e => setSubForm((f: any) => ({ ...f, current_period_start: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Fin período</Label>
+                    <Input type="date" value={subForm.current_period_end}
+                      onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Estado</span>
-                    <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estado</p>
+                    <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="mt-1">
                       {STATUS_MAP[subscription.status]?.l || subscription.status}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Plan</span>
-                    <span className="text-sm font-medium">{subscription.subscription_plans?.nombre || 'Sin plan'}</span>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Plan</p>
+                    <p className="font-medium mt-1">{subscription.subscription_plans?.nombre || 'Sin plan'}</p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Usuarios</span>
-                    <span className="text-sm font-medium flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                      {profiles.length} / {subscription.max_usuarios}
-                    </span>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Usuarios</p>
+                    <p className="font-medium mt-1">{profiles.length} / {subscription.max_usuarios}</p>
                   </div>
                   {subscription.subscription_plans?.precio_por_usuario && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Precio/usuario</span>
-                      <span className="text-sm font-medium">{fmtMXN(subscription.subscription_plans.precio_por_usuario)}</span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Precio/usuario</p>
+                      <p className="font-medium mt-1">{fmtMXN(subscription.subscription_plans.precio_por_usuario)}</p>
                     </div>
                   )}
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> Próximo cobro
-                    </span>
-                    <span className="text-sm font-medium">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Próximo cobro</p>
+                    <p className="font-medium mt-1">
                       {subscription.current_period_end
                         ? format(new Date(subscription.current_period_end), "dd MMM yyyy", { locale: es })
                         : '—'}
-                    </span>
+                    </p>
                   </div>
                   {daysLeft !== null && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Días restantes</span>
-                      <Badge variant={daysLeft <= 3 ? 'destructive' : daysLeft <= 7 ? 'secondary' : 'outline'}>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Días restantes</p>
+                      <Badge variant={daysLeft <= 3 ? 'destructive' : daysLeft <= 7 ? 'secondary' : 'outline'} className="mt-1">
                         {daysLeft <= 0 ? 'Vencido' : `${daysLeft} días`}
                       </Badge>
                     </div>
                   )}
                   {subscription.trial_ends_at && subscription.status === 'trial' && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Fin trial</span>
-                      <span className="text-sm">{format(new Date(subscription.trial_ends_at), "dd MMM yyyy", { locale: es })}</span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Fin trial</p>
+                      <p className="font-medium mt-1">{format(new Date(subscription.trial_ends_at), "dd MMM yyyy", { locale: es })}</p>
                     </div>
                   )}
                   {subscription.stripe_customer_id && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Stripe</span>
-                      <span className="text-xs font-mono text-muted-foreground">{subscription.stripe_customer_id.slice(0, 18)}…</span>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Stripe Customer</p>
+                      <p className="font-mono text-sm mt-1 text-muted-foreground">{subscription.stripe_customer_id}</p>
                     </div>
                   )}
                   {subscription.card_last4 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Tarjeta</span>
-                      <span className="text-sm font-mono">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tarjeta</p>
+                      <p className="font-mono font-medium mt-1">
                         {subscription.card_brand ? `${subscription.card_brand} ` : ''}•••• {subscription.card_last4}
-                      </span>
+                      </p>
                     </div>
                   )}
                 </div>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Timbres CFDI — Sales Panel */}
-          <Card className="border border-border/60 shadow-sm">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
-                </CardTitle>
-                <Button size="sm" variant="outline" onClick={() => setShowTimbresSale(!showTimbresSale)}>
-                  <ShoppingCart className="h-3.5 w-3.5 mr-1" /> Nueva venta
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Saldo */}
-              <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
-                <span className="text-sm text-muted-foreground">Saldo actual</span>
-                <span className={`text-2xl font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
-                  {timbres}
-                </span>
-              </div>
-
-              {/* Sale Form */}
-              {showTimbresSale && (
-                <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-muted/10">
-                  <p className="text-xs font-semibold text-foreground flex items-center gap-1">
-                    <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Registrar venta de timbres
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Paquetes (×100)</Label>
-                      <Input type="number" min={1} value={timbresForm.paquetes}
-                        onChange={e => setTimbresForm(f => ({ ...f, paquetes: parseInt(e.target.value) || 1 }))}
-                        className="h-8 text-sm font-mono" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Precio/timbre</Label>
-                      <Input type="number" min={0} step={0.5} value={timbresForm.precio_timbre}
-                        onChange={e => setTimbresForm(f => ({ ...f, precio_timbre: parseFloat(e.target.value) || 0 }))}
-                        className="h-8 text-sm font-mono" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs flex items-center gap-1">
-                      <Percent className="h-3 w-3" /> Descuento (%)
-                    </Label>
-                    <Input type="number" min={0} max={100} value={timbresForm.descuento_pct}
-                      onChange={e => setTimbresForm(f => ({ ...f, descuento_pct: parseFloat(e.target.value) || 0 }))}
-                      className="h-8 text-sm font-mono" />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Notas</Label>
-                    <Textarea value={timbresForm.notas}
-                      onChange={e => setTimbresForm(f => ({ ...f, notas: e.target.value }))}
-                      className="text-sm resize-none h-16" placeholder="Notas de la venta..." />
-                  </div>
-
-                  {/* Summary */}
-                  <div className="bg-background border border-border/40 rounded-lg p-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">{timbresCount} timbres × ${timbresForm.precio_timbre}</span>
-                      <span>{fmtMXN(timbresSubtotal)}</span>
-                    </div>
-                    {timbresForm.descuento_pct > 0 && (
-                      <div className="flex justify-between text-primary">
-                        <span>Descuento ({timbresForm.descuento_pct}%)</span>
-                        <span>-{fmtMXN(timbresDescuento)}</span>
-                      </div>
-                    )}
-                    <Separator />
-                    <div className="flex justify-between font-bold">
-                      <span>Total</span>
-                      <span>{fmtMXN(timbresTotal)}</span>
-                    </div>
-                  </div>
-
-                  {/* Generate invoice checkbox */}
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="generar-factura"
-                      checked={timbresForm.generar_factura}
-                      onCheckedChange={v => setTimbresForm(f => ({ ...f, generar_factura: !!v }))}
-                    />
-                    <Label htmlFor="generar-factura" className="text-xs cursor-pointer">
-                      Generar factura Stripe y enviar por correo
-                    </Label>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setShowTimbresSale(false)}>
-                      Cancelar
-                    </Button>
-                    <Button size="sm" className="flex-1" disabled={addingTimbres} onClick={handleTimbresSale}>
-                      {addingTimbres ? 'Procesando...' : `Vender ${timbresCount} timbres`}
-                    </Button>
-                  </div>
+        {/* ═══ TAB: Timbres ═══ */}
+        <TabsContent value="timbres">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Saldo + Venta */}
+            <Card className="border border-border/60 shadow-sm">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold flex items-center gap-2">
+                    <Stamp className="h-4 w-4 text-primary" /> Timbres CFDI
+                  </h3>
+                  <Button variant="outline" size="sm" onClick={() => setShowTimbresSale(!showTimbresSale)}>
+                    <ShoppingCart className="h-4 w-4 mr-1.5" /> Nueva venta
+                  </Button>
                 </div>
-              )}
 
-              {/* Historial de movimientos */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                  <History className="h-3.5 w-3.5" /> Historial de movimientos
-                </p>
+                <div className="flex items-center justify-between bg-muted/30 rounded-lg p-4">
+                  <span className="text-muted-foreground">Saldo actual</span>
+                  <span className={`text-3xl font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
+                    {timbres}
+                  </span>
+                </div>
+
+                {showTimbresSale && (
+                  <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-muted/10">
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <ShoppingCart className="h-4 w-4 text-primary" /> Registrar venta de timbres
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Paquetes (×100)</Label>
+                        <Input type="number" min={1} value={timbresForm.paquetes}
+                          onChange={e => setTimbresForm(f => ({ ...f, paquetes: parseInt(e.target.value) || 1 }))}
+                          className="font-mono" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Precio/timbre</Label>
+                        <Input type="number" min={0} step={0.5} value={timbresForm.precio_timbre}
+                          onChange={e => setTimbresForm(f => ({ ...f, precio_timbre: parseFloat(e.target.value) || 0 }))}
+                          className="font-mono" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-sm flex items-center gap-1">
+                        <Percent className="h-3.5 w-3.5" /> Descuento (%)
+                      </Label>
+                      <Input type="number" min={0} max={100} value={timbresForm.descuento_pct}
+                        onChange={e => setTimbresForm(f => ({ ...f, descuento_pct: parseFloat(e.target.value) || 0 }))}
+                        className="font-mono" />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Notas</Label>
+                      <Textarea value={timbresForm.notas}
+                        onChange={e => setTimbresForm(f => ({ ...f, notas: e.target.value }))}
+                        className="resize-none h-16" placeholder="Notas de la venta..." />
+                    </div>
+
+                    <div className="bg-background border border-border/40 rounded-lg p-3 space-y-1.5">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{timbresCount} timbres × ${timbresForm.precio_timbre}</span>
+                        <span>{fmtMXN(timbresSubtotal)}</span>
+                      </div>
+                      {timbresForm.descuento_pct > 0 && (
+                        <div className="flex justify-between text-sm text-primary">
+                          <span>Descuento ({timbresForm.descuento_pct}%)</span>
+                          <span>-{fmtMXN(timbresDescuento)}</span>
+                        </div>
+                      )}
+                      <Separator />
+                      <div className="flex justify-between font-bold">
+                        <span>Total</span>
+                        <span>{fmtMXN(timbresTotal)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="generar-factura"
+                        checked={timbresForm.generar_factura}
+                        onCheckedChange={v => setTimbresForm(f => ({ ...f, generar_factura: !!v }))}
+                      />
+                      <Label htmlFor="generar-factura" className="text-sm cursor-pointer">
+                        Generar factura Stripe y enviar por correo
+                      </Label>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => setShowTimbresSale(false)}>
+                        Cancelar
+                      </Button>
+                      <Button className="flex-1" disabled={addingTimbres} onClick={handleTimbresSale}>
+                        {addingTimbres ? 'Procesando...' : `Vender ${timbresCount} timbres`}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Historial */}
+            <Card className="border border-border/60 shadow-sm">
+              <CardContent className="pt-6">
+                <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
+                  <History className="h-4 w-4 text-primary" /> Historial de movimientos
+                </h3>
                 {timbresMovimientos.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-2">Sin movimientos</p>
+                  <p className="text-muted-foreground text-center py-8">Sin movimientos</p>
                 ) : (
-                  <div className="space-y-1.5 max-h-[250px] overflow-y-auto">
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
                     {timbresMovimientos.map(m => (
-                      <div key={m.id} className="flex items-start justify-between border border-border/30 rounded p-2 text-xs">
+                      <div key={m.id} className="flex items-start justify-between border border-border/30 rounded-lg p-3">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant={m.tipo === 'compra' || m.tipo === 'recarga' ? 'default' : 'secondary'} className="text-[10px] h-4">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={m.tipo === 'compra' || m.tipo === 'recarga' ? 'default' : 'secondary'}>
                               {m.tipo === 'compra' ? '🛒 Compra' : m.tipo === 'consumo' ? '📄 Uso' : m.tipo === 'recarga' ? '🔄 Recarga' : m.tipo}
                             </Badge>
                             <span className={`font-mono font-semibold ${m.cantidad >= 0 ? 'text-primary' : 'text-destructive'}`}>
                               {m.cantidad >= 0 ? '+' : ''}{m.cantidad}
                             </span>
                           </div>
-                          {m.notas && <p className="text-muted-foreground mt-0.5 truncate">{m.notas}</p>}
+                          {m.notas && <p className="text-sm text-muted-foreground mt-1 truncate">{m.notas}</p>}
                         </div>
-                        <div className="text-right shrink-0 ml-2">
-                          <p className="font-mono text-muted-foreground">→ {m.saldo_nuevo}</p>
-                          <p className="text-muted-foreground">{format(new Date(m.created_at), 'dd/MM/yy HH:mm')}</p>
+                        <div className="text-right shrink-0 ml-3">
+                          <p className="font-mono text-muted-foreground text-sm">→ {m.saldo_nuevo}</p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(m.created_at), 'dd/MM/yy HH:mm')}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-        {/* ── Column 3: Facturas ── */}
-        <Card className="border border-border/60 shadow-sm lg:col-span-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-primary" /> Facturas ({facturas.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {facturas.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">Sin facturas registradas</p>
-            ) : (
-              <div className="space-y-2 max-h-[500px] overflow-y-auto">
-                {facturas.map(f => (
-                  <div key={f.id} className="border border-border/40 rounded-lg p-3 space-y-1.5 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs text-muted-foreground">{f.numero_factura || 'Sin número'}</span>
-                      <Badge variant={f.estado === 'pagada' ? 'default' : f.estado === 'pendiente' ? 'destructive' : 'secondary'}>
-                        {f.estado || 'pendiente'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-xs">
-                        {format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} — {format(new Date(f.periodo_fin), 'dd MMM yy', { locale: es })}
-                      </span>
-                      <span className="font-semibold">{fmtMXN(f.total)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Users className="h-3 w-3" /> {f.num_usuarios} usuario{f.num_usuarios > 1 ? 's' : ''}
-                      {f.es_prorrateo && <Badge variant="outline" className="text-[10px] h-4">Prorrateo</Badge>}
-                    </div>
-                    {f.fecha_pago && (
-                      <p className="text-xs text-muted-foreground">
-                        Pagada: {format(new Date(f.fecha_pago), 'dd MMM yyyy', { locale: es })}
-                      </p>
-                    )}
+        {/* ═══ TAB: Facturación ═══ */}
+        <TabsContent value="facturacion">
+          <div className="space-y-6">
+            {/* Internal invoices */}
+            <Card className="border border-border/60 shadow-sm">
+              <CardContent className="pt-6">
+                <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
+                  <Receipt className="h-4 w-4 text-primary" /> Facturas internas ({facturas.length})
+                </h3>
+                {facturas.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">Sin facturas registradas</p>
+                ) : (
+                  <div className="border border-border/60 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/30">
+                          <TableHead>Número</TableHead>
+                          <TableHead>Período</TableHead>
+                          <TableHead>Usuarios</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Pagada</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {facturas.map(f => (
+                          <TableRow key={f.id}>
+                            <TableCell className="font-mono text-sm">{f.numero_factura || '—'}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} — {format(new Date(f.periodo_fin), 'dd MMM yy', { locale: es })}
+                            </TableCell>
+                            <TableCell>{f.num_usuarios}</TableCell>
+                            <TableCell className="font-semibold">{fmtMXN(f.total)}</TableCell>
+                            <TableCell>
+                              <Badge variant={f.estado === 'pagada' ? 'default' : f.estado === 'pendiente' ? 'destructive' : 'secondary'}>
+                                {f.estado || 'pendiente'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {f.fecha_pago ? format(new Date(f.fecha_pago), 'dd MMM yyyy', { locale: es }) : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                )}
+              </CardContent>
+            </Card>
 
-      {/* Stripe Invoices (if any) */}
-      {stripeInvoices.length > 0 && (
-        <Card className="border border-border/60 shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <ExternalLink className="h-4 w-4 text-primary" /> Facturas Stripe ({stripeInvoices.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Número</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Monto</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead className="w-20"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stripeInvoices.map((inv: any) => (
-                  <TableRow key={inv.id}>
-                    <TableCell className="text-sm font-mono">{inv.number || '—'}</TableCell>
-                    <TableCell>
-                      <Badge variant={inv.status === 'paid' ? 'default' : 'destructive'}>
-                        {inv.status === 'paid' ? 'Pagada' : inv.status === 'open' ? 'Pendiente' : inv.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">{fmtMXN(inv.amount_due / 100)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(inv.created * 1000), 'dd MMM yy', { locale: es })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {inv.hosted_invoice_url && (
-                          <Button size="sm" variant="ghost" asChild>
-                            <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a>
-                          </Button>
-                        )}
-                        {inv.invoice_pdf && (
-                          <Button size="sm" variant="ghost" asChild>
-                            <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer"><Download className="h-3.5 w-3.5" /></a>
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+            {/* Stripe invoices */}
+            {stripeInvoices.length > 0 && (
+              <Card className="border border-border/60 shadow-sm">
+                <CardContent className="pt-6">
+                  <h3 className="text-base font-semibold flex items-center gap-2 mb-4">
+                    <ExternalLink className="h-4 w-4 text-primary" /> Facturas Stripe ({stripeInvoices.length})
+                  </h3>
+                  <div className="border border-border/60 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/30">
+                          <TableHead>Número</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Monto</TableHead>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead className="w-20"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {stripeInvoices.map((inv: any) => (
+                          <TableRow key={inv.id}>
+                            <TableCell className="font-mono text-sm">{inv.number || '—'}</TableCell>
+                            <TableCell>
+                              <Badge variant={inv.status === 'paid' ? 'default' : 'destructive'}>
+                                {inv.status === 'paid' ? 'Pagada' : inv.status === 'open' ? 'Pendiente' : inv.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">{fmtMXN(inv.amount_due / 100)}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {format(new Date(inv.created * 1000), 'dd MMM yy', { locale: es })}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {inv.hosted_invoice_url && (
+                                  <Button size="sm" variant="ghost" asChild>
+                                    <a href={inv.hosted_invoice_url} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5" /></a>
+                                  </Button>
+                                )}
+                                {inv.invoice_pdf && (
+                                  <Button size="sm" variant="ghost" asChild>
+                                    <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer"><Download className="h-3.5 w-3.5" /></a>
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Reset Password Dialog */}
       <Dialog open={!!resetDialog} onOpenChange={open => { if (!open) setResetDialog(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4" /> Restablecer contraseña
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <KeyRound className="h-5 w-5 text-primary" /> Restablecer contraseña
             </DialogTitle>
-            <DialogDescription>
-              {resetDialog?.nombre} ({resetDialog?.email})
+            <DialogDescription className="text-base">
+              {resetDialog?.nombre} — <span className="font-mono">{resetDialog?.email}</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Nueva contraseña temporal</Label>
+          <div className="space-y-5 pt-2">
+            <div className="space-y-2">
+              <Label>Nueva contraseña temporal</Label>
               <Input
                 type="text"
                 value={resetPassword}
                 onChange={e => setResetPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
-                className="font-mono"
+                className="font-mono text-base"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
               <Checkbox
                 id="force-change"
                 checked={resetForceChange}
                 onCheckedChange={(v) => setResetForceChange(!!v)}
               />
-              <label htmlFor="force-change" className="text-xs text-muted-foreground cursor-pointer">
-                Forzar cambio de contraseña al iniciar sesión
+              <label htmlFor="force-change" className="text-sm cursor-pointer leading-tight">
+                <span className="font-medium">Forzar cambio al iniciar sesión</span>
+                <br />
+                <span className="text-muted-foreground text-xs">El usuario verá un modal para crear una nueva contraseña antes de poder usar la app</span>
               </label>
             </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" size="sm" onClick={() => setResetDialog(null)}>
+            <div className="flex gap-3 justify-end pt-2">
+              <Button variant="outline" onClick={() => setResetDialog(null)}>
                 Cancelar
               </Button>
               <Button
-                size="sm"
                 disabled={resettingPw || resetPassword.length < 6}
                 onClick={handleResetPassword}
               >
-                {resettingPw ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <KeyRound className="h-4 w-4 mr-1" />}
-                Restablecer
+                {resettingPw ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}
+                Restablecer contraseña
               </Button>
             </div>
           </div>
@@ -896,11 +940,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
 function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value: string | null }) {
   return (
-    <div className="flex items-start gap-2">
-      <Icon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+    <div className="flex items-start gap-2.5">
+      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-foreground truncate">{value || '—'}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-foreground font-medium">{value || '—'}</p>
       </div>
     </div>
   );
