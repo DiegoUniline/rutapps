@@ -205,10 +205,11 @@ export default function AuditoriaConteoPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Producto</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead className="w-[140px]">Fecha / Hora</TableHead>
-                <TableHead className="w-[100px] text-center">Esperado</TableHead>
+                <TableHead className="w-[80px] text-center">Esperado</TableHead>
                 <TableHead className="w-[80px] text-center">Estado</TableHead>
-                <TableHead className="w-[180px] text-center">Conteo</TableHead>
+                <TableHead className="w-[160px] text-center">Conteo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
