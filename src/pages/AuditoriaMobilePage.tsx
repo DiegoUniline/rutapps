@@ -42,10 +42,12 @@ export default function AuditoriaMobilePage() {
   const [auditoria, setAuditoria] = useState<AuditoriaData | null>(null);
   const [lineas, setLineas] = useState<LineaItem[]>([]);
   const [auditorName, setAuditorName] = useState('');
+  const [empresaUsers, setEmpresaUsers] = useState<EmpresaUser[]>([]);
   const [scanTotals, setScanTotals] = useState<ScanTotal>({});
   const [search, setSearch] = useState('');
   const [manualQty, setManualQty] = useState<Record<string, string>>({});
   const [scanning, setScanning] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<any>(null);
 
