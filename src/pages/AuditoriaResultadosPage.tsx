@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal, FileText } from 'lucide-react';
+import { ArrowLeft, Check, X, AlertTriangle, TrendingUp, TrendingDown, Equal, FileText, Eye } from 'lucide-react';
+import AuditoriaMovimientosModal from '@/components/auditorias/AuditoriaMovimientosModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -41,6 +42,7 @@ export default function AuditoriaResultadosPage() {
   const [motivoGlobal, setMotivoGlobal] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [movModal, setMovModal] = useState<{ productoId: string; nombre: string; codigo: string; esperada: number } | null>(null);
 
   const handleGenerarPdf = () => {
     if (!auditoria || !lineas) return;
@@ -307,6 +309,7 @@ export default function AuditoriaResultadosPage() {
                 <TableHead className="text-right">Diferencia</TableHead>
                 <TableHead className="text-center">Ajustado</TableHead>
                 <TableHead className="text-right">Cerrada</TableHead>
+                <TableHead className="text-center w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -328,6 +331,21 @@ export default function AuditoriaResultadosPage() {
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
                       {l.cerrada_at ? new Date(l.cerrada_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setMovModal({
+                          productoId: l.producto_id,
+                          nombre: l.productos?.nombre ?? '',
+                          codigo: l.productos?.codigo ?? '',
+                          esperada: l.cantidad_esperada,
+                        })}
+                      >
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -451,6 +469,20 @@ export default function AuditoriaResultadosPage() {
         tipo="auditoria"
         referencia_id={id}
       />
+
+
+      {movModal && (
+        <AuditoriaMovimientosModal
+          open={!!movModal}
+          onOpenChange={() => setMovModal(null)}
+          productoId={movModal.productoId}
+          productoNombre={movModal.nombre}
+          productoCodigo={movModal.codigo}
+          cantidadEsperada={movModal.esperada}
+          apertura={auditoria?.created_at ?? ''}
+          cierre={auditoria?.cerrada_at ?? auditoria?.fecha_aprobacion ?? null}
+        />
+      )}
     </div>
   );
 }
