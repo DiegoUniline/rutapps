@@ -301,8 +301,9 @@ export default function AuditoriaResultadosPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Producto</TableHead>
-                <TableHead className="text-right">Sistema</TableHead>
-                <TableHead className="text-right">Real</TableHead>
+                <TableHead>Código</TableHead>
+                <TableHead className="text-right">Esperado</TableHead>
+                <TableHead className="text-right">Contado</TableHead>
                 <TableHead className="text-right">Diferencia</TableHead>
                 <TableHead className="text-center">Ajustado</TableHead>
                 <TableHead className="text-right">Cerrada</TableHead>
@@ -314,10 +315,8 @@ export default function AuditoriaResultadosPage() {
                 const notCounted = l.cantidad_real === null;
                 return (
                   <TableRow key={l.id} className={cn(notCounted && 'opacity-50')}>
-                    <TableCell>
-                      <p className="text-sm font-medium">{l.productos?.nombre}</p>
-                      <p className="text-xs text-muted-foreground">{l.productos?.codigo}</p>
-                    </TableCell>
+                    <TableCell className="text-sm font-medium">{l.productos?.nombre}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{l.productos?.codigo}</TableCell>
                     <TableCell className="text-right font-mono">{l.cantidad_esperada}</TableCell>
                     <TableCell className="text-right font-mono">{l.cantidad_real ?? '-'}</TableCell>
                     <TableCell className={cn('text-right font-mono font-semibold',
