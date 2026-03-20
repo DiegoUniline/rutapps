@@ -230,6 +230,9 @@ export default function AuditoriaConteoPage() {
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {fmtDt(line.created_at)}
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      —
+                    </TableCell>
                     <TableCell className="text-center font-mono text-sm">
                       {line.cantidad_esperada}
                     </TableCell>
