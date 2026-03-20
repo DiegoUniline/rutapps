@@ -184,13 +184,14 @@ export default function TraspasoFormPage() {
     }
 
     // almacen_almacen or almacen_ruta: filter by stock_almacen for selected origin
-    if (stockAlmacenOrigen && almacenOrigenId) {
+    if (almacenOrigenId && stockAlmacenOrigen && stockAlmacenOrigen.length > 0) {
       const saMap = new Map(stockAlmacenOrigen.map(s => [s.producto_id, s.cantidad]));
       return allProductos
         .filter(p => (saMap.get(p.id) ?? 0) > 0)
         .map(p => ({ ...p, cantidad: saMap.get(p.id) ?? 0 }));
     }
 
+    // Fallback: show all products with global stock > 0
     return allProductos.filter(p => (p.cantidad ?? 0) > 0);
   }, [allProductos, stockCamion, stockAlmacenOrigen, tipo, vendedorOrigenId, almacenOrigenId, readOnly]);
 
