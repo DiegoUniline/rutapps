@@ -83,6 +83,7 @@ const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
+const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 
 
 // Logistica pages
@@ -163,6 +164,7 @@ function AppRoutes() {
           <Route path="/privacidad" element={<PrivacidadPage />} />
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="/pagar/:token" element={<PagarPage />} />
+          <Route path="/auditoria-movil/:auditoria_id" element={<AuditoriaMobilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

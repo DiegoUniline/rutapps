@@ -3,11 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Search, Save, Package, Check, Plus, Eye, ChevronDown, ChevronRight, Trash2, User } from 'lucide-react';
+import { ArrowLeft, Search, Save, Package, Check, Plus, Eye, ChevronDown, ChevronRight, Trash2, User, Lock, Link2, Copy, Share2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -43,6 +47,8 @@ export default function AuditoriaConteoPage() {
   const [modalLine, setModalLine] = useState<ConteoLine | null>(null);
   const [expandedLine, setExpandedLine] = useState<string | null>(null);
   const [addQty, setAddQty] = useState<Record<string, string>>({});
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
@@ -189,10 +195,48 @@ export default function AuditoriaConteoPage() {
     navigate(`/almacen/auditorias/${id}/resultados`);
   };
 
+  const handleCerrarAuditoria = async () => {
+    setClosing(true);
+    try {
+      await supabase.from('auditorias').update({
+        status: 'cerrada',
+        cerrada_por: profile?.nombre || user?.email || 'Admin',
+        cerrada_at: new Date().toISOString(),
+      } as any).eq('id', id!);
+      toast.success('Auditoría cerrada — ya no se pueden registrar conteos');
+      qc.invalidateQueries({ queryKey: ['auditoria', id] });
+      qc.invalidateQueries({ queryKey: ['auditorias'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al cerrar');
+    } finally {
+      setClosing(false);
+      setShowCloseDialog(false);
+    }
+  };
+
+  const publicUrl = `${window.location.origin}/auditoria-movil/${id}`;
+  const isCerrada = auditoria?.status === 'cerrada' || auditoria?.status === 'aprobada' || auditoria?.status === 'rechazada';
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(publicUrl);
+    toast.success('URL copiada al portapapeles');
+  };
+
+  const shareUrl = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: `Auditoría ${auditoria?.nombre}`, url: publicUrl });
+    } else {
+      copyUrl();
+    }
+  };
+
   const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
     pendiente: { label: 'Pendiente', variant: 'secondary' },
     en_proceso: { label: 'En proceso', variant: 'outline' },
     por_aprobar: { label: 'Por aprobar', variant: 'default' },
+    cerrada: { label: 'Cerrada', variant: 'destructive' },
+    aprobada: { label: 'Aprobada', variant: 'default' },
+    rechazada: { label: 'Rechazada', variant: 'destructive' },
   };
 
   const fmtDt = (d: string | null | undefined) => {
@@ -240,6 +284,31 @@ export default function AuditoriaConteoPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar producto..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+
+        {/* Public URL */}
+        {!isCerrada && (
+          <div className="flex items-center gap-2 bg-accent/50 rounded-lg px-3 py-2">
+            <Link2 className="h-4 w-4 text-primary shrink-0" />
+            <input
+              readOnly
+              value={publicUrl}
+              className="flex-1 bg-transparent text-xs text-muted-foreground truncate outline-none"
+              onClick={e => (e.target as HTMLInputElement).select()}
+            />
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={copyUrl} title="Copiar URL">
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={shareUrl} title="Compartir">
+              <Share2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
+        {isCerrada && (
+          <div className="flex items-center gap-2 bg-destructive/10 rounded-lg px-3 py-2 text-xs text-destructive">
+            <Lock className="h-4 w-4 shrink-0" />
+            <span>Auditoría cerrada por <strong>{(auditoria as any)?.cerrada_por ?? '—'}</strong> el {fmtDt((auditoria as any)?.cerrada_at)}</span>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -403,10 +472,35 @@ export default function AuditoriaConteoPage() {
         <Button variant="outline" className="flex-1" onClick={() => navigate('/almacen/auditorias')}>
           Volver al listado
         </Button>
-        <Button className="flex-1" onClick={handleFinalizarConteo} disabled={saving || contadas === 0}>
-          Finalizar conteo
-        </Button>
+        {!isCerrada && (
+          <>
+            <Button className="flex-1" onClick={handleFinalizarConteo} disabled={saving || contadas === 0}>
+              Finalizar conteo
+            </Button>
+            <Button variant="destructive" onClick={() => setShowCloseDialog(true)} disabled={closing}>
+              <Lock className="h-4 w-4 mr-1" /> Cerrar Auditoría
+            </Button>
+          </>
+        )}
       </div>
+
+      {/* Close audit confirmation */}
+      <AlertDialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar auditoría?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya no se podrán registrar conteos desde la app móvil ni desde el panel. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCerrarAuditoria} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {closing ? 'Cerrando...' : 'Sí, cerrar auditoría'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {modalLine && auditoria && (
         <AuditoriaMovimientosModal
