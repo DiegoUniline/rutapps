@@ -39,8 +39,9 @@ export default function UsuariosPage() {
   const [showRoleForm, setShowRoleForm] = useState(false);
 
   // User edit
-  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<ProfileUser | null>(null);
   const [editForm, setEditForm] = useState({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', vendedor_id: '', role_id: '' });
+  const [savingUser, setSavingUser] = useState(false);
 
   // New user form
   const [showNewUser, setShowNewUser] = useState(false);
