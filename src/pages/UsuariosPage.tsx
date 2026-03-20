@@ -73,7 +73,7 @@ export default function UsuariosPage() {
     const [r, p, pr, ur, a, v] = await Promise.all([
       supabase.from('roles').select('*').eq('empresa_id', empresa.id).order('nombre'),
       supabase.from('role_permisos').select('*'),
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado').eq('empresa_id', empresa.id),
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
       supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa.id),
