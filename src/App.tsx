@@ -65,6 +65,8 @@ const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage")
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const AuditoriaConteoPage = lazy(() => import("@/pages/AuditoriaConteoPage"));
 const AuditoriaResultadosPage = lazy(() => import("@/pages/AuditoriaResultadosPage"));
+const ConteosFisicosPage = lazy(() => import("@/pages/ConteosFisicosPage"));
+const ConteoFisicoPage = lazy(() => import("@/pages/ConteoFisicoPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const MonitorRutasPage = lazy(() => import("@/pages/MonitorRutasPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
