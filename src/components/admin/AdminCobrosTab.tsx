@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { CreditCard, Plus, Trash2, Loader2, Store, Building2, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Loader2, Store, Building2, Search, CheckCircle, AlertCircle, MessageSquare, Mail, Copy, Send } from 'lucide-react';
 
 // ─── OpenPay helpers ───
 async function openpayAction(action: string, params: Record<string, any> = {}) {
