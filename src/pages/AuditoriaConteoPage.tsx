@@ -77,13 +77,13 @@ export default function AuditoriaConteoPage() {
     },
   });
 
+  const lineaIds = useMemo(() => (lineas ?? []).map(l => l.id), [lineas]);
+
   // Fetch all entries for this audit
-  const { data: entradas } = useQuery({
-    queryKey: ['auditoria-entradas', id],
-    enabled: !!id,
+  const { data: entradas, refetch: refetchEntradas } = useQuery({
+    queryKey: ['auditoria-entradas', id, lineaIds],
+    enabled: !!id && lineaIds.length > 0,
     queryFn: async () => {
-      const lineaIds = (lineas ?? []).map(l => l.id);
-      if (!lineaIds.length) return {};
       const { data, error } = await supabase
         .from('auditoria_entradas')
         .select('*')
@@ -130,11 +130,11 @@ export default function AuditoriaConteoPage() {
   // Add entry mutation
   const addEntry = useMutation({
     mutationFn: async ({ lineaId, cantidad }: { lineaId: string; cantidad: number }) => {
-      const { error } = await supabase.from('auditoria_entradas').insert({
+      const { data: inserted, error } = await supabase.from('auditoria_entradas').insert({
         auditoria_linea_id: lineaId,
         cantidad,
         user_id: user!.id,
-      } as any);
+      } as any).select().single();
       if (error) throw error;
       // Update cantidad_real on the line
       const newTotal = (entradaTotals[lineaId] ?? 0) + cantidad;
@@ -144,10 +144,11 @@ export default function AuditoriaConteoPage() {
         cantidad_real: newTotal,
         diferencia: dif,
       } as any).eq('id', lineaId);
+      return inserted;
     },
     onSuccess: (_, { lineaId, cantidad }) => {
       toast.success(`+${cantidad} registrado`);
-      qc.invalidateQueries({ queryKey: ['auditoria-entradas', id] });
+      refetchEntradas();
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       setAddQty(prev => ({ ...prev, [lineaId]: '' }));
     },
@@ -169,7 +170,7 @@ export default function AuditoriaConteoPage() {
       } as any).eq('id', lineaId);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auditoria-entradas', id] });
+      refetchEntradas();
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       toast.success('Entrada eliminada');
     },

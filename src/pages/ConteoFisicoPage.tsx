@@ -138,11 +138,12 @@ export default function ConteoFisicoPage() {
 
     try {
       // Insert entry
-      await supabase.from('conteo_entradas').insert({
+      const { error: entryErr } = await supabase.from('conteo_entradas').insert({
         conteo_linea_id: selectedItem.id,
         cantidad: qty,
         creado_por: user.id,
       } as any);
+      if (entryErr) throw entryErr;
 
       // Update line
       await supabase.from('conteo_lineas').update({
