@@ -25,6 +25,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import PinAuthDialog from '@/components/PinAuthDialog';
 
 const VENTA_STEPS_FULL: { key: StatusVenta; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
