@@ -18,6 +18,7 @@ import {
   Plus, ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { es } from 'date-fns/locale';
 
 interface Props {
