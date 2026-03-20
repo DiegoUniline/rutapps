@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.get_audit_users(uuid) TO anon;
