@@ -186,9 +186,23 @@ export default function AuditoriaConteoPage() {
   });
 
   const handleAddEntry = (lineaId: string) => {
+    const line = lineas?.find(l => l.id === lineaId);
+    if (line?.cerrada) { toast.error('Esta línea ya fue cerrada'); return; }
     const qty = Number(addQty[lineaId] || 1);
     if (qty <= 0) return;
     addEntry.mutate({ lineaId, cantidad: qty });
+  };
+
+  const handleToggleLineCerrada = async (line: ConteoLine, cerrar: boolean) => {
+    try {
+      await supabase.from('auditoria_lineas').update({ cerrada: cerrar } as any).eq('id', line.id);
+      toast.success(cerrar ? `"${line.nombre}" cerrada` : `"${line.nombre}" reabierta`);
+      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error');
+    } finally {
+      setLineToClose(null);
+    }
   };
 
   const handleFinalizarConteo = async () => {
