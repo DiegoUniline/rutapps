@@ -287,6 +287,19 @@ export default function AuditoriaConteoPage() {
           Finalizar conteo
         </Button>
       </div>
+
+      {modalLine && auditoria && (
+        <AuditoriaMovimientosModal
+          open={!!modalLine}
+          onOpenChange={(v) => !v && setModalLine(null)}
+          productoId={modalLine.producto_id}
+          productoNombre={modalLine.nombre}
+          productoCodigo={modalLine.codigo}
+          cantidadEsperada={modalLine.cantidad_esperada}
+          apertura={auditoria.created_at}
+          cierre={null}
+        />
+      )}
     </div>
   );
 }
