@@ -508,6 +508,19 @@ export default function UsuariosPage() {
                             <>
                               <button onClick={() => startEdit(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
                               <button onClick={() => { setPasswordModal({ userId: p.user_id, nombre: p.nombre || authUser?.email || '' }); setNewPassword(''); }} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
+                              <button
+                                onClick={async () => {
+                                  const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
+                                  if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
+                                  await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
+                                  toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
+                                  load();
+                                }}
+                                className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
+                                title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
+                              >
+                                {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                              </button>
                             </>
                           )}
                         </div>
