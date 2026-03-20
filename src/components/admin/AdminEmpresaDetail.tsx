@@ -302,6 +302,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     }
   }
 
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         Cargando detalle de empresa...
