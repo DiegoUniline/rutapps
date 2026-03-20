@@ -232,6 +232,9 @@ function renderAuthenticatedRoutes() {
       {/* Desktop POS */}
       <Route path="/pos" element={<PuntoVentaPage />} />
 
+      {/* Conteo físico — standalone mobile page */}
+      <Route path="/conteo/:countId" element={<ConteoFisicoPage />} />
+
       <Route path="*" element={
         <AppLayout>
           <GuardedDesktopRoutes />
