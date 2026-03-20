@@ -196,15 +196,23 @@ export default function AuditoriaConteoPage() {
   };
 
   const handleToggleLineCerrada = async (line: ConteoLine, cerrar: boolean) => {
-    try {
-      // Use RPC to recalculate theoretical stock when closing
-      await supabase.rpc('close_audit_line', { p_linea_id: line.id, p_cerrada: cerrar });
-      toast.success(cerrar ? `"${line.nombre}" cerrada — stock teórico recalculado` : `"${line.nombre}" reabierta`);
-      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
-    } catch (err: any) {
-      toast.error(err.message ?? 'Error');
-    } finally {
-      setLineToClose(null);
+    const doToggle = async () => {
+      try {
+        await supabase.rpc('close_audit_line', { p_linea_id: line.id, p_cerrada: cerrar });
+        toast.success(cerrar ? `"${line.nombre}" cerrada — stock teórico recalculado` : `"${line.nombre}" reabierta`);
+        qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
+      } catch (err: any) {
+        toast.error(err.message ?? 'Error');
+      } finally {
+        setLineToClose(null);
+      }
+    };
+
+    // Reopening a closed line requires PIN authorization
+    if (!cerrar) {
+      requestPin('Reabrir línea', `Ingresa tu PIN para reabrir "${line.nombre}".`, doToggle);
+    } else {
+      doToggle();
     }
   };
 
