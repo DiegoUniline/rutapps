@@ -3260,6 +3260,7 @@ export type Database = {
           id: string
           must_change_password: boolean
           nombre: string | null
+          pin_code: string | null
           telefono: string | null
           user_id: string
           vendedor_id: string | null
@@ -3273,6 +3274,7 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           nombre?: string | null
+          pin_code?: string | null
           telefono?: string | null
           user_id: string
           vendedor_id?: string | null
@@ -3286,6 +3288,7 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           nombre?: string | null
+          pin_code?: string | null
           telefono?: string | null
           user_id?: string
           vendedor_id?: string | null
@@ -5056,6 +5059,10 @@ export type Database = {
         Returns: undefined
       }
       user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
+      verify_admin_pin: {
+        Args: { p_pin: string; p_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       aplica_a_tarifa: "todos" | "categoria" | "producto"
