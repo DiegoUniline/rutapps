@@ -193,6 +193,7 @@ export type Database = {
           auditoria_id: string
           cantidad_esperada: number
           cantidad_real: number | null
+          cerrada: boolean
           created_at: string
           diferencia: number
           id: string
@@ -204,6 +205,7 @@ export type Database = {
           auditoria_id: string
           cantidad_esperada?: number
           cantidad_real?: number | null
+          cerrada?: boolean
           created_at?: string
           diferencia?: number
           id?: string
@@ -215,6 +217,7 @@ export type Database = {
           auditoria_id?: string
           cantidad_esperada?: number
           cantidad_real?: number | null
+          cerrada?: boolean
           created_at?: string
           diferencia?: number
           id?: string

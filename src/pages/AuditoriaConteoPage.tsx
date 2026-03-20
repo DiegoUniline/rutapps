@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Search, Save, Package, Check, Plus, Eye, ChevronDown, ChevronRight, Trash2, User, Lock, Link2, Copy, Share2 } from 'lucide-react';
+import { ArrowLeft, Search, Save, Package, Check, Plus, Eye, ChevronDown, ChevronRight, Trash2, User, Lock, Unlock, Link2, Copy, Share2, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ interface ConteoLine {
   cantidad_esperada: number;
   cantidad_real: number | null;
   contado: boolean;
+  cerrada: boolean;
   created_at: string;
 }
 
@@ -49,6 +50,7 @@ export default function AuditoriaConteoPage() {
   const [addQty, setAddQty] = useState<Record<string, string>>({});
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [lineToClose, setLineToClose] = useState<ConteoLine | null>(null);
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
@@ -78,6 +80,7 @@ export default function AuditoriaConteoPage() {
         cantidad_esperada: l.cantidad_esperada,
         cantidad_real: l.cantidad_real,
         contado: l.cantidad_real !== null,
+        cerrada: l.cerrada ?? false,
         created_at: l.created_at,
       })) as ConteoLine[];
     },
@@ -183,9 +186,23 @@ export default function AuditoriaConteoPage() {
   });
 
   const handleAddEntry = (lineaId: string) => {
+    const line = lineas?.find(l => l.id === lineaId);
+    if (line?.cerrada) { toast.error('Esta línea ya fue cerrada'); return; }
     const qty = Number(addQty[lineaId] || 1);
     if (qty <= 0) return;
     addEntry.mutate({ lineaId, cantidad: qty });
+  };
+
+  const handleToggleLineCerrada = async (line: ConteoLine, cerrar: boolean) => {
+    try {
+      await supabase.from('auditoria_lineas').update({ cerrada: cerrar } as any).eq('id', line.id);
+      toast.success(cerrar ? `"${line.nombre}" cerrada` : `"${line.nombre}" reabierta`);
+      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error');
+    } finally {
+      setLineToClose(null);
+    }
   };
 
   const handleFinalizarConteo = async () => {
@@ -336,6 +353,7 @@ export default function AuditoriaConteoPage() {
                 <TableHead className="w-[80px] text-center">Esperado</TableHead>
                 <TableHead className="w-[80px] text-center">Contado</TableHead>
                 <TableHead className="w-[200px] text-center">Agregar</TableHead>
+                <TableHead className="w-[90px] text-center">Estado</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -352,7 +370,8 @@ export default function AuditoriaConteoPage() {
                       key={line.id}
                       className={cn(
                         'cursor-pointer',
-                        total > 0 && 'bg-muted/30',
+                        line.cerrada && 'opacity-60 bg-muted/20',
+                        !line.cerrada && total > 0 && 'bg-muted/30',
                       )}
                       onClick={() => setExpandedLine(isExpanded ? null : line.id)}
                     >
@@ -372,25 +391,46 @@ export default function AuditoriaConteoPage() {
                         </Badge>
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1">
-                          <Input
-                            type="number"
-                            className="w-16 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={qtyVal}
-                            placeholder="1"
-                            min={1}
-                            onChange={e => setAddQty(prev => ({ ...prev, [line.id]: e.target.value }))}
-                            onKeyDown={e => { if (e.key === 'Enter') handleAddEntry(line.id); }}
-                          />
-                          <Button
-                            size="sm"
-                            className="h-7 gap-1 px-2"
-                            disabled={addEntry.isPending}
-                            onClick={() => handleAddEntry(line.id)}
-                          >
-                            <Plus className="h-3 w-3" /> Agregar
-                          </Button>
-                        </div>
+                        {line.cerrada ? (
+                          <div className="flex items-center justify-center">
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <Lock className="h-3 w-3" /> Cerrada
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <Input
+                              type="number"
+                              className="w-16 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={qtyVal}
+                              placeholder="1"
+                              min={1}
+                              onChange={e => setAddQty(prev => ({ ...prev, [line.id]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') handleAddEntry(line.id); }}
+                            />
+                            <Button
+                              size="sm"
+                              className="h-7 gap-1 px-2"
+                              disabled={addEntry.isPending || isCerrada}
+                              onClick={() => handleAddEntry(line.id)}
+                            >
+                              <Plus className="h-3 w-3" /> Agregar
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        {!isCerrada && (
+                          line.cerrada ? (
+                            <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" onClick={() => handleToggleLineCerrada(line, false)}>
+                              <Unlock className="h-3 w-3" /> Reabrir
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="secondary" className="h-7 gap-1 px-2 text-xs" onClick={() => setLineToClose(line)}>
+                              <CheckCircle2 className="h-3 w-3" /> Cerrar
+                            </Button>
+                          )
+                        )}
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setModalLine(line)}>
@@ -402,7 +442,7 @@ export default function AuditoriaConteoPage() {
                     {/* Expanded entries */}
                     {isExpanded && (
                       <TableRow key={`${line.id}-entries`} className="bg-background hover:bg-background">
-                        <TableCell colSpan={9} className="p-0 bg-background">
+                        <TableCell colSpan={10} className="p-0 bg-background">
                           <div className="px-8 py-2">
                             {lineEntries.length === 0 ? (
                               <p className="text-xs text-muted-foreground py-2">Sin entradas aún</p>
@@ -497,6 +537,24 @@ export default function AuditoriaConteoPage() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleCerrarAuditoria} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               {closing ? 'Cerrando...' : 'Sí, cerrar auditoría'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Close line confirmation */}
+      <AlertDialog open={!!lineToClose} onOpenChange={v => !v && setLineToClose(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar línea "{lineToClose?.nombre}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya no se podrán agregar más conteos a este producto. Puedes reabrirla después si lo necesitas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => lineToClose && handleToggleLineCerrada(lineToClose, true)}>
+              Sí, cerrar línea
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
