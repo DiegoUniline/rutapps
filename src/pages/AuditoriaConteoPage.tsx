@@ -266,31 +266,9 @@ export default function AuditoriaConteoPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8"
-                          onClick={() => setConteo(line.id, (currentVal ?? 0) - 1)}
-                        >
-                          <Minus className="h-3.5 w-3.5" />
-                        </Button>
-                        <Input
-                          type="number"
-                          className="w-16 h-8 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={currentVal ?? ''}
-                          placeholder="0"
-                          onChange={e => setConteo(line.id, Number(e.target.value) || 0)}
-                        />
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8"
-                          onClick={() => setConteo(line.id, (currentVal ?? 0) + 1)}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setModalLine(line); }}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
