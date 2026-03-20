@@ -469,6 +469,20 @@ export default function AuditoriaResultadosPage() {
         tipo="auditoria"
         referencia_id={id}
       />
+
+
+      {movModal && (
+        <AuditoriaMovimientosModal
+          open={!!movModal}
+          onOpenChange={() => setMovModal(null)}
+          productoId={movModal.productoId}
+          productoNombre={movModal.nombre}
+          productoCodigo={movModal.codigo}
+          cantidadEsperada={movModal.esperada}
+          apertura={auditoria?.created_at ?? ''}
+          cierre={auditoria?.cerrada_at ?? auditoria?.fecha_aprobacion ?? null}
+        />
+      )}
     </div>
   );
 }
