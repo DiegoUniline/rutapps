@@ -85,6 +85,8 @@ export default function VentaFormPage() {
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+  const [showPinDialog, setShowPinDialog] = useState(false);
+  const [pendingPinAction, setPendingPinAction] = useState<(() => Promise<void>) | null>(null);
 
   // Fetch tarifa rules for price resolution
   const { data: tarifaRules } = useQuery({
