@@ -59,40 +59,25 @@ export default function AdminCobrosTab() {
   );
 }
 
-// ─── Load Openpay.js SDK ───
-function useOpenpaySDK() {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    if ((window as any).OpenPay) { setReady(true); return; }
-    const script = document.createElement('script');
-    script.src = 'https://js.openpay.mx/openpay.v1.min.js';
-    script.onload = () => setReady(true);
-    document.head.appendChild(script);
-  }, []);
-  return ready;
-}
-
 // ─── Main: Suscribir Empresa ───
 function SuscribirEmpresaSection() {
-  const sdkReady = useOpenpaySDK();
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [opCustomers, setOpCustomers] = useState<OpenPayCustomer[]>([]);
   const [plans, setPlans] = useState<OpenPayPlan[]>([]);
-  const [opConfig, setOpConfig] = useState<{ merchant_id: string; public_key: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [sendingWa, setSendingWa] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [search, setSearch] = useState('');
 
-  // Payment method: 'card' | 'store' | 'stripe'
-  const [metodo, setMetodo] = useState<'card' | 'store' | 'stripe'>('card');
+  // Payment method: 'card_link' | 'store' | 'stripe'
+  const [metodo, setMetodo] = useState<'card_link' | 'store' | 'stripe'>('card_link');
 
-  // Last payment result
+  // Generated payment link
+  const [paymentLink, setPaymentLink] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<{
-    type: 'subscription' | 'store' | 'stripe';
+    type: 'link' | 'store' | 'stripe';
     reference?: string;
-    subscriptionId?: string;
     url?: string;
     amount?: number;
     planName?: string;
@@ -105,28 +90,19 @@ function SuscribirEmpresaSection() {
   const [custName, setCustName] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
 
-  // Card form
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardHolder, setCardHolder] = useState('');
-  const [cardExpMonth, setCardExpMonth] = useState('');
-  const [cardExpYear, setCardExpYear] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [empRes, custRes, plansRes, configRes] = await Promise.all([
+      const [empRes, custRes, plansRes] = await Promise.all([
         supabase.from('empresas').select('id, nombre, email, telefono'),
         openpayAction('list_customers'),
         openpayAction('list_plans'),
-        openpayAction('get_config'),
       ]);
       setEmpresas((empRes.data || []) as EmpresaRow[]);
       setOpCustomers(Array.isArray(custRes) ? custRes : []);
       setPlans(Array.isArray(plansRes) ? plansRes : []);
-      if (configRes?.merchant_id) setOpConfig(configRes);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -147,9 +123,9 @@ function SuscribirEmpresaSection() {
     setCustEmail(emp.email || '');
     setCustPhone(emp.telefono || '');
     setCustName(emp.nombre || '');
-    setCardHolder(emp.nombre || '');
     setSelectedPlanId('');
     setLastResult(null);
+    setPaymentLink(null);
   }
 
   const filtered = empresas.filter(e =>
@@ -157,7 +133,6 @@ function SuscribirEmpresaSection() {
     e.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Ensure customer exists in OpenPay
   async function ensureCustomer(): Promise<string> {
     if (matchedCustomer?.id) return matchedCustomer.id;
     const newCust = await openpayAction('create_customer', {
@@ -165,29 +140,6 @@ function SuscribirEmpresaSection() {
     });
     toast.success('Cliente creado en OpenPay');
     return newCust.id;
-  }
-
-  // Tokenize card with Openpay.js
-  function tokenizeCard(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const OP = (window as any).OpenPay;
-      if (!OP || !opConfig) { reject(new Error('OpenPay SDK no cargado')); return; }
-      OP.setId(opConfig.merchant_id);
-      OP.setApiKey(opConfig.public_key);
-      OP.setSandboxMode(true);
-
-      OP.token.create({
-        card_number: cardNumber.replace(/\s/g, ''),
-        holder_name: cardHolder,
-        expiration_year: cardExpYear.length === 4 ? cardExpYear.slice(2) : cardExpYear,
-        expiration_month: cardExpMonth.padStart(2, '0'),
-        cvv2: cardCvv,
-      }, (response: any) => {
-        resolve(response.data.id);
-      }, (error: any) => {
-        reject(new Error(error.data?.description || 'Error tokenizando tarjeta'));
-      });
-    });
   }
 
   async function handleSubmit() {
@@ -199,44 +151,44 @@ function SuscribirEmpresaSection() {
 
     setActionLoading(true);
     try {
-      if (metodo === 'card') {
-        // 1. Validate card fields
-        if (!cardNumber || !cardHolder || !cardExpMonth || !cardExpYear || !cardCvv) {
-          toast.error('Completa todos los campos de la tarjeta');
-          return;
-        }
-        // 2. Tokenize
-        const tokenId = await tokenizeCard();
-        toast.success('Tarjeta tokenizada');
-
-        // 3. Ensure customer
+      if (metodo === 'card_link') {
+        // Create customer in OpenPay first
         const customerId = await ensureCustomer();
 
-        // 4. Add card to customer
-        const card = await openpayAction('add_card', {
-          customer_id: customerId,
-          token_id: tokenId,
-          device_session_id: (window as any).OpenPay?.deviceData?.setup?.() || 'browser',
-        });
-        toast.success('Tarjeta asociada al cliente');
+        // Create payment link in DB
+        const { data: linkData, error: linkErr } = await supabase
+          .from('payment_links')
+          .insert({
+            empresa_id: selectedEmpresa.id,
+            empresa_nombre: selectedEmpresa.nombre,
+            openpay_customer_id: customerId,
+            openpay_plan_id: selectedPlanId,
+            plan_name: selectedPlan.name,
+            plan_amount: selectedPlan.amount,
+            plan_currency: selectedPlan.currency || 'MXN',
+            plan_repeat_unit: selectedPlan.repeat_unit,
+            customer_name: custName,
+            customer_email: custEmail,
+            customer_phone: custPhone || null,
+          } as any)
+          .select('token')
+          .single();
 
-        // 5. Create subscription
-        const sub = await openpayAction('create_subscription', {
-          customer_id: customerId,
-          plan_id: selectedPlanId,
-          card_id: card.id,
-        });
+        if (linkErr) throw new Error(linkErr.message);
+
+        const url = `${window.location.origin}/pagar/${linkData.token}`;
+        setPaymentLink(url);
+        navigator.clipboard?.writeText(url);
 
         setLastResult({
-          type: 'subscription',
-          subscriptionId: sub.id,
+          type: 'link',
+          url,
           amount: selectedPlan.amount,
           planName: selectedPlan.name,
         });
-        toast.success('¡Suscripción creada! Se cobrará automáticamente.');
+        toast.success('Enlace de pago generado y copiado');
 
       } else if (metodo === 'store') {
-        // Store / OXXO reference
         const customerId = await ensureCustomer();
         const result = await openpayAction('create_checkout', {
           customer_id: customerId,
@@ -266,13 +218,11 @@ function SuscribirEmpresaSection() {
         });
         if (error) throw error;
         if (data?.url) {
-          window.open(data.url, '_blank');
           setLastResult({ type: 'stripe', url: data.url, amount: selectedPlan.amount, planName: selectedPlan.name });
-          toast.success('Checkout Stripe abierto');
+          toast.success('Checkout Stripe generado');
         }
       }
 
-      // Refresh
       const freshCustomers = await openpayAction('list_customers');
       setOpCustomers(Array.isArray(freshCustomers) ? freshCustomers : []);
     } catch (e: any) {
@@ -288,19 +238,57 @@ function SuscribirEmpresaSection() {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
 
+  async function sendWhatsApp(message: string) {
+    if (!custPhone) { toast.error('Sin teléfono'); return; }
+    setSendingWa(true);
+    try {
+      const { data: waConfig } = await supabase.from('whatsapp_config').select('api_token').limit(1).maybeSingle();
+      if (!waConfig?.api_token) { toast.error('WhatsApp no configurado'); return; }
+      const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
+      const res = await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
+        body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message }),
+      });
+      if (!res.ok) throw new Error('Error WhatsApp');
+      toast.success('Enviado por WhatsApp');
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSendingWa(false); }
+  }
+
+  async function sendEmail() {
+    if (!custEmail || !lastResult) return;
+    setSendingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('billing-notify-email', {
+        body: {
+          to: custEmail,
+          empresa: selectedEmpresa?.nombre,
+          plan: lastResult.planName,
+          amount: lastResult.amount,
+          reference: lastResult.reference,
+          url: lastResult.url,
+        },
+      });
+      if (error) throw error;
+      toast.success('Enviado por Email');
+    } catch (e: any) { toast.error(e.message); }
+    finally { setSendingEmail(false); }
+  }
+
   return (
     <div className="space-y-6">
       {/* Payment method selector */}
       <div className="flex items-center gap-3 flex-wrap">
         <Label className="text-sm font-medium">Método:</Label>
         <div className="flex gap-2">
-          <Button variant={metodo === 'card' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('card'); setLastResult(null); }}>
-            <CreditCard className="h-4 w-4 mr-1" /> Tarjeta
+          <Button variant={metodo === 'card_link' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('card_link'); setLastResult(null); setPaymentLink(null); }}>
+            <CreditCard className="h-4 w-4 mr-1" /> Tarjeta (Link)
           </Button>
-          <Button variant={metodo === 'store' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('store'); setLastResult(null); }}>
+          <Button variant={metodo === 'store' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('store'); setLastResult(null); setPaymentLink(null); }}>
             <Store className="h-4 w-4 mr-1" /> Tienda (OXXO)
           </Button>
-          <Button variant={metodo === 'stripe' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('stripe'); setLastResult(null); }}>
+          <Button variant={metodo === 'stripe' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('stripe'); setLastResult(null); setPaymentLink(null); }}>
             <CreditCard className="h-4 w-4 mr-1" /> Stripe
           </Button>
         </div>
@@ -342,11 +330,11 @@ function SuscribirEmpresaSection() {
           </CardContent>
         </Card>
 
-        {/* RIGHT: Configure & Subscribe */}
+        {/* RIGHT: Configure */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              <CreditCard className="h-4 w-4" /> 2. Configurar y Cobrar
+              <CreditCard className="h-4 w-4" /> 2. Configurar y Enviar
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -354,7 +342,6 @@ function SuscribirEmpresaSection() {
               <p className="text-sm text-muted-foreground text-center py-8">← Selecciona una empresa para continuar</p>
             ) : (
               <>
-                {/* Customer status */}
                 {matchedCustomer ? (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                     <CheckCircle className="h-4 w-4 text-primary shrink-0" />
@@ -370,7 +357,6 @@ function SuscribirEmpresaSection() {
                   </div>
                 ) : null}
 
-                {/* Editable customer data */}
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Nombre</Label>
@@ -388,41 +374,13 @@ function SuscribirEmpresaSection() {
                   </div>
                 </div>
 
-                {/* Card form — only for 'card' method */}
-                {metodo === 'card' && (
-                  <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
-                    <p className="text-xs font-semibold flex items-center gap-1.5">
-                      <CreditCard className="h-3.5 w-3.5" /> Datos de tarjeta
+                {/* Info: for card_link, explain the flow */}
+                {metodo === 'card_link' && (
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/30 dark:border-blue-800">
+                    <Send className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Se generará un <strong>enlace de pago seguro</strong> que podrás enviar al cliente por WhatsApp o email. El cliente ingresará sus datos de tarjeta desde su dispositivo.
                     </p>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Número de tarjeta</Label>
-                      <Input
-                        placeholder="4111 1111 1111 1111"
-                        value={cardNumber}
-                        onChange={e => setCardNumber(e.target.value)}
-                        maxLength={19}
-                        className="font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Titular</Label>
-                      <Input placeholder="NOMBRE COMO APARECE EN LA TARJETA" value={cardHolder} onChange={e => setCardHolder(e.target.value)} />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Mes</Label>
-                        <Input placeholder="MM" maxLength={2} value={cardExpMonth} onChange={e => setCardExpMonth(e.target.value)} className="font-mono" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Año</Label>
-                        <Input placeholder="YY" maxLength={4} value={cardExpYear} onChange={e => setCardExpYear(e.target.value)} className="font-mono" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">CVV</Label>
-                        <Input type="password" placeholder="***" maxLength={4} value={cardCvv} onChange={e => setCardCvv(e.target.value)} className="font-mono" />
-                      </div>
-                    </div>
-                    {!sdkReady && <p className="text-xs text-amber-600">Cargando Openpay.js...</p>}
                   </div>
                 )}
 
@@ -461,7 +419,7 @@ function SuscribirEmpresaSection() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Método: <span className="font-medium text-foreground">
-                        {metodo === 'card' ? '💳 Tarjeta (suscripción automática)' : metodo === 'store' ? '🏪 Tienda (OXXO)' : '💳 Stripe'}
+                        {metodo === 'card_link' ? '🔗 Link de pago (el cliente registra su tarjeta)' : metodo === 'store' ? '🏪 Tienda (OXXO)' : '💳 Stripe'}
                       </span>
                     </p>
                   </div>
@@ -471,10 +429,10 @@ function SuscribirEmpresaSection() {
                 <Button
                   className="w-full"
                   onClick={handleSubmit}
-                  disabled={actionLoading || !selectedPlanId || (metodo === 'card' && !sdkReady)}
+                  disabled={actionLoading || !selectedPlanId}
                 >
                   {actionLoading && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                  {metodo === 'card' ? 'Suscribir con Tarjeta' : metodo === 'store' ? 'Generar Referencia OXXO' : 'Generar Checkout Stripe'}
+                  {metodo === 'card_link' ? '🔗 Generar Link de Pago' : metodo === 'store' ? 'Generar Referencia OXXO' : 'Generar Checkout Stripe'}
                 </Button>
 
                 {/* ─── Result card ─── */}
@@ -484,16 +442,25 @@ function SuscribirEmpresaSection() {
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary shrink-0" />
                         <p className="text-sm font-semibold">
-                          {lastResult.type === 'subscription' ? '¡Suscripción creada!' :
+                          {lastResult.type === 'link' ? '¡Link de pago generado!' :
                            lastResult.type === 'store' ? 'Referencia generada' : 'Checkout generado'}
                         </p>
                       </div>
 
-                      {lastResult.type === 'subscription' && (
-                        <div className="space-y-1">
-                          <p className="text-sm text-foreground">La tarjeta fue registrada y la suscripción está activa.</p>
-                          <p className="text-xs text-muted-foreground">El cobro de <strong>${lastResult.amount} MXN</strong> se realizará automáticamente cada periodo.</p>
-                          <p className="text-xs font-mono text-muted-foreground">Sub ID: {lastResult.subscriptionId}</p>
+                      {lastResult.type === 'link' && lastResult.url && (
+                        <div className="space-y-2">
+                          <p className="text-xs text-muted-foreground">Envía este enlace al cliente para que registre su tarjeta y se suscriba:</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 bg-background border rounded px-3 py-2 text-xs break-all">
+                              {lastResult.url}
+                            </code>
+                            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => {
+                              navigator.clipboard?.writeText(lastResult.url!);
+                              toast.success('Link copiado');
+                            }}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       )}
 
@@ -510,15 +477,13 @@ function SuscribirEmpresaSection() {
                               <Copy className="h-4 w-4" />
                             </Button>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Paga en OXXO, 7-Eleven o cualquier tienda de conveniencia.
-                          </p>
+                          <p className="text-xs text-muted-foreground">Paga en OXXO, 7-Eleven o tienda de conveniencia.</p>
                         </div>
                       )}
 
-                      {lastResult.url && (
+                      {lastResult.type === 'stripe' && lastResult.url && (
                         <a href={lastResult.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline break-all">
-                          Abrir link de pago
+                          Abrir link de pago Stripe
                         </a>
                       )}
 
@@ -526,111 +491,33 @@ function SuscribirEmpresaSection() {
                         {lastResult.planName} · ${lastResult.amount} MXN
                       </p>
 
-                      {/* Send buttons (for store/stripe results) */}
-                      {lastResult.type !== 'subscription' && (
-                        <>
-                          <div className="grid grid-cols-2 gap-2 pt-1">
-                            <Button
-                              variant="outline" size="sm" className="gap-1.5"
-                              disabled={sendingWa || !custPhone}
-                              onClick={async () => {
-                                if (!custPhone) { toast.error('Sin teléfono'); return; }
-                                setSendingWa(true);
-                                try {
-                                  const msg = `💳 *Referencia de pago — ${selectedEmpresa?.nombre}*\n\n` +
-                                    `Plan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\n` +
-                                    (lastResult.reference
-                                      ? `Referencia:\n*${lastResult.reference}*\n\nPaga en OXXO, 7-Eleven o tienda de conveniencia.`
-                                      : `Paga aquí:\n${lastResult.url}`) +
-                                    `\n\n¡Gracias por confiar en Rutapp! 🚀`;
-                                  const { data: waConfig } = await supabase.from('whatsapp_config').select('api_token').limit(1).maybeSingle();
-                                  if (!waConfig?.api_token) { toast.error('WhatsApp no configurado'); return; }
-                                  const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
-                                  const res = await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
-                                    body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message: msg }),
-                                  });
-                                  if (!res.ok) throw new Error('Error WhatsApp');
-                                  toast.success('Enviado por WhatsApp');
-                                } catch (e: any) { toast.error(e.message); }
-                                finally { setSendingWa(false); }
-                              }}
-                            >
-                              {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                              WhatsApp
-                            </Button>
-                            <Button
-                              variant="outline" size="sm" className="gap-1.5"
-                              disabled={sendingEmail || !custEmail}
-                              onClick={async () => {
-                                setSendingEmail(true);
-                                try {
-                                  const { error } = await supabase.functions.invoke('billing-notify-email', {
-                                    body: { to: custEmail, empresa: selectedEmpresa?.nombre, plan: lastResult.planName, amount: lastResult.amount, reference: lastResult.reference, url: lastResult.url },
-                                  });
-                                  if (error) throw error;
-                                  toast.success('Enviado por Email');
-                                } catch (e: any) { toast.error(e.message); }
-                                finally { setSendingEmail(false); }
-                              }}
-                            >
-                              {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                              Email
-                            </Button>
-                          </div>
-                          {!custPhone && <p className="text-xs text-destructive">Sin teléfono — no se puede enviar WhatsApp</p>}
-                        </>
-                      )}
-
-                      {/* For subscription: notify success */}
-                      {lastResult.type === 'subscription' && (
-                        <div className="grid grid-cols-2 gap-2 pt-1">
-                          <Button
-                            variant="outline" size="sm" className="gap-1.5"
-                            disabled={sendingWa || !custPhone}
-                            onClick={async () => {
-                              setSendingWa(true);
-                              try {
-                                const msg = `✅ *Suscripción activada — ${selectedEmpresa?.nombre}*\n\n` +
-                                  `Plan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\n` +
-                                  `Tu tarjeta fue registrada y el cobro será automático cada periodo.\n\n¡Gracias por confiar en Rutapp! 🚀`;
-                                const { data: waConfig } = await supabase.from('whatsapp_config').select('api_token').limit(1).maybeSingle();
-                                if (!waConfig?.api_token) { toast.error('WhatsApp no configurado'); return; }
-                                const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
-                                await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
-                                  body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message: msg }),
-                                });
-                                toast.success('Confirmación enviada por WhatsApp');
-                              } catch (e: any) { toast.error(e.message); }
-                              finally { setSendingWa(false); }
-                            }}
-                          >
-                            {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                            Confirmar WhatsApp
-                          </Button>
-                          <Button
-                            variant="outline" size="sm" className="gap-1.5"
-                            disabled={sendingEmail || !custEmail}
-                            onClick={async () => {
-                              setSendingEmail(true);
-                              try {
-                                const { error } = await supabase.functions.invoke('billing-notify-email', {
-                                  body: { to: custEmail, empresa: selectedEmpresa?.nombre, plan: lastResult.planName, amount: lastResult.amount, reference: `Suscripción: ${lastResult.subscriptionId}` },
-                                });
-                                if (error) throw error;
-                                toast.success('Confirmación enviada por Email');
-                              } catch (e: any) { toast.error(e.message); }
-                              finally { setSendingEmail(false); }
-                            }}
-                          >
-                            {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                            Confirmar Email
-                          </Button>
-                        </div>
-                      )}
+                      {/* Send buttons */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <Button
+                          variant="outline" size="sm" className="gap-1.5"
+                          disabled={sendingWa || !custPhone}
+                          onClick={() => {
+                            const msg = lastResult.type === 'link'
+                              ? `💳 *Enlace de pago — ${selectedEmpresa?.nombre}*\n\nPlan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\nRegistra tu tarjeta aquí:\n${lastResult.url}\n\nEs un enlace seguro donde tú mismo ingresas tus datos de pago. 🔒\n\n¡Gracias por confiar en Rutapp! 🚀`
+                              : lastResult.type === 'store'
+                              ? `🏪 *Referencia de pago — ${selectedEmpresa?.nombre}*\n\nPlan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\nReferencia:\n*${lastResult.reference}*\n\nPaga en OXXO, 7-Eleven o tienda de conveniencia.\n\n¡Gracias! 🚀`
+                              : `💳 *Link de pago — ${selectedEmpresa?.nombre}*\n\nPlan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\nPaga aquí:\n${lastResult.url}\n\n¡Gracias! 🚀`;
+                            sendWhatsApp(msg);
+                          }}
+                        >
+                          {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                          WhatsApp
+                        </Button>
+                        <Button
+                          variant="outline" size="sm" className="gap-1.5"
+                          disabled={sendingEmail || !custEmail}
+                          onClick={sendEmail}
+                        >
+                          {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                          Email
+                        </Button>
+                      </div>
+                      {!custPhone && <p className="text-xs text-destructive">Sin teléfono — no se puede enviar WhatsApp</p>}
                     </CardContent>
                   </Card>
                 )}

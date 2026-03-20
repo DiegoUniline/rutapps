@@ -2713,6 +2713,80 @@ export type Database = {
           },
         ]
       }
+      payment_links: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          empresa_id: string
+          empresa_nombre: string
+          id: string
+          openpay_card_id: string | null
+          openpay_customer_id: string | null
+          openpay_plan_id: string
+          openpay_subscription_id: string | null
+          plan_amount: number
+          plan_currency: string
+          plan_name: string
+          plan_repeat_unit: string
+          status: string
+          token: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          empresa_id: string
+          empresa_nombre?: string
+          id?: string
+          openpay_card_id?: string | null
+          openpay_customer_id?: string | null
+          openpay_plan_id: string
+          openpay_subscription_id?: string | null
+          plan_amount?: number
+          plan_currency?: string
+          plan_name?: string
+          plan_repeat_unit?: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          empresa_id?: string
+          empresa_nombre?: string
+          id?: string
+          openpay_card_id?: string | null
+          openpay_customer_id?: string | null
+          openpay_plan_id?: string
+          openpay_subscription_id?: string | null
+          plan_amount?: number
+          plan_currency?: string
+          plan_name?: string
+          plan_repeat_unit?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_links_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planes: {
         Row: {
           activo: boolean | null
