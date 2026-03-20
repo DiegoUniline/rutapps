@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import ModalSelect from '@/components/ModalSelect';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -28,7 +30,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'defa
   rechazada: { label: 'Rechazada', variant: 'destructive' },
 };
 
-type FiltroTipo = 'todos' | 'clasificacion' | 'marca';
+type FiltroTipo = 'todos' | 'clasificacion' | 'marca' | 'productos';
 
 export default function AuditoriasPage() {
   const { empresa, user, profile } = useAuth();
@@ -38,7 +40,8 @@ export default function AuditoriasPage() {
   const [showDialog, setShowDialog] = useState(false);
   const [almacenId, setAlmacenId] = useState('');
   const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
-  const [filtroValorId, setFiltroValorId] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filterSearch, setFilterSearch] = useState('');
   const [notas, setNotas] = useState('');
 
   const { data: almacenes } = useQuery({
@@ -67,6 +70,15 @@ export default function AuditoriasPage() {
     },
   });
 
+  const { data: productosAll } = useQuery({
+    queryKey: ['productos-audit', empresa?.id],
+    enabled: !!empresa?.id && showDialog && filtroTipo === 'productos',
+    queryFn: async () => {
+      const { data } = await supabase.from('productos').select('id, nombre, codigo').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre');
+      return data ?? [];
+    },
+  });
+
   const { data: auditorias, isLoading } = useQuery({
     queryKey: ['auditorias', empresa?.id],
     enabled: !!empresa?.id,
@@ -86,11 +98,19 @@ export default function AuditoriasPage() {
     [almacenes]
   );
 
-  const filtroValorOptions = useMemo(() => {
-    if (filtroTipo === 'clasificacion') return (clasificaciones ?? []).map(c => ({ value: c.id, label: c.nombre }));
-    if (filtroTipo === 'marca') return (marcas ?? []).map(m => ({ value: m.id, label: m.nombre }));
+  // Items for the multi-select list based on filtroTipo
+  const checklistItems = useMemo(() => {
+    if (filtroTipo === 'clasificacion') return (clasificaciones ?? []).map(c => ({ id: c.id, label: c.nombre }));
+    if (filtroTipo === 'marca') return (marcas ?? []).map(m => ({ id: m.id, label: m.nombre }));
+    if (filtroTipo === 'productos') return (productosAll ?? []).map(p => ({ id: p.id, label: `${p.codigo ?? ''} — ${p.nombre}` }));
     return [];
-  }, [filtroTipo, clasificaciones, marcas]);
+  }, [filtroTipo, clasificaciones, marcas, productosAll]);
+
+  const filteredChecklist = useMemo(() => {
+    if (!filterSearch) return checklistItems;
+    const s = filterSearch.toLowerCase();
+    return checklistItems.filter(i => i.label.toLowerCase().includes(s));
+  }, [checklistItems, filterSearch]);
 
   const filtered = useMemo(() => {
     if (!search) return auditorias ?? [];
@@ -99,20 +119,23 @@ export default function AuditoriasPage() {
   }, [auditorias, search]);
 
   // Preview count
+  const selectedArray = useMemo(() => Array.from(selectedIds), [selectedIds]);
   const { data: previewCount } = useQuery({
-    queryKey: ['audit-preview', almacenId, filtroTipo, filtroValorId],
+    queryKey: ['audit-preview', almacenId, filtroTipo, selectedArray],
     enabled: !!almacenId && showDialog,
     queryFn: async () => {
+      if (filtroTipo === 'productos' && selectedIds.size > 0) return selectedIds.size;
+
       let query = supabase
         .from('productos')
         .select('id', { count: 'exact', head: true })
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo');
 
-      if (filtroTipo === 'clasificacion' && filtroValorId) {
-        query = query.eq('clasificacion_id', filtroValorId);
-      } else if (filtroTipo === 'marca' && filtroValorId) {
-        query = query.eq('marca_id', filtroValorId);
+      if (filtroTipo === 'clasificacion' && selectedIds.size > 0) {
+        query = query.in('clasificacion_id', selectedArray);
+      } else if (filtroTipo === 'marca' && selectedIds.size > 0) {
+        query = query.in('marca_id', selectedArray);
       }
 
       const { count } = await query;
@@ -124,19 +147,32 @@ export default function AuditoriasPage() {
 
   const autoNombre = useMemo(() => {
     const fecha = format(new Date(), "dd/MM/yyyy", { locale: es });
-    const filtroLabel = filtroTipo === 'todos' ? 'Todos'
-      : filtroTipo === 'clasificacion' ? `Cat: ${filtroValorOptions.find(o => o.value === filtroValorId)?.label ?? '...'}`
-      : `Marca: ${filtroValorOptions.find(o => o.value === filtroValorId)?.label ?? '...'}`;
+    let filtroLabel = 'Todos';
+    if (filtroTipo !== 'todos' && selectedIds.size > 0) {
+      const names = checklistItems.filter(i => selectedIds.has(i.id)).map(i => i.label);
+      filtroLabel = names.length <= 2 ? names.join(', ') : `${names.length} ${filtroTipo === 'clasificacion' ? 'categorías' : filtroTipo === 'marca' ? 'marcas' : 'productos'}`;
+    }
     return `Auditoría ${almacenNombre || '...'} — ${filtroLabel} — ${fecha}`;
-  }, [almacenNombre, filtroTipo, filtroValorId, filtroValorOptions]);
+  }, [almacenNombre, filtroTipo, selectedIds, checklistItems]);
+
+  const toggleId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(filteredChecklist.map(i => i.id)));
+  const deselectAll = () => setSelectedIds(new Set());
 
   const crearAuditoria = useMutation({
     mutationFn: async () => {
       if (!almacenId) throw new Error('Selecciona un almacén');
-      if (filtroTipo !== 'todos' && !filtroValorId) throw new Error('Selecciona el filtro');
+      if (filtroTipo !== 'todos' && selectedIds.size === 0) throw new Error('Selecciona al menos un elemento');
 
       const dbFiltroTipo = filtroTipo === 'todos' ? 'almacen' : filtroTipo;
-      const dbFiltroValor = filtroTipo === 'todos' ? almacenId : filtroValorId;
+      const dbFiltroValor = filtroTipo === 'todos' ? almacenId : selectedArray.join(',');
 
       const { data: auditoria, error } = await supabase.from('auditorias').insert({
         empresa_id: empresa!.id,
@@ -149,20 +185,35 @@ export default function AuditoriasPage() {
       } as any).select('id').single();
       if (error) throw error;
 
-      let query = supabase
-        .from('productos')
-        .select('id, cantidad')
-        .eq('empresa_id', empresa!.id)
-        .eq('status', 'activo');
+      let productos: any[] = [];
 
-      if (filtroTipo === 'clasificacion' && filtroValorId) {
-        query = query.eq('clasificacion_id', filtroValorId);
-      } else if (filtroTipo === 'marca' && filtroValorId) {
-        query = query.eq('marca_id', filtroValorId);
+      if (filtroTipo === 'productos') {
+        // Directly use selected product ids
+        const { data } = await supabase
+          .from('productos')
+          .select('id, cantidad')
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'activo')
+          .in('id', selectedArray);
+        productos = data ?? [];
+      } else {
+        let query = supabase
+          .from('productos')
+          .select('id, cantidad')
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'activo');
+
+        if (filtroTipo === 'clasificacion' && selectedIds.size > 0) {
+          query = query.in('clasificacion_id', selectedArray);
+        } else if (filtroTipo === 'marca' && selectedIds.size > 0) {
+          query = query.in('marca_id', selectedArray);
+        }
+
+        const { data } = await query;
+        productos = data ?? [];
       }
 
-      const { data: productos } = await query;
-      if (!productos?.length) throw new Error('No hay productos activos con ese filtro');
+      if (!productos.length) throw new Error('No hay productos activos con ese filtro');
 
       const { error: lErr } = await supabase.from('auditoria_lineas').insert(
         productos.map(p => ({
@@ -188,9 +239,12 @@ export default function AuditoriasPage() {
     setShowDialog(false);
     setAlmacenId('');
     setFiltroTipo('todos');
-    setFiltroValorId('');
+    setSelectedIds(new Set());
+    setFilterSearch('');
     setNotas('');
   };
+
+  const canCreate = almacenId && (filtroTipo === 'todos' || selectedIds.size > 0);
 
   return (
     <div className="p-4 space-y-4 min-h-full">
@@ -255,7 +309,7 @@ export default function AuditoriasPage() {
       </div>
 
       <Dialog open={showDialog} onOpenChange={v => !v && resetForm()}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Nueva auditoría</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {/* Info: fecha y usuario */}
@@ -277,27 +331,68 @@ export default function AuditoriasPage() {
 
             <div>
               <Label>¿Qué auditar?</Label>
-              <Select value={filtroTipo} onValueChange={(v: FiltroTipo) => { setFiltroTipo(v); setFiltroValorId(''); }}>
+              <Select value={filtroTipo} onValueChange={(v: FiltroTipo) => { setFiltroTipo(v); setSelectedIds(new Set()); setFilterSearch(''); }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos los productos</SelectItem>
-                  <SelectItem value="clasificacion">Por categoría</SelectItem>
-                  <SelectItem value="marca">Por marca</SelectItem>
+                  <SelectItem value="clasificacion">Por categoría(s)</SelectItem>
+                  <SelectItem value="marca">Por marca(s)</SelectItem>
+                  <SelectItem value="productos">Productos específicos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Multi-select checklist */}
             {filtroTipo !== 'todos' && (
-              <div>
-                <Label>{filtroTipo === 'clasificacion' ? 'Categoría' : 'Marca'}</Label>
-                <ModalSelect
-                  options={filtroValorOptions}
-                  value={filtroValorId}
-                  onChange={setFiltroValorId}
-                  placeholder={`Seleccionar ${filtroTipo === 'clasificacion' ? 'categoría' : 'marca'}...`}
-                />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">
+                    {filtroTipo === 'clasificacion' ? 'Categorías' : filtroTipo === 'marca' ? 'Marcas' : 'Productos'}
+                    {selectedIds.size > 0 && <span className="ml-1 text-muted-foreground">({selectedIds.size})</span>}
+                  </Label>
+                  <div className="flex gap-1">
+                    <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={selectAll}>
+                      Seleccionar todo
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={deselectAll}>
+                      Quitar todo
+                    </Button>
+                  </div>
+                </div>
+
+                {checklistItems.length > 8 && (
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Filtrar..."
+                      className="h-8 pl-8 text-sm"
+                      value={filterSearch}
+                      onChange={e => setFilterSearch(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                <ScrollArea className="border border-border rounded-md h-[200px]">
+                  <div className="p-1">
+                    {filteredChecklist.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-4">Sin resultados</p>
+                    )}
+                    {filteredChecklist.map(item => (
+                      <label
+                        key={item.id}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          onCheckedChange={() => toggleId(item.id)}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             )}
 
@@ -309,7 +404,7 @@ export default function AuditoriasPage() {
 
             {almacenId && (
               <div className="text-xs text-muted-foreground">
-                <span className="font-medium">Nombre auto:</span> {autoNombre}
+                <span className="font-medium">Nombre:</span> {autoNombre}
               </div>
             )}
 
@@ -319,7 +414,7 @@ export default function AuditoriasPage() {
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={resetForm}>Cancelar</Button>
-              <Button onClick={() => crearAuditoria.mutate()} disabled={crearAuditoria.isPending || !almacenId}>
+              <Button onClick={() => crearAuditoria.mutate()} disabled={crearAuditoria.isPending || !canCreate}>
                 {crearAuditoria.isPending ? 'Creando...' : 'Crear y comenzar conteo'}
               </Button>
             </div>
