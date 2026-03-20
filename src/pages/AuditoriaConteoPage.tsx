@@ -195,10 +195,48 @@ export default function AuditoriaConteoPage() {
     navigate(`/almacen/auditorias/${id}/resultados`);
   };
 
+  const handleCerrarAuditoria = async () => {
+    setClosing(true);
+    try {
+      await supabase.from('auditorias').update({
+        status: 'cerrada',
+        cerrada_por: profile?.nombre || user?.email || 'Admin',
+        cerrada_at: new Date().toISOString(),
+      } as any).eq('id', id!);
+      toast.success('Auditoría cerrada — ya no se pueden registrar conteos');
+      qc.invalidateQueries({ queryKey: ['auditoria', id] });
+      qc.invalidateQueries({ queryKey: ['auditorias'] });
+    } catch (err: any) {
+      toast.error(err.message ?? 'Error al cerrar');
+    } finally {
+      setClosing(false);
+      setShowCloseDialog(false);
+    }
+  };
+
+  const publicUrl = `${window.location.origin}/auditoria-movil/${id}`;
+  const isCerrada = auditoria?.status === 'cerrada' || auditoria?.status === 'aprobada' || auditoria?.status === 'rechazada';
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(publicUrl);
+    toast.success('URL copiada al portapapeles');
+  };
+
+  const shareUrl = async () => {
+    if (navigator.share) {
+      await navigator.share({ title: `Auditoría ${auditoria?.nombre}`, url: publicUrl });
+    } else {
+      copyUrl();
+    }
+  };
+
   const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
     pendiente: { label: 'Pendiente', variant: 'secondary' },
     en_proceso: { label: 'En proceso', variant: 'outline' },
     por_aprobar: { label: 'Por aprobar', variant: 'default' },
+    cerrada: { label: 'Cerrada', variant: 'destructive' },
+    aprobada: { label: 'Aprobada', variant: 'default' },
+    rechazada: { label: 'Rechazada', variant: 'destructive' },
   };
 
   const fmtDt = (d: string | null | undefined) => {
