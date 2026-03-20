@@ -206,7 +206,8 @@ export default function AuditoriaConteoPage() {
               <TableRow>
                 <TableHead>Producto</TableHead>
                 <TableHead>Código</TableHead>
-                <TableHead className="w-[140px]">Fecha / Hora</TableHead>
+                <TableHead className="w-[140px]">Apertura</TableHead>
+                <TableHead className="w-[140px]">Cierre</TableHead>
                 <TableHead className="w-[80px] text-center">Esperado</TableHead>
                 <TableHead className="w-[80px] text-center">Estado</TableHead>
                 <TableHead className="w-[160px] text-center">Conteo</TableHead>
@@ -228,6 +229,9 @@ export default function AuditoriaConteoPage() {
                     <TableCell className="text-xs text-muted-foreground">{line.codigo}</TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {fmtDt(line.created_at)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      —
                     </TableCell>
                     <TableCell className="text-center font-mono text-sm">
                       {line.cantidad_esperada}
