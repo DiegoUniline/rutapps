@@ -260,7 +260,48 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     }
   }
 
-  if (loading) {
+  async function handleResetPassword() {
+    if (!resetDialog || !resetPassword) return;
+    if (resetPassword.length < 6) { toast.error('Mínimo 6 caracteres'); return; }
+    setResettingPw(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'reset-password',
+          user_id: resetDialog.userId,
+          password: resetPassword,
+          force_change: resetForceChange,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Contraseña restablecida para ${resetDialog.email}${resetForceChange ? ' — deberá cambiarla al entrar' : ''}`);
+      setResetDialog(null);
+      setResetPassword('');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setResettingPw(false);
+    }
+  }
+
+  async function handleForceChangeAll() {
+    if (!confirm(`¿Forzar cambio de contraseña para TODOS los usuarios de ${empresa?.nombre}?`)) return;
+    setForcingAll(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'force-change-all', empresa_id: empresaId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.count} usuarios deberán cambiar su contraseña al entrar`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setForcingAll(false);
+    }
+  }
+
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
         Cargando detalle de empresa...
