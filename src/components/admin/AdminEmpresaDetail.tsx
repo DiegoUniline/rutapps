@@ -841,6 +841,55 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           </CardContent>
         </Card>
       )}
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetDialog} onOpenChange={open => { if (!open) setResetDialog(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" /> Restablecer contraseña
+            </DialogTitle>
+            <DialogDescription>
+              {resetDialog?.nombre} ({resetDialog?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nueva contraseña temporal</Label>
+              <Input
+                type="text"
+                value={resetPassword}
+                onChange={e => setResetPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="font-mono"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="force-change"
+                checked={resetForceChange}
+                onCheckedChange={(v) => setResetForceChange(!!v)}
+              />
+              <label htmlFor="force-change" className="text-xs text-muted-foreground cursor-pointer">
+                Forzar cambio de contraseña al iniciar sesión
+              </label>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setResetDialog(null)}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={resettingPw || resetPassword.length < 6}
+                onClick={handleResetPassword}
+              >
+                {resettingPw ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <KeyRound className="h-4 w-4 mr-1" />}
+                Restablecer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
