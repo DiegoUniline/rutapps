@@ -7,9 +7,11 @@ import { ArrowLeft, Search, Save, Package, Check, Minus, Plus } from 'lucide-rea
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface ConteoLine {
   id: string;
@@ -19,6 +21,7 @@ interface ConteoLine {
   cantidad_esperada: number;
   cantidad_real: number | null;
   contado: boolean;
+  created_at: string;
 }
 
 export default function AuditoriaConteoPage() {
@@ -26,7 +29,6 @@ export default function AuditoriaConteoPage() {
   const { empresa } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
   const [conteos, setConteos] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
@@ -59,11 +61,11 @@ export default function AuditoriaConteoPage() {
         cantidad_esperada: l.cantidad_esperada,
         cantidad_real: l.cantidad_real,
         contado: l.cantidad_real !== null,
+        created_at: l.created_at,
       })) as ConteoLine[];
     },
   });
 
-  // Merge server data with local conteos
   const mergedLines = useMemo(() => {
     return (lineas ?? []).map(l => ({
       ...l,
@@ -106,7 +108,6 @@ export default function AuditoriaConteoPage() {
       toast.success('Conteo guardado correctamente');
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       setConteos({});
-      // If all lines counted, go to results
       const allCounted = mergedLines.every(l => l.contado);
       if (allCounted) {
         navigate(`/almacen/auditorias/${id}/resultados`);
@@ -119,15 +120,24 @@ export default function AuditoriaConteoPage() {
   };
 
   const handleFinalizarConteo = async () => {
-    // Save pending first
     if (Object.keys(conteos).length > 0) {
       await handleGuardar();
     }
-    // Mark as por_aprobar
     await supabase.from('auditorias').update({ status: 'por_aprobar' } as any).eq('id', id!);
     qc.invalidateQueries({ queryKey: ['auditorias'] });
     toast.success('Conteo finalizado — revisa los resultados');
     navigate(`/almacen/auditorias/${id}/resultados`);
+  };
+
+  const STATUS_LABEL: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
+    pendiente: { label: 'Pendiente', variant: 'secondary' },
+    en_proceso: { label: 'En proceso', variant: 'outline' },
+    por_aprobar: { label: 'Por aprobar', variant: 'default' },
+  };
+
+  const fmtDt = (d: string | null | undefined) => {
+    if (!d) return '—';
+    try { return format(new Date(d), "dd/MM/yyyy HH:mm", { locale: es }); } catch { return '—'; }
   };
 
   return (
@@ -140,16 +150,25 @@ export default function AuditoriaConteoPage() {
           </Button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-semibold truncate">{auditoria?.nombre ?? 'Conteo'}</h1>
-            <p className="text-xs text-muted-foreground">
-              {contadas}/{totalLineas} productos contados
-            </p>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span>Apertura: {fmtDt(auditoria?.created_at)}</span>
+              <span>•</span>
+              <span>{contadas}/{totalLineas} contados</span>
+              {auditoria?.status && (
+                <>
+                  <span>•</span>
+                  <Badge variant={STATUS_LABEL[auditoria.status]?.variant ?? 'secondary'} className="text-[10px] h-5">
+                    {STATUS_LABEL[auditoria.status]?.label ?? auditoria.status}
+                  </Badge>
+                </>
+              )}
+            </div>
           </div>
           <Badge variant={contadas === totalLineas ? 'default' : 'secondary'}>
             {Math.round((contadas / Math.max(totalLineas, 1)) * 100)}%
           </Badge>
         </div>
 
-        {/* Progress bar */}
         <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
           <div
             className="h-full bg-primary rounded-full transition-all duration-300"
@@ -168,7 +187,7 @@ export default function AuditoriaConteoPage() {
         </div>
       </div>
 
-      {/* Product list */}
+      {/* Table */}
       <div className="flex-1 overflow-auto">
         {isLoading && (
           <div className="p-8 text-center text-muted-foreground">Cargando productos...</div>
@@ -181,60 +200,81 @@ export default function AuditoriaConteoPage() {
           </div>
         )}
 
-        <div className="divide-y divide-border">
-          {filtered.map(line => {
-            const currentVal = conteos[line.id] !== undefined ? conteos[line.id] : line.cantidad_real;
-            const hasLocalChange = conteos[line.id] !== undefined;
-            return (
-              <div
-                key={line.id}
-                className={cn(
-                  'p-3 flex items-center gap-3 transition-colors',
-                  line.contado && !hasLocalChange && 'bg-muted/30',
-                  hasLocalChange && 'bg-accent/20'
-                )}
-              >
-                {/* Product info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{line.nombre}</p>
-                  <p className="text-xs text-muted-foreground">{line.codigo}</p>
-                </div>
-
-                {/* Counter controls */}
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9"
-                    onClick={() => setConteo(line.id, (currentVal ?? 0) - 1)}
+        {!isLoading && filtered.length > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Producto</TableHead>
+                <TableHead className="w-[140px]">Fecha / Hora</TableHead>
+                <TableHead className="w-[100px] text-center">Esperado</TableHead>
+                <TableHead className="w-[80px] text-center">Estado</TableHead>
+                <TableHead className="w-[180px] text-center">Conteo</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map(line => {
+                const currentVal = conteos[line.id] !== undefined ? conteos[line.id] : line.cantidad_real;
+                const hasLocalChange = conteos[line.id] !== undefined;
+                return (
+                  <TableRow
+                    key={line.id}
+                    className={cn(
+                      line.contado && !hasLocalChange && 'bg-muted/30',
+                      hasLocalChange && 'bg-accent/20'
+                    )}
                   >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    className="w-16 h-9 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    value={currentVal ?? ''}
-                    placeholder="0"
-                    onChange={e => setConteo(line.id, Number(e.target.value) || 0)}
-                  />
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    className="h-9 w-9"
-                    onClick={() => setConteo(line.id, (currentVal ?? 0) + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Counted indicator */}
-                {line.contado && !hasLocalChange && (
-                  <Check className="h-4 w-4 text-green-600 shrink-0" />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    <TableCell>
+                      <p className="text-sm font-medium">{line.nombre}</p>
+                      <p className="text-xs text-muted-foreground">{line.codigo}</p>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {fmtDt(line.created_at)}
+                    </TableCell>
+                    <TableCell className="text-center font-mono text-sm">
+                      {line.cantidad_esperada}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {line.contado && !hasLocalChange ? (
+                        <Check className="h-4 w-4 text-green-600 mx-auto" />
+                      ) : hasLocalChange ? (
+                        <Badge variant="outline" className="text-[10px]">Editado</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px]">Pendiente</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8"
+                          onClick={() => setConteo(line.id, (currentVal ?? 0) - 1)}
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+                        <Input
+                          type="number"
+                          className="w-16 h-8 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={currentVal ?? ''}
+                          placeholder="0"
+                          onChange={e => setConteo(line.id, Number(e.target.value) || 0)}
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8"
+                          onClick={() => setConteo(line.id, (currentVal ?? 0) + 1)}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {/* Bottom action bar */}
