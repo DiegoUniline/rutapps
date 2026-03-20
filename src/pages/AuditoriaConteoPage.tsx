@@ -195,8 +195,9 @@ export default function AuditoriaConteoPage() {
 
   const handleToggleLineCerrada = async (line: ConteoLine, cerrar: boolean) => {
     try {
-      await supabase.from('auditoria_lineas').update({ cerrada: cerrar } as any).eq('id', line.id);
-      toast.success(cerrar ? `"${line.nombre}" cerrada` : `"${line.nombre}" reabierta`);
+      // Use RPC to recalculate theoretical stock when closing
+      await supabase.rpc('close_audit_line', { p_linea_id: line.id, p_cerrada: cerrar });
+      toast.success(cerrar ? `"${line.nombre}" cerrada — stock teórico recalculado` : `"${line.nombre}" reabierta`);
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
     } catch (err: any) {
       toast.error(err.message ?? 'Error');
