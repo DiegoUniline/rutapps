@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store } from 'lucide-react';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
 import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
@@ -14,6 +14,7 @@ import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
 import AdminAnunciosTab from '@/components/admin/AdminAnunciosTab';
+import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
@@ -88,6 +89,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="anuncios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Megaphone className="h-4 w-4" /> Anuncios
               </TabsTrigger>
+              <TabsTrigger value="cobros" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Store className="h-4 w-4" /> Cobros
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
@@ -98,6 +102,7 @@ export default function SuperAdminPage() {
             <TabsContent value="notifications"><AdminNotificationsTab /></TabsContent>
             <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
             <TabsContent value="anuncios"><AdminAnunciosTab /></TabsContent>
+            <TabsContent value="cobros"><AdminCobrosTab /></TabsContent>
           </Tabs>
         )}
       </div>
