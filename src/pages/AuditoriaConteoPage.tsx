@@ -542,6 +542,24 @@ export default function AuditoriaConteoPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Close line confirmation */}
+      <AlertDialog open={!!lineToClose} onOpenChange={v => !v && setLineToClose(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar línea "{lineToClose?.nombre}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya no se podrán agregar más conteos a este producto. Puedes reabrirla después si lo necesitas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => lineToClose && handleToggleLineCerrada(lineToClose, true)}>
+              Sí, cerrar línea
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {modalLine && auditoria && (
         <AuditoriaMovimientosModal
           open={!!modalLine}
