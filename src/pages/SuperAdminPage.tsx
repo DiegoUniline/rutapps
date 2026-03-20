@@ -102,6 +102,7 @@ export default function SuperAdminPage() {
             <TabsContent value="notifications"><AdminNotificationsTab /></TabsContent>
             <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
             <TabsContent value="anuncios"><AdminAnunciosTab /></TabsContent>
+            <TabsContent value="cobros"><AdminCobrosTab /></TabsContent>
           </Tabs>
         )}
       </div>
