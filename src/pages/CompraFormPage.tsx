@@ -1028,5 +1028,7 @@ export default function CompraFormPage() {
         </div>
       </div>
     </div>
+    <PinDialog />
+    </>
   );
 }
