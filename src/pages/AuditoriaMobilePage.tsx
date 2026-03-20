@@ -152,6 +152,8 @@ export default function AuditoriaMobilePage() {
 
   const addScan = useCallback(async (lineaId: string, qty: number) => {
     if (!auditoria_id) return;
+    const line = lineas.find(l => l.id === lineaId);
+    if (line?.cerrada) { toast.error('Esta línea ya fue cerrada'); return; }
 
     // Optimistic
     setScanTotals(prev => ({ ...prev, [lineaId]: (prev[lineaId] ?? 0) + qty }));
