@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Search, Save, Package, Check, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, Search, Save, Package, Check, Minus, Plus, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import AuditoriaMovimientosModal from '@/components/auditorias/AuditoriaMovimientosModal';
 
 interface ConteoLine {
   id: string;
@@ -32,6 +33,7 @@ export default function AuditoriaConteoPage() {
   const [search, setSearch] = useState('');
   const [conteos, setConteos] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [modalLine, setModalLine] = useState<ConteoLine | null>(null);
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
@@ -211,6 +213,7 @@ export default function AuditoriaConteoPage() {
                 <TableHead className="w-[80px] text-center">Esperado</TableHead>
                 <TableHead className="w-[80px] text-center">Estado</TableHead>
                 <TableHead className="w-[160px] text-center">Conteo</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -263,31 +266,9 @@ export default function AuditoriaConteoPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8"
-                          onClick={() => setConteo(line.id, (currentVal ?? 0) - 1)}
-                        >
-                          <Minus className="h-3.5 w-3.5" />
-                        </Button>
-                        <Input
-                          type="number"
-                          className="w-16 h-8 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={currentVal ?? ''}
-                          placeholder="0"
-                          onChange={e => setConteo(line.id, Number(e.target.value) || 0)}
-                        />
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="h-8 w-8"
-                          onClick={() => setConteo(line.id, (currentVal ?? 0) + 1)}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setModalLine(line); }}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -306,6 +287,19 @@ export default function AuditoriaConteoPage() {
           Finalizar conteo
         </Button>
       </div>
+
+      {modalLine && auditoria && (
+        <AuditoriaMovimientosModal
+          open={!!modalLine}
+          onOpenChange={(v) => !v && setModalLine(null)}
+          productoId={modalLine.producto_id}
+          productoNombre={modalLine.nombre}
+          productoCodigo={modalLine.codigo}
+          cantidadEsperada={modalLine.cantidad_esperada}
+          apertura={auditoria.created_at}
+          cierre={null}
+        />
+      )}
     </div>
   );
 }
