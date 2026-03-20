@@ -3120,6 +3120,7 @@ export type Database = {
           empresa_id: string
           estado: string
           id: string
+          must_change_password: boolean
           nombre: string | null
           telefono: string | null
           user_id: string
@@ -3132,6 +3133,7 @@ export type Database = {
           empresa_id: string
           estado?: string
           id?: string
+          must_change_password?: boolean
           nombre?: string | null
           telefono?: string | null
           user_id: string
@@ -3144,6 +3146,7 @@ export type Database = {
           empresa_id?: string
           estado?: string
           id?: string
+          must_change_password?: boolean
           nombre?: string | null
           telefono?: string | null
           user_id?: string
