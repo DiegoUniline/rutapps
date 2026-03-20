@@ -1,10 +1,14 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Lock, Camera, X, Plus, Package, Search, User } from 'lucide-react';
+import { Lock, Camera, X, Plus, Package, Search, User, CheckCircle2, ChevronDown, ChevronRight, Trash2, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -30,6 +34,7 @@ interface LineaItem {
   producto_nombre: string;
   producto_codigo: string;
   cantidad_esperada: number;
+  cerrada: boolean;
 }
 
 interface ScanTotal {
@@ -48,6 +53,9 @@ export default function AuditoriaMobilePage() {
   const [manualQty, setManualQty] = useState<Record<string, string>>({});
   const [scanning, setScanning] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
+  const [showCloseAll, setShowCloseAll] = useState(false);
+  const [lineToClose, setLineToClose] = useState<LineaItem | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<any>(null);
 
@@ -74,7 +82,7 @@ export default function AuditoriaMobilePage() {
       // Load lines
       const { data: lines } = await supabase
         .from('auditoria_lineas')
-        .select('id, producto_id, cantidad_esperada, productos(nombre, codigo)')
+        .select('id, producto_id, cantidad_esperada, cerrada, productos(nombre, codigo)')
         .eq('auditoria_id', auditoria_id)
         .order('created_at', { ascending: true });
 
@@ -84,6 +92,7 @@ export default function AuditoriaMobilePage() {
         producto_nombre: (l.productos as any)?.nombre ?? 'Producto',
         producto_codigo: (l.productos as any)?.codigo ?? '',
         cantidad_esperada: l.cantidad_esperada,
+        cerrada: l.cerrada ?? false,
       })));
 
       // Load existing scans
@@ -121,8 +130,30 @@ export default function AuditoriaMobilePage() {
     setPageState('counting');
   };
 
+  const handleCloseLineMobile = async (line: LineaItem, cerrar: boolean) => {
+    try {
+      await supabase.rpc('close_audit_line', { p_linea_id: line.id, p_cerrada: cerrar });
+      setLineas(prev => prev.map(l => l.id === line.id ? { ...l, cerrada: cerrar } : l));
+      toast.success(cerrar ? `"${line.producto_nombre}" cerrada` : `"${line.producto_nombre}" reabierta`);
+    } catch { toast.error('Error'); }
+    setLineToClose(null);
+  };
+
+  const handleCloseAllMobile = async () => {
+    if (!auditoria_id) return;
+    try {
+      await supabase.rpc('close_full_audit', { p_auditoria_id: auditoria_id, p_cerrada_por: auditorName });
+      setAuditoria(prev => prev ? { ...prev, status: 'cerrada', cerrada_por: auditorName, cerrada_at: new Date().toISOString() } : prev);
+      setPageState('closed');
+      toast.success('Auditoría cerrada');
+    } catch { toast.error('Error al cerrar'); }
+    setShowCloseAll(false);
+  };
+
   const addScan = useCallback(async (lineaId: string, qty: number) => {
     if (!auditoria_id) return;
+    const line = lineas.find(l => l.id === lineaId);
+    if (line?.cerrada) { toast.error('Esta línea ya fue cerrada'); return; }
 
     // Optimistic
     setScanTotals(prev => ({ ...prev, [lineaId]: (prev[lineaId] ?? 0) + qty }));
@@ -375,7 +406,7 @@ export default function AuditoriaMobilePage() {
       </div>
 
       {/* Product list */}
-      <div className="flex-1 overflow-auto" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex-1 overflow-auto pb-20">
         {filtered.length === 0 && (
           <div className="p-8 text-center text-muted-foreground">
             <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -387,51 +418,127 @@ export default function AuditoriaMobilePage() {
           {filtered.map(item => {
             const total = scanTotals[item.id] ?? 0;
             const qtyVal = manualQty[item.id] ?? '';
+            const isExpanded = expandedLine === item.id;
 
             return (
-              <div key={item.id} className="px-4 py-3 flex items-center gap-3">
-                {/* Product info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[16px] font-semibold truncate text-foreground">{item.producto_nombre}</p>
-                  <p className="text-xs text-muted-foreground">{item.producto_codigo}</p>
+              <div key={item.id} className={cn(item.cerrada && 'opacity-50 bg-muted/20')}>
+                <div className="px-4 py-3 flex items-center gap-3">
+                  {/* Expand toggle */}
+                  <button className="shrink-0 p-1" onClick={() => setExpandedLine(isExpanded ? null : item.id)}>
+                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                  </button>
+
+                  {/* Product info */}
+                  <div className="flex-1 min-w-0" onClick={() => setExpandedLine(isExpanded ? null : item.id)}>
+                    <p className="text-[16px] font-semibold truncate text-foreground">{item.producto_nombre}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">{item.producto_codigo}</p>
+                      {item.cerrada && <Badge variant="secondary" className="text-[10px] h-4 gap-0.5"><Lock className="h-2.5 w-2.5" />Cerrada</Badge>}
+                    </div>
+                  </div>
+
+                  {/* Count badge */}
+                  <Badge variant={total > 0 ? 'default' : 'secondary'} className="shrink-0 font-mono text-sm min-w-[32px] justify-center">
+                    {total}
+                  </Badge>
+
+                  {item.cerrada ? (
+                    <Button size="sm" variant="outline" className="h-9 text-xs gap-1 shrink-0" onClick={() => handleCloseLineMobile(item, false)}>
+                      <Unlock className="h-3 w-3" /> Reabrir
+                    </Button>
+                  ) : (
+                    <>
+                      {/* Manual qty */}
+                      <Input
+                        type="number"
+                        className="w-14 h-10 text-center font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={qtyVal}
+                        placeholder="1"
+                        min={1}
+                        onChange={e => setManualQty(prev => ({ ...prev, [item.id]: e.target.value }))}
+                        onKeyDown={e => { if (e.key === 'Enter') handleAddManual(item.id); }}
+                      />
+
+                      {/* + button */}
+                      <Button
+                        size="icon"
+                        className="h-11 w-11 shrink-0"
+                        onClick={() => {
+                          const qty = Number(qtyVal || 1);
+                          if (qty > 0) {
+                            addScan(item.id, qty);
+                            setManualQty(prev => ({ ...prev, [item.id]: '' }));
+                            toast.success(`+${qty}`);
+                          }
+                        }}
+                      >
+                        <Plus className="h-5 w-5" />
+                      </Button>
+                    </>
+                  )}
                 </div>
 
-                {/* Count badge */}
-                <Badge variant={total > 0 ? 'default' : 'secondary'} className="shrink-0 font-mono text-sm min-w-[32px] justify-center">
-                  {total}
-                </Badge>
-
-                {/* Manual qty */}
-                <Input
-                  type="number"
-                  className="w-14 h-10 text-center font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  value={qtyVal}
-                  placeholder="1"
-                  min={1}
-                  onChange={e => setManualQty(prev => ({ ...prev, [item.id]: e.target.value }))}
-                  onKeyDown={e => { if (e.key === 'Enter') handleAddManual(item.id); }}
-                />
-
-                {/* +1 button */}
-                <Button
-                  size="icon"
-                  className="h-11 w-11 shrink-0"
-                  onClick={() => {
-                    const qty = Number(qtyVal || 1);
-                    if (qty > 0) {
-                      addScan(item.id, qty);
-                      setManualQty(prev => ({ ...prev, [item.id]: '' }));
-                      toast.success(`+${qty}`);
-                    }
-                  }}
-                >
-                  <Plus className="h-5 w-5" />
-                </Button>
+                {/* Expanded: entries + close button */}
+                {isExpanded && (
+                  <div className="px-5 pb-3 space-y-2 bg-background">
+                    {total === 0 ? (
+                      <p className="text-xs text-muted-foreground py-1">Sin entradas aún</p>
+                    ) : (
+                      <div className="text-xs text-muted-foreground">
+                        Total contado: <span className="font-mono font-semibold text-foreground">{total}</span>
+                        {' · '}Esperado: <span className="font-mono">{item.cantidad_esperada}</span>
+                        {' · '}Diferencia: <span className={cn('font-mono font-semibold', total - item.cantidad_esperada !== 0 ? 'text-destructive' : 'text-green-600')}>{total - item.cantidad_esperada}</span>
+                      </div>
+                    )}
+                    {!item.cerrada && (
+                      <Button size="sm" variant="secondary" className="h-8 text-xs gap-1 w-full" onClick={() => setLineToClose(item)}>
+                        <CheckCircle2 className="h-3 w-3" /> Cerrar este producto
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
       </div>
+
+      {/* Bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-10 bg-background border-t border-border p-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)' }}>
+        <Button variant="destructive" className="w-full h-11 gap-2" onClick={() => setShowCloseAll(true)}>
+          <Lock className="h-4 w-4" /> Cerrar Auditoría Completa
+        </Button>
+      </div>
+
+      {/* Close line dialog */}
+      <AlertDialog open={!!lineToClose} onOpenChange={v => !v && setLineToClose(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar "{lineToClose?.producto_nombre}"?</AlertDialogTitle>
+            <AlertDialogDescription>Ya no podrás agregar conteos a este producto. Puedes reabrirlo después.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => lineToClose && handleCloseLineMobile(lineToClose, true)}>Sí, cerrar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Close all dialog */}
+      <AlertDialog open={showCloseAll} onOpenChange={setShowCloseAll}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar toda la auditoría?</AlertDialogTitle>
+            <AlertDialogDescription>Ya no se podrán registrar más conteos en ningún producto. Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCloseAllMobile} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sí, cerrar todo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

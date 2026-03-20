@@ -5012,6 +5012,14 @@ export type Database = {
         }
         Returns: number
       }
+      close_audit_line: {
+        Args: { p_cerrada: boolean; p_linea_id: string }
+        Returns: undefined
+      }
+      close_full_audit: {
+        Args: { p_auditoria_id: string; p_cerrada_por: string }
+        Returns: undefined
+      }
       deduct_timbre: {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
