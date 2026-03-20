@@ -1,0 +1,1 @@
+ALTER TABLE public.auditoria_lineas ADD COLUMN IF NOT EXISTS cerrada boolean NOT NULL DEFAULT false;
