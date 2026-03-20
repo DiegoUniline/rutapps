@@ -110,6 +110,38 @@ export type Database = {
           },
         ]
       }
+      auditoria_entradas: {
+        Row: {
+          auditoria_linea_id: string
+          cantidad: number
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          auditoria_linea_id: string
+          cantidad?: number
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          auditoria_linea_id?: string
+          cantidad?: number
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditoria_entradas_auditoria_linea_id_fkey"
+            columns: ["auditoria_linea_id"]
+            isOneToOne: false
+            referencedRelation: "auditoria_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auditoria_lineas: {
         Row: {
           ajustado: boolean
