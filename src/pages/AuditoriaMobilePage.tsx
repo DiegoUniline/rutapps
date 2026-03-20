@@ -98,6 +98,10 @@ export default function AuditoriaMobilePage() {
       });
       setScanTotals(totals);
 
+      // Load empresa users via RPC
+      const { data: users } = await supabase.rpc('get_audit_users', { p_auditoria_id: auditoria_id });
+      setEmpresaUsers((users as any[]) ?? []);
+
       // Check localStorage for name
       const saved = localStorage.getItem(`auditor_nombre_${auditoria_id}`);
       if (saved) {
