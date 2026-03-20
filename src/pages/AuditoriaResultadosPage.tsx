@@ -309,6 +309,7 @@ export default function AuditoriaResultadosPage() {
                 <TableHead className="text-right">Diferencia</TableHead>
                 <TableHead className="text-center">Ajustado</TableHead>
                 <TableHead className="text-right">Cerrada</TableHead>
+                <TableHead className="text-center w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -330,6 +331,21 @@ export default function AuditoriaResultadosPage() {
                     </TableCell>
                     <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
                       {l.cerrada_at ? new Date(l.cerrada_at).toLocaleString('es-MX', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setMovModal({
+                          productoId: l.producto_id,
+                          nombre: l.productos?.nombre ?? '',
+                          codigo: l.productos?.codigo ?? '',
+                          esperada: l.cantidad_esperada,
+                        })}
+                      >
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
