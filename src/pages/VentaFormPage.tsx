@@ -1628,13 +1628,7 @@ export default function VentaFormPage() {
         />
        )}
 
-      <PinAuthDialog
-        open={showPinDialog}
-        onOpenChange={setShowPinDialog}
-        title="Cancelar venta"
-        description="Ingresa tu PIN de autorización para cancelar esta venta."
-        onSuccess={() => { if (pendingPinAction) { pendingPinAction(); setPendingPinAction(null); } }}
-      />
+      <PinDialog />
     </div>
   );
 }
