@@ -130,6 +130,26 @@ export default function AuditoriaMobilePage() {
     setPageState('counting');
   };
 
+  const handleCloseLineMobile = async (line: LineaItem, cerrar: boolean) => {
+    try {
+      await supabase.rpc('close_audit_line', { p_linea_id: line.id, p_cerrada: cerrar });
+      setLineas(prev => prev.map(l => l.id === line.id ? { ...l, cerrada: cerrar } : l));
+      toast.success(cerrar ? `"${line.producto_nombre}" cerrada` : `"${line.producto_nombre}" reabierta`);
+    } catch { toast.error('Error'); }
+    setLineToClose(null);
+  };
+
+  const handleCloseAllMobile = async () => {
+    if (!auditoria_id) return;
+    try {
+      await supabase.rpc('close_full_audit', { p_auditoria_id: auditoria_id, p_cerrada_por: auditorName });
+      setAuditoria(prev => prev ? { ...prev, status: 'cerrada', cerrada_por: auditorName, cerrada_at: new Date().toISOString() } : prev);
+      setPageState('closed');
+      toast.success('Auditoría cerrada');
+    } catch { toast.error('Error al cerrar'); }
+    setShowCloseAll(false);
+  };
+
   const addScan = useCallback(async (lineaId: string, qty: number) => {
     if (!auditoria_id) return;
 
