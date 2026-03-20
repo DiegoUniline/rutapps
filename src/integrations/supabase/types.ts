@@ -194,6 +194,7 @@ export type Database = {
           cantidad_esperada: number
           cantidad_real: number | null
           cerrada: boolean
+          cerrada_at: string | null
           created_at: string
           diferencia: number
           id: string
@@ -206,6 +207,7 @@ export type Database = {
           cantidad_esperada?: number
           cantidad_real?: number | null
           cerrada?: boolean
+          cerrada_at?: string | null
           created_at?: string
           diferencia?: number
           id?: string
@@ -218,6 +220,7 @@ export type Database = {
           cantidad_esperada?: number
           cantidad_real?: number | null
           cerrada?: boolean
+          cerrada_at?: string | null
           created_at?: string
           diferencia?: number
           id?: string

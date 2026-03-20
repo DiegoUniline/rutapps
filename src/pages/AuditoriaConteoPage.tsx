@@ -28,6 +28,7 @@ interface ConteoLine {
   cantidad_real: number | null;
   contado: boolean;
   cerrada: boolean;
+  cerrada_at: string | null;
   created_at: string;
 }
 
@@ -83,6 +84,7 @@ export default function AuditoriaConteoPage() {
         cantidad_real: l.cantidad_real,
         contado: l.cantidad_real !== null,
         cerrada: l.cerrada ?? false,
+        cerrada_at: l.cerrada_at ?? null,
         created_at: l.created_at,
       })) as ConteoLine[];
     },
@@ -392,7 +394,7 @@ export default function AuditoriaConteoPage() {
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {fmtDt(line.created_at)}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">—</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{line.cerrada_at ? fmtDt(line.cerrada_at) : '—'}</TableCell>
                       <TableCell className="text-center font-mono text-sm">{line.cantidad_esperada}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={total > 0 ? 'default' : 'secondary'} className="font-mono">
