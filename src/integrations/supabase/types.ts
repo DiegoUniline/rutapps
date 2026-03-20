@@ -243,6 +243,7 @@ export type Database = {
       }
       auditorias: {
         Row: {
+          almacen_id: string | null
           aprobado_por: string | null
           cerrada_at: string | null
           cerrada_por: string | null
@@ -260,6 +261,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          almacen_id?: string | null
           aprobado_por?: string | null
           cerrada_at?: string | null
           cerrada_por?: string | null
@@ -277,6 +279,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          almacen_id?: string | null
           aprobado_por?: string | null
           cerrada_at?: string | null
           cerrada_por?: string | null
@@ -294,6 +297,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "auditorias_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "auditorias_empresa_id_fkey"
             columns: ["empresa_id"]
@@ -5010,6 +5020,10 @@ export type Database = {
           p_notas?: string
           p_user_id: string
         }
+        Returns: number
+      }
+      calc_audit_stock_teorico: {
+        Args: { p_linea_id: string }
         Returns: number
       }
       close_audit_line: {
