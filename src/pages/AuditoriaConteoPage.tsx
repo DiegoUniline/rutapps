@@ -50,6 +50,7 @@ export default function AuditoriaConteoPage() {
   const [addQty, setAddQty] = useState<Record<string, string>>({});
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [lineToClose, setLineToClose] = useState<ConteoLine | null>(null);
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
