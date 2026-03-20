@@ -84,6 +84,7 @@ export default function AuditoriaConteoPage() {
         cantidad_real: l.cantidad_real,
         contado: l.cantidad_real !== null,
         cerrada: l.cerrada ?? false,
+        cerrada_at: l.cerrada_at ?? null,
         created_at: l.created_at,
       })) as ConteoLine[];
     },
