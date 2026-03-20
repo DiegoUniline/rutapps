@@ -82,7 +82,7 @@ export default function AuditoriaMobilePage() {
       // Load lines
       const { data: lines } = await supabase
         .from('auditoria_lineas')
-        .select('id, producto_id, cantidad_esperada, productos(nombre, codigo)')
+        .select('id, producto_id, cantidad_esperada, cerrada, productos(nombre, codigo)')
         .eq('auditoria_id', auditoria_id)
         .order('created_at', { ascending: true });
 
@@ -92,6 +92,7 @@ export default function AuditoriaMobilePage() {
         producto_nombre: (l.productos as any)?.nombre ?? 'Producto',
         producto_codigo: (l.productos as any)?.codigo ?? '',
         cantidad_esperada: l.cantidad_esperada,
+        cerrada: l.cerrada ?? false,
       })));
 
       // Load existing scans
