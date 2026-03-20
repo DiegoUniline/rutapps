@@ -14,6 +14,7 @@ import AdminWhatsAppTab from '@/components/admin/AdminWhatsAppTab';
 import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
 import AdminAnunciosTab from '@/components/admin/AdminAnunciosTab';
+import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
