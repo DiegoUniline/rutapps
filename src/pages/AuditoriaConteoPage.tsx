@@ -52,6 +52,7 @@ export default function AuditoriaConteoPage() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [closing, setClosing] = useState(false);
   const [lineToClose, setLineToClose] = useState<ConteoLine | null>(null);
+  const { requestPin, PinDialog } = usePinAuth();
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
