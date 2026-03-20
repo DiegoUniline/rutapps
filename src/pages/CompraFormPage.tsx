@@ -132,6 +132,7 @@ export default function CompraFormPage() {
   const [addingPago, setAddingPago] = useState(false);
   const [newPago, setNewPago] = useState({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
+  const { requestPin, PinDialog } = usePinAuth();
 
   // Load existing
   useEffect(() => {
