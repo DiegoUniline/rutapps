@@ -83,6 +83,7 @@ const PrivacidadPage = lazy(() => import("@/pages/PrivacidadPage"));
 const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage"));
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
+const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 
 
 // Logistica pages
