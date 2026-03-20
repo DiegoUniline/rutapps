@@ -257,29 +257,61 @@ export default function AuditoriaMobilePage() {
 
   // ── NAME ENTRY ──
   if (pageState === 'name_entry') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-        <div className="w-full max-w-sm space-y-6">
-          <div className="text-center space-y-2">
-            <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Package className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-xl font-bold text-foreground">{auditoria?.nombre}</h1>
-            <p className="text-sm text-muted-foreground">Identifícate para comenzar el conteo</p>
-          </div>
+    const filteredUsers = empresaUsers.filter(u =>
+      u.nombre.toLowerCase().includes(userSearch.toLowerCase())
+    );
 
-          <div className="space-y-3">
-            <Input
-              className="h-14 text-lg text-center"
-              placeholder="Tu nombre o identificador"
-              value={auditorName}
-              onChange={e => setAuditorName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleStartCounting()}
-              autoFocus
-            />
-            <Button className="w-full h-12 text-base" onClick={handleStartCounting}>
-              Comenzar
-            </Button>
+    const selectUser = (name: string) => {
+      setAuditorName(name);
+      localStorage.setItem(`auditor_nombre_${auditoria_id}`, name);
+      setPageState('counting');
+    };
+
+    return (
+      <div className="min-h-screen flex flex-col bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="px-5 pt-8 pb-4 space-y-2 text-center">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Package className="h-8 w-8 text-primary" />
+          </div>
+          <h1 className="text-xl font-bold text-foreground">{auditoria?.nombre}</h1>
+          <p className="text-sm text-muted-foreground">Selecciona tu usuario para comenzar</p>
+        </div>
+
+        {empresaUsers.length > 5 && (
+          <div className="px-5 pb-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9 h-10"
+                placeholder="Buscar usuario..."
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-auto px-5 pb-6">
+          <div className="space-y-2">
+            {filteredUsers.map(u => (
+              <button
+                key={u.user_id}
+                onClick={() => selectUser(u.nombre)}
+                className="w-full flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors active:scale-[0.98] hover:bg-accent/50"
+              >
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-base font-medium text-foreground truncate">{u.nombre}</span>
+              </button>
+            ))}
+
+            {filteredUsers.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground py-8">
+                {userSearch ? 'Sin resultados' : 'No hay usuarios registrados'}
+              </p>
+            )}
           </div>
         </div>
       </div>
