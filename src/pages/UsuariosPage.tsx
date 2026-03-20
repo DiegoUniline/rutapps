@@ -200,18 +200,20 @@ export default function UsuariosPage() {
   // ── User edit ──
   const startEdit = (p: ProfileUser) => {
     const userRole = userRoles.find(ur => ur.user_id === p.user_id);
-    setEditingUser(p.id);
+    setEditingUser(p);
     setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', vendedor_id: p.vendedor_id || '', role_id: userRole?.role_id || '' });
   };
 
-  const saveUser = async (p: ProfileUser) => {
+  const saveUser = async () => {
+    if (!editingUser) return;
+    setSavingUser(true);
     try {
-      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, vendedor_id: editForm.vendedor_id || null }).eq('id', p.id);
-      const existing = userRoles.filter(ur => ur.user_id === p.user_id);
+      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, vendedor_id: editForm.vendedor_id || null }).eq('id', editingUser.id);
+      const existing = userRoles.filter(ur => ur.user_id === editingUser.user_id);
       for (const ur of existing) { await supabase.from('user_roles').delete().eq('id', ur.id); }
-      if (editForm.role_id) { await supabase.from('user_roles').insert({ user_id: p.user_id, role_id: editForm.role_id }); }
+      if (editForm.role_id) { await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role_id: editForm.role_id }); }
       toast.success('Usuario actualizado'); setEditingUser(null); load();
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) { toast.error(e.message); } finally { setSavingUser(false); }
   };
 
   // ── Create user ──
