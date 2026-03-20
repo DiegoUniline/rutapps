@@ -59,43 +59,74 @@ export default function AdminCobrosTab() {
   );
 }
 
+// ─── Load Openpay.js SDK ───
+function useOpenpaySDK() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if ((window as any).OpenPay) { setReady(true); return; }
+    const script = document.createElement('script');
+    script.src = 'https://js.openpay.mx/openpay.v1.min.js';
+    script.onload = () => setReady(true);
+    document.head.appendChild(script);
+  }, []);
+  return ready;
+}
+
 // ─── Main: Suscribir Empresa ───
 function SuscribirEmpresaSection() {
+  const sdkReady = useOpenpaySDK();
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [opCustomers, setOpCustomers] = useState<OpenPayCustomer[]>([]);
   const [plans, setPlans] = useState<OpenPayPlan[]>([]);
+  const [opConfig, setOpConfig] = useState<{ merchant_id: string; public_key: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [sendingWa, setSendingWa] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [search, setSearch] = useState('');
+
+  // Payment method: 'card' | 'store' | 'stripe'
+  const [metodo, setMetodo] = useState<'card' | 'store' | 'stripe'>('card');
+
   // Last payment result
-  const [lastPaymentResult, setLastPaymentResult] = useState<{ reference?: string; url?: string; amount?: number; planName?: string } | null>(null);
+  const [lastResult, setLastResult] = useState<{
+    type: 'subscription' | 'store' | 'stripe';
+    reference?: string;
+    subscriptionId?: string;
+    url?: string;
+    amount?: number;
+    planName?: string;
+  } | null>(null);
 
   // Selected empresa
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaRow | null>(null);
-  // Editable fields for OpenPay customer creation
   const [custEmail, setCustEmail] = useState('');
   const [custPhone, setCustPhone] = useState('');
   const [custName, setCustName] = useState('');
-  // Selected plan
   const [selectedPlanId, setSelectedPlanId] = useState('');
-  // Pasarela
-  const [pasarela, setPasarela] = useState<'openpay' | 'stripe'>('openpay');
+
+  // Card form
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardExpMonth, setCardExpMonth] = useState('');
+  const [cardExpYear, setCardExpYear] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
 
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
     try {
-      const [empRes, custRes, plansRes] = await Promise.all([
+      const [empRes, custRes, plansRes, configRes] = await Promise.all([
         supabase.from('empresas').select('id, nombre, email, telefono'),
         openpayAction('list_customers'),
         openpayAction('list_plans'),
+        openpayAction('get_config'),
       ]);
       setEmpresas((empRes.data || []) as EmpresaRow[]);
       setOpCustomers(Array.isArray(custRes) ? custRes : []);
       setPlans(Array.isArray(plansRes) ? plansRes : []);
+      if (configRes?.merchant_id) setOpConfig(configRes);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -103,7 +134,6 @@ function SuscribirEmpresaSection() {
     }
   }
 
-  // Check if empresa already exists as OpenPay customer (by email match)
   const matchedCustomer = useMemo(() => {
     if (!selectedEmpresa) return null;
     return opCustomers.find(c =>
@@ -117,8 +147,9 @@ function SuscribirEmpresaSection() {
     setCustEmail(emp.email || '');
     setCustPhone(emp.telefono || '');
     setCustName(emp.nombre || '');
+    setCardHolder(emp.nombre || '');
     setSelectedPlanId('');
-    setLastPaymentResult(null);
+    setLastResult(null);
   }
 
   const filtered = empresas.filter(e =>
@@ -126,70 +157,124 @@ function SuscribirEmpresaSection() {
     e.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  async function handleSuscribir() {
-    if (!selectedEmpresa) return;
-    if (!selectedPlanId) { toast.error('Selecciona un plan'); return; }
-    if (!custEmail) { toast.error('El email es obligatorio'); return; }
+  // Ensure customer exists in OpenPay
+  async function ensureCustomer(): Promise<string> {
+    if (matchedCustomer?.id) return matchedCustomer.id;
+    const newCust = await openpayAction('create_customer', {
+      name: custName, email: custEmail, phone: custPhone || undefined,
+    });
+    toast.success('Cliente creado en OpenPay');
+    return newCust.id;
+  }
+
+  // Tokenize card with Openpay.js
+  function tokenizeCard(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const OP = (window as any).OpenPay;
+      if (!OP || !opConfig) { reject(new Error('OpenPay SDK no cargado')); return; }
+      OP.setId(opConfig.merchant_id);
+      OP.setApiKey(opConfig.public_key);
+      OP.setSandboxMode(true);
+
+      OP.token.create({
+        card_number: cardNumber.replace(/\s/g, ''),
+        holder_name: cardHolder,
+        expiration_year: cardExpYear.length === 4 ? cardExpYear.slice(2) : cardExpYear,
+        expiration_month: cardExpMonth.padStart(2, '0'),
+        cvv2: cardCvv,
+      }, (response: any) => {
+        resolve(response.data.id);
+      }, (error: any) => {
+        reject(new Error(error.data?.description || 'Error tokenizando tarjeta'));
+      });
+    });
+  }
+
+  async function handleSubmit() {
+    if (!selectedEmpresa || !selectedPlanId) return;
+    if (!custEmail) { toast.error('Email obligatorio'); return; }
+
+    const selectedPlan = plans.find(p => p.id === selectedPlanId);
+    if (!selectedPlan) return;
 
     setActionLoading(true);
     try {
-      if (pasarela === 'openpay') {
-        // 1. Find or create customer in OpenPay
-        let customerId = matchedCustomer?.id;
-
-        if (!customerId) {
-          const newCust = await openpayAction('create_customer', {
-            name: custName,
-            email: custEmail,
-            phone: custPhone || undefined,
-          });
-          customerId = newCust.id;
-          toast.success('Cliente creado en OpenPay: ' + custName);
+      if (metodo === 'card') {
+        // 1. Validate card fields
+        if (!cardNumber || !cardHolder || !cardExpMonth || !cardExpYear || !cardCvv) {
+          toast.error('Completa todos los campos de la tarjeta');
+          return;
         }
+        // 2. Tokenize
+        const tokenId = await tokenizeCard();
+        toast.success('Tarjeta tokenizada');
 
-        // 2. Create a store-type charge (generates payment reference)
-        const selectedPlan = plans.find(p => p.id === selectedPlanId);
-        if (!selectedPlan) throw new Error('Plan no encontrado');
+        // 3. Ensure customer
+        const customerId = await ensureCustomer();
 
+        // 4. Add card to customer
+        const card = await openpayAction('add_card', {
+          customer_id: customerId,
+          token_id: tokenId,
+          device_session_id: (window as any).OpenPay?.deviceData?.setup?.() || 'browser',
+        });
+        toast.success('Tarjeta asociada al cliente');
+
+        // 5. Create subscription
+        const sub = await openpayAction('create_subscription', {
+          customer_id: customerId,
+          plan_id: selectedPlanId,
+          card_id: card.id,
+        });
+
+        setLastResult({
+          type: 'subscription',
+          subscriptionId: sub.id,
+          amount: selectedPlan.amount,
+          planName: selectedPlan.name,
+        });
+        toast.success('¡Suscripción creada! Se cobrará automáticamente.');
+
+      } else if (metodo === 'store') {
+        // Store / OXXO reference
+        const customerId = await ensureCustomer();
         const result = await openpayAction('create_checkout', {
           customer_id: customerId,
           amount: selectedPlan.amount,
           description: `Suscripción: ${selectedPlan.name} — ${selectedEmpresa.nombre}`,
-          redirect_url: window.location.origin + '/dashboard',
           order_id: `SUB-${selectedEmpresa.id.slice(0, 8)}-${Date.now()}`,
         });
 
-        const selectedPlanObj = plans.find(p => p.id === selectedPlanId);
+        setLastResult({
+          type: 'store',
+          reference: result?.payment_method?.reference,
+          amount: selectedPlan.amount,
+          planName: selectedPlan.name,
+        });
         if (result?.payment_method?.reference) {
-          setLastPaymentResult({ reference: result.payment_method.reference, amount: selectedPlanObj?.amount, planName: selectedPlanObj?.name });
-          toast.success(`Referencia de pago generada: ${result.payment_method.reference}`);
           navigator.clipboard?.writeText(result.payment_method.reference);
-        } else if (result?.payment_method?.url) {
-          setLastPaymentResult({ url: result.payment_method.url, amount: selectedPlanObj?.amount, planName: selectedPlanObj?.name });
-          window.open(result.payment_method.url, '_blank');
-          toast.success('Link de pago abierto');
-        } else {
-          toast.success('Cobro creado exitosamente en OpenPay');
         }
+        toast.success('Referencia de pago generada');
 
-        // Refresh customers
-        const freshCustomers = await openpayAction('list_customers');
-        setOpCustomers(Array.isArray(freshCustomers) ? freshCustomers : []);
       } else {
-        // Stripe checkout
-        const selectedPlan = plans.find(p => p.id === selectedPlanId);
+        // Stripe
         const { data, error } = await supabase.functions.invoke('create-checkout', {
           body: {
-            amount: selectedPlan ? selectedPlan.amount * 100 : 0,
+            amount: selectedPlan.amount * 100,
             description: `Suscripción — ${selectedEmpresa.nombre}`,
           },
         });
         if (error) throw error;
         if (data?.url) {
           window.open(data.url, '_blank');
-          toast.success('Checkout de Stripe abierto');
+          setLastResult({ type: 'stripe', url: data.url, amount: selectedPlan.amount, planName: selectedPlan.name });
+          toast.success('Checkout Stripe abierto');
         }
       }
+
+      // Refresh
+      const freshCustomers = await openpayAction('list_customers');
+      setOpCustomers(Array.isArray(freshCustomers) ? freshCustomers : []);
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -205,14 +290,17 @@ function SuscribirEmpresaSection() {
 
   return (
     <div className="space-y-6">
-      {/* Pasarela selector */}
-      <div className="flex items-center gap-3">
-        <Label className="text-sm font-medium">Pasarela:</Label>
+      {/* Payment method selector */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Label className="text-sm font-medium">Método:</Label>
         <div className="flex gap-2">
-          <Button variant={pasarela === 'openpay' ? 'default' : 'outline'} size="sm" onClick={() => setPasarela('openpay')}>
-            <Store className="h-4 w-4 mr-1" /> OpenPay
+          <Button variant={metodo === 'card' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('card'); setLastResult(null); }}>
+            <CreditCard className="h-4 w-4 mr-1" /> Tarjeta
           </Button>
-          <Button variant={pasarela === 'stripe' ? 'default' : 'outline'} size="sm" onClick={() => setPasarela('stripe')}>
+          <Button variant={metodo === 'store' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('store'); setLastResult(null); }}>
+            <Store className="h-4 w-4 mr-1" /> Tienda (OXXO)
+          </Button>
+          <Button variant={metodo === 'stripe' ? 'default' : 'outline'} size="sm" onClick={() => { setMetodo('stripe'); setLastResult(null); }}>
             <CreditCard className="h-4 w-4 mr-1" /> Stripe
           </Button>
         </div>
@@ -275,17 +363,17 @@ function SuscribirEmpresaSection() {
                       <p className="text-xs text-muted-foreground">ID: {matchedCustomer.id}</p>
                     </div>
                   </div>
-                ) : (
+                ) : metodo !== 'stripe' ? (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border">
                     <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
                     <p className="text-sm text-muted-foreground">Se creará como nuevo cliente en OpenPay</p>
                   </div>
-                )}
+                ) : null}
 
                 {/* Editable customer data */}
                 <div className="space-y-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Nombre (OpenPay)</Label>
+                    <Label className="text-xs">Nombre</Label>
                     <Input value={custName} onChange={e => setCustName(e.target.value)} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -300,11 +388,49 @@ function SuscribirEmpresaSection() {
                   </div>
                 </div>
 
+                {/* Card form — only for 'card' method */}
+                {metodo === 'card' && (
+                  <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+                    <p className="text-xs font-semibold flex items-center gap-1.5">
+                      <CreditCard className="h-3.5 w-3.5" /> Datos de tarjeta
+                    </p>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Número de tarjeta</Label>
+                      <Input
+                        placeholder="4111 1111 1111 1111"
+                        value={cardNumber}
+                        onChange={e => setCardNumber(e.target.value)}
+                        maxLength={19}
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Titular</Label>
+                      <Input placeholder="NOMBRE COMO APARECE EN LA TARJETA" value={cardHolder} onChange={e => setCardHolder(e.target.value)} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Mes</Label>
+                        <Input placeholder="MM" maxLength={2} value={cardExpMonth} onChange={e => setCardExpMonth(e.target.value)} className="font-mono" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Año</Label>
+                        <Input placeholder="YY" maxLength={4} value={cardExpYear} onChange={e => setCardExpYear(e.target.value)} className="font-mono" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">CVV</Label>
+                        <Input type="password" placeholder="***" maxLength={4} value={cardCvv} onChange={e => setCardCvv(e.target.value)} className="font-mono" />
+                      </div>
+                    </div>
+                    {!sdkReady && <p className="text-xs text-amber-600">Cargando Openpay.js...</p>}
+                  </div>
+                )}
+
                 {/* Plan selection */}
                 <div className="space-y-1">
                   <Label className="text-xs">Plan</Label>
                   {plans.length === 0 ? (
-                    <p className="text-xs text-destructive">No hay planes creados. Ve a la pestaña "Planes OpenPay" para crear uno.</p>
+                    <p className="text-xs text-destructive">No hay planes. Créalos en la pestaña "Planes OpenPay".</p>
                   ) : (
                     <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
                       <SelectTrigger><SelectValue placeholder="Seleccionar plan" /></SelectTrigger>
@@ -334,7 +460,9 @@ function SuscribirEmpresaSection() {
                       Monto: <span className="font-medium text-foreground">${plans.find(p => p.id === selectedPlanId)?.amount} MXN</span>
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Pasarela: <span className="font-medium text-foreground">{pasarela === 'openpay' ? 'OpenPay' : 'Stripe'}</span>
+                      Método: <span className="font-medium text-foreground">
+                        {metodo === 'card' ? '💳 Tarjeta (suscripción automática)' : metodo === 'store' ? '🏪 Tienda (OXXO)' : '💳 Stripe'}
+                      </span>
                     </p>
                   </div>
                 )}
@@ -342,116 +470,167 @@ function SuscribirEmpresaSection() {
                 {/* Action button */}
                 <Button
                   className="w-full"
-                  onClick={handleSuscribir}
-                  disabled={actionLoading || !selectedPlanId}
+                  onClick={handleSubmit}
+                  disabled={actionLoading || !selectedPlanId || (metodo === 'card' && !sdkReady)}
                 >
                   {actionLoading && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
-                  {pasarela === 'openpay' ? 'Generar Cobro OpenPay' : 'Generar Checkout Stripe'}
+                  {metodo === 'card' ? 'Suscribir con Tarjeta' : metodo === 'store' ? 'Generar Referencia OXXO' : 'Generar Checkout Stripe'}
                 </Button>
 
-                {/* Payment result with send options */}
-                {lastPaymentResult && (
+                {/* ─── Result card ─── */}
+                {lastResult && (
                   <Card className="border-primary/30 bg-primary/5">
                     <CardContent className="pt-4 space-y-3">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-primary shrink-0" />
-                        <p className="text-sm font-semibold">Referencia generada</p>
+                        <p className="text-sm font-semibold">
+                          {lastResult.type === 'subscription' ? '¡Suscripción creada!' :
+                           lastResult.type === 'store' ? 'Referencia generada' : 'Checkout generado'}
+                        </p>
                       </div>
-                      {lastPaymentResult.reference && (
-                        <div className="flex items-center gap-2">
-                          <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono font-bold tracking-wider">
-                            {lastPaymentResult.reference}
-                          </code>
-                          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => {
-                            navigator.clipboard?.writeText(lastPaymentResult.reference!);
-                            toast.success('Referencia copiada');
-                          }}>
-                            <Copy className="h-4 w-4" />
+
+                      {lastResult.type === 'subscription' && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-foreground">La tarjeta fue registrada y la suscripción está activa.</p>
+                          <p className="text-xs text-muted-foreground">El cobro de <strong>${lastResult.amount} MXN</strong> se realizará automáticamente cada periodo.</p>
+                          <p className="text-xs font-mono text-muted-foreground">Sub ID: {lastResult.subscriptionId}</p>
+                        </div>
+                      )}
+
+                      {lastResult.type === 'store' && lastResult.reference && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono font-bold tracking-wider">
+                              {lastResult.reference}
+                            </code>
+                            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => {
+                              navigator.clipboard?.writeText(lastResult.reference!);
+                              toast.success('Referencia copiada');
+                            }}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Paga en OXXO, 7-Eleven o cualquier tienda de conveniencia.
+                          </p>
+                        </div>
+                      )}
+
+                      {lastResult.url && (
+                        <a href={lastResult.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline break-all">
+                          Abrir link de pago
+                        </a>
+                      )}
+
+                      <p className="text-xs text-muted-foreground">
+                        {lastResult.planName} · ${lastResult.amount} MXN
+                      </p>
+
+                      {/* Send buttons (for store/stripe results) */}
+                      {lastResult.type !== 'subscription' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <Button
+                              variant="outline" size="sm" className="gap-1.5"
+                              disabled={sendingWa || !custPhone}
+                              onClick={async () => {
+                                if (!custPhone) { toast.error('Sin teléfono'); return; }
+                                setSendingWa(true);
+                                try {
+                                  const msg = `💳 *Referencia de pago — ${selectedEmpresa?.nombre}*\n\n` +
+                                    `Plan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\n` +
+                                    (lastResult.reference
+                                      ? `Referencia:\n*${lastResult.reference}*\n\nPaga en OXXO, 7-Eleven o tienda de conveniencia.`
+                                      : `Paga aquí:\n${lastResult.url}`) +
+                                    `\n\n¡Gracias por confiar en Rutapp! 🚀`;
+                                  const { data: waConfig } = await supabase.from('whatsapp_config').select('api_token').limit(1).maybeSingle();
+                                  if (!waConfig?.api_token) { toast.error('WhatsApp no configurado'); return; }
+                                  const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
+                                  const res = await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
+                                    body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message: msg }),
+                                  });
+                                  if (!res.ok) throw new Error('Error WhatsApp');
+                                  toast.success('Enviado por WhatsApp');
+                                } catch (e: any) { toast.error(e.message); }
+                                finally { setSendingWa(false); }
+                              }}
+                            >
+                              {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                              WhatsApp
+                            </Button>
+                            <Button
+                              variant="outline" size="sm" className="gap-1.5"
+                              disabled={sendingEmail || !custEmail}
+                              onClick={async () => {
+                                setSendingEmail(true);
+                                try {
+                                  const { error } = await supabase.functions.invoke('billing-notify-email', {
+                                    body: { to: custEmail, empresa: selectedEmpresa?.nombre, plan: lastResult.planName, amount: lastResult.amount, reference: lastResult.reference, url: lastResult.url },
+                                  });
+                                  if (error) throw error;
+                                  toast.success('Enviado por Email');
+                                } catch (e: any) { toast.error(e.message); }
+                                finally { setSendingEmail(false); }
+                              }}
+                            >
+                              {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                              Email
+                            </Button>
+                          </div>
+                          {!custPhone && <p className="text-xs text-destructive">Sin teléfono — no se puede enviar WhatsApp</p>}
+                        </>
+                      )}
+
+                      {/* For subscription: notify success */}
+                      {lastResult.type === 'subscription' && (
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <Button
+                            variant="outline" size="sm" className="gap-1.5"
+                            disabled={sendingWa || !custPhone}
+                            onClick={async () => {
+                              setSendingWa(true);
+                              try {
+                                const msg = `✅ *Suscripción activada — ${selectedEmpresa?.nombre}*\n\n` +
+                                  `Plan: *${lastResult.planName}*\nMonto: *$${lastResult.amount} MXN*\n\n` +
+                                  `Tu tarjeta fue registrada y el cobro será automático cada periodo.\n\n¡Gracias por confiar en Rutapp! 🚀`;
+                                const { data: waConfig } = await supabase.from('whatsapp_config').select('api_token').limit(1).maybeSingle();
+                                if (!waConfig?.api_token) { toast.error('WhatsApp no configurado'); return; }
+                                const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
+                                await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
+                                  body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message: msg }),
+                                });
+                                toast.success('Confirmación enviada por WhatsApp');
+                              } catch (e: any) { toast.error(e.message); }
+                              finally { setSendingWa(false); }
+                            }}
+                          >
+                            {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                            Confirmar WhatsApp
+                          </Button>
+                          <Button
+                            variant="outline" size="sm" className="gap-1.5"
+                            disabled={sendingEmail || !custEmail}
+                            onClick={async () => {
+                              setSendingEmail(true);
+                              try {
+                                const { error } = await supabase.functions.invoke('billing-notify-email', {
+                                  body: { to: custEmail, empresa: selectedEmpresa?.nombre, plan: lastResult.planName, amount: lastResult.amount, reference: `Suscripción: ${lastResult.subscriptionId}` },
+                                });
+                                if (error) throw error;
+                                toast.success('Confirmación enviada por Email');
+                              } catch (e: any) { toast.error(e.message); }
+                              finally { setSendingEmail(false); }
+                            }}
+                          >
+                            {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                            Confirmar Email
                           </Button>
                         </div>
                       )}
-                      {lastPaymentResult.url && (
-                        <p className="text-xs text-muted-foreground break-all">{lastPaymentResult.url}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {lastPaymentResult.planName} · ${lastPaymentResult.amount} MXN
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-2 pt-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5"
-                          disabled={sendingWa || !custPhone}
-                          onClick={async () => {
-                            if (!custPhone) { toast.error('No hay teléfono configurado'); return; }
-                            setSendingWa(true);
-                            try {
-                              const msg = `💳 *Referencia de pago — ${selectedEmpresa?.nombre}*\n\n` +
-                                `Plan: *${lastPaymentResult.planName}*\n` +
-                                `Monto: *$${lastPaymentResult.amount} MXN*\n\n` +
-                                (lastPaymentResult.reference
-                                  ? `Tu referencia de pago es:\n*${lastPaymentResult.reference}*\n\nPresenta esta referencia en cualquier tienda de conveniencia (OXXO, 7-Eleven, etc.) para realizar tu pago.`
-                                  : `Realiza tu pago en el siguiente enlace:\n${lastPaymentResult.url}`) +
-                                `\n\n¡Gracias por confiar en Rutapp! 🚀`;
-
-                              const { data: waConfig } = await supabase
-                                .from('whatsapp_config')
-                                .select('api_token')
-                                .limit(1)
-                                .maybeSingle();
-
-                              if (!waConfig?.api_token) {
-                                toast.error('WhatsApp no configurado');
-                                return;
-                              }
-
-                              const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
-                              const res = await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
-                                body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message: msg }),
-                              });
-                              if (!res.ok) throw new Error('Error al enviar WhatsApp');
-                              toast.success('Referencia enviada por WhatsApp');
-                            } catch (e: any) { toast.error(e.message); }
-                            finally { setSendingWa(false); }
-                          }}
-                        >
-                          {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                          WhatsApp
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5"
-                          disabled={sendingEmail || !custEmail}
-                          onClick={async () => {
-                            if (!custEmail) { toast.error('No hay email configurado'); return; }
-                            setSendingEmail(true);
-                            try {
-                              const { data, error } = await supabase.functions.invoke('billing-notify-email', {
-                                body: {
-                                  to: custEmail,
-                                  empresa: selectedEmpresa?.nombre,
-                                  plan: lastPaymentResult.planName,
-                                  amount: lastPaymentResult.amount,
-                                  reference: lastPaymentResult.reference || null,
-                                  url: lastPaymentResult.url || null,
-                                },
-                              });
-                              if (error) throw error;
-                              toast.success('Referencia enviada por Email');
-                            } catch (e: any) { toast.error(e.message); }
-                            finally { setSendingEmail(false); }
-                          }}
-                        >
-                          {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                          Email
-                        </Button>
-                      </div>
-                      {!custPhone && <p className="text-xs text-destructive">Sin teléfono — no se puede enviar WhatsApp</p>}
                     </CardContent>
                   </Card>
                 )}
