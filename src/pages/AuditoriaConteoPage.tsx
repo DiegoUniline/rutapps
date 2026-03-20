@@ -2,8 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Search, Save, Package, Check, Minus, Plus, Eye } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Search, Save, Package, Check, Plus, Eye, ChevronDown, ChevronRight, Trash2, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,15 +25,24 @@ interface ConteoLine {
   created_at: string;
 }
 
+interface Entrada {
+  id: string;
+  cantidad: number;
+  user_id: string;
+  created_at: string;
+  user_nombre?: string;
+}
+
 export default function AuditoriaConteoPage() {
   const { id } = useParams<{ id: string }>();
-  const { empresa } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
-  const [conteos, setConteos] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [modalLine, setModalLine] = useState<ConteoLine | null>(null);
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
+  const [addQty, setAddQty] = useState<Record<string, string>>({});
 
   const { data: auditoria } = useQuery({
     queryKey: ['auditoria', id],
@@ -68,63 +77,112 @@ export default function AuditoriaConteoPage() {
     },
   });
 
-  const mergedLines = useMemo(() => {
-    return (lineas ?? []).map(l => ({
-      ...l,
-      cantidad_real: conteos[l.id] !== undefined ? conteos[l.id] : l.cantidad_real,
-      contado: conteos[l.id] !== undefined || l.contado,
-    }));
-  }, [lineas, conteos]);
+  // Fetch all entries for this audit
+  const { data: entradas } = useQuery({
+    queryKey: ['auditoria-entradas', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const lineaIds = (lineas ?? []).map(l => l.id);
+      if (!lineaIds.length) return {};
+      const { data, error } = await supabase
+        .from('auditoria_entradas')
+        .select('*')
+        .in('auditoria_linea_id', lineaIds)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      // Group by linea_id
+      const map: Record<string, Entrada[]> = {};
+      (data ?? []).forEach((e: any) => {
+        if (!map[e.auditoria_linea_id]) map[e.auditoria_linea_id] = [];
+        map[e.auditoria_linea_id].push({
+          id: e.id,
+          cantidad: Number(e.cantidad),
+          user_id: e.user_id,
+          created_at: e.created_at,
+        });
+      });
+      return map;
+    },
+  });
+
+  // Compute totals from entries
+  const entradaTotals = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!entradas) return map;
+    for (const [lineaId, items] of Object.entries(entradas)) {
+      map[lineaId] = items.reduce((sum, e) => sum + e.cantidad, 0);
+    }
+    return map;
+  }, [entradas]);
 
   const filtered = useMemo(() => {
-    if (!search) return mergedLines;
+    const all = lineas ?? [];
+    if (!search) return all;
     const s = search.toLowerCase();
-    return mergedLines.filter(l =>
+    return all.filter(l =>
       l.codigo.toLowerCase().includes(s) || l.nombre.toLowerCase().includes(s)
     );
-  }, [mergedLines, search]);
+  }, [lineas, search]);
 
-  const totalLineas = mergedLines.length;
-  const contadas = mergedLines.filter(l => l.contado).length;
+  const totalLineas = (lineas ?? []).length;
+  const contadas = (lineas ?? []).filter(l => (entradaTotals[l.id] ?? 0) > 0).length;
 
-  const setConteo = useCallback((lineaId: string, val: number) => {
-    setConteos(prev => ({ ...prev, [lineaId]: Math.max(0, val) }));
-  }, []);
-
-  const handleGuardar = async () => {
-    if (Object.keys(conteos).length === 0) {
-      toast.error('No has registrado ningún conteo');
-      return;
-    }
-    setSaving(true);
-    try {
-      for (const [lineaId, cantidadReal] of Object.entries(conteos)) {
-        const linea = lineas?.find(l => l.id === lineaId);
-        if (!linea) continue;
-        const diferencia = cantidadReal - linea.cantidad_esperada;
-        await supabase.from('auditoria_lineas').update({
-          cantidad_real: cantidadReal,
-          diferencia,
-        } as any).eq('id', lineaId);
-      }
-      toast.success('Conteo guardado correctamente');
+  // Add entry mutation
+  const addEntry = useMutation({
+    mutationFn: async ({ lineaId, cantidad }: { lineaId: string; cantidad: number }) => {
+      const { error } = await supabase.from('auditoria_entradas').insert({
+        auditoria_linea_id: lineaId,
+        cantidad,
+        user_id: user!.id,
+      } as any);
+      if (error) throw error;
+      // Update cantidad_real on the line
+      const newTotal = (entradaTotals[lineaId] ?? 0) + cantidad;
+      const linea = lineas?.find(l => l.id === lineaId);
+      const dif = newTotal - (linea?.cantidad_esperada ?? 0);
+      await supabase.from('auditoria_lineas').update({
+        cantidad_real: newTotal,
+        diferencia: dif,
+      } as any).eq('id', lineaId);
+    },
+    onSuccess: (_, { lineaId, cantidad }) => {
+      toast.success(`+${cantidad} registrado`);
+      qc.invalidateQueries({ queryKey: ['auditoria-entradas', id] });
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
-      setConteos({});
-      const allCounted = mergedLines.every(l => l.contado);
-      if (allCounted) {
-        navigate(`/almacen/auditorias/${id}/resultados`);
-      }
-    } catch (err: any) {
-      toast.error(err.message ?? 'Error al guardar');
-    } finally {
-      setSaving(false);
-    }
+      setAddQty(prev => ({ ...prev, [lineaId]: '' }));
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  // Delete entry mutation
+  const deleteEntry = useMutation({
+    mutationFn: async ({ entryId, lineaId }: { entryId: string; lineaId: string }) => {
+      const { error } = await supabase.from('auditoria_entradas').delete().eq('id', entryId);
+      if (error) throw error;
+      // Recalculate total
+      const remaining = (entradas?.[lineaId] ?? []).filter(e => e.id !== entryId);
+      const newTotal = remaining.reduce((s, e) => s + e.cantidad, 0);
+      const linea = lineas?.find(l => l.id === lineaId);
+      await supabase.from('auditoria_lineas').update({
+        cantidad_real: newTotal || null,
+        diferencia: newTotal - (linea?.cantidad_esperada ?? 0),
+      } as any).eq('id', lineaId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['auditoria-entradas', id] });
+      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
+      toast.success('Entrada eliminada');
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const handleAddEntry = (lineaId: string) => {
+    const qty = Number(addQty[lineaId] || 1);
+    if (qty <= 0) return;
+    addEntry.mutate({ lineaId, cantidad: qty });
   };
 
   const handleFinalizarConteo = async () => {
-    if (Object.keys(conteos).length > 0) {
-      await handleGuardar();
-    }
     await supabase.from('auditorias').update({ status: 'por_aprobar' } as any).eq('id', id!);
     qc.invalidateQueries({ queryKey: ['auditorias'] });
     toast.success('Conteo finalizado — revisa los resultados');
@@ -178,14 +236,9 @@ export default function AuditoriaConteoPage() {
           />
         </div>
 
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar producto..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <Button size="sm" onClick={handleGuardar} disabled={saving || Object.keys(conteos).length === 0} className="gap-1">
-            <Save className="h-4 w-4" /> Guardar
-          </Button>
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar producto..." className="pl-9 h-9" value={search} onChange={e => setSearch(e.target.value)} />
         </div>
       </div>
 
@@ -206,71 +259,138 @@ export default function AuditoriaConteoPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[30px]"></TableHead>
                 <TableHead>Producto</TableHead>
                 <TableHead>Código</TableHead>
                 <TableHead className="w-[140px]">Apertura</TableHead>
                 <TableHead className="w-[140px]">Cierre</TableHead>
                 <TableHead className="w-[80px] text-center">Esperado</TableHead>
-                <TableHead className="w-[80px] text-center">Estado</TableHead>
-                <TableHead className="w-[160px] text-center">Conteo</TableHead>
+                <TableHead className="w-[80px] text-center">Contado</TableHead>
+                <TableHead className="w-[200px] text-center">Agregar</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map(line => {
-                const currentVal = conteos[line.id] !== undefined ? conteos[line.id] : line.cantidad_real;
-                const hasLocalChange = conteos[line.id] !== undefined;
+                const total = entradaTotals[line.id] ?? 0;
+                const lineEntries = entradas?.[line.id] ?? [];
+                const isExpanded = expandedLine === line.id;
+                const qtyVal = addQty[line.id] ?? '';
+
                 return (
-                  <TableRow
-                    key={line.id}
-                    className={cn(
-                      line.contado && !hasLocalChange && 'bg-muted/30',
-                      hasLocalChange && 'bg-accent/20'
-                    )}
-                  >
-                    <TableCell className="text-sm font-medium">{line.nombre}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{line.codigo}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {fmtDt(line.created_at)}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      —
-                    </TableCell>
-                    <TableCell className="text-center font-mono text-sm">
-                      {line.cantidad_esperada}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {line.contado && !hasLocalChange ? (
-                        <Check className="h-4 w-4 text-green-600 mx-auto" />
-                      ) : hasLocalChange ? (
-                        <Badge variant="outline" className="text-[10px]">Editado</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-[10px]">Pendiente</Badge>
+                  <>
+                    <TableRow
+                      key={line.id}
+                      className={cn(
+                        'cursor-pointer',
+                        total > 0 && 'bg-muted/30',
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setConteo(line.id, (currentVal ?? 0) - 1)}>
-                          <Minus className="h-3 w-3" />
+                      onClick={() => setExpandedLine(isExpanded ? null : line.id)}
+                    >
+                      <TableCell className="px-2">
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{line.nombre}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{line.codigo}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {fmtDt(line.created_at)}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">—</TableCell>
+                      <TableCell className="text-center font-mono text-sm">{line.cantidad_esperada}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={total > 0 ? 'default' : 'secondary'} className="font-mono">
+                          {total}
+                        </Badge>
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+                          <Input
+                            type="number"
+                            className="w-16 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={qtyVal}
+                            placeholder="1"
+                            min={1}
+                            onChange={e => setAddQty(prev => ({ ...prev, [line.id]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') handleAddEntry(line.id); }}
+                          />
+                          <Button
+                            size="sm"
+                            className="h-7 gap-1 px-2"
+                            disabled={addEntry.isPending}
+                            onClick={() => handleAddEntry(line.id)}
+                          >
+                            <Plus className="h-3 w-3" /> Agregar
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setModalLine(line)}>
+                          <Eye className="h-3.5 w-3.5" />
                         </Button>
-                        <Input
-                          type="number"
-                          className="w-14 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={currentVal ?? ''}
-                          placeholder="0"
-                          onChange={e => setConteo(line.id, Number(e.target.value) || 0)}
-                        />
-                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setConteo(line.id, (currentVal ?? 0) + 1)}>
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); setModalLine(line); }}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Expanded entries */}
+                    {isExpanded && (
+                      <TableRow key={`${line.id}-entries`} className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={9} className="p-0">
+                          <div className="px-8 py-2">
+                            {lineEntries.length === 0 ? (
+                              <p className="text-xs text-muted-foreground py-2">Sin entradas aún</p>
+                            ) : (
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-xs text-muted-foreground border-b">
+                                    <th className="text-left py-1 font-medium">#</th>
+                                    <th className="text-left py-1 font-medium">Fecha / Hora</th>
+                                    <th className="text-left py-1 font-medium">Usuario</th>
+                                    <th className="text-right py-1 font-medium">Cantidad</th>
+                                    <th className="text-right py-1 font-medium">Acumulado</th>
+                                    <th className="w-8"></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lineEntries.map((entry, idx) => {
+                                    const acum = lineEntries.slice(0, idx + 1).reduce((s, e) => s + e.cantidad, 0);
+                                    return (
+                                      <tr key={entry.id} className="border-b border-border/50 last:border-0">
+                                        <td className="py-1.5 text-xs text-muted-foreground">{idx + 1}</td>
+                                        <td className="py-1.5 text-xs">{fmtDt(entry.created_at)}</td>
+                                        <td className="py-1.5 text-xs flex items-center gap-1">
+                                          <User className="h-3 w-3 text-muted-foreground" />
+                                          {entry.user_id === user?.id ? (profile?.nombre ?? 'Yo') : entry.user_id.slice(0, 8)}
+                                        </td>
+                                        <td className="py-1.5 text-right font-mono font-medium">+{entry.cantidad}</td>
+                                        <td className="py-1.5 text-right font-mono text-muted-foreground">{acum}</td>
+                                        <td className="py-1.5 text-right">
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 text-destructive hover:text-destructive"
+                                            onClick={() => deleteEntry.mutate({ entryId: entry.id, lineaId: line.id })}
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot>
+                                  <tr className="font-medium">
+                                    <td colSpan={3} className="py-1.5 text-xs">Total</td>
+                                    <td className="py-1.5 text-right font-mono">{total}</td>
+                                    <td></td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 );
               })}
             </TableBody>
