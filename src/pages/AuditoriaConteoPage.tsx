@@ -472,10 +472,35 @@ export default function AuditoriaConteoPage() {
         <Button variant="outline" className="flex-1" onClick={() => navigate('/almacen/auditorias')}>
           Volver al listado
         </Button>
-        <Button className="flex-1" onClick={handleFinalizarConteo} disabled={saving || contadas === 0}>
-          Finalizar conteo
-        </Button>
+        {!isCerrada && (
+          <>
+            <Button className="flex-1" onClick={handleFinalizarConteo} disabled={saving || contadas === 0}>
+              Finalizar conteo
+            </Button>
+            <Button variant="destructive" onClick={() => setShowCloseDialog(true)} disabled={closing}>
+              <Lock className="h-4 w-4 mr-1" /> Cerrar Auditoría
+            </Button>
+          </>
+        )}
       </div>
+
+      {/* Close audit confirmation */}
+      <AlertDialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cerrar auditoría?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ya no se podrán registrar conteos desde la app móvil ni desde el panel. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCerrarAuditoria} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {closing ? 'Cerrando...' : 'Sí, cerrar auditoría'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {modalLine && auditoria && (
         <AuditoriaMovimientosModal
