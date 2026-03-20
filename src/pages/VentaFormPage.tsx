@@ -429,11 +429,11 @@ export default function VentaFormPage() {
   const handleStatusChange = async (newStatus: StatusVenta) => {
     if (!form.id) return;
     if (newStatus === 'cancelado') {
-      setPendingPinAction(() => async () => {
+      requestPin('Cancelar venta', 'Ingresa tu PIN de autorización para cancelar esta venta.', async () => {
         setForm(prev => ({ ...prev, status: newStatus }));
         await saveVenta.mutateAsync({ id: form.id!, status: newStatus } as any);
+        toast.success('Venta cancelada');
       });
-      setShowPinDialog(true);
       return;
     }
     setForm(prev => ({ ...prev, status: newStatus }));
