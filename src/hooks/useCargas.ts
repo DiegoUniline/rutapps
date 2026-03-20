@@ -64,8 +64,8 @@ export function useSaveCarga() {
         if (error) throw error;
         return data;
       } else {
-        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
+        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: empresaId }).select('id').single();
         if (error) throw error;
         return data;
       }

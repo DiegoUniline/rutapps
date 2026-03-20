@@ -357,8 +357,7 @@ export function useSaveListaPrecio() {
         if (error) throw error;
         return data;
       } else {
-        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const empresaId = profile!.empresa_id;
+        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
         
         // Auto-create a tarifa if none provided
         let tarifaId = rest.tarifa_id;
