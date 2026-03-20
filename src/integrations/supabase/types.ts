@@ -5016,6 +5016,13 @@ export type Database = {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
       }
+      get_audit_users: {
+        Args: { p_auditoria_id: string }
+        Returns: {
+          nombre: string
+          user_id: string
+        }[]
+      }
       get_my_empresa_id: { Args: never; Returns: string }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
