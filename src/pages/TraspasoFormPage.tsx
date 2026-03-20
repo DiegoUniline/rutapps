@@ -951,6 +951,7 @@ export default function TraspasoFormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <PinDialog />
     </div>
   );
 }
