@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ClipboardCheck, Plus, Search, Package, Eye } from 'lucide-react';
+import { ClipboardCheck, Plus, Search, Package, Eye, Calendar, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ModalSelect from '@/components/ModalSelect';
 import { fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'secondary' },
@@ -25,21 +28,41 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'defa
   rechazada: { label: 'Rechazada', variant: 'destructive' },
 };
 
+type FiltroTipo = 'todos' | 'clasificacion' | 'marca';
+
 export default function AuditoriasPage() {
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [showDialog, setShowDialog] = useState(false);
-  const [nombre, setNombre] = useState('');
   const [almacenId, setAlmacenId] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>('todos');
+  const [filtroValorId, setFiltroValorId] = useState('');
   const [notas, setNotas] = useState('');
 
   const { data: almacenes } = useQuery({
     queryKey: ['almacenes', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return data ?? [];
+    },
+  });
+
+  const { data: clasificaciones } = useQuery({
+    queryKey: ['clasificaciones', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return data ?? [];
+    },
+  });
+
+  const { data: marcas } = useQuery({
+    queryKey: ['marcas-audit'],
+    queryFn: async () => {
+      const { data } = await supabase.from('marcas').select('id, nombre').eq('activo', true).order('nombre');
       return data ?? [];
     },
   });
@@ -63,38 +86,84 @@ export default function AuditoriasPage() {
     [almacenes]
   );
 
+  const filtroValorOptions = useMemo(() => {
+    if (filtroTipo === 'clasificacion') return (clasificaciones ?? []).map(c => ({ value: c.id, label: c.nombre }));
+    if (filtroTipo === 'marca') return (marcas ?? []).map(m => ({ value: m.id, label: m.nombre }));
+    return [];
+  }, [filtroTipo, clasificaciones, marcas]);
+
   const filtered = useMemo(() => {
     if (!search) return auditorias ?? [];
     const s = search.toLowerCase();
     return (auditorias ?? []).filter((a: any) => a.nombre?.toLowerCase().includes(s));
   }, [auditorias, search]);
 
+  // Preview count
+  const { data: previewCount } = useQuery({
+    queryKey: ['audit-preview', almacenId, filtroTipo, filtroValorId],
+    enabled: !!almacenId && showDialog,
+    queryFn: async () => {
+      let query = supabase
+        .from('productos')
+        .select('id', { count: 'exact', head: true })
+        .eq('empresa_id', empresa!.id)
+        .eq('status', 'activo');
+
+      if (filtroTipo === 'clasificacion' && filtroValorId) {
+        query = query.eq('clasificacion_id', filtroValorId);
+      } else if (filtroTipo === 'marca' && filtroValorId) {
+        query = query.eq('marca_id', filtroValorId);
+      }
+
+      const { count } = await query;
+      return count ?? 0;
+    },
+  });
+
+  const almacenNombre = (almacenes ?? []).find(a => a.id === almacenId)?.nombre ?? '';
+
+  const autoNombre = useMemo(() => {
+    const fecha = format(new Date(), "dd/MM/yyyy", { locale: es });
+    const filtroLabel = filtroTipo === 'todos' ? 'Todos'
+      : filtroTipo === 'clasificacion' ? `Cat: ${filtroValorOptions.find(o => o.value === filtroValorId)?.label ?? '...'}`
+      : `Marca: ${filtroValorOptions.find(o => o.value === filtroValorId)?.label ?? '...'}`;
+    return `Auditoría ${almacenNombre || '...'} — ${filtroLabel} — ${fecha}`;
+  }, [almacenNombre, filtroTipo, filtroValorId, filtroValorOptions]);
+
   const crearAuditoria = useMutation({
     mutationFn: async () => {
-      if (!nombre) throw new Error('Indica un nombre para la auditoría');
       if (!almacenId) throw new Error('Selecciona un almacén');
+      if (filtroTipo !== 'todos' && !filtroValorId) throw new Error('Selecciona el filtro');
+
+      const dbFiltroTipo = filtroTipo === 'todos' ? 'almacen' : filtroTipo;
+      const dbFiltroValor = filtroTipo === 'todos' ? almacenId : filtroValorId;
 
       const { data: auditoria, error } = await supabase.from('auditorias').insert({
         empresa_id: empresa!.id,
-        nombre,
-        filtro_tipo: 'almacen',
-        filtro_valor: almacenId,
+        nombre: autoNombre,
+        filtro_tipo: dbFiltroTipo,
+        filtro_valor: dbFiltroValor,
         notas: notas || null,
         user_id: user!.id,
         status: 'en_proceso',
       } as any).select('id').single();
       if (error) throw error;
 
-      // Fetch active products
-      const { data: productos } = await supabase
+      let query = supabase
         .from('productos')
         .select('id, cantidad')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo');
 
-      if (!productos?.length) throw new Error('No hay productos activos para auditar');
+      if (filtroTipo === 'clasificacion' && filtroValorId) {
+        query = query.eq('clasificacion_id', filtroValorId);
+      } else if (filtroTipo === 'marca' && filtroValorId) {
+        query = query.eq('marca_id', filtroValorId);
+      }
 
-      // Create empty audit lines (cantidad_real = null, user will fill during conteo)
+      const { data: productos } = await query;
+      if (!productos?.length) throw new Error('No hay productos activos con ese filtro');
+
       const { error: lErr } = await supabase.from('auditoria_lineas').insert(
         productos.map(p => ({
           auditoria_id: auditoria.id,
@@ -117,8 +186,9 @@ export default function AuditoriasPage() {
 
   const resetForm = () => {
     setShowDialog(false);
-    setNombre('');
     setAlmacenId('');
+    setFiltroTipo('todos');
+    setFiltroValorId('');
     setNotas('');
   };
 
@@ -188,21 +258,68 @@ export default function AuditoriasPage() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>Nueva auditoría</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Nombre</Label>
-              <Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Auditoría semanal almacén central" />
+            {/* Info: fecha y usuario */}
+            <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/50 rounded-md p-3">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                <span>{profile?.nombre ?? user?.email ?? 'Usuario'}</span>
+              </div>
             </div>
+
             <div>
               <Label>Almacén a auditar</Label>
               <ModalSelect options={almacenOptions} value={almacenId} onChange={setAlmacenId} placeholder="Seleccionar almacén..." />
             </div>
+
+            <div>
+              <Label>¿Qué auditar?</Label>
+              <Select value={filtroTipo} onValueChange={(v: FiltroTipo) => { setFiltroTipo(v); setFiltroValorId(''); }}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos los productos</SelectItem>
+                  <SelectItem value="clasificacion">Por categoría</SelectItem>
+                  <SelectItem value="marca">Por marca</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {filtroTipo !== 'todos' && (
+              <div>
+                <Label>{filtroTipo === 'clasificacion' ? 'Categoría' : 'Marca'}</Label>
+                <ModalSelect
+                  options={filtroValorOptions}
+                  value={filtroValorId}
+                  onChange={setFiltroValorId}
+                  placeholder={`Seleccionar ${filtroTipo === 'clasificacion' ? 'categoría' : 'marca'}...`}
+                />
+              </div>
+            )}
+
+            {almacenId && (
+              <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-2 text-center">
+                Se incluirán <span className="font-bold text-foreground">{previewCount ?? '...'}</span> productos
+              </div>
+            )}
+
+            {almacenId && (
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium">Nombre auto:</span> {autoNombre}
+              </div>
+            )}
+
             <div>
               <Label>Notas (opcional)</Label>
               <Textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2} />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="outline" onClick={resetForm}>Cancelar</Button>
-              <Button onClick={() => crearAuditoria.mutate()} disabled={crearAuditoria.isPending}>
+              <Button onClick={() => crearAuditoria.mutate()} disabled={crearAuditoria.isPending || !almacenId}>
                 {crearAuditoria.isPending ? 'Creando...' : 'Crear y comenzar conteo'}
               </Button>
             </div>
