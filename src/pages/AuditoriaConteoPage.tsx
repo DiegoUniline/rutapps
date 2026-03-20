@@ -170,7 +170,7 @@ export default function AuditoriaConteoPage() {
       } as any).eq('id', lineaId);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['auditoria-entradas', id] });
+      refetchEntradas();
       qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       toast.success('Entrada eliminada');
     },
