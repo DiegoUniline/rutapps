@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
-  Plus, ShoppingCart, History, Percent
+  Plus, ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
