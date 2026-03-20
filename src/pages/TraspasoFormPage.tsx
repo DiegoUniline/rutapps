@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -59,6 +60,7 @@ export default function TraspasoFormPage() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
+  const { requestPin, PinDialog } = usePinAuth();
 
   const handleGenerarPdf = () => {
     const blob = generarTraspasoPdf({
@@ -939,7 +941,9 @@ export default function TraspasoFormPage() {
               className={confirmDialog?.action === 'cancelar' ? 'bg-destructive hover:bg-destructive/90' : ''}
               onClick={() => {
                 if (confirmDialog?.action === 'confirmar') confirmarMut.mutate();
-                else if (confirmDialog?.action === 'cancelar') cancelarMut.mutate();
+                else if (confirmDialog?.action === 'cancelar') {
+                  requestPin('Cancelar traspaso', 'Ingresa tu PIN para cancelar este traspaso.', () => cancelarMut.mutate());
+                }
                 setConfirmDialog(null);
               }}
             >
@@ -948,6 +952,7 @@ export default function TraspasoFormPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <PinDialog />
     </div>
   );
 }

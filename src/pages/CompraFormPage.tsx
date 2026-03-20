@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
@@ -131,6 +132,7 @@ export default function CompraFormPage() {
   const [addingPago, setAddingPago] = useState(false);
   const [newPago, setNewPago] = useState({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
+  const { requestPin, PinDialog } = usePinAuth();
 
   // Load existing
   useEffect(() => {
@@ -465,7 +467,7 @@ export default function CompraFormPage() {
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-full">
+    <><div className="p-4 space-y-4 min-h-full">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -587,7 +589,7 @@ export default function CompraFormPage() {
               )}
               onClick={() => {
                 if (confirmDialog?.action === 'cancelar') {
-                  handleCancel();
+                  requestPin('Cancelar compra', 'Ingresa tu PIN para cancelar esta compra.', () => handleCancel());
                 } else if (confirmDialog?.action) {
                   handleStatusChange(confirmDialog.action);
                 }
@@ -1026,5 +1028,7 @@ export default function CompraFormPage() {
         </div>
       </div>
     </div>
+    <PinDialog />
+    </>
   );
 }

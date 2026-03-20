@@ -6,12 +6,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { MODULOS, ACCIONES, getModuloGroups } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
-import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; }
 interface RolePermiso { id: string; role_id: string; modulo: string; accion: string; permitido: boolean; }
-interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; }
+interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
 interface Almacen { id: string; nombre: string; }
 interface Vendedor { id: string; nombre: string; }
@@ -40,7 +40,7 @@ export default function UsuariosPage() {
 
   // User edit
   const [editingUser, setEditingUser] = useState<ProfileUser | null>(null);
-  const [editForm, setEditForm] = useState({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', vendedor_id: '', role_id: '' });
+  const [editForm, setEditForm] = useState({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', vendedor_id: '', role_id: '', pin_code: '' });
   const [savingUser, setSavingUser] = useState(false);
 
   // New user form
@@ -73,7 +73,7 @@ export default function UsuariosPage() {
     const [r, p, pr, ur, a, v] = await Promise.all([
       supabase.from('roles').select('*').eq('empresa_id', empresa.id).order('nombre'),
       supabase.from('role_permisos').select('*'),
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado').eq('empresa_id', empresa.id),
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
       supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa.id),
@@ -201,14 +201,14 @@ export default function UsuariosPage() {
   const startEdit = (p: ProfileUser) => {
     const userRole = userRoles.find(ur => ur.user_id === p.user_id);
     setEditingUser(p);
-    setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', vendedor_id: p.vendedor_id || '', role_id: userRole?.role_id || '' });
+    setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', vendedor_id: p.vendedor_id || '', role_id: userRole?.role_id || '', pin_code: p.pin_code || '' });
   };
 
   const saveUser = async () => {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, vendedor_id: editForm.vendedor_id || null }).eq('id', editingUser.id);
+      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, vendedor_id: editForm.vendedor_id || null, pin_code: editForm.pin_code || null }).eq('id', editingUser.id);
       const existing = userRoles.filter(ur => ur.user_id === editingUser.user_id);
       for (const ur of existing) { await supabase.from('user_roles').delete().eq('id', ur.id); }
       if (editForm.role_id) { await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role_id: editForm.role_id }); }
@@ -486,6 +486,24 @@ export default function UsuariosPage() {
                     {editForm.estado === 'baja' && (
                       <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
                     )}
+                  </div>
+                  <div>
+                    <label className="label-odoo flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary" /> PIN de autorización (4 dígitos)
+                    </label>
+                    <input
+                      className="input-odoo w-full font-mono tracking-[0.5em] text-center"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={editForm.pin_code}
+                      onChange={e => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setEditForm({ ...editForm, pin_code: v });
+                      }}
+                      placeholder="••••"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">Se usará para autorizar operaciones sensibles (cancelar ventas, reabrir conteos, etc.)</p>
                   </div>
                 </div>
                 <div className="p-5 border-t border-border flex gap-2 justify-end">

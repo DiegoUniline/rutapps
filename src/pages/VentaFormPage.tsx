@@ -25,6 +25,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { usePinAuth } from '@/hooks/usePinAuth';
 
 const VENTA_STEPS_FULL: { key: StatusVenta; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
@@ -85,6 +86,7 @@ export default function VentaFormPage() {
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+  const { requestPin, PinDialog } = usePinAuth();
 
   // Fetch tarifa rules for price resolution
   const { data: tarifaRules } = useQuery({
@@ -426,7 +428,14 @@ export default function VentaFormPage() {
 
   const handleStatusChange = async (newStatus: StatusVenta) => {
     if (!form.id) return;
-    if (newStatus === 'cancelado' && !confirm('¿Cancelar esta venta?')) return;
+    if (newStatus === 'cancelado') {
+      requestPin('Cancelar venta', 'Ingresa tu PIN de autorización para cancelar esta venta.', async () => {
+        setForm(prev => ({ ...prev, status: newStatus }));
+        await saveVenta.mutateAsync({ id: form.id!, status: newStatus } as any);
+        toast.success('Venta cancelada');
+      });
+      return;
+    }
     setForm(prev => ({ ...prev, status: newStatus }));
     await saveVenta.mutateAsync({ id: form.id, status: newStatus } as any);
 
@@ -1617,7 +1626,9 @@ export default function VentaFormPage() {
           lineas={lineas as any}
           productosList={productosList ?? []}
         />
-      )}
+       )}
+
+      <PinDialog />
     </div>
   );
 }
