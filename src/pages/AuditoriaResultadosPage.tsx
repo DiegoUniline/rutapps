@@ -42,6 +42,7 @@ export default function AuditoriaResultadosPage() {
   const [motivoGlobal, setMotivoGlobal] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
+  const [movModal, setMovModal] = useState<{ productoId: string; nombre: string; codigo: string; esperada: number } | null>(null);
 
   const handleGenerarPdf = () => {
     if (!auditoria || !lineas) return;
