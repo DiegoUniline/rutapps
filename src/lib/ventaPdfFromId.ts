@@ -17,8 +17,8 @@ export async function generateVentaPdfById(ventaId: string): Promise<{ blob: Blo
   if (error || !venta) throw new Error('No se pudo cargar la venta');
 
   // Fetch empresa
-  const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-  const { data: empresa } = await supabase.from('empresas').select('*').eq('id', profile!.empresa_id).single();
+  const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+  const { data: empresa } = await supabase.from('empresas').select('*').eq('id', empresaId).single();
 
   // Fetch pagos
   const { data: pagos } = await supabase

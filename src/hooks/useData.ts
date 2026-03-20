@@ -44,8 +44,8 @@ export function useSaveProducto() {
         if (error) throw error;
         return data;
       } else {
-        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('productos').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
+        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        const { data, error } = await supabase.from('productos').insert({ ...rest, empresa_id: empresaId }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -104,8 +104,8 @@ export function useSaveTarifa() {
         if (error) throw error;
         return data;
       } else {
-        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: profile!.empresa_id }).select('id').single();
+        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: empresaId }).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -357,8 +357,7 @@ export function useSaveListaPrecio() {
         if (error) throw error;
         return data;
       } else {
-        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const empresaId = profile!.empresa_id;
+        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
         
         // Auto-create a tarifa if none provided
         let tarifaId = rest.tarifa_id;

@@ -23,10 +23,10 @@ export function useSaveDevolucion() {
       devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; tipo: string; notas?: string; user_id: string };
       lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string }[];
     }) => {
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
+      const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
       const { data: dev, error: devErr } = await supabase.from('devoluciones').insert({
         ...devolucion,
-        empresa_id: profile!.empresa_id,
+        empresa_id: empresaId,
         tipo: devolucion.tipo as any,
       }).select('id').single();
       if (devErr) throw devErr;

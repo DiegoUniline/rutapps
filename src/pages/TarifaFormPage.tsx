@@ -415,7 +415,9 @@ export default function TarifaFormPage() {
   const handleCreateLista = async (name: string): Promise<string | undefined> => {
     if (!id) return undefined;
     try {
-      const { data: profile } = await (await import('@/lib/supabase')).supabase.from('profiles').select('empresa_id').maybeSingle();
+      const sb = (await import('@/lib/supabase')).supabase;
+      const { data: { user: authUser } } = await sb.auth.getUser();
+      const { data: profile } = await sb.from('profiles').select('empresa_id').eq('user_id', authUser?.id ?? '').maybeSingle();
       if (!profile?.empresa_id) { toast.error('Sin empresa'); return undefined; }
       const result = await saveListaPrecio.mutateAsync({ tarifa_id: id, nombre: name, es_principal: (listasPrecios ?? []).length === 0 });
       qc.invalidateQueries({ queryKey: ['lista_precios', id] });

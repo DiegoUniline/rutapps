@@ -66,8 +66,8 @@ export function useSavePromocion() {
         if (error) throw error;
         return data;
       } else {
-        const { data: profile } = await supabase.from('profiles').select('empresa_id').single();
-        const { data, error } = await supabase.from('promociones').insert({ ...rest, empresa_id: profile!.empresa_id } as any).select().single();
+        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        const { data, error } = await supabase.from('promociones').insert({ ...rest, empresa_id: empresaId } as any).select().single();
         if (error) throw error;
         return data;
       }

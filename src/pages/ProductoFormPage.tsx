@@ -24,7 +24,8 @@ async function quickCreateCatalog(
   extra?: Record<string, any>,
 ): Promise<string | undefined> {
   try {
-    const { data: profile } = await supabase.from('profiles').select('empresa_id').maybeSingle();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const { data: profile } = await supabase.from('profiles').select('empresa_id').eq('user_id', authUser?.id ?? '').maybeSingle();
     if (!profile?.empresa_id) { toast.error('Sin perfil de empresa'); return undefined; }
     const { data, error } = await (supabase.from as any)(tableName)
       .insert({ nombre, empresa_id: profile.empresa_id, ...extra })
