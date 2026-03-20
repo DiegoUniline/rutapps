@@ -62,7 +62,7 @@ export default function AuditoriaConteoPage() {
         .from('auditoria_lineas')
         .select('*, productos(codigo, nombre)')
         .eq('auditoria_id', id!)
-        .order('created_at');
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return (data ?? []).map((l: any) => ({
         id: l.id,
@@ -75,6 +75,7 @@ export default function AuditoriaConteoPage() {
         created_at: l.created_at,
       })) as ConteoLine[];
     },
+    structuralSharing: true,
   });
 
   const lineaIds = useMemo(() => (lineas ?? []).map(l => l.id), [lineas]);
