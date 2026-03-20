@@ -26,6 +26,7 @@ interface ConteoLine {
   cantidad_esperada: number;
   cantidad_real: number | null;
   contado: boolean;
+  cerrada: boolean;
   created_at: string;
 }
 
