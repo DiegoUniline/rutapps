@@ -89,6 +89,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="anuncios" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Megaphone className="h-4 w-4" /> Anuncios
               </TabsTrigger>
+              <TabsTrigger value="cobros" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Store className="h-4 w-4" /> Cobros
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
