@@ -391,25 +391,46 @@ export default function AuditoriaConteoPage() {
                         </Badge>
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1">
-                          <Input
-                            type="number"
-                            className="w-16 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={qtyVal}
-                            placeholder="1"
-                            min={1}
-                            onChange={e => setAddQty(prev => ({ ...prev, [line.id]: e.target.value }))}
-                            onKeyDown={e => { if (e.key === 'Enter') handleAddEntry(line.id); }}
-                          />
-                          <Button
-                            size="sm"
-                            className="h-7 gap-1 px-2"
-                            disabled={addEntry.isPending}
-                            onClick={() => handleAddEntry(line.id)}
-                          >
-                            <Plus className="h-3 w-3" /> Agregar
-                          </Button>
-                        </div>
+                        {line.cerrada ? (
+                          <div className="flex items-center justify-center">
+                            <Badge variant="secondary" className="gap-1 text-xs">
+                              <Lock className="h-3 w-3" /> Cerrada
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1">
+                            <Input
+                              type="number"
+                              className="w-16 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              value={qtyVal}
+                              placeholder="1"
+                              min={1}
+                              onChange={e => setAddQty(prev => ({ ...prev, [line.id]: e.target.value }))}
+                              onKeyDown={e => { if (e.key === 'Enter') handleAddEntry(line.id); }}
+                            />
+                            <Button
+                              size="sm"
+                              className="h-7 gap-1 px-2"
+                              disabled={addEntry.isPending || isCerrada}
+                              onClick={() => handleAddEntry(line.id)}
+                            >
+                              <Plus className="h-3 w-3" /> Agregar
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        {!isCerrada && (
+                          line.cerrada ? (
+                            <Button size="sm" variant="outline" className="h-7 gap-1 px-2 text-xs" onClick={() => handleToggleLineCerrada(line, false)}>
+                              <Unlock className="h-3 w-3" /> Reabrir
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="secondary" className="h-7 gap-1 px-2 text-xs" onClick={() => setLineToClose(line)}>
+                              <CheckCircle2 className="h-3 w-3" /> Cerrar
+                            </Button>
+                          )
+                        )}
                       </TableCell>
                       <TableCell onClick={e => e.stopPropagation()}>
                         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setModalLine(line)}>
