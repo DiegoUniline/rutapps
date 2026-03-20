@@ -1358,6 +1358,192 @@ export type Database = {
           },
         ]
       }
+      conteo_entradas: {
+        Row: {
+          cantidad: number
+          codigo_escaneado: string | null
+          conteo_linea_id: string
+          creado_por: string | null
+          created_at: string
+          id: string
+        }
+        Insert: {
+          cantidad?: number
+          codigo_escaneado?: string | null
+          conteo_linea_id: string
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          cantidad?: number
+          codigo_escaneado?: string | null
+          conteo_linea_id?: string
+          creado_por?: string | null
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conteo_entradas_conteo_linea_id_fkey"
+            columns: ["conteo_linea_id"]
+            isOneToOne: false
+            referencedRelation: "conteo_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conteo_lineas: {
+        Row: {
+          ajuste_aplicado: boolean
+          cantidad_contada: number | null
+          conteo_id: string
+          costo_unitario: number
+          created_at: string
+          diferencia: number | null
+          diferencia_valor: number | null
+          id: string
+          linea_abierta_en: string
+          linea_cerrada_en: string | null
+          notas: string | null
+          producto_id: string
+          status: string
+          stock_esperado: number | null
+          stock_inicial: number
+        }
+        Insert: {
+          ajuste_aplicado?: boolean
+          cantidad_contada?: number | null
+          conteo_id: string
+          costo_unitario?: number
+          created_at?: string
+          diferencia?: number | null
+          diferencia_valor?: number | null
+          id?: string
+          linea_abierta_en?: string
+          linea_cerrada_en?: string | null
+          notas?: string | null
+          producto_id: string
+          status?: string
+          stock_esperado?: number | null
+          stock_inicial?: number
+        }
+        Update: {
+          ajuste_aplicado?: boolean
+          cantidad_contada?: number | null
+          conteo_id?: string
+          costo_unitario?: number
+          created_at?: string
+          diferencia?: number | null
+          diferencia_valor?: number | null
+          id?: string
+          linea_abierta_en?: string
+          linea_cerrada_en?: string | null
+          notas?: string | null
+          producto_id?: string
+          status?: string
+          stock_esperado?: number | null
+          stock_inicial?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conteo_lineas_conteo_id_fkey"
+            columns: ["conteo_id"]
+            isOneToOne: false
+            referencedRelation: "conteos_fisicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteo_lineas_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conteos_fisicos: {
+        Row: {
+          abierto_en: string
+          almacen_id: string
+          asignado_a: string | null
+          cerrado_en: string | null
+          clasificacion_id: string | null
+          creado_por: string | null
+          created_at: string
+          diferencia_total_valor: number | null
+          empresa_id: string
+          filtro_stock: string
+          folio: string
+          id: string
+          notas: string | null
+          productos_contados: number
+          status: string
+          total_productos: number
+          updated_at: string
+        }
+        Insert: {
+          abierto_en?: string
+          almacen_id: string
+          asignado_a?: string | null
+          cerrado_en?: string | null
+          clasificacion_id?: string | null
+          creado_por?: string | null
+          created_at?: string
+          diferencia_total_valor?: number | null
+          empresa_id: string
+          filtro_stock?: string
+          folio: string
+          id?: string
+          notas?: string | null
+          productos_contados?: number
+          status?: string
+          total_productos?: number
+          updated_at?: string
+        }
+        Update: {
+          abierto_en?: string
+          almacen_id?: string
+          asignado_a?: string | null
+          cerrado_en?: string | null
+          clasificacion_id?: string | null
+          creado_por?: string | null
+          created_at?: string
+          diferencia_total_valor?: number | null
+          empresa_id?: string
+          filtro_stock?: string
+          folio?: string
+          id?: string
+          notas?: string | null
+          productos_contados?: number
+          status?: string
+          total_productos?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conteos_fisicos_almacen_id_fkey"
+            columns: ["almacen_id"]
+            isOneToOne: false
+            referencedRelation: "almacenes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteos_fisicos_clasificacion_id_fkey"
+            columns: ["clasificacion_id"]
+            isOneToOne: false
+            referencedRelation: "clasificaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conteos_fisicos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       descarga_ruta: {
         Row: {
           aprobado_por: string | null

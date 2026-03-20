@@ -65,6 +65,8 @@ const AjustesInventarioPage = lazy(() => import("@/pages/AjustesInventarioPage")
 const AuditoriasPage = lazy(() => import("@/pages/AuditoriasPage"));
 const AuditoriaConteoPage = lazy(() => import("@/pages/AuditoriaConteoPage"));
 const AuditoriaResultadosPage = lazy(() => import("@/pages/AuditoriaResultadosPage"));
+const ConteosFisicosPage = lazy(() => import("@/pages/ConteosFisicosPage"));
+const ConteoFisicoPage = lazy(() => import("@/pages/ConteoFisicoPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const MonitorRutasPage = lazy(() => import("@/pages/MonitorRutasPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
@@ -230,6 +232,9 @@ function renderAuthenticatedRoutes() {
       {/* Desktop POS */}
       <Route path="/pos" element={<PuntoVentaPage />} />
 
+      {/* Conteo físico — standalone mobile page */}
+      <Route path="/conteo/:countId" element={<ConteoFisicoPage />} />
+
       <Route path="*" element={
         <AppLayout>
           <GuardedDesktopRoutes />
@@ -308,6 +313,7 @@ function desktopRoutes() {
       <Route path="/almacen/auditorias" element={<AuditoriasPage />} />
       <Route path="/almacen/auditorias/:id/conteo" element={<AuditoriaConteoPage />} />
       <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
+      <Route path="/almacen/conteos" element={<ConteosFisicosPage />} />
       <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
       <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
       <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
