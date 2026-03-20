@@ -940,7 +940,9 @@ export default function TraspasoFormPage() {
               className={confirmDialog?.action === 'cancelar' ? 'bg-destructive hover:bg-destructive/90' : ''}
               onClick={() => {
                 if (confirmDialog?.action === 'confirmar') confirmarMut.mutate();
-                else if (confirmDialog?.action === 'cancelar') cancelarMut.mutate();
+                else if (confirmDialog?.action === 'cancelar') {
+                  requestPin('Cancelar traspaso', 'Ingresa tu PIN para cancelar este traspaso.', () => cancelarMut.mutate());
+                }
                 setConfirmDialog(null);
               }}
             >
