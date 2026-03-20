@@ -213,6 +213,7 @@ export default function AuditoriaConteoPage() {
                 <TableHead className="w-[80px] text-center">Esperado</TableHead>
                 <TableHead className="w-[80px] text-center">Estado</TableHead>
                 <TableHead className="w-[160px] text-center">Conteo</TableHead>
+                <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
