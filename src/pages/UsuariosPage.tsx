@@ -431,13 +431,79 @@ export default function UsuariosPage() {
             </div>
           )}
 
+          {/* Edit user modal */}
+          {editingUser && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+              <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto">
+                <div className="flex items-center justify-between p-5 border-b border-border">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <Edit2 className="h-4 w-4 text-primary" /> Editar usuario
+                  </h3>
+                  <button onClick={() => setEditingUser(null)} className="p-1.5 rounded-md hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="text-xs text-muted-foreground bg-accent/30 rounded-lg px-3 py-2">
+                    {authUsers.find(au => au.id === editingUser.user_id)?.email || '—'}
+                  </div>
+                  <div>
+                    <label className="label-odoo">Nombre</label>
+                    <input className="input-odoo w-full" value={editForm.nombre} onChange={e => setEditForm({ ...editForm, nombre: e.target.value })} placeholder="Nombre completo" />
+                  </div>
+                  <div>
+                    <label className="label-odoo">Teléfono</label>
+                    <input className="input-odoo w-full" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} placeholder="10 dígitos" />
+                  </div>
+                  <div>
+                    <label className="label-odoo">Rol</label>
+                    <select className="input-odoo w-full" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
+                      <option value="">Sin rol</option>
+                      {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}{r.acceso_ruta_movil ? ' 📱' : ''}</option>)}
+                    </select>
+                    {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && (
+                      <p className="text-[11px] text-success mt-1">📱 Este rol tiene acceso a la vista móvil de ruta</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="label-odoo">Almacén de trabajo</label>
+                    <select className="input-odoo w-full" value={editForm.almacen_id} onChange={e => setEditForm({ ...editForm, almacen_id: e.target.value })}>
+                      <option value="">Sin almacén asignado</option>
+                      {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-odoo">Vendedor asociado</label>
+                    <select className="input-odoo w-full" value={editForm.vendedor_id} onChange={e => setEditForm({ ...editForm, vendedor_id: e.target.value })}>
+                      <option value="">Sin vendedor</option>
+                      {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label-odoo">Estado</label>
+                    <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
+                      <option value="activo">✅ Activo</option>
+                      <option value="baja">🚫 Baja (no puede acceder)</option>
+                    </select>
+                    {editForm.estado === 'baja' && (
+                      <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
+                    )}
+                  </div>
+                </div>
+                <div className="p-5 border-t border-border flex gap-2 justify-end">
+                  <button onClick={() => setEditingUser(null)} className="btn-odoo text-sm">Cancelar</button>
+                  <button onClick={saveUser} disabled={savingUser} className="btn-odoo-primary text-sm">
+                    {savingUser ? 'Guardando...' : 'Guardar cambios'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-card border border-border rounded-lg overflow-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-accent/50 border-b border-border">
                   <th className="text-left px-4 py-2.5 font-semibold text-foreground">Nombre</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-foreground">Email</th>
-                  <th className="text-left px-4 py-2.5 font-semibold text-foreground">Teléfono</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-foreground">Rol</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-foreground">Almacén</th>
                   <th className="text-left px-4 py-2.5 font-semibold text-foreground">Estado</th>
@@ -448,91 +514,50 @@ export default function UsuariosPage() {
                 {profiles.map(p => {
                   const userRole = userRoles.find(ur => ur.user_id === p.user_id);
                   const authUser = authUsers.find(au => au.id === p.user_id);
-                  const isEditing = editingUser === p.id;
                   return (
-                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/30">
+                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer" onClick={() => startEdit(p)}>
                       <td className="px-4 py-2.5">
-                        {isEditing ? (
-                          <input className="input-odoo text-xs py-1 w-full" value={editForm.nombre} onChange={e => setEditForm({ ...editForm, nombre: e.target.value })} />
-                        ) : (
-                          <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
-                        )}
+                        <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
+                        {p.telefono && <span className="block text-[11px] text-muted-foreground">{p.telefono}</span>}
                       </td>
                       <td className="px-4 py-2.5">
                         <span className="text-xs text-muted-foreground">{authUser?.email || '—'}</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        {isEditing ? (
-                          <input className="input-odoo text-xs py-1 w-full" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} />
-                        ) : (
-                          <span className="text-xs text-muted-foreground">{p.telefono || '—'}</span>
-                        )}
+                        <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
+                          {userRole ? roles.find(r => r.id === userRole.role_id)?.nombre : 'Sin rol'}
+                        </span>
                       </td>
                       <td className="px-4 py-2.5">
-                        {isEditing ? (
-                          <select className="input-odoo text-xs py-1" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
-                            <option value="">Sin rol</option>
-                            {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
-                          </select>
-                        ) : (
-                          <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
-                            {userRole ? roles.find(r => r.id === userRole.role_id)?.nombre : 'Sin rol'}
-                          </span>
-                        )}
+                        <span className="text-xs text-muted-foreground">{almacenes.find(a => a.id === p.almacen_id)?.nombre || '—'}</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        {isEditing ? (
-                          <select className="input-odoo text-xs py-1" value={editForm.almacen_id} onChange={e => setEditForm({ ...editForm, almacen_id: e.target.value })}>
-                            <option value="">Ninguno</option>
-                            {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-                          </select>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">{almacenes.find(a => a.id === p.almacen_id)?.nombre || '—'}</span>
-                        )}
+                        <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium capitalize", estadoBadge(p.estado))}>{p.estado}</span>
                       </td>
-                      <td className="px-4 py-2.5">
-                        {isEditing ? (
-                          <select className="input-odoo text-xs py-1" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
-                            <option value="activo">Activo</option>
-                            <option value="baja">Baja</option>
-                          </select>
-                        ) : (
-                          <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium capitalize", estadoBadge(p.estado))}>{p.estado}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
-                          {isEditing ? (
-                            <>
-                              <button onClick={() => saveUser(p)} className="p-1 rounded hover:bg-success/10 text-success" title="Guardar"><Save className="h-3.5 w-3.5" /></button>
-                              <button onClick={() => setEditingUser(null)} className="p-1 rounded hover:bg-accent text-muted-foreground" title="Cancelar"><X className="h-3.5 w-3.5" /></button>
-                            </>
-                          ) : (
-                            <>
-                              <button onClick={() => startEdit(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
-                              <button onClick={() => { setPasswordModal({ userId: p.user_id, nombre: p.nombre || authUser?.email || '' }); setNewPassword(''); }} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
-                              <button
-                                onClick={async () => {
-                                  const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
-                                  if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
-                                  await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
-                                  toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
-                                  load();
-                                }}
-                                className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
-                                title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
-                              >
-                                {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
-                              </button>
-                            </>
-                          )}
+                          <button onClick={() => startEdit(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
+                          <button onClick={() => { setPasswordModal({ userId: p.user_id, nombre: p.nombre || authUser?.email || '' }); setNewPassword(''); }} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
+                          <button
+                            onClick={async () => {
+                              const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
+                              if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
+                              await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
+                              toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
+                              load();
+                            }}
+                            className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
+                            title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
+                          >
+                            {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                          </button>
                         </div>
                       </td>
                     </tr>
                   );
                 })}
                 {profiles.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">No hay usuarios registrados</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground text-sm">No hay usuarios registrados</td></tr>
                 )}
               </tbody>
             </table>
