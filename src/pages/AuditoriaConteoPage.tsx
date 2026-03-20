@@ -62,7 +62,7 @@ export default function AuditoriaConteoPage() {
         .from('auditoria_lineas')
         .select('*, productos(codigo, nombre)')
         .eq('auditoria_id', id!)
-        .order('created_at');
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return (data ?? []).map((l: any) => ({
         id: l.id,
@@ -75,6 +75,7 @@ export default function AuditoriaConteoPage() {
         created_at: l.created_at,
       })) as ConteoLine[];
     },
+    structuralSharing: true,
   });
 
   const lineaIds = useMemo(() => (lineas ?? []).map(l => l.id), [lineas]);
@@ -149,7 +150,6 @@ export default function AuditoriaConteoPage() {
     onSuccess: (_, { lineaId, cantidad }) => {
       toast.success(`+${cantidad} registrado`);
       refetchEntradas();
-      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       setAddQty(prev => ({ ...prev, [lineaId]: '' }));
     },
     onError: (err: any) => toast.error(err.message),
@@ -171,7 +171,6 @@ export default function AuditoriaConteoPage() {
     },
     onSuccess: () => {
       refetchEntradas();
-      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       toast.success('Entrada eliminada');
     },
     onError: (err: any) => toast.error(err.message),
