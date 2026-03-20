@@ -171,7 +171,6 @@ export default function AuditoriaConteoPage() {
     },
     onSuccess: () => {
       refetchEntradas();
-      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       toast.success('Entrada eliminada');
     },
     onError: (err: any) => toast.error(err.message),
