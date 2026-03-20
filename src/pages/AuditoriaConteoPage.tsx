@@ -394,7 +394,7 @@ export default function AuditoriaConteoPage() {
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {fmtDt(line.created_at)}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">—</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{line.cerrada_at ? fmtDt(line.cerrada_at) : '—'}</TableCell>
                       <TableCell className="text-center font-mono text-sm">{line.cantidad_esperada}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant={total > 0 ? 'default' : 'secondary'} className="font-mono">
