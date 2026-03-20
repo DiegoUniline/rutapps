@@ -15,9 +15,10 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
-  Plus, ShoppingCart, History, Percent
+  Plus, ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { es } from 'date-fns/locale';
 
 interface Props {
@@ -65,6 +66,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     notas: '',
     generar_factura: false,
   });
+
+  // Password reset states
+  const [resetDialog, setResetDialog] = useState<{ userId: string; email: string; nombre: string } | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetForceChange, setResetForceChange] = useState(true);
+  const [resettingPw, setResettingPw] = useState(false);
+  const [forcingAll, setForcingAll] = useState(false);
 
   useEffect(() => { load(); }, [empresaId]);
 
@@ -252,6 +260,48 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     }
   }
 
+  async function handleResetPassword() {
+    if (!resetDialog || !resetPassword) return;
+    if (resetPassword.length < 6) { toast.error('Mínimo 6 caracteres'); return; }
+    setResettingPw(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'reset-password',
+          user_id: resetDialog.userId,
+          password: resetPassword,
+          force_change: resetForceChange,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Contraseña restablecida para ${resetDialog.email}${resetForceChange ? ' — deberá cambiarla al entrar' : ''}`);
+      setResetDialog(null);
+      setResetPassword('');
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setResettingPw(false);
+    }
+  }
+
+  async function handleForceChangeAll() {
+    if (!confirm(`¿Forzar cambio de contraseña para TODOS los usuarios de ${empresa?.nombre}?`)) return;
+    setForcingAll(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: { action: 'force-change-all', empresa_id: empresaId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${data.count} usuarios deberán cambiar su contraseña al entrar`);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setForcingAll(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -359,9 +409,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
             {/* Users */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" /> Usuarios ({usersDetailed.length || profiles.length})
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" /> Usuarios ({usersDetailed.length || profiles.length})
+                </p>
+                {usersDetailed.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1"
+                    disabled={forcingAll}
+                    onClick={handleForceChangeAll}
+                  >
+                    {forcingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
+                    Forzar cambio todos
+                  </Button>
+                )}
+              </div>
               {(usersDetailed.length > 0 ? usersDetailed : profiles).length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sin usuarios</p>
               ) : usersDetailed.length > 0 ? (
@@ -370,7 +434,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <div key={u.id} className="rounded-lg border border-border/60 p-2.5 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-foreground">{u.nombre || 'Sin nombre'}</span>
-                        <Badge variant="outline" className="text-[10px] h-5">{u.rol || 'Sin rol'}</Badge>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0"
+                            title="Resetear contraseña"
+                            onClick={() => { setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email }); setResetPassword(''); setResetForceChange(true); }}
+                          >
+                            <KeyRound className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                          <Badge variant="outline" className="text-[10px] h-5">{u.rol || 'Sin rol'}</Badge>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{u.email}</span>
@@ -766,6 +841,55 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
           </CardContent>
         </Card>
       )}
+
+      {/* Reset Password Dialog */}
+      <Dialog open={!!resetDialog} onOpenChange={open => { if (!open) setResetDialog(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" /> Restablecer contraseña
+            </DialogTitle>
+            <DialogDescription>
+              {resetDialog?.nombre} ({resetDialog?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nueva contraseña temporal</Label>
+              <Input
+                type="text"
+                value={resetPassword}
+                onChange={e => setResetPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                className="font-mono"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="force-change"
+                checked={resetForceChange}
+                onCheckedChange={(v) => setResetForceChange(!!v)}
+              />
+              <label htmlFor="force-change" className="text-xs text-muted-foreground cursor-pointer">
+                Forzar cambio de contraseña al iniciar sesión
+              </label>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setResetDialog(null)}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                disabled={resettingPw || resetPassword.length < 6}
+                onClick={handleResetPassword}
+              >
+                {resettingPw ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <KeyRound className="h-4 w-4 mr-1" />}
+                Restablecer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

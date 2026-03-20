@@ -152,7 +152,7 @@ export interface UnidadSat { id: string; clave: string; nombre: string; }
 export interface Zona { id: string; empresa_id: string; nombre: string; }
 export interface Vendedor { id: string; empresa_id: string; nombre: string; }
 export interface Cobrador { id: string; empresa_id: string; nombre: string; }
-export interface Profile { id: string; user_id: string; empresa_id: string; nombre?: string; avatar_url?: string; almacen_id?: string; vendedor_id?: string; }
+export interface Profile { id: string; user_id: string; empresa_id: string; nombre?: string; avatar_url?: string; almacen_id?: string; vendedor_id?: string; must_change_password?: boolean; }
 export interface Empresa {
   id: string;
   nombre: string;

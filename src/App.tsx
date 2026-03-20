@@ -133,8 +133,10 @@ function PageLoader() {
   );
 }
 
+const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPage"));
+
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const subscription = useSubscription();
   
   // Global unhandled rejection → error modal
@@ -160,6 +162,17 @@ function AppRoutes() {
           <Route path="/privacidad" element={<PrivacidadPage />} />
           <Route path="/catalogo/:token" element={<CatalogoPublicoPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
+  // Force password change if flagged
+  if (profile?.must_change_password) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="*" element={<ForceChangePasswordPage />} />
         </Routes>
       </Suspense>
     );

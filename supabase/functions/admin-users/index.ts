@@ -227,6 +227,82 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "reset-password") {
+      const { user_id, password, force_change } = params;
+      if (!user_id || !password) {
+        return new Response(JSON.stringify({ error: "user_id y password requeridos" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Verify caller is super admin
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        return new Response(JSON.stringify({ error: "Solo super admin puede resetear contraseñas" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Update password
+      const { error: pwError } = await adminClient.auth.admin.updateUserById(user_id, { password });
+      if (pwError) {
+        return new Response(JSON.stringify({ error: pwError.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Set must_change_password flag if requested
+      if (force_change) {
+        await adminClient
+          .from("profiles")
+          .update({ must_change_password: true })
+          .eq("user_id", user_id);
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "force-change-all") {
+      // Force all users of an empresa to change password on next login
+      const { empresa_id: targetEmpId } = params;
+      if (!targetEmpId) {
+        return new Response(JSON.stringify({ error: "empresa_id requerido" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        return new Response(JSON.stringify({ error: "Solo super admin" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: updated, error: upErr } = await adminClient
+        .from("profiles")
+        .update({ must_change_password: true })
+        .eq("empresa_id", targetEmpId)
+        .select("user_id");
+
+      if (upErr) {
+        return new Response(JSON.stringify({ error: upErr.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true, count: updated?.length || 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
