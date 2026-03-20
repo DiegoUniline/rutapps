@@ -370,7 +370,8 @@ export default function AuditoriaConteoPage() {
                       key={line.id}
                       className={cn(
                         'cursor-pointer',
-                        total > 0 && 'bg-muted/30',
+                        line.cerrada && 'opacity-60 bg-muted/20',
+                        !line.cerrada && total > 0 && 'bg-muted/30',
                       )}
                       onClick={() => setExpandedLine(isExpanded ? null : line.id)}
                     >
