@@ -122,6 +122,34 @@ export default function AuditoriaMobilePage() {
     };
 
     load();
+
+    // Realtime: listen for audit status changes
+    const channel = supabase
+      .channel(`auditoria-status-${auditoria_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'auditorias',
+          filter: `id=eq.${auditoria_id}`,
+        },
+        (payload: any) => {
+          const newStatus = payload.new?.status;
+          if (newStatus === 'cerrada' || newStatus === 'aprobada' || newStatus === 'rechazada') {
+            setAuditoria(prev => prev ? {
+              ...prev,
+              status: newStatus,
+              cerrada_por: payload.new?.cerrada_por ?? prev.cerrada_por,
+              cerrada_at: payload.new?.cerrada_at ?? prev.cerrada_at,
+            } : prev);
+            setPageState('closed');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [auditoria_id]);
 
   const handleStartCounting = () => {
