@@ -205,10 +205,11 @@ export default function AuditoriaConteoPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Producto</TableHead>
+                <TableHead>Código</TableHead>
                 <TableHead className="w-[140px]">Fecha / Hora</TableHead>
-                <TableHead className="w-[100px] text-center">Esperado</TableHead>
+                <TableHead className="w-[80px] text-center">Esperado</TableHead>
                 <TableHead className="w-[80px] text-center">Estado</TableHead>
-                <TableHead className="w-[180px] text-center">Conteo</TableHead>
+                <TableHead className="w-[160px] text-center">Conteo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -223,11 +224,9 @@ export default function AuditoriaConteoPage() {
                       hasLocalChange && 'bg-accent/20'
                     )}
                   >
-                    <TableCell>
-                      <p className="text-sm font-medium">{line.nombre}</p>
-                      <p className="text-xs text-muted-foreground">{line.codigo}</p>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-sm font-medium">{line.nombre}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{line.codigo}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {fmtDt(line.created_at)}
                     </TableCell>
                     <TableCell className="text-center font-mono text-sm">
@@ -241,6 +240,23 @@ export default function AuditoriaConteoPage() {
                       ) : (
                         <Badge variant="secondary" className="text-[10px]">Pendiente</Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setConteo(line.id, (currentVal ?? 0) - 1)}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          className="w-14 h-7 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={currentVal ?? ''}
+                          placeholder="0"
+                          onChange={e => setConteo(line.id, Number(e.target.value) || 0)}
+                        />
+                        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => setConteo(line.id, (currentVal ?? 0) + 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
