@@ -118,6 +118,7 @@ function SuscribirEmpresaSection() {
     setCustPhone(emp.telefono || '');
     setCustName(emp.nombre || '');
     setSelectedPlanId('');
+    setLastPaymentResult(null);
   }
 
   const filtered = empresas.filter(e =>
