@@ -426,7 +426,14 @@ export default function VentaFormPage() {
 
   const handleStatusChange = async (newStatus: StatusVenta) => {
     if (!form.id) return;
-    if (newStatus === 'cancelado' && !confirm('¿Cancelar esta venta?')) return;
+    if (newStatus === 'cancelado') {
+      setPendingPinAction(() => async () => {
+        setForm(prev => ({ ...prev, status: newStatus }));
+        await saveVenta.mutateAsync({ id: form.id!, status: newStatus } as any);
+      });
+      setShowPinDialog(true);
+      return;
+    }
     setForm(prev => ({ ...prev, status: newStatus }));
     await saveVenta.mutateAsync({ id: form.id, status: newStatus } as any);
 
