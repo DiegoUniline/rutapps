@@ -150,7 +150,6 @@ export default function AuditoriaConteoPage() {
     onSuccess: (_, { lineaId, cantidad }) => {
       toast.success(`+${cantidad} registrado`);
       refetchEntradas();
-      qc.invalidateQueries({ queryKey: ['auditoria-lineas', id] });
       setAddQty(prev => ({ ...prev, [lineaId]: '' }));
     },
     onError: (err: any) => toast.error(err.message),
