@@ -53,6 +53,9 @@ export default function AuditoriaMobilePage() {
   const [manualQty, setManualQty] = useState<Record<string, string>>({});
   const [scanning, setScanning] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [expandedLine, setExpandedLine] = useState<string | null>(null);
+  const [showCloseAll, setShowCloseAll] = useState(false);
+  const [lineToClose, setLineToClose] = useState<LineaItem | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const scannerRef = useRef<any>(null);
 
