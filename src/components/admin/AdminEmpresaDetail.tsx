@@ -67,6 +67,13 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     generar_factura: false,
   });
 
+  // Password reset states
+  const [resetDialog, setResetDialog] = useState<{ userId: string; email: string; nombre: string } | null>(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetForceChange, setResetForceChange] = useState(true);
+  const [resettingPw, setResettingPw] = useState(false);
+  const [forcingAll, setForcingAll] = useState(false);
+
   useEffect(() => { load(); }, [empresaId]);
 
   async function load() {
