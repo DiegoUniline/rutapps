@@ -581,6 +581,7 @@ export default function AuditoriaConteoPage() {
           cierre={null}
         />
       )}
+      <PinDialog />
     </div>
   );
 }
