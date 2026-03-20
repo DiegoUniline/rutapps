@@ -77,13 +77,13 @@ export default function AuditoriaConteoPage() {
     },
   });
 
+  const lineaIds = useMemo(() => (lineas ?? []).map(l => l.id), [lineas]);
+
   // Fetch all entries for this audit
-  const { data: entradas } = useQuery({
-    queryKey: ['auditoria-entradas', id],
-    enabled: !!id,
+  const { data: entradas, refetch: refetchEntradas } = useQuery({
+    queryKey: ['auditoria-entradas', id, lineaIds],
+    enabled: !!id && lineaIds.length > 0,
     queryFn: async () => {
-      const lineaIds = (lineas ?? []).map(l => l.id);
-      if (!lineaIds.length) return {};
       const { data, error } = await supabase
         .from('auditoria_entradas')
         .select('*')
