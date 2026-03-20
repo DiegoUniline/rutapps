@@ -418,85 +418,80 @@ export default function AuditoriaMobilePage() {
           {filtered.map(item => {
             const total = scanTotals[item.id] ?? 0;
             const qtyVal = manualQty[item.id] ?? '';
-            const isExpanded = expandedLine === item.id;
+            const diff = total - item.cantidad_esperada;
 
             return (
-              <div key={item.id} className={cn(item.cerrada && 'opacity-50 bg-muted/20')}>
-                <div className="px-4 py-3 flex items-center gap-3">
-                  {/* Expand toggle */}
-                  <button className="shrink-0 p-1" onClick={() => setExpandedLine(isExpanded ? null : item.id)}>
-                    {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-                  </button>
-
-                  {/* Product info */}
-                  <div className="flex-1 min-w-0" onClick={() => setExpandedLine(isExpanded ? null : item.id)}>
-                    <p className="text-[16px] font-semibold truncate text-foreground">{item.producto_nombre}</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">{item.producto_codigo}</p>
-                      {item.cerrada && <Badge variant="secondary" className="text-[10px] h-4 gap-0.5"><Lock className="h-2.5 w-2.5" />Cerrada</Badge>}
-                    </div>
-                  </div>
-
-                  {/* Count badge */}
-                  <Badge variant={total > 0 ? 'default' : 'secondary'} className="shrink-0 font-mono text-sm min-w-[32px] justify-center">
-                    {total}
-                  </Badge>
-
-                  {item.cerrada ? (
-                    <Button size="sm" variant="outline" className="h-9 text-xs gap-1 shrink-0" onClick={() => handleCloseLineMobile(item, false)}>
-                      <Unlock className="h-3 w-3" /> Reabrir
-                    </Button>
-                  ) : (
-                    <>
-                      {/* Manual qty */}
-                      <Input
-                        type="number"
-                        className="w-14 h-10 text-center font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        value={qtyVal}
-                        placeholder="1"
-                        min={1}
-                        onChange={e => setManualQty(prev => ({ ...prev, [item.id]: e.target.value }))}
-                        onKeyDown={e => { if (e.key === 'Enter') handleAddManual(item.id); }}
-                      />
-
-                      {/* + button */}
-                      <Button
-                        size="icon"
-                        className="h-11 w-11 shrink-0"
-                        onClick={() => {
-                          const qty = Number(qtyVal || 1);
-                          if (qty > 0) {
-                            addScan(item.id, qty);
-                            setManualQty(prev => ({ ...prev, [item.id]: '' }));
-                            toast.success(`+${qty}`);
-                          }
-                        }}
-                      >
-                        <Plus className="h-5 w-5" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Expanded: entries + close button */}
-                {isExpanded && (
-                  <div className="px-5 pb-3 space-y-2 bg-background">
-                    {total === 0 ? (
-                      <p className="text-xs text-muted-foreground py-1">Sin entradas aún</p>
-                    ) : (
-                      <div className="text-xs text-muted-foreground">
-                        Total contado: <span className="font-mono font-semibold text-foreground">{total}</span>
-                        {' · '}Esperado: <span className="font-mono">{item.cantidad_esperada}</span>
-                        {' · '}Diferencia: <span className={cn('font-mono font-semibold', total - item.cantidad_esperada !== 0 ? 'text-destructive' : 'text-green-600')}>{total - item.cantidad_esperada}</span>
+              <div key={item.id} className={cn('bg-card', item.cerrada && 'opacity-60')}>
+                {/* Product row */}
+                <div className="px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    {/* Product info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[16px] font-semibold truncate text-foreground">{item.producto_nombre}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-xs text-muted-foreground">{item.producto_codigo}</p>
+                        {item.cerrada && <Badge variant="secondary" className="text-[10px] h-4 gap-0.5"><Lock className="h-2.5 w-2.5" />Cerrada</Badge>}
                       </div>
-                    )}
-                    {!item.cerrada && (
-                      <Button size="sm" variant="secondary" className="h-8 text-xs gap-1 w-full" onClick={() => setLineToClose(item)}>
-                        <CheckCircle2 className="h-3 w-3" /> Cerrar este producto
+                    </div>
+
+                    {/* Count badge */}
+                    <Badge variant={total > 0 ? 'default' : 'secondary'} className="shrink-0 font-mono text-sm min-w-[32px] justify-center">
+                      {total}
+                    </Badge>
+                  </div>
+
+                  {/* Stats row - always visible */}
+                  {total > 0 && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-3">
+                      <span>Esperado: <span className="font-mono">{item.cantidad_esperada}</span></span>
+                      <span>Contado: <span className="font-mono font-semibold text-foreground">{total}</span></span>
+                      <span>Dif: <span className={cn('font-mono font-semibold', diff !== 0 ? 'text-destructive' : 'text-green-600')}>{diff > 0 ? '+' : ''}{diff}</span></span>
+                    </div>
+                  )}
+
+                  {/* Actions row */}
+                  <div className="flex items-center gap-2">
+                    {item.cerrada ? (
+                      <Button size="sm" variant="outline" className="h-9 text-xs gap-1 flex-1" onClick={() => handleCloseLineMobile(item, false)}>
+                        <Unlock className="h-3 w-3" /> Reabrir
                       </Button>
+                    ) : (
+                      <>
+                        {/* Manual qty input */}
+                        <Input
+                          type="number"
+                          className="w-16 h-9 text-center font-mono text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={qtyVal}
+                          placeholder="1"
+                          min={1}
+                          onChange={e => setManualQty(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          onKeyDown={e => { if (e.key === 'Enter') handleAddManual(item.id); }}
+                        />
+
+                        {/* + button */}
+                        <Button
+                          size="icon"
+                          className="h-9 w-9 shrink-0"
+                          onClick={() => {
+                            const qty = Number(qtyVal || 1);
+                            if (qty > 0) {
+                              addScan(item.id, qty);
+                              setManualQty(prev => ({ ...prev, [item.id]: '' }));
+                              toast.success(`+${qty}`);
+                            }
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+
+                        {/* Close line button */}
+                        <Button size="sm" variant="secondary" className="h-9 text-xs gap-1 shrink-0" onClick={() => setLineToClose(item)}>
+                          <CheckCircle2 className="h-3 w-3" /> Cerrar
+                        </Button>
+                      </>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
