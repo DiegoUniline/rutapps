@@ -409,9 +409,23 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
 
             {/* Users */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                <Users className="h-3.5 w-3.5" /> Usuarios ({usersDetailed.length || profiles.length})
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" /> Usuarios ({usersDetailed.length || profiles.length})
+                </p>
+                {usersDetailed.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] gap-1"
+                    disabled={forcingAll}
+                    onClick={handleForceChangeAll}
+                  >
+                    {forcingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
+                    Forzar cambio todos
+                  </Button>
+                )}
+              </div>
               {(usersDetailed.length > 0 ? usersDetailed : profiles).length === 0 ? (
                 <p className="text-xs text-muted-foreground">Sin usuarios</p>
               ) : usersDetailed.length > 0 ? (
@@ -420,7 +434,18 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <div key={u.id} className="rounded-lg border border-border/60 p-2.5 space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-foreground">{u.nombre || 'Sin nombre'}</span>
-                        <Badge variant="outline" className="text-[10px] h-5">{u.rol || 'Sin rol'}</Badge>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0"
+                            title="Resetear contraseña"
+                            onClick={() => { setResetDialog({ userId: u.id, email: u.email, nombre: u.nombre || u.email }); setResetPassword(''); setResetForceChange(true); }}
+                          >
+                            <KeyRound className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                          <Badge variant="outline" className="text-[10px] h-5">{u.rol || 'Sin rol'}</Badge>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
                         <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{u.email}</span>
