@@ -487,6 +487,24 @@ export default function UsuariosPage() {
                       <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
                     )}
                   </div>
+                  <div>
+                    <label className="label-odoo flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-primary" /> PIN de autorización (4 dígitos)
+                    </label>
+                    <input
+                      className="input-odoo w-full font-mono tracking-[0.5em] text-center"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      value={editForm.pin_code}
+                      onChange={e => {
+                        const v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        setEditForm({ ...editForm, pin_code: v });
+                      }}
+                      placeholder="••••"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">Se usará para autorizar operaciones sensibles (cancelar ventas, reabrir conteos, etc.)</p>
+                  </div>
                 </div>
                 <div className="p-5 border-t border-border flex gap-2 justify-end">
                   <button onClick={() => setEditingUser(null)} className="btn-odoo text-sm">Cancelar</button>
