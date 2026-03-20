@@ -10,6 +10,11 @@ import { toast } from 'sonner';
 
 type PageState = 'loading' | 'not_found' | 'closed' | 'name_entry' | 'counting';
 
+interface EmpresaUser {
+  user_id: string;
+  nombre: string;
+}
+
 interface AuditoriaData {
   id: string;
   nombre: string;
