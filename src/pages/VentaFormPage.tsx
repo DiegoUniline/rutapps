@@ -1627,7 +1627,15 @@ export default function VentaFormPage() {
           lineas={lineas as any}
           productosList={productosList ?? []}
         />
-      )}
+       )}
+
+      <PinAuthDialog
+        open={showPinDialog}
+        onOpenChange={setShowPinDialog}
+        title="Cancelar venta"
+        description="Ingresa tu PIN de autorización para cancelar esta venta."
+        onSuccess={() => { if (pendingPinAction) { pendingPinAction(); setPendingPinAction(null); } }}
+      />
     </div>
   );
 }
