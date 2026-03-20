@@ -348,6 +348,113 @@ function SuscribirEmpresaSection() {
                   {actionLoading && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                   {pasarela === 'openpay' ? 'Generar Cobro OpenPay' : 'Generar Checkout Stripe'}
                 </Button>
+
+                {/* Payment result with send options */}
+                {lastPaymentResult && (
+                  <Card className="border-primary/30 bg-primary/5">
+                    <CardContent className="pt-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-primary shrink-0" />
+                        <p className="text-sm font-semibold">Referencia generada</p>
+                      </div>
+                      {lastPaymentResult.reference && (
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 bg-background border rounded px-3 py-2 text-sm font-mono font-bold tracking-wider">
+                            {lastPaymentResult.reference}
+                          </code>
+                          <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => {
+                            navigator.clipboard?.writeText(lastPaymentResult.reference!);
+                            toast.success('Referencia copiada');
+                          }}>
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      {lastPaymentResult.url && (
+                        <p className="text-xs text-muted-foreground break-all">{lastPaymentResult.url}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {lastPaymentResult.planName} · ${lastPaymentResult.amount} MXN
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={sendingWa || !custPhone}
+                          onClick={async () => {
+                            if (!custPhone) { toast.error('No hay teléfono configurado'); return; }
+                            setSendingWa(true);
+                            try {
+                              const msg = `💳 *Referencia de pago — ${selectedEmpresa?.nombre}*\n\n` +
+                                `Plan: *${lastPaymentResult.planName}*\n` +
+                                `Monto: *$${lastPaymentResult.amount} MXN*\n\n` +
+                                (lastPaymentResult.reference
+                                  ? `Tu referencia de pago es:\n*${lastPaymentResult.reference}*\n\nPresenta esta referencia en cualquier tienda de conveniencia (OXXO, 7-Eleven, etc.) para realizar tu pago.`
+                                  : `Realiza tu pago en el siguiente enlace:\n${lastPaymentResult.url}`) +
+                                `\n\n¡Gracias por confiar en Rutapp! 🚀`;
+
+                              const { data: waConfig } = await supabase
+                                .from('whatsapp_config')
+                                .select('api_token')
+                                .limit(1)
+                                .maybeSingle();
+
+                              if (!waConfig?.api_token) {
+                                toast.error('WhatsApp no configurado');
+                                return;
+                              }
+
+                              const cleanPhone = custPhone.replace(/[\s\-\(\)]/g, '');
+                              const res = await fetch('https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'x-api-token': waConfig.api_token },
+                                body: JSON.stringify({ action: 'send-text', phone: cleanPhone, message: msg }),
+                              });
+                              if (!res.ok) throw new Error('Error al enviar WhatsApp');
+                              toast.success('Referencia enviada por WhatsApp');
+                            } catch (e: any) { toast.error(e.message); }
+                            finally { setSendingWa(false); }
+                          }}
+                        >
+                          {sendingWa ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                          WhatsApp
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={sendingEmail || !custEmail}
+                          onClick={async () => {
+                            if (!custEmail) { toast.error('No hay email configurado'); return; }
+                            setSendingEmail(true);
+                            try {
+                              const { data, error } = await supabase.functions.invoke('billing-notify-email', {
+                                body: {
+                                  to: custEmail,
+                                  empresa: selectedEmpresa?.nombre,
+                                  plan: lastPaymentResult.planName,
+                                  amount: lastPaymentResult.amount,
+                                  reference: lastPaymentResult.reference || null,
+                                  url: lastPaymentResult.url || null,
+                                },
+                              });
+                              if (error) throw error;
+                              toast.success('Referencia enviada por Email');
+                            } catch (e: any) { toast.error(e.message); }
+                            finally { setSendingEmail(false); }
+                          }}
+                        >
+                          {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                          Email
+                        </Button>
+                      </div>
+                      {!custPhone && <p className="text-xs text-destructive">Sin teléfono — no se puede enviar WhatsApp</p>}
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
           </CardContent>
