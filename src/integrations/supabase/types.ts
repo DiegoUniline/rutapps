@@ -142,6 +142,51 @@ export type Database = {
           },
         ]
       }
+      auditoria_escaneos: {
+        Row: {
+          auditoria_id: string
+          cantidad: number
+          created_at: string
+          escaneado_at: string
+          escaneado_por: string
+          id: string
+          linea_id: string
+        }
+        Insert: {
+          auditoria_id: string
+          cantidad?: number
+          created_at?: string
+          escaneado_at?: string
+          escaneado_por?: string
+          id?: string
+          linea_id: string
+        }
+        Update: {
+          auditoria_id?: string
+          cantidad?: number
+          created_at?: string
+          escaneado_at?: string
+          escaneado_por?: string
+          id?: string
+          linea_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auditoria_escaneos_auditoria_id_fkey"
+            columns: ["auditoria_id"]
+            isOneToOne: false
+            referencedRelation: "auditorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auditoria_escaneos_linea_id_fkey"
+            columns: ["linea_id"]
+            isOneToOne: false
+            referencedRelation: "auditoria_lineas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auditoria_lineas: {
         Row: {
           ajustado: boolean
@@ -196,6 +241,8 @@ export type Database = {
       auditorias: {
         Row: {
           aprobado_por: string | null
+          cerrada_at: string | null
+          cerrada_por: string | null
           created_at: string
           empresa_id: string
           fecha: string
@@ -211,6 +258,8 @@ export type Database = {
         }
         Insert: {
           aprobado_por?: string | null
+          cerrada_at?: string | null
+          cerrada_por?: string | null
           created_at?: string
           empresa_id: string
           fecha?: string
@@ -226,6 +275,8 @@ export type Database = {
         }
         Update: {
           aprobado_por?: string | null
+          cerrada_at?: string | null
+          cerrada_por?: string | null
           created_at?: string
           empresa_id?: string
           fecha?: string
@@ -5007,6 +5058,7 @@ export type Database = {
         | "por_aprobar"
         | "aprobada"
         | "rechazada"
+        | "cerrada"
       status_carga: "pendiente" | "en_ruta" | "completada" | "cancelada"
       status_cliente: "activo" | "inactivo" | "suspendido"
       status_descarga: "pendiente" | "aprobada" | "rechazada"
@@ -5202,6 +5254,7 @@ export const Constants = {
         "por_aprobar",
         "aprobada",
         "rechazada",
+        "cerrada",
       ],
       status_carga: ["pendiente", "en_ruta", "completada", "cancelada"],
       status_cliente: ["activo", "inactivo", "suspendido"],
