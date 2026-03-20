@@ -442,7 +442,7 @@ export default function AuditoriaConteoPage() {
                     {/* Expanded entries */}
                     {isExpanded && (
                       <TableRow key={`${line.id}-entries`} className="bg-background hover:bg-background">
-                        <TableCell colSpan={9} className="p-0 bg-background">
+                        <TableCell colSpan={10} className="p-0 bg-background">
                           <div className="px-8 py-2">
                             {lineEntries.length === 0 ? (
                               <p className="text-xs text-muted-foreground py-2">Sin entradas aún</p>
