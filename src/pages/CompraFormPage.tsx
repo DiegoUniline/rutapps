@@ -589,7 +589,7 @@ export default function CompraFormPage() {
               )}
               onClick={() => {
                 if (confirmDialog?.action === 'cancelar') {
-                  handleCancel();
+                  requestPin('Cancelar compra', 'Ingresa tu PIN para cancelar esta compra.', () => handleCancel());
                 } else if (confirmDialog?.action) {
                   handleStatusChange(confirmDialog.action);
                 }
