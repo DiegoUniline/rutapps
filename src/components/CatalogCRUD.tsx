@@ -47,8 +47,9 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
       return;
     }
     try {
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').maybeSingle();
-      if (!profile) { toast.error('Sin perfil'); return; }
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('empresa_id').eq('user_id', authUser?.id ?? '').maybeSingle();
+      if (!profile?.empresa_id) { toast.error('Sin perfil de empresa'); return; }
       const { error } = await (supabase.from as any)(tableName).insert({ ...newRow, empresa_id: profile.empresa_id });
       if (error) throw error;
       setNewRow({});
