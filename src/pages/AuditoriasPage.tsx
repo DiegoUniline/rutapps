@@ -185,21 +185,15 @@ export default function AuditoriasPage() {
       } as any).select('id').single();
       if (error) throw error;
 
-      let productos: any[] = [];
+      // Fetch products based on filter
+      let productoIds: string[] = [];
 
       if (filtroTipo === 'productos') {
-        // Directly use selected product ids
-        const { data } = await supabase
-          .from('productos')
-          .select('id, cantidad')
-          .eq('empresa_id', empresa!.id)
-          .eq('status', 'activo')
-          .in('id', selectedArray);
-        productos = data ?? [];
+        productoIds = selectedArray;
       } else {
         let query = supabase
           .from('productos')
-          .select('id, cantidad')
+          .select('id')
           .eq('empresa_id', empresa!.id)
           .eq('status', 'activo');
 
@@ -210,16 +204,27 @@ export default function AuditoriasPage() {
         }
 
         const { data } = await query;
-        productos = data ?? [];
+        productoIds = (data ?? []).map((p: any) => p.id);
       }
 
-      if (!productos.length) throw new Error('No hay productos activos con ese filtro');
+      if (!productoIds.length) throw new Error('No hay productos activos con ese filtro');
 
+      // Get stock from stock_almacen for the selected warehouse
+      const { data: stockRows } = await supabase
+        .from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', almacenId)
+        .in('producto_id', productoIds);
+
+      const stockMap = new Map<string, number>();
+      (stockRows ?? []).forEach((s: any) => stockMap.set(s.producto_id, Number(s.cantidad)));
+
+      const now = new Date().toISOString();
       const { error: lErr } = await supabase.from('auditoria_lineas').insert(
-        productos.map(p => ({
+        productoIds.map(pid => ({
           auditoria_id: auditoria.id,
-          producto_id: p.id,
-          cantidad_esperada: p.cantidad ?? 0,
+          producto_id: pid,
+          cantidad_esperada: stockMap.get(pid) ?? 0,
         }))
       );
       if (lErr) throw lErr;
