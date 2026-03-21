@@ -674,64 +674,92 @@ export default function PuntoVentaPage() {
 
               {condicion === 'contado' && (
                 <>
-                  {/* Método */}
-                  <div>
-                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Método de pago</label>
-                    <div className="flex gap-2 mt-1.5">
-                      {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
-                        <button key={val} onClick={() => setMetodoPago(val as PayMethod)}
-                          className={`flex-1 py-2.5 rounded-lg text-[11px] font-semibold transition-all flex flex-col items-center gap-1 ${metodoPago === val ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'}`}>
-                          <Icon className="h-4 w-4" />{label}
-                        </button>
-                      ))}
+                  {/* Payment splits */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Métodos de pago</label>
+                      <button onClick={addSplit} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1">
+                        <Plus className="h-3 w-3" /> Agregar método
+                      </button>
                     </div>
-                  </div>
 
-                  {metodoPago === 'efectivo' && (
-                    <div>
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Monto recibido</label>
-                      <div className="relative mt-1.5">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[16px] text-muted-foreground font-medium">$</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-accent/40 border border-border rounded-lg pl-8 pr-3 py-3 text-[20px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={montoRecibido}
-                          placeholder={fmt(totals.total)}
-                          onChange={e => setMontoRecibido(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                      {/* Quick amounts */}
-                      <div className="flex gap-1.5 mt-2">
-                        {quickAmounts.map(a => (
-                          <button key={a} onClick={() => setMontoRecibido(a.toString())}
-                            className={`flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-all ${parseFloat(montoRecibido) === a ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground hover:bg-accent/80'}`}>
-                            ${fmt(a)}
-                          </button>
-                        ))}
-                      </div>
-                      {cambio > 0 && (
-                        <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2.5 mt-2">
-                          <span className="text-[13px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-                          <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">${fmt(cambio)}</span>
+                    {paySplits.map((split, idx) => (
+                      <div key={split.id} className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-semibold text-muted-foreground">Pago {idx + 1}</span>
+                          {paySplits.length > 1 && (
+                            <button onClick={() => removeSplit(split.id)} className="text-destructive hover:underline text-[10px] font-medium">Quitar</button>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {/* Method selector */}
+                        <div className="flex gap-1.5">
+                          {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
+                            <button key={val} onClick={() => updateSplit(split.id, 'metodo', val)}
+                              className={`flex-1 py-2 rounded-lg text-[10px] font-semibold transition-all flex flex-col items-center gap-0.5 ${split.metodo === val ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border'}`}>
+                              <Icon className="h-3.5 w-3.5" />{label}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Amount */}
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={split.monto}
+                            placeholder={paySplits.length === 1 ? fmt(totals.total) : '0.00'}
+                            onChange={e => updateSplit(split.id, 'monto', e.target.value)}
+                            autoFocus={idx === 0}
+                          />
+                        </div>
+                        {/* Quick amounts only for first split if single */}
+                        {paySplits.length === 1 && split.metodo === 'efectivo' && (
+                          <div className="flex gap-1.5">
+                            {quickAmounts.map(a => (
+                              <button key={a} onClick={() => updateSplit(split.id, 'monto', a.toString())}
+                                className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-all ${parseFloat(split.monto) === a ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border hover:bg-accent'}`}>
+                                ${fmt(a)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {/* Reference for non-cash */}
+                        {split.metodo !== 'efectivo' && (
+                          <input
+                            type="text"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                            value={split.referencia}
+                            placeholder="Referencia (opcional)"
+                            onChange={e => updateSplit(split.id, 'referencia', e.target.value)}
+                          />
+                        )}
+                      </div>
+                    ))}
 
-                  {metodoPago !== 'efectivo' && (
-                    <div>
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Referencia (opcional)</label>
-                      <input
-                        type="text"
-                        className="w-full mt-1.5 bg-accent/40 border border-border rounded-lg px-3 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        value={referencia}
-                        placeholder="No. de referencia o autorización"
-                        onChange={e => setReferencia(e.target.value)}
-                      />
-                    </div>
-                  )}
+                    {/* Summary */}
+                    {paySplits.length > 1 && (
+                      <div className="rounded-lg bg-accent/40 px-3 py-2 space-y-1">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-muted-foreground">Total pagado</span>
+                          <span className="font-bold text-foreground tabular-nums">${fmt(totalPagado)}</span>
+                        </div>
+                        {faltante > 0 && (
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-destructive font-medium">Faltante</span>
+                            <span className="font-bold text-destructive tabular-nums">${fmt(faltante)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {cambio > 0 && (
+                      <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2.5">
+                        <span className="text-[13px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
+                        <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">${fmt(cambio)}</span>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
