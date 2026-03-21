@@ -301,25 +301,29 @@ export default function PuntoVentaPage() {
         } as any);
       }
 
-      // 4. Insert cobro if contado
+      // 4. Insert cobros if contado (one per split)
       if (condicion === 'contado' && totals.total > 0) {
-        const cobroId = crypto.randomUUID();
-        const { error: cobErr } = await supabase.from('cobros').insert({
-          id: cobroId,
-          empresa_id: empresa.id,
-          cliente_id: clienteId ?? empresa.id,
-          user_id: user.id,
-          monto: totals.total,
-          metodo_pago: metodoPago,
-          referencia: referencia || null,
-          fecha: today,
-        });
-        if (!cobErr) {
-          await supabase.from('cobro_aplicaciones').insert({
-            cobro_id: cobroId,
-            venta_id: ventaId,
-            monto_aplicado: totals.total,
+        for (const split of paySplits) {
+          const splitMonto = parseFloat(split.monto) || 0;
+          if (splitMonto <= 0) continue;
+          const cobroId = crypto.randomUUID();
+          const { error: cobErr } = await supabase.from('cobros').insert({
+            id: cobroId,
+            empresa_id: empresa.id,
+            cliente_id: clienteId ?? empresa.id,
+            user_id: user.id,
+            monto: Math.min(splitMonto, totals.total),
+            metodo_pago: split.metodo,
+            referencia: split.referencia || null,
+            fecha: today,
           });
+          if (!cobErr) {
+            await supabase.from('cobro_aplicaciones').insert({
+              cobro_id: cobroId,
+              venta_id: ventaId,
+              monto_aplicado: Math.min(splitMonto, totals.total),
+            });
+          }
         }
       }
 
