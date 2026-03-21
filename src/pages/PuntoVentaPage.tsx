@@ -200,6 +200,10 @@ export default function PuntoVentaPage() {
     setSearch('');
   };
 
+  // Ticket state
+  const [showTicket, setShowTicket] = useState(false);
+  const [lastVentaData, setLastVentaData] = useState<any>(null);
+
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
@@ -207,9 +211,10 @@ export default function PuntoVentaPage() {
     try {
       const ventaId = crypto.randomUUID();
       const almacenId = profile?.almacen_id || null;
+      const today = new Date().toISOString().split('T')[0];
 
       // 1. Insert venta
-      const { error: ventaErr } = await supabase.from('ventas').insert({
+      const { data: ventaData, error: ventaErr } = await supabase.from('ventas').insert({
         id: ventaId,
         empresa_id: empresa.id,
         cliente_id: clienteId,
@@ -225,8 +230,8 @@ export default function PuntoVentaPage() {
         descuento_total: 0,
         total: totals.total,
         saldo_pendiente: condicion === 'credito' ? totals.total : 0,
-        fecha: new Date().toISOString().split('T')[0],
-      });
+        fecha: today,
+      }).select('folio').single();
       if (ventaErr) throw ventaErr;
 
       // 2. Insert lines
@@ -252,18 +257,51 @@ export default function PuntoVentaPage() {
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
       if (linErr) throw linErr;
 
-      // 3. Insert cobro if contado
+      // 3. Deduct stock from global inventory and log movements
+      for (const item of cart) {
+        const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', item.producto_id).single();
+        const currentQty = Number(prod?.cantidad ?? 0);
+        await supabase.from('productos').update({ cantidad: Math.max(0, currentQty - item.cantidad) } as any).eq('id', item.producto_id);
+        
+        // Deduct from stock_almacen if almacen assigned
+        if (almacenId) {
+          const { data: sa } = await supabase.from('stock_almacen')
+            .select('id, cantidad')
+            .eq('almacen_id', almacenId)
+            .eq('producto_id', item.producto_id)
+            .maybeSingle();
+          if (sa) {
+            await supabase.from('stock_almacen').update({ cantidad: Math.max(0, sa.cantidad - item.cantidad), updated_at: new Date().toISOString() } as any).eq('id', sa.id);
+          }
+        }
+        
+        // Log inventory movement
+        await supabase.from('movimientos_inventario').insert({
+          empresa_id: empresa.id,
+          tipo: 'salida',
+          producto_id: item.producto_id,
+          cantidad: item.cantidad,
+          almacen_origen_id: almacenId,
+          referencia_tipo: 'venta',
+          referencia_id: ventaId,
+          user_id: user.id,
+          fecha: today,
+          notas: `Venta POS ${ventaData?.folio ?? ventaId.slice(0, 8)}`,
+        } as any);
+      }
+
+      // 4. Insert cobro if contado
       if (condicion === 'contado' && totals.total > 0) {
         const cobroId = crypto.randomUUID();
         const { error: cobErr } = await supabase.from('cobros').insert({
           id: cobroId,
           empresa_id: empresa.id,
-          cliente_id: clienteId ?? empresa.id, // fallback
+          cliente_id: clienteId ?? empresa.id,
           user_id: user.id,
           monto: totals.total,
           metodo_pago: metodoPago,
           referencia: referencia || null,
-          fecha: new Date().toISOString().split('T')[0],
+          fecha: today,
         });
         if (!cobErr) {
           await supabase.from('cobro_aplicaciones').insert({
@@ -274,9 +312,42 @@ export default function PuntoVentaPage() {
         }
       }
 
+      // Save ticket data for display
+      setLastVentaData({
+        folio: ventaData?.folio ?? ventaId.slice(0, 8),
+        fecha: today,
+        clienteNombre,
+        lineas: cart.map(item => {
+          const lineSub = item.precio_unitario * item.cantidad;
+          const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+          const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
+          return {
+            nombre: item.nombre,
+            cantidad: item.cantidad,
+            precio: item.precio_unitario,
+            subtotal: lineSub,
+            iva_monto: lineIva,
+            ieps_monto: lineIeps,
+            total: lineSub + lineIeps + lineIva,
+          };
+        }),
+        subtotal: totals.subtotal,
+        iva: totals.iva,
+        ieps: totals.ieps,
+        total: totals.total,
+        condicionPago: condicion,
+        metodoPago,
+        montoRecibido: montoNum > 0 ? montoNum : undefined,
+        cambio: cambio > 0 ? cambio : undefined,
+      });
+
       toast.success('¡Venta registrada!');
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
-      clearAll();
+      queryClient.invalidateQueries({ queryKey: ['pos-productos'] });
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
+      queryClient.invalidateQueries({ queryKey: ['inventario'] });
+      setShowTicket(true);
+      setShowPago(false);
     } catch (err: any) {
       toast.error(err.message || 'Error al guardar');
     } finally {

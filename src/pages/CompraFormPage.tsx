@@ -169,7 +169,24 @@ export default function CompraFormPage() {
   }, [lineas]);
 
   const updateField = (key: string, val: any) => {
-    setForm(f => ({ ...f, [key]: val }));
+    setForm(f => {
+      const updated = { ...f, [key]: val };
+      // Auto-fill dias_credito from proveedor when selecting condicion_pago = credito
+      if (key === 'condicion_pago' && val === 'credito' && f.proveedor_id && proveedoresList) {
+        const prov = proveedoresList.find((p: any) => p.id === f.proveedor_id);
+        if (prov && (prov as any).dias_credito) {
+          updated.dias_credito = (prov as any).dias_credito;
+        }
+      }
+      // Auto-fill dias_credito when selecting a proveedor and condicion is already credito
+      if (key === 'proveedor_id' && val && f.condicion_pago === 'credito' && proveedoresList) {
+        const prov = proveedoresList.find((p: any) => p.id === val);
+        if (prov && (prov as any).dias_credito) {
+          updated.dias_credito = (prov as any).dias_credito;
+        }
+      }
+      return updated;
+    });
     setDirty(true);
   };
 
