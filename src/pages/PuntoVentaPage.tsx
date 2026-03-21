@@ -190,10 +190,16 @@ export default function PuntoVentaPage() {
     return { subtotal, iva, ieps, total: subtotal + iva + ieps, items };
   }, [cart]);
 
-  const montoNum = parseFloat(montoRecibido) || 0;
-  const cambio = montoNum > totals.total ? montoNum - totals.total : 0;
+  const totalPagado = useMemo(() => paySplits.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0), [paySplits]);
+  const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
+  const faltante = Math.max(0, totals.total - totalPagado);
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const addSplit = () => setPaySplits(prev => [...prev, { id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
+  const removeSplit = (id: string) => setPaySplits(prev => prev.length > 1 ? prev.filter(p => p.id !== id) : prev);
+  const updateSplit = (id: string, field: keyof PaySplit, value: string) =>
+    setPaySplits(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
 
   const clearAll = () => {
     setCart([]);
@@ -201,8 +207,7 @@ export default function PuntoVentaPage() {
     setClienteNombre('Público general');
     setCondicion('contado');
     setShowPago(false);
-    setMontoRecibido('');
-    setReferencia('');
+    setPaySplits([{ id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
     setSearch('');
   };
 
