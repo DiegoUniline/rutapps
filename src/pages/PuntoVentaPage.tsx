@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import TicketVenta from '@/components/ruta/TicketVenta';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
