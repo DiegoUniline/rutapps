@@ -27,6 +27,13 @@ interface PosItem {
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
 
+interface PaySplit {
+  id: string;
+  metodo: PayMethod;
+  monto: string;
+  referencia: string;
+}
+
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
   const { empresa, user, profile } = useAuth();
