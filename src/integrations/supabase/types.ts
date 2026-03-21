@@ -3064,6 +3064,7 @@ export type Database = {
           min: number | null
           monto_maximo: number | null
           nombre: string
+          notas: string | null
           pct_comision: number | null
           permitir_descuento: boolean | null
           precio_principal: number | null
@@ -3112,6 +3113,7 @@ export type Database = {
           min?: number | null
           monto_maximo?: number | null
           nombre: string
+          notas?: string | null
           pct_comision?: number | null
           permitir_descuento?: boolean | null
           precio_principal?: number | null
@@ -3160,6 +3162,7 @@ export type Database = {
           min?: number | null
           monto_maximo?: number | null
           nombre?: string
+          notas?: string | null
           pct_comision?: number | null
           permitir_descuento?: boolean | null
           precio_principal?: number | null
