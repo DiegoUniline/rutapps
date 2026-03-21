@@ -351,8 +351,8 @@ export default function PuntoVentaPage() {
         ieps: totals.ieps,
         total: totals.total,
         condicionPago: condicion,
-        metodoPago,
-        montoRecibido: montoNum > 0 ? montoNum : undefined,
+        metodoPago: paySplits.map(s => s.metodo).join(' + '),
+        montoRecibido: totalPagado > 0 ? totalPagado : undefined,
         cambio: cambio > 0 ? cambio : undefined,
       });
 
