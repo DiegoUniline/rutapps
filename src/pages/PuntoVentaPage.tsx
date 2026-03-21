@@ -741,6 +741,39 @@ export default function PuntoVentaPage() {
           </div>
         </div>
       )}
+
+      {/* ─── Ticket after sale ─── */}
+      {showTicket && lastVentaData && (
+        <div className="fixed inset-0 z-50 bg-background">
+          <TicketVenta
+            empresa={{
+              nombre: empresa?.nombre ?? '',
+              telefono: empresa?.telefono,
+              direccion: empresa?.direccion,
+              logo_url: empresa?.logo_url,
+              rfc: empresa?.rfc,
+              moneda: empresa?.moneda,
+            }}
+            folio={lastVentaData.folio}
+            fecha={lastVentaData.fecha}
+            clienteNombre={lastVentaData.clienteNombre}
+            lineas={lastVentaData.lineas}
+            subtotal={lastVentaData.subtotal}
+            iva={lastVentaData.iva}
+            ieps={lastVentaData.ieps}
+            total={lastVentaData.total}
+            condicionPago={lastVentaData.condicionPago}
+            metodoPago={lastVentaData.metodoPago}
+            montoRecibido={lastVentaData.montoRecibido}
+            cambio={lastVentaData.cambio}
+            onClose={() => {
+              setShowTicket(false);
+              setLastVentaData(null);
+              clearAll();
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
