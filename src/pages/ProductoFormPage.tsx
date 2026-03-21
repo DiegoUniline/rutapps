@@ -1382,7 +1382,7 @@ export default function ProductoFormPage() {
         <div className="mt-4 border-t border-border pt-3">
           <OdooSection title="NOTAS INTERNAS">
             <textarea className="odoo-textarea" placeholder="Esta nota es solo para fines internos." rows={3}
-              value={form.notas ?? ''}
+              value={(form as any).notas ?? ''}
               onChange={e => set('notas' as any, e.target.value)} />
           </OdooSection>
         </div>
