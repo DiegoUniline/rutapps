@@ -32,12 +32,15 @@ export function useProductosRealtime() {
 
 /** Paginated products for list views */
 export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-page', search, statusFilter, page, pageSize],
+    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('productos')
         .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)', { count: 'exact' })
+        .eq('empresa_id', empresa!.id)
         .order('nombre', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
@@ -51,12 +54,15 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
 
 /** All products (for lookups — not for list pages) */
 export function useProductos(search?: string, statusFilter?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos', search, statusFilter],
+    queryKey: ['productos', empresa?.id, search, statusFilter],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('productos')
         .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)')
+        .eq('empresa_id', empresa!.id)
         .order('nombre', { ascending: true });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
@@ -139,12 +145,15 @@ export function useDeleteProducto() {
 
 // Tarifas
 export function useTarifas() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['tarifas'],
+    queryKey: ['tarifas', empresa?.id],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifas')
         .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, created_at, tarifa_lineas(id)')
+        .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as (Tarifa & { tarifa_lineas: { id: string }[] })[];
@@ -227,25 +236,32 @@ export function useDeleteTarifaLinea() {
 
 // Catalogs — all with 5 min staleTime and explicit columns
 export function useMarcas() {
-  return useQuery({ queryKey: ['marcas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('activo', true).order('nombre'); return data as Marca[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['marcas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Marca[]; }});
 }
 export function useProveedores() {
-  return useQuery({ queryKey: ['proveedores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre, dias_credito, condicion_pago').neq('status', 'baja').order('nombre'); return data as (Proveedor & { dias_credito?: number; condicion_pago?: string })[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['proveedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre, dias_credito, condicion_pago').eq('empresa_id', empresa!.id).neq('status', 'baja').order('nombre'); return data as (Proveedor & { dias_credito?: number; condicion_pago?: string })[]; }});
 }
 export function useClasificaciones() {
-  return useQuery({ queryKey: ['clasificaciones'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('activo', true).order('nombre'); return data as Clasificacion[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['clasificaciones', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Clasificacion[]; }});
 }
 export function useListas() {
-  return useQuery({ queryKey: ['listas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').eq('activo', true).order('nombre'); return data as Lista[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['listas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Lista[]; }});
 }
 export function useUnidades() {
-  return useQuery({ queryKey: ['unidades'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').eq('activo', true).order('nombre'); return data as Unidad[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['unidades', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Unidad[]; }});
 }
 export function useTasasIva() {
-  return useQuery({ queryKey: ['tasas_iva'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('id, nombre, porcentaje').order('nombre'); return data as TasaIva[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['tasas_iva', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('id, nombre, porcentaje').eq('empresa_id', empresa!.id).order('nombre'); return data as TasaIva[]; }});
 }
 export function useTasasIeps() {
-  return useQuery({ queryKey: ['tasas_ieps'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').order('nombre'); return data as TasaIeps[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['tasas_ieps', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').eq('empresa_id', empresa!.id).order('nombre'); return data as TasaIeps[]; }});
 }
 export function useAlmacenes() {
   const { empresa } = useAuth();
@@ -255,23 +271,28 @@ export function useUnidadesSat() {
   return useQuery({ queryKey: ['unidades_sat'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('id, clave, nombre').order('nombre'); return data as UnidadSat[]; }});
 }
 export function useProductosForSelect() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-select'],
+    queryKey: ['productos-select', empresa?.id],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('productos')
         .select('id, codigo, nombre, precio_principal, costo, cantidad, clasificacion_id, unidad_venta_id, unidad_compra_id, factor_conversion, tiene_iva, tiene_ieps, tasa_iva_id, tasa_ieps_id, iva_pct, ieps_pct, ieps_tipo, costo_incluye_impuestos, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura), unidades_compra:unidades!productos_unidad_compra_id_fkey(nombre, abreviatura)')
+        .eq('empresa_id', empresa!.id)
         .eq('status', 'activo').order('nombre');
       return data ?? [];
     },
   });
 }
 export function useTarifasForSelect() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['tarifas-select'],
+    queryKey: ['tarifas-select', empresa?.id],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').eq('activa', true).order('nombre');
+      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').eq('empresa_id', empresa!.id).eq('activa', true).order('nombre');
       return data ?? [];
     },
   });

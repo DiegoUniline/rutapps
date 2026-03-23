@@ -28,9 +28,10 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
   const [showInactive, setShowInactive] = useState(false);
 
   const { data: items, isLoading } = useQuery({
-    queryKey: [queryKey, showInactive],
+    queryKey: [queryKey, empresa?.id, showInactive],
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = (supabase.from as any)(tableName).select('*').order('nombre');
+      let q = (supabase.from as any)(tableName).select('*').eq('empresa_id', empresa!.id).order('nombre');
       // Only filter by activo if column exists (we added it to all catalog tables)
       if (!showInactive) q = q.eq('activo', true);
       const { data, error } = await q;

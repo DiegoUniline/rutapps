@@ -10,15 +10,18 @@ const CATALOG_STALE = CATALOG_STALE_TIME;
 
 /** Paginated clients for list views */
 export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
+  const { empresa } = useAuth();
   const { seeAll, profileId, clientesVisibilidad } = useDataVisibility('clientes');
   const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['clientes-page', search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all'],
+    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all'],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('clientes')
         .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)', { count: 'exact' })
+        .eq('empresa_id', empresa!.id)
         .order('orden', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
@@ -33,12 +36,15 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
 
 /** All clients (for lookups/selectors — not for list pages) */
 export function useClientes(search?: string, statusFilter?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['clientes', search, statusFilter],
+    queryKey: ['clientes', empresa?.id, search, statusFilter],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('clientes')
         .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
+        .eq('empresa_id', empresa!.id)
         .order('orden', { ascending: true });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Cliente['status']);
