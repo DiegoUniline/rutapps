@@ -87,7 +87,7 @@ function ClientesTable() {
                 onExcel={() => exportToExcel({
                   fileName: 'Clientes', title: 'Catálogo de Clientes',
                   columns: CLIENTES_COLUMNS,
-                  data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+                  data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
                 })}
                 onPDF={() => exportToPDF({
                   fileName: 'Clientes', title: 'Catálogo de Clientes',
