@@ -95,7 +95,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
     ['Condiciones de pago:', pagoLabel],
     ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
     ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
-    ['Moneda:', 'MXN - Peso Mexicano'],
+    ['Moneda:', `${cc.code} - ${cc.name}`],
   ];
 
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
