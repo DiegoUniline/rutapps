@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, UserPlus, ArrowRight, PieChart } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, Legend, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
+import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface DashboardStats {
   balance_available: number; balance_pending: number; total_invoiced: number;
@@ -10,21 +13,30 @@ interface DashboardStats {
 }
 
 interface FacturamaPlan {
-  Plan: string;
-  CurrentFolios: string;
-  CreationDate: string;
-  ExpirationDate: string;
-  Amount: number;
-  Id: string;
-  Type: string;
+  Plan: string; CurrentFolios: string; CreationDate: string;
+  ExpirationDate: string; Amount: number; Id: string; Type: string;
 }
+
+interface EmpresaRow {
+  id: string; created_at: string;
+  subscriptions: { status: string; plan_id: string | null; created_at: string }[];
+}
+
+const COLORS = ['hsl(var(--primary))', 'hsl(var(--success))', 'hsl(142 71% 45%)', 'hsl(var(--destructive))', 'hsl(38 92% 50%)', 'hsl(var(--muted-foreground))'];
+
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Activa', trial: 'Trial', past_due: 'Vencida',
+  suspended: 'Suspendida', gracia: 'Gracia', cancelada: 'Cancelada', sin_sub: 'Sin sub',
+};
 
 export default function AdminStatsTab() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [facturamaPlan, setFacturamaPlan] = useState<FacturamaPlan | null>(null);
+  const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(30);
 
-  useEffect(() => { loadStats(); loadFacturamaPlan(); }, []);
+  useEffect(() => { loadStats(); loadFacturamaPlan(); loadEmpresas(); }, []);
 
   async function loadStats() {
     try {
@@ -56,6 +68,58 @@ export default function AdminStatsTab() {
       console.error('Facturama plan error:', err);
     }
   }
+
+  async function loadEmpresas() {
+    const { data } = await supabase
+      .from('empresas')
+      .select('id, created_at, subscriptions(status, plan_id, created_at)')
+      .order('created_at', { ascending: true });
+    setEmpresas((data as any) || []);
+  }
+
+  // ── Derived chart data ──
+  const signupsByDay = useMemo(() => {
+    if (!empresas.length) return [];
+    const start = subDays(new Date(), days);
+    const interval = eachDayOfInterval({ start, end: new Date() });
+    const counts: Record<string, number> = {};
+    interval.forEach(d => { counts[format(d, 'yyyy-MM-dd')] = 0; });
+    empresas.forEach(e => {
+      const day = format(new Date(e.created_at), 'yyyy-MM-dd');
+      if (counts[day] !== undefined) counts[day]++;
+    });
+    // cumulative
+    let cum = empresas.filter(e => new Date(e.created_at) < start).length;
+    return Object.entries(counts).map(([date, count]) => {
+      cum += count;
+      return { date, label: format(new Date(date), 'dd MMM', { locale: es }), nuevas: count, total: cum };
+    });
+  }, [empresas, days]);
+
+  const conversionData = useMemo(() => {
+    const total = empresas.length;
+    const withSub = empresas.filter(e => e.subscriptions?.length > 0).length;
+    const active = empresas.filter(e => e.subscriptions?.some(s => s.status === 'active')).length;
+    const trial = empresas.filter(e => e.subscriptions?.some(s => s.status === 'trial')).length;
+    return [
+      { name: 'Registros', value: total, pct: 100 },
+      { name: 'Con suscripción', value: withSub, pct: total ? Math.round(withSub / total * 100) : 0 },
+      { name: 'En trial', value: trial, pct: total ? Math.round(trial / total * 100) : 0 },
+      { name: 'Activas (pagando)', value: active, pct: total ? Math.round(active / total * 100) : 0 },
+    ];
+  }, [empresas]);
+
+  const statusDistribution = useMemo(() => {
+    const map: Record<string, number> = {};
+    empresas.forEach(e => {
+      const status = e.subscriptions?.[0]?.status || 'sin_sub';
+      map[status] = (map[status] || 0) + 1;
+    });
+    return Object.entries(map).map(([status, count]) => ({
+      name: STATUS_LABELS[status] || status,
+      value: count,
+    }));
+  }, [empresas]);
 
   const fmt = (cents: number) => `$${(cents / 100).toLocaleString('es-MX')}`;
 
@@ -93,16 +157,132 @@ export default function AdminStatsTab() {
         </div>
       )}
 
+      {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={DollarSign} label="Ingresos cobrados" value={fmt(stats.total_paid)} accent="success" />
         <StatCard icon={TrendingUp} label="MRR" value={fmt(stats.mrr)} accent="primary" />
         <StatCard icon={CreditCard} label="Facturas abiertas" value={fmt(stats.total_open)} accent="destructive" />
-        <StatCard icon={Receipt} label="Total cobrado" value={fmt(stats.total_paid)} accent="success" />
+        <StatCard icon={Users} label="Total empresas" value={empresas.length.toString()} accent="primary" />
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <StatCard icon={Users} label="Clientes" value={stats.total_customers.toString()} accent="primary" />
         <StatCard icon={CreditCard} label="Suscripciones activas" value={stats.active_subscriptions.toString()} accent="success" />
         <StatCard icon={Receipt} label="Total facturado" value={fmt(stats.total_invoiced)} accent="muted" />
+        <StatCard icon={Users} label="Clientes Stripe" value={stats.total_customers.toString()} accent="primary" />
+      </div>
+
+      {/* ── Nuevos registros por día ── */}
+      <Card className="border border-border/60 shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <UserPlus className="h-4 w-4 text-primary" /> Nuevos registros por día
+            </CardTitle>
+            <div className="flex gap-1">
+              {[7, 14, 30, 60].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDays(d)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${days === d ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'}`}
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={signupsByDay}>
+                <defs>
+                  <linearGradient id="colorNuevas" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                  formatter={(value: number, name: string) => [value, name === 'nuevas' ? 'Nuevas' : 'Acumulado']}
+                />
+                <Bar dataKey="nuevas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Line type="monotone" dataKey="total" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Funnel de conversión + Distribución por status ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Conversion funnel */}
+        <Card className="border border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <ArrowRight className="h-4 w-4 text-primary" /> Embudo de conversión
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {conversionData.map((step, i) => (
+                <div key={step.name}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium text-foreground">{step.name}</span>
+                    <span className="text-xs text-muted-foreground">{step.value} ({step.pct}%)</span>
+                  </div>
+                  <div className="h-7 bg-muted/30 rounded-lg overflow-hidden relative">
+                    <div
+                      className="h-full rounded-lg transition-all duration-700 flex items-center justify-end pr-2"
+                      style={{
+                        width: `${Math.max(step.pct, 5)}%`,
+                        backgroundColor: COLORS[i % COLORS.length],
+                      }}
+                    >
+                      <span className="text-[10px] font-bold text-white drop-shadow">{step.pct}%</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Status distribution */}
+        <Card className="border border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <PieChart className="h-4 w-4 text-primary" /> Distribución por status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-52">
+              <ResponsiveContainer width="100%" height="100%">
+                <RPieChart>
+                  <Pie
+                    data={statusDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
+                  >
+                    {statusDistribution.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
+                  />
+                </RPieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
