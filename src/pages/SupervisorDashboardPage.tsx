@@ -6,8 +6,9 @@ import { ShoppingCart, Banknote, Users, TrendingUp } from 'lucide-react';
 import { useVendedores } from '@/hooks/useClientes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
