@@ -57,23 +57,21 @@ export function useVenta(id?: string) {
           if (local) {
             // Enrich with local venta_lineas if available
             const lineasTable = getOfflineTable('venta_lineas');
-            let venta_lineas: any[] = [];
+            let venta_lineas: VentaLinea[] = [];
             if (lineasTable) {
               const allLineas = await lineasTable.toArray();
-              venta_lineas = allLineas.filter((l: any) => l.venta_id === id);
-              // Try to enrich with product names from local productos
+              venta_lineas = allLineas.filter((l: Record<string, unknown>) => l.venta_id === id) as unknown as VentaLinea[];
               const prodTable = getOfflineTable('productos');
               if (prodTable) {
                 const prods = await prodTable.toArray();
-                const prodMap = new Map(prods.map((p: any) => [p.id, p]));
-                venta_lineas = venta_lineas.map((l: any) => ({
+                const prodMap = new Map(prods.map((p: Record<string, unknown>) => [p.id, p]));
+                venta_lineas = venta_lineas.map((l: VentaLinea) => ({
                   ...l,
-                  productos: prodMap.get(l.producto_id) || { id: l.producto_id, codigo: '', nombre: l.descripcion ?? '—' },
+                  productos: (prodMap.get(l.producto_id) as VentaLinea['productos']) || { id: l.producto_id, codigo: '', nombre: l.descripcion ?? '—' },
                 }));
               }
             }
-            // Try to get client name
-            let clientes: any = { nombre: 'Sin cliente' };
+            let clientes: { nombre: string } = { nombre: 'Sin cliente' };
             if (local.cliente_id) {
               const cliTable = getOfflineTable('clientes');
               if (cliTable) {

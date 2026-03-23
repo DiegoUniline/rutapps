@@ -59,7 +59,7 @@ export function useSaveCarga() {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   return useMutation({
-    mutationFn: async (carga: any) => {
+    mutationFn: async (carga: Record<string, unknown> & { id?: string }) => {
       const { id, vendedores, carga_lineas, ...rest } = carga;
       if (id) {
         const { data, error } = await supabase.from('cargas').update(rest).eq('id', id).select('id').single();

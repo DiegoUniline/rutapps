@@ -71,7 +71,7 @@ export function useDescargaCalculos(cargaId: string | null) {
     },
   });
 
-  const lineas: DescargaLinea[] = (cargaLineas || []).map((cl: any) => {
+  const lineas: DescargaLinea[] = (cargaLineas || []).map((cl: Record<string, unknown>) => {
     const esperada = Number(cl.cantidad_cargada) - Number(cl.cantidad_vendida) - Number(cl.cantidad_devuelta);
     return {
       producto_id: cl.producto_id,

@@ -195,8 +195,9 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
       if (error) throw error;
 
       const map = new Map<string, { nombre: string; total: number; count: number }>();
-      (data ?? []).forEach((v: any) => {
-        const existing = map.get(v.vendedor_id) ?? { nombre: v.vendedores?.nombre ?? 'N/A', total: 0, count: 0 };
+      (data ?? []).forEach((v) => {
+        const vendedorName = (v.vendedores as { nombre: string } | null)?.nombre ?? 'N/A';
+        const existing = map.get(v.vendedor_id!) ?? { nombre: vendedorName, total: 0, count: 0 };
         existing.total += Number(v.total ?? 0);
         existing.count += 1;
         map.set(v.vendedor_id, existing);
