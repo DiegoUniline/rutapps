@@ -137,7 +137,7 @@ export function useOfflineMutation() {
   const mutate = useCallback(async (
     table: string,
     operation: 'insert' | 'update' | 'delete',
-    data: any,
+    data: Record<string, unknown>,
     keyField: string = 'id',
   ) => {
     setIsPending(true);

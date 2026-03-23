@@ -110,50 +110,61 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         if (!entregasPorRuta[vid]) entregasPorRuta[vid] = { nombre: (e.vendedores as any)?.nombre ?? 'Sin ruta', entregas: 0, total: 0, productos: {} };
         entregasPorRuta[vid].entregas += 1;
         entregasPorRuta[vid].total += e.total ?? 0;
-        for (const l of ((e as any).venta_lineas ?? [])) {
-          const pid = l.producto_id ?? '';
-          if (!entregasPorRuta[vid].productos[pid]) entregasPorRuta[vid].productos[pid] = { codigo: (l.productos as any)?.codigo ?? '', nombre: (l.productos as any)?.nombre ?? '', cantidad: 0 };
-          entregasPorRuta[vid].productos[pid].cantidad += l.cantidad ?? 0;
+        for (const l of ((e as Record<string, unknown>).venta_lineas ?? []) as Record<string, unknown>[]) {
+          const pid = (l.producto_id as string) ?? '';
+          const prod = l.productos as { codigo?: string; nombre?: string } | null;
+          if (!entregasPorRuta[vid].productos[pid]) entregasPorRuta[vid].productos[pid] = { codigo: prod?.codigo ?? '', nombre: prod?.nombre ?? '', cantidad: 0 };
+          entregasPorRuta[vid].productos[pid].cantidad += (l.cantidad as number) ?? 0;
         }
       }
 
       // === CARGAS ===
-      const cargasData = cargas.map((c: any) => ({
-        id: c.id,
-        fecha: c.fecha,
-        status: c.status,
-        vendedor: c.vendedores?.nombre ?? '—',
-        lineas: (c.carga_lineas ?? []).map((l: any) => ({
-          codigo: l.productos?.codigo ?? '',
-          nombre: l.productos?.nombre ?? '',
-          cargada: l.cantidad_cargada ?? 0,
-          vendida: l.cantidad_vendida ?? 0,
-          devuelta: l.cantidad_devuelta ?? 0,
-        })),
-        totalCargado: (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0),
-        totalVendido: (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_vendida ?? 0), 0),
-      }));
+      const cargasData = cargas.map((c) => {
+        const cLineas = ((c as Record<string, unknown>).carga_lineas ?? []) as Record<string, unknown>[];
+        const vend = (c as Record<string, unknown>).vendedores as { nombre?: string } | null;
+        return {
+          id: c.id,
+          fecha: c.fecha,
+          status: c.status,
+          vendedor: vend?.nombre ?? '—',
+          lineas: cLineas.map((l) => ({
+            codigo: ((l.productos as Record<string, unknown>)?.codigo as string) ?? '',
+            nombre: ((l.productos as Record<string, unknown>)?.nombre as string) ?? '',
+            cargada: (l.cantidad_cargada as number) ?? 0,
+            vendida: (l.cantidad_vendida as number) ?? 0,
+            devuelta: (l.cantidad_devuelta as number) ?? 0,
+          })),
+          totalCargado: cLineas.reduce((s, l) => s + ((l.cantidad_cargada as number) ?? 0), 0),
+          totalVendido: cLineas.reduce((s, l) => s + ((l.cantidad_vendida as number) ?? 0), 0),
+        };
+      });
 
       // === DEVOLUCIONES ===
-      const devData = devoluciones.map((d: any) => ({
-        id: d.id,
-        fecha: d.fecha,
-        tipo: d.tipo,
-        vendedor: d.vendedores?.nombre ?? '—',
-        cliente: d.clientes?.nombre ?? '—',
-        lineas: (d.devolucion_lineas ?? []).map((l: any) => ({
-          codigo: l.productos?.codigo ?? '',
-          nombre: l.productos?.nombre ?? '',
-          cantidad: l.cantidad ?? 0,
-          motivo: l.motivo ?? '',
-        })),
-        totalPiezas: (d.devolucion_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad ?? 0), 0),
-      }));
+      const devData = devoluciones.map((d) => {
+        const dLineas = ((d as Record<string, unknown>).devolucion_lineas ?? []) as Record<string, unknown>[];
+        const vend = (d as Record<string, unknown>).vendedores as { nombre?: string } | null;
+        const cli = (d as Record<string, unknown>).clientes as { nombre?: string } | null;
+        return {
+          id: d.id,
+          fecha: d.fecha,
+          tipo: d.tipo,
+          vendedor: vend?.nombre ?? '—',
+          cliente: cli?.nombre ?? '—',
+          lineas: dLineas.map((l) => ({
+            codigo: ((l.productos as Record<string, unknown>)?.codigo as string) ?? '',
+            nombre: ((l.productos as Record<string, unknown>)?.nombre as string) ?? '',
+            cantidad: (l.cantidad as number) ?? 0,
+            motivo: (l.motivo as string) ?? '',
+          })),
+          totalPiezas: dLineas.reduce((s, l) => s + ((l.cantidad as number) ?? 0), 0),
+        };
+      });
 
       const devPorMotivo: Record<string, number> = {};
       for (const d of devoluciones) {
-        for (const l of ((d as any).devolucion_lineas ?? [])) {
-          devPorMotivo[l.motivo] = (devPorMotivo[l.motivo] ?? 0) + (l.cantidad ?? 0);
+        for (const l of ((d as Record<string, unknown>).devolucion_lineas ?? []) as Record<string, unknown>[]) {
+          const motivo = (l.motivo as string) ?? '';
+          devPorMotivo[motivo] = (devPorMotivo[motivo] ?? 0) + ((l.cantidad as number) ?? 0);
         }
       }
 

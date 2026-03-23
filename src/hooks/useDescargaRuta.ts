@@ -71,12 +71,13 @@ export function useDescargaCalculos(cargaId: string | null) {
     },
   });
 
-  const lineas: DescargaLinea[] = (cargaLineas || []).map((cl: any) => {
+  const lineas: DescargaLinea[] = (cargaLineas || []).map((cl) => {
+    const prod = cl.productos as { nombre?: string; codigo?: string } | null;
     const esperada = Number(cl.cantidad_cargada) - Number(cl.cantidad_vendida) - Number(cl.cantidad_devuelta);
     return {
       producto_id: cl.producto_id,
-      producto_nombre: cl.productos?.nombre ?? '',
-      producto_codigo: cl.productos?.codigo ?? '',
+      producto_nombre: prod?.nombre ?? '',
+      producto_codigo: prod?.codigo ?? '',
       cantidad_cargada: Number(cl.cantidad_cargada),
       cantidad_vendida: Number(cl.cantidad_vendida),
       cantidad_devuelta: Number(cl.cantidad_devuelta),

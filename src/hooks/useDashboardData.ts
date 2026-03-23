@@ -121,11 +121,11 @@ export function useDashboardTopProductos(range: DateRange) {
         .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status)')
         .gte('ventas.fecha', fmt(range.from))
         .lte('ventas.fecha', fmt(range.to))
-        .neq('ventas.status', 'cancelado' as any);
+        .neq('ventas.status', 'cancelado');
       if (error) throw error;
 
       const map = new Map<string, { qty: number; total: number }>();
-      (data ?? []).forEach((l: any) => {
+      (data ?? []).forEach((l) => {
         const existing = map.get(l.producto_id) ?? { qty: 0, total: 0 };
         existing.qty += Number(l.cantidad);
         existing.total += Number(l.total ?? 0);
@@ -159,7 +159,7 @@ export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) 
         .select('fecha, total')
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelado' as any);
+        .neq('status', 'cancelado');
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
       const { data, error } = await q;
       if (error) throw error;
@@ -190,13 +190,14 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
         .select('vendedor_id, total, vendedores(nombre)')
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelado' as any)
+        .neq('status', 'cancelado')
         .not('vendedor_id', 'is', null);
       if (error) throw error;
 
       const map = new Map<string, { nombre: string; total: number; count: number }>();
-      (data ?? []).forEach((v: any) => {
-        const existing = map.get(v.vendedor_id) ?? { nombre: v.vendedores?.nombre ?? 'N/A', total: 0, count: 0 };
+      (data ?? []).forEach((v) => {
+        const vendedorName = (v.vendedores as { nombre: string } | null)?.nombre ?? 'N/A';
+        const existing = map.get(v.vendedor_id!) ?? { nombre: vendedorName, total: 0, count: 0 };
         existing.total += Number(v.total ?? 0);
         existing.count += 1;
         map.set(v.vendedor_id, existing);
