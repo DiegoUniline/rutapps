@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
+import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
@@ -52,6 +53,8 @@ export default function PuntoVentaPage() {
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [scanBuffer, setScanBuffer] = useState('');
   const [lastScanTime, setLastScanTime] = useState(0);
+  const [clienteTarifaId, setClienteTarifaId] = useState<string | null>(null);
+  const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
 
   // Products
   const { data: productos } = useQuery({
@@ -59,7 +62,7 @@ export default function PuntoVentaPage() {
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, clave_alterna, unidad_venta_id, se_puede_vender, status')
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id')
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
         .order('nombre');
@@ -74,12 +77,31 @@ export default function PuntoVentaPage() {
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
-        .select('id, codigo, nombre, credito, limite_credito, dias_credito')
+        .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id')
         .eq('status', 'activo')
         .order('nombre');
       return data ?? [];
     },
   });
+
+  const { data: generalTarifa } = useQuery({
+    queryKey: ['pos-tarifa-general'], staleTime: CATALOG_STALE,
+    queryFn: async () => { const { data } = await supabase.from('tarifas').select('id').eq('tipo', 'general').eq('activa', true).maybeSingle(); return data; },
+  });
+  const effectiveTarifaId = clienteTarifaId || generalTarifa?.id || null;
+  const { data: effectiveTarifaLineas } = useQuery({
+    queryKey: ['pos-tarifa-lineas', effectiveTarifaId], enabled: !!effectiveTarifaId, staleTime: CATALOG_STALE,
+    queryFn: async () => { const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', effectiveTarifaId!); return (data ?? []) as TarifaLineaRule[]; },
+  });
+  const resolvePosPrice = useCallback((p: any): number => {
+    const rules = effectiveTarifaLineas ?? [];
+    if (!rules.length) return p.precio_principal ?? 0;
+    return resolveProductPrice(rules, { id: p.id, precio_principal: p.precio_principal ?? 0, costo: p.costo ?? 0, clasificacion_id: p.clasificacion_id, tiene_iva: p.tiene_iva, iva_pct: p.iva_pct ?? 16, tiene_ieps: p.tiene_ieps, ieps_pct: p.ieps_pct ?? 0, ieps_tipo: p.ieps_tipo }, clienteListaPrecioId);
+  }, [effectiveTarifaLineas, clienteListaPrecioId]);
+  useEffect(() => {
+    if (cart.length === 0 || !productos) return;
+    setCart(prev => prev.map(item => { const prod = productos.find(p => p.id === item.producto_id); if (!prod) return item; return { ...item, precio_unitario: resolvePosPrice(prod) }; }));
+  }, [effectiveTarifaLineas, clienteListaPrecioId]);
 
   // Barcode scanner: listen for rapid key presses
   useEffect(() => {
@@ -152,7 +174,7 @@ export default function PuntoVentaPage() {
         producto_id: p.id,
         codigo: p.codigo,
         nombre: p.nombre,
-        precio_unitario: p.precio_principal ?? 0,
+        precio_unitario: resolvePosPrice(p),
         cantidad: 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
@@ -205,6 +227,8 @@ export default function PuntoVentaPage() {
     setCart([]);
     setClienteId(null);
     setClienteNombre('Público general');
+    setClienteTarifaId(null);
+    setClienteListaPrecioId(null);
     setCondicion('contado');
     setShowPago(false);
     setPaySplits([{ id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
@@ -621,7 +645,7 @@ export default function PuntoVentaPage() {
             </div>
             <div className="max-h-72 overflow-auto px-2 pb-2">
               <button
-                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setShowClientes(false); setClienteSearch(''); }}
+                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
                 className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent text-[13px] text-foreground font-medium"
               >
                 Público general
@@ -629,11 +653,11 @@ export default function PuntoVentaPage() {
               {filteredClientes.map(c => (
                 <button
                   key={c.id}
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setShowClientes(false); setClienteSearch(''); }}
+                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteTarifaId((c as any).tarifa_id || null); setClienteListaPrecioId((c as any).lista_precio_id || null); setShowClientes(false); setClienteSearch(''); if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); }}
                   className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent transition-colors ${clienteId === c.id ? 'bg-primary/10' : ''}`}
                 >
                   <p className="text-[13px] font-medium text-foreground truncate">{c.nombre}</p>
-                  {c.codigo && <p className="text-[10px] text-muted-foreground">{c.codigo}</p>}
+                  <div className="flex items-center gap-2">{c.codigo && <span className="text-[10px] text-muted-foreground">{c.codigo}</span>}{(c as any).credito && <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Crédito</span>}</div>
                 </button>
               ))}
             </div>
