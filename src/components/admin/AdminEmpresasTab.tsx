@@ -59,7 +59,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   async function load() {
     const { data } = await supabase
       .from('empresas')
-      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, plan_id), profiles(nombre, user_id)');
+      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, trial_ends_at, plan_id), profiles(nombre, user_id)');
     setEmpresas((data as any) || []);
     setLoading(false);
   }
