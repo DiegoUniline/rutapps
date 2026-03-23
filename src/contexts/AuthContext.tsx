@@ -16,7 +16,8 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, profile: null, empresa: null, loading: true, signOut: async () => {}
+  user: null, profile: null, empresa: null, loading: true, signOut: async () => {},
+  overrideEmpresaId: null, setOverrideEmpresaId: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
