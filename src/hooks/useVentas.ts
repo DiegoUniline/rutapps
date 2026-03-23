@@ -153,6 +153,17 @@ export function useDeleteVenta() {
       const { error } = await supabase.from('ventas').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ventas'] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['ventas'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['ventas'] });
+      qc.setQueriesData<any[]>({ queryKey: ['ventas'] }, (old) =>
+        old?.filter(v => v.id !== id)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['ventas'] }),
   });
 }

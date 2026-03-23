@@ -107,7 +107,18 @@ export function useUpdateCargaStatus() {
       const { error } = await supabase.from('cargas').update({ status: status as any }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ['cargas'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['cargas'] });
+      qc.setQueriesData<any[]>({ queryKey: ['cargas'] }, (old) =>
+        old?.map(c => c.id === id ? { ...c, status } : c)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['cargas'] });
       qc.invalidateQueries({ queryKey: ['carga'] });
       qc.invalidateQueries({ queryKey: ['carga-activa'] });
@@ -119,10 +130,20 @@ export function useDeleteCarga() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Soft delete: cancel instead of deleting
       const { error } = await supabase.from('cargas').update({ status: 'cancelada' }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cargas'] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['cargas'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['cargas'] });
+      qc.setQueriesData<any[]>({ queryKey: ['cargas'] }, (old) =>
+        old?.map(c => c.id === id ? { ...c, status: 'cancelada' } : c)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['cargas'] }),
   });
 }
