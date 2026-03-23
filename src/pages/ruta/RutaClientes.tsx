@@ -111,14 +111,22 @@ export default function RutaClientes() {
     orderBy: 'orden',
   });
 
-  const filtered = (clientes ?? []).filter((c: any) => {
+  // Filter by vendedor assignment when visibility is 'propios'
+  const myClientes = (clientes ?? []).filter((c: any) => {
+    if (clientesVisibilidad === 'propios' && profile?.id) {
+      return c.vendedor_id === profile.id;
+    }
+    return true;
+  });
+
+  const filtered = myClientes.filter((c: any) => {
     if (search) {
       const s = search.toLowerCase();
       if (!c.nombre.toLowerCase().includes(s) && !c.codigo?.toLowerCase().includes(s) && !c.direccion?.toLowerCase().includes(s))
         return false;
     }
     if (modo === 'visitas') {
-      if (visited.has(c.id)) return false; // Hide already visited
+      if (visited.has(c.id)) return false;
       if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
       return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
     }
