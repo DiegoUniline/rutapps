@@ -404,13 +404,13 @@ export default function InventarioPage() {
       {/* Rutas view */}
       {view === 'rutas' && data && !selectedRuta && (
         <div className="space-y-3">
-          {data.cargas.length === 0 && (
+          {data.cargas.filter(c => c.totalUnidades > 0).length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
               <p>No hay rutas activas</p>
             </div>
           )}
-          {data.cargas.map(c => (
+          {data.cargas.filter(c => c.totalUnidades > 0).map(c => (
             <div
               key={c.id}
               className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/40 transition-colors"
