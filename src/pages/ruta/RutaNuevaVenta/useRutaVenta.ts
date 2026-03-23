@@ -86,15 +86,27 @@ export function useRutaVenta() {
   }, [cargasRaw, profile]);
 
   const { data: cargaLineasRaw } = useOfflineQuery('carga_lineas', { carga_id: activeCarga?.id }, { enabled: !!activeCarga?.id });
+
+  // Fallback: if no active carga, use stock_almacen from user's assigned warehouse
+  const almacenId = profile?.almacen_id;
+  const useFallbackStock = !activeCarga && !!almacenId;
+  const { data: stockAlmacenRaw } = useOfflineQuery('stock_almacen', { almacen_id: almacenId }, { enabled: useFallbackStock });
+
   const stockAbordo = useMemo(() => {
     const map = new Map<string, number>();
-    if (!cargaLineasRaw) return map;
-    (cargaLineasRaw as any[]).forEach(l => {
-      const disponible = (l.cantidad_cargada ?? 0) - (l.cantidad_vendida ?? 0) - (l.cantidad_devuelta ?? 0);
-      map.set(l.producto_id, Math.max(0, disponible));
-    });
+    if (cargaLineasRaw) {
+      (cargaLineasRaw as any[]).forEach(l => {
+        const disponible = (l.cantidad_cargada ?? 0) - (l.cantidad_vendida ?? 0) - (l.cantidad_devuelta ?? 0);
+        map.set(l.producto_id, Math.max(0, disponible));
+      });
+    } else if (stockAlmacenRaw) {
+      // Fallback to warehouse stock
+      (stockAlmacenRaw as any[]).forEach(s => {
+        if ((s.cantidad ?? 0) > 0) map.set(s.producto_id, s.cantidad);
+      });
+    }
     return map;
-  }, [cargaLineasRaw]);
+  }, [cargaLineasRaw, stockAlmacenRaw]);
 
   const { data: promocionesActivas } = usePromocionesActivas();
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
@@ -288,7 +300,7 @@ export function useRutaVenta() {
     referenciaPago, setReferenciaPago, cuentasPendientes, showDevSearch, setShowDevSearch,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     ticketInfo, sinCompra, setSinCompra, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra,
-    entregaInmediata, stockAbordo, clientes, productos, filteredClientes,
+    entregaInmediata, stockAbordo, usandoAlmacen: useFallbackStock, clientes, productos, filteredClientes,
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
