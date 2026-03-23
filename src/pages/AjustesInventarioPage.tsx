@@ -143,7 +143,8 @@ export default function AjustesInventarioPage() {
 
       const groups = new Map<string, { key: string; fecha: string; userName: string; almacenName: string; motivo: string; created_at: string; items: any[] }>();
       for (const a of (data ?? [])) {
-        const gKey = `${a.fecha}_${a.user_id}_${a.motivo ?? ''}_${a.almacen_id ?? ''}`;
+        // Use batch_id when available, fallback to legacy grouping
+        const gKey = (a as any).batch_id ?? `${a.fecha}_${a.user_id}_${a.motivo ?? ''}_${a.almacen_id ?? ''}`;
         if (!groups.has(gKey)) {
           groups.set(gKey, {
             key: gKey,
