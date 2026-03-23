@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = 5 * 60 * 1000;
