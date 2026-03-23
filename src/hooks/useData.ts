@@ -192,13 +192,14 @@ export function useSaveTarifaLinea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (linea: Partial<TarifaLinea> & { id?: string }) => {
-      const { id, productos, ...rest } = linea as any;
-      if (id) {
-        const { data, error } = await supabase.from('tarifa_lineas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(linea, TARIFA_LINEA_COLUMNS);
+      delete (clean as any).id;
+      if (linea.id) {
+        const { data, error } = await supabase.from('tarifa_lineas').update(clean as any).eq('id', linea.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('tarifa_lineas').insert(rest).select('id').single();
+        const { data, error } = await supabase.from('tarifa_lineas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
