@@ -46,7 +46,7 @@ const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
 const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
 const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
-const CompraFormPage = lazy(() => import("@/pages/CompraFormPage"));
+const CompraFormPage = lazy(() => import("@/pages/CompraForm"));
 const LotesPage = lazy(() => import("@/pages/LotesPage"));
 const CuentasCobrarPage = lazy(() => import("@/pages/CuentasCobrarPage"));
 const CuentasPagarPage = lazy(() => import("@/pages/CuentasPagarPage"));
