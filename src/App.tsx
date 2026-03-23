@@ -99,7 +99,7 @@ const RutaVentasTab = lazy(() => import("@/pages/ruta/RutaVentasTab"));
 const RutaClientesEntregas = lazy(() => import("@/pages/ruta/RutaClientesEntregas"));
 const RutaStock = lazy(() => import("@/pages/ruta/RutaStock"));
 const RutaGastos = lazy(() => import("@/pages/ruta/RutaGastos"));
-const RutaNuevaVenta = lazy(() => import("@/pages/ruta/RutaNuevaVenta"));
+const RutaNuevaVenta = lazy(() => import("@/pages/ruta/RutaNuevaVenta/index"));
 const RutaCobros = lazy(() => import("@/pages/ruta/RutaCobros"));
 const RutaCobrar = lazy(() => import("@/pages/ruta/RutaCobrar"));
 const RutaVentaDetalle = lazy(() => import("@/pages/ruta/RutaVentaDetalle"));
