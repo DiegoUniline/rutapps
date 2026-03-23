@@ -87,26 +87,19 @@ export function useRutaVenta() {
 
   const { data: cargaLineasRaw } = useOfflineQuery('carga_lineas', { carga_id: activeCarga?.id }, { enabled: !!activeCarga?.id });
 
-  // Fallback: if no active carga, use stock_almacen from user's assigned warehouse
-  const almacenId = profile?.almacen_id;
-  const useFallbackStock = !activeCarga && !!almacenId;
-  const { data: stockAlmacenRaw } = useOfflineQuery('stock_almacen', { almacen_id: almacenId }, { enabled: useFallbackStock });
+  // When no active carga, use product's own stock (cantidad) as fallback
+  const useFallbackStock = !activeCarga;
 
   const stockAbordo = useMemo(() => {
     const map = new Map<string, number>();
-    if (cargaLineasRaw) {
+    if (cargaLineasRaw && cargaLineasRaw.length > 0) {
       (cargaLineasRaw as any[]).forEach(l => {
         const disponible = (l.cantidad_cargada ?? 0) - (l.cantidad_vendida ?? 0) - (l.cantidad_devuelta ?? 0);
         map.set(l.producto_id, Math.max(0, disponible));
       });
-    } else if (stockAlmacenRaw) {
-      // Fallback to warehouse stock
-      (stockAlmacenRaw as any[]).forEach(s => {
-        if ((s.cantidad ?? 0) > 0) map.set(s.producto_id, s.cantidad);
-      });
     }
     return map;
-  }, [cargaLineasRaw, stockAlmacenRaw]);
+  }, [cargaLineasRaw]);
 
   const { data: promocionesActivas } = usePromocionesActivas();
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
@@ -151,12 +144,27 @@ export function useRutaVenta() {
   }, [pedidoSugeridoRaw, productos]);
 
   const filteredClientes = clientes?.filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
-  const productosDisponibles = useMemo(() => { if (!productos) return []; if (tipoVenta === 'pedido') return productos; return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0); }, [productos, tipoVenta, stockAbordo]);
+  const productosDisponibles = useMemo(() => {
+    if (!productos) return [];
+    if (tipoVenta === 'pedido') return productos;
+    if (useFallbackStock) {
+      // No carga: use product's own stock (cantidad)
+      return productos.filter(p => (p.cantidad ?? 0) > 0);
+    }
+    return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
+  }, [productos, tipoVenta, stockAbordo, useFallbackStock]);
   const filteredProductos = productosDisponibles?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
   const filteredDevProductos = productos?.filter(p => !searchDevProducto || p.nombre.toLowerCase().includes(searchDevProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchDevProducto.toLowerCase()));
   const filteredReemplazoProductos = productos?.filter(p => !searchReemplazo || p.nombre.toLowerCase().includes(searchReemplazo.toLowerCase()) || p.codigo.toLowerCase().includes(searchReemplazo.toLowerCase()));
 
-  const getMaxQty = (productoId: string) => tipoVenta === 'pedido' ? Infinity : (stockAbordo.get(productoId) ?? 0);
+  const getMaxQty = (productoId: string) => {
+    if (tipoVenta === 'pedido') return Infinity;
+    if (useFallbackStock) {
+      const prod = productos?.find(p => p.id === productoId);
+      return prod?.cantidad ?? 0;
+    }
+    return stockAbordo.get(productoId) ?? 0;
+  };
 
   const addToCart = (p: any, esCambio = false) => {
     const maxQty = esCambio ? Infinity : getMaxQty(p.id);
