@@ -98,6 +98,7 @@ export function useTarifa(id?: string) {
 
 export function useSaveTarifa() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (tarifa: Partial<Tarifa> & { id?: string }) => {
       const { id, tarifa_lineas, ...rest } = tarifa as any;
@@ -106,8 +107,8 @@ export function useSaveTarifa() {
         if (error) throw error;
         return data;
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
-        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: empresaId }).select('id').single();
+        if (!empresa?.id) throw new Error('Sin empresa');
+        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
         if (error) throw error;
         return data;
       }
