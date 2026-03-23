@@ -8,6 +8,7 @@ import {
   checkPageBreak, numberToWords,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 interface VentaPdfParams {
   empresa: EmpresaInfo;
