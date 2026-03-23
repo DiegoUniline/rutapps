@@ -167,10 +167,21 @@ export default function PuntoVentaPage() {
   }, [clientes, clienteSearch]);
 
   const addToCart = (p: any) => {
+    const stock = p.cantidad ?? 0;
+    const canSellWithout = p.vender_sin_stock;
     setCart(prev => {
       const existing = prev.find(c => c.producto_id === p.id);
       if (existing) {
-        return prev.map(c => c.producto_id === p.id ? { ...c, cantidad: c.cantidad + 1 } : c);
+        const newQty = existing.cantidad + 1;
+        if (!canSellWithout && newQty > stock) {
+          toast.error(`Stock máximo: ${stock}`);
+          return prev;
+        }
+        return prev.map(c => c.producto_id === p.id ? { ...c, cantidad: newQty } : c);
+      }
+      if (!canSellWithout && stock < 1) {
+        toast.error('Sin stock disponible');
+        return prev;
       }
       return [...prev, {
         producto_id: p.id,
@@ -183,6 +194,7 @@ export default function PuntoVentaPage() {
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
         unidad: 'pz',
+        _max_stock: canSellWithout ? Infinity : stock,
       }];
     });
   };
@@ -191,6 +203,13 @@ export default function PuntoVentaPage() {
     if (qty <= 0) {
       setCart(prev => prev.filter(c => c.producto_id !== id));
     } else {
+      const item = cart.find(c => c.producto_id === id);
+      const prod = productos?.find(p => p.id === id);
+      const maxStock = prod?.vender_sin_stock ? Infinity : (prod?.cantidad ?? 0);
+      if (qty > maxStock) {
+        toast.error(`Stock máximo: ${maxStock}`);
+        return;
+      }
       setCart(prev => prev.map(c => c.producto_id === id ? { ...c, cantidad: qty } : c));
     }
   };

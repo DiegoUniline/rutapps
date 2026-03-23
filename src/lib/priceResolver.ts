@@ -47,10 +47,10 @@ function findMatchingRule(
   producto: ProductForPricing,
   listaPrecioId?: string | null
 ): TarifaLineaRule | null {
-  // Filter rules by lista_precio_id if provided
+  // Filter rules by lista_precio_id: if provided match that list, otherwise only rules without a list
   const filtered = listaPrecioId
-    ? rules.filter(r => r.lista_precio_id === listaPrecioId)
-    : rules;
+    ? rules.filter(r => r.lista_precio_id === listaPrecioId || !r.lista_precio_id)
+    : rules.filter(r => !r.lista_precio_id);
 
   // 1) Product-specific
   const prodRule = filtered.find(
