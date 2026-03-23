@@ -22,7 +22,7 @@ const SignupPage = lazy(() => import("@/pages/SignupPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
 const ProductosListPage = lazy(() => import("@/pages/ProductosListPage"));
 const CatalogPage = lazy(() => import("@/pages/CatalogPage"));
-const ProductoFormPage = lazy(() => import("@/pages/ProductoFormPage"));
+const ProductoFormPage = lazy(() => import("@/pages/ProductoForm"));
 const TarifasListPage = lazy(() => import("@/pages/TarifasListPage"));
 const ListasPrecioListPage = lazy(() => import("@/pages/ListasPrecioListPage"));
 const ProveedoresListPage = lazy(() => import("@/pages/ProveedoresListPage"));
