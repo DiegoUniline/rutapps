@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
+import { useProductosRealtime } from '@/hooks/useData';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
@@ -337,6 +338,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
   const location = useLocation();
+  useProductosRealtime();
 
   useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);

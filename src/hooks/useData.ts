@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -5,6 +6,28 @@ import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
+
+/** Realtime listener — invalidates productos cache on any server-side change */
+export function useProductosRealtime() {
+  const qc = useQueryClient();
+  useEffect(() => {
+    const channel = supabase
+      .channel('productos-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => {
+        qc.invalidateQueries({ queryKey: ['productos'] });
+        qc.invalidateQueries({ queryKey: ['productos-page'] });
+        qc.invalidateQueries({ queryKey: ['productos-select'] });
+        qc.invalidateQueries({ queryKey: ['pos-productos'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen' }, () => {
+        qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+        qc.invalidateQueries({ queryKey: ['productos'] });
+        qc.invalidateQueries({ queryKey: ['productos-page'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
+}
 
 /** Paginated products for list views */
 export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
