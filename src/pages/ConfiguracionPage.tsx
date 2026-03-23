@@ -4,7 +4,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe } from 'lucide-react';
+import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe, Users } from 'lucide-react';
 import { CURRENCIES } from '@/lib/currency';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { Button } from '@/components/ui/button';
@@ -298,6 +298,7 @@ export default function ConfiguracionPage() {
   const [initialized, setInitialized] = useState(false);
 
   const [moneda, setMoneda] = useState('MXN');
+  const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
 
   if (config && !initialized) {
     setForm({
@@ -319,10 +320,11 @@ export default function ConfiguracionPage() {
       setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
     }
     setMoneda((config as any).moneda ?? 'MXN');
+    setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setInitialized(true);
   }
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -361,7 +363,7 @@ export default function ConfiguracionPage() {
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
-        ticket_campos: campos, moneda,
+        ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -437,6 +439,32 @@ export default function ConfiguracionPage() {
                 <span className="text-[12px] text-foreground">{label}</span>
               </label>
             ))}
+          </div>
+        </div>
+
+        {/* Visibilidad de datos */}
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4" /> Visibilidad de datos
+          </h3>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            Controla qué datos puede ver cada vendedor/cobrador. Los usuarios con el permiso "Ver todos" siempre ven todo.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Clientes</label>
+              <select
+                value={clientesVisibilidad}
+                onChange={e => setClientesVisibilidad(e.target.value)}
+                className="input-odoo text-[13px] w-full max-w-xs"
+              >
+                <option value="todos">Todos los usuarios ven todos los clientes</option>
+                <option value="propios">Cada vendedor solo ve sus clientes asignados</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              <strong>Ventas, cobros y entregas</strong> siempre se filtran: cada usuario solo ve los registros donde es vendedor asignado o los que él creó. Los usuarios con permiso "Ver todos" ven todo.
+            </p>
           </div>
         </div>
 

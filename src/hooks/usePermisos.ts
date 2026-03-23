@@ -91,7 +91,7 @@ export const MODULOS: ModuloDef[] = [
   { id: 'configuracion.suscripcion', label: 'Mi suscripción', group: 'Configuración' },
 ];
 
-export const ACCIONES = ['ver', 'crear', 'editar', 'eliminar'];
+export const ACCIONES = ['ver', 'crear', 'editar', 'eliminar', 'ver_todos'];
 
 /** Get unique groups in order */
 export function getModuloGroups(): string[] {

@@ -1892,6 +1892,7 @@ export type Database = {
       empresas: {
         Row: {
           ciudad: string | null
+          clientes_visibilidad: string
           colonia: string | null
           cp: string | null
           created_at: string
@@ -1911,6 +1912,7 @@ export type Database = {
         }
         Insert: {
           ciudad?: string | null
+          clientes_visibilidad?: string
           colonia?: string | null
           cp?: string | null
           created_at?: string
@@ -1930,6 +1932,7 @@ export type Database = {
         }
         Update: {
           ciudad?: string | null
+          clientes_visibilidad?: string
           colonia?: string | null
           cp?: string | null
           created_at?: string

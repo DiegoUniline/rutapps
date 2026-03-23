@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
@@ -9,14 +10,18 @@ const CATALOG_STALE = CATALOG_STALE_TIME;
 
 /** Paginated clients for list views */
 export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
+  const { seeAll, profileId, clientesVisibilidad } = useDataVisibility('clientes');
+  const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
+
   return useQuery({
-    queryKey: ['clientes-page', search, statusFilter, page, pageSize],
+    queryKey: ['clientes-page', search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all'],
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       let q = supabase.from('clientes')
         .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)', { count: 'exact' })
         .order('orden', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
+      if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Cliente['status']);
       const { data, error, count } = await q;
