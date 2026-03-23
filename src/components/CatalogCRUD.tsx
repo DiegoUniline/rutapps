@@ -5,6 +5,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 export interface CatalogColumn {
@@ -22,6 +23,7 @@ interface CatalogCRUDProps {
 
 export default function CatalogCRUD({ title, tableName, columns, queryKey }: CatalogCRUDProps) {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   const [newRow, setNewRow] = useState<Record<string, string | number>>({});
   const [showInactive, setShowInactive] = useState(false);
 
@@ -47,10 +49,8 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
       return;
     }
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase.from('profiles').select('empresa_id').eq('user_id', authUser?.id ?? '').maybeSingle();
-      if (!profile?.empresa_id) { toast.error('Sin perfil de empresa'); return; }
-      const { error } = await (supabase.from as any)(tableName).insert({ ...newRow, empresa_id: profile.empresa_id });
+      if (!empresa?.id) { toast.error('Sin perfil de empresa'); return; }
+      const { error } = await (supabase.from as any)(tableName).insert({ ...newRow, empresa_id: empresa.id });
       if (error) throw error;
       setNewRow({});
       qc.invalidateQueries({ queryKey: [queryKey] });
@@ -62,12 +62,17 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
 
   const handleToggleActivo = async (id: string, currentActivo: boolean) => {
     const newVal = !currentActivo;
+    // Optimistic: update cache immediately
+    qc.setQueriesData<any[]>({ queryKey: [queryKey] }, (old) =>
+      old?.map(item => item.id === id ? { ...item, activo: newVal } : item)
+    );
     try {
       const { error } = await (supabase.from as any)(tableName).update({ activo: newVal }).eq('id', id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: [queryKey] });
       toast.success(newVal ? 'Activado' : 'Dado de baja');
     } catch (err: any) {
+      qc.invalidateQueries({ queryKey: [queryKey] }); // revert
       toast.error(err.message);
     }
   };
