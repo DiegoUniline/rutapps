@@ -475,13 +475,6 @@ export default function UsuariosPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="label-odoo">Vendedor asociado</label>
-                    <select className="input-odoo w-full" value={editForm.vendedor_id} onChange={e => setEditForm({ ...editForm, vendedor_id: e.target.value })}>
-                      <option value="">Sin vendedor</option>
-                      {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div>
                     <label className="label-odoo">Estado</label>
                     <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
                       <option value="activo">✅ Activo</option>
