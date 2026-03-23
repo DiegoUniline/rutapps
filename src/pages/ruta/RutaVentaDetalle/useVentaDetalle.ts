@@ -153,6 +153,9 @@ export function useVentaDetalle() {
       toast.success('Venta cancelada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
+      queryClient.invalidateQueries({ queryKey: ['inventario-dashboard'] });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
