@@ -4,6 +4,8 @@ import { Plus, Search, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
+import { useDateFilter } from '@/hooks/useDateFilter';
+import DateFilterBar from '@/components/ruta/DateFilterBar';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
