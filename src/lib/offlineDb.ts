@@ -50,7 +50,7 @@ class OfflineDatabase extends Dexie {
 
   constructor() {
     super('UnilineOffline');
-    this.version(5).stores({
+    this.version(6).stores({
       clientes: 'id, empresa_id, vendedor_id, status, nombre',
       productos: 'id, empresa_id, codigo, nombre, status',
       vendedores: 'id, empresa_id',
