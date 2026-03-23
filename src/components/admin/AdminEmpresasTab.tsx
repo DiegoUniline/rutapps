@@ -190,16 +190,18 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                           </div>
                         </TableCell>
                         <TableCell>
-                          {sub?.current_period_end ? (
-                            <div className="text-xs">
-                              <div className="font-medium">{format(new Date(sub.current_period_end), 'dd MMM yyyy', { locale: es })}</div>
-                              {new Date(sub.current_period_end) < new Date() && (
-                                <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          {(() => {
+                            const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
+                            if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
+                            return (
+                              <div className="text-xs">
+                                <div className="font-medium">{format(new Date(endDate), 'dd MMM yyyy', { locale: es })}</div>
+                                {new Date(endDate) < new Date() && (
+                                  <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {format(new Date(e.created_at), 'dd MMM yyyy', { locale: es })}
