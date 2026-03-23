@@ -512,48 +512,7 @@ export default function VentaFormPage() {
     setDirty(true);
   };
 
-  // Add payment
-  const handleAddPago = async () => {
-    if (!form.id || !form.cliente_id || !user?.id || !empresa?.id) return;
-    const monto = Number(pagoMonto);
-    if (!monto || monto <= 0) { toast.error('Ingresa un monto válido'); return; }
-    if (monto > saldoPendiente + 0.01) { toast.error('El monto excede el saldo pendiente'); return; }
-    setPagoSaving(true);
-    try {
-      // Create cobro
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
-        empresa_id: empresa.id,
-        cliente_id: form.cliente_id,
-        monto,
-        metodo_pago: pagoMetodo,
-        referencia: pagoRef || null,
-        user_id: user.id,
-      }).select('id').single();
-      if (cobroErr) throw cobroErr;
-
-      // Apply to this venta
-      const { error: appErr } = await supabase.from('cobro_aplicaciones').insert({
-        cobro_id: cobro.id,
-        venta_id: form.id,
-        monto_aplicado: monto,
-      });
-      if (appErr) throw appErr;
-
-      // Update saldo_pendiente on venta
-      await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, saldoPendiente - monto) }).eq('id', form.id);
-
-      toast.success('Pago registrado');
-      setPagoMonto('');
-      setPagoRef('');
-      setShowPagoForm(false);
-      queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
-      queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
-    } catch (e: any) {
-      toast.error(e.message);
-    } finally {
-      setPagoSaving(false);
-    }
-  };
+  // Payment logic is now in VentaPagosTab
 
   if (!isNew && isLoading) {
     return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
