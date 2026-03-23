@@ -205,7 +205,7 @@ export default function UsuariosPage() {
   const startEdit = (p: ProfileUser) => {
     const userRole = userRoles.find(ur => ur.user_id === p.user_id);
     setEditingUser(p);
-    setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', vendedor_id: p.vendedor_id || '', role_id: userRole?.role_id || '', pin_code: p.pin_code || '' });
+    setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', role_id: userRole?.role_id || '', pin_code: p.pin_code || '' });
   };
 
   const saveUser = async () => {
