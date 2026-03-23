@@ -193,13 +193,7 @@ export default function AdminStatsTab() {
         <CardContent>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={signupsByDay}>
-                <defs>
-                  <linearGradient id="colorNuevas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <ComposedChart data={signupsByDay}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                 <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
@@ -209,9 +203,32 @@ export default function AdminStatsTab() {
                 />
                 <Bar dataKey="nuevas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 <Line type="monotone" dataKey="total" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
+
+          {/* Recent signups list */}
+          {recentSignups.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Últimas altas</h4>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {recentSignups.map(e => {
+                  const sub = e.subscriptions?.[0];
+                  const status = sub?.status || 'sin_sub';
+                  const statusLabel = STATUS_LABELS[status] || status;
+                  return (
+                    <div key={e.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-1.5">
+                      <div>
+                        <span className="font-medium text-foreground">{e.nombre}</span>
+                        <span className="text-muted-foreground ml-2">{format(new Date(e.created_at), "dd MMM yyyy, HH:mm", { locale: es })}</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted font-medium">{statusLabel}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
