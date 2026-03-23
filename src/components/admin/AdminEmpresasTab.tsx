@@ -24,6 +24,7 @@ interface SubRow {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   current_period_end: string | null;
+  trial_ends_at: string | null;
   plan_id: string | null;
 }
 
