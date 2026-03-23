@@ -645,7 +645,7 @@ export default function PuntoVentaPage() {
             </div>
             <div className="max-h-72 overflow-auto px-2 pb-2">
               <button
-                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setShowClientes(false); setClienteSearch(''); }}
+                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
                 className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent text-[13px] text-foreground font-medium"
               >
                 Público general
@@ -653,11 +653,11 @@ export default function PuntoVentaPage() {
               {filteredClientes.map(c => (
                 <button
                   key={c.id}
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setShowClientes(false); setClienteSearch(''); }}
+                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteTarifaId((c as any).tarifa_id || null); setClienteListaPrecioId((c as any).lista_precio_id || null); setShowClientes(false); setClienteSearch(''); if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); }}
                   className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent transition-colors ${clienteId === c.id ? 'bg-primary/10' : ''}`}
                 >
                   <p className="text-[13px] font-medium text-foreground truncate">{c.nombre}</p>
-                  {c.codigo && <p className="text-[10px] text-muted-foreground">{c.codigo}</p>}
+                  <div className="flex items-center gap-2">{c.codigo && <span className="text-[10px] text-muted-foreground">{c.codigo}</span>}{(c as any).credito && <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Crédito</span>}</div>
                 </button>
               ))}
             </div>
