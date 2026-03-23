@@ -554,6 +554,7 @@ export default function MiSuscripcionPage() {
                         <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</th>
                         <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
                         <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                        <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -577,6 +578,20 @@ export default function MiSuscripcionPage() {
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
                               {facturaStatusLabel[f.estado] || f.estado}
                             </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center">
+                            {f.estado === 'pendiente' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1"
+                                disabled={payingInvoice === f.id}
+                                onClick={() => handlePayInvoice(f)}
+                              >
+                                {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                                Pagar
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
