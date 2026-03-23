@@ -136,8 +136,8 @@ export default function RutaClientes() {
     return true;
   });
 
-  const visitadosCount = (clientes ?? []).filter((c: any) => visited.has(c.id)).length;
-  const pendientesCount = (clientes ?? []).filter((c: any) => {
+  const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
+  const pendientesCount = myClientes.filter((c: any) => {
     if (visited.has(c.id)) return false;
     if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
     return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
