@@ -236,25 +236,32 @@ export function useDeleteTarifaLinea() {
 
 // Catalogs — all with 5 min staleTime and explicit columns
 export function useMarcas() {
-  return useQuery({ queryKey: ['marcas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('activo', true).order('nombre'); return data as Marca[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['marcas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Marca[]; }});
 }
 export function useProveedores() {
-  return useQuery({ queryKey: ['proveedores'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre, dias_credito, condicion_pago').neq('status', 'baja').order('nombre'); return data as (Proveedor & { dias_credito?: number; condicion_pago?: string })[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['proveedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('proveedores').select('id, nombre, dias_credito, condicion_pago').eq('empresa_id', empresa!.id).neq('status', 'baja').order('nombre'); return data as (Proveedor & { dias_credito?: number; condicion_pago?: string })[]; }});
 }
 export function useClasificaciones() {
-  return useQuery({ queryKey: ['clasificaciones'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('activo', true).order('nombre'); return data as Clasificacion[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['clasificaciones', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Clasificacion[]; }});
 }
 export function useListas() {
-  return useQuery({ queryKey: ['listas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').eq('activo', true).order('nombre'); return data as Lista[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['listas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('listas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Lista[]; }});
 }
 export function useUnidades() {
-  return useQuery({ queryKey: ['unidades'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').eq('activo', true).order('nombre'); return data as Unidad[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['unidades', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Unidad[]; }});
 }
 export function useTasasIva() {
-  return useQuery({ queryKey: ['tasas_iva'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('id, nombre, porcentaje').order('nombre'); return data as TasaIva[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['tasas_iva', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('tasas_iva').select('id, nombre, porcentaje').eq('empresa_id', empresa!.id).order('nombre'); return data as TasaIva[]; }});
 }
 export function useTasasIeps() {
-  return useQuery({ queryKey: ['tasas_ieps'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').order('nombre'); return data as TasaIeps[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['tasas_ieps', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').eq('empresa_id', empresa!.id).order('nombre'); return data as TasaIeps[]; }});
 }
 export function useAlmacenes() {
   const { empresa } = useAuth();
