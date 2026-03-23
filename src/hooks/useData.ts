@@ -372,7 +372,8 @@ export function useAllListasPrecios() {
       const { data, error } = await supabase.from('lista_precios')
         .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at, share_token, share_activo')
         .order('nombre');
-      if (error) throw error;
+      if (error) { console.error('Error fetching lista_precios:', error); throw error; }
+      console.log('[useAllListasPrecios] fetched', data?.length, 'listas');
       return data as ListaPrecio[];
     },
   });
