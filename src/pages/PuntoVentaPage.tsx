@@ -84,20 +84,19 @@ export default function PuntoVentaPage() {
     },
   });
 
-  const { data: generalTarifa } = useQuery({
-    queryKey: ['pos-tarifa-general'], staleTime: CATALOG_STALE,
-    queryFn: async () => { const { data } = await supabase.from('tarifas').select('id').eq('tipo', 'general').eq('activa', true).maybeSingle(); return data; },
-  });
-  const effectiveTarifaId = clienteTarifaId || generalTarifa?.id || null;
+  // Only load tarifa rules when a real client with tarifa is selected
+  const effectiveTarifaId = clienteTarifaId || null;
   const { data: effectiveTarifaLineas } = useQuery({
     queryKey: ['pos-tarifa-lineas', effectiveTarifaId], enabled: !!effectiveTarifaId, staleTime: CATALOG_STALE,
     queryFn: async () => { const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', effectiveTarifaId!); return (data ?? []) as TarifaLineaRule[]; },
   });
   const resolvePosPrice = useCallback((p: any): number => {
+    // No client or no tarifa → use precio_principal directly
+    if (!effectiveTarifaId) return p.precio_principal ?? 0;
     const rules = effectiveTarifaLineas ?? [];
     if (!rules.length) return p.precio_principal ?? 0;
     return resolveProductPrice(rules, { id: p.id, precio_principal: p.precio_principal ?? 0, costo: p.costo ?? 0, clasificacion_id: p.clasificacion_id, tiene_iva: p.tiene_iva, iva_pct: p.iva_pct ?? 16, tiene_ieps: p.tiene_ieps, ieps_pct: p.ieps_pct ?? 0, ieps_tipo: p.ieps_tipo }, clienteListaPrecioId);
-  }, [effectiveTarifaLineas, clienteListaPrecioId]);
+  }, [effectiveTarifaId, effectiveTarifaLineas, clienteListaPrecioId]);
   useEffect(() => {
     if (cart.length === 0 || !productos) return;
     setCart(prev => prev.map(item => { const prod = productos.find(p => p.id === item.producto_id); if (!prod) return item; return { ...item, precio_unitario: resolvePosPrice(prod) }; }));
