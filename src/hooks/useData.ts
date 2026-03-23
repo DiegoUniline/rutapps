@@ -286,11 +286,13 @@ export function useProductosForSelect() {
   });
 }
 export function useTarifasForSelect() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['tarifas-select'],
+    queryKey: ['tarifas-select', empresa?.id],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').eq('activa', true).order('nombre');
+      const { data } = await supabase.from('tarifas').select('id, nombre, tipo, activa').eq('empresa_id', empresa!.id).eq('activa', true).order('nombre');
       return data ?? [];
     },
   });
