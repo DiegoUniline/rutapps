@@ -162,8 +162,9 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       const devPorMotivo: Record<string, number> = {};
       for (const d of devoluciones) {
-        for (const l of ((d as any).devolucion_lineas ?? [])) {
-          devPorMotivo[l.motivo] = (devPorMotivo[l.motivo] ?? 0) + (l.cantidad ?? 0);
+        for (const l of ((d as Record<string, unknown>).devolucion_lineas ?? []) as Record<string, unknown>[]) {
+          const motivo = (l.motivo as string) ?? '';
+          devPorMotivo[motivo] = (devPorMotivo[motivo] ?? 0) + ((l.cantidad as number) ?? 0);
         }
       }
 
