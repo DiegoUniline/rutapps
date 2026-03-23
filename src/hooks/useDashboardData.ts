@@ -121,7 +121,7 @@ export function useDashboardTopProductos(range: DateRange) {
         .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status)')
         .gte('ventas.fecha', fmt(range.from))
         .lte('ventas.fecha', fmt(range.to))
-        .neq('ventas.status', 'cancelado' as any);
+        .neq('ventas.status', 'cancelado');
       if (error) throw error;
 
       const map = new Map<string, { qty: number; total: number }>();
