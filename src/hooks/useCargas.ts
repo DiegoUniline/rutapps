@@ -4,12 +4,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { pickColumns, CARGA_COLUMNS } from '@/lib/allowlist';
 
 export function useCargas(search?: string, statusFilter?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['cargas', search, statusFilter],
+    queryKey: ['cargas', empresa?.id, search, statusFilter],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('cargas')
         .select('id, fecha, status, vendedor_id, almacen_id, almacen_destino_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), almacen_origen:almacen_id(nombre), almacen_destino:almacen_destino_id(nombre), carga_lineas(id, producto_id, cantidad_cargada, cantidad_devuelta, cantidad_vendida, productos(codigo, nombre))')
+        .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
