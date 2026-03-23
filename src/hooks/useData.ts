@@ -170,14 +170,16 @@ export function useSaveTarifa() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (tarifa: Partial<Tarifa> & { id?: string }) => {
-      const { id, tarifa_lineas, ...rest } = tarifa as any;
-      if (id) {
-        const { data, error } = await supabase.from('tarifas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(tarifa, TARIFA_COLUMNS);
+      delete (clean as any).id;
+      if (tarifa.id) {
+        const { data, error } = await supabase.from('tarifas').update(clean as any).eq('id', tarifa.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('tarifas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
