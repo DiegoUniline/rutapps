@@ -4,6 +4,7 @@ import { HELP } from '@/lib/helpContent';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useVendedores } from '@/hooks/useClientes';
 import { OdooPagination } from '@/components/OdooPagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';

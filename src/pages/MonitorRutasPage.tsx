@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useVendedores } from '@/hooks/useClientes';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, MarkerF, InfoWindow } from '@react-google-maps/api';
 import {
