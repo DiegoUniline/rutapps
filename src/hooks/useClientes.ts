@@ -22,7 +22,7 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       let q = supabase.from('clientes')
         .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)', { count: 'exact' })
         .eq('empresa_id', empresa!.id)
-        .order('orden', { ascending: true })
+        .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
