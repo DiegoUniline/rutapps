@@ -1156,36 +1156,7 @@ export default function VentaFormPage() {
                   )}
 
                   {/* Totals */}
-                  <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
-                    <div className={cn("bg-accent rounded-md p-3 space-y-1.5 text-[13px]", isMobile ? "w-full" : "w-72")}>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Subtotal</span>
-                        <span>${totals.subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      {totals.descuento_total > 0 && (
-                        <div className="flex justify-between text-destructive">
-                          <span>Descuento</span>
-                          <span>-${totals.descuento_total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                      )}
-                      {totals.ieps_total > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">IEPS</span>
-                          <span>${totals.ieps_total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                      )}
-                      {totals.iva_total > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">IVA</span>
-                          <span>${totals.iva_total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between border-t border-border pt-2 font-semibold text-[15px]">
-                        <span>Total</span>
-                        <span>${totals.total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <VentaTotals {...totals} isMobile={isMobile} />
                 </div>
               ),
             },
