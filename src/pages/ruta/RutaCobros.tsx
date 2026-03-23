@@ -38,24 +38,8 @@ export default function RutaCobros() {
     return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
   };
 
-  const renderCobro = (c: any) => {
-    const Icon = METODO_ICONS[c.metodo_pago] || Wallet;
-    const clienteNombre = clienteMap.get(c.cliente_id) ?? 'Sin cliente';
-    return (
-      <div key={c.id} className="rounded-xl px-4 py-3.5 bg-card flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-          <Icon className="h-5 w-5 text-success" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{clienteNombre}</p>
-          <p className="text-xs text-muted-foreground capitalize">{c.metodo_pago}</p>
-        </div>
-        <p className="text-sm font-bold text-success shrink-0 tabular-nums">
-          +${(c.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-        </p>
-      </div>
-    );
-  };
+
+
 
   return (
     <div className="flex flex-col h-full">
