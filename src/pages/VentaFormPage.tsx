@@ -132,11 +132,7 @@ export default function VentaFormPage() {
   }, [entregasActivas]);
 
   // Payments state
-  const [showPagoForm, setShowPagoForm] = useState(false);
-  const [pagoMonto, setPagoMonto] = useState('');
-  const [pagoMetodo, setPagoMetodo] = useState('efectivo');
-  const [pagoRef, setPagoRef] = useState('');
-  const [pagoSaving, setPagoSaving] = useState(false);
+  // Pago state is now managed inside VentaPagosTab
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
