@@ -121,7 +121,8 @@ export function useDeleteCliente() {
 
 // Catalog hooks with staleTime
 export function useZonas() {
-  return useQuery({ queryKey: ['zonas'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('zonas').select('id, nombre').eq('activo', true).order('nombre'); return data as Zona[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['zonas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('zonas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Zona[]; }});
 }
 export function useVendedores() {
   const { empresa } = useAuth();
