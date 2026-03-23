@@ -84,10 +84,11 @@ export function useSaveProducto() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (producto: Partial<Producto> & { id?: string }) => {
-      const { id, marcas, ...rest } = producto as any;
+      // Strip all relational/virtual fields that aren't DB columns
+      const { id, marcas, clasificaciones, proveedores, listas, unidades_venta, unidades_compra, ...rest } = producto as any;
       if (id) {
         const { data, error } = await supabase.from('productos').update(rest).eq('id', id).select('id').single();
-        if (error) throw error;
+        if (error) { console.error('Supabase update error:', error); throw error; }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');

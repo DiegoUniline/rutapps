@@ -123,7 +123,7 @@ export function useProductoForm() {
       toast.success('Producto guardado');
       setOriginalForm({ ...form });
       if (isNew && result?.id) navigate(`/productos/${result.id}`, { replace: true });
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: any) { console.error('Error guardando producto:', err); toast.error(err.message || 'Error al guardar'); }
   };
 
   const handleDelete = async () => {
