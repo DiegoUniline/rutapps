@@ -121,6 +121,12 @@ export default function AdminStatsTab() {
     }));
   }, [empresas]);
 
+  const recentSignups = useMemo(() => {
+    return [...empresas]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 10) as (EmpresaRow & { nombre: string })[];
+  }, [empresas]);
+
   const fmt = (cents: number) => `$${(cents / 100).toLocaleString('es-MX')}`;
 
   if (loading) return <div className="text-muted-foreground text-center py-10">Cargando estadísticas...</div>;
