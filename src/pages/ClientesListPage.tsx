@@ -92,7 +92,7 @@ function ClientesTable() {
                 onPDF={() => exportToPDF({
                   fileName: 'Clientes', title: 'Catálogo de Clientes',
                   columns: CLIENTES_COLUMNS,
-                  data: (clientes ?? []).map((c: any) => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
+                  data: clientes.map(c => ({ ...c, credito: c.credito ? 'Sí' : 'No' })),
                 })}
               />
               <button onClick={() => setImportOpen(true)} className="btn-odoo-secondary shrink-0 gap-1">
