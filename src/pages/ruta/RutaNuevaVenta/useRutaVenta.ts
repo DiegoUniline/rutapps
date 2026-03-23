@@ -300,7 +300,7 @@ export function useRutaVenta() {
     referenciaPago, setReferenciaPago, cuentasPendientes, showDevSearch, setShowDevSearch,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     ticketInfo, sinCompra, setSinCompra, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra,
-    entregaInmediata, stockAbordo, clientes, productos, filteredClientes,
+    entregaInmediata, stockAbordo, usandoAlmacen: useFallbackStock, clientes, productos, filteredClientes,
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
