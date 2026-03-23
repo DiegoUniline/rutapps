@@ -165,17 +165,58 @@ function useInventarioData() {
         });
       }
 
-      // Build sorted list of routes for columns
-      const rutas = Object.entries(rutaBreakdown)
-        .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
-        .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
-
       // Build stock_almacen map: almacen_id -> producto_id -> cantidad
       const stockAlmacenMap: Record<string, Record<string, number>> = {};
       for (const sa of (stockAlmacenData ?? [])) {
         if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
         stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
       }
+
+      // Also include almacenes with stock as "route" cards
+      for (const alm of (almacenes ?? [])) {
+        const almStock = stockAlmacenMap[alm.id] ?? {};
+        let totalUnidades = 0, valorCosto = 0, valorVenta = 0;
+        const lineasDetalle: any[] = [];
+        for (const [prodId, qty] of Object.entries(almStock)) {
+          if ((qty as number) <= 0) continue;
+          totalUnidades += qty as number;
+          const prod = (productos ?? []).find(p => p.id === prodId);
+          valorCosto += (qty as number) * (prod?.costo ?? 0);
+          valorVenta += (qty as number) * (prod?.precio_principal ?? 0);
+          lineasDetalle.push({
+            producto_id: prodId,
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cargado: qty,
+            entregado: 0,
+            devuelto: 0,
+            abordo: qty,
+            costo: prod?.costo ?? 0,
+            precio: prod?.precio_principal ?? 0,
+          });
+        }
+        if (totalUnidades > 0) {
+          cargaDetails.push({
+            id: `alm-${alm.id}`,
+            origen: 'almacen',
+            vendedor: alm.nombre,
+            vendedor_id: null,
+            repartidor: null,
+            almacen: alm.nombre,
+            fecha: null,
+            status: 'activo',
+            totalUnidades,
+            valorCosto,
+            valorVenta,
+            lineas: lineasDetalle,
+          });
+        }
+      }
+
+      // Build sorted list of routes for columns
+      const rutas = Object.entries(rutaBreakdown)
+        .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
+        .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
       // Products with enriched data
       const productosEnriquecidos = (productos ?? []).map(p => {
