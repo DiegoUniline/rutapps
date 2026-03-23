@@ -30,6 +30,7 @@ const PAGE_SIZE = 80;
 export default function ProductosListPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { fmt: fmtCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('activo');
   const [selected, setSelected] = useState<Set<string>>(new Set());
