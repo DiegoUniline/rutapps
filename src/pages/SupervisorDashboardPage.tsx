@@ -175,7 +175,7 @@ export default function SupervisorDashboardPage() {
                     <p className="text-[10px] text-muted-foreground">Ventas</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-primary">${fmt(st.totalVentas)}</p>
+                    <p className="text-lg font-bold text-primary">{fmtMoney(st.totalVentas)}</p>
                     <p className="text-[10px] text-muted-foreground">Total</p>
                   </div>
                   <div>
