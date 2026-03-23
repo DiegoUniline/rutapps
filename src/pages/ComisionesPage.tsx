@@ -26,13 +26,7 @@ export default function ComisionesPage() {
   const [payFechaCorte, setPayFechaCorte] = useState(new Date().toISOString().slice(0, 10));
   const [showPayForm, setShowPayForm] = useState(false);
 
-  const { data: vendedores } = useQuery({
-    queryKey: ['vendedores'],
-    queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').order('nombre');
-      return data ?? [];
-    },
-  });
+  const { data: vendedores } = useVendedores();
 
   const { data: comisiones, isLoading } = useQuery({
     queryKey: ['venta_comisiones', vendedorFilter, statusFilter],

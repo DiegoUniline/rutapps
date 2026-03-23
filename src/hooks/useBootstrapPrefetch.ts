@@ -44,55 +44,55 @@ export function useBootstrapPrefetch() {
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['vendedores'],
+        queryKey: ['vendedores', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('vendedores').select('id, nombre').order('nombre');
+          const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', eid).order('nombre');
           return data ?? [];
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['almacenes'],
+        queryKey: ['almacenes', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('almacenes').select('id, nombre').eq('activo', true).order('nombre');
+          const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', eid).eq('activo', true).order('nombre');
           return data ?? [];
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['zonas'],
+        queryKey: ['zonas', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('zonas').select('id, nombre').eq('activo', true).order('nombre');
+          const { data } = await supabase.from('zonas').select('id, nombre').eq('empresa_id', eid).eq('activo', true).order('nombre');
           return data ?? [];
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['marcas'],
+        queryKey: ['marcas', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('marcas').select('id, nombre').eq('activo', true).order('nombre');
+          const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', eid).eq('activo', true).order('nombre');
           return data ?? [];
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['clasificaciones'],
+        queryKey: ['clasificaciones', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('activo', true).order('nombre');
+          const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', eid).eq('activo', true).order('nombre');
           return data ?? [];
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['cobradores'],
+        queryKey: ['cobradores', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('cobradores').select('id, nombre').eq('activo', true).order('nombre');
+          const { data } = await supabase.from('cobradores').select('id, nombre').eq('empresa_id', eid).order('nombre');
           return data ?? [];
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['unidades'],
+        queryKey: ['unidades', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
           const { data } = await supabase.from('unidades').select('id, nombre, abreviatura').eq('activo', true).order('nombre');
@@ -100,10 +100,10 @@ export function useBootstrapPrefetch() {
         },
       }),
       qc.prefetchQuery({
-        queryKey: ['listas'],
+        queryKey: ['listas', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('listas').select('id, nombre').eq('activo', true).order('nombre');
+          const { data } = await supabase.from('listas').select('id, nombre').eq('empresa_id', eid).eq('activo', true).order('nombre');
           return data ?? [];
         },
       }),

@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { MapPin, ShoppingCart, Banknote, Users, TrendingUp, Package, Clock, RotateCcw, Truck } from 'lucide-react';
+import { ShoppingCart, Banknote, Users, TrendingUp } from 'lucide-react';
+import { useVendedores } from '@/hooks/useClientes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 

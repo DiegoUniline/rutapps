@@ -64,14 +64,7 @@ function MonitorContent() {
   };
 
   // Vendedores
-  const { data: vendedores } = useQuery({
-    queryKey: ['monitor-vendedores'],
-    staleTime: 5 * 60 * 1000,
-    queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').order('nombre');
-      return data ?? [];
-    },
-  });
+  const { data: vendedores } = useVendedores();
 
   // Clients scheduled for selected day
   const { data: clientesHoy } = useQuery({
