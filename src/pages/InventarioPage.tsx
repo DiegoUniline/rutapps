@@ -165,18 +165,24 @@ function useInventarioData() {
         });
       }
 
+      // Build stock_almacen map: almacen_id -> producto_id -> cantidad
+      const stockAlmacenMap: Record<string, Record<string, number>> = {};
+      for (const sa of (stockAlmacenData ?? [])) {
+        if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
+        stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
+      }
+
       // Also include almacenes with stock as "route" cards
-      const cargaAlmacenIds = new Set(cargaDetails.map((c: any) => c.almacen_id).filter(Boolean));
       for (const alm of (almacenes ?? [])) {
         const almStock = stockAlmacenMap[alm.id] ?? {};
         let totalUnidades = 0, valorCosto = 0, valorVenta = 0;
         const lineasDetalle: any[] = [];
         for (const [prodId, qty] of Object.entries(almStock)) {
-          if (qty <= 0) continue;
-          totalUnidades += qty;
+          if ((qty as number) <= 0) continue;
+          totalUnidades += qty as number;
           const prod = (productos ?? []).find(p => p.id === prodId);
-          valorCosto += qty * (prod?.costo ?? 0);
-          valorVenta += qty * (prod?.precio_principal ?? 0);
+          valorCosto += (qty as number) * (prod?.costo ?? 0);
+          valorVenta += (qty as number) * (prod?.precio_principal ?? 0);
           lineasDetalle.push({
             producto_id: prodId,
             codigo: prod?.codigo ?? '',
@@ -211,13 +217,6 @@ function useInventarioData() {
       const rutas = Object.entries(rutaBreakdown)
         .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
         .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
-
-      // Build stock_almacen map: almacen_id -> producto_id -> cantidad
-      const stockAlmacenMap: Record<string, Record<string, number>> = {};
-      for (const sa of (stockAlmacenData ?? [])) {
-        if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
-        stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
-      }
 
       // Products with enriched data
       const productosEnriquecidos = (productos ?? []).map(p => {
