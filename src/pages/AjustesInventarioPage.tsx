@@ -673,7 +673,10 @@ export default function AjustesInventarioPage() {
                   <div className="flex items-center gap-4 flex-1 flex-wrap">
                     <span className="flex items-center gap-1.5 text-sm font-medium">
                       <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      {fmtDate(group.fecha)}
+                      {fmtDate(group.fecha)}{' '}
+                      <span className="text-xs text-muted-foreground font-normal">
+                        {new Date(group.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </span>
                     <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                       <User className="h-3.5 w-3.5" />
