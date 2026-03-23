@@ -106,10 +106,10 @@ export default function RutaCobros() {
           })}
         </div>
 
-        {recentCobros.length === 0 && (
+        {filteredCobros.length === 0 && (
           <div className="text-center py-12">
             <Banknote className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-            <p className="text-muted-foreground text-base">No hay cobros registrados</p>
+            <p className="text-muted-foreground text-base">No hay cobros en este rango</p>
           </div>
         )}
       </div>
