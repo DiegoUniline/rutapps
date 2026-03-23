@@ -254,15 +254,17 @@ Deno.serve(async (req) => {
       log("WhatsApp notification", { sent, phone: profile.telefono });
 
       // Log to billing_notifications
-      await supabase.from("billing_notifications").insert({
-        customer_email: userData.user.email || "",
-        customer_phone: profile.telefono.replace(/[\s\-\(\)]/g, ""),
-        channel: "whatsapp",
-        tipo: "factura_pendiente",
-        mensaje: waMsg,
-        monto_centavos: Math.round(total * 100),
-        status: sent ? "sent" : "error",
-      }).catch(() => {});
+      try {
+        await supabase.from("billing_notifications").insert({
+          customer_email: userData.user.email || "",
+          customer_phone: profile.telefono.replace(/[\s\-\(\)]/g, ""),
+          channel: "whatsapp",
+          tipo: "factura_pendiente",
+          mensaje: waMsg,
+          monto_centavos: Math.round(total * 100),
+          status: sent ? "sent" : "error",
+        });
+      } catch { /* silent */ }
     }
 
     // ─── Email notification ───
