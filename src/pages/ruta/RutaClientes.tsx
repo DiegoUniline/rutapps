@@ -31,7 +31,8 @@ function saveVisitedSet(set: Set<string>) {
 export default function RutaClientes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
