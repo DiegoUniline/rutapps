@@ -71,52 +71,40 @@ export default function RutaCobros() {
           </button>
         </div>
 
-        {todayCobros.length > 0 && (
+        <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+
+        {filteredCobros.length > 0 && (
           <div className="bg-success/8 rounded-xl p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cobrado hoy</p>
-              <p className="text-2xl font-bold text-success tabular-nums">${totalHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total cobrado</p>
+              <p className="text-2xl font-bold text-success tabular-nums">${totalFiltrado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
             </div>
-            <p className="text-sm text-muted-foreground">{todayCobros.length} cobros</p>
+            <p className="text-sm text-muted-foreground">{filteredCobros.length} cobros</p>
           </div>
         )}
       </div>
 
       <div className="flex-1 overflow-auto px-4 pb-4">
-        {todayCobros.length > 0 && (
-          <>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2">Hoy</p>
-            <div className="space-y-1.5">
-              {todayCobros.map(renderCobro)}
-            </div>
-          </>
-        )}
-
-        {olderCobros.length > 0 && (
-          <>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 py-2 mt-3">Anteriores</p>
-            <div className="space-y-1.5">
-              {olderCobros.map((c: any) => {
-                const Icon = METODO_ICONS[c.metodo_pago] || Wallet;
-                const clienteNombre = clienteMap.get(c.cliente_id) ?? 'Sin cliente';
-                return (
-                  <div key={c.id} className="rounded-xl px-4 py-3.5 bg-card/60 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{clienteNombre}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · {c.metodo_pago}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-foreground shrink-0 tabular-nums">
-                      ${(c.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+        <div className="space-y-1.5">
+          {filteredCobros.map((c: any) => {
+            const Icon = METODO_ICONS[c.metodo_pago] || Wallet;
+            const clienteNombre = clienteMap.get(c.cliente_id) ?? 'Sin cliente';
+            return (
+              <div key={c.id} className="rounded-xl px-4 py-3.5 bg-card flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                  <Icon className="h-5 w-5 text-success" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{clienteNombre}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · {c.metodo_pago}</p>
+                </div>
+                <p className="text-sm font-bold text-success shrink-0 tabular-nums">
+                  +${(c.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            );
+          })}
+        </div>
 
         {recentCobros.length === 0 && (
           <div className="text-center py-12">
