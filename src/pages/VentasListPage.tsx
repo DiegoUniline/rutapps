@@ -13,7 +13,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useVentas } from '@/hooks/useVentas';
+import { useVentasPaginated } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
