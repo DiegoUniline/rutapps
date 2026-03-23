@@ -18,7 +18,7 @@ interface FacturamaPlan {
 }
 
 interface EmpresaRow {
-  id: string; created_at: string;
+  id: string; nombre: string; created_at: string;
   subscriptions: { status: string; plan_id: string | null; created_at: string }[];
 }
 
