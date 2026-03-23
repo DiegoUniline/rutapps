@@ -57,18 +57,21 @@ export function useVenta(id?: string) {
           if (local) {
             // Enrich with local venta_lineas if available
             const lineasTable = getOfflineTable('venta_lineas');
-            let venta_lineas: VentaLinea[] = [];
+            let venta_lineas: unknown[] = [];
             if (lineasTable) {
               const allLineas = await lineasTable.toArray();
-              venta_lineas = allLineas.filter((l: Record<string, unknown>) => l.venta_id === id) as unknown as VentaLinea[];
+              venta_lineas = allLineas.filter((l: Record<string, unknown>) => l.venta_id === id);
               const prodTable = getOfflineTable('productos');
               if (prodTable) {
                 const prods = await prodTable.toArray();
                 const prodMap = new Map(prods.map((p: Record<string, unknown>) => [p.id, p]));
-                venta_lineas = venta_lineas.map((l: VentaLinea) => ({
-                  ...l,
-                  productos: (prodMap.get(l.producto_id) as VentaLinea['productos']) || { id: l.producto_id, codigo: '', nombre: l.descripcion ?? '—' },
-                }));
+                venta_lineas = venta_lineas.map((l: unknown) => {
+                  const line = l as Record<string, unknown>;
+                  return {
+                    ...line,
+                    productos: prodMap.get(line.producto_id as string) || { id: line.producto_id, codigo: '', nombre: (line.descripcion as string) ?? '—' },
+                  };
+                });
               }
             }
             let clientes: { nombre: string } = { nombre: 'Sin cliente' };
