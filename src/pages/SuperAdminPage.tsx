@@ -93,6 +93,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="cobros" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Store className="h-4 w-4" /> Cobros
               </TabsTrigger>
+              <TabsTrigger value="incompletos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <UserX className="h-4 w-4" /> Registros incompletos
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
@@ -104,6 +107,7 @@ export default function SuperAdminPage() {
             <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
             <TabsContent value="anuncios"><AdminAnunciosTab /></TabsContent>
             <TabsContent value="cobros"><AdminCobrosTab /></TabsContent>
+            <TabsContent value="incompletos"><AdminRegistrosIncompletosTab /></TabsContent>
           </Tabs>
         )}
       </div>
