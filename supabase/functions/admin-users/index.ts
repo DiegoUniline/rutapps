@@ -303,6 +303,77 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "create_user_with_empresa") {
+      const { email, password, nombre, empresa_nombre, telefono } = params;
+
+      // Only super admins can do this
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        return new Response(JSON.stringify({ error: "Solo super admin" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!email || !password || !nombre || !empresa_nombre) {
+        return new Response(JSON.stringify({ error: "Todos los campos son requeridos" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check duplicate email
+      const { data: { users: existingUsers } } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+      const emailLower = email.trim().toLowerCase();
+      if (existingUsers?.find((u: any) => u.email?.toLowerCase() === emailLower)) {
+        return new Response(JSON.stringify({ error: "Este correo ya está registrado" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Create auth user with empresa metadata so handle_new_user trigger creates empresa
+      const { data: newUser, error: createError } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: nombre,
+          empresa_nombre: empresa_nombre,
+          phone: telefono || '',
+        },
+      });
+
+      if (createError) {
+        return new Response(JSON.stringify({ error: createError.message }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Wait for trigger
+      await new Promise(r => setTimeout(r, 800));
+
+      // Get the created empresa
+      const { data: newProfile } = await adminClient
+        .from("profiles")
+        .select("empresa_id")
+        .eq("user_id", newUser.user.id)
+        .maybeSingle();
+
+      // Update empresa phone if needed
+      if (newProfile?.empresa_id && telefono) {
+        await adminClient
+          .from("empresas")
+          .update({ telefono })
+          .eq("id", newProfile.empresa_id);
+      }
+
+      return new Response(JSON.stringify({ ok: true, user_id: newUser.user.id, empresa_id: newProfile?.empresa_id }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Acción no válida" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

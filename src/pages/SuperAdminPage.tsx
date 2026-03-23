@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Building2, CreditCard, Receipt, MessageCircle, Bell, ArrowLeft, BanknoteIcon, Megaphone, Store, UserX } from 'lucide-react';
 import AdminStatsTab from '@/components/admin/AdminStatsTab';
 import AdminEmpresasTab from '@/components/admin/AdminEmpresasTab';
 import AdminSubscriptionsTab from '@/components/admin/AdminSubscriptionsTab';
@@ -15,6 +15,7 @@ import AdminNotificationsTab from '@/components/admin/AdminNotificationsTab';
 import AdminPaymentRequestsTab from '@/components/admin/AdminPaymentRequestsTab';
 import AdminAnunciosTab from '@/components/admin/AdminAnunciosTab';
 import AdminCobrosTab from '@/components/admin/AdminCobrosTab';
+import AdminRegistrosIncompletosTab from '@/components/admin/AdminRegistrosIncompletosTab';
 
 export default function SuperAdminPage() {
   const { user, signOut } = useAuth();
@@ -92,6 +93,9 @@ export default function SuperAdminPage() {
               <TabsTrigger value="cobros" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Store className="h-4 w-4" /> Cobros
               </TabsTrigger>
+              <TabsTrigger value="incompletos" className="gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <UserX className="h-4 w-4" /> Registros incompletos
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="dashboard"><AdminStatsTab /></TabsContent>
@@ -103,6 +107,7 @@ export default function SuperAdminPage() {
             <TabsContent value="payment_requests"><AdminPaymentRequestsTab /></TabsContent>
             <TabsContent value="anuncios"><AdminAnunciosTab /></TabsContent>
             <TabsContent value="cobros"><AdminCobrosTab /></TabsContent>
+            <TabsContent value="incompletos"><AdminRegistrosIncompletosTab /></TabsContent>
           </Tabs>
         )}
       </div>
