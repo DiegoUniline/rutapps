@@ -315,7 +315,7 @@ export function useRutaVenta() {
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
-    currentStepIdx, goBack, goToPayment, fmt, currSym, markVisited, saveVisita,
+    currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty,
     addDevolucion, updateDevQty, updateDevMotivo, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
