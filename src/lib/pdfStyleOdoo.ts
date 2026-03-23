@@ -42,6 +42,7 @@ export interface EmpresaInfo {
   email?: string | null;
   logo_url?: string | null;
   regimen_fiscal?: string | null;
+  moneda?: string | null;
 }
 
 export function createDoc(): jsPDF {

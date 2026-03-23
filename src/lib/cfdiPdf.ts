@@ -10,6 +10,7 @@ import {
   drawFooter, checkPageBreak,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 export interface CfdiPdfParams {
   empresa: EmpresaInfo & {
@@ -174,6 +175,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const rightX = pageW - MR;
   const midX = pageW / 2;
   const contentW = pageW - ML - MR;
+  const s = getCurrencyConfig(empresa.moneda).symbol;
 
   let y = 16;
 

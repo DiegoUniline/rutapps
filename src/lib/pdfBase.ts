@@ -38,6 +38,10 @@ export interface EmpresaInfo {
 export const fmtCurrency = (n: number) =>
   n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+/** Format number with currency symbol. Pass symbol from getCurrencyConfig(empresa.moneda).symbol */
+export const fmtMoney = (n: number, symbol: string = '$') =>
+  `${symbol}${fmtCurrency(n)}`;
+
 export const fmtDate = (d: string) => {
   try {
     return new Date(d + 'T12:00:00').toLocaleDateString('es-MX', {

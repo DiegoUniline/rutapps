@@ -7,6 +7,7 @@ import {
   drawFooter, checkPageBreak,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 interface EstadoCuentaParams {
   empresa: EmpresaInfo;
@@ -42,6 +43,7 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const s = getCurrencyConfig(empresa.moneda).symbol;
 
   const fechaHoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
 

@@ -8,6 +8,7 @@ import {
   checkPageBreak, numberToWords,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 interface VentaPdfParams {
   empresa: EmpresaInfo;
@@ -70,6 +71,8 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const cc = getCurrencyConfig(empresa.moneda);
+  const s = cc.symbol;
 
   const tipoLabel = venta.tipo === 'pedido' ? 'ORDEN DE VENTA' : 'VENTA';
   const statusInfo = STATUS_MAP[venta.status] || { label: venta.status.charAt(0).toUpperCase() + venta.status.slice(1), color: 'neutral' as const };
@@ -92,7 +95,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
     ['Condiciones de pago:', pagoLabel],
     ...(vendedor ? [['Vendedor:', vendedor] as [string, string]] : []),
     ...(almacen ? [['Almacén:', almacen] as [string, string]] : []),
-    ['Moneda:', 'MXN - Peso Mexicano'],
+    ['Moneda:', `${cc.code} - ${cc.name}`],
   ];
 
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
@@ -105,13 +108,13 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
       l.nombre,
       { content: String(l.cantidad), styles: { halign: 'center' } },
       l.unidad || 'Pieza',
-      { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
+      { content: `${s}${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
       l.descuento_pct > 0
         ? { content: `${l.descuento_pct}%`, styles: { halign: 'center', textColor: C.red } }
         : { content: '—', styles: { halign: 'center', textColor: C.sublabel } },
       { content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } },
       { content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } },
-      { content: `$${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: `${s}${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]),
     {
       0: { cellWidth: 20 },
@@ -130,16 +133,16 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   const totalRows: { label: string; value: string; bold?: boolean; red?: boolean; separator?: boolean }[] = [];
 
   if (venta.descuento_total > 0) {
-    totalRows.push({ label: 'Subtotal bruto:', value: `$${fmtCurrency(subtotalBruto)}` });
-    totalRows.push({ label: 'Descuentos:', value: `-$${fmtCurrency(venta.descuento_total)}`, red: true });
-    totalRows.push({ label: 'Subtotal neto:', value: `$${fmtCurrency(venta.subtotal)}`, separator: true });
+    totalRows.push({ label: 'Subtotal bruto:', value: `${s}${fmtCurrency(subtotalBruto)}` });
+    totalRows.push({ label: 'Descuentos:', value: `-${s}${fmtCurrency(venta.descuento_total)}`, red: true });
+    totalRows.push({ label: 'Subtotal neto:', value: `${s}${fmtCurrency(venta.subtotal)}`, separator: true });
   } else {
-    totalRows.push({ label: 'Subtotal:', value: `$${fmtCurrency(venta.subtotal)}` });
+    totalRows.push({ label: 'Subtotal:', value: `${s}${fmtCurrency(venta.subtotal)}` });
   }
 
-  if (venta.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `$${fmtCurrency(venta.iva_total)}` });
-  if (venta.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `$${fmtCurrency(venta.ieps_total)}` });
-  totalRows.push({ label: 'Total:', value: `$${fmtCurrency(venta.total)}`, bold: true });
+  if (venta.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(venta.iva_total)}` });
+  if (venta.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `${s}${fmtCurrency(venta.ieps_total)}` });
+  totalRows.push({ label: 'Total:', value: `${s}${fmtCurrency(venta.total)}`, bold: true });
 
   y = drawTotalsBlock(doc, y, totalRows);
 
@@ -163,7 +166,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
         fmtDate(p.fecha),
         p.metodo_pago,
         p.referencia || '—',
-        { content: `$${fmtCurrency(p.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `${s}${fmtCurrency(p.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
       { 3: { halign: 'right' } },
     );
@@ -171,7 +174,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total pagado: $${fmtCurrency(totalPagado)}`, rightX, y - 2, { align: 'right' });
+    doc.text(`Total pagado: ${s}${fmtCurrency(totalPagado)}`, rightX, y - 2, { align: 'right' });
     y += 6;
   }
 
