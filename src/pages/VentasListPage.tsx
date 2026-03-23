@@ -139,7 +139,7 @@ export default function VentasListPage() {
               onExcel={() => exportToExcel({
                 fileName: 'Ventas', title: 'Reporte de Ventas',
                 columns: VENTAS_COLUMNS,
-                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })),
                 totals: { total: totalVentas, saldo_pendiente: totalSaldo },
               })}
               onPDF={() => exportToPDF({
