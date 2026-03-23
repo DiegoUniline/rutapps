@@ -62,12 +62,17 @@ export default function CatalogCRUD({ title, tableName, columns, queryKey }: Cat
 
   const handleToggleActivo = async (id: string, currentActivo: boolean) => {
     const newVal = !currentActivo;
+    // Optimistic: update cache immediately
+    qc.setQueriesData<any[]>({ queryKey: [queryKey] }, (old) =>
+      old?.map(item => item.id === id ? { ...item, activo: newVal } : item)
+    );
     try {
       const { error } = await (supabase.from as any)(tableName).update({ activo: newVal }).eq('id', id);
       if (error) throw error;
       qc.invalidateQueries({ queryKey: [queryKey] });
       toast.success(newVal ? 'Activado' : 'Dado de baja');
     } catch (err: any) {
+      qc.invalidateQueries({ queryKey: [queryKey] }); // revert
       toast.error(err.message);
     }
   };
