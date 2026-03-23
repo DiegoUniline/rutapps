@@ -87,26 +87,19 @@ export function useRutaVenta() {
 
   const { data: cargaLineasRaw } = useOfflineQuery('carga_lineas', { carga_id: activeCarga?.id }, { enabled: !!activeCarga?.id });
 
-  // Fallback: if no active carga, use stock_almacen from user's assigned warehouse
-  const almacenId = profile?.almacen_id;
-  const useFallbackStock = !activeCarga && !!almacenId;
-  const { data: stockAlmacenRaw } = useOfflineQuery('stock_almacen', { almacen_id: almacenId }, { enabled: useFallbackStock });
+  // When no active carga, use product's own stock (cantidad) as fallback
+  const useFallbackStock = !activeCarga;
 
   const stockAbordo = useMemo(() => {
     const map = new Map<string, number>();
-    if (cargaLineasRaw) {
+    if (cargaLineasRaw && cargaLineasRaw.length > 0) {
       (cargaLineasRaw as any[]).forEach(l => {
         const disponible = (l.cantidad_cargada ?? 0) - (l.cantidad_vendida ?? 0) - (l.cantidad_devuelta ?? 0);
         map.set(l.producto_id, Math.max(0, disponible));
       });
-    } else if (stockAlmacenRaw) {
-      // Fallback to warehouse stock
-      (stockAlmacenRaw as any[]).forEach(s => {
-        if ((s.cantidad ?? 0) > 0) map.set(s.producto_id, s.cantidad);
-      });
     }
     return map;
-  }, [cargaLineasRaw, stockAlmacenRaw]);
+  }, [cargaLineasRaw]);
 
   const { data: promocionesActivas } = usePromocionesActivas();
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id, status: 'activo' }, { enabled: !!empresa?.id, orderBy: 'nombre' });
