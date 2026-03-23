@@ -62,6 +62,7 @@ export default function CfdiFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { empresa } = useAuth();
+  const { fmt: fmtCurrency } = useCurrency();
   const queryClient = useQueryClient();
 
   // Load CFDI
