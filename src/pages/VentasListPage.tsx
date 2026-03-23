@@ -96,8 +96,8 @@ export default function VentasListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
 
-  const totalVentas = ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0;
-  const totalSaldo = ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
+  const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
+  const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
   return (
     <div className="p-4 space-y-3 min-h-full">
