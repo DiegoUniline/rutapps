@@ -55,7 +55,7 @@ export default function ProductosListPage() {
     setSelected(next);
   };
 
-  const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
+  const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
 
   return (
     <div className="p-4 space-y-3 min-h-full">
