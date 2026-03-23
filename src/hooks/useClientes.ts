@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
+import { pickColumns, CLIENTE_COLUMNS } from '@/lib/allowlist';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
@@ -63,28 +64,16 @@ export function useSaveCliente() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (cliente: Partial<Cliente> & { id?: string }) => {
-      // Only include valid DB columns – strip any relational/virtual fields
-      const VALID_COLS = new Set([
-        'nombre','codigo','telefono','email','contacto','direccion','colonia','cp',
-        'vendedor_id','cobrador_id','zona_id','tarifa_id','lista_id','lista_precio_id',
-        'status','orden','credito','limite_credito','dias_credito','dia_visita',
-        'gps_lat','gps_lng','frecuencia','foto_url','foto_fachada_url','notas',
-        'rfc','regimen_fiscal','uso_cfdi','requiere_factura','fecha_alta',
-        'facturama_id','facturama_rfc','facturama_razon_social','facturama_regimen_fiscal',
-        'facturama_uso_cfdi','facturama_cp','facturama_correo_facturacion','empresa_id',
-      ]);
-      const rest: Record<string, any> = {};
-      for (const [k, v] of Object.entries(cliente)) {
-        if (k !== 'id' && VALID_COLS.has(k)) rest[k] = v;
-      }
+      const clean = pickColumns(cliente, CLIENTE_COLUMNS);
+      delete (clean as any).id;
       if (cliente.id) {
-        const { data, error } = await supabase.from('clientes').update(rest).eq('id', cliente.id).select('id').single();
-        if (error) { console.error('Error updating cliente:', error, 'payload:', rest); throw error; }
+        const { data, error } = await supabase.from('clientes').update(clean as any).eq('id', cliente.id).select('id').single();
+        if (error) { console.error('Error updating cliente:', error); throw error; }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        rest.empresa_id = empresa.id;
-        const { data, error } = await supabase.from('clientes').insert(rest as any).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('clientes').insert(clean as any).select('id').single();
         if (error) { console.error('Error inserting cliente:', error); throw error; }
         return data;
       }

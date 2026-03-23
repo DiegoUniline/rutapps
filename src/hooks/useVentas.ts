@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
 import type { Venta, VentaLinea } from '@/types';
 
 /** Paginated ventas for list views */
@@ -130,14 +131,16 @@ export function useSaveVenta() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (venta: Partial<Venta> & { id?: string }) => {
-      const { id, clientes, vendedores, tarifas, almacenes, venta_lineas, ...rest } = venta as any;
-      if (id) {
-        const { data, error } = await supabase.from('ventas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(venta, VENTA_COLUMNS);
+      delete (clean as any).id;
+      if (venta.id) {
+        const { data, error } = await supabase.from('ventas').update(clean as any).eq('id', venta.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        const { data, error } = await supabase.from('ventas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('ventas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -153,13 +156,14 @@ export function useSaveVentaLinea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (linea: Partial<VentaLinea> & { id?: string }) => {
-      const { id, productos, unidades, unidad_label, impuestos_label, ...rest } = linea as any;
-      if (id) {
-        const { data, error } = await supabase.from('venta_lineas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(linea, VENTA_LINEA_COLUMNS);
+      delete (clean as any).id;
+      if (linea.id) {
+        const { data, error } = await supabase.from('venta_lineas').update(clean as any).eq('id', linea.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('venta_lineas').insert(rest).select('id').single();
+        const { data, error } = await supabase.from('venta_lineas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }

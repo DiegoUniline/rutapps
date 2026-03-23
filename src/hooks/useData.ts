@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
+import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
@@ -84,30 +85,16 @@ export function useSaveProducto() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (producto: Partial<Producto> & { id?: string }) => {
-      // Only include valid DB columns
-      const VALID_COLS = new Set([
-        'codigo','nombre','clave_alterna','costo','precio_principal','imagen_url',
-        'se_puede_comprar','se_puede_vender','vender_sin_stock','se_puede_inventariar',
-        'es_combo','min','max','manejar_lotes','factor_conversion','permitir_descuento',
-        'monto_maximo','cantidad','tiene_comision','tipo_comision','pct_comision',
-        'status','almacenes','tiene_iva','tiene_ieps','calculo_costo','codigo_sat',
-        'contador','contador_tarifas','iva_pct','ieps_pct','ieps_tipo',
-        'costo_incluye_impuestos','usa_listas_precio','marca_id','clasificacion_id',
-        'lista_id','unidad_venta_id','unidad_compra_id','unidad_sat_id',
-        'descripcion','notas','empresa_id',
-      ]);
-      const rest: Record<string, any> = {};
-      for (const [k, v] of Object.entries(producto)) {
-        if (k !== 'id' && VALID_COLS.has(k)) rest[k] = v;
-      }
+      const clean = pickColumns(producto, PRODUCTO_COLUMNS);
+      delete (clean as any).id;
       if (producto.id) {
-        const { data, error } = await supabase.from('productos').update(rest as any).eq('id', producto.id).select('id').single();
+        const { data, error } = await supabase.from('productos').update(clean as any).eq('id', producto.id).select('id').single();
         if (error) { console.error('Supabase update error:', error); throw error; }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        rest.empresa_id = empresa.id;
-        const { data, error } = await supabase.from('productos').insert(rest as any).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('productos').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -183,14 +170,16 @@ export function useSaveTarifa() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (tarifa: Partial<Tarifa> & { id?: string }) => {
-      const { id, tarifa_lineas, ...rest } = tarifa as any;
-      if (id) {
-        const { data, error } = await supabase.from('tarifas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(tarifa, TARIFA_COLUMNS);
+      delete (clean as any).id;
+      if (tarifa.id) {
+        const { data, error } = await supabase.from('tarifas').update(clean as any).eq('id', tarifa.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        const { data, error } = await supabase.from('tarifas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('tarifas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -203,13 +192,14 @@ export function useSaveTarifaLinea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (linea: Partial<TarifaLinea> & { id?: string }) => {
-      const { id, productos, ...rest } = linea as any;
-      if (id) {
-        const { data, error } = await supabase.from('tarifa_lineas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(linea, TARIFA_LINEA_COLUMNS);
+      delete (clean as any).id;
+      if (linea.id) {
+        const { data, error } = await supabase.from('tarifa_lineas').update(clean as any).eq('id', linea.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('tarifa_lineas').insert(rest).select('id').single();
+        const { data, error } = await supabase.from('tarifa_lineas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
@@ -329,15 +319,16 @@ export function useSaveProductoProveedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (row: { id?: string; producto_id: string; proveedor_id: string; es_principal?: boolean; precio_compra?: number; tiempo_entrega_dias?: number; notas?: string }) => {
-      // If setting as principal, unset others first
       if (row.es_principal) {
         await supabase.from('producto_proveedores').update({ es_principal: false }).eq('producto_id', row.producto_id);
       }
+      const clean = pickColumns(row, PRODUCTO_PROVEEDOR_COLUMNS);
+      delete (clean as any).id;
       if (row.id) {
-        const { error } = await supabase.from('producto_proveedores').update(row).eq('id', row.id);
+        const { error } = await supabase.from('producto_proveedores').update(clean as any).eq('id', row.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('producto_proveedores').insert(row);
+        const { error } = await supabase.from('producto_proveedores').insert(clean as any);
         if (error) throw error;
       }
     },
