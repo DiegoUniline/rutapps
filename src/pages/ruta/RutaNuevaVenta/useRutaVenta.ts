@@ -161,18 +161,25 @@ export function useRutaVenta() {
   const productosDisponibles = useMemo(() => {
     if (!productos) return [];
     if (tipoVenta === 'pedido') return productos;
+    if (useFallbackStock && almacenId) {
+      // No carga but has assigned warehouse: use warehouse stock
+      return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
+    }
     if (useFallbackStock) {
-      // No carga: use product's own stock (cantidad)
+      // No carga, no warehouse: use global stock as last resort
       return productos.filter(p => (p.cantidad ?? 0) > 0);
     }
     return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
-  }, [productos, tipoVenta, stockAbordo, useFallbackStock]);
+  }, [productos, tipoVenta, stockAbordo, useFallbackStock, almacenId]);
   const filteredProductos = productosDisponibles?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
   const filteredDevProductos = productos?.filter(p => !searchDevProducto || p.nombre.toLowerCase().includes(searchDevProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchDevProducto.toLowerCase()));
   const filteredReemplazoProductos = productos?.filter(p => !searchReemplazo || p.nombre.toLowerCase().includes(searchReemplazo.toLowerCase()) || p.codigo.toLowerCase().includes(searchReemplazo.toLowerCase()));
 
   const getMaxQty = (productoId: string) => {
     if (tipoVenta === 'pedido') return Infinity;
+    if (useFallbackStock && almacenId) {
+      return stockAbordo.get(productoId) ?? 0;
+    }
     if (useFallbackStock) {
       const prod = productos?.find(p => p.id === productoId);
       return prod?.cantidad ?? 0;
