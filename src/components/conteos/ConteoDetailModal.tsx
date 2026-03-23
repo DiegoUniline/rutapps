@@ -123,6 +123,10 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
       toast.success(`${ajustables.length} ajustes aplicados`);
       refetchLineas();
       qc.invalidateQueries({ queryKey: ['conteos-fisicos'] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+      qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+      qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
     } catch (err: any) {
       toast.error(err.message ?? 'Error al ajustar');
     } finally {
