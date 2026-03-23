@@ -13,6 +13,7 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 import { ErrorModalProvider } from "@/components/ErrorModal";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 
 // Lazy-loaded pages
