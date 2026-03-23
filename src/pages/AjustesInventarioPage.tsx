@@ -332,6 +332,8 @@ export default function AjustesInventarioPage() {
     setApplying(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
+      const batchId = crypto.randomUUID();
+
       for (const row of changedRows) {
         const diferencia = (row.cantidadReal ?? 0) - row.cantidadSistema;
 
@@ -344,36 +346,29 @@ export default function AjustesInventarioPage() {
           motivo,
           user_id: user!.id,
           almacen_id: almacenId || null,
+          batch_id: batchId,
         } as any);
 
-        const { data: sa } = await supabase.from('stock_almacen')
-          .select('id')
-          .eq('almacen_id', almacenId)
-          .eq('producto_id', row.id)
-          .maybeSingle();
+        await supabase.from('stock_almacen').upsert({
+          empresa_id: empresa!.id,
+          almacen_id: almacenId,
+          producto_id: row.id,
+          cantidad: row.cantidadReal ?? 0,
+        } as any, { onConflict: 'empresa_id,almacen_id,producto_id' });
 
-        if (sa) {
-          await supabase.from('stock_almacen').update({ cantidad: row.cantidadReal ?? 0, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
-        } else {
-          await supabase.from('stock_almacen').insert({
+        if (diferencia !== 0) {
+          await supabase.from('movimientos_inventario').insert({
             empresa_id: empresa!.id,
-            almacen_id: almacenId,
+            tipo: diferencia > 0 ? 'entrada' : 'salida',
             producto_id: row.id,
-            cantidad: row.cantidadReal ?? 0,
+            cantidad: Math.abs(diferencia),
+            referencia_tipo: 'ajuste',
+            user_id: user?.id,
+            fecha: today,
+            almacen_origen_id: almacenId || null,
+            notas: `Ajuste masivo: ${motivo}`,
           } as any);
         }
-
-        await supabase.from('movimientos_inventario').insert({
-          empresa_id: empresa!.id,
-          tipo: diferencia > 0 ? 'entrada' : 'salida',
-          producto_id: row.id,
-          cantidad: Math.abs(diferencia),
-          referencia_tipo: 'ajuste',
-          user_id: user?.id,
-          fecha: today,
-          almacen_origen_id: almacenId || null,
-          notas: `Ajuste masivo: ${motivo}`,
-        } as any);
       }
 
       await syncProductTotals(changedRows.map(row => row.id));
