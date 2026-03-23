@@ -48,6 +48,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   const { user } = useAuth();
   const [empresas, setEmpresas] = useState<EmpresaRow[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('todos');
   const [loading, setLoading] = useState(true);
   const [showAddTimbres, setShowAddTimbres] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaRow | null>(null);
