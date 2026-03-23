@@ -204,6 +204,9 @@ Deno.serve(async (req) => {
           ? invoice.subscription : invoice.subscription.id;
 
         const stripeSub = await stripe.subscriptions.retrieve(subId);
+        const item0 = stripeSub.items.data[0];
+        const periodStart = (item0 as any)?.current_period_start ?? (stripeSub as any).current_period_start;
+        const periodEnd = (item0 as any)?.current_period_end ?? (stripeSub as any).current_period_end;
         const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, subId);
 
         const { data: sub } = await supabase
@@ -213,12 +216,14 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (sub) {
-          await supabase.from("subscriptions").update({
+          const updateData: Record<string, any> = {
             status: "active",
-            current_period_start: new Date(stripeSub.current_period_start * 1000).toISOString(),
-            current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
             updated_at: new Date().toISOString(),
-          }).eq("id", sub.id);
+          };
+          if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
+          if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+
+          await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 
           // Update factura
           if (invoice.id) {
