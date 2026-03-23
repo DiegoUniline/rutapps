@@ -125,7 +125,7 @@ export function useDashboardTopProductos(range: DateRange) {
       if (error) throw error;
 
       const map = new Map<string, { qty: number; total: number }>();
-      (data ?? []).forEach((l: any) => {
+      (data ?? []).forEach((l) => {
         const existing = map.get(l.producto_id) ?? { qty: 0, total: 0 };
         existing.qty += Number(l.cantidad);
         existing.total += Number(l.total ?? 0);
