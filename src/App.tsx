@@ -13,6 +13,7 @@ import SubscriptionBanner from "@/components/SubscriptionBanner";
 import { ErrorModalProvider } from "@/components/ErrorModal";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
+import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
 import { showAppError } from "@/lib/globalError";
 
 // Lazy-loaded pages
@@ -143,6 +144,9 @@ function AppRoutes() {
   
   // Global unhandled rejection → error modal
   useGlobalErrorHandler();
+  
+  // Pre-warm React Query cache with base catalogs on login
+  useBootstrapPrefetch();
 
   if (loading || subscription.loading) {
     return (
