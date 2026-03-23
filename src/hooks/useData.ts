@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
+import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
