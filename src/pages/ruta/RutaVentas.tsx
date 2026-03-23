@@ -27,7 +27,7 @@ export default function RutaVentas() {
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-  const enriched = (ventas ?? []).slice(0, 50).map((v: any) => ({
+  const enriched = filterByDate((ventas ?? []) as any[], 'fecha').map((v: any) => ({
     ...v,
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
