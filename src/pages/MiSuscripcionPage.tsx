@@ -169,12 +169,15 @@ export default function MiSuscripcionPage() {
     try {
       const planItem = cart.find(c => c.type === 'plan');
       const timbresItem = cart.find(c => c.type === 'timbres');
+      let redirectUrl = '';
 
       if (planItem) {
         const plan = plans.find(p => p.id === selectedPlan);
+        if (!plan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
+
         if (subData?.stripe_subscription_id) {
           const { data, error } = await supabase.functions.invoke('manage-subscription', {
-            body: { action: 'change_plan', new_price_id: plan?.stripe_price_id },
+            body: { action: 'change_plan', new_price_id: plan.stripe_price_id },
           });
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
@@ -183,34 +186,41 @@ export default function MiSuscripcionPage() {
               body: { action: 'update_quantity', new_quantity: planQty },
             });
           }
+          toast.success('Plan actualizado correctamente');
+          setShowPayMethod(false);
+          setCart([]);
+          loadData();
+          return;
         } else {
-          // First call select-plan to create invoice, then checkout
           await supabase.functions.invoke('select-plan', {
             body: { plan_id: selectedPlan, num_usuarios: planQty },
           });
           const { data, error } = await supabase.functions.invoke('create-checkout', {
-            body: { price_id: plan?.stripe_price_id, quantity: planQty, empresa_id: empresa?.id },
+            body: { price_id: plan.stripe_price_id, quantity: planQty, empresa_id: empresa?.id },
           });
           if (error) throw error;
           if (data?.error) throw new Error(data.error);
-          if (data?.url) window.open(data.url, '_blank');
+          if (!data?.url) throw new Error('No se recibió URL de pago de Stripe');
+          redirectUrl = data.url;
         }
       }
 
-      if (timbresItem) {
+      if (timbresItem && !redirectUrl) {
         const { data, error } = await supabase.functions.invoke('purchase-timbres', {
           body: { action: 'create_checkout', quantity: timbresPacks },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        if (data?.url) window.open(data.url, '_blank');
+        if (!data?.url) throw new Error('No se recibió URL de pago de Stripe');
+        redirectUrl = data.url;
       }
 
-      toast.success('Redirigiendo al pago...');
-      setShowPayMethod(false);
-      setCart([]);
+      if (redirectUrl) {
+        // Use location.href to avoid popup blockers
+        window.location.href = redirectUrl;
+      }
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(e.message || 'Error al procesar el pago con tarjeta');
     } finally {
       setPaying(false);
     }
