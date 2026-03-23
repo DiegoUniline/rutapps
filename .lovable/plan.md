@@ -1,52 +1,32 @@
 
 
-## Problema raiz
+## Problema confirmado
 
-Hay **dos problemas** que causan que se vean usuarios de otras empresas en los selects de Vendedor/Cobrador:
+La tabla `vendedores` de "Mi Empresa Demo" tiene **4 registros** pero solo **2 son perfiles reales** (Diego y Lucas):
 
-1. **`useBootstrapPrefetch`** precarga vendedores, cobradores, zonas y almacenes **SIN filtro de empresa_id**. Esto llena el cache de React Query con datos de TODAS las empresas bajo el key `['vendedores']`.
+| Tabla | Registros | Detalle |
+|---|---|---|
+| profiles | 2 | Diego, Lucas |
+| vendedores | 4 | Diego + **Ana García, Carlos Mendoza, Roberto Díaz** (huérfanos) |
+| cobradores | 1 | Solo Diego (**falta Lucas**) |
 
-2. **Varias páginas** hacen queries ad-hoc a vendedores/cobradores sin filtrar por empresa:
-   - `ComisionesPage.tsx` — `queryKey: ['vendedores']` sin filtro
-   - `MonitorRutasPage.tsx` — `queryKey: ['vendedores-monitor']` sin filtro  
-   - `SupervisorDashboardPage.tsx` — `queryKey: ['supervisor-vendedores']` sin filtro
-   - `useData.ts` → `useAlmacenes()` sin filtro de empresa
+Los 3 vendedores huérfanos no tienen perfil asociado — son registros basura que se crearon en algún momento y nunca se limpiaron. Además, **Lucas no existe** en vendedores ni cobradores porque el trigger no lo sincronizó.
 
-Mientras tanto, `useVendedores()` y `useCobradores()` en `useClientes.ts` **ya están bien** (filtran por `empresa_id`), pero usan un cache key diferente `['vendedores', empresa.id]` que no coincide con el prefetch.
-
-### Datos reales en la BD
-
-Para **Mi Empresa Demo**:
-- **Profiles (usuarios reales)**: 2 (Diego, Lucas)
-- **Vendedores**: 4 (Ana García, Carlos Mendoza, Diego, Roberto Díaz) — registros huérfanos
-- **Cobradores**: 1 (Diego)
-
-Los 4 vendedores existen porque el trigger `sync_profile_to_vendedor_cobrador` los creó en algún momento, pero ya no corresponden a perfiles activos.
+Los 15 clientes asignados a esos vendedores huérfanos se dejarán sin vendedor (como indicaste).
 
 ---
 
-## Plan de corrección
+## Plan
 
-### 1. Corregir `useBootstrapPrefetch.ts`
-- Agregar `.eq('empresa_id', eid)` a las queries de vendedores, cobradores, zonas y almacenes
-- Cambiar los `queryKey` para que coincidan con los hooks centralizados: `['vendedores', eid]`, `['cobradores', eid]`, `['zonas', eid]`, `['almacenes', eid]`
-- Quitar `.eq('activo', true)` de cobradores (como pediste antes)
+### 1. Limpiar datos en la base de datos
+- Quitar `vendedor_id` de los 15 clientes asignados a vendedores huérfanos (Ana, Carlos, Roberto)
+- Eliminar los 3 registros huérfanos de `vendedores`
+- Insertar a Lucas en `vendedores` y `cobradores`
 
-### 2. Corregir `ComisionesPage.tsx`
-- Reemplazar query ad-hoc por `useVendedores()` del hook centralizado
+### 2. Corregir el trigger de sincronización
+- Actualizar la función `sync_profile_to_vendedor_cobrador` para que también sincronice cuando se actualice `empresa_id` (actualmente solo se dispara con cambios en `nombre`)
+- Agregar validación: no sincronizar si `empresa_id` es NULL
 
-### 3. Corregir `MonitorRutasPage.tsx`
-- Reemplazar query ad-hoc por `useVendedores()`
-
-### 4. Corregir `SupervisorDashboardPage.tsx`
-- Reemplazar query ad-hoc por `useVendedores()`
-
-### 5. Corregir `useData.ts` → `useAlmacenes()`
-- Agregar filtro `.eq('empresa_id', empresa.id)` y key `['almacenes', empresa.id]`
-
-### 6. Verificar `select-plan` edge function
-- Corregir el error `supabase.from(...).insert(...).catch is not a function` que aparece en logs (cambiar `.catch(() => {})` por un try/catch)
-- Quitar referencia a columna `stripe_price_id` que no existe en `subscriptions`
-
-Con estos cambios, todo el sistema solo mostrará vendedores, cobradores, zonas y almacenes de la empresa del usuario logueado.
+### 3. Sin cambios de código frontend
+- Las queries en `useVendedores()`, `useCobradores()` y `useBootstrapPrefetch` ya filtran correctamente por `empresa_id`. El problema es 100% datos sucios en la BD.
 
