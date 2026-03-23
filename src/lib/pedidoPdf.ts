@@ -82,6 +82,8 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const cc = getCurrencyConfig(empresa.moneda);
+  const s = cc.symbol;
 
   const statusInfo = STATUS_MAP[pedido.status] || { label: pedido.status.charAt(0).toUpperCase() + pedido.status.slice(1), color: 'neutral' as const };
   const pagoLabel = pedido.condicion_pago === 'credito' ? 'Crédito' : pedido.condicion_pago === 'contado' ? 'Contado' : 'Por definir';
