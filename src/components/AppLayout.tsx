@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
+import { useProductosRealtime } from '@/hooks/useData';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
