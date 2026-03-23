@@ -442,6 +442,32 @@ export default function ConfiguracionPage() {
           </div>
         </div>
 
+        {/* Visibilidad de datos */}
+        <div className="bg-card border border-border rounded-lg p-5">
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Users className="h-4 w-4" /> Visibilidad de datos
+          </h3>
+          <p className="text-[11px] text-muted-foreground mb-3">
+            Controla qué datos puede ver cada vendedor/cobrador. Los usuarios con el permiso "Ver todos" siempre ven todo.
+          </p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Clientes</label>
+              <select
+                value={clientesVisibilidad}
+                onChange={e => setClientesVisibilidad(e.target.value)}
+                className="input-odoo text-[13px] w-full max-w-xs"
+              >
+                <option value="todos">Todos los usuarios ven todos los clientes</option>
+                <option value="propios">Cada vendedor solo ve sus clientes asignados</option>
+              </select>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              <strong>Ventas, cobros y entregas</strong> siempre se filtran: cada usuario solo ve los registros donde es vendedor asignado o los que él creó. Los usuarios con permiso "Ver todos" ven todo.
+            </p>
+          </div>
+        </div>
+
         {/* Moneda */}
         <div className="bg-card border border-border rounded-lg p-5">
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
