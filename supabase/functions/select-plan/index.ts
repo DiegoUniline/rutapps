@@ -336,14 +336,16 @@ Deno.serve(async (req) => {
       }
 
       // Log email notification
-      await supabase.from("billing_notifications").insert({
-        customer_email: userData.user.email,
-        channel: "email",
-        tipo: "factura_pendiente",
-        mensaje: `Factura ${numFactura} — $${total} MXN — ${plan.nombre}`,
-        monto_centavos: Math.round(total * 100),
-        status: "sent",
-      }).catch(() => {});
+      try {
+        await supabase.from("billing_notifications").insert({
+          customer_email: userData.user.email,
+          channel: "email",
+          tipo: "factura_pendiente",
+          mensaje: `Factura ${numFactura} — $${total} MXN — ${plan.nombre}`,
+          monto_centavos: Math.round(total * 100),
+          status: "sent",
+        });
+      } catch { /* silent */ }
     }
 
     return new Response(JSON.stringify({
