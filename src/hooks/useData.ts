@@ -85,30 +85,16 @@ export function useSaveProducto() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (producto: Partial<Producto> & { id?: string }) => {
-      // Only include valid DB columns
-      const VALID_COLS = new Set([
-        'codigo','nombre','clave_alterna','costo','precio_principal','imagen_url',
-        'se_puede_comprar','se_puede_vender','vender_sin_stock','se_puede_inventariar',
-        'es_combo','min','max','manejar_lotes','factor_conversion','permitir_descuento',
-        'monto_maximo','cantidad','tiene_comision','tipo_comision','pct_comision',
-        'status','almacenes','tiene_iva','tiene_ieps','calculo_costo','codigo_sat',
-        'contador','contador_tarifas','iva_pct','ieps_pct','ieps_tipo',
-        'costo_incluye_impuestos','usa_listas_precio','marca_id','clasificacion_id',
-        'lista_id','unidad_venta_id','unidad_compra_id','unidad_sat_id',
-        'descripcion','notas','empresa_id',
-      ]);
-      const rest: Record<string, any> = {};
-      for (const [k, v] of Object.entries(producto)) {
-        if (k !== 'id' && VALID_COLS.has(k)) rest[k] = v;
-      }
+      const clean = pickColumns(producto, PRODUCTO_COLUMNS);
+      delete (clean as any).id;
       if (producto.id) {
-        const { data, error } = await supabase.from('productos').update(rest as any).eq('id', producto.id).select('id').single();
+        const { data, error } = await supabase.from('productos').update(clean as any).eq('id', producto.id).select('id').single();
         if (error) { console.error('Supabase update error:', error); throw error; }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        rest.empresa_id = empresa.id;
-        const { data, error } = await supabase.from('productos').insert(rest as any).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('productos').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
