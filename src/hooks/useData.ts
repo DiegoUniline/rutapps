@@ -37,6 +37,7 @@ export function useProducto(id?: string) {
 
 export function useSaveProducto() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (producto: Partial<Producto> & { id?: string }) => {
       const { id, marcas, ...rest } = producto as any;
@@ -45,8 +46,8 @@ export function useSaveProducto() {
         if (error) throw error;
         return data;
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
-        const { data, error } = await supabase.from('productos').insert({ ...rest, empresa_id: empresaId }).select('id').single();
+        if (!empresa?.id) throw new Error('Sin empresa');
+        const { data, error } = await supabase.from('productos').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
         if (error) throw error;
         return data;
       }
