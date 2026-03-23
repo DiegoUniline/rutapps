@@ -270,7 +270,29 @@ export default function MiSuscripcionPage() {
     }
   }
 
-  function copyToClipboard(text: string) {
+  // ─── Pay single invoice with Stripe ───
+  async function handlePayInvoice(factura: FacturaRow) {
+    setPayingInvoice(factura.id);
+    try {
+      // Find the plan linked to current subscription
+      const plan = plans.find(p => p.stripe_price_id === subData?.stripe_price_id) || plans[0];
+      if (!plan?.stripe_price_id) throw new Error('No se encontró un plan con precio de Stripe');
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { price_id: plan.stripe_price_id, quantity: factura.num_usuarios, empresa_id: empresa?.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.url) throw new Error('No se recibió URL de pago');
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(e.message || 'Error al generar enlace de pago');
+    } finally {
+      setPayingInvoice(null);
+    }
+  }
+
+
     navigator.clipboard.writeText(text.replace(/\s/g, ''));
     toast.success('Copiado');
   }
