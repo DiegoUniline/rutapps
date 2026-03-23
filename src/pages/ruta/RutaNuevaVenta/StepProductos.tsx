@@ -60,7 +60,7 @@ export function StepProductos(props: Props) {
         {filteredProductos?.map(p => {
           const inCart = getItemInCart(p.id);
           const maxQty = getMaxQty(p.id);
-          const stockLabel = tipoVenta === 'venta_directa' ? `${maxQty} a bordo` : `${p.cantidad ?? 0} en almacén`;
+          const stockLabel = tipoVenta === 'venta_directa' ? `${maxQty} ${usandoAlmacen ? 'en almacén' : 'a bordo'}` : `${p.cantidad ?? 0} en almacén`;
           const stockOk = tipoVenta === 'pedido' || maxQty > 0;
           const atMax = inCart && tipoVenta === 'venta_directa' && inCart.cantidad >= maxQty;
           return (
