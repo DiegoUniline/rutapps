@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DollarSign, TrendingUp, CreditCard, Receipt, Users, Stamp, Calendar, UserPlus, ArrowRight, PieChart } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, Legend, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
+import { ComposedChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RPieChart, Pie, Cell, CartesianGrid, Line } from 'recharts';
 import { format, subDays, eachDayOfInterval, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -18,7 +18,7 @@ interface FacturamaPlan {
 }
 
 interface EmpresaRow {
-  id: string; created_at: string;
+  id: string; nombre: string; created_at: string;
   subscriptions: { status: string; plan_id: string | null; created_at: string }[];
 }
 
@@ -72,7 +72,7 @@ export default function AdminStatsTab() {
   async function loadEmpresas() {
     const { data } = await supabase
       .from('empresas')
-      .select('id, created_at, subscriptions(status, plan_id, created_at)')
+      .select('id, nombre, created_at, subscriptions(status, plan_id, created_at)')
       .order('created_at', { ascending: true });
     setEmpresas((data as any) || []);
   }
@@ -119,6 +119,12 @@ export default function AdminStatsTab() {
       name: STATUS_LABELS[status] || status,
       value: count,
     }));
+  }, [empresas]);
+
+  const recentSignups = useMemo(() => {
+    return [...empresas]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 10) as (EmpresaRow & { nombre: string })[];
   }, [empresas]);
 
   const fmt = (cents: number) => `$${(cents / 100).toLocaleString('es-MX')}`;
@@ -193,13 +199,7 @@ export default function AdminStatsTab() {
         <CardContent>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={signupsByDay}>
-                <defs>
-                  <linearGradient id="colorNuevas" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <ComposedChart data={signupsByDay}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
                 <YAxis allowDecimals={false} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
@@ -209,9 +209,32 @@ export default function AdminStatsTab() {
                 />
                 <Bar dataKey="nuevas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 <Line type="monotone" dataKey="total" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
-              </AreaChart>
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
+
+          {/* Recent signups list */}
+          {recentSignups.length > 0 && (
+            <div className="mt-4 border-t border-border pt-3">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Últimas altas</h4>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                {recentSignups.map(e => {
+                  const sub = e.subscriptions?.[0];
+                  const status = sub?.status || 'sin_sub';
+                  const statusLabel = STATUS_LABELS[status] || status;
+                  return (
+                    <div key={e.id} className="flex items-center justify-between text-xs bg-accent/30 rounded-lg px-3 py-1.5">
+                      <div>
+                        <span className="font-medium text-foreground">{e.nombre}</span>
+                        <span className="text-muted-foreground ml-2">{format(new Date(e.created_at), "dd MMM yyyy, HH:mm", { locale: es })}</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted font-medium">{statusLabel}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
