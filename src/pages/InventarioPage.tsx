@@ -165,6 +165,48 @@ function useInventarioData() {
         });
       }
 
+      // Also include almacenes with stock as "route" cards
+      const cargaAlmacenIds = new Set(cargaDetails.map((c: any) => c.almacen_id).filter(Boolean));
+      for (const alm of (almacenes ?? [])) {
+        const almStock = stockAlmacenMap[alm.id] ?? {};
+        let totalUnidades = 0, valorCosto = 0, valorVenta = 0;
+        const lineasDetalle: any[] = [];
+        for (const [prodId, qty] of Object.entries(almStock)) {
+          if (qty <= 0) continue;
+          totalUnidades += qty;
+          const prod = (productos ?? []).find(p => p.id === prodId);
+          valorCosto += qty * (prod?.costo ?? 0);
+          valorVenta += qty * (prod?.precio_principal ?? 0);
+          lineasDetalle.push({
+            producto_id: prodId,
+            codigo: prod?.codigo ?? '',
+            nombre: prod?.nombre ?? '',
+            cargado: qty,
+            entregado: 0,
+            devuelto: 0,
+            abordo: qty,
+            costo: prod?.costo ?? 0,
+            precio: prod?.precio_principal ?? 0,
+          });
+        }
+        if (totalUnidades > 0) {
+          cargaDetails.push({
+            id: `alm-${alm.id}`,
+            origen: 'almacen',
+            vendedor: alm.nombre,
+            vendedor_id: null,
+            repartidor: null,
+            almacen: alm.nombre,
+            fecha: null,
+            status: 'activo',
+            totalUnidades,
+            valorCosto,
+            valorVenta,
+            lineas: lineasDetalle,
+          });
+        }
+      }
+
       // Build sorted list of routes for columns
       const rutas = Object.entries(rutaBreakdown)
         .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
