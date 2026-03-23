@@ -212,7 +212,7 @@ export default function SupervisorDashboardPage() {
                       <Badge variant={v.status === 'confirmado' ? 'default' : 'secondary'} className="text-[9px] h-4">{v.status}</Badge>
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-foreground tabular-nums">${fmt(v.total ?? 0)}</span>
+                  <span className="text-sm font-bold text-foreground tabular-nums">{fmtMoney(v.total ?? 0)}</span>
                 </div>
               ))}
             </div>
