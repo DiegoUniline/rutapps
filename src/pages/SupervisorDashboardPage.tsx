@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { MapPin, ShoppingCart, Banknote, Users, TrendingUp, Package, Clock, RotateCcw, Truck } from 'lucide-react';
+import { ShoppingCart, Banknote, Users, TrendingUp } from 'lucide-react';
+import { useVendedores } from '@/hooks/useClientes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -13,14 +14,8 @@ export default function SupervisorDashboardPage() {
   const today = new Date().toISOString().split('T')[0];
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
 
-  // All vendedores
-  const { data: vendedores } = useQuery({
-    queryKey: ['supervisor-vendedores'],
-    queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').order('nombre');
-      return data ?? [];
-    },
-  });
+  // All vendedores (filtered by empresa via centralized hook)
+  const { data: vendedores } = useVendedores();
 
   // Today's sales for all vendedores
   const { data: ventasHoy } = useQuery({

@@ -110,17 +110,18 @@ Deno.serve(async (req) => {
 
     log("Proration calculated", { diasEnMes, diaActual, diasRestantes, esProrrateo, subtotal, total });
 
-    // Update subscription
+    const subUpdatePayload: Record<string, any> = {
+      plan_id: plan.id,
+      status: "pendiente_pago",
+      max_usuarios: qty,
+      es_manual: true,
+      updated_at: new Date().toISOString(),
+    };
+    if (plan.stripe_price_id) subUpdatePayload.stripe_price_id = plan.stripe_price_id;
+
     const { error: subErr } = await supabase
       .from("subscriptions")
-      .update({
-        plan_id: plan.id,
-        status: "pendiente_pago",
-        max_usuarios: qty,
-        es_manual: true,
-        stripe_price_id: plan.stripe_price_id,
-        updated_at: new Date().toISOString(),
-      })
+      .update(subUpdatePayload)
       .eq("empresa_id", profile.empresa_id);
 
     if (subErr) log("Sub update error", subErr);
@@ -253,15 +254,17 @@ Deno.serve(async (req) => {
       log("WhatsApp notification", { sent, phone: profile.telefono });
 
       // Log to billing_notifications
-      await supabase.from("billing_notifications").insert({
-        customer_email: userData.user.email || "",
-        customer_phone: profile.telefono.replace(/[\s\-\(\)]/g, ""),
-        channel: "whatsapp",
-        tipo: "factura_pendiente",
-        mensaje: waMsg,
-        monto_centavos: Math.round(total * 100),
-        status: sent ? "sent" : "error",
-      }).catch(() => {});
+      try {
+        await supabase.from("billing_notifications").insert({
+          customer_email: userData.user.email || "",
+          customer_phone: profile.telefono.replace(/[\s\-\(\)]/g, ""),
+          channel: "whatsapp",
+          tipo: "factura_pendiente",
+          mensaje: waMsg,
+          monto_centavos: Math.round(total * 100),
+          status: sent ? "sent" : "error",
+        });
+      } catch { /* silent */ }
     }
 
     // ─── Email notification ───
@@ -333,14 +336,16 @@ Deno.serve(async (req) => {
       }
 
       // Log email notification
-      await supabase.from("billing_notifications").insert({
-        customer_email: userData.user.email,
-        channel: "email",
-        tipo: "factura_pendiente",
-        mensaje: `Factura ${numFactura} — $${total} MXN — ${plan.nombre}`,
-        monto_centavos: Math.round(total * 100),
-        status: "sent",
-      }).catch(() => {});
+      try {
+        await supabase.from("billing_notifications").insert({
+          customer_email: userData.user.email,
+          channel: "email",
+          tipo: "factura_pendiente",
+          mensaje: `Factura ${numFactura} — $${total} MXN — ${plan.nombre}`,
+          monto_centavos: Math.round(total * 100),
+          status: "sent",
+        });
+      } catch { /* silent */ }
     }
 
     return new Response(JSON.stringify({

@@ -248,7 +248,8 @@ export function useTasasIeps() {
   return useQuery({ queryKey: ['tasas_ieps'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('tasas_ieps').select('id, nombre, porcentaje').order('nombre'); return data as TasaIeps[]; }});
 }
 export function useAlmacenes() {
-  return useQuery({ queryKey: ['almacenes'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('almacenes').select('id, nombre').eq('activo', true).order('nombre'); return data as Almacen[]; }});
+  const { empresa } = useAuth();
+  return useQuery({ queryKey: ['almacenes', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Almacen[]; }});
 }
 export function useUnidadesSat() {
   return useQuery({ queryKey: ['unidades_sat'], staleTime: CATALOG_STALE, queryFn: async () => { const { data } = await supabase.from('unidades_sat').select('id, clave, nombre').order('nombre'); return data as UnidadSat[]; }});
