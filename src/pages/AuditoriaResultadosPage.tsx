@@ -167,6 +167,9 @@ export default function AuditoriaResultadosPage() {
   const aprobarAuditoria = useMutation({
     mutationFn: async () => {
       const today = new Date().toISOString().slice(0, 10);
+      const batchId = crypto.randomUUID();
+      const almacenIdAuditoria = auditoria?.almacen_id ?? null;
+      const adjustedProductIds: string[] = [];
 
       for (const [lineaId, config] of Object.entries(ajustes)) {
         if (!config.ajustar) continue;
@@ -176,7 +179,19 @@ export default function AuditoriaResultadosPage() {
         const diff = linea.cantidad_real - linea.cantidad_esperada;
         const motivo = config.motivo || motivoGlobal || 'Ajuste por auditoría';
 
-        await supabase.from('productos').update({ cantidad: linea.cantidad_real } as any).eq('id', linea.producto_id);
+        // Update stock_almacen if we have almacen
+        if (almacenIdAuditoria) {
+          await supabase.from('stock_almacen').upsert({
+            empresa_id: empresa!.id,
+            almacen_id: almacenIdAuditoria,
+            producto_id: linea.producto_id,
+            cantidad: linea.cantidad_real,
+          } as any, { onConflict: 'almacen_id,producto_id' });
+          adjustedProductIds.push(linea.producto_id);
+        } else {
+          // No almacen — direct global update (legacy)
+          await supabase.from('productos').update({ cantidad: linea.cantidad_real } as any).eq('id', linea.producto_id);
+        }
 
         await supabase.from('movimientos_inventario').insert({
           empresa_id: empresa!.id,
@@ -187,6 +202,7 @@ export default function AuditoriaResultadosPage() {
           referencia_id: id,
           user_id: user?.id,
           fecha: today,
+          almacen_origen_id: almacenIdAuditoria,
           notas: motivo,
         } as any);
 
@@ -199,9 +215,28 @@ export default function AuditoriaResultadosPage() {
           motivo,
           user_id: user!.id,
           fecha: today,
+          almacen_id: almacenIdAuditoria,
+          batch_id: batchId,
         } as any);
 
         await supabase.from('auditoria_lineas').update({ ajustado: true } as any).eq('id', lineaId);
+      }
+
+      // Sync global totals from stock_almacen
+      if (almacenIdAuditoria && adjustedProductIds.length > 0) {
+        const uniqueIds = [...new Set(adjustedProductIds)];
+        const { data: stockRows } = await supabase
+          .from('stock_almacen')
+          .select('producto_id, cantidad')
+          .eq('empresa_id', empresa!.id)
+          .in('producto_id', uniqueIds as any);
+        const totalMap = new Map<string, number>();
+        for (const row of (stockRows ?? [])) {
+          totalMap.set(row.producto_id, (totalMap.get(row.producto_id) ?? 0) + (row.cantidad ?? 0));
+        }
+        await Promise.all(uniqueIds.map(pid =>
+          supabase.from('productos').update({ cantidad: totalMap.get(pid) ?? 0 } as any).eq('id', pid)
+        ));
       }
 
       for (const [lineaId, config] of Object.entries(ajustes)) {
@@ -223,6 +258,9 @@ export default function AuditoriaResultadosPage() {
       qc.invalidateQueries({ queryKey: ['auditorias'] });
       qc.invalidateQueries({ queryKey: ['auditoria-lineas'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+      qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+      qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
       setShowAprobar(false);
     },
     onError: (err: any) => toast.error(err.message),
