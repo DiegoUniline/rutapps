@@ -45,7 +45,7 @@ export function useClientes(search?: string, statusFilter?: string) {
       let q = supabase.from('clientes')
         .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
         .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
+        .order('codigo', { ascending: true });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Cliente['status']);
       const { data, error } = await q;
