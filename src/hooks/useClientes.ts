@@ -84,7 +84,7 @@ export function useSaveCliente() {
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
         rest.empresa_id = empresa.id;
-        const { data, error } = await supabase.from('clientes').insert(rest).select('id').single();
+        const { data, error } = await supabase.from('clientes').insert(rest as any).select('id').single();
         if (error) { console.error('Error inserting cliente:', error); throw error; }
         return data;
       }
