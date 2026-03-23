@@ -65,9 +65,10 @@ export default function RutaVentas() {
             className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={search}
             onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
+           />
+         </div>
+         <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+       </div>
 
       <div className="flex-1 px-4 space-y-2 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
