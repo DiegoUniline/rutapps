@@ -292,7 +292,7 @@ export default function MiSuscripcionPage() {
     }
   }
 
-
+  function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text.replace(/\s/g, ''));
     toast.success('Copiado');
   }
