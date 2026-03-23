@@ -99,7 +99,13 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
     }
   }
 
-  const filtered = empresas.filter(e => e.nombre.toLowerCase().includes(search.toLowerCase()));
+  const filtered = empresas.filter(e => {
+    const matchSearch = e.nombre.toLowerCase().includes(search.toLowerCase());
+    if (statusFilter === 'todos') return matchSearch;
+    const sub = e.subscriptions?.[0];
+    const status = sub?.status || 'sin_sub';
+    return matchSearch && status === statusFilter;
+  });
 
   return (
     <>
