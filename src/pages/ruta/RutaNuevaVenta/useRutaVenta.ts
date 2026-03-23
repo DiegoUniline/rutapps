@@ -9,6 +9,7 @@ import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import type { CartItem, DevolucionItem, CuentaPendiente, Step } from './types';
+import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
 
 export function useRutaVenta() {
@@ -293,7 +294,9 @@ export function useRutaVenta() {
   const currentStepIdx = STEPS.indexOf(step);
   const goBack = () => { if (currentStepIdx === 0) navigate('/ruta/ventas'); else setStep(STEPS[currentStepIdx - 1]); };
   const goToPayment = () => { initCuentasPendientes(); setStep('pago'); };
+  const { symbol: currSym } = useCurrency();
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const fmtM = (n: number) => `${currSym}${fmt(n)}`;
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
 
@@ -312,7 +315,7 @@ export function useRutaVenta() {
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
-    currentStepIdx, goBack, goToPayment, fmt, markVisited, saveVisita,
+    currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty,
     addDevolucion, updateDevQty, updateDevMotivo, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,

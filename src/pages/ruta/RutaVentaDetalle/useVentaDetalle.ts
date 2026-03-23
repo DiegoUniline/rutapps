@@ -10,6 +10,7 @@ import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/li
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function useVentaDetalle() {
   const { id } = useParams();
@@ -37,7 +38,9 @@ export function useVentaDetalle() {
   const [searchProducto, setSearchProducto] = useState('');
 
   const clienteId = (venta as any)?.cliente_id;
+  const { symbol: currSym } = useCurrency();
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const fmtM = (n: number) => `${currSym}${fmt(n)}`;
 
   const { data: clienteData } = useQuery({
     queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId,
@@ -185,7 +188,7 @@ export function useVentaDetalle() {
   };
 
   return {
-    id, navigate, venta, isLoading, view, setView, fmt, clienteData, clienteId,
+    id, navigate, venta, isLoading, view, setView, fmt, fmtM, currSym, clienteData, clienteId,
     metodoPago, setMetodoPago, montoRecibido, setMontoRecibido, referenciaPago, setReferenciaPago,
     cuentasPendientes, setCuentasPendientes, saving, ticketData,
     sendingWA, showWADialog, setShowWADialog, waPhone, setWaPhone,
