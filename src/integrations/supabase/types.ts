@@ -17,6 +17,7 @@ export type Database = {
       ajustes_inventario: {
         Row: {
           almacen_id: string | null
+          batch_id: string | null
           cantidad_anterior: number
           cantidad_nueva: number
           created_at: string
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           almacen_id?: string | null
+          batch_id?: string | null
           cantidad_anterior?: number
           cantidad_nueva?: number
           created_at?: string
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           almacen_id?: string | null
+          batch_id?: string | null
           cantidad_anterior?: number
           cantidad_nueva?: number
           created_at?: string
