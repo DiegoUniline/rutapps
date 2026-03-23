@@ -7,6 +7,7 @@ import {
   drawFooter, checkPageBreak,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 interface EstadoCuentaParams {
   empresa: EmpresaInfo;
