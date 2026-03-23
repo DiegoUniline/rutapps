@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export type DateRange = { from: Date; to: Date };
 
@@ -11,12 +12,15 @@ function fmt(d: Date) {
 }
 
 export function useDashboardVentas(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-ventas', fmt(range.from), fmt(range.to), vendedorId],
+    queryKey: ['dashboard-ventas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('ventas')
         .select('id, fecha, total, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
         .neq('status', 'cancelado' as any);
@@ -29,12 +33,15 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
 }
 
 export function useDashboardCobros(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-cobros', fmt(range.from), fmt(range.to), vendedorId],
+    queryKey: ['dashboard-cobros', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('cobros')
         .select('id, fecha, monto, metodo_pago, cliente_id')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to));
       const { data, error } = await q;
@@ -45,12 +52,15 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
 }
 
 export function useDashboardCompras(range: DateRange) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-compras', fmt(range.from), fmt(range.to)],
+    queryKey: ['dashboard-compras', empresa?.id, fmt(range.from), fmt(range.to)],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('compras')
         .select('id, fecha, total, saldo_pendiente, status, proveedor_id, proveedores(nombre)')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to));
       if (error) throw error;
@@ -60,12 +70,15 @@ export function useDashboardCompras(range: DateRange) {
 }
 
 export function useDashboardGastos(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-gastos', fmt(range.from), fmt(range.to), vendedorId],
+    queryKey: ['dashboard-gastos', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('gastos')
         .select('id, fecha, monto, concepto, vendedor_id')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to));
       if (vendedorId) q = q.eq('vendedor_id', vendedorId);
@@ -77,12 +90,15 @@ export function useDashboardGastos(range: DateRange, vendedorId?: string) {
 }
 
 export function useDashboardCartera() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-cartera'],
+    queryKey: ['dashboard-cartera', empresa?.id],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
         .select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), condicion_pago')
+        .eq('empresa_id', empresa!.id)
         .eq('condicion_pago', 'credito')
         .gt('saldo_pendiente', 0)
         .neq('status', 'cancelado' as any)
@@ -95,13 +111,16 @@ export function useDashboardCartera() {
 }
 
 export function useDashboardStock() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-stock'],
+    queryKey: ['dashboard-stock', empresa?.id],
     staleTime: 5 * 60 * 1000,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('productos')
         .select('id, codigo, nombre, cantidad, min, max, precio_principal, costo, status')
+        .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .not('status', 'eq', 'inactivo')
         .order('cantidad', { ascending: true })
@@ -113,12 +132,15 @@ export function useDashboardStock() {
 }
 
 export function useDashboardTopProductos(range: DateRange) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-top-productos', fmt(range.from), fmt(range.to)],
+    queryKey: ['dashboard-top-productos', empresa?.id, fmt(range.from), fmt(range.to)],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('venta_lineas')
-        .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status)')
+        .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status, empresa_id)')
+        .eq('ventas.empresa_id', empresa!.id)
         .gte('ventas.fecha', fmt(range.from))
         .lte('ventas.fecha', fmt(range.to))
         .neq('ventas.status', 'cancelado');
@@ -151,12 +173,15 @@ export function useDashboardTopProductos(range: DateRange) {
 }
 
 export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-ventas-dia', fmt(range.from), fmt(range.to), vendedorId],
+    queryKey: ['dashboard-ventas-dia', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
         .from('ventas')
         .select('fecha, total')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
         .neq('status', 'cancelado');
@@ -182,12 +207,15 @@ export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) 
 }
 
 export function useDashboardVentasPorVendedor(range: DateRange) {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['dashboard-ventas-vendedor', fmt(range.from), fmt(range.to)],
+    queryKey: ['dashboard-ventas-vendedor', empresa?.id, fmt(range.from), fmt(range.to)],
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
         .select('vendedor_id, total, vendedores(nombre)')
+        .eq('empresa_id', empresa!.id)
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to))
         .neq('status', 'cancelado')
