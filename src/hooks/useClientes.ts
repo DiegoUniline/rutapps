@@ -63,15 +63,29 @@ export function useSaveCliente() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (cliente: Partial<Cliente> & { id?: string }) => {
-      const { id, zonas, listas, vendedores, cobradores, tarifas, ...rest } = cliente as any;
-      if (id) {
-        const { data, error } = await supabase.from('clientes').update(rest).eq('id', id).select('id').single();
-        if (error) throw error;
+      // Only include valid DB columns – strip any relational/virtual fields
+      const VALID_COLS = new Set([
+        'nombre','codigo','telefono','email','contacto','direccion','colonia','cp',
+        'vendedor_id','cobrador_id','zona_id','tarifa_id','lista_id','lista_precio_id',
+        'status','orden','credito','limite_credito','dias_credito','dia_visita',
+        'gps_lat','gps_lng','frecuencia','foto_url','foto_fachada_url','notas',
+        'rfc','regimen_fiscal','uso_cfdi','requiere_factura','fecha_alta',
+        'facturama_id','facturama_rfc','facturama_razon_social','facturama_regimen_fiscal',
+        'facturama_uso_cfdi','facturama_cp','facturama_correo_facturacion','empresa_id',
+      ]);
+      const rest: Record<string, any> = {};
+      for (const [k, v] of Object.entries(cliente)) {
+        if (k !== 'id' && VALID_COLS.has(k)) rest[k] = v;
+      }
+      if (cliente.id) {
+        const { data, error } = await supabase.from('clientes').update(rest).eq('id', cliente.id).select('id').single();
+        if (error) { console.error('Error updating cliente:', error, 'payload:', rest); throw error; }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        const { data, error } = await supabase.from('clientes').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
-        if (error) throw error;
+        rest.empresa_id = empresa.id;
+        const { data, error } = await supabase.from('clientes').insert(rest as any).select('id').single();
+        if (error) { console.error('Error inserting cliente:', error); throw error; }
         return data;
       }
     },
