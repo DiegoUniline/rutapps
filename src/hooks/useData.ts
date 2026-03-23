@@ -145,12 +145,15 @@ export function useDeleteProducto() {
 
 // Tarifas
 export function useTarifas() {
+  const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['tarifas'],
+    queryKey: ['tarifas', empresa?.id],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('tarifas')
         .select('id, nombre, tipo, activa, descripcion, vigencia_inicio, vigencia_fin, created_at, tarifa_lineas(id)')
+        .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as (Tarifa & { tarifa_lineas: { id: string }[] })[];
