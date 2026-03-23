@@ -24,6 +24,7 @@ interface SubRow {
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   current_period_end: string | null;
+  trial_ends_at: string | null;
   plan_id: string | null;
 }
 
@@ -58,7 +59,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   async function load() {
     const { data } = await supabase
       .from('empresas')
-      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, plan_id), profiles(nombre, user_id)');
+      .select('id, nombre, email, telefono, created_at, timbres_saldo(saldo), subscriptions(status, max_usuarios, stripe_customer_id, stripe_subscription_id, current_period_end, trial_ends_at, plan_id), profiles(nombre, user_id)');
     setEmpresas((data as any) || []);
     setLoading(false);
   }
@@ -190,16 +191,18 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                           </div>
                         </TableCell>
                         <TableCell>
-                          {sub?.current_period_end ? (
-                            <div className="text-xs">
-                              <div className="font-medium">{format(new Date(sub.current_period_end), 'dd MMM yyyy', { locale: es })}</div>
-                              {new Date(sub.current_period_end) < new Date() && (
-                                <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          {(() => {
+                            const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
+                            if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
+                            return (
+                              <div className="text-xs">
+                                <div className="font-medium">{format(new Date(endDate), 'dd MMM yyyy', { locale: es })}</div>
+                                {new Date(endDate) < new Date() && (
+                                  <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {format(new Date(e.created_at), 'dd MMM yyyy', { locale: es })}
