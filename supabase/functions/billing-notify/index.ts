@@ -145,16 +145,18 @@ async function sendWA(
     status = res.ok ? "sent" : "error";
   } catch { status = "error"; }
 
-  await supabase.from("billing_notifications").insert({
-    customer_email: email,
-    customer_phone: cleanPhone,
-    channel: "whatsapp",
-    tipo: tpl.tipo,
-    mensaje: textMsg,
-    stripe_invoice_url: invoiceUrl || null,
-    monto_centavos: amountCents || 0,
-    status,
-  }).catch(() => {});
+  try {
+    await supabase.from("billing_notifications").insert({
+      customer_email: email,
+      customer_phone: cleanPhone,
+      channel: "whatsapp",
+      tipo: tpl.tipo,
+      mensaje: textMsg,
+      stripe_invoice_url: invoiceUrl || null,
+      monto_centavos: amountCents || 0,
+      status,
+    });
+  } catch { /* silent */ }
 
   return status === "sent";
 }
