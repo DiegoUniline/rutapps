@@ -130,14 +130,16 @@ export function useSaveVenta() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (venta: Partial<Venta> & { id?: string }) => {
-      const { id, clientes, vendedores, tarifas, almacenes, venta_lineas, ...rest } = venta as any;
-      if (id) {
-        const { data, error } = await supabase.from('ventas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(venta, VENTA_COLUMNS);
+      delete (clean as any).id;
+      if (venta.id) {
+        const { data, error } = await supabase.from('ventas').update(clean as any).eq('id', venta.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        const { data, error } = await supabase.from('ventas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('ventas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
