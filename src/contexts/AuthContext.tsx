@@ -109,7 +109,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setEmpresa(nextEmpresa);
+    setRealEmpresa(nextEmpresa);
   }, []);
+
+  // Handle override empresa for super admin
+  const setOverrideEmpresaId = useCallback(async (id: string | null) => {
+    setOverrideEmpresaIdRaw(id);
+    if (!id) {
+      // Restore original empresa
+      setEmpresa(realEmpresa);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.from('empresas')
+        .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda')
+        .eq('id', id)
+        .maybeSingle();
+      if (!error && data) {
+        setEmpresa(data as Empresa);
+      }
+    } catch { /* ignore */ }
+  }, [realEmpresa]);
 
   useEffect(() => {
     let initialised = false;
@@ -121,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setProfile(null);
         setEmpresa(null);
+        setRealEmpresa(null);
+        setOverrideEmpresaIdRaw(null);
         setLoading(false);
         return;
       }
@@ -145,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId }}>
       {children}
     </AuthContext.Provider>
   );
