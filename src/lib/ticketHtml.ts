@@ -2,6 +2,7 @@
  * Unified ticket HTML builder — single source of truth for all ticket outputs:
  * on-screen display, PNG download, WhatsApp image, thermal print.
  */
+import { getCurrencyConfig } from '@/lib/currency';
 
 export interface TicketEmpresa {
   nombre: string;
@@ -9,6 +10,7 @@ export interface TicketEmpresa {
   direccion?: string | null;
   telefono?: string | null;
   logo_url?: string | null;
+  moneda?: string | null;
 }
 
 export interface TicketLinea {
@@ -41,7 +43,7 @@ export interface TicketData {
   saldoNuevo?: number;
 }
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function buildTicketHTML(data: TicketData): string {
   const {
@@ -49,6 +51,9 @@ export function buildTicketHTML(data: TicketData): string {
     subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo,
   } = data;
+
+  const sym = getCurrencyConfig(empresa.moneda).symbol;
+  const fmt = (n: number) => `${sym}${fmtNum(n)}`;
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
 
@@ -61,15 +66,15 @@ export function buildTicketHTML(data: TicketData): string {
   const telHtml = empresa.telefono ? `<div style="font-size:8px;color:#888">Tel: ${empresa.telefono}</div>` : '';
 
   const lineasHtml = lineas.map(l => {
-    const detailParts: string[] = [`$${fmt(l.precio)} c/u`];
+    const detailParts: string[] = [`${fmt(l.precio)} c/u`];
     if ((l.descuento_pct ?? 0) > 0) detailParts.push(`<span style="color:#3b82f6">-${l.descuento_pct}% dto</span>`);
-    if ((l.iva_monto ?? 0) > 0) detailParts.push(`IVA $${fmt(l.iva_monto!)}`);
-    if ((l.ieps_monto ?? 0) > 0) detailParts.push(`IEPS $${fmt(l.ieps_monto!)}`);
+    if ((l.iva_monto ?? 0) > 0) detailParts.push(`IVA ${fmt(l.iva_monto!)}`);
+    if ((l.ieps_monto ?? 0) > 0) detailParts.push(`IEPS ${fmt(l.ieps_monto!)}`);
 
     return `<div style="padding:2px 0${l.esCambio ? ';opacity:0.6' : ''}">
       <div style="display:flex;justify-content:space-between;font-size:11px">
         <span style="flex:1;margin-right:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500">${l.cantidad}x ${l.nombre}${l.esCambio ? ' <span style="font-size:9px;color:#888;font-style:italic">(cambio)</span>' : ''}</span>
-        <span style="font-weight:600;white-space:nowrap">$${fmt(l.total)}</span>
+        <span style="font-weight:600;white-space:nowrap">${fmt(l.total)}</span>
       </div>
       ${!l.esCambio ? `<div style="font-size:8px;color:#888;margin-top:1px">${detailParts.join(' &middot; ')}</div>` : ''}
     </div>`;
@@ -82,8 +87,8 @@ export function buildTicketHTML(data: TicketData): string {
   let recibidoHtml = '';
   if (montoRecibido != null && montoRecibido > 0) {
     recibidoHtml = `
-      <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span style="color:#666">Recibido</span><span>$${fmt(montoRecibido)}</span></div>
-      ${(cambio ?? 0) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cambio</span><span style="font-weight:700;color:#3b82f6">$${fmt(cambio!)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin-top:2px"><span style="color:#666">Recibido</span><span>${fmt(montoRecibido)}</span></div>
+      ${(cambio ?? 0) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cambio</span><span style="font-weight:700;color:#3b82f6">${fmt(cambio!)}</span></div>` : ''}
     `;
   }
 
@@ -93,12 +98,12 @@ export function buildTicketHTML(data: TicketData): string {
       <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
       <div style="padding:4px 0">
         <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:3px">Estado de cuenta</div>
-        ${saldoAnterior != null && saldoAnterior > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Saldo anterior</span><span>$${fmt(saldoAnterior)}</span></div>` : ''}
-        ${pagoAplicado != null && pagoAplicado > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Pago aplicado</span><span style="color:#16a34a;font-weight:500">-$${fmt(pagoAplicado)}</span></div>` : ''}
-        ${condicionPago === 'credito' ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">+ Esta venta (crédito)</span><span>$${fmt(total)}</span></div>` : ''}
+        ${saldoAnterior != null && saldoAnterior > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Saldo anterior</span><span>${fmt(saldoAnterior)}</span></div>` : ''}
+        ${pagoAplicado != null && pagoAplicado > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Pago aplicado</span><span style="color:#16a34a;font-weight:500">-${fmt(pagoAplicado)}</span></div>` : ''}
+        ${condicionPago === 'credito' ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">+ Esta venta (crédito)</span><span>${fmt(total)}</span></div>` : ''}
         <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;border-top:1px dashed #aaa;padding-top:3px;margin-top:3px">
           <span>Nuevo saldo</span>
-          <span style="color:${(saldoNuevo ?? 0) > 0 ? '#dc2626' : '#16a34a'}">$${fmt(saldoNuevo ?? 0)}</span>
+          <span style="color:${(saldoNuevo ?? 0) > 0 ? '#dc2626' : '#16a34a'}">${fmt(saldoNuevo ?? 0)}</span>
         </div>
       </div>
     `;
@@ -129,11 +134,11 @@ export function buildTicketHTML(data: TicketData): string {
     </div>
     <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
     <div style="padding:4px 0">
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>$${fmt(subtotal)}</span></div>
-      ${iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>$${fmt(iva)}</span></div>` : ''}
-      ${ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>$${fmt(ieps)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>${fmt(subtotal)}</span></div>
+      ${iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>${fmt(iva)}</span></div>` : ''}
+      ${ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px dashed #aaa;padding-top:4px;margin-top:4px">
-        <span>Total</span><span style="color:#3b82f6">$${fmt(total)}</span>
+        <span>Total</span><span style="color:#3b82f6">${fmt(total)}</span>
       </div>
       ${recibidoHtml}
     </div>
