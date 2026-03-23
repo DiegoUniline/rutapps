@@ -19,6 +19,7 @@ interface Props {
   setStep: (s: any) => void;
   setCart: (v: any) => void;
   stockAbordo: Map<string, number>;
+  usandoAlmacen: boolean;
   fmt: (n: number) => string;
 }
 
