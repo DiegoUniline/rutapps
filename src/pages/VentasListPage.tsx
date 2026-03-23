@@ -66,7 +66,7 @@ export default function VentasListPage() {
   const [tipoFilter, setTipoFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  const { data: ventas, isLoading } = useVentas(search, statusFilter, tipoFilter);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
   const { data: clientesList } = useClientes();
 
   // WhatsApp state
@@ -77,10 +77,11 @@ export default function VentasListPage() {
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
-  const total = ventas?.length ?? 0;
+  const ventas = ventasData?.rows ?? [];
+  const total = ventasData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = ventas?.slice(from - 1, to) ?? [];
+  const pageData = ventas;
   const allSelected = pageData.length > 0 && pageData.every(v => selected.has(v.id));
 
   const toggleAll = () => {
