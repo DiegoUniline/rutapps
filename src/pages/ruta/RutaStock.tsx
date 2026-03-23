@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
@@ -8,7 +8,6 @@ export default function RutaStock() {
   const [search, setSearch] = useState('');
   const almacenId = profile?.almacen_id;
 
-  // Products filtered by almacen assigned to vendedor
   const { data: productos, isLoading } = useOfflineQuery('productos', {
     empresa_id: empresa?.id,
     se_puede_vender: true,
@@ -18,7 +17,23 @@ export default function RutaStock() {
     orderBy: 'nombre',
   });
 
-  const filtered = (productos ?? []).filter((p: any) =>
+  const { data: stockAlmacen } = useOfflineQuery('stock_almacen', {
+    empresa_id: empresa?.id,
+    almacen_id: almacenId,
+  }, {
+    enabled: !!empresa?.id && !!almacenId,
+  });
+
+  const productosConStock = useMemo(() => {
+    const stockMap = new Map((stockAlmacen ?? []).map((item: any) => [item.producto_id, item.cantidad ?? 0]));
+
+    return (productos ?? []).map((producto: any) => ({
+      ...producto,
+      stockRuta: almacenId ? (stockMap.get(producto.id) ?? 0) : (producto.cantidad ?? 0),
+    }));
+  }, [stockAlmacen, productos, almacenId]);
+
+  const filtered = productosConStock.filter((p: any) =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) ||
     p.codigo.toLowerCase().includes(search.toLowerCase())
   );
@@ -48,15 +63,15 @@ export default function RutaStock() {
       <div className="px-4 mb-3">
         <div className="flex gap-2">
           <div className="flex-1 bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-[20px] font-bold text-foreground">{(productos ?? []).length}</p>
+            <p className="text-[20px] font-bold text-foreground">{productosConStock.length}</p>
             <p className="text-[11px] text-muted-foreground">Productos</p>
           </div>
           <div className="flex-1 bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-[20px] font-bold text-success">{(productos ?? []).filter((p: any) => (p.cantidad ?? 0) > 0).length}</p>
+            <p className="text-[20px] font-bold text-success">{productosConStock.filter((p: any) => (p.stockRuta ?? 0) > 0).length}</p>
             <p className="text-[11px] text-muted-foreground">Con stock</p>
           </div>
           <div className="flex-1 bg-card border border-border rounded-xl p-3 text-center">
-            <p className="text-[20px] font-bold text-destructive">{(productos ?? []).filter((p: any) => (p.cantidad ?? 0) <= 0).length}</p>
+            <p className="text-[20px] font-bold text-destructive">{productosConStock.filter((p: any) => (p.stockRuta ?? 0) <= 0).length}</p>
             <p className="text-[11px] text-muted-foreground">Sin stock</p>
           </div>
         </div>
@@ -65,14 +80,14 @@ export default function RutaStock() {
       <div className="flex-1 px-4 space-y-2 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
         {filtered.map((p: any) => {
-          const qty = p.cantidad ?? 0;
+          const qty = p.stockRuta ?? 0;
           const unidad = p.unidades?.abreviatura || p.unidades?.nombre || 'pz';
           return (
             <div key={p.id} className="bg-card border border-border rounded-xl p-3.5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0 overflow-hidden">
                   {p.imagen_url ? (
-                    <img src={p.imagen_url} alt="" className="w-full h-full object-cover" />
+                    <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover" />
                   ) : (
                     <Package className="h-5 w-5 text-accent-foreground" />
                   )}

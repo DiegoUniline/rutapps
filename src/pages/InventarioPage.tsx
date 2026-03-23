@@ -171,6 +171,13 @@ function useInventarioData() {
         if (!stockAlmacenMap[sa.almacen_id]) stockAlmacenMap[sa.almacen_id] = {};
         stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
       }
+      const hasWarehouseStock = (stockAlmacenData?.length ?? 0) > 0;
+      const getTotalStockEnUbicaciones = (productoId: string) => {
+        if (!hasWarehouseStock) {
+          return (productos ?? []).find(p => p.id === productoId)?.cantidad ?? 0;
+        }
+        return (almacenes ?? []).reduce((sum, alm) => sum + (stockAlmacenMap[alm.id]?.[productoId] ?? 0), 0);
+      };
 
       // Also include almacenes with stock as "route" cards
       for (const alm of (almacenes ?? [])) {
@@ -220,7 +227,7 @@ function useInventarioData() {
 
       // Products with enriched data
       const productosEnriquecidos = (productos ?? []).map(p => {
-        const stockAlmacen = p.cantidad ?? 0;
+        const stockAlmacen = getTotalStockEnUbicaciones(p.id);
         const stockRuta = rutaStock[p.id] ?? 0;
         const stockTotal = stockAlmacen + stockRuta;
         return {
