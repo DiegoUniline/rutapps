@@ -10,6 +10,9 @@ interface AuthContextType {
   empresa: Empresa | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  /** Super-admin only: override the active empresa to view another company's data */
+  overrideEmpresaId: string | null;
+  setOverrideEmpresaId: (id: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
