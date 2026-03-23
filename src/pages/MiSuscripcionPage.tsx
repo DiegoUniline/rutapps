@@ -193,16 +193,25 @@ export default function MiSuscripcionPage() {
           loadData();
           return;
         } else {
-          await supabase.functions.invoke('select-plan', {
+          // select-plan now generates the checkout URL + sends WA/email notifications
+          const { data: spData, error: spError } = await supabase.functions.invoke('select-plan', {
             body: { plan_id: selectedPlan, num_usuarios: planQty },
           });
-          const { data, error } = await supabase.functions.invoke('create-checkout', {
-            body: { price_id: plan.stripe_price_id, quantity: planQty, empresa_id: empresa?.id },
-          });
-          if (error) throw error;
-          if (data?.error) throw new Error(data.error);
-          if (!data?.url) throw new Error('No se recibió URL de pago de Stripe');
-          redirectUrl = data.url;
+          if (spError) throw spError;
+          if (spData?.error) throw new Error(spData.error);
+
+          // Use checkout_url from select-plan if available, otherwise fallback to create-checkout
+          if (spData?.checkout_url) {
+            redirectUrl = spData.checkout_url;
+          } else {
+            const { data, error } = await supabase.functions.invoke('create-checkout', {
+              body: { price_id: plan.stripe_price_id, quantity: planQty, empresa_id: empresa?.id },
+            });
+            if (error) throw error;
+            if (data?.error) throw new Error(data.error);
+            if (!data?.url) throw new Error('No se recibió URL de pago de Stripe');
+            redirectUrl = data.url;
+          }
         }
       }
 
