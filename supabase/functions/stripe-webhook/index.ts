@@ -159,19 +159,25 @@ Deno.serve(async (req) => {
         if (!empresaId) { log("No empresa_id for checkout"); break; }
 
         const stripeSub = await stripe.subscriptions.retrieve(subscriptionId);
-        const priceId = stripeSub.items.data[0]?.price?.id;
-        const qty = stripeSub.items.data[0]?.quantity || 3;
+        const item0 = stripeSub.items.data[0];
+        const priceId = item0?.price?.id;
+        const qty = item0?.quantity || 3;
 
-        await supabase.from("subscriptions").update({
+        // In Stripe API 2025-08-27.basil, period dates are on items, not top-level
+        const periodStart = (item0 as any)?.current_period_start ?? (stripeSub as any).current_period_start;
+        const periodEnd = (item0 as any)?.current_period_end ?? (stripeSub as any).current_period_end;
+
+        const updateData: Record<string, any> = {
           status: "active",
           stripe_customer_id: customerId,
           stripe_subscription_id: subscriptionId,
-          stripe_price_id: priceId,
           max_usuarios: qty,
-          current_period_start: new Date(stripeSub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
           updated_at: new Date().toISOString(),
-        }).eq("empresa_id", empresaId);
+        };
+        if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
+        if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+
+        await supabase.from("subscriptions").update(updateData).eq("empresa_id", empresaId);
 
         // Mark pending invoices as paid
         await supabase.from("facturas")
