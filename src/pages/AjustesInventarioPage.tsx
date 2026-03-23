@@ -91,14 +91,33 @@ export default function AjustesInventarioPage() {
     queryKey: ['productos-ajuste', empresa?.id, almacenId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('productos')
-        .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
-        .eq('empresa_id', empresa!.id)
-        .in('status', ['activo'] as any[])
-        .order('nombre');
+      const [{ data, error }, { data: stockRows, error: stockError }] = await Promise.all([
+        supabase
+          .from('productos')
+          .select('id, codigo, nombre, cantidad, se_puede_inventariar, status, clasificacion_id, clasificaciones(nombre), unidad_venta_id, unidades:unidad_venta_id(nombre, abreviatura)')
+          .eq('empresa_id', empresa!.id)
+          .in('status', ['activo'] as any[])
+          .order('nombre'),
+        almacenId
+          ? supabase
+              .from('stock_almacen')
+              .select('producto_id, cantidad')
+              .eq('empresa_id', empresa!.id)
+              .eq('almacen_id', almacenId)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+
       if (error) throw error;
-      return (data ?? []).filter((p: any) => p.se_puede_inventariar !== false);
+      if (stockError) throw stockError;
+
+      const stockMap = new Map((stockRows ?? []).map((item: any) => [item.producto_id, item.cantidad ?? 0]));
+
+      return (data ?? [])
+        .filter((p: any) => p.se_puede_inventariar !== false)
+        .map((p: any) => ({
+          ...p,
+          cantidad: almacenId ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
+        }));
     },
   });
 
@@ -115,7 +134,6 @@ export default function AjustesInventarioPage() {
         .limit(500);
       if (error) throw error;
 
-      // Fetch profile names for user_ids
       const userIds = [...new Set((data ?? []).map((a: any) => a.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -123,7 +141,6 @@ export default function AjustesInventarioPage() {
         .in('user_id', userIds);
       const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p.nombre]));
 
-      // Group by fecha + user_id + motivo + almacen_id
       const groups = new Map<string, { key: string; fecha: string; userName: string; almacenName: string; motivo: string; created_at: string; items: any[] }>();
       for (const a of (data ?? [])) {
         const gKey = `${a.fecha}_${a.user_id}_${a.motivo ?? ''}_${a.almacen_id ?? ''}`;
@@ -143,6 +160,31 @@ export default function AjustesInventarioPage() {
       return Array.from(groups.values());
     },
   });
+
+  const syncProductTotals = async (productIds: string[]) => {
+    const uniqueIds = [...new Set(productIds)];
+    if (!empresa?.id || uniqueIds.length === 0) return;
+
+    const { data: stockRows, error } = await supabase
+      .from('stock_almacen')
+      .select('producto_id, cantidad')
+      .eq('empresa_id', empresa.id)
+      .in('producto_id', uniqueIds as any);
+
+    if (error) throw error;
+
+    const totalMap = new Map<string, number>();
+    for (const row of (stockRows ?? [])) {
+      totalMap.set(row.producto_id, (totalMap.get(row.producto_id) ?? 0) + (row.cantidad ?? 0));
+    }
+
+    await Promise.all(uniqueIds.map((productoId) =>
+      supabase
+        .from('productos')
+        .update({ cantidad: totalMap.get(productoId) ?? 0 } as any)
+        .eq('id', productoId)
+    ));
+  };
 
   // Initialize rows when products load
   const initRows = () => {
@@ -202,7 +244,6 @@ export default function AjustesInventarioPage() {
       'Cantidad nueva': '',
     }));
     const ws = XLSX.utils.json_to_sheet(wsData);
-    // Set column widths
     ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Ajuste');
@@ -262,7 +303,6 @@ export default function AjustesInventarioPage() {
         const idx = newRows.findIndex(r => r.codigo.toLowerCase() === codigo.toLowerCase());
         if (idx !== -1) {
           const numVal = Number(cantidadNueva);
-          // Only mark as touched if the value actually differs from system
           const differs = numVal !== newRows[idx].cantidadSistema;
           newRows[idx] = { ...newRows[idx], cantidadReal: numVal, touched: differs };
           matched++;
@@ -305,25 +345,21 @@ export default function AjustesInventarioPage() {
           almacen_id: almacenId || null,
         } as any);
 
-        await supabase.from('productos').update({ cantidad: row.cantidadReal } as any).eq('id', row.id);
+        const { data: sa } = await supabase.from('stock_almacen')
+          .select('id')
+          .eq('almacen_id', almacenId)
+          .eq('producto_id', row.id)
+          .maybeSingle();
 
-        // Update stock_almacen for the selected warehouse
-        if (almacenId) {
-          const { data: sa } = await supabase.from('stock_almacen')
-            .select('id, cantidad')
-            .eq('almacen_id', almacenId)
-            .eq('producto_id', row.id)
-            .maybeSingle();
-          if (sa) {
-            await supabase.from('stock_almacen').update({ cantidad: row.cantidadReal ?? 0, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
-          } else {
-            await supabase.from('stock_almacen').insert({
-              empresa_id: empresa!.id,
-              almacen_id: almacenId,
-              producto_id: row.id,
-              cantidad: row.cantidadReal ?? 0,
-            } as any);
-          }
+        if (sa) {
+          await supabase.from('stock_almacen').update({ cantidad: row.cantidadReal ?? 0, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
+        } else {
+          await supabase.from('stock_almacen').insert({
+            empresa_id: empresa!.id,
+            almacen_id: almacenId,
+            producto_id: row.id,
+            cantidad: row.cantidadReal ?? 0,
+          } as any);
         }
 
         await supabase.from('movimientos_inventario').insert({
@@ -338,6 +374,9 @@ export default function AjustesInventarioPage() {
           notas: `Ajuste masivo: ${motivo}`,
         } as any);
       }
+
+      await syncProductTotals(changedRows.map(row => row.id));
+
       toast.success(`${changedRows.length} producto(s) ajustados`);
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
@@ -355,6 +394,7 @@ export default function AjustesInventarioPage() {
   // Reset all stock to zero
   const resetStock = async () => {
     if (!resetMotivo.trim()) { toast.error('Indica un motivo'); return; }
+    if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
     setResetting(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
@@ -372,21 +412,24 @@ export default function AjustesInventarioPage() {
           diferencia: -cantAnterior,
           motivo: resetMotivo,
           user_id: user!.id,
-          almacen_id: almacenId || null,
+          almacen_id: almacenId,
         } as any);
 
-        await supabase.from('productos').update({ cantidad: 0 } as any).eq('id', p.id);
+        const { data: sa } = await supabase.from('stock_almacen')
+          .select('id')
+          .eq('almacen_id', almacenId)
+          .eq('producto_id', p.id)
+          .maybeSingle();
 
-        // Reset stock_almacen for the selected warehouse
-        if (almacenId) {
-          const { data: sa } = await supabase.from('stock_almacen')
-            .select('id')
-            .eq('almacen_id', almacenId)
-            .eq('producto_id', p.id)
-            .maybeSingle();
-          if (sa) {
-            await supabase.from('stock_almacen').update({ cantidad: 0, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
-          }
+        if (sa) {
+          await supabase.from('stock_almacen').update({ cantidad: 0, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
+        } else {
+          await supabase.from('stock_almacen').insert({
+            empresa_id: empresa!.id,
+            almacen_id: almacenId,
+            producto_id: p.id,
+            cantidad: 0,
+          } as any);
         }
 
         await supabase.from('movimientos_inventario').insert({
@@ -397,10 +440,12 @@ export default function AjustesInventarioPage() {
           referencia_tipo: 'ajuste',
           user_id: user?.id,
           fecha: today,
-          almacen_origen_id: almacenId || null,
+          almacen_origen_id: almacenId,
           notas: `Reinicio a ceros: ${resetMotivo}`,
         } as any);
       }
+
+      await syncProductTotals(nonZero.map((p: any) => p.id));
 
       toast.success(`Stock reiniciado a 0 en ${nonZero.length} productos`);
       setShowResetDialog(false);
