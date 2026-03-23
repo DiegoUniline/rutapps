@@ -449,6 +449,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        <SuperAdminEmpresaSelector />
         <Breadcrumb />
         <main className="flex-1 overflow-auto pb-16">
           {children}
