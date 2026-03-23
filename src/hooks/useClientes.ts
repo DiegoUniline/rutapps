@@ -55,7 +55,19 @@ export function useSaveCliente() {
         return data;
       }
     },
-    onSuccess: () => {
+    onMutate: async (cliente) => {
+      if (!cliente.id) return;
+      await qc.cancelQueries({ queryKey: ['clientes'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['clientes'] });
+      qc.setQueriesData<any[]>({ queryKey: ['clientes'] }, (old) =>
+        old?.map(c => c.id === cliente.id ? { ...c, ...cliente } : c)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['clientes'] });
       qc.invalidateQueries({ queryKey: ['cliente'] });
     },
