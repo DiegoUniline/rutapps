@@ -298,6 +298,7 @@ export default function ConfiguracionPage() {
   const [initialized, setInitialized] = useState(false);
 
   const [moneda, setMoneda] = useState('MXN');
+  const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
 
   if (config && !initialized) {
     setForm({
@@ -319,6 +320,7 @@ export default function ConfiguracionPage() {
       setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
     }
     setMoneda((config as any).moneda ?? 'MXN');
+    setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setInitialized(true);
   }
 
