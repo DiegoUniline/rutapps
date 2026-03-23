@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import { useProductosRealtime } from '@/hooks/useData';
+import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
