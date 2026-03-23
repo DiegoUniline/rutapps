@@ -307,6 +307,25 @@ export default function AjustesInventarioPage() {
 
         await supabase.from('productos').update({ cantidad: row.cantidadReal } as any).eq('id', row.id);
 
+        // Update stock_almacen for the selected warehouse
+        if (almacenId) {
+          const { data: sa } = await supabase.from('stock_almacen')
+            .select('id, cantidad')
+            .eq('almacen_id', almacenId)
+            .eq('producto_id', row.id)
+            .maybeSingle();
+          if (sa) {
+            await supabase.from('stock_almacen').update({ cantidad: row.cantidadReal ?? 0, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
+          } else {
+            await supabase.from('stock_almacen').insert({
+              empresa_id: empresa!.id,
+              almacen_id: almacenId,
+              producto_id: row.id,
+              cantidad: row.cantidadReal ?? 0,
+            } as any);
+          }
+        }
+
         await supabase.from('movimientos_inventario').insert({
           empresa_id: empresa!.id,
           tipo: diferencia > 0 ? 'entrada' : 'salida',
