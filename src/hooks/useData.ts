@@ -73,11 +73,21 @@ export function useDeleteProducto() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Soft delete: set status to 'baja' instead of deleting
       const { error } = await supabase.from('productos').update({ status: 'inactivo' }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['productos'] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['productos'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['productos'] });
+      qc.setQueriesData<any[]>({ queryKey: ['productos'] }, (old) =>
+        old?.filter(p => p.id !== id)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['productos'] }),
   });
 }
 

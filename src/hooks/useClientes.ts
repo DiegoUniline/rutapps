@@ -78,11 +78,21 @@ export function useDeleteCliente() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Soft delete: set status to 'baja' instead of deleting
       const { error } = await supabase.from('clientes').update({ status: 'inactivo' }).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['clientes'] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['clientes'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['clientes'] });
+      qc.setQueriesData<any[]>({ queryKey: ['clientes'] }, (old) =>
+        old?.filter(c => c.id !== id)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['clientes'] }),
   });
 }
 
