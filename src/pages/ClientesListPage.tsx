@@ -11,7 +11,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useClientes } from '@/hooks/useClientes';
+import { useClientesPaginated } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
