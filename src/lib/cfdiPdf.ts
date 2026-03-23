@@ -10,6 +10,7 @@ import {
   drawFooter, checkPageBreak,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 export interface CfdiPdfParams {
   empresa: EmpresaInfo & {
