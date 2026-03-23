@@ -13,6 +13,7 @@ import { OdooStatusbar } from '@/components/OdooStatusbar';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { generarCfdiPdf } from '@/lib/cfdiPdf';
@@ -61,6 +62,7 @@ export default function CfdiFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { empresa } = useAuth();
+  const { fmt: fmtCurrency } = useCurrency();
   const queryClient = useQueryClient();
 
   // Load CFDI
@@ -363,7 +365,7 @@ export default function CfdiFormPage() {
     }
   };
 
-  const fmt = (v: number) => `$${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmt = (v: number) => fmtCurrency(v);
 
   const formaOptions = (formasPago || []).map((f: any) => ({ value: f.clave, label: `${f.clave} - ${f.descripcion}` }));
   const usoOptions = (usoCfdiList || []).map((u: any) => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }));

@@ -6,11 +6,13 @@ import { ShoppingCart, Banknote, Users, TrendingUp } from 'lucide-react';
 import { useVendedores } from '@/hooks/useClientes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
+  const { fmt: fmtMoney } = useCurrency();
   const today = new Date().toISOString().split('T')[0];
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
 
@@ -139,9 +141,9 @@ export default function SupervisorDashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard icon={ShoppingCart} label="Ventas" value={`$${fmt(globalStats.totalVentas)}`} sub={`${globalStats.numVentas} ventas`} color="text-primary" />
-        <KpiCard icon={Banknote} label="Cobros" value={`$${fmt(globalStats.totalCobros)}`} sub={`${globalStats.numCobros} cobros`} color="text-emerald-600" />
-        <KpiCard icon={TrendingUp} label="Gastos" value={`$${fmt(globalStats.totalGastos)}`} sub="Gastos del día" color="text-destructive" />
+        <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(globalStats.totalVentas)} sub={`${globalStats.numVentas} ventas`} color="text-primary" />
+        <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(globalStats.totalCobros)} sub={`${globalStats.numCobros} cobros`} color="text-emerald-600" />
+        <KpiCard icon={TrendingUp} label="Gastos" value={fmtMoney(globalStats.totalGastos)} sub="Gastos del día" color="text-destructive" />
         <KpiCard icon={Users} label="Vendedores activos" value={String(globalStats.vendedoresActivos)} sub={`de ${vendedores?.length ?? 0} totales`} color="text-primary" />
       </div>
 
@@ -173,11 +175,11 @@ export default function SupervisorDashboardPage() {
                     <p className="text-[10px] text-muted-foreground">Ventas</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-primary">${fmt(st.totalVentas)}</p>
+                    <p className="text-lg font-bold text-primary">{fmtMoney(st.totalVentas)}</p>
                     <p className="text-[10px] text-muted-foreground">Total</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-destructive">${fmt(st.totalGastos)}</p>
+                    <p className="text-lg font-bold text-destructive">{fmtMoney(st.totalGastos)}</p>
                     <p className="text-[10px] text-muted-foreground">Gastos</p>
                   </div>
                 </div>
@@ -210,7 +212,7 @@ export default function SupervisorDashboardPage() {
                       <Badge variant={v.status === 'confirmado' ? 'default' : 'secondary'} className="text-[9px] h-4">{v.status}</Badge>
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-foreground tabular-nums">${fmt(v.total ?? 0)}</span>
+                  <span className="text-sm font-bold text-foreground tabular-nums">{fmtMoney(v.total ?? 0)}</span>
                 </div>
               ))}
             </div>

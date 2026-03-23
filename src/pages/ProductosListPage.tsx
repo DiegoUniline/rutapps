@@ -14,6 +14,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { useProductosPaginated } from '@/hooks/useData';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 12 },
@@ -29,6 +30,7 @@ const PAGE_SIZE = 80;
 export default function ProductosListPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { fmt: fmtCurrency } = useCurrency();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('activo');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -53,7 +55,7 @@ export default function ProductosListPage() {
     setSelected(next);
   };
 
-  const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
+  const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
 
   return (
     <div className="p-4 space-y-3 min-h-full">

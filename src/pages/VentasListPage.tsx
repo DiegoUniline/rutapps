@@ -94,7 +94,7 @@ export default function VentasListPage() {
     setSelected(next);
   };
 
-  const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
+  const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
 
   const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
