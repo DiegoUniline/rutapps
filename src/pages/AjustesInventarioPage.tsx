@@ -408,6 +408,8 @@ export default function AjustesInventarioPage() {
       qc.invalidateQueries({ queryKey: ['productos-ajuste'] });
       qc.invalidateQueries({ queryKey: ['ajustes-historial'] });
       qc.invalidateQueries({ queryKey: ['movimientos'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+      qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
     } catch (err: any) {
       toast.error(err.message || 'Error al reiniciar stock');
     } finally {
