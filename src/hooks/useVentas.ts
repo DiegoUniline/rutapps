@@ -2,12 +2,15 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist';
 import type { Venta, VentaLinea } from '@/types';
 
 /** Paginated ventas for list views */
 export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80) {
   const qc = useQueryClient();
+  const { seeAll, profileId } = useDataVisibility('ventas');
+  const filterOwn = !seeAll && !!profileId;
 
   useEffect(() => {
     const channel = supabase
@@ -20,13 +23,14 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   }, [qc]);
 
   return useQuery({
-    queryKey: ['ventas', search, statusFilter, tipoFilter, page, pageSize],
+    queryKey: ['ventas', search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all'],
     queryFn: async () => {
       let q = supabase
         .from('ventas')
         .select('id, folio, fecha, total, subtotal, iva_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
+      if (filterOwn) q = q.eq('vendedor_id', profileId!);
       if (search) q = q.or(`folio.ilike.%${search}%`);
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
       if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
