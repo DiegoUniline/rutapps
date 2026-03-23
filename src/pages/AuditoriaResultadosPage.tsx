@@ -179,8 +179,17 @@ export default function AuditoriaResultadosPage() {
         const diff = linea.cantidad_real - linea.cantidad_esperada;
         const motivo = config.motivo || motivoGlobal || 'Ajuste por auditoría';
 
-        // Update stock_almacen if we have almacen
+        // Read actual current stock before adjusting
+        let stockAnterior = 0;
         if (almacenIdAuditoria) {
+          const { data: currentStock } = await supabase
+            .from('stock_almacen')
+            .select('cantidad')
+            .eq('almacen_id', almacenIdAuditoria)
+            .eq('producto_id', linea.producto_id)
+            .maybeSingle();
+          stockAnterior = currentStock?.cantidad ?? 0;
+
           await supabase.from('stock_almacen').upsert({
             empresa_id: empresa!.id,
             almacen_id: almacenIdAuditoria,
@@ -189,15 +198,22 @@ export default function AuditoriaResultadosPage() {
           } as any, { onConflict: 'almacen_id,producto_id' });
           adjustedProductIds.push(linea.producto_id);
         } else {
-          // No almacen — direct global update (legacy)
+          const { data: prod } = await supabase
+            .from('productos')
+            .select('cantidad')
+            .eq('id', linea.producto_id)
+            .maybeSingle();
+          stockAnterior = prod?.cantidad ?? 0;
           await supabase.from('productos').update({ cantidad: linea.cantidad_real } as any).eq('id', linea.producto_id);
         }
 
+        const diffReal = (linea.cantidad_real ?? 0) - stockAnterior;
+
         await supabase.from('movimientos_inventario').insert({
           empresa_id: empresa!.id,
-          tipo: diff > 0 ? 'entrada' : 'salida',
+          tipo: diffReal > 0 ? 'entrada' : 'salida',
           producto_id: linea.producto_id,
-          cantidad: Math.abs(diff),
+          cantidad: Math.abs(diffReal),
           referencia_tipo: 'auditoria',
           referencia_id: id,
           user_id: user?.id,
@@ -209,7 +225,7 @@ export default function AuditoriaResultadosPage() {
         await supabase.from('ajustes_inventario').insert({
           empresa_id: empresa!.id,
           producto_id: linea.producto_id,
-          cantidad_anterior: linea.cantidad_esperada,
+          cantidad_anterior: stockAnterior,
           cantidad_nueva: linea.cantidad_real,
           diferencia: diff,
           motivo,
