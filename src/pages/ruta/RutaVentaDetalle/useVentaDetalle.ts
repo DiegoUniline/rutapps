@@ -37,6 +37,7 @@ export function useVentaDetalle() {
   const [searchProducto, setSearchProducto] = useState('');
 
   const clienteId = (venta as any)?.cliente_id;
+  const { symbol: currSym } = useCurrency();
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
   const { data: clienteData } = useQuery({
