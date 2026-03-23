@@ -23,6 +23,7 @@ interface CatalogCRUDProps {
 
 export default function CatalogCRUD({ title, tableName, columns, queryKey }: CatalogCRUDProps) {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   const [newRow, setNewRow] = useState<Record<string, string | number>>({});
   const [showInactive, setShowInactive] = useState(false);
 
