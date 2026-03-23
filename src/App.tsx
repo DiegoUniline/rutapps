@@ -144,6 +144,9 @@ function AppRoutes() {
   
   // Global unhandled rejection → error modal
   useGlobalErrorHandler();
+  
+  // Pre-warm React Query cache with base catalogs on login
+  useBootstrapPrefetch();
 
   if (loading || subscription.loading) {
     return (
