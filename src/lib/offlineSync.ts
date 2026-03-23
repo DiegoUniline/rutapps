@@ -32,6 +32,7 @@ const TABLES_TO_CACHE = [
   'visitas',
   'tarifas',
   'tarifa_lineas',
+  'stock_almacen',
 ] as const;
 
 // Minimal column selects per table to reduce payload size
