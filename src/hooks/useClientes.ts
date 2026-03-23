@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 
 const CATALOG_STALE = 5 * 60 * 1000;
@@ -38,6 +39,7 @@ export function useCliente(id?: string) {
 
 export function useSaveCliente() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (cliente: Partial<Cliente> & { id?: string }) => {
       const { id, zonas, listas, vendedores, cobradores, tarifas, ...rest } = cliente as any;
@@ -46,8 +48,8 @@ export function useSaveCliente() {
         if (error) throw error;
         return data;
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
-        const { data, error } = await supabase.from('clientes').insert({ ...rest, empresa_id: empresaId }).select('id').single();
+        if (!empresa?.id) throw new Error('Sin empresa');
+        const { data, error } = await supabase.from('clientes').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
         if (error) throw error;
         return data;
       }

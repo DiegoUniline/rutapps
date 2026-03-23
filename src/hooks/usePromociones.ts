@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Promocion {
   id: string;
@@ -58,6 +59,7 @@ export function usePromocionesActivas() {
 
 export function useSavePromocion() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (promo: Partial<Promocion> & { id?: string }) => {
       const { id, ...rest } = promo;
@@ -66,8 +68,8 @@ export function useSavePromocion() {
         if (error) throw error;
         return data;
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
-        const { data, error } = await supabase.from('promociones').insert({ ...rest, empresa_id: empresaId } as any).select().single();
+        if (!empresa?.id) throw new Error('Sin empresa');
+        const { data, error } = await supabase.from('promociones').insert({ ...rest, empresa_id: empresa.id } as any).select().single();
         if (error) throw error;
         return data;
       }

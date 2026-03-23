@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 
-export async function generateVentaPdfById(ventaId: string): Promise<{ blob: Blob; fileName: string; caption: string }> {
+export async function generateVentaPdfById(ventaId: string, empresaId?: string): Promise<{ blob: Blob; fileName: string; caption: string }> {
   // Fetch venta with relations
   const { data: venta, error } = await supabase
     .from('ventas')
@@ -16,9 +16,10 @@ export async function generateVentaPdfById(ventaId: string): Promise<{ blob: Blo
 
   if (error || !venta) throw new Error('No se pudo cargar la venta');
 
-  // Fetch empresa
-  const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
-  const { data: empresa } = await supabase.from('empresas').select('*').eq('id', empresaId).single();
+  // Fetch empresa - use provided empresaId or fall back to venta's empresa_id
+  const eid = empresaId || (venta as any).empresa_id;
+  if (!eid) throw new Error('Sin empresa');
+  const { data: empresa } = await supabase.from('empresas').select('*').eq('id', eid).single();
 
   // Fetch pagos
   const { data: pagos } = await supabase

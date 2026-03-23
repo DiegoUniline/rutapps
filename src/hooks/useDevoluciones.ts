@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function useDevoluciones(search?: string) {
   return useQuery({
@@ -18,15 +19,16 @@ export function useDevoluciones(search?: string) {
 
 export function useSaveDevolucion() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async ({ devolucion, lineas }: {
       devolucion: { vendedor_id?: string; cliente_id?: string; carga_id?: string; tipo: string; notas?: string; user_id: string };
       lineas: { producto_id: string; cantidad: number; motivo: string; notas?: string }[];
     }) => {
-      const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+      if (!empresa?.id) throw new Error('Sin empresa');
       const { data: dev, error: devErr } = await supabase.from('devoluciones').insert({
         ...devolucion,
-        empresa_id: empresaId,
+        empresa_id: empresa.id,
         tipo: devolucion.tipo as any,
       }).select('id').single();
       if (devErr) throw devErr;

@@ -180,7 +180,7 @@ export default function VentasListPage() {
               e.stopPropagation();
               setGeneratingPdf(v.id);
               try {
-                const { blob, fileName, caption } = await generateVentaPdfById(v.id);
+                const { blob, fileName, caption } = await generateVentaPdfById(v.id, empresa?.id);
                 setWaPdfBlob(blob);
                 setWaPdfName(fileName);
                 setWaPhone(cliente?.telefono ?? '');

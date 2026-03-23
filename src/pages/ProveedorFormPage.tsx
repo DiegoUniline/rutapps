@@ -4,6 +4,7 @@ import { Save, Trash2 } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -51,6 +52,7 @@ export default function ProveedorFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   const isNew = id === 'nuevo';
 
   const { data: existing } = useQuery({
@@ -86,9 +88,9 @@ export default function ProveedorFormPage() {
         if (error) throw error;
         return { id };
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        if (!empresa?.id) throw new Error('Sin empresa');
         const { data, error } = await supabase.from('proveedores')
-          .insert({ ...rest, empresa_id: empresaId })
+          .insert({ ...rest, empresa_id: empresa.id })
           .select('id').single();
         if (error) throw error;
         return data;
