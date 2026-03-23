@@ -354,7 +354,7 @@ export default function AjustesInventarioPage() {
           almacen_id: almacenId,
           producto_id: row.id,
           cantidad: row.cantidadReal ?? 0,
-        } as any, { onConflict: 'empresa_id,almacen_id,producto_id' });
+        } as any, { onConflict: 'almacen_id,producto_id' });
 
         if (diferencia !== 0) {
           await supabase.from('movimientos_inventario').insert({
@@ -418,7 +418,7 @@ export default function AjustesInventarioPage() {
           almacen_id: almacenId,
           producto_id: p.id,
           cantidad: 0,
-        } as any, { onConflict: 'empresa_id,almacen_id,producto_id' });
+        } as any, { onConflict: 'almacen_id,producto_id' });
 
         if (cantAnterior !== 0) {
           await supabase.from('movimientos_inventario').insert({
