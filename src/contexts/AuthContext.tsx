@@ -10,10 +10,14 @@ interface AuthContextType {
   empresa: Empresa | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  /** Super-admin only: override the active empresa to view another company's data */
+  overrideEmpresaId: string | null;
+  setOverrideEmpresaId: (id: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, profile: null, empresa: null, loading: true, signOut: async () => {}
+  user: null, profile: null, empresa: null, loading: true, signOut: async () => {},
+  overrideEmpresaId: null, setOverrideEmpresaId: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -52,7 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const [realEmpresa, setRealEmpresa] = useState<Empresa | null>(null);
   const [loading, setLoading] = useState(true);
+  const [overrideEmpresaId, setOverrideEmpresaIdRaw] = useState<string | null>(null);
 
   const loadUserData = useCallback(async (u: User | null) => {
     if (!u) {
@@ -103,7 +109,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setEmpresa(nextEmpresa);
+    setRealEmpresa(nextEmpresa);
   }, []);
+
+  // Handle override empresa for super admin
+  const setOverrideEmpresaId = useCallback(async (id: string | null) => {
+    setOverrideEmpresaIdRaw(id);
+    if (!id) {
+      // Restore original empresa
+      setEmpresa(realEmpresa);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.from('empresas')
+        .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda')
+        .eq('id', id)
+        .maybeSingle();
+      if (!error && data) {
+        setEmpresa(data as Empresa);
+      }
+    } catch { /* ignore */ }
+  }, [realEmpresa]);
 
   useEffect(() => {
     let initialised = false;
@@ -115,6 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setProfile(null);
         setEmpresa(null);
+        setRealEmpresa(null);
+        setOverrideEmpresaIdRaw(null);
         setLoading(false);
         return;
       }
@@ -139,7 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => { await supabase.auth.signOut(); };
 
   return (
-    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut }}>
+    <AuthContext.Provider value={{ user, profile, empresa, loading, signOut, overrideEmpresaId, setOverrideEmpresaId }}>
       {children}
     </AuthContext.Provider>
   );

@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import { useProductosRealtime } from '@/hooks/useData';
+import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
@@ -448,6 +449,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        <SuperAdminEmpresaSelector />
         <Breadcrumb />
         <main className="flex-1 overflow-auto pb-16">
           {children}
@@ -564,6 +566,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
+        <SuperAdminEmpresaSelector />
         <Breadcrumb />
         <main className="flex-1 overflow-auto">
           {children}
