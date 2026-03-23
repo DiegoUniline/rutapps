@@ -9,6 +9,7 @@ import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import type { CartItem, DevolucionItem, CuentaPendiente, Step } from './types';
+import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
 
 export function useRutaVenta() {

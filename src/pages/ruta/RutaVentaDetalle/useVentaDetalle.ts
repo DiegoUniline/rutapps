@@ -10,6 +10,7 @@ import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/li
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function useVentaDetalle() {
   const { id } = useParams();
