@@ -338,6 +338,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { hasModulo, loading: permisosLoading } = usePermisos();
   const isMobile = useIsMobile();
   const location = useLocation();
+  useProductosRealtime();
 
   useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);
