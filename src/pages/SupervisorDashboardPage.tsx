@@ -12,6 +12,7 @@ const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits:
 
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
+  const { fmt: fmtMoney } = useCurrency();
   const today = new Date().toISOString().split('T')[0];
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
 
