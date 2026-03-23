@@ -198,8 +198,6 @@ export default function ClientesListPage() {
         tabs={[
           { key: 'clientes', label: 'Clientes', content: <ClientesTable /> },
           { key: 'zonas', label: 'Zonas', content: <CatalogCRUD title="Zonas" tableName="zonas" queryKey="zonas" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'vendedores', label: 'Vendedores', content: <CatalogCRUD title="Vendedores" tableName="vendedores" queryKey="vendedores" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
-          { key: 'cobradores', label: 'Cobradores', content: <CatalogCRUD title="Cobradores" tableName="cobradores" queryKey="cobradores" columns={[{ key: 'nombre', label: 'Nombre' }]} /> },
         ]}
       />
     </div>
