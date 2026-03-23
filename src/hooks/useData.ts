@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Lista, Unidad, TasaIva, TasaIeps, Almacen, UnidadSat } from '@/types';
 
-const CATALOG_STALE = 5 * 60 * 1000; // 5 min for catalogs
+const CATALOG_STALE = CATALOG_STALE_TIME;
 
 export function useProductos(search?: string, statusFilter?: string) {
   return useQuery({
