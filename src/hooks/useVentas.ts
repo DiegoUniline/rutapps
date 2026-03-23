@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Venta, VentaLinea } from '@/types';
 
 export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string) {
