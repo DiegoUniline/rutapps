@@ -348,11 +348,11 @@ export function useListasPrecioForSelect(tarifaId?: string) {
 
 export function useSaveListaPrecio() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (lp: { id?: string; tarifa_id?: string; nombre: string; es_principal?: boolean; activa?: boolean }) => {
       const { id, ...rest } = lp;
       if (id) {
-        // If setting as principal, unset others first
         if (rest.es_principal && rest.tarifa_id) {
           await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', rest.tarifa_id);
         }
@@ -360,24 +360,22 @@ export function useSaveListaPrecio() {
         if (error) throw error;
         return data;
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        if (!empresa?.id) throw new Error('Sin empresa');
         
-        // Auto-create a tarifa if none provided
         let tarifaId = rest.tarifa_id;
         if (!tarifaId) {
           const { data: tarifa, error: tErr } = await supabase.from('tarifas')
-            .insert({ empresa_id: empresaId, nombre: rest.nombre, tipo: 'general', activa: true })
+            .insert({ empresa_id: empresa.id, nombre: rest.nombre, tipo: 'general', activa: true })
             .select('id').single();
           if (tErr) throw tErr;
           tarifaId = tarifa.id;
         }
 
-        // If setting as principal, unset others first
         if (rest.es_principal) {
           await supabase.from('lista_precios').update({ es_principal: false }).eq('tarifa_id', tarifaId);
         }
         const { data, error } = await supabase.from('lista_precios')
-          .insert({ ...rest, tarifa_id: tarifaId, empresa_id: empresaId })
+          .insert({ ...rest, tarifa_id: tarifaId, empresa_id: empresa.id })
           .select('id').single();
         if (error) throw error;
         return data;

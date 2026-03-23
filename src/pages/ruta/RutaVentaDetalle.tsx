@@ -291,9 +291,9 @@ export default function RutaVentaDetalle() {
     if (!user || !venta || totalACobrar <= 0) return;
     setSaving(true);
     try {
-      const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+      if (!empresa?.id) throw new Error('Sin empresa');
       const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({
-        empresa_id: empresaId, cliente_id: clienteId, user_id: user.id,
+        empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id,
         monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null,
       }).select('id').single();
       if (cobroErr) throw cobroErr;

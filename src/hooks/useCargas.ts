@@ -57,6 +57,7 @@ export function useCargaActiva(vendedorId?: string) {
 
 export function useSaveCarga() {
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (carga: any) => {
       const { id, vendedores, carga_lineas, ...rest } = carga;
@@ -65,8 +66,8 @@ export function useSaveCarga() {
         if (error) throw error;
         return data;
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
-        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: empresaId }).select('id').single();
+        if (!empresa?.id) throw new Error('Sin empresa');
+        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
         if (error) throw error;
         return data;
       }

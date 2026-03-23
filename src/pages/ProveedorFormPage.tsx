@@ -88,9 +88,9 @@ export default function ProveedorFormPage() {
         if (error) throw error;
         return { id };
       } else {
-        const empresaId = await (await import('@/lib/getEmpresaId')).getEmpresaId();
+        if (!empresa?.id) throw new Error('Sin empresa');
         const { data, error } = await supabase.from('proveedores')
-          .insert({ ...rest, empresa_id: empresaId })
+          .insert({ ...rest, empresa_id: empresa.id })
           .select('id').single();
         if (error) throw error;
         return data;
