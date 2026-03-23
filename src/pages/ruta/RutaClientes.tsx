@@ -4,6 +4,7 @@ import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, Sh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
