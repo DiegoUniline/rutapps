@@ -141,9 +141,9 @@ export default function SupervisorDashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard icon={ShoppingCart} label="Ventas" value={`$${fmt(globalStats.totalVentas)}`} sub={`${globalStats.numVentas} ventas`} color="text-primary" />
-        <KpiCard icon={Banknote} label="Cobros" value={`$${fmt(globalStats.totalCobros)}`} sub={`${globalStats.numCobros} cobros`} color="text-emerald-600" />
-        <KpiCard icon={TrendingUp} label="Gastos" value={`$${fmt(globalStats.totalGastos)}`} sub="Gastos del día" color="text-destructive" />
+        <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(globalStats.totalVentas)} sub={`${globalStats.numVentas} ventas`} color="text-primary" />
+        <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(globalStats.totalCobros)} sub={`${globalStats.numCobros} cobros`} color="text-emerald-600" />
+        <KpiCard icon={TrendingUp} label="Gastos" value={fmtMoney(globalStats.totalGastos)} sub="Gastos del día" color="text-destructive" />
         <KpiCard icon={Users} label="Vendedores activos" value={String(globalStats.vendedoresActivos)} sub={`de ${vendedores?.length ?? 0} totales`} color="text-primary" />
       </div>
 
