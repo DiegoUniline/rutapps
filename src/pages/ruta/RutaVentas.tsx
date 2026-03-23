@@ -4,11 +4,14 @@ import { Plus, Search, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
+import { useDateFilter } from '@/hooks/useDateFilter';
+import DateFilterBar from '@/components/ruta/DateFilterBar';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const [search, setSearch] = useState('');
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   const vendedorId = profile?.vendedor_id || profile?.id;
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
@@ -24,7 +27,7 @@ export default function RutaVentas() {
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-  const enriched = (ventas ?? []).slice(0, 50).map((v: any) => ({
+  const enriched = filterByDate((ventas ?? []) as any[], 'fecha').map((v: any) => ({
     ...v,
     _clienteNombre: clienteMap.get(v.cliente_id) ?? 'Sin cliente',
   }));
@@ -62,9 +65,10 @@ export default function RutaVentas() {
             className="w-full bg-card border border-border rounded-xl pl-9 pr-3 py-2.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/30"
             value={search}
             onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
+           />
+         </div>
+         <DateFilterBar desde={desde} hasta={hasta} onDesdeChange={setDesde} onHastaChange={setHasta} />
+       </div>
 
       <div className="flex-1 px-4 space-y-2 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
