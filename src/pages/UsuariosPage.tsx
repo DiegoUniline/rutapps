@@ -41,7 +41,7 @@ export default function UsuariosPage() {
 
   // User edit
   const [editingUser, setEditingUser] = useState<ProfileUser | null>(null);
-  const [editForm, setEditForm] = useState({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', vendedor_id: '', role_id: '', pin_code: '' });
+  const [editForm, setEditForm] = useState({ nombre: '', telefono: '', estado: 'activo', almacen_id: '', role_id: '', pin_code: '' });
   const [savingUser, setSavingUser] = useState(false);
 
   // New user form
@@ -205,14 +205,14 @@ export default function UsuariosPage() {
   const startEdit = (p: ProfileUser) => {
     const userRole = userRoles.find(ur => ur.user_id === p.user_id);
     setEditingUser(p);
-    setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', vendedor_id: p.vendedor_id || '', role_id: userRole?.role_id || '', pin_code: p.pin_code || '' });
+    setEditForm({ nombre: p.nombre || '', telefono: p.telefono || '', estado: p.estado || 'activo', almacen_id: p.almacen_id || '', role_id: userRole?.role_id || '', pin_code: p.pin_code || '' });
   };
 
   const saveUser = async () => {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, vendedor_id: editForm.vendedor_id || null, pin_code: editForm.pin_code || null }).eq('id', editingUser.id);
+      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, pin_code: editForm.pin_code || null }).eq('id', editingUser.id);
       const existing = userRoles.filter(ur => ur.user_id === editingUser.user_id);
       for (const ur of existing) { await supabase.from('user_roles').delete().eq('id', ur.id); }
       if (editForm.role_id) { await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role_id: editForm.role_id }); }
@@ -472,13 +472,6 @@ export default function UsuariosPage() {
                     <select className="input-odoo w-full" value={editForm.almacen_id} onChange={e => setEditForm({ ...editForm, almacen_id: e.target.value })}>
                       <option value="">Sin almacén asignado</option>
                       {almacenes.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label-odoo">Vendedor asociado</label>
-                    <select className="input-odoo w-full" value={editForm.vendedor_id} onChange={e => setEditForm({ ...editForm, vendedor_id: e.target.value })}>
-                      <option value="">Sin vendedor</option>
-                      {vendedores.map(v => <option key={v.id} value={v.id}>{v.nombre}</option>)}
                     </select>
                   </div>
                   <div>
