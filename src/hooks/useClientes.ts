@@ -130,7 +130,7 @@ export function useVendedores() {
 }
 export function useCobradores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data as Cobrador[]; }});
+  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre'); return data as Cobrador[]; }});
 }
 
 // Pedido sugerido per client
