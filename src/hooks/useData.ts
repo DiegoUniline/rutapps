@@ -19,11 +19,18 @@ export function useProductosRealtime() {
         qc.invalidateQueries({ queryKey: ['productos-page'] });
         qc.invalidateQueries({ queryKey: ['productos-select'] });
         qc.invalidateQueries({ queryKey: ['pos-productos'] });
+        qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_almacen' }, () => {
         qc.invalidateQueries({ queryKey: ['stock-almacen'] });
+        qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
         qc.invalidateQueries({ queryKey: ['productos'] });
         qc.invalidateQueries({ queryKey: ['productos-page'] });
+        qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, () => {
+        qc.invalidateQueries({ queryKey: ['ventas'] });
+        qc.invalidateQueries({ queryKey: ['ventas-list'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
