@@ -81,6 +81,7 @@ export default function MiSuscripcionPage() {
   const [showTransferInfo, setShowTransferInfo] = useState(false);
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
+  const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!empresa?.id) return;
