@@ -13,6 +13,7 @@ import { OdooStatusbar } from '@/components/OdooStatusbar';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { generarCfdiPdf } from '@/lib/cfdiPdf';
