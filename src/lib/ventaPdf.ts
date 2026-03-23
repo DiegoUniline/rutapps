@@ -71,6 +71,8 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const cc = getCurrencyConfig(empresa.moneda);
+  const s = cc.symbol;
 
   const tipoLabel = venta.tipo === 'pedido' ? 'ORDEN DE VENTA' : 'VENTA';
   const statusInfo = STATUS_MAP[venta.status] || { label: venta.status.charAt(0).toUpperCase() + venta.status.slice(1), color: 'neutral' as const };
