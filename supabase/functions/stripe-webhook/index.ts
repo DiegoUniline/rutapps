@@ -317,14 +317,19 @@ Deno.serve(async (req) => {
           trialing: "trial",
         };
 
-        await supabase.from("subscriptions").update({
+        const item0 = sub.items.data[0];
+        const periodStart = (item0 as any)?.current_period_start ?? (sub as any).current_period_start;
+        const periodEnd = (item0 as any)?.current_period_end ?? (sub as any).current_period_end;
+
+        const updateData: Record<string, any> = {
           status: statusMap[sub.status] || sub.status,
-          stripe_price_id: priceId,
           max_usuarios: qty,
-          current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           updated_at: new Date().toISOString(),
-        }).eq("stripe_subscription_id", sub.id);
+        };
+        if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
+        if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+
+        await supabase.from("subscriptions").update(updateData).eq("stripe_subscription_id", sub.id);
 
         log("Subscription updated", { subId: sub.id, status: sub.status, qty });
         break;
