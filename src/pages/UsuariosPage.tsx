@@ -212,7 +212,7 @@ export default function UsuariosPage() {
     if (!editingUser) return;
     setSavingUser(true);
     try {
-      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, vendedor_id: editForm.vendedor_id || null, pin_code: editForm.pin_code || null }).eq('id', editingUser.id);
+      await supabase.from('profiles').update({ nombre: editForm.nombre || null, telefono: editForm.telefono || null, estado: editForm.estado, almacen_id: editForm.almacen_id || null, pin_code: editForm.pin_code || null }).eq('id', editingUser.id);
       const existing = userRoles.filter(ur => ur.user_id === editingUser.user_id);
       for (const ur of existing) { await supabase.from('user_roles').delete().eq('id', ur.id); }
       if (editForm.role_id) { await supabase.from('user_roles').insert({ user_id: editingUser.user_id, role_id: editForm.role_id }); }
