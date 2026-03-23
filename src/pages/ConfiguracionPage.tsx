@@ -363,7 +363,7 @@ export default function ConfiguracionPage() {
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
-        ticket_campos: campos, moneda,
+        ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
