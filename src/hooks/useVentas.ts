@@ -4,10 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Venta, VentaLinea } from '@/types';
 
-export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80) {
+/** Paginated ventas for list views */
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80) {
   const qc = useQueryClient();
 
-  // Realtime: auto-refresh when any row changes
   useEffect(() => {
     const channel = supabase
       .channel('ventas-realtime')
@@ -27,11 +27,42 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
         .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (search) q = q.or(`folio.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter);
-      if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter);
+      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
+      if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
       const { data, error, count } = await q;
       if (error) throw error;
       return { rows: (data ?? []) as Venta[], total: count ?? 0 };
+    },
+  });
+}
+
+/** All ventas (for lookups) */
+export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string) {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('ventas-realtime-all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, () => {
+        qc.invalidateQueries({ queryKey: ['ventas'] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [qc]);
+
+  return useQuery({
+    queryKey: ['ventas', search, statusFilter, tipoFilter],
+    queryFn: async () => {
+      let q = supabase
+        .from('ventas')
+        .select('id, folio, fecha, total, subtotal, iva_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
+        .order('created_at', { ascending: false });
+      if (search) q = q.or(`folio.ilike.%${search}%`);
+      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
+      if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data as Venta[];
     },
   });
 }
