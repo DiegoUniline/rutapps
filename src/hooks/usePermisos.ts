@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -103,7 +104,6 @@ export function getModuloGroups(): string[] {
 
 /**
  * Maps exact nav child paths → permission module IDs.
- * Used for sidebar filtering and route guarding.
  */
 export const PATH_MODULE_MAP: Record<string, string> = {
   '/dashboard': 'dashboard',
@@ -151,66 +151,49 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/configuracion-inicial': '', // always accessible
 };
 
+interface PermisosData {
+  hasRole: boolean;
+  permisos: Permiso[];
+}
+
+async function fetchPermisos(userId: string): Promise<PermisosData> {
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!userRole?.role_id) {
+    return { hasRole: false, permisos: [] };
+  }
+
+  const { data: rolePermisos } = await supabase
+    .from('role_permisos')
+    .select('modulo, accion, permitido')
+    .eq('role_id', userRole.role_id);
+
+  return { hasRole: true, permisos: rolePermisos ?? [] };
+}
+
 export function usePermisos(): UsePermisosReturn {
   const { user } = useAuth();
-  const [permisos, setPermisos] = useState<Permiso[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasRole, setHasRole] = useState<boolean | null>(null);
 
-  const load = useCallback(async () => {
-    if (!user?.id) {
-      setPermisos([]);
-      setHasRole(null);
-      setLoading(false);
-      return;
-    }
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['user-permisos', user?.id],
+    queryFn: () => fetchPermisos(user!.id),
+    enabled: !!user?.id,
+    staleTime: 2 * 60_000, // 2 min
+    gcTime: 5 * 60_000,
+  });
 
-    try {
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!userRole?.role_id) {
-        setHasRole(false);
-        setPermisos([]);
-        setLoading(false);
-        return;
-      }
-
-      setHasRole(true);
-
-      const { data: rolePermisos } = await supabase
-        .from('role_permisos')
-        .select('modulo, accion, permitido')
-        .eq('role_id', userRole.role_id);
-
-      setPermisos(rolePermisos ?? []);
-    } catch (e) {
-      console.error('Error loading permisos:', e);
-      setPermisos([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.id]);
-
-  useEffect(() => { load(); }, [load]);
-
-  // Re-load when permissions are changed from UsuariosPage
-  useEffect(() => {
-    const handler = () => load();
-    window.addEventListener('uniline:permisos-changed', handler);
-    return () => window.removeEventListener('uniline:permisos-changed', handler);
-  }, [load]);
+  const hasRole = data?.hasRole ?? null;
+  const permisos = data?.permisos ?? [];
 
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
     if (hasRole === false) return true; // no role = owner = full access
     if (hasRole === null) return false; // loading
-    // Exact match first
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
     if (perm) return perm.permitido;
-    // Parent match: if checking 'catalogo.productos', also accept 'catalogo'
     if (modulo.includes('.')) {
       const parent = modulo.split('.')[0];
       const parentPerm = permisos.find(p => p.modulo === parent && p.accion === accion);
@@ -220,9 +203,15 @@ export function usePermisos(): UsePermisosReturn {
   }, [permisos, hasRole]);
 
   const hasModulo = useCallback((modulo: string): boolean => {
-    if (!modulo) return true; // empty = always visible
+    if (!modulo) return true;
     return hasPermiso(modulo, 'ver');
   }, [hasPermiso]);
 
-  return { permisos, loading, hasPermiso, hasModulo, reload: load };
+  const reload = useCallback(() => {
+    refetch();
+    // Keep backward compat with event-based reload
+    window.dispatchEvent(new Event('uniline:permisos-changed'));
+  }, [refetch]);
+
+  return { permisos, loading: isLoading, hasPermiso, hasModulo, reload };
 }

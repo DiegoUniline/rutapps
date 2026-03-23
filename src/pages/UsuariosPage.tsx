@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { supabase } from '@/lib/supabase';
@@ -112,8 +113,11 @@ export default function UsuariosPage() {
     load();
   };
 
-  const notifyPermisosChanged = () => window.dispatchEvent(new Event('uniline:permisos-changed'));
-
+  const qc = useQueryClient();
+  const notifyPermisosChanged = () => {
+    qc.invalidateQueries({ queryKey: ['user-permisos'] });
+    window.dispatchEvent(new Event('uniline:permisos-changed'));
+  };
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
     const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
     if (existing) {
