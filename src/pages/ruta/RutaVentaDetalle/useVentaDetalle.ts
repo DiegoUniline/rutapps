@@ -40,6 +40,7 @@ export function useVentaDetalle() {
   const clienteId = (venta as any)?.cliente_id;
   const { symbol: currSym } = useCurrency();
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const fmtM = (n: number) => `${currSym}${fmt(n)}`;
 
   const { data: clienteData } = useQuery({
     queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId,
