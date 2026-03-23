@@ -52,6 +52,7 @@ export default function ProveedorFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { empresa } = useAuth();
   const isNew = id === 'nuevo';
 
   const { data: existing } = useQuery({
