@@ -16,6 +16,7 @@ const RUTAPP_PRODUCT_IDS = new Set([
 ]);
 
 const GRACE_DAYS = 3;
+const FACTURACION_URL = "https://rutapps.lovable.app/facturacion";
 
 /* ─── Template types ─── */
 interface TemplateConfig {
@@ -37,24 +38,41 @@ interface TicketVars {
   fechaVigencia?: string;
 }
 
-/* ─── Theme colors per type ─── */
-const THEMES: Record<string, { accent: string; badgeBg: string }> = {
-  pre_cobro: { accent: "#2563eb", badgeBg: "#dbeafe" },
-  cobro_exitoso: { accent: "#16a34a", badgeBg: "#dcfce7" },
-  cobro_fallido: { accent: "#dc2626", badgeBg: "#fee2e2" },
-  suspension: { accent: "#991b1b", badgeBg: "#fee2e2" },
+/* ─── Default templates ─── */
+const DEFAULT_TEMPLATES: Record<string, TemplateConfig> = {
+  pre_cobro: {
+    tipo: "pre_cobro", emoji: "🔔", encabezado: "Recordatorio de cobro — Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, fecha_cobro: true, monto: true, num_usuarios: true, enlace_facturacion: true, mensaje_despedida: true },
+  },
+  cobro_exitoso: {
+    tipo: "cobro_exitoso", emoji: "✅", encabezado: "Pago confirmado — Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, monto: true, fecha_vigencia: true, mensaje_despedida: true },
+  },
+  cobro_fallido: {
+    tipo: "cobro_fallido", emoji: "⚠️", encabezado: "Pago pendiente — Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, monto: true, dias_gracia: true, enlace_pago: true, advertencia_suspension: true },
+  },
+  suspension: {
+    tipo: "suspension", emoji: "🚫", encabezado: "Cuenta suspendida — Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_contacto: true },
+  },
+  trial_expira_manana: {
+    tipo: "trial_expira_manana", emoji: "⏳", encabezado: "Tu prueba gratuita vence mañana — Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_despedida: true },
+  },
+  trial_expirado: {
+    tipo: "trial_expirado", emoji: "⚠️", encabezado: "Tu prueba gratuita ha vencido — Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, dias_gracia: true, enlace_facturacion: true, advertencia_suspension: true },
+  },
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pre_cobro: "RECORDATORIO DE COBRO",
-  cobro_exitoso: "PAGO CONFIRMADO",
-  cobro_fallido: "PAGO FALLIDO",
-  suspension: "CUENTA SUSPENDIDA",
-};
-
-/* ─── Satori/PNG generation removed — text-only messages ─── */
-
-/* ─── Build text fallback ─── */
+/* ─── Build text message ─── */
 function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
   const c = tpl.campos;
   const lines: string[] = [];
@@ -87,12 +105,25 @@ function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
     if (c.enlace_facturacion) lines.push(`\n${vars.enlaceFacturacion || ""}`);
     if (c.mensaje_contacto) lines.push("\nSi tienes dudas, contáctanos.");
   }
+  if (tpl.tipo === "trial_expira_manana") {
+    lines.push("Tu periodo de prueba gratuita *vence mañana*.");
+    lines.push("\nPara seguir usando Rutapp sin interrupciones, activa tu plan ahora:");
+    if (c.enlace_facturacion) lines.push(`\n💳 *Activar plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+    if (c.mensaje_despedida) lines.push("\n¡Esperamos que estés disfrutando Rutapp! 🚀");
+  }
+  if (tpl.tipo === "trial_expirado") {
+    lines.push("Tu periodo de prueba gratuita *ha vencido*.");
+    if (c.dias_gracia) lines.push(`\nTienes *${GRACE_DAYS} días de gracia* antes de que tu cuenta sea suspendida.`);
+    lines.push("\nActiva tu plan para no perder acceso a tus datos:");
+    if (c.enlace_facturacion) lines.push(`\n💳 *Activar plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+    if (c.advertencia_suspension) lines.push("\n⚠️ Después del periodo de gracia tu acceso será suspendido.");
+  }
   return lines.join("\n");
 }
 
 /* ─── Send WhatsApp (text only) ─── */
-async function sendTicketWhatsApp(
-  supabase: any,
+async function sendWA(
+  supabase: ReturnType<typeof createClient>,
   waToken: string,
   phone: string,
   tpl: TemplateConfig,
@@ -114,19 +145,55 @@ async function sendTicketWhatsApp(
     status = res.ok ? "sent" : "error";
   } catch { status = "error"; }
 
-  // Log
-  await supabase.from("billing_notifications").insert({
-    customer_email: email,
-    customer_phone: cleanPhone,
-    channel: "whatsapp",
-    tipo: tpl.tipo,
-    mensaje: textMsg,
-    stripe_invoice_url: invoiceUrl || null,
-    monto_centavos: amountCents || 0,
-    status,
-  }).catch(() => {});
+  try {
+    await supabase.from("billing_notifications").insert({
+      customer_email: email,
+      customer_phone: cleanPhone,
+      channel: "whatsapp",
+      tipo: tpl.tipo,
+      mensaje: textMsg,
+      stripe_invoice_url: invoiceUrl || null,
+      monto_centavos: amountCents || 0,
+      status,
+    });
+  } catch { /* silent */ }
 
   return status === "sent";
+}
+
+/* ─── Check if already notified today ─── */
+async function alreadyNotifiedToday(
+  supabase: ReturnType<typeof createClient>,
+  email: string,
+  tipo: string
+): Promise<boolean> {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const { count } = await supabase
+    .from("billing_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("customer_email", email)
+    .eq("tipo", tipo)
+    .gte("created_at", todayStart.toISOString());
+  return (count ?? 0) > 0;
+}
+
+/* ─── Helpers ─── */
+function getMonthName(offset = 1) {
+  const months = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  return months[(new Date().getMonth() + offset) % 12];
+}
+
+async function getEmpresaName(supabase: ReturnType<typeof createClient>, id: string): Promise<string> {
+  const { data } = await supabase.from("empresas").select("nombre").eq("id", id).maybeSingle();
+  return data?.nombre || "";
+}
+
+async function getProfileForEmpresa(supabase: ReturnType<typeof createClient>, empresaId: string) {
+  const { data } = await supabase.from("profiles").select("user_id, nombre, telefono").eq("empresa_id", empresaId).limit(1).maybeSingle();
+  if (!data) return null;
+  const { data: userData } = await supabase.auth.admin.getUserById(data.user_id);
+  return { ...data, email: userData?.user?.email || null };
 }
 
 /* ─── Main handler ─── */
@@ -146,11 +213,11 @@ Deno.serve(async (req) => {
     );
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const results: any[] = [];
+    const results: Array<{ id: string; action: string; status: string }> = [];
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
 
-    // Load WhatsApp token
+    // Load global WhatsApp token (super admin config without empresa_id)
     const { data: waConfig } = await supabase
       .from("whatsapp_config")
       .select("api_token")
@@ -159,7 +226,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const waToken = waConfig?.api_token;
 
-    // Load templates
+    // Load templates from DB (override defaults)
     const { data: tplRows } = await supabase
       .from("billing_message_templates")
       .select("tipo, campos, emoji, encabezado, activo");
@@ -174,53 +241,126 @@ Deno.serve(async (req) => {
       };
     }
 
-    const FACTURACION_URL = "https://rutapps.lovable.app/facturacion";
+    // ═══════════════════════════════════════════════
+    // STEP 0: TRIAL EXPIRATION NOTIFICATIONS
+    // ═══════════════════════════════════════════════
 
-    async function getEmpresaName(empresaId: string): Promise<string> {
-      const { data } = await supabase.from("empresas").select("nombre").eq("id", empresaId).maybeSingle();
-      return data?.nombre || "";
-    }
-
-    // ─── STEP 1: Pre-charge (day before the 1st) ───
+    // Trials expiring TOMORROW
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+    const { data: trialsExpiringTomorrow } = await supabase
+      .from("subscriptions")
+      .select("id, empresa_id, trial_ends_at, max_usuarios")
+      .eq("status", "trial")
+      .gte("trial_ends_at", `${tomorrowStr}T00:00:00`)
+      .lt("trial_ends_at", `${tomorrowStr}T23:59:59`);
+
+    for (const sub of trialsExpiringTomorrow || []) {
+      try {
+        const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
+        if (!profile?.email) continue;
+        if (await alreadyNotifiedToday(supabase, profile.email, "trial_expira_manana")) continue;
+
+        const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
+        const tpl = tplMap.trial_expira_manana || DEFAULT_TEMPLATES.trial_expira_manana;
+
+        if (waToken && profile.telefono && tpl.activo) {
+          await sendWA(supabase, waToken, profile.telefono, tpl, {
+            nombre: profile.nombre || "",
+            empresa: empresaNombre,
+            enlaceFacturacion: FACTURACION_URL,
+          }, profile.email);
+        }
+        results.push({ id: sub.id, action: "trial_expira_manana", status: "sent" });
+      } catch (err) {
+        console.error("Trial tomorrow error:", err);
+        results.push({ id: sub.id, action: "trial_expira_manana", status: "error" });
+      }
+    }
+
+    // Trials EXPIRED TODAY (or recently) — still in trial status
+    const { data: trialsExpiredToday } = await supabase
+      .from("subscriptions")
+      .select("id, empresa_id, trial_ends_at, max_usuarios")
+      .eq("status", "trial")
+      .lt("trial_ends_at", `${todayStr}T23:59:59`)
+      .gte("trial_ends_at", new Date(today.getTime() - GRACE_DAYS * 86400000).toISOString());
+
+    for (const sub of trialsExpiredToday || []) {
+      try {
+        const trialEnd = new Date(sub.trial_ends_at);
+        if (trialEnd > today) continue; // Not yet expired
+
+        const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
+        if (!profile?.email) continue;
+        if (await alreadyNotifiedToday(supabase, profile.email, "trial_expirado")) continue;
+
+        const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
+        const tpl = tplMap.trial_expirado || DEFAULT_TEMPLATES.trial_expirado;
+
+        if (waToken && profile.telefono && tpl.activo) {
+          await sendWA(supabase, waToken, profile.telefono, tpl, {
+            nombre: profile.nombre || "",
+            empresa: empresaNombre,
+            enlaceFacturacion: FACTURACION_URL,
+          }, profile.email);
+        }
+
+        // Update status to gracia
+        await supabase.from("subscriptions").update({
+          status: "gracia",
+          updated_at: new Date().toISOString(),
+        }).eq("id", sub.id).eq("status", "trial");
+
+        results.push({ id: sub.id, action: "trial_expirado", status: "sent" });
+      } catch (err) {
+        console.error("Trial expired error:", err);
+        results.push({ id: sub.id, action: "trial_expirado", status: "error" });
+      }
+    }
+
+    // ═══════════════════════════════════════════════
+    // STEP 1: PRE-CHARGE (day before the 1st)
+    // ═══════════════════════════════════════════════
     if (tomorrow.getDate() === 1 && tplMap.pre_cobro.activo) {
       const tpl = tplMap.pre_cobro;
       const { data: activeSubs } = await supabase
         .from("subscriptions")
         .select("id, empresa_id, max_usuarios, status")
-        .in("status", ["active", "trial"]);
+        .eq("status", "active");
 
       for (const sub of activeSubs || []) {
         try {
-          const { data: profile } = await supabase.from("profiles").select("user_id, nombre, telefono").eq("empresa_id", sub.empresa_id).limit(1).maybeSingle();
-          if (!profile) continue;
-          const { data: userData } = await supabase.auth.admin.getUserById(profile.user_id);
-          const email = userData?.user?.email;
-          if (!email) continue;
+          const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
+          if (!profile?.email) continue;
+          if (await alreadyNotifiedToday(supabase, profile.email, "pre_cobro")) continue;
 
           const amount = sub.max_usuarios * 300;
-          const empresaNombre = await getEmpresaName(sub.empresa_id);
+          const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
 
           if (waToken && profile.telefono) {
-            await sendTicketWhatsApp(supabase, waToken, profile.telefono, tpl, {
+            await sendWA(supabase, waToken, profile.telefono, tpl, {
               nombre: profile.nombre || "",
               empresa: empresaNombre,
               monto: `$${amount.toLocaleString("es-MX")} MXN`,
               fechaCobro: `1 de ${getMonthName()}`,
               numUsuarios: sub.max_usuarios,
               enlaceFacturacion: FACTURACION_URL,
-            }, email, null, amount * 100);
+            }, profile.email, null, amount * 100);
           }
-          results.push({ sub_id: sub.id, action: "pre_notify", status: "sent" });
+          results.push({ id: sub.id, action: "pre_notify", status: "sent" });
         } catch (err) {
-          console.error(`Pre-notify error:`, err);
-          results.push({ sub_id: sub.id, action: "pre_notify", status: "error" });
+          console.error("Pre-notify error:", err);
+          results.push({ id: sub.id, action: "pre_notify", status: "error" });
         }
       }
     }
 
-    // ─── STEP 2: Check charges ───
+    // ═══════════════════════════════════════════════
+    // STEP 2: CHECK STRIPE CHARGES (1st-2nd of month)
+    // ═══════════════════════════════════════════════
     if (today.getDate() === 1 || today.getDate() === 2) {
       const recentInvoices = await stripe.invoices.list({
         limit: 100,
@@ -243,7 +383,7 @@ Deno.serve(async (req) => {
         const { data: profile } = await supabase.from("profiles").select("empresa_id, telefono, nombre").eq("user_id", matchUser.id).maybeSingle();
         if (!profile) continue;
 
-        const empresaNombre = await getEmpresaName(profile.empresa_id);
+        const empresaNombre = await getEmpresaName(supabase, profile.empresa_id);
 
         if (inv.status === "paid" && tplMap.cobro_exitoso.activo) {
           await supabase.from("subscriptions").update({
@@ -254,35 +394,38 @@ Deno.serve(async (req) => {
           }).eq("empresa_id", profile.empresa_id);
 
           if (waToken && profile.telefono) {
-            await sendTicketWhatsApp(supabase, waToken, profile.telefono, tplMap.cobro_exitoso, {
+            await sendWA(supabase, waToken, profile.telefono, tplMap.cobro_exitoso, {
               nombre: profile.nombre || "",
               empresa: empresaNombre,
               monto: `$${(inv.amount_paid / 100).toLocaleString("es-MX")} MXN`,
-              fechaVigencia: `1 de ${getNextMonthName()}`,
+              fechaVigencia: `1 de ${getMonthName(2)}`,
             }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_paid);
           }
-          results.push({ email: inv.customer_email, action: "payment_confirmed" });
+          results.push({ id: profile.empresa_id, action: "payment_confirmed", status: "sent" });
 
         } else if ((inv.status === "open" || inv.status === "uncollectible") && tplMap.cobro_fallido.activo) {
           await supabase.from("subscriptions").update({ status: "past_due", updated_at: new Date().toISOString() }).eq("empresa_id", profile.empresa_id);
 
           if (waToken && profile.telefono) {
-            await sendTicketWhatsApp(supabase, waToken, profile.telefono, tplMap.cobro_fallido, {
+            await sendWA(supabase, waToken, profile.telefono, tplMap.cobro_fallido, {
               nombre: profile.nombre || "",
               empresa: empresaNombre,
               monto: `$${(inv.amount_due / 100).toLocaleString("es-MX")} MXN`,
               enlacePago: inv.hosted_invoice_url || FACTURACION_URL,
             }, inv.customer_email!, inv.hosted_invoice_url, inv.amount_due);
           }
-          results.push({ email: inv.customer_email, action: "payment_failed" });
+          results.push({ id: profile.empresa_id, action: "payment_failed", status: "sent" });
         }
       }
     }
 
-    // ─── STEP 3: Suspend after grace period ───
+    // ═══════════════════════════════════════════════
+    // STEP 3: SUSPEND AFTER GRACE (trial + past_due)
+    // ═══════════════════════════════════════════════
     const graceCutoff = new Date(today);
     graceCutoff.setDate(graceCutoff.getDate() - GRACE_DAYS);
 
+    // Past due subs
     const { data: pastDueSubs } = await supabase
       .from("subscriptions")
       .select("id, empresa_id, updated_at")
@@ -291,24 +434,43 @@ Deno.serve(async (req) => {
 
     for (const sub of pastDueSubs || []) {
       await supabase.from("subscriptions").update({ status: "suspended", updated_at: new Date().toISOString() }).eq("id", sub.id);
-
-      if (tplMap.suspension.activo) {
-        const { data: profile } = await supabase.from("profiles").select("user_id, telefono, nombre").eq("empresa_id", sub.empresa_id).limit(1).maybeSingle();
-
-        if (waToken && profile?.telefono) {
-          const empresaNombre = await getEmpresaName(sub.empresa_id);
-          const { data: suspProfile } = await supabase.auth.admin.getUserById(profile.user_id);
-          await sendTicketWhatsApp(supabase, waToken, profile.telefono, tplMap.suspension, {
-            nombre: profile.nombre || "",
-            empresa: empresaNombre,
-            enlaceFacturacion: FACTURACION_URL,
-          }, suspProfile?.user?.email || "desconocido");
-        }
+      const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
+      if (waToken && profile?.telefono && tplMap.suspension.activo) {
+        const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
+        await sendWA(supabase, waToken, profile.telefono, tplMap.suspension, {
+          nombre: profile.nombre || "",
+          empresa: empresaNombre,
+          enlaceFacturacion: FACTURACION_URL,
+        }, profile.email || "desconocido");
       }
-      results.push({ sub_id: sub.id, action: "suspended" });
+      results.push({ id: sub.id, action: "suspended", status: "done" });
     }
 
-    return new Response(JSON.stringify({ results, timestamp: new Date().toISOString() }), {
+    // Gracia subs (expired trials) past grace period
+    const { data: graciaSubs } = await supabase
+      .from("subscriptions")
+      .select("id, empresa_id, trial_ends_at")
+      .eq("status", "gracia");
+
+    for (const sub of graciaSubs || []) {
+      const trialEnd = new Date(sub.trial_ends_at);
+      const daysSinceExpiry = Math.floor((today.getTime() - trialEnd.getTime()) / 86400000);
+      if (daysSinceExpiry <= GRACE_DAYS) continue;
+
+      await supabase.from("subscriptions").update({ status: "suspended", updated_at: new Date().toISOString() }).eq("id", sub.id);
+      const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
+      if (waToken && profile?.telefono && tplMap.suspension.activo) {
+        const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
+        await sendWA(supabase, waToken, profile.telefono, tplMap.suspension, {
+          nombre: profile.nombre || "",
+          empresa: empresaNombre,
+          enlaceFacturacion: FACTURACION_URL,
+        }, profile.email || "desconocido");
+      }
+      results.push({ id: sub.id, action: "trial_suspended", status: "done" });
+    }
+
+    return new Response(JSON.stringify({ ok: true, results, timestamp: new Date().toISOString() }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
@@ -319,13 +481,3 @@ Deno.serve(async (req) => {
     });
   }
 });
-
-function getMonthName() {
-  const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  return months[new Date().getMonth() + 1] || months[0];
-}
-
-function getNextMonthName() {
-  const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  return months[(new Date().getMonth() + 2) % 12];
-}
