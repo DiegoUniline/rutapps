@@ -77,6 +77,7 @@ export const TABLE_LABELS: Record<string, string> = {
   visitas: 'Visitas',
   tarifas: 'Tarifas',
   tarifa_lineas: 'Reglas de tarifa',
+  stock_almacen: 'Stock por almacén',
 };
 
 // Tables that have empresa_id for filtering
