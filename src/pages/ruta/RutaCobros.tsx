@@ -16,8 +16,7 @@ const METODO_ICONS: Record<string, any> = {
 export default function RutaCobros() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
-
-  const today = new Date().toISOString().slice(0, 10);
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const { data: cobros } = useOfflineQuery('cobros', {
     empresa_id: empresa?.id,
@@ -31,10 +30,8 @@ export default function RutaCobros() {
   const { data: clientes } = useOfflineQuery('clientes', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c.nombre]));
 
-  const recentCobros = (cobros ?? []).slice(0, 100);
-  const todayCobros = recentCobros.filter((c: any) => c.fecha === today);
-  const olderCobros = recentCobros.filter((c: any) => c.fecha !== today);
-  const totalHoy = todayCobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+  const filteredCobros = filterByDate((cobros ?? []) as any[], 'fecha');
+  const totalFiltrado = filteredCobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
 
   const formatDate = (d: string) => {
     const date = new Date(d + 'T12:00:00');
