@@ -72,7 +72,7 @@ export default function AdminStatsTab() {
   async function loadEmpresas() {
     const { data } = await supabase
       .from('empresas')
-      .select('id, created_at, subscriptions(status, plan_id, created_at)')
+      .select('id, nombre, created_at, subscriptions(status, plan_id, created_at)')
       .order('created_at', { ascending: true });
     setEmpresas((data as any) || []);
   }
