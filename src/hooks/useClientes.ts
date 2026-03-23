@@ -63,15 +63,16 @@ export function useSaveCliente() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (cliente: Partial<Cliente> & { id?: string }) => {
-      const { id, zonas, listas, vendedores, cobradores, tarifas, ...rest } = cliente as any;
+      // Strip ALL relational/virtual fields that come from joins
+      const { id, zonas, listas, vendedores, cobradores, tarifas, lista_precios, cliente_pedido_sugerido, cobro_aplicaciones, ...rest } = cliente as any;
       if (id) {
         const { data, error } = await supabase.from('clientes').update(rest).eq('id', id).select('id').single();
-        if (error) throw error;
+        if (error) { console.error('Error updating cliente:', error, 'payload keys:', Object.keys(rest)); throw error; }
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
         const { data, error } = await supabase.from('clientes').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
-        if (error) throw error;
+        if (error) { console.error('Error inserting cliente:', error); throw error; }
         return data;
       }
     },
