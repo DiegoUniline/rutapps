@@ -24,7 +24,7 @@ interface Props {
 }
 
 export function StepProductos(props: Props) {
-  const { clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos, cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setStep, setCart, stockAbordo, fmt } = props;
+  const { clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos, cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt } = props;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
