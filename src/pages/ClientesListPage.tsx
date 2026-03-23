@@ -41,12 +41,13 @@ function ClientesTable() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
-  const { data: clientes, isLoading } = useClientes(search, statusFilter);
+  const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, PAGE_SIZE);
 
-  const total = clientes?.length ?? 0;
+  const clientes = clientesData?.rows ?? [];
+  const total = clientesData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = clientes?.slice(from - 1, to) ?? [];
+  const pageData = clientes;
   const allSelected = pageData.length > 0 && pageData.every(c => selected.has(c.id));
 
   const toggleAll = () => {
