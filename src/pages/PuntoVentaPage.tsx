@@ -148,9 +148,11 @@ export default function PuntoVentaPage() {
 
   const filteredProducts = useMemo(() => {
     if (!productos) return [];
-    if (!search) return productos;
+    // Filter out products with no stock unless vender_sin_stock is enabled
+    const available = productos.filter(p => p.vender_sin_stock || (p.cantidad ?? 0) > 0);
+    if (!search) return available;
     const s = search.toLowerCase();
-    return productos.filter(p =>
+    return available.filter(p =>
       p.nombre.toLowerCase().includes(s) ||
       p.codigo.toLowerCase().includes(s) ||
       (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
