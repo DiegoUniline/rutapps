@@ -53,7 +53,19 @@ export function useSaveProducto() {
         return data;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['productos'] }),
+    onMutate: async (producto) => {
+      if (!producto.id) return;
+      await qc.cancelQueries({ queryKey: ['productos'] });
+      const prev = qc.getQueriesData<any[]>({ queryKey: ['productos'] });
+      qc.setQueriesData<any[]>({ queryKey: ['productos'] }, (old) =>
+        old?.map(p => p.id === producto.id ? { ...p, ...producto } : p)
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['productos'] }),
   });
 }
 
