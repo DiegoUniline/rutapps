@@ -365,7 +365,7 @@ export default function CfdiFormPage() {
     }
   };
 
-  const fmt = (v: number) => `$${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmt = (v: number) => fmtCurrency(v);
 
   const formaOptions = (formasPago || []).map((f: any) => ({ value: f.clave, label: `${f.clave} - ${f.descripcion}` }));
   const usoOptions = (usoCfdiList || []).map((u: any) => ({ value: u.clave, label: `${u.clave} - ${u.descripcion}` }));
