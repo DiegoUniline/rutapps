@@ -319,15 +319,16 @@ export function useSaveProductoProveedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (row: { id?: string; producto_id: string; proveedor_id: string; es_principal?: boolean; precio_compra?: number; tiempo_entrega_dias?: number; notas?: string }) => {
-      // If setting as principal, unset others first
       if (row.es_principal) {
         await supabase.from('producto_proveedores').update({ es_principal: false }).eq('producto_id', row.producto_id);
       }
+      const clean = pickColumns(row, PRODUCTO_PROVEEDOR_COLUMNS);
+      delete (clean as any).id;
       if (row.id) {
-        const { error } = await supabase.from('producto_proveedores').update(row).eq('id', row.id);
+        const { error } = await supabase.from('producto_proveedores').update(clean as any).eq('id', row.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('producto_proveedores').insert(row);
+        const { error } = await supabase.from('producto_proveedores').insert(clean as any);
         if (error) throw error;
       }
     },
