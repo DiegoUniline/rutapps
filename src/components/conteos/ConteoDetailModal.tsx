@@ -91,7 +91,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
             almacen_id: conteo?.almacen_id,
             producto_id: linea.producto_id,
             cantidad: stockActual + dif,
-          } as any, { onConflict: 'empresa_id,almacen_id,producto_id' });
+          } as any, { onConflict: 'almacen_id,producto_id' });
 
           // Register movement
           await supabase.from('movimientos_inventario').insert({
