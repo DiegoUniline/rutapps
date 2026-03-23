@@ -60,14 +60,16 @@ export function useSaveCarga() {
   const { empresa } = useAuth();
   return useMutation({
     mutationFn: async (carga: Record<string, unknown> & { id?: string }) => {
-      const { id, vendedores, carga_lineas, ...rest } = carga;
-      if (id) {
-        const { data, error } = await supabase.from('cargas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(carga, CARGA_COLUMNS);
+      delete (clean as any).id;
+      if (carga.id) {
+        const { data, error } = await supabase.from('cargas').update(clean as any).eq('id', carga.id as string).select('id').single();
         if (error) throw error;
         return data;
       } else {
         if (!empresa?.id) throw new Error('Sin empresa');
-        const { data, error } = await supabase.from('cargas').insert({ ...rest, empresa_id: empresa.id }).select('id').single();
+        (clean as any).empresa_id = empresa.id;
+        const { data, error } = await supabase.from('cargas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }

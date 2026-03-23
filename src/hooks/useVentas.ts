@@ -155,13 +155,14 @@ export function useSaveVentaLinea() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (linea: Partial<VentaLinea> & { id?: string }) => {
-      const { id, productos, unidades, unidad_label, impuestos_label, ...rest } = linea as any;
-      if (id) {
-        const { data, error } = await supabase.from('venta_lineas').update(rest).eq('id', id).select('id').single();
+      const clean = pickColumns(linea, VENTA_LINEA_COLUMNS);
+      delete (clean as any).id;
+      if (linea.id) {
+        const { data, error } = await supabase.from('venta_lineas').update(clean as any).eq('id', linea.id).select('id').single();
         if (error) throw error;
         return data;
       } else {
-        const { data, error } = await supabase.from('venta_lineas').insert(rest).select('id').single();
+        const { data, error } = await supabase.from('venta_lineas').insert(clean as any).select('id').single();
         if (error) throw error;
         return data;
       }
