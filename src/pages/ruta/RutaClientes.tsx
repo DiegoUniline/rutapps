@@ -4,6 +4,7 @@ import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, Sh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
@@ -30,7 +31,8 @@ function saveVisitedSet(set: Set<string>) {
 export default function RutaClientes() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { empresa } = useAuth();
+  const { empresa, profile } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [diaFiltro, setDiaFiltro] = useState<string>(DIA_HOY);
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
@@ -109,14 +111,22 @@ export default function RutaClientes() {
     orderBy: 'orden',
   });
 
-  const filtered = (clientes ?? []).filter((c: any) => {
+  // Filter by vendedor assignment when visibility is 'propios'
+  const myClientes = (clientes ?? []).filter((c: any) => {
+    if (clientesVisibilidad === 'propios' && profile?.id) {
+      return c.vendedor_id === profile.id;
+    }
+    return true;
+  });
+
+  const filtered = myClientes.filter((c: any) => {
     if (search) {
       const s = search.toLowerCase();
       if (!c.nombre.toLowerCase().includes(s) && !c.codigo?.toLowerCase().includes(s) && !c.direccion?.toLowerCase().includes(s))
         return false;
     }
     if (modo === 'visitas') {
-      if (visited.has(c.id)) return false; // Hide already visited
+      if (visited.has(c.id)) return false;
       if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
       return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
     }
@@ -126,8 +136,8 @@ export default function RutaClientes() {
     return true;
   });
 
-  const visitadosCount = (clientes ?? []).filter((c: any) => visited.has(c.id)).length;
-  const pendientesCount = (clientes ?? []).filter((c: any) => {
+  const visitadosCount = myClientes.filter((c: any) => visited.has(c.id)).length;
+  const pendientesCount = myClientes.filter((c: any) => {
     if (visited.has(c.id)) return false;
     if (!c.dia_visita || !Array.isArray(c.dia_visita)) return false;
     return c.dia_visita.some((d: string) => d.toLowerCase() === diaFiltro.toLowerCase());
