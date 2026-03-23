@@ -572,112 +572,43 @@ export default function VentaFormPage() {
 
   return (
     <div className="min-h-full">
-      {/* Header bar */}
-      <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
-        <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/ventas')} className="btn-odoo-secondary !px-2.5">
-            <ArrowLeft className="h-3.5 w-3.5" />
-          </button>
-          <div className="min-w-0">
-            <h1 className="text-[15px] font-semibold text-foreground truncate">
-              {isNew ? 'Nueva venta' : (form.folio || `Venta`)}
-            </h1>
-            {clienteNombre && (
-              <p className="text-xs text-muted-foreground truncate">{clienteNombre}</p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          {!isNew && form.status === 'borrador' && (
-            <button onClick={() => handleStatusChange('confirmado')} className="btn-odoo-primary">Confirmar</button>
-          )}
-          {isNew && (
-            <button
-              onClick={async () => { await handleSave(); }}
-              disabled={saveVenta.isPending}
-              className="btn-odoo-secondary"
-            >
-              <Save className="h-3.5 w-3.5" /> Guardar borrador
-            </button>
-          )}
-          {/* Entrega button for pedidos — 1:N partial deliveries */}
-          {canCreateEntrega && (
-            <button
-              onClick={async () => {
-                // Use remaining quantities if there are previous entregas, otherwise full lines
-                const linesToUse = remaining && remaining.length > 0
-                  ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente }))
-                  : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad) }));
-                if (linesToUse.length === 0) { toast.error('No hay líneas pendientes para crear entrega'); return; }
-                try {
-                  const result = await crearEntrega.mutateAsync({
-                    pedidoId: form.id,
-                    vendedorId: form.vendedor_id,
-                    clienteId: form.cliente_id,
-                    almacenId: form.almacen_id,
-                    lineas: linesToUse,
-                  });
-                  toast.success('Entrega creada');
-                  navigate(`/logistica/entregas/${result.id}`);
-                } catch (e: any) { toast.error(e.message); }
-              }}
-              disabled={crearEntrega.isPending}
-              className="btn-odoo-primary"
-            >
-              <Truck className="h-3.5 w-3.5" /> Crear entrega{hayEntregas ? ' parcial' : ''}
-            </button>
-          )}
-          {/* Show existing entregas */}
-          {!isNew && form.tipo === 'pedido' && hayEntregas && (
-            <div className="flex items-center gap-1">
-              {(entregasExistentes ?? []).map(ent => (
-                <button key={ent.id} onClick={() => navigate(`/logistica/entregas/${ent.id}`)} className="btn-odoo-secondary text-[11px]">
-                  <Truck className="h-3 w-3" /> {ent.folio}
-                </button>
-              ))}
-            </div>
-          )}
-          {!isNew && (
-            <button onClick={handleGenerarPdf} className="btn-odoo-secondary text-xs">
-              <FileText className="h-3.5 w-3.5" /> Documento
-            </button>
-          )}
-          {/* Factura button — visible when requiere_factura and has pending lines */}
-          {!isNew && (form as any).requiere_factura && lineas.some(l => l.producto_id && !l.facturado) && (
-            <button onClick={() => setShowFacturaDrawer(true)} className="btn-odoo-primary text-xs">
-              <Receipt className="h-3.5 w-3.5" /> Facturar • {lineas.filter(l => l.producto_id && !l.facturado).length} pendientes
-            </button>
-          )}
-          {!isNew && form.status === 'confirmado' && !form.entrega_inmediata && form.tipo !== 'pedido' && (
-            <button onClick={() => handleStatusChange('entregado')} className="btn-odoo-primary">Entregar</button>
-          )}
-          {!isNew && ((form.status === 'confirmado' && form.entrega_inmediata) || form.status === 'entregado') && !(form as any).requiere_factura && (
-            <button onClick={() => handleStatusChange('facturado')} className="btn-odoo-primary">Facturar</button>
-          )}
-          {!readOnly && !isNew && (
-            <button onClick={() => handleSave()} disabled={saveVenta.isPending} className="btn-odoo-secondary">
-              <Save className="h-3.5 w-3.5" /> Guardar
-            </button>
-          )}
-          {isNew && (
-            <button
-              onClick={() => handleSave(true)}
-              disabled={saveVenta.isPending}
-              className="btn-odoo-primary"
-            >
-              <Check className="h-3.5 w-3.5" /> Guardar y confirmar
-            </button>
-          )}
-          {!isNew && form.status !== 'cancelado' && (
-            <button onClick={() => handleStatusChange('cancelado')} className="btn-odoo-secondary text-destructive text-xs">Cancelar</button>
-          )}
-          {!isNew && form.status === 'borrador' && (
-            <button onClick={handleDelete} className="btn-odoo-secondary text-destructive !px-2">
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
+      <VentaFormHeader
+        isNew={isNew}
+        folio={form.folio}
+        clienteNombre={clienteNombre}
+        status={form.status}
+        entregaInmediata={form.entrega_inmediata}
+        tipo={form.tipo}
+        requiereFactura={(form as any).requiere_factura}
+        readOnly={readOnly}
+        canCreateEntrega={canCreateEntrega}
+        hayEntregas={hayEntregas}
+        entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
+        lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
+        isSaving={saveVenta.isPending}
+        isCreatingEntrega={crearEntrega.isPending}
+        onBack={() => navigate('/ventas')}
+        onSave={handleSave}
+        onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
+        onCreateEntrega={async () => {
+          const linesToUse = remaining && remaining.length > 0
+            ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente }))
+            : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad) }));
+          if (linesToUse.length === 0) { toast.error('No hay líneas pendientes para crear entrega'); return; }
+          try {
+            const result = await crearEntrega.mutateAsync({
+              pedidoId: form.id, vendedorId: form.vendedor_id, clienteId: form.cliente_id,
+              almacenId: form.almacen_id, lineas: linesToUse,
+            });
+            toast.success('Entrega creada');
+            navigate(`/logistica/entregas/${result.id}`);
+          } catch (e: any) { toast.error(e.message); }
+        }}
+        onNavigateEntrega={(id) => navigate(`/logistica/entregas/${id}`)}
+        onGenerarPdf={handleGenerarPdf}
+        onFacturar={() => setShowFacturaDrawer(true)}
+      />
 
       {/* Status bar */}
       {!isNew && (
