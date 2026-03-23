@@ -11,7 +11,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useProductos } from '@/hooks/useData';
+import { useProductosPaginated } from '@/hooks/useData';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -34,12 +34,13 @@ export default function ProductosListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
-  const { data: productos, isLoading } = useProductos(search, statusFilter);
+  const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE);
 
-  const total = productos?.length ?? 0;
+  const productos = productosData?.rows ?? [];
+  const total = productosData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = productos?.slice(from - 1, to) ?? [];
+  const pageData = productos;
   const allSelected = pageData.length > 0 && pageData.every(p => selected.has(p.id));
 
   const toggleAll = () => {

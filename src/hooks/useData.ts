@@ -6,6 +6,26 @@ import type { Producto, Tarifa, TarifaLinea, Marca, Proveedor, Clasificacion, Li
 
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
+/** Paginated products for list views */
+export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
+  return useQuery({
+    queryKey: ['productos-page', search, statusFilter, page, pageSize],
+    staleTime: CATALOG_STALE,
+    queryFn: async () => {
+      let q = supabase.from('productos')
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)', { count: 'exact' })
+        .order('nombre', { ascending: true })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+      if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
+      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { rows: (data ?? []) as unknown as Producto[], total: count ?? 0 };
+    },
+  });
+}
+
+/** All products (for lookups — not for list pages) */
 export function useProductos(search?: string, statusFilter?: string) {
   return useQuery({
     queryKey: ['productos', search, statusFilter],
@@ -15,10 +35,10 @@ export function useProductos(search?: string, statusFilter?: string) {
         .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)')
         .order('nombre', { ascending: true });
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
+      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
       const { data, error } = await q;
       if (error) throw error;
-      return data as any[];
+      return data as unknown as Producto[];
     },
   });
 }

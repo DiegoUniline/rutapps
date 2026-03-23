@@ -13,7 +13,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useVentas } from '@/hooks/useVentas';
+import { useVentasPaginated } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
@@ -66,7 +66,7 @@ export default function VentasListPage() {
   const [tipoFilter, setTipoFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  const { data: ventas, isLoading } = useVentas(search, statusFilter, tipoFilter);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
   const { data: clientesList } = useClientes();
 
   // WhatsApp state
@@ -77,10 +77,11 @@ export default function VentasListPage() {
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
-  const total = ventas?.length ?? 0;
+  const ventas = ventasData?.rows ?? [];
+  const total = ventasData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = ventas?.slice(from - 1, to) ?? [];
+  const pageData = ventas;
   const allSelected = pageData.length > 0 && pageData.every(v => selected.has(v.id));
 
   const toggleAll = () => {
@@ -95,8 +96,8 @@ export default function VentasListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? `$${v.toFixed(2)}` : '—';
 
-  const totalVentas = ventas?.reduce((s: number, v: any) => s + (v.total ?? 0), 0) ?? 0;
-  const totalSaldo = ventas?.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
+  const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
+  const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
   return (
     <div className="p-4 space-y-3 min-h-full">
@@ -138,13 +139,13 @@ export default function VentasListPage() {
               onExcel={() => exportToExcel({
                 fileName: 'Ventas', title: 'Reporte de Ventas',
                 columns: VENTAS_COLUMNS,
-                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })),
                 totals: { total: totalVentas, saldo_pendiente: totalSaldo },
               })}
               onPDF={() => exportToPDF({
                 fileName: 'Ventas', title: 'Reporte de Ventas',
                 columns: VENTAS_COLUMNS,
-                data: (ventas ?? []).map((v: any) => ({ ...v, cliente_nombre: v.clientes?.nombre || '' })),
+                data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })),
                 totals: { total: totalVentas, saldo_pendiente: totalSaldo },
               })}
             />
@@ -174,8 +175,8 @@ export default function VentasListPage() {
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay ventas. Crea la primera.</div>
           )}
-          {pageData.map((v: any) => {
-            const cliente = clientesList?.find((c: any) => c.id === v.cliente_id);
+          {pageData.map((v) => {
+            const cliente = clientesList?.find(c => c.id === v.cliente_id);
             const openWa = async (e: React.MouseEvent) => {
               e.stopPropagation();
               setGeneratingPdf(v.id);
