@@ -175,8 +175,8 @@ export default function VentasListPage() {
           {pageData.length === 0 && (
             <div className="text-center py-12 text-muted-foreground text-sm">No hay ventas. Crea la primera.</div>
           )}
-          {pageData.map((v: any) => {
-            const cliente = clientesList?.find((c: any) => c.id === v.cliente_id);
+          {pageData.map((v) => {
+            const cliente = clientesList?.find(c => c.id === v.cliente_id);
             const openWa = async (e: React.MouseEvent) => {
               e.stopPropagation();
               setGeneratingPdf(v.id);
