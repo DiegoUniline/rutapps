@@ -81,6 +81,7 @@ export default function MiSuscripcionPage() {
   const [showTransferInfo, setShowTransferInfo] = useState(false);
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
+  const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!empresa?.id) return;
@@ -266,6 +267,28 @@ export default function MiSuscripcionPage() {
       toast.error(e.message);
     } finally {
       setPaying(false);
+    }
+  }
+
+  // ─── Pay single invoice with Stripe ───
+  async function handlePayInvoice(factura: FacturaRow) {
+    setPayingInvoice(factura.id);
+    try {
+      // Find the plan linked to current subscription
+      const plan = plans.find(p => p.stripe_price_id === subData?.stripe_price_id) || plans[0];
+      if (!plan?.stripe_price_id) throw new Error('No se encontró un plan con precio de Stripe');
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { price_id: plan.stripe_price_id, quantity: factura.num_usuarios, empresa_id: empresa?.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.url) throw new Error('No se recibió URL de pago');
+      window.location.href = data.url;
+    } catch (e: any) {
+      toast.error(e.message || 'Error al generar enlace de pago');
+    } finally {
+      setPayingInvoice(null);
     }
   }
 
@@ -554,6 +577,7 @@ export default function MiSuscripcionPage() {
                         <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Usuarios</th>
                         <th className="text-right py-2 px-2 font-semibold text-muted-foreground text-xs">Total</th>
                         <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs">Estado</th>
+                        <th className="text-center py-2 px-2 font-semibold text-muted-foreground text-xs"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -577,6 +601,20 @@ export default function MiSuscripcionPage() {
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
                               {facturaStatusLabel[f.estado] || f.estado}
                             </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center">
+                            {f.estado === 'pendiente' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1"
+                                disabled={payingInvoice === f.id}
+                                onClick={() => handlePayInvoice(f)}
+                              >
+                                {payingInvoice === f.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CreditCard className="h-3 w-3" />}
+                                Pagar
+                              </Button>
+                            )}
                           </td>
                         </tr>
                       ))}
