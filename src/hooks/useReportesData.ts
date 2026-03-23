@@ -110,10 +110,11 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         if (!entregasPorRuta[vid]) entregasPorRuta[vid] = { nombre: (e.vendedores as any)?.nombre ?? 'Sin ruta', entregas: 0, total: 0, productos: {} };
         entregasPorRuta[vid].entregas += 1;
         entregasPorRuta[vid].total += e.total ?? 0;
-        for (const l of ((e as any).venta_lineas ?? [])) {
-          const pid = l.producto_id ?? '';
-          if (!entregasPorRuta[vid].productos[pid]) entregasPorRuta[vid].productos[pid] = { codigo: (l.productos as any)?.codigo ?? '', nombre: (l.productos as any)?.nombre ?? '', cantidad: 0 };
-          entregasPorRuta[vid].productos[pid].cantidad += l.cantidad ?? 0;
+        for (const l of ((e as Record<string, unknown>).venta_lineas ?? []) as Record<string, unknown>[]) {
+          const pid = (l.producto_id as string) ?? '';
+          const prod = l.productos as { codigo?: string; nombre?: string } | null;
+          if (!entregasPorRuta[vid].productos[pid]) entregasPorRuta[vid].productos[pid] = { codigo: prod?.codigo ?? '', nombre: prod?.nombre ?? '', cantidad: 0 };
+          entregasPorRuta[vid].productos[pid].cantidad += (l.cantidad as number) ?? 0;
         }
       }
 
