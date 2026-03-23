@@ -110,17 +110,18 @@ Deno.serve(async (req) => {
 
     log("Proration calculated", { diasEnMes, diaActual, diasRestantes, esProrrateo, subtotal, total });
 
-    // Update subscription
+    const subUpdatePayload: Record<string, any> = {
+      plan_id: plan.id,
+      status: "pendiente_pago",
+      max_usuarios: qty,
+      es_manual: true,
+      updated_at: new Date().toISOString(),
+    };
+    if (plan.stripe_price_id) subUpdatePayload.stripe_price_id = plan.stripe_price_id;
+
     const { error: subErr } = await supabase
       .from("subscriptions")
-      .update({
-        plan_id: plan.id,
-        status: "pendiente_pago",
-        max_usuarios: qty,
-        es_manual: true,
-        stripe_price_id: plan.stripe_price_id,
-        updated_at: new Date().toISOString(),
-      })
+      .update(subUpdatePayload)
       .eq("empresa_id", profile.empresa_id);
 
     if (subErr) log("Sub update error", subErr);
