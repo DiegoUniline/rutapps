@@ -913,7 +913,7 @@ export default function DescargasPage() {
             ))}
           </div>
           <Button size="sm" onClick={() => setShowNew(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Nueva descarga
+            <Plus className="h-3.5 w-3.5 mr-1" /> Nueva liquidación
           </Button>
         </div>
       </div>
