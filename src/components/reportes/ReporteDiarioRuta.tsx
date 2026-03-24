@@ -13,64 +13,69 @@ const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2,
 export default function ReporteDiarioRuta() {
   const { empresa } = useAuth();
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
-  const [vendedorId, setVendedorId] = useState<string>('');
+  const [usuarioId, setUsuarioId] = useState<string>('');
   const printRef = useRef<HTMLDivElement>(null);
 
-  const { data: vendedores } = useQuery<any[]>({
-    queryKey: ['vendedores-list-report', empresa?.id],
+  // Load all active users (profiles) of the company
+  const { data: usuarios } = useQuery<any[]>({
+    queryKey: ['usuarios-list-report', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      const { data } = await (supabase as any).from('profiles').select('id, user_id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
       return data ?? [];
     },
   });
 
-  const vendedorOpts = (vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre }));
+  // Use profile.id as value since vendedor_id in ventas/gastos/devoluciones = profile.id
+  const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre }));
+  // Get the user_id for tables that use user_id (cobros, visitas)
+  const selectedProfile = (usuarios || []).find((u: any) => u.id === usuarioId);
+  const selectedUserId = selectedProfile?.user_id ?? usuarioId;
 
-  const enabled = !!empresa?.id && !!vendedorId && !!fecha;
+  const enabled = !!empresa?.id && !!usuarioId && !!fecha;
 
   const { data: ventas } = useQuery<any[]>({
-    queryKey: ['rpt-diario-ventas', empresa?.id, vendedorId, fecha],
+    queryKey: ['rpt-diario-ventas', empresa?.id, usuarioId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('ventas').select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', vendedorId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('ventas').select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId).eq('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
 
   const { data: cobros } = useQuery<any[]>({
-    queryKey: ['rpt-diario-cobros', empresa?.id, vendedorId, fecha],
+    queryKey: ['rpt-diario-cobros', empresa?.id, usuarioId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', vendedorId).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', selectedUserId).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
 
   const { data: gastos } = useQuery<any[]>({
-    queryKey: ['rpt-diario-gastos', empresa?.id, vendedorId, fecha],
+    queryKey: ['rpt-diario-gastos', empresa?.id, usuarioId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('gastos').select('id, monto, concepto, notas').eq('empresa_id', empresa!.id).eq('vendedor_id', vendedorId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('gastos').select('id, monto, concepto, notas').eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId).eq('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
 
   const { data: devoluciones } = useQuery<any[]>({
-    queryKey: ['rpt-diario-devs', empresa?.id, vendedorId, fecha],
+    queryKey: ['rpt-diario-devs', empresa?.id, usuarioId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', vendedorId).eq('fecha', fecha);
+      const { data } = await (supabase as any).from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId).eq('fecha', fecha);
       return data ?? [];
     },
   });
 
   // Visitas (clientes visitados, sin compra, etc.)
   const { data: visitas } = useQuery<any[]>({
-    queryKey: ['rpt-diario-visitas', empresa?.id, vendedorId, fecha],
+    queryKey: ['rpt-diario-visitas', empresa?.id, usuarioId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', vendedorId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', selectedUserId).eq('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
@@ -128,14 +133,14 @@ export default function ReporteDiarioRuta() {
     });
   });
 
-  const vendedorNombre = vendedores?.find(v => v.id === vendedorId)?.nombre ?? '';
+  const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
 
   const handlePrint = () => {
     const content = printRef.current;
     if (!content) return;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Reporte Diario - ${vendedorNombre} - ${fecha}</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Reporte Diario - ${usuarioNombre} - ${fecha}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 20px; }
@@ -176,12 +181,12 @@ export default function ReporteDiarioRuta() {
           <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
         </div>
         <div className="w-56">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Vendedor / Ruta</label>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Usuario</label>
           <SearchableSelect
-            options={vendedorOpts}
-            value={vendedorId}
-            onChange={val => setVendedorId(val)}
-            placeholder="Selecciona vendedor..."
+            options={usuarioOpts}
+            value={usuarioId}
+            onChange={val => setUsuarioId(val)}
+            placeholder="Selecciona usuario..."
           />
         </div>
         {enabled && (
@@ -194,7 +199,7 @@ export default function ReporteDiarioRuta() {
       {!enabled && (
         <div className="text-center py-12">
           <FileText className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Selecciona un vendedor y fecha para generar el reporte diario</p>
+          <p className="text-sm text-muted-foreground">Selecciona un usuario y fecha para generar el reporte diario</p>
         </div>
       )}
 
@@ -203,7 +208,7 @@ export default function ReporteDiarioRuta() {
           {/* Header */}
           <div>
             <h1 className="text-base font-bold text-foreground">Reporte diario de ruta</h1>
-            <p className="text-xs text-muted-foreground">{vendedorNombre} — {fecha} — {empresa?.nombre}</p>
+            <p className="text-xs text-muted-foreground">{usuarioNombre} — {fecha} — {empresa?.nombre}</p>
           </div>
 
           {/* Summary cards */}
