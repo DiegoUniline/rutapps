@@ -84,11 +84,8 @@ Deno.serve(async (req) => {
     for (const table of tablesToClean) {
       await admin.from(table).delete().eq("empresa_id", eid);
     }
-    // Tables without empresa_id but linked via parent
     await admin.from("clientes").delete().eq("empresa_id", eid);
     await admin.from("productos").delete().eq("empresa_id", eid);
-
-    // Clean extra almacenes/zonas/clasificaciones (keep defaults or recreate)
     await admin.from("almacenes").delete().eq("empresa_id", eid);
     await admin.from("zonas").delete().eq("empresa_id", eid);
     await admin.from("clasificaciones").delete().eq("empresa_id", eid);
@@ -96,7 +93,7 @@ Deno.serve(async (req) => {
     await admin.from("lista_precios").delete().eq("empresa_id", eid);
     await admin.from("proveedores").delete().eq("empresa_id", eid);
 
-    // ── 5) Create almacenes ──
+    // ── 5) Almacenes ──
     const { data: almGeneral } = await admin.from("almacenes").insert({
       empresa_id: eid, nombre: "Almacén General", activo: true,
     }).select("id").single();
@@ -109,47 +106,24 @@ Deno.serve(async (req) => {
       empresa_id: eid, nombre: "Ruta Sur", activo: true,
     }).select("id").single();
 
-    // ── 6) Create zonas ──
-    const { data: zonaNorte } = await admin.from("zonas").insert({
-      empresa_id: eid, nombre: "Zona Norte",
-    }).select("id").single();
+    // ── 6) Zonas ──
+    const { data: zonaNorte } = await admin.from("zonas").insert({ empresa_id: eid, nombre: "Zona Norte" }).select("id").single();
+    const { data: zonaSur } = await admin.from("zonas").insert({ empresa_id: eid, nombre: "Zona Sur" }).select("id").single();
+    const { data: zonaCentro } = await admin.from("zonas").insert({ empresa_id: eid, nombre: "Zona Centro" }).select("id").single();
 
-    const { data: zonaSur } = await admin.from("zonas").insert({
-      empresa_id: eid, nombre: "Zona Sur",
-    }).select("id").single();
+    // ── 7) Clasificaciones ──
+    const { data: catBebidas } = await admin.from("clasificaciones").insert({ empresa_id: eid, nombre: "Bebidas" }).select("id").single();
+    const { data: catBotanas } = await admin.from("clasificaciones").insert({ empresa_id: eid, nombre: "Botanas" }).select("id").single();
+    const { data: catLacteos } = await admin.from("clasificaciones").insert({ empresa_id: eid, nombre: "Lácteos" }).select("id").single();
+    const { data: catLimpieza } = await admin.from("clasificaciones").insert({ empresa_id: eid, nombre: "Limpieza" }).select("id").single();
+    const { data: catAbarrotes } = await admin.from("clasificaciones").insert({ empresa_id: eid, nombre: "Abarrotes" }).select("id").single();
 
-    const { data: zonaCentro } = await admin.from("zonas").insert({
-      empresa_id: eid, nombre: "Zona Centro",
-    }).select("id").single();
-
-    // ── 7) Create clasificaciones (categorías) ──
-    const { data: catBebidas } = await admin.from("clasificaciones").insert({
-      empresa_id: eid, nombre: "Bebidas",
-    }).select("id").single();
-
-    const { data: catBotanas } = await admin.from("clasificaciones").insert({
-      empresa_id: eid, nombre: "Botanas",
-    }).select("id").single();
-
-    const { data: catLacteos } = await admin.from("clasificaciones").insert({
-      empresa_id: eid, nombre: "Lácteos",
-    }).select("id").single();
-
-    const { data: catLimpieza } = await admin.from("clasificaciones").insert({
-      empresa_id: eid, nombre: "Limpieza",
-    }).select("id").single();
-
-    const { data: catAbarrotes } = await admin.from("clasificaciones").insert({
-      empresa_id: eid, nombre: "Abarrotes",
-    }).select("id").single();
-
-    // ── 8) Create marcas ──
-    const marcasNombres = ["Coca-Cola", "PepsiCo", "Bimbo", "Lala", "Gamesa", "Sabritas", "Del Valle", "Roma"];
-    for (const m of marcasNombres) {
+    // ── 8) Marcas ──
+    for (const m of ["Coca-Cola", "PepsiCo", "Bimbo", "Lala", "Gamesa", "Sabritas", "Del Valle", "Roma"]) {
       await admin.from("marcas").insert({ empresa_id: eid, nombre: m });
     }
 
-    // ── 9) Create proveedores ──
+    // ── 9) Proveedores ──
     const { data: provBebidas } = await admin.from("proveedores").insert({
       empresa_id: eid, nombre: "Distribuidora de Bebidas del Norte",
       contacto: "Luis Ramírez", telefono: "8191234567", email: "ventas@bebidasnorte.com",
@@ -160,18 +134,14 @@ Deno.serve(async (req) => {
       contacto: "Carmen Flores", telefono: "8197654321", email: "pedidos@mayoreocentral.com",
     }).select("id").single();
 
-    // ── 10) Get existing tarifa & lista ──
-    const { data: tarifa } = await admin.from("tarifas").select("id")
-      .eq("empresa_id", eid).limit(1).single();
+    // ── 10) Tarifa & lista existentes ──
+    const { data: tarifa } = await admin.from("tarifas").select("id").eq("empresa_id", eid).limit(1).single();
+    const { data: lista } = await admin.from("listas").select("id").eq("empresa_id", eid).limit(1).single();
 
-    const { data: lista } = await admin.from("listas").select("id")
-      .eq("empresa_id", eid).limit(1).single();
+    // ── 11) Vendedor ──
+    const { data: vendedor } = await admin.from("vendedores").select("id").eq("empresa_id", eid).limit(1).single();
 
-    // ── 11) Get vendedor (auto-created from profile trigger) ──
-    const { data: vendedor } = await admin.from("vendedores").select("id")
-      .eq("empresa_id", eid).limit(1).single();
-
-    // ── 12) Insert productos completos ──
+    // ── 12) Productos ──
     const productos = [
       { codigo: "BEB-001", nombre: "Coca-Cola 600ml", precio: 18, costo: 12, cant: 500, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
       { codigo: "BEB-002", nombre: "Pepsi 600ml", precio: 17, costo: 11, cant: 450, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
@@ -218,7 +188,6 @@ Deno.serve(async (req) => {
 
     // ── 13) Stock en almacén general + rutas ──
     for (const p of insertedProducts) {
-      // 70% stock general, 15% ruta norte, 15% ruta sur
       const stockGeneral = Math.round(p.cant * 0.7);
       const stockR1 = Math.round(p.cant * 0.15);
       const stockR2 = p.cant - stockGeneral - stockR1;
@@ -240,42 +209,59 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── 14) Tarifa linea general (margen 30% sobre costo) ──
+    // ── 14) Tarifa lineas: regla general + reglas por categoría ──
     if (tarifa) {
       await admin.from("tarifa_lineas").insert({
-        tarifa_id: tarifa.id,
-        aplica_a: "todos",
-        tipo_calculo: "margen",
-        base_precio: "costo",
-        margen_pct: 30,
-        clasificacion_ids: [],
-        producto_ids: [],
+        tarifa_id: tarifa.id, aplica_a: "todos", tipo_calculo: "margen",
+        base_precio: "costo", margen_pct: 30, clasificacion_ids: [], producto_ids: [],
       });
+      if (catBebidas) {
+        await admin.from("tarifa_lineas").insert({
+          tarifa_id: tarifa.id, aplica_a: "clasificacion", tipo_calculo: "margen",
+          base_precio: "costo", margen_pct: 40, clasificacion_ids: [catBebidas.id], producto_ids: [],
+        });
+      }
+      if (catLacteos) {
+        await admin.from("tarifa_lineas").insert({
+          tarifa_id: tarifa.id, aplica_a: "clasificacion", tipo_calculo: "descuento",
+          base_precio: "precio", descuento_pct: 5, clasificacion_ids: [catLacteos.id], producto_ids: [],
+        });
+      }
     }
 
-    // ── 15) Lista de precios principal ──
+    // ── 15) Lista de precios principal con líneas para TODOS los productos ──
+    let listaP: any = null;
     if (tarifa) {
-      const { data: listaP } = await admin.from("lista_precios").insert({
-        empresa_id: eid,
-        nombre: "Lista Principal",
-        tarifa_id: tarifa.id,
-        es_principal: true,
-        activa: true,
+      const { data: lp } = await admin.from("lista_precios").insert({
+        empresa_id: eid, nombre: "Lista Principal", tarifa_id: tarifa.id, es_principal: true, activa: true,
       }).select("id").single();
+      listaP = lp;
 
-      // Precios especiales para algunos productos
       if (listaP) {
-        for (const p of insertedProducts.slice(0, 5)) {
+        for (const p of insertedProducts) {
           await admin.from("lista_precios_lineas").insert({
-            lista_precio_id: listaP.id,
-            producto_id: p.id,
-            precio: p.precio,
+            lista_precio_id: listaP.id, producto_id: p.id, precio: p.precio,
           });
         }
       }
     }
 
-    // ── 16) Clientes con datos completos ──
+    // ── 15b) Lista Mayoreo con 10% descuento ──
+    if (tarifa) {
+      const { data: listaMay } = await admin.from("lista_precios").insert({
+        empresa_id: eid, nombre: "Lista Mayoreo", tarifa_id: tarifa.id, es_principal: false, activa: true,
+      }).select("id").single();
+
+      if (listaMay) {
+        for (const p of insertedProducts) {
+          await admin.from("lista_precios_lineas").insert({
+            lista_precio_id: listaMay.id, producto_id: p.id, precio: Math.round(p.precio * 0.9 * 100) / 100,
+          });
+        }
+      }
+    }
+
+    // ── 16) Clientes ──
     const zonas = [zonaNorte, zonaSur, zonaCentro];
     const dias: string[][] = [["lunes"], ["martes"], ["miercoles"], ["jueves"], ["viernes"], ["lunes", "jueves"], ["martes", "viernes"], ["miercoles"]];
     const clientesData = [
@@ -298,17 +284,14 @@ Deno.serve(async (req) => {
       const zona = zonas[i % zonas.length];
       await admin.from("clientes").insert({
         empresa_id: eid,
-        nombre: c.nombre,
-        direccion: c.dir,
-        colonia: c.col,
-        telefono: c.tel,
-        contacto: c.contacto,
-        gps_lat: c.lat,
-        gps_lng: c.lng,
+        nombre: c.nombre, direccion: c.dir, colonia: c.col,
+        telefono: c.tel, contacto: c.contacto,
+        gps_lat: c.lat, gps_lng: c.lng,
         zona_id: zona?.id ?? null,
         vendedor_id: vendedor?.id ?? null,
         tarifa_id: tarifa?.id ?? null,
         lista_id: lista?.id ?? null,
+        lista_precio_id: listaP?.id ?? null,
         frecuencia: i < 6 ? "semanal" : "quincenal",
         dia_visita: dias[i % dias.length],
         status: "activo",
@@ -319,7 +302,54 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── 17) Sign in as demo user and return session ──
+    // ── 17) Cargas de ruta (ya preparadas) ──
+    if (almGeneral && almRuta1 && vendedor) {
+      const { data: carga1 } = await admin.from("cargas").insert({
+        empresa_id: eid,
+        almacen_id: almGeneral.id,
+        almacen_destino_id: almRuta1.id,
+        vendedor_id: vendedor.id,
+        fecha: new Date().toISOString().slice(0, 10),
+        status: "confirmada",
+        notas: "Carga de la mañana - Ruta Norte",
+      }).select("id").single();
+
+      if (carga1) {
+        for (const p of insertedProducts.slice(0, 10)) {
+          await admin.from("carga_lineas").insert({
+            carga_id: carga1.id, producto_id: p.id,
+            cantidad_cargada: Math.round(p.cant * 0.05),
+            cantidad_vendida: 0, cantidad_devuelta: 0,
+          });
+        }
+      }
+    }
+
+    if (almGeneral && almRuta2 && vendedor) {
+      const { data: carga2 } = await admin.from("cargas").insert({
+        empresa_id: eid,
+        almacen_id: almGeneral.id,
+        almacen_destino_id: almRuta2.id,
+        vendedor_id: vendedor.id,
+        fecha: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+        status: "descargada",
+        notas: "Carga anterior - Ruta Sur (completada)",
+      }).select("id").single();
+
+      if (carga2) {
+        for (const p of insertedProducts.slice(5, 15)) {
+          const cargada = Math.round(p.cant * 0.04);
+          const vendida = Math.round(cargada * 0.7);
+          await admin.from("carga_lineas").insert({
+            carga_id: carga2.id, producto_id: p.id,
+            cantidad_cargada: cargada, cantidad_vendida: vendida,
+            cantidad_devuelta: cargada - vendida,
+          });
+        }
+      }
+    }
+
+    // ── 18) Sign in as demo user and return session ──
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const { data: signIn, error: signInErr } = await anonClient.auth.signInWithPassword({
       email: DEMO_EMAIL,
@@ -329,10 +359,7 @@ Deno.serve(async (req) => {
     if (signInErr) throw signInErr;
 
     return new Response(
-      JSON.stringify({
-        session: signIn.session,
-        message: "Demo lista con datos completos.",
-      }),
+      JSON.stringify({ session: signIn.session, message: "Demo lista con datos completos." }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
