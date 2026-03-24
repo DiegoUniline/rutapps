@@ -104,7 +104,7 @@ export function useDescargasListDesktop() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('descarga_ruta')
-        .select('id, fecha, fecha_inicio, fecha_fin, status, vendedor_id, carga_id, efectivo_esperado, efectivo_entregado, diferencia_efectivo, notas, vendedores(nombre), cargas(fecha)')
+        .select('id, fecha, fecha_inicio, fecha_fin, status, vendedor_id, empresa_id, carga_id, efectivo_esperado, efectivo_entregado, diferencia_efectivo, notas, vendedores(nombre), cargas(fecha)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false })
         .limit(50);
