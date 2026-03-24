@@ -1182,7 +1182,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 
       <Button
         onClick={() => submitMutation.mutate()}
-        disabled={submitMutation.isPending || efectivoEntregado === '' || !vendedorId}
+        disabled={submitMutation.isPending || efectivoEntregado === '' || !vendedorId || yaLiquidado}
         className="w-full sm:w-auto"
       >
         <PackageCheck className="h-4 w-4 mr-2" />
