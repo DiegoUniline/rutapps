@@ -121,7 +121,7 @@ export function useDescargaDetalle(descargaId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('descarga_ruta')
-        .select('id, fecha, fecha_inicio, fecha_fin, status, vendedor_id, carga_id, efectivo_esperado, efectivo_entregado, diferencia_efectivo, notas, notas_supervisor, fecha_aprobacion, vendedores(nombre), cargas(fecha, status)')
+        .select('id, fecha, fecha_inicio, fecha_fin, status, vendedor_id, empresa_id, carga_id, efectivo_esperado, efectivo_entregado, diferencia_efectivo, notas, notas_supervisor, fecha_aprobacion, vendedores(nombre), cargas(fecha, status)')
         .eq('id', descargaId!)
         .single();
       if (error) throw error;
