@@ -47,6 +47,7 @@ export default function LoginPage() {
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
         });
+        sessionStorage.setItem('demo_welcome', '1');
         toast.success('¡Bienvenido a la demo! Los datos se resetean en cada sesión.');
       }
     } catch (err: any) {
