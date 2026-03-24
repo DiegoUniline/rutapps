@@ -949,6 +949,7 @@ export default function DescargasPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showNew, setShowNew] = useState(false);
+  const { data: descargaDetalle } = useDescargaDetalle(selectedId);
 
   const filtered = (descargas || []).filter((d: any) =>
     filterStatus === 'all' || d.status === filterStatus
