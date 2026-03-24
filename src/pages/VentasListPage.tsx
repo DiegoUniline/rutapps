@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
