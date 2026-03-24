@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
