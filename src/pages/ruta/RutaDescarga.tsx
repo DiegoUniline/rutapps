@@ -51,20 +51,45 @@ export default function RutaDescarga() {
     enabled: !!empresa?.id,
   });
 
-  // Check if already submitted for this carga
+  // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
-    queryKey: ['mi-descarga-hoy', cargaActiva?.id],
+    queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id],
     queryFn: async () => {
-      if (!cargaActiva?.id) return null;
+      const today = new Date().toISOString().slice(0, 10);
+      // Check by carga_id
+      if (cargaActiva?.id) {
+        const { data } = await supabase
+          .from('descarga_ruta')
+          .select('id, status')
+          .eq('carga_id', cargaActiva.id)
+          .limit(1)
+          .maybeSingle();
+        if (data) return data;
+      }
+      // Check by vendedor + date overlap
+      const vendedorId = cargaActiva?.vendedor_id || user?.id;
+      if (vendedorId) {
+        const { data } = await supabase
+          .from('descarga_ruta')
+          .select('id, status')
+          .eq('vendedor_id', vendedorId)
+          .lte('fecha_inicio', today)
+          .gte('fecha_fin', today)
+          .limit(1)
+          .maybeSingle();
+        if (data) return data;
+      }
+      // Also check by fecha field
       const { data } = await supabase
         .from('descarga_ruta')
         .select('id, status')
-        .eq('carga_id', cargaActiva!.id)
+        .eq('user_id', user!.id)
+        .eq('fecha', today)
         .limit(1)
         .maybeSingle();
       return data;
     },
-    enabled: !!cargaActiva?.id,
+    enabled: !!user?.id,
   });
 
   // Calculate effective total from bill/coin counter
