@@ -342,6 +342,7 @@ export default function VentasListPage() {
           )}
         </div>
       )}
+      </>)}
     </div>
   );
 }
