@@ -328,10 +328,13 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
   );
 }
 
+const DemoWelcomeDialog = lazy(() => import('@/components/DemoWelcomeDialog'));
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+  const [showDemoWelcome, setShowDemoWelcome] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
@@ -340,6 +343,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const location = useLocation();
   useProductosRealtime();
+
+  useEffect(() => {
+    if (sessionStorage.getItem('demo_welcome') === '1') {
+      sessionStorage.removeItem('demo_welcome');
+      setShowDemoWelcome(true);
+    }
+  }, []);
 
   useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);
