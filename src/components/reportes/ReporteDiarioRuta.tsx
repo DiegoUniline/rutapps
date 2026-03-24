@@ -13,21 +13,22 @@ const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2,
 export default function ReporteDiarioRuta() {
   const { empresa } = useAuth();
   const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
-  const [vendedorId, setVendedorId] = useState<string>('');
+  const [usuarioId, setUsuarioId] = useState<string>('');
   const printRef = useRef<HTMLDivElement>(null);
 
-  const { data: vendedores } = useQuery<any[]>({
-    queryKey: ['vendedores-list-report', empresa?.id],
+  // Load all active users (profiles) of the company
+  const { data: usuarios } = useQuery<any[]>({
+    queryKey: ['usuarios-list-report', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      const { data } = await (supabase as any).from('profiles').select('user_id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
       return data ?? [];
     },
   });
 
-  const vendedorOpts = (vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre }));
+  const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.user_id, label: u.nombre }));
 
-  const enabled = !!empresa?.id && !!vendedorId && !!fecha;
+  const enabled = !!empresa?.id && !!usuarioId && !!fecha;
 
   const { data: ventas } = useQuery<any[]>({
     queryKey: ['rpt-diario-ventas', empresa?.id, vendedorId, fecha],
