@@ -923,7 +923,7 @@ export default function DescargasPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-12">
           <PackageCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">No hay descargas</p>
+          <p className="text-sm text-muted-foreground">No hay liquidaciones</p>
           <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera descarga
           </Button>
