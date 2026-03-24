@@ -11,7 +11,7 @@ const log = (step: string, details?: any) =>
   console.log(`[SELECT-PLAN] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
 const WHATSAPI_URL = "https://itxrxxoykvxpwflndvea.supabase.co/functions/v1/api-proxy";
-const FACTURACION_URL = "https://rutapps.lovable.app/mi-suscripcion";
+const FACTURACION_URL = "https://rutapp.mx/mi-suscripcion";
 
 /* ─── Send WhatsApp text ─── */
 async function sendWA(waToken: string, phone: string, message: string): Promise<boolean> {
