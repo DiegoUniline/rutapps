@@ -424,49 +424,50 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         </SectionCard>
 
         {/* ═══ COBROS RECIBIDOS ═══ */}
-        {(cobros || []).length > 0 && (
-          <SectionCard title={`Cobros recibidos (${(cobros || []).length})`} icon={CreditCard}>
-            {/* By method summary */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
-                <div key={metodo} className="bg-muted/50 rounded-md px-3 py-2 text-[12px]">
-                  <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
-                  <span className="font-bold">${total.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-            <table className="w-full text-[12px]">
-              <thead>
-                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                  <th className="text-left py-2">Cliente</th>
-                  <th className="text-left py-2">Método</th>
-                  <th className="text-left py-2">Referencia</th>
-                  <th className="text-right py-2">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(cobros || []).map((c: any) => (
-                  <tr key={c.id} className="border-b border-border/50">
-                    <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
-                    <td className="py-1.5 capitalize">{c.metodo_pago}</td>
-                    <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
-                    <td className="py-1.5 text-right font-semibold">${Number(c.monto).toFixed(2)}</td>
-                  </tr>
+        <SectionCard title={`Cobros recibidos (${(cobros || []).length})`} icon={CreditCard}>
+          {(cobros || []).length > 0 ? (
+            <>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
+                  <div key={metodo} className="bg-muted/50 rounded-md px-3 py-2 text-[12px]">
+                    <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
+                    <span className="font-bold">${total.toFixed(2)}</span>
+                  </div>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border font-bold">
-                  <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
-                  <td className="py-2 text-right">${totalCobros.toFixed(2)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </SectionCard>
-        )}
+              </div>
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-2">Cliente</th>
+                    <th className="text-left py-2">Método</th>
+                    <th className="text-left py-2">Referencia</th>
+                    <th className="text-right py-2">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(cobros || []).map((c: any) => (
+                    <tr key={c.id} className="border-b border-border/50">
+                      <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
+                      <td className="py-1.5 capitalize">{c.metodo_pago}</td>
+                      <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
+                      <td className="py-1.5 text-right font-semibold">${Number(c.monto).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-bold">
+                    <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
+                    <td className="py-2 text-right">${totalCobros.toFixed(2)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </>
+          ) : <p className="text-sm text-muted-foreground">Sin cobros en este periodo</p>}
+        </SectionCard>
 
         {/* ═══ GASTOS ═══ */}
-        {(gastos || []).length > 0 && (
-          <SectionCard title={`Gastos (${(gastos || []).length})`} icon={TrendingDown}>
+        <SectionCard title={`Gastos (${(gastos || []).length})`} icon={TrendingDown}>
+          {(gastos || []).length > 0 ? (
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
@@ -491,12 +492,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </tr>
               </tfoot>
             </table>
-          </SectionCard>
-        )}
+          ) : <p className="text-sm text-muted-foreground">Sin gastos en este periodo</p>}
+        </SectionCard>
 
         {/* ═══ DEVOLUCIONES ═══ */}
-        {devLineas.length > 0 && (
-          <SectionCard title={`Devoluciones (${devLineas.length} productos)`} icon={RotateCcw}>
+        <SectionCard title={`Devoluciones (${devLineas.length} productos)`} icon={RotateCcw}>
+          {devLineas.length > 0 ? (
             <div className="space-y-1">
               {devLineas.map((d, i) => (
                 <div key={i} className="flex items-center justify-between bg-muted/30 rounded px-3 py-1.5 text-[12px]">
@@ -511,8 +512,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </div>
               ))}
             </div>
-          </SectionCard>
-        )}
+          ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
+        </SectionCard>
 
         {/* ═══ PRODUCTOS DEVUELTOS (Descarga lineas) ═══ */}
         {(lineas || []).length > 0 && (
