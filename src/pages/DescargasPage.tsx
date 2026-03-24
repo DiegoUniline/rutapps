@@ -96,14 +96,25 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Cobros recibidos
+  // Cobros recibidos — filter by user_id (auth uuid from profile)
+  const { data: vendedorProfile } = useQuery({
+    queryKey: ['vendedor-profile', descarga.vendedor_id],
+    enabled: !!descarga.vendedor_id,
+    queryFn: async () => {
+      const { data } = await supabase.from('profiles').select('user_id').eq('id', descarga.vendedor_id).single();
+      return data;
+    },
+  });
+
   const { data: cobros } = useQuery({
-    queryKey: ['descarga-cobros', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin],
+    queryKey: ['descarga-cobros', descarga.vendedor_id, descarga.empresa_id, fInicio, fFin, vendedorProfile?.user_id],
+    enabled: !!vendedorProfile?.user_id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cobros')
         .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
         .eq('empresa_id', descarga.empresa_id)
+        .eq('user_id', vendedorProfile!.user_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
         .order('created_at', { ascending: true });
