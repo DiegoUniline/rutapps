@@ -194,7 +194,7 @@ export default function AdminWhatsAppTab() {
         data: sampleData,
         phone: testPhone,
         waToken: savedToken,
-        customerEmail: 'test@rutapps.lovable.app',
+        customerEmail: 'test@rutapp.mx',
         textCaption: `${tpl.emoji} ${tpl.encabezado} (PRUEBA)`,
       });
 
