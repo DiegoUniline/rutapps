@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Play } from 'lucide-react';
+import { Eye, EyeOff, Play, Package, Users, Warehouse, Truck, BarChart3, MapPin } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+
+const DEMO_STEPS = [
+  { icon: Warehouse, label: 'Creando almacenes y zonas...' },
+  { icon: Package, label: 'Cargando catálogo de productos...' },
+  { icon: Users, label: 'Registrando clientes y rutas...' },
+  { icon: BarChart3, label: 'Configurando listas de precios...' },
+  { icon: Truck, label: 'Preparando cargas y stock...' },
+  { icon: MapPin, label: '¡Casi listo! Finalizando...' },
+];
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,32 +21,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [demoStep, setDemoStep] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      if (isForgot) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
-        if (error) throw error;
-        toast.success('Te enviamos un enlace para restablecer tu contraseña. Revisa tu email.');
-        setIsForgot(false);
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success('Sesión iniciada');
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!demoLoading) { setDemoStep(0); return; }
+    const interval = setInterval(() => {
+      setDemoStep(s => (s < DEMO_STEPS.length - 1 ? s + 1 : s));
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [demoLoading]);
 
   const handleDemo = async () => {
     setDemoLoading(true);
+    setDemoStep(0);
     try {
       const { data, error } = await supabase.functions.invoke('demo-login');
       if (error) throw error;
@@ -56,6 +53,30 @@ export default function LoginPage() {
       setDemoLoading(false);
     }
   };
+
+  if (demoLoading) {
+    const StepIcon = DEMO_STEPS[demoStep].icon;
+    const progress = Math.min(((demoStep + 1) / DEMO_STEPS.length) * 100, 95);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-full max-w-sm text-center space-y-6 p-6">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
+            <StepIcon className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Preparando tu demo</h2>
+            <p className="text-sm text-muted-foreground mt-1 animate-fade-in" key={demoStep}>
+              {DEMO_STEPS[demoStep].label}
+            </p>
+          </div>
+          <Progress value={progress} className="h-2" />
+          <p className="text-xs text-muted-foreground">
+            Esto toma unos segundos, estamos creando un entorno completo para ti.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
