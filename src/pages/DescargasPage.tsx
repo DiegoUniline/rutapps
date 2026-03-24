@@ -311,12 +311,16 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   })),
                   gastos: (gastos || []).map((g: any) => ({ concepto: g.concepto ?? '—', monto: Number(g.monto) || 0 })),
                   devoluciones: devLineas.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo })),
-                  cuadre: {
+                    cuadre: {
                     totalContado, totalCredito,
                     cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
+                  ...(incluirStock ? {
+                    stockInicio: cargaInicio ? { fecha: cargaInicio.fecha, lineas: stockInicio } : undefined,
+                    stockFin: cargaFin && cargaFin.id !== cargaInicio?.id ? { fecha: cargaFin.fecha, lineas: stockFin } : undefined,
+                  } : {}),
                 };
                 const html = buildLiquidacionTicketHTML(ticketData);
                 const container = document.createElement('div');
