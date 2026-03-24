@@ -25,7 +25,7 @@ export default function ReporteDiarioRuta() {
         .select('id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
-        .order('nombre');
+        .order('nombre') as { data: { id: string; nombre: string }[] | null };
       return data ?? [];
     },
   });
