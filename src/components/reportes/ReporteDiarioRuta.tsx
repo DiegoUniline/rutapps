@@ -42,7 +42,7 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-cobros', empresa?.id, vendedorId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', vendedorId).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
