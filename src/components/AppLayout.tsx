@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
       { label: 'Cobranza', path: '/ventas/cobranza' },
       { label: 'Promociones', path: '/ventas/promociones' },
       { label: 'Punto de venta', path: '/pos' },
+      { label: 'Reporte diario', path: '/ventas/reporte-diario' },
     ],
   },
   { label: 'Clientes', icon: Users, path: '/clientes' },
