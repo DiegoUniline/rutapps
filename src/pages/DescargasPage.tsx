@@ -878,7 +878,7 @@ export default function DescargasPage() {
                 return (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-4">
-                      {hasRange ? `${d.fecha_inicio} → ${d.fecha_fin}` : d.fecha}
+                      {hasRange ? `${fmtDate(d.fecha_inicio)} → ${fmtDate(d.fecha_fin)}` : fmtDate(d.fecha)}
                     </td>
                     <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
                     <td className="py-2.5 px-4">
