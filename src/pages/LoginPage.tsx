@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Play } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -10,6 +10,7 @@ export default function LoginPage() {
   const [isForgot, setIsForgot] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +32,27 @@ export default function LoginPage() {
       toast.error(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDemo = async () => {
+    setDemoLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('demo-login');
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+        toast.success('¡Bienvenido a la demo! Los datos se resetean en cada sesión.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error al iniciar demo');
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -67,6 +89,20 @@ export default function LoginPage() {
             {loading ? 'Cargando...' : isForgot ? 'Enviar enlace' : 'Entrar'}
           </button>
         </form>
+
+        {/* Demo button */}
+        {!isForgot && (
+          <button
+            type="button"
+            onClick={handleDemo}
+            disabled={demoLoading}
+            className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded border-2 border-dashed border-primary/40 text-primary text-sm font-medium hover:bg-primary/5 transition-colors disabled:opacity-50"
+          >
+            <Play className="h-4 w-4" />
+            {demoLoading ? 'Preparando demo...' : 'Probar Demo (sin registro)'}
+          </button>
+        )}
+
         {!isForgot && (
           <p className="text-center text-xs text-muted-foreground mt-3">
             <button onClick={() => setIsForgot(true)} className="odoo-link">
