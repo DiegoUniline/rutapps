@@ -571,112 +571,117 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const { user, empresa } = useAuth();
   const qc = useQueryClient();
-  const [selectedCargaId, setSelectedCargaId] = useState<string | null>(null);
-  const [lineas, setLineas] = useState<DescargaLinea[]>([]);
+  const [vendedorId, setVendedorId] = useState<string>('');
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
   const [notas, setNotas] = useState('');
-  const [fechaInicio, setFechaInicio] = useState('');
-  const [fechaFin, setFechaFin] = useState('');
+  const [fechaInicio, setFechaInicio] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().slice(0, 10));
 
-  // Fetch cargas en_ruta / completada
-  const { data: cargas } = useQuery({
-    queryKey: ['cargas-para-descarga', empresa?.id],
+  // All active users
+  const { data: usuarios } = useQuery({
+    queryKey: ['usuarios-liquidar', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('cargas')
-        .select('*, vendedores!cargas_vendedor_id_fkey(nombre)')
+      const { data } = await (supabase as any)
+        .from('profiles')
+        .select('id, user_id, nombre')
         .eq('empresa_id', empresa!.id)
-        .in('status', ['en_ruta', 'completada'])
-        .order('fecha', { ascending: false });
-      if (error) throw error;
-      return data;
+        .eq('estado', 'activo')
+        .order('nombre');
+      return (data ?? []) as { id: string; user_id: string; nombre: string }[];
     },
   });
 
-  const { lineas: lineasBase, efectivoEsperado, ventasContado, gastosTotal } = useDescargaCalculos(selectedCargaId);
+  const usuarioOpts = (usuarios || []).map(u => ({ value: u.id, label: u.nombre }));
+  const selectedProfile = (usuarios || []).find(u => u.id === vendedorId);
+  const selectedUserId = selectedProfile?.user_id ?? vendedorId;
 
-  const lineasBaseJson = JSON.stringify(lineasBase.map(l => l.producto_id));
-  useEffect(() => {
-    if (lineasBase.length > 0) {
-      setLineas(lineasBase);
-    } else {
-      setLineas([]);
-    }
-  }, [lineasBaseJson]);
+  // Calculate expected cash for the period
+  const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;
 
-  const updateLinea = (idx: number, field: keyof DescargaLinea, value: any) => {
-    setLineas(prev => prev.map((l, i) => {
-      if (i !== idx) return l;
-      const updated = { ...l, [field]: value };
-      if (field === 'cantidad_real') {
-        updated.diferencia = Number(value) - updated.cantidad_esperada;
-      }
-      return updated;
-    }));
-  };
+  const { data: resumen } = useQuery({
+    queryKey: ['liquidar-resumen', empresa?.id, vendedorId, fechaInicio, fechaFin],
+    enabled: canCalc,
+    queryFn: async () => {
+      // Ventas contado
+      const { data: ventasContado } = await (supabase as any)
+        .from('ventas')
+        .select('total')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', vendedorId)
+        .eq('condicion_pago', 'contado')
+        .neq('status', 'cancelado')
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
 
-  const hayDiferencias = lineas.some(l => l.diferencia !== 0) ||
-    (efectivoEntregado !== '' && Number(efectivoEntregado) !== efectivoEsperado);
+      const totalContado = (ventasContado || []).reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
 
-  const selectedCarga = cargas?.find((c: any) => c.id === selectedCargaId);
+      // Cobros en efectivo
+      const { data: cobrosEfectivo } = await (supabase as any)
+        .from('cobros')
+        .select('monto')
+        .eq('empresa_id', empresa!.id)
+        .eq('user_id', selectedUserId)
+        .eq('metodo_pago', 'efectivo')
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
+
+      const totalCobros = (cobrosEfectivo || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+
+      // Gastos
+      const { data: gastos } = await (supabase as any)
+        .from('gastos')
+        .select('monto')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', vendedorId)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
+
+      const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
+
+      const esperado = totalContado + totalCobros - totalGastos;
+
+      return { totalContado, totalCobros, totalGastos, esperado };
+    },
+  });
+
+  const efectivoEsperado = resumen?.esperado ?? 0;
+  const diferenciaEfectivo = efectivoEntregado !== '' ? Number(efectivoEntregado) - efectivoEsperado : 0;
+  const hayDiferencias = efectivoEntregado !== '' && Number(efectivoEntregado) !== efectivoEsperado;
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      if (selectedCargaId) {
-        const sinMotivo = lineas.filter(l => l.diferencia !== 0 && !l.motivo);
-        if (sinMotivo.length > 0) throw new Error('Todas las diferencias necesitan un motivo');
-      }
+      if (!vendedorId) throw new Error('Selecciona un usuario');
+      if (efectivoEntregado === '') throw new Error('Ingresa el efectivo entregado');
 
-      const efectivoReal = efectivoEntregado !== '' ? Number(efectivoEntregado) : efectivoEsperado;
+      const efectivoReal = Number(efectivoEntregado);
 
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
+        vendedor_id: vendedorId,
         efectivo_esperado: efectivoEsperado,
         efectivo_entregado: efectivoReal,
         diferencia_efectivo: efectivoReal - efectivoEsperado,
         notas: notas || null,
+        fecha_inicio: fechaInicio || null,
+        fecha_fin: fechaFin || null,
       };
 
-      if (selectedCargaId) {
-        insertData.carga_id = selectedCargaId;
-        insertData.vendedor_id = (selectedCarga as any)?.vendedor_id ?? null;
-      }
-
-      if (fechaInicio) insertData.fecha_inicio = fechaInicio;
-      if (fechaFin) insertData.fecha_fin = fechaFin;
-
-      const { data: descarga, error } = await supabase
+      const { error } = await supabase
         .from('descarga_ruta')
         .insert(insertData)
         .select()
         .single();
       if (error) throw error;
-
-      if (lineas.length > 0) {
-        const lineItems = lineas.map(l => ({
-          descarga_id: descarga.id,
-          producto_id: l.producto_id,
-          cantidad_esperada: l.cantidad_esperada,
-          cantidad_real: l.cantidad_real,
-          diferencia: l.diferencia,
-          motivo: l.diferencia !== 0 ? l.motivo : null,
-          notas: l.notas || null,
-        }));
-        const { error: lErr } = await supabase.from('descarga_ruta_lineas').insert(lineItems as any);
-        if (lErr) throw lErr;
-      }
     },
     onSuccess: () => {
-      toast.success(hayDiferencias ? 'Descarga enviada para aprobación' : 'Descarga completada');
+      toast.success(hayDiferencias ? 'Liquidación enviada para aprobación' : 'Liquidación completada');
       qc.invalidateQueries({ queryKey: ['descargas-list'] });
       onClose();
     },
     onError: (e: any) => toast.error(e.message),
   });
-
-  const diferenciaEfectivo = efectivoEntregado !== '' ? Number(efectivoEntregado) - efectivoEsperado : 0;
 
   return (
     <div className="space-y-5">
@@ -685,42 +690,19 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         <h2 className="text-lg font-bold text-foreground">Nueva liquidación de ruta</h2>
       </div>
 
-      {/* Step 1: Select carga (optional) */}
-      <div className="bg-card border border-border rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">1. Selecciona la carga (opcional)</h3>
-        <p className="text-xs text-muted-foreground mb-3">Si no hay carga o solo liquidas efectivo, puedes dejarlo sin seleccionar.</p>
-        {!cargas || cargas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay cargas activas</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {cargas.map((c: any) => (
-              <button
-                key={c.id}
-                onClick={() => {
-                  setSelectedCargaId(prev => prev === c.id ? null : c.id);
-                  setLineas([]);
-                  setEfectivoEntregado('');
-                }}
-                className={cn(
-                  "border rounded-lg p-3 text-left transition-colors",
-                  selectedCargaId === c.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
-                )}
-              >
-                <div className="text-[13px] font-semibold text-foreground">{(c as any).vendedores?.nombre ?? 'Sin vendedor'}</div>
-                <div className="text-[11px] text-muted-foreground">Fecha: {c.fecha} — {c.status}</div>
-              </button>
-            ))}
+      {/* Step 1: Select user and period */}
+      <div className="bg-card border border-border rounded-lg p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground mb-1">1. Usuario y periodo</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl">
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Usuario a liquidar</label>
+            <SearchableSelect
+              options={usuarioOpts}
+              value={vendedorId}
+              onChange={val => { setVendedorId(val); setEfectivoEntregado(''); }}
+              placeholder="Selecciona usuario..."
+            />
           </div>
-        )}
-      </div>
-
-      {/* Date range (optional) */}
-      <div className="bg-card border border-border rounded-lg p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Periodo (opcional)</h3>
-        <p className="text-xs text-muted-foreground mb-3">Para liquidaciones semanales o por rango de fechas.</p>
-        <div className="grid grid-cols-2 gap-3 max-w-sm">
           <div>
             <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Desde</label>
             <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
@@ -732,116 +714,48 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      {/* Cash reconciliation — always visible */}
-      <div className="bg-card border border-border rounded-lg p-5 space-y-3">
-        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-          <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
-        </h3>
-        {selectedCargaId && (
-          <div className="grid grid-cols-3 gap-3 text-[12px]">
+      {/* Step 2: Cash reconciliation */}
+      {canCalc && resumen && (
+        <div className="bg-card border border-border rounded-lg p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
             <div className="bg-muted/50 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Ventas contado</div>
-              <div className="font-bold text-foreground">${ventasContado.toFixed(2)}</div>
+              <div className="font-bold text-foreground">${resumen.totalContado.toFixed(2)}</div>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-center">
+              <div className="text-muted-foreground">Cobros efectivo</div>
+              <div className="font-bold text-foreground">${resumen.totalCobros.toFixed(2)}</div>
             </div>
             <div className="bg-muted/50 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Gastos</div>
-              <div className="font-bold text-destructive">-${gastosTotal.toFixed(2)}</div>
+              <div className="font-bold text-destructive">-${resumen.totalGastos.toFixed(2)}</div>
             </div>
             <div className="bg-primary/5 rounded-md p-3 text-center">
-              <div className="text-muted-foreground">Esperado</div>
+              <div className="text-muted-foreground">Efectivo esperado</div>
               <div className="font-bold text-primary">${efectivoEsperado.toFixed(2)}</div>
             </div>
           </div>
-        )}
-        <div className="max-w-xs">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Efectivo entregado</label>
-          <Input
-            type="number"
-            value={efectivoEntregado}
-            onChange={e => setEfectivoEntregado(e.target.value)}
-            placeholder={selectedCargaId ? efectivoEsperado.toFixed(2) : '0.00'}
-          />
-        </div>
-        {diferenciaEfectivo !== 0 && (
-          <div className={cn(
-            "flex items-center gap-2 p-2 rounded-md text-[12px] font-semibold max-w-xs",
-            diferenciaEfectivo > 0 ? "bg-green-50 text-green-700" : "bg-destructive/10 text-destructive"
-          )}>
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${diferenciaEfectivo.toFixed(2)}
+          <div className="max-w-xs">
+            <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Efectivo entregado</label>
+            <Input
+              type="number"
+              value={efectivoEntregado}
+              onChange={e => setEfectivoEntregado(e.target.value)}
+              placeholder={efectivoEsperado.toFixed(2)}
+            />
           </div>
-        )}
-      </div>
-
-      {/* Product reconciliation — only when carga selected */}
-      {selectedCargaId && lineas.length > 0 && (
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <PackageCheck className="h-4 w-4" /> 3. Cuadre de productos
-          </h3>
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2 px-2">Producto</th>
-                <th className="text-center py-2 px-1 w-16">Cargado</th>
-                <th className="text-center py-2 px-1 w-16">Vendido</th>
-                <th className="text-center py-2 px-1 w-16">Devuelto</th>
-                <th className="text-center py-2 px-1 w-16">Esperado</th>
-                <th className="text-center py-2 px-1 w-20">Real</th>
-                <th className="text-center py-2 px-1 w-14">Dif.</th>
-                <th className="text-left py-2 px-1 w-32">Motivo</th>
-                <th className="text-left py-2 px-1">Notas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineas.map((l, idx) => (
-                <tr key={l.producto_id} className={cn("border-b border-border/50", l.diferencia !== 0 && "bg-amber-50/50")}>
-                  <td className="py-2 px-2">
-                    <div className="font-medium text-foreground">{l.producto_nombre}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono">{l.producto_codigo}</div>
-                  </td>
-                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_cargada}</td>
-                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_vendida}</td>
-                  <td className="py-2 px-1 text-center text-muted-foreground">{l.cantidad_devuelta}</td>
-                  <td className="py-2 px-1 text-center font-semibold">{l.cantidad_esperada}</td>
-                  <td className="py-2 px-1">
-                    <Input
-                      type="number"
-                      value={l.cantidad_real}
-                      onChange={e => updateLinea(idx, 'cantidad_real', Number(e.target.value) || 0)}
-                      className="h-7 text-[12px] text-center w-16 mx-auto"
-                    />
-                  </td>
-                  <td className={cn(
-                    "py-2 px-1 text-center font-bold",
-                    l.diferencia > 0 ? "text-green-600" : l.diferencia < 0 ? "text-destructive" : ""
-                  )}>
-                    {l.diferencia > 0 ? '+' : ''}{l.diferencia}
-                  </td>
-                  <td className="py-2 px-1">
-                    {l.diferencia !== 0 ? (
-                      <SearchableSelect
-                        options={MOTIVOS}
-                        value={l.motivo || ''}
-                        onChange={val => updateLinea(idx, 'motivo', val || null)}
-                        placeholder="Motivo..."
-                      />
-                    ) : <span className="text-muted-foreground">—</span>}
-                  </td>
-                  <td className="py-2 px-1">
-                    {l.diferencia !== 0 ? (
-                      <Input
-                        value={l.notas || ''}
-                        onChange={e => updateLinea(idx, 'notas', e.target.value)}
-                        placeholder="Detalle..."
-                        className="h-7 text-[11px]"
-                      />
-                    ) : <span className="text-muted-foreground">—</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {diferenciaEfectivo !== 0 && (
+            <div className={cn(
+              "flex items-center gap-2 p-2 rounded-md text-[12px] font-semibold max-w-xs",
+              diferenciaEfectivo > 0 ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400" : "bg-destructive/10 text-destructive"
+            )}>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Diferencia: {diferenciaEfectivo > 0 ? '+' : ''}${diferenciaEfectivo.toFixed(2)}
+            </div>
+          )}
         </div>
       )}
 
@@ -851,18 +765,18 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         <textarea
           value={notas}
           onChange={e => setNotas(e.target.value)}
-          placeholder="Observaciones sobre la descarga..."
+          placeholder="Observaciones sobre la liquidación..."
           className="input-odoo min-h-[60px] text-[13px] w-full"
         />
       </div>
 
       <Button
         onClick={() => submitMutation.mutate()}
-        disabled={submitMutation.isPending || efectivoEntregado === ''}
+        disabled={submitMutation.isPending || efectivoEntregado === '' || !vendedorId}
         className="w-full sm:w-auto"
       >
         <PackageCheck className="h-4 w-4 mr-2" />
-        {hayDiferencias ? 'Enviar para aprobación' : 'Completar descarga'}
+        {hayDiferencias ? 'Enviar para aprobación' : 'Completar liquidación'}
       </Button>
     </div>
   );
