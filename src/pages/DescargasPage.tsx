@@ -62,6 +62,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
+  const [incluirStock, setIncluirStock] = useState(false);
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
