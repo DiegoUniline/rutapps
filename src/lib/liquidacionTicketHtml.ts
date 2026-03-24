@@ -5,6 +5,15 @@
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt = (n: number) => `$${fmtNum(n)}`;
 
+export interface StockLineItem {
+  nombre: string;
+  codigo: string;
+  cargada: number;
+  vendida: number;
+  devuelta: number;
+  restante: number;
+}
+
 export interface LiquidacionTicketData {
   empresaNombre: string;
   vendedorNombre: string;
@@ -24,6 +33,8 @@ export interface LiquidacionTicketData {
     efectivoEsperado: number;
     diferencia: number;
   };
+  stockInicio?: { fecha: string; lineas: StockLineItem[] };
+  stockFin?: { fecha: string; lineas: StockLineItem[] };
 }
 
 const statusLabel: Record<string, string> = {
