@@ -955,7 +955,7 @@ export default function DescargasPage() {
     filterStatus === 'all' || d.status === filterStatus
   );
 
-  const selectedDescarga = descargas?.find((d: any) => d.id === selectedId);
+  const selectedDescarga = descargaDetalle ?? descargas?.find((d: any) => d.id === selectedId);
 
   if (showNew) {
     return (
