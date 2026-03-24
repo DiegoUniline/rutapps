@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
+import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
+import { toPng } from 'html-to-image';
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
