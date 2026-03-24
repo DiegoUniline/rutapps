@@ -68,6 +68,7 @@ export default function VentasListPage() {
   const [tipoFilter, setTipoFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<'ventas' | 'reporte'>('ventas');
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
   const { data: clientesList } = useClientes();
 
