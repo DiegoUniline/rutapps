@@ -237,8 +237,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <p className="text-xs text-muted-foreground mt-0.5">
               {(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} — {
                 descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
-                  ? `${descarga.fecha_inicio} al ${descarga.fecha_fin}`
-                  : descarga.fecha
+                  ? `${fmtDate(descarga.fecha_inicio)} al ${fmtDate(descarga.fecha_fin)}`
+                  : fmtDate(descarga.fecha)
               }
             </p>
           </div>
