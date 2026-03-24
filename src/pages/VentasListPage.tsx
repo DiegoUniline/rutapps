@@ -106,6 +106,34 @@ export default function VentasListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /></h1>
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          onClick={() => setTab('ventas')}
+          className={cn(
+            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+            tab === 'ventas' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <ShoppingCart className="h-3.5 w-3.5 inline mr-1.5" />Ventas
+        </button>
+        <button
+          onClick={() => setTab('reporte')}
+          className={cn(
+            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+            tab === 'reporte' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <FileBarChart className="h-3.5 w-3.5 inline mr-1.5" />Reporte diario
+        </button>
+      </div>
+
+      {tab === 'reporte' ? (
+        <Suspense fallback={<div className="text-sm text-muted-foreground py-8 text-center">Cargando...</div>}>
+          <ReporteDiarioRuta />
+        </Suspense>
+      ) : (<>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
           search={search}
