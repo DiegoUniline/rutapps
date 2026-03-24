@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const DEMO_EMAIL = "demo@rutapp.mx";
 const DEMO_PASSWORD = "demo1234";
-const DEMO_EMPRESA_NOMBRE = "Empresa Demo";
+const DEMO_EMPRESA_NOMBRE = "Distribuidora Demo";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 1) Find or create demo user
+    // ── 1) Find or create demo user ──
     const { data: listData } = await admin.auth.admin.listUsers();
     let demoUser = listData?.users?.find((u: any) => u.email === DEMO_EMAIL);
 
@@ -32,32 +32,26 @@ Deno.serve(async (req) => {
           email: DEMO_EMAIL,
           password: DEMO_PASSWORD,
           email_confirm: true,
-          user_metadata: { full_name: "Usuario Demo", empresa_nombre: DEMO_EMPRESA_NOMBRE },
+          user_metadata: { full_name: "Admin Demo", empresa_nombre: DEMO_EMPRESA_NOMBRE },
         });
       if (createErr) throw createErr;
       demoUser = created.user;
-
-      // Wait briefly for trigger to create profile + empresa
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 2500));
     } else {
-      // Reset password in case it was changed
       await admin.auth.admin.updateUserById(demoUser.id, { password: DEMO_PASSWORD });
     }
 
-    // 2) Get profile → empresa_id
+    // ── 2) Get profile → empresa_id ──
     const { data: profile } = await admin
       .from("profiles")
       .select("empresa_id")
       .eq("user_id", demoUser!.id)
       .single();
 
-    if (!profile?.empresa_id) {
-      throw new Error("Demo empresa not found");
-    }
-
+    if (!profile?.empresa_id) throw new Error("Demo empresa not found");
     const eid = profile.empresa_id;
 
-    // 3) Update empresa details
+    // ── 3) Update empresa details ──
     await admin.from("empresas").update({
       nombre: DEMO_EMPRESA_NOMBRE,
       rfc: "XAXX010101000",
@@ -68,79 +62,137 @@ Deno.serve(async (req) => {
       cp: "64000",
       telefono: "8112345678",
       email: "demo@rutapp.mx",
-      razon_social: "Empresa Demo S.A. de C.V.",
+      razon_social: "Distribuidora Demo S.A. de C.V.",
       regimen_fiscal: "601",
       moneda: "MXN",
     }).eq("id", eid);
 
-    // 4) Clean existing demo data (order matters for FK constraints)
-    await admin.from("venta_lineas").delete().eq("venta_id",
-      admin.from("ventas").select("id").eq("empresa_id", eid) as any
-    );
-    // Simplified: delete tables in correct order
+    // ── 4) Clean existing demo data (FK order) ──
     const tablesToClean = [
+      "conteo_entradas", "conteo_lineas", "conteos_fisicos",
+      "carga_pedidos", "carga_lineas", "cargas",
       "cobro_aplicaciones", "cobros",
       "venta_pagos", "venta_lineas", "ventas",
+      "entregas",
       "movimientos_inventario", "ajustes_inventario",
-      "stock_almacen", "compra_lineas", "compras",
+      "stock_almacen",
+      "compra_lineas", "compras",
+      "lista_precios_lineas",
+      "tarifa_lineas",
       "cliente_pedido_sugerido",
     ];
-
     for (const table of tablesToClean) {
       await admin.from(table).delete().eq("empresa_id", eid);
     }
-    // Delete clientes and productos (these have empresa_id directly)
+    // Tables without empresa_id but linked via parent
     await admin.from("clientes").delete().eq("empresa_id", eid);
     await admin.from("productos").delete().eq("empresa_id", eid);
 
-    // 5) Get almacen & tarifa
-    const { data: almacen } = await admin
-      .from("almacenes")
-      .select("id")
-      .eq("empresa_id", eid)
-      .limit(1)
-      .single();
+    // Clean extra almacenes/zonas/clasificaciones (keep defaults or recreate)
+    await admin.from("almacenes").delete().eq("empresa_id", eid);
+    await admin.from("zonas").delete().eq("empresa_id", eid);
+    await admin.from("clasificaciones").delete().eq("empresa_id", eid);
+    await admin.from("marcas").delete().eq("empresa_id", eid);
+    await admin.from("lista_precios").delete().eq("empresa_id", eid);
+    await admin.from("proveedores").delete().eq("empresa_id", eid);
 
-    const { data: tarifa } = await admin
-      .from("tarifas")
-      .select("id")
-      .eq("empresa_id", eid)
-      .limit(1)
-      .single();
+    // ── 5) Create almacenes ──
+    const { data: almGeneral } = await admin.from("almacenes").insert({
+      empresa_id: eid, nombre: "Almacén General", activo: true,
+    }).select("id").single();
 
-    const { data: zona } = await admin
-      .from("zonas")
-      .select("id")
-      .eq("empresa_id", eid)
-      .limit(1)
-      .single();
+    const { data: almRuta1 } = await admin.from("almacenes").insert({
+      empresa_id: eid, nombre: "Ruta Norte", activo: true,
+    }).select("id").single();
 
-    const { data: lista } = await admin
-      .from("listas")
-      .select("id")
-      .eq("empresa_id", eid)
-      .limit(1)
-      .single();
+    const { data: almRuta2 } = await admin.from("almacenes").insert({
+      empresa_id: eid, nombre: "Ruta Sur", activo: true,
+    }).select("id").single();
 
-    const { data: vendedor } = await admin
-      .from("vendedores")
-      .select("id")
-      .eq("empresa_id", eid)
-      .limit(1)
-      .single();
+    // ── 6) Create zonas ──
+    const { data: zonaNorte } = await admin.from("zonas").insert({
+      empresa_id: eid, nombre: "Zona Norte",
+    }).select("id").single();
 
-    // 6) Insert sample products
+    const { data: zonaSur } = await admin.from("zonas").insert({
+      empresa_id: eid, nombre: "Zona Sur",
+    }).select("id").single();
+
+    const { data: zonaCentro } = await admin.from("zonas").insert({
+      empresa_id: eid, nombre: "Zona Centro",
+    }).select("id").single();
+
+    // ── 7) Create clasificaciones (categorías) ──
+    const { data: catBebidas } = await admin.from("clasificaciones").insert({
+      empresa_id: eid, nombre: "Bebidas",
+    }).select("id").single();
+
+    const { data: catBotanas } = await admin.from("clasificaciones").insert({
+      empresa_id: eid, nombre: "Botanas",
+    }).select("id").single();
+
+    const { data: catLacteos } = await admin.from("clasificaciones").insert({
+      empresa_id: eid, nombre: "Lácteos",
+    }).select("id").single();
+
+    const { data: catLimpieza } = await admin.from("clasificaciones").insert({
+      empresa_id: eid, nombre: "Limpieza",
+    }).select("id").single();
+
+    const { data: catAbarrotes } = await admin.from("clasificaciones").insert({
+      empresa_id: eid, nombre: "Abarrotes",
+    }).select("id").single();
+
+    // ── 8) Create marcas ──
+    const marcasNombres = ["Coca-Cola", "PepsiCo", "Bimbo", "Lala", "Gamesa", "Sabritas", "Del Valle", "Roma"];
+    for (const m of marcasNombres) {
+      await admin.from("marcas").insert({ empresa_id: eid, nombre: m });
+    }
+
+    // ── 9) Create proveedores ──
+    const { data: provBebidas } = await admin.from("proveedores").insert({
+      empresa_id: eid, nombre: "Distribuidora de Bebidas del Norte",
+      contacto: "Luis Ramírez", telefono: "8191234567", email: "ventas@bebidasnorte.com",
+    }).select("id").single();
+
+    const { data: provAbarrotes } = await admin.from("proveedores").insert({
+      empresa_id: eid, nombre: "Abarrotes Mayoreo Central",
+      contacto: "Carmen Flores", telefono: "8197654321", email: "pedidos@mayoreocentral.com",
+    }).select("id").single();
+
+    // ── 10) Get existing tarifa & lista ──
+    const { data: tarifa } = await admin.from("tarifas").select("id")
+      .eq("empresa_id", eid).limit(1).single();
+
+    const { data: lista } = await admin.from("listas").select("id")
+      .eq("empresa_id", eid).limit(1).single();
+
+    // ── 11) Get vendedor (auto-created from profile trigger) ──
+    const { data: vendedor } = await admin.from("vendedores").select("id")
+      .eq("empresa_id", eid).limit(1).single();
+
+    // ── 12) Insert productos completos ──
     const productos = [
-      { codigo: "PROD-0001", nombre: "Coca-Cola 600ml", precio: 18, costo: 12, cantidad: 500, unidad_venta: "pza", iva_pct: 16 },
-      { codigo: "PROD-0002", nombre: "Pepsi 600ml", precio: 17, costo: 11, cantidad: 450, unidad_venta: "pza", iva_pct: 16 },
-      { codigo: "PROD-0003", nombre: "Agua Natural 1L", precio: 12, costo: 6, cantidad: 800, unidad_venta: "pza", iva_pct: 16 },
-      { codigo: "PROD-0004", nombre: "Galletas Marías 170g", precio: 15, costo: 9, cantidad: 300, unidad_venta: "pza", iva_pct: 0 },
-      { codigo: "PROD-0005", nombre: "Sabritas Original 45g", precio: 20, costo: 13, cantidad: 250, unidad_venta: "pza", iva_pct: 8 },
-      { codigo: "PROD-0006", nombre: "Jugo Del Valle 1L", precio: 28, costo: 18, cantidad: 200, unidad_venta: "pza", iva_pct: 0 },
-      { codigo: "PROD-0007", nombre: "Pan Bimbo Grande", precio: 55, costo: 38, cantidad: 100, unidad_venta: "pza", iva_pct: 0 },
-      { codigo: "PROD-0008", nombre: "Leche Lala 1L", precio: 28, costo: 20, cantidad: 350, unidad_venta: "pza", iva_pct: 0 },
-      { codigo: "PROD-0009", nombre: "Cerveza XX Lager 355ml", precio: 25, costo: 16, cantidad: 600, unidad_venta: "pza", iva_pct: 16 },
-      { codigo: "PROD-0010", nombre: "Detergente Roma 1kg", precio: 32, costo: 22, cantidad: 150, unidad_venta: "pza", iva_pct: 16 },
+      { codigo: "BEB-001", nombre: "Coca-Cola 600ml", precio: 18, costo: 12, cant: 500, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BEB-002", nombre: "Pepsi 600ml", precio: 17, costo: 11, cant: 450, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BEB-003", nombre: "Agua Natural 1L", precio: 12, costo: 6, cant: 800, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BEB-004", nombre: "Jugo Del Valle 1L", precio: 28, costo: 18, cant: 200, iva: 0, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BEB-005", nombre: "Cerveza XX Lager 355ml", precio: 25, costo: 16, cant: 600, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BEB-006", nombre: "Sprite 600ml", precio: 17, costo: 11, cant: 300, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BEB-007", nombre: "Fanta Naranja 600ml", precio: 17, costo: 11, cant: 280, iva: 16, clasId: catBebidas?.id, prov: provBebidas?.id },
+      { codigo: "BOT-001", nombre: "Sabritas Original 45g", precio: 20, costo: 13, cant: 250, iva: 16, clasId: catBotanas?.id, prov: provAbarrotes?.id },
+      { codigo: "BOT-002", nombre: "Doritos Nacho 62g", precio: 22, costo: 14, cant: 200, iva: 16, clasId: catBotanas?.id, prov: provAbarrotes?.id },
+      { codigo: "BOT-003", nombre: "Ruffles Queso 50g", precio: 20, costo: 13, cant: 180, iva: 16, clasId: catBotanas?.id, prov: provAbarrotes?.id },
+      { codigo: "LAC-001", nombre: "Leche Lala Entera 1L", precio: 28, costo: 20, cant: 350, iva: 0, clasId: catLacteos?.id, prov: provAbarrotes?.id },
+      { codigo: "LAC-002", nombre: "Yogurt Lala Fresa 1L", precio: 35, costo: 24, cant: 150, iva: 0, clasId: catLacteos?.id, prov: provAbarrotes?.id },
+      { codigo: "LAC-003", nombre: "Queso Oaxaca 400g", precio: 85, costo: 60, cant: 80, iva: 0, clasId: catLacteos?.id, prov: provAbarrotes?.id },
+      { codigo: "LIM-001", nombre: "Detergente Roma 1kg", precio: 32, costo: 22, cant: 150, iva: 16, clasId: catLimpieza?.id, prov: provAbarrotes?.id },
+      { codigo: "LIM-002", nombre: "Jabón Zote 400g", precio: 18, costo: 11, cant: 200, iva: 16, clasId: catLimpieza?.id, prov: provAbarrotes?.id },
+      { codigo: "LIM-003", nombre: "Cloro Cloralex 1L", precio: 22, costo: 14, cant: 120, iva: 16, clasId: catLimpieza?.id, prov: provAbarrotes?.id },
+      { codigo: "ABR-001", nombre: "Galletas Marías 170g", precio: 15, costo: 9, cant: 300, iva: 0, clasId: catAbarrotes?.id, prov: provAbarrotes?.id },
+      { codigo: "ABR-002", nombre: "Pan Bimbo Grande", precio: 55, costo: 38, cant: 100, iva: 0, clasId: catAbarrotes?.id, prov: provAbarrotes?.id },
+      { codigo: "ABR-003", nombre: "Aceite 1-2-3 1L", precio: 42, costo: 30, cant: 90, iva: 0, clasId: catAbarrotes?.id, prov: provAbarrotes?.id },
+      { codigo: "ABR-004", nombre: "Arroz Verde Valle 1kg", precio: 28, costo: 18, cant: 130, iva: 0, clasId: catAbarrotes?.id, prov: provAbarrotes?.id },
     ];
 
     const insertedProducts: any[] = [];
@@ -149,61 +201,125 @@ Deno.serve(async (req) => {
         empresa_id: eid,
         codigo: p.codigo,
         nombre: p.nombre,
-        precio: p.precio,
+        precio_principal: p.precio,
         costo: p.costo,
-        cantidad: p.cantidad,
-        unidad_venta: p.unidad_venta,
-        iva_pct: p.iva_pct,
-        activo: true,
+        cantidad: p.cant,
+        iva_pct: p.iva,
+        tiene_iva: p.iva > 0,
+        clasificacion_id: p.clasId ?? null,
+        proveedor_id: p.prov ?? null,
+        status: "activo",
+        se_puede_vender: true,
+        se_puede_comprar: true,
+        se_puede_inventariar: true,
       }).select("id").single();
       if (data) insertedProducts.push({ ...data, ...p });
     }
 
-    // 7) Insert stock_almacen for each product
-    if (almacen) {
-      for (const p of insertedProducts) {
+    // ── 13) Stock en almacén general + rutas ──
+    for (const p of insertedProducts) {
+      // 70% stock general, 15% ruta norte, 15% ruta sur
+      const stockGeneral = Math.round(p.cant * 0.7);
+      const stockR1 = Math.round(p.cant * 0.15);
+      const stockR2 = p.cant - stockGeneral - stockR1;
+
+      if (almGeneral) {
         await admin.from("stock_almacen").insert({
-          empresa_id: eid,
-          almacen_id: almacen.id,
-          producto_id: p.id,
-          cantidad: p.cantidad,
+          empresa_id: eid, almacen_id: almGeneral.id, producto_id: p.id, cantidad: stockGeneral,
+        });
+      }
+      if (almRuta1) {
+        await admin.from("stock_almacen").insert({
+          empresa_id: eid, almacen_id: almRuta1.id, producto_id: p.id, cantidad: stockR1,
+        });
+      }
+      if (almRuta2) {
+        await admin.from("stock_almacen").insert({
+          empresa_id: eid, almacen_id: almRuta2.id, producto_id: p.id, cantidad: stockR2,
         });
       }
     }
 
-    // 8) Insert sample clients
-    const clientes = [
-      { nombre: "Abarrotes Don José", direccion: "Calle Morelos 45", telefono: "8111111111", contacto: "José García" },
-      { nombre: "Tienda La Esquina", direccion: "Av. Juárez 120", telefono: "8122222222", contacto: "María López" },
-      { nombre: "Mini Super El Sol", direccion: "Blvd. Roble 890", telefono: "8133333333", contacto: "Carlos Ruiz" },
-      { nombre: "Abarrotes Lupita", direccion: "Calle 5 de Mayo 34", telefono: "8144444444", contacto: "Guadalupe Hdez" },
-      { nombre: "Tienda Don Pancho", direccion: "Av. Universidad 567", telefono: "8155555555", contacto: "Francisco Torres" },
-      { nombre: "Miscelánea La Estrella", direccion: "Calle Hidalgo 78", telefono: "8166666666", contacto: "Rosa Martínez" },
-      { nombre: "Super Ahorro", direccion: "Av. Lincoln 234", telefono: "8177777777", contacto: "Pedro Sánchez" },
-      { nombre: "Cremería Los Reyes", direccion: "Calle Zaragoza 90", telefono: "8188888888", contacto: "Ana Reyes" },
+    // ── 14) Tarifa linea general (margen 30% sobre costo) ──
+    if (tarifa) {
+      await admin.from("tarifa_lineas").insert({
+        tarifa_id: tarifa.id,
+        aplica_a: "todos",
+        tipo_calculo: "margen",
+        base_precio: "costo",
+        margen_pct: 30,
+        clasificacion_ids: [],
+        producto_ids: [],
+      });
+    }
+
+    // ── 15) Lista de precios principal ──
+    if (tarifa) {
+      const { data: listaP } = await admin.from("lista_precios").insert({
+        empresa_id: eid,
+        nombre: "Lista Principal",
+        tarifa_id: tarifa.id,
+        es_principal: true,
+        activa: true,
+      }).select("id").single();
+
+      // Precios especiales para algunos productos
+      if (listaP) {
+        for (const p of insertedProducts.slice(0, 5)) {
+          await admin.from("lista_precios_lineas").insert({
+            lista_precio_id: listaP.id,
+            producto_id: p.id,
+            precio: p.precio,
+          });
+        }
+      }
+    }
+
+    // ── 16) Clientes con datos completos ──
+    const zonas = [zonaNorte, zonaSur, zonaCentro];
+    const dias: string[][] = [["lunes"], ["martes"], ["miercoles"], ["jueves"], ["viernes"], ["lunes", "jueves"], ["martes", "viernes"], ["miercoles"]];
+    const clientesData = [
+      { nombre: "Abarrotes Don José", dir: "Calle Morelos 45, Col. Centro", col: "Centro", tel: "8111111111", contacto: "José García", lat: 25.6714, lng: -100.3093 },
+      { nombre: "Tienda La Esquina", dir: "Av. Juárez 120, Col. Obispado", col: "Obispado", tel: "8122222222", contacto: "María López", lat: 25.6745, lng: -100.3245 },
+      { nombre: "Mini Super El Sol", dir: "Blvd. Roble 890, Col. Valle", col: "Valle", tel: "8133333333", contacto: "Carlos Ruiz", lat: 25.6520, lng: -100.3350 },
+      { nombre: "Abarrotes Lupita", dir: "Calle 5 de Mayo 34, Col. Mitras", col: "Mitras", tel: "8144444444", contacto: "Guadalupe Hernández", lat: 25.6890, lng: -100.3410 },
+      { nombre: "Tienda Don Pancho", dir: "Av. Universidad 567, Col. Anáhuac", col: "Anáhuac", tel: "8155555555", contacto: "Francisco Torres", lat: 25.7010, lng: -100.3150 },
+      { nombre: "Miscelánea La Estrella", dir: "Calle Hidalgo 78, Col. Terminal", col: "Terminal", tel: "8166666666", contacto: "Rosa Martínez", lat: 25.6830, lng: -100.3050 },
+      { nombre: "Super Ahorro", dir: "Av. Lincoln 234, Col. Lincoln", col: "Lincoln", tel: "8177777777", contacto: "Pedro Sánchez", lat: 25.7100, lng: -100.3300 },
+      { nombre: "Cremería Los Reyes", dir: "Calle Zaragoza 90, Col. Independencia", col: "Independencia", tel: "8188888888", contacto: "Ana Reyes", lat: 25.6650, lng: -100.2950 },
+      { nombre: "Abarrotes El Porvenir", dir: "Av. Madero 456, Col. Cumbres", col: "Cumbres", tel: "8199999999", contacto: "Roberto Garza", lat: 25.7200, lng: -100.3600 },
+      { nombre: "Tiendita Doña Mary", dir: "Calle Matamoros 12, Col. San Nicolás", col: "San Nicolás", tel: "8110101010", contacto: "María Elena Díaz", lat: 25.7450, lng: -100.2900 },
+      { nombre: "Depósito El Güero", dir: "Blvd. Díaz Ordaz 789, Col. Country", col: "Country", tel: "8120202020", contacto: "Fernando Guzmán", lat: 25.6580, lng: -100.3500 },
+      { nombre: "Mini Mart Express", dir: "Av. Garza Sada 1200, Col. Tecnológico", col: "Tecnológico", tel: "8130303030", contacto: "Alejandra Villarreal", lat: 25.6380, lng: -100.2880 },
     ];
 
-    for (const c of clientes) {
+    for (let i = 0; i < clientesData.length; i++) {
+      const c = clientesData[i];
+      const zona = zonas[i % zonas.length];
       await admin.from("clientes").insert({
         empresa_id: eid,
         nombre: c.nombre,
-        direccion: c.direccion,
-        telefono: c.telefono,
+        direccion: c.dir,
+        colonia: c.col,
+        telefono: c.tel,
         contacto: c.contacto,
+        gps_lat: c.lat,
+        gps_lng: c.lng,
         zona_id: zona?.id ?? null,
         vendedor_id: vendedor?.id ?? null,
         tarifa_id: tarifa?.id ?? null,
         lista_id: lista?.id ?? null,
-        frecuencia: "semanal",
-        dia_visita: ["lunes"],
+        frecuencia: i < 6 ? "semanal" : "quincenal",
+        dia_visita: dias[i % dias.length],
         status: "activo",
-        credito: true,
-        dias_credito: 15,
-        limite_credito: 5000,
+        credito: i % 3 !== 0,
+        dias_credito: i % 3 !== 0 ? (i % 2 === 0 ? 15 : 30) : 0,
+        limite_credito: i % 3 !== 0 ? (i % 2 === 0 ? 5000 : 10000) : 0,
+        orden: i + 1,
       });
     }
 
-    // 9) Sign in as demo user and return session
+    // ── 17) Sign in as demo user and return session ──
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!);
     const { data: signIn, error: signInErr } = await anonClient.auth.signInWithPassword({
       email: DEMO_EMAIL,
@@ -215,7 +331,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         session: signIn.session,
-        message: "Demo lista. Datos reseteados.",
+        message: "Demo lista con datos completos.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
