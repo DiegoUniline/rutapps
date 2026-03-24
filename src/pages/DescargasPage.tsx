@@ -682,7 +682,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     <div className="space-y-5">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onClose}><ArrowLeft className="h-4 w-4" /></Button>
-        <h2 className="text-lg font-bold text-foreground">Nueva descarga de ruta</h2>
+        <h2 className="text-lg font-bold text-foreground">Nueva liquidación de ruta</h2>
       </div>
 
       {/* Step 1: Select carga (optional) */}
