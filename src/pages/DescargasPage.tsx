@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
+import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
+import { toPng } from 'html-to-image';
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
@@ -253,6 +255,53 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </span>
               );
             })()}
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
+              try {
+                const ticketData = {
+                  empresaNombre: empresa?.nombre ?? '',
+                  vendedorNombre: (descarga as any).vendedores?.nombre ?? 'Sin vendedor',
+                  fechaInicio: fInicio, fechaFin: fFin, status: descarga.status,
+                  efectivoEntregado: Number(descarga.efectivo_entregado) || 0,
+                  ventas: ventasActivas.map((v: any) => ({
+                    folio: v.folio ?? '—', cliente: v.clientes?.nombre ?? '—',
+                    condicion: v.condicion_pago, total: Number(v.total) || 0,
+                  })),
+                  cobros: (cobros || []).map((c: any) => ({
+                    cliente: c.clientes?.nombre ?? '—', metodo: c.metodo_pago ?? 'efectivo', monto: Number(c.monto) || 0,
+                  })),
+                  gastos: (gastos || []).map((g: any) => ({ concepto: g.concepto ?? '—', monto: Number(g.monto) || 0 })),
+                  devoluciones: devLineas.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo })),
+                  cuadre: {
+                    totalContado, totalCredito,
+                    cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
+                    totalGastos, efectivoEsperado: efectivoSistema,
+                    diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
+                  },
+                };
+                const html = buildLiquidacionTicketHTML(ticketData);
+                const container = document.createElement('div');
+                container.style.position = 'fixed';
+                container.style.left = '-9999px';
+                container.style.top = '0';
+                container.innerHTML = html;
+                document.body.appendChild(container);
+                try {
+                  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+                  const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' });
+                  const a = document.createElement('a');
+                  a.href = dataUrl;
+                  a.download = `Ticket-Liquidacion-${(descarga as any).vendedores?.nombre ?? 'vendedor'}-${fInicio}.png`;
+                  a.click();
+                  toast.success('Ticket descargado');
+                } finally {
+                  document.body.removeChild(container);
+                }
+              } catch (e: any) {
+                toast.error('Error: ' + e.message);
+              }
+            }}>
+              <Receipt className="h-3.5 w-3.5" /> Ticket
+            </Button>
             <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
               try {
                 const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
