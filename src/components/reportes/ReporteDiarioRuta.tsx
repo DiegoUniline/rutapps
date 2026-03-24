@@ -16,83 +16,51 @@ export default function ReporteDiarioRuta() {
   const [vendedorId, setVendedorId] = useState<string>('');
   const printRef = useRef<HTMLDivElement>(null);
 
-  const { data: vendedores } = useQuery({
+  const { data: vendedores } = useQuery<any[]>({
     queryKey: ['vendedores-list-report', empresa?.id],
     enabled: !!empresa?.id,
-    queryFn: async (): Promise<{ id: string; nombre: string }[]> => {
-      const { data } = await supabase
-        .from('vendedores')
-        .select('id, nombre')
-        .eq('empresa_id', empresa!.id)
-        .eq('activo', true)
-        .order('nombre');
-      return (data as any) ?? [];
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return data ?? [];
     },
   });
 
-  const vendedorOpts = (vendedores || []).map(v => ({ value: v.id, label: v.nombre }));
+  const vendedorOpts = (vendedores || []).map((v: any) => ({ value: v.id, label: v.nombre }));
 
   const enabled = !!empresa?.id && !!vendedorId && !!fecha;
 
-  // Ventas
-  const { data: ventas } = useQuery({
+  const { data: ventas } = useQuery<any[]>({
     queryKey: ['rpt-diario-ventas', empresa?.id, vendedorId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
-        .eq('fecha', fecha)
-        .order('created_at');
+      const { data } = await (supabase as any).from('ventas').select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', vendedorId).eq('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
 
-  // Cobros
-  const { data: cobros } = useQuery({
+  const { data: cobros } = useQuery<any[]>({
     queryKey: ['rpt-diario-cobros', empresa?.id, vendedorId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('cobros')
-        .select('id, monto, metodo_pago, referencia, clientes(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fecha)
-        .lte('fecha', fecha)
-        .order('created_at');
+      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
 
-  // Gastos
-  const { data: gastos } = useQuery({
+  const { data: gastos } = useQuery<any[]>({
     queryKey: ['rpt-diario-gastos', empresa?.id, vendedorId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('gastos')
-        .select('id, monto, concepto, notas')
-        .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
-        .eq('fecha', fecha)
-        .order('created_at');
+      const { data } = await (supabase as any).from('gastos').select('id, monto, concepto, notas').eq('empresa_id', empresa!.id).eq('vendedor_id', vendedorId).eq('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
 
-  // Devoluciones
-  const { data: devoluciones } = useQuery({
+  const { data: devoluciones } = useQuery<any[]>({
     queryKey: ['rpt-diario-devs', empresa?.id, vendedorId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('devoluciones')
-        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
-        .eq('fecha', fecha);
+      const { data } = await (supabase as any).from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', vendedorId).eq('fecha', fecha);
       return data ?? [];
     },
   });
