@@ -6,11 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useDescargasListDesktop, useDescargaDetalle, useDescargaLineas, useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown } from 'lucide-react';
+import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarSign, Plus, ArrowLeft, ShoppingCart, RotateCcw, CreditCard, Receipt, TrendingDown, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
+import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
+import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
@@ -53,7 +55,7 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
 /* ─── Detail / Approve panel — Full activity breakdown ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
-  const { user } = useAuth();
+  const { user, empresa } = useAuth();
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
@@ -251,6 +253,62 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </span>
               );
             })()}
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
+              try {
+                const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
+                const blob = generarLiquidacionPdf({
+                  empresa: {
+                    nombre: empresa?.nombre ?? '', razon_social: empresa?.razon_social, rfc: empresa?.rfc,
+                    direccion: empresa?.direccion, colonia: empresa?.colonia, ciudad: empresa?.ciudad,
+                    estado: empresa?.estado, cp: empresa?.cp, telefono: empresa?.telefono, email: empresa?.email,
+                  },
+                  logoBase64: logo,
+                  vendedorNombre: (descarga as any).vendedores?.nombre ?? 'Sin vendedor',
+                  fecha: descarga.fecha,
+                  fechaInicio: fInicio,
+                  fechaFin: fFin,
+                  status: descarga.status,
+                  efectivoEntregado: Number(descarga.efectivo_entregado) || 0,
+                  notas: descarga.notas,
+                  notasSupervisor: descarga.notas_supervisor,
+                  ventas: ventasActivas.map((v: any) => ({
+                    folio: v.folio ?? '—', cliente: v.clientes?.nombre ?? '—',
+                    condicion: v.condicion_pago, status: v.status, total: Number(v.total) || 0,
+                  })),
+                  ventasCanceladas: ventasCanceladas.map((v: any) => ({
+                    folio: v.folio ?? '—', cliente: v.clientes?.nombre ?? '—', total: Number(v.total) || 0,
+                  })),
+                  productos: productosArr.map(p => ({
+                    codigo: p.codigo, nombre: p.nombre, cantidad: p.cantidad, total: p.total,
+                  })),
+                  cobros: (cobros || []).map((c: any) => ({
+                    cliente: c.clientes?.nombre ?? '—', metodo: c.metodo_pago ?? 'efectivo',
+                    referencia: c.referencia || '', monto: Number(c.monto) || 0,
+                  })),
+                  gastos: (gastos || []).map((g: any) => ({
+                    concepto: g.concepto ?? '—', notas: g.notas || '', monto: Number(g.monto) || 0,
+                  })),
+                  devoluciones: devLineas,
+                  cuadre: {
+                    totalContado, totalCredito,
+                    cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
+                    totalGastos, efectivoEsperado: efectivoSistema,
+                    diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
+                  },
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Liquidacion-${(descarga as any).vendedores?.nombre ?? 'vendedor'}-${fInicio}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success('Documento generado');
+              } catch (e: any) {
+                toast.error('Error al generar documento: ' + e.message);
+              }
+            }}>
+              <FileText className="h-3.5 w-3.5" /> Documento
+            </Button>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg px-2">✕</button>
           </div>
         </div>
