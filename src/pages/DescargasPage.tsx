@@ -985,8 +985,22 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
+      {/* Warning: already liquidated */}
+      {canCalc && yaLiquidado && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-destructive">Este periodo ya fue liquidado</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ya existe una liquidación ({existingLiq?.status}) para este vendedor que cubre las fechas seleccionadas.
+              No se puede crear otra liquidación para el mismo periodo.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Step 2: Cash reconciliation */}
-      {canCalc && (
+      {canCalc && !yaLiquidado && (
         <div className="bg-card border border-border rounded-lg p-5 space-y-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
