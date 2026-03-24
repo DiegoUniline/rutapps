@@ -31,6 +31,29 @@ export default function LoginPage() {
     return () => clearInterval(interval);
   }, [demoLoading]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (isForgot) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success('Te enviamos un enlace para restablecer tu contraseña. Revisa tu email.');
+        setIsForgot(false);
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        toast.success('Sesión iniciada');
+      }
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDemo = async () => {
     setDemoLoading(true);
     setDemoStep(0);
