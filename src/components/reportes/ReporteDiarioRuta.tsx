@@ -75,7 +75,7 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-visitas', empresa?.id, usuarioId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', usuarioId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', selectedUserId).eq('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
