@@ -19,14 +19,14 @@ export default function ReporteDiarioRuta() {
   const { data: vendedores } = useQuery({
     queryKey: ['vendedores-list-report', empresa?.id],
     enabled: !!empresa?.id,
-    queryFn: async () => {
+    queryFn: async (): Promise<{ id: string; nombre: string }[]> => {
       const { data } = await supabase
         .from('vendedores')
         .select('id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
-        .order('nombre') as { data: { id: string; nombre: string }[] | null };
-      return data ?? [];
+        .order('nombre');
+      return (data as any) ?? [];
     },
   });
 
