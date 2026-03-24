@@ -2,9 +2,11 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Printer, FileText, Users, ShoppingCart, CreditCard, TrendingDown, XCircle, MapPin, RotateCcw } from 'lucide-react';
+import { Printer, FileText, ShoppingCart, CreditCard, TrendingDown, XCircle, MapPin, RotateCcw, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn } from '@/lib/utils';
 
@@ -12,11 +14,13 @@ const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2,
 
 export default function ReporteDiarioRuta() {
   const { empresa } = useAuth();
-  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const today = new Date().toISOString().slice(0, 10);
+  const [fechaInicio, setFechaInicio] = useState(today);
+  const [fechaFin, setFechaFin] = useState(today);
   const [usuarioId, setUsuarioId] = useState<string>('');
+  const [incluirStock, setIncluirStock] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Load all active users (profiles) of the company
   const { data: usuarios } = useQuery<any[]>({
     queryKey: ['usuarios-list-report', empresa?.id],
     enabled: !!empresa?.id,
@@ -26,60 +30,113 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  // Use profile.id as value since vendedor_id in ventas/gastos/devoluciones = profile.id
   const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre }));
-  // Get the user_id for tables that use user_id (cobros, visitas)
   const selectedProfile = (usuarios || []).find((u: any) => u.id === usuarioId);
   const selectedUserId = selectedProfile?.user_id ?? usuarioId;
 
-  const enabled = !!empresa?.id && !!usuarioId && !!fecha;
+  const enabled = !!empresa?.id && !!usuarioId && !!fechaInicio && !!fechaFin;
 
+  // --- Ventas ---
   const { data: ventas } = useQuery<any[]>({
-    queryKey: ['rpt-diario-ventas', empresa?.id, usuarioId, fecha],
+    queryKey: ['rpt-diario-ventas', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('ventas').select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('ventas')
+        .select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .gte('fecha', fechaInicio).lte('fecha', fechaFin)
+        .order('created_at');
       return data ?? [];
     },
   });
 
+  // --- Cobros ---
   const { data: cobros } = useQuery<any[]>({
-    queryKey: ['rpt-diario-cobros', empresa?.id, usuarioId, fecha],
+    queryKey: ['rpt-diario-cobros', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', selectedUserId).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('cobros')
+        .select('id, monto, metodo_pago, referencia, clientes(nombre)')
+        .eq('empresa_id', empresa!.id).eq('user_id', selectedUserId)
+        .gte('fecha', fechaInicio).lte('fecha', fechaFin)
+        .order('created_at');
       return data ?? [];
     },
   });
 
+  // --- Gastos ---
   const { data: gastos } = useQuery<any[]>({
-    queryKey: ['rpt-diario-gastos', empresa?.id, usuarioId, fecha],
+    queryKey: ['rpt-diario-gastos', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('gastos').select('id, monto, concepto, notas').eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('gastos')
+        .select('id, monto, concepto, notas')
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .gte('fecha', fechaInicio).lte('fecha', fechaFin)
+        .order('created_at');
       return data ?? [];
     },
   });
 
+  // --- Devoluciones ---
   const { data: devoluciones } = useQuery<any[]>({
-    queryKey: ['rpt-diario-devs', empresa?.id, usuarioId, fecha],
+    queryKey: ['rpt-diario-devs', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('devoluciones').select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))').eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId).eq('fecha', fecha);
+      const { data } = await (supabase as any).from('devoluciones')
+        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))')
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .gte('fecha', fechaInicio).lte('fecha', fechaFin);
       return data ?? [];
     },
   });
 
-  // Visitas (clientes visitados, sin compra, etc.)
+  // --- Visitas ---
   const { data: visitas } = useQuery<any[]>({
-    queryKey: ['rpt-diario-visitas', empresa?.id, usuarioId, fecha],
+    queryKey: ['rpt-diario-visitas', empresa?.id, usuarioId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', selectedUserId).eq('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('visitas')
+        .select('id, tipo, motivo, notas, clientes(nombre)')
+        .eq('empresa_id', empresa!.id).eq('user_id', selectedUserId)
+        .gte('fecha', fechaInicio).lte('fecha', fechaFin)
+        .order('created_at');
       return data ?? [];
     },
   });
 
+  // --- Stock a bordo: carga más reciente <= fechaInicio y <= fechaFin ---
+  const { data: cargaInicio } = useQuery<any>({
+    queryKey: ['rpt-stock-inicio', empresa?.id, usuarioId, fechaInicio],
+    enabled: enabled && incluirStock,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('cargas')
+        .select('id, fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .lte('fecha', fechaInicio)
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const { data: cargaFin } = useQuery<any>({
+    queryKey: ['rpt-stock-fin', empresa?.id, usuarioId, fechaFin],
+    enabled: enabled && incluirStock,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('cargas')
+        .select('id, fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .lte('fecha', fechaFin)
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // --- Computed data ---
   const ventasActivas = (ventas || []).filter((v: any) => v.status !== 'cancelado');
   const ventasCanceladas = (ventas || []).filter((v: any) => v.status === 'cancelado');
   const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
@@ -92,7 +149,6 @@ export default function ReporteDiarioRuta() {
   const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
 
-  // Unique clients visited (from ventas + visitas)
   const clientesVisitados = new Set([
     ...ventasActivas.map((v: any) => v.cliente_id).filter(Boolean),
     ...(visitas || []).map((v: any) => v.clientes?.nombre).filter(Boolean),
@@ -133,14 +189,31 @@ export default function ReporteDiarioRuta() {
     });
   });
 
+  // Stock helpers
+  const buildStockArr = (carga: any) => {
+    if (!carga?.carga_lineas) return [];
+    return (carga.carga_lineas as any[]).map((l: any) => ({
+      nombre: l.productos?.nombre || '—',
+      codigo: l.productos?.codigo || '',
+      cargada: Number(l.cantidad_cargada) || 0,
+      vendida: Number(l.cantidad_vendida) || 0,
+      devuelta: Number(l.cantidad_devuelta) || 0,
+      restante: (Number(l.cantidad_cargada) || 0) - (Number(l.cantidad_vendida) || 0) - (Number(l.cantidad_devuelta) || 0),
+    })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+  };
+
+  const stockInicio = buildStockArr(cargaInicio);
+  const stockFin = buildStockArr(cargaFin);
+
   const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
+  const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
   const handlePrint = () => {
     const content = printRef.current;
     if (!content) return;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Reporte Diario - ${usuarioNombre} - ${fecha}</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>Reporte - ${usuarioNombre} - ${fechaLabel}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 20px; }
@@ -162,7 +235,6 @@ export default function ReporteDiarioRuta() {
       .badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; }
       .badge-contado { background: #dcfce7; color: #166534; }
       .badge-credito { background: #dbeafe; color: #1e40af; }
-      .badge-cancel { background: #fee2e2; color: #991b1b; text-decoration: line-through; }
       tfoot td { border-top: 1.5px solid #999; font-weight: bold; }
       @media print { body { padding: 10px; } }
     </style></head><body>`);
@@ -177,8 +249,12 @@ export default function ReporteDiarioRuta() {
       {/* Controls */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="w-40">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Fecha</label>
-          <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Fecha inicio</label>
+          <Input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} />
+        </div>
+        <div className="w-40">
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Fecha fin</label>
+          <Input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)} />
         </div>
         <div className="w-56">
           <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Usuario</label>
@@ -188,6 +264,10 @@ export default function ReporteDiarioRuta() {
             onChange={val => setUsuarioId(val)}
             placeholder="Selecciona usuario..."
           />
+        </div>
+        <div className="flex items-center gap-2 pb-1">
+          <Switch id="incluir-stock" checked={incluirStock} onCheckedChange={setIncluirStock} />
+          <Label htmlFor="incluir-stock" className="text-xs cursor-pointer">Incluir stock a bordo</Label>
         </div>
         {enabled && (
           <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -199,7 +279,7 @@ export default function ReporteDiarioRuta() {
       {!enabled && (
         <div className="text-center py-12">
           <FileText className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Selecciona un usuario y fecha para generar el reporte diario</p>
+          <p className="text-sm text-muted-foreground">Selecciona un usuario y rango de fechas para generar el reporte</p>
         </div>
       )}
 
@@ -207,8 +287,8 @@ export default function ReporteDiarioRuta() {
         <div ref={printRef} className="bg-card border border-border rounded-lg p-5 space-y-4">
           {/* Header */}
           <div>
-            <h1 className="text-base font-bold text-foreground">Reporte diario de ruta</h1>
-            <p className="text-xs text-muted-foreground">{usuarioNombre} — {fecha} — {empresa?.nombre}</p>
+            <h1 className="text-base font-bold text-foreground">Reporte de ruta</h1>
+            <p className="text-xs text-muted-foreground">{usuarioNombre} — {fechaLabel} — {empresa?.nombre}</p>
           </div>
 
           {/* Summary cards */}
@@ -243,6 +323,78 @@ export default function ReporteDiarioRuta() {
               <div className="text-lg font-bold text-foreground">{clientesVisitados.size}</div>
             </div>
           </div>
+
+          {/* Stock a bordo - Inicio */}
+          {incluirStock && stockInicio.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                <Package className="h-3.5 w-3.5" /> Stock a bordo — Inicio ({cargaInicio?.fecha})
+              </h2>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-1.5">Código</th>
+                    <th className="text-left py-1.5">Producto</th>
+                    <th className="text-right py-1.5">Cargado</th>
+                    <th className="text-right py-1.5">Vendido</th>
+                    <th className="text-right py-1.5">Devuelto</th>
+                    <th className="text-right py-1.5">Restante</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockInicio.map((p: any, i: number) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
+                      <td className="py-1">{p.nombre}</td>
+                      <td className="py-1 text-right">{p.cargada}</td>
+                      <td className="py-1 text-right">{p.vendida}</td>
+                      <td className="py-1 text-right">{p.devuelta}</td>
+                      <td className="py-1 text-right font-semibold">{p.restante}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Stock a bordo - Fin */}
+          {incluirStock && stockFin.length > 0 && cargaFin?.id !== cargaInicio?.id && (
+            <div>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                <Package className="h-3.5 w-3.5" /> Stock a bordo — Fin ({cargaFin?.fecha})
+              </h2>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-1.5">Código</th>
+                    <th className="text-left py-1.5">Producto</th>
+                    <th className="text-right py-1.5">Cargado</th>
+                    <th className="text-right py-1.5">Vendido</th>
+                    <th className="text-right py-1.5">Devuelto</th>
+                    <th className="text-right py-1.5">Restante</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stockFin.map((p: any, i: number) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
+                      <td className="py-1">{p.nombre}</td>
+                      <td className="py-1 text-right">{p.cargada}</td>
+                      <td className="py-1 text-right">{p.vendida}</td>
+                      <td className="py-1 text-right">{p.devuelta}</td>
+                      <td className="py-1 text-right font-semibold">{p.restante}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {incluirStock && stockInicio.length === 0 && stockFin.length === 0 && (
+            <div className="text-[11px] text-muted-foreground italic py-2">
+              No se encontraron cargas para este usuario en el rango seleccionado.
+            </div>
+          )}
 
           {/* Ventas activas */}
           <div>
@@ -478,7 +630,7 @@ export default function ReporteDiarioRuta() {
 
           {/* Resumen final */}
           <div className="border-t border-border pt-3 mt-4">
-            <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del día</h2>
+            <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del período</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] max-w-md">
               <span className="text-muted-foreground">Ventas (contado):</span><span className="text-right font-semibold">${fmt(totalContado)}</span>
               <span className="text-muted-foreground">Ventas (crédito):</span><span className="text-right font-semibold">${fmt(totalCredito)}</span>
