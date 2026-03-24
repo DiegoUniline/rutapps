@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Package } from 'lucide-react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -61,6 +62,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
+  const [incluirStock, setIncluirStock] = useState(false);
 
   const fInicio = descarga.fecha_inicio || descarga.fecha;
   const fFin = descarga.fecha_fin || descarga.fecha;
@@ -144,7 +146,45 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Computed values
+  // --- Stock a bordo (cargas) ---
+  const { data: cargaInicio } = useQuery({
+    queryKey: ['liq-stock-inicio', descarga.empresa_id, descarga.vendedor_id, fInicio],
+    enabled: !!descarga.vendedor_id && incluirStock,
+    queryFn: async () => {
+      const { data } = await supabase.from('cargas')
+        .select('id, fecha, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
+        .eq('empresa_id', descarga.empresa_id).eq('vendedor_id', descarga.vendedor_id)
+        .lte('fecha', fInicio).order('fecha', { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+  });
+  const { data: cargaFin } = useQuery({
+    queryKey: ['liq-stock-fin', descarga.empresa_id, descarga.vendedor_id, fFin],
+    enabled: !!descarga.vendedor_id && incluirStock,
+    queryFn: async () => {
+      const { data } = await supabase.from('cargas')
+        .select('id, fecha, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
+        .eq('empresa_id', descarga.empresa_id).eq('vendedor_id', descarga.vendedor_id)
+        .lte('fecha', fFin).order('fecha', { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+  });
+
+  const buildStockArr = (carga: any) => {
+    if (!carga?.carga_lineas) return [];
+    return (carga.carga_lineas as any[]).map((l: any) => ({
+      nombre: l.productos?.nombre || '—',
+      codigo: l.productos?.codigo || '',
+      cargada: Number(l.cantidad_cargada) || 0,
+      vendida: Number(l.cantidad_vendida) || 0,
+      devuelta: Number(l.cantidad_devuelta) || 0,
+      restante: (Number(l.cantidad_cargada) || 0) - (Number(l.cantidad_vendida) || 0) - (Number(l.cantidad_devuelta) || 0),
+    })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+  };
+  const stockInicio = buildStockArr(cargaInicio);
+  const stockFin = buildStockArr(cargaFin);
+
+
   const ventasActivas = (ventasDia || []).filter((v: any) => v.status !== 'cancelado');
   const ventasCanceladas = (ventasDia || []).filter((v: any) => v.status === 'cancelado');
   const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
@@ -255,6 +295,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </span>
               );
             })()}
+            <div className="flex items-center gap-1.5">
+              <input type="checkbox" id="liq-stock" checked={incluirStock} onChange={e => setIncluirStock(e.target.checked)} className="accent-primary" />
+              <label htmlFor="liq-stock" className="text-[10px] cursor-pointer text-muted-foreground">Stock</label>
+            </div>
             <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
               try {
                 const ticketData = {
@@ -271,12 +315,16 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   })),
                   gastos: (gastos || []).map((g: any) => ({ concepto: g.concepto ?? '—', monto: Number(g.monto) || 0 })),
                   devoluciones: devLineas.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo })),
-                  cuadre: {
+                    cuadre: {
                     totalContado, totalCredito,
                     cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
+                  ...(incluirStock ? {
+                    stockInicio: cargaInicio ? { fecha: cargaInicio.fecha, lineas: stockInicio } : undefined,
+                    stockFin: cargaFin && cargaFin.id !== cargaInicio?.id ? { fecha: cargaFin.fecha, lineas: stockFin } : undefined,
+                  } : {}),
                 };
                 const html = buildLiquidacionTicketHTML(ticketData);
                 const container = document.createElement('div');
@@ -622,7 +670,69 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
         </SectionCard>
 
-        {/* ═══ PRODUCTOS DEVUELTOS (Descarga lineas) ═══ */}
+        {/* ═══ STOCK A BORDO ═══ */}
+        {incluirStock && (stockInicio.length > 0 || stockFin.length > 0) && (
+          <SectionCard title="Stock a bordo" icon={Package}>
+            {stockInicio.length > 0 && (
+              <div className="mb-4">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Inicio del periodo ({cargaInicio?.fecha})</div>
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                      <th className="text-left py-1.5">Producto</th>
+                      <th className="text-right py-1.5">Cargado</th>
+                      <th className="text-right py-1.5">Vendido</th>
+                      <th className="text-right py-1.5">Devuelto</th>
+                      <th className="text-right py-1.5">Restante</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockInicio.map((p: any, i: number) => (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="py-1">{p.nombre} <span className="text-muted-foreground font-mono text-[10px]">{p.codigo}</span></td>
+                        <td className="py-1 text-right">{p.cargada}</td>
+                        <td className="py-1 text-right">{p.vendida}</td>
+                        <td className="py-1 text-right">{p.devuelta}</td>
+                        <td className="py-1 text-right font-semibold">{p.restante}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {stockFin.length > 0 && cargaFin?.id !== cargaInicio?.id && (
+              <div>
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Fin del periodo ({cargaFin?.fecha})</div>
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                      <th className="text-left py-1.5">Producto</th>
+                      <th className="text-right py-1.5">Cargado</th>
+                      <th className="text-right py-1.5">Vendido</th>
+                      <th className="text-right py-1.5">Devuelto</th>
+                      <th className="text-right py-1.5">Restante</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stockFin.map((p: any, i: number) => (
+                      <tr key={i} className="border-b border-border/50">
+                        <td className="py-1">{p.nombre} <span className="text-muted-foreground font-mono text-[10px]">{p.codigo}</span></td>
+                        <td className="py-1 text-right">{p.cargada}</td>
+                        <td className="py-1 text-right">{p.vendida}</td>
+                        <td className="py-1 text-right">{p.devuelta}</td>
+                        <td className="py-1 text-right font-semibold">{p.restante}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {stockInicio.length === 0 && stockFin.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">No se encontraron cargas para este vendedor.</p>
+            )}
+          </SectionCard>
+        )}
+
         {(lineas || []).length > 0 && (
           <SectionCard title="Cuadre de productos (carga)" icon={PackageCheck}>
             <div className="space-y-1">
