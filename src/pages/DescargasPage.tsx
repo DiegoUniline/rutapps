@@ -398,7 +398,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         </SectionCard>
 
         {/* ═══ PRODUCTOS VENDIDOS (AGREGADO) ═══ */}
-        {productosArr.length > 0 && (
+        {productosArr.length > 0 ? (
           <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
             <table className="w-full text-[12px]">
               <thead>
