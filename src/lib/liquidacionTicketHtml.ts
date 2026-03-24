@@ -158,6 +158,9 @@ export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string 
       ${devHtml}
     </div>` : ''}
 
+    ${buildStockSection(data.stockInicio, 'Stock a bordo — Inicio')}
+    ${buildStockSection(data.stockFin, 'Stock a bordo — Fin')}
+
     <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
 
     <!-- FIRMAS -->
