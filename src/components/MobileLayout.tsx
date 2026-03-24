@@ -16,7 +16,7 @@ const tabs = [
 ];
 
 const moreItems = [
-  { label: 'Descarga', icon: PackageCheck, path: '/ruta/descarga' },
+  { label: 'Liquidar', icon: PackageCheck, path: '/ruta/descarga' },
   { label: 'Gastos', icon: FileText, path: '/ruta/gastos' },
   { label: 'Sincronizar', icon: RefreshCw, path: '/ruta/sincronizar' },
   { label: 'Perfil', icon: UserCircle, path: '/ruta/perfil' },

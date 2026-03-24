@@ -244,7 +244,7 @@ function Breadcrumb() {
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
-    configuracion: 'Configuración', 'configuracion-inicial': 'Configuración inicial', descargas: 'Descargas de ruta',
+    configuracion: 'Configuración', 'configuracion-inicial': 'Configuración inicial', descargas: 'Liquidar Ruta',
     usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
     'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
     logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
