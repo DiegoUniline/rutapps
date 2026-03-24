@@ -129,7 +129,7 @@ export default function ReporteDiarioRuta() {
     });
   });
 
-  const usuarioNombre = vendedores?.find(v => v.id === usuarioId)?.nombre ?? '';
+  const usuarioNombre = usuarios?.find((u: any) => u.user_id === usuarioId)?.nombre ?? '';
 
   const handlePrint = () => {
     const content = printRef.current;
