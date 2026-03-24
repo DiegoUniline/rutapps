@@ -65,6 +65,16 @@ export default function ReporteDiarioRuta() {
     },
   });
 
+  // Visitas (clientes visitados, sin compra, etc.)
+  const { data: visitas } = useQuery<any[]>({
+    queryKey: ['rpt-diario-visitas', empresa?.id, vendedorId, fecha],
+    enabled,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', vendedorId).eq('fecha', fecha).order('created_at');
+      return data ?? [];
+    },
+  });
+
   const ventasActivas = (ventas || []).filter((v: any) => v.status !== 'cancelado');
   const ventasCanceladas = (ventas || []).filter((v: any) => v.status === 'cancelado');
   const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
