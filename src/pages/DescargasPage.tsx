@@ -828,7 +828,26 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   // Calculate expected cash for the period
   const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;
 
-  // ── Detail queries for preview ──
+  // Check for existing liquidación overlapping this date range for this vendedor
+  const { data: existingLiq } = useQuery({
+    queryKey: ['liq-overlap-check', empresa?.id, vendedorId, fechaInicio, fechaFin],
+    enabled: canCalc,
+    queryFn: async () => {
+      // Check if any descarga_ruta overlaps: existing.fecha_inicio <= fechaFin AND existing.fecha_fin >= fechaInicio
+      const { data } = await supabase
+        .from('descarga_ruta')
+        .select('id, fecha, fecha_inicio, fecha_fin, status')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', vendedorId)
+        .lte('fecha_inicio', fechaFin)
+        .gte('fecha_fin', fechaInicio)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const yaLiquidado = !!existingLiq;
   const { data: ventasPreview } = useQuery({
     queryKey: ['liquidar-ventas', empresa?.id, vendedorId, fechaInicio, fechaFin],
     enabled: canCalc,
