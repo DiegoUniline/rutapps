@@ -177,7 +177,7 @@ export default function ReporteDiarioRuta() {
           <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
         </div>
         <div className="w-56">
-          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Vendedor / Ruta</label>
+          <label className="text-[11px] font-medium text-muted-foreground uppercase block mb-1">Usuario</label>
           <SearchableSelect
             options={usuarioOpts}
             value={usuarioId}
