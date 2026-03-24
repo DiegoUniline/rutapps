@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
       { label: 'Promociones', path: '/ventas/promociones' },
       { label: 'Punto de venta', path: '/pos' },
       { label: 'Reporte diario', path: '/ventas/reporte-diario' },
+      { label: 'Liquidar Ruta', path: '/almacen/descargas' },
     ],
   },
   { label: 'Clientes', icon: Users, path: '/clientes' },
