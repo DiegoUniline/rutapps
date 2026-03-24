@@ -52,6 +52,23 @@ export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string 
   const totalGastos = gastos.reduce((s, g) => s + g.monto, 0);
   const periodoLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
+  function buildStockSection(stock: { fecha: string; lineas: StockLineItem[] } | undefined, title: string) {
+    if (!stock || stock.lineas.length === 0) return '';
+    const rows = stock.lineas.map(l => `
+      <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px">${l.nombre}</span>
+        <span style="white-space:nowrap;color:#888;font-size:9px">C:${l.cargada} V:${l.vendida} D:${l.devuelta}</span>
+        <span style="font-weight:600;white-space:nowrap;min-width:30px;text-align:right">${l.restante}</span>
+      </div>
+    `).join('');
+    return `
+    <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
+    <div style="padding:4px 0">
+      <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">📦 ${title} (${stock.fecha})</div>
+      ${rows}
+    </div>`;
+  }
+
   const ventasHtml = ventas.map(v => `
     <div style="display:flex;justify-content:space-between;font-size:10px;padding:1px 0">
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:4px"><b>${v.folio}</b> ${v.cliente}</span>
