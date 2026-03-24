@@ -195,7 +195,7 @@ export default function ReporteDiarioRuta() {
       {!enabled && (
         <div className="text-center py-12">
           <FileText className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Selecciona un vendedor y fecha para generar el reporte diario</p>
+          <p className="text-sm text-muted-foreground">Selecciona un usuario y fecha para generar el reporte diario</p>
         </div>
       )}
 
