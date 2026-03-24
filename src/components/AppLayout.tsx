@@ -487,6 +487,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
         <NotificationRuntime overlaysOnly />
+        <Suspense fallback={null}>
+          <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
+        </Suspense>
       </div>
     );
   }
