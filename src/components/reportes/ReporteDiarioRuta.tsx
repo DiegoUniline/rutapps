@@ -444,6 +444,33 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
+          {/* Visitas sin compra */}
+          {visitasSinCompra.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                <MapPin className="h-3.5 w-3.5" /> Visitas sin compra ({visitasSinCompra.length})
+              </h2>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-1.5">Cliente</th>
+                    <th className="text-left py-1.5">Motivo</th>
+                    <th className="text-left py-1.5">Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visitasSinCompra.map((v: any, i: number) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
+                      <td className="py-1 text-muted-foreground">{v.motivo || '—'}</td>
+                      <td className="py-1 text-muted-foreground">{v.notas || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* Resumen final */}
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del día</h2>
@@ -454,6 +481,7 @@ export default function ReporteDiarioRuta() {
               <span className="text-muted-foreground">Gastos:</span><span className="text-right font-semibold text-destructive">-${fmt(totalGastos)}</span>
               <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">${fmt(totalCancelado)}</span>
               <span className="text-muted-foreground">Clientes visitados:</span><span className="text-right font-semibold">{clientesVisitados.size}</span>
+              <span className="text-muted-foreground">Visitas sin compra:</span><span className="text-right font-semibold">{visitasSinCompra.length}</span>
               <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{devLineas.length} productos</span>
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
