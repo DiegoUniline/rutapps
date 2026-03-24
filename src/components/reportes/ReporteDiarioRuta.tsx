@@ -21,12 +21,16 @@ export default function ReporteDiarioRuta() {
     queryKey: ['usuarios-list-report', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('profiles').select('user_id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+      const { data } = await (supabase as any).from('profiles').select('id, user_id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
       return data ?? [];
     },
   });
 
-  const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.user_id, label: u.nombre }));
+  // Use profile.id as value since vendedor_id in ventas/gastos/devoluciones = profile.id
+  const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre }));
+  // Get the user_id for tables that use user_id (cobros, visitas)
+  const selectedProfile = (usuarios || []).find((u: any) => u.id === usuarioId);
+  const selectedUserId = selectedProfile?.user_id ?? usuarioId;
 
   const enabled = !!empresa?.id && !!usuarioId && !!fecha;
 
