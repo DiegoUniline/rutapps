@@ -828,7 +828,26 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   // Calculate expected cash for the period
   const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;
 
-  // ── Detail queries for preview ──
+  // Check for existing liquidación overlapping this date range for this vendedor
+  const { data: existingLiq } = useQuery({
+    queryKey: ['liq-overlap-check', empresa?.id, vendedorId, fechaInicio, fechaFin],
+    enabled: canCalc,
+    queryFn: async () => {
+      // Check if any descarga_ruta overlaps: existing.fecha_inicio <= fechaFin AND existing.fecha_fin >= fechaInicio
+      const { data } = await supabase
+        .from('descarga_ruta')
+        .select('id, fecha, fecha_inicio, fecha_fin, status')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', vendedorId)
+        .lte('fecha_inicio', fechaFin)
+        .gte('fecha_fin', fechaInicio)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const yaLiquidado = !!existingLiq;
   const { data: ventasPreview } = useQuery({
     queryKey: ['liquidar-ventas', empresa?.id, vendedorId, fechaInicio, fechaFin],
     enabled: canCalc,
@@ -966,8 +985,22 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
+      {/* Warning: already liquidated */}
+      {canCalc && yaLiquidado && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-destructive">Este periodo ya fue liquidado</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Ya existe una liquidación ({existingLiq?.status}) para este vendedor que cubre las fechas seleccionadas.
+              No se puede crear otra liquidación para el mismo periodo.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Step 2: Cash reconciliation */}
-      {canCalc && (
+      {canCalc && !yaLiquidado && (
         <div className="bg-card border border-border rounded-lg p-5 space-y-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
@@ -1149,7 +1182,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 
       <Button
         onClick={() => submitMutation.mutate()}
-        disabled={submitMutation.isPending || efectivoEntregado === '' || !vendedorId}
+        disabled={submitMutation.isPending || efectivoEntregado === '' || !vendedorId || yaLiquidado}
         className="w-full sm:w-auto"
       >
         <PackageCheck className="h-4 w-4 mr-2" />

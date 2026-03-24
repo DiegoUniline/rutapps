@@ -51,20 +51,45 @@ export default function RutaDescarga() {
     enabled: !!empresa?.id,
   });
 
-  // Check if already submitted for this carga
+  // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
-    queryKey: ['mi-descarga-hoy', cargaActiva?.id],
+    queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id],
     queryFn: async () => {
-      if (!cargaActiva?.id) return null;
+      const today = new Date().toISOString().slice(0, 10);
+      // Check by carga_id
+      if (cargaActiva?.id) {
+        const { data } = await supabase
+          .from('descarga_ruta')
+          .select('id, status')
+          .eq('carga_id', cargaActiva.id)
+          .limit(1)
+          .maybeSingle();
+        if (data) return data;
+      }
+      // Check by vendedor + date overlap
+      const vendedorId = cargaActiva?.vendedor_id || user?.id;
+      if (vendedorId) {
+        const { data } = await supabase
+          .from('descarga_ruta')
+          .select('id, status')
+          .eq('vendedor_id', vendedorId)
+          .lte('fecha_inicio', today)
+          .gte('fecha_fin', today)
+          .limit(1)
+          .maybeSingle();
+        if (data) return data;
+      }
+      // Also check by fecha field
       const { data } = await supabase
         .from('descarga_ruta')
         .select('id, status')
-        .eq('carga_id', cargaActiva!.id)
+        .eq('user_id', user!.id)
+        .eq('fecha', today)
         .limit(1)
         .maybeSingle();
       return data;
     },
-    enabled: !!cargaActiva?.id,
+    enabled: !!user?.id,
   });
 
   // Calculate effective total from bill/coin counter
@@ -88,13 +113,16 @@ export default function RutaDescarga() {
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
+      const today = new Date().toISOString().slice(0, 10);
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        efectivo_esperado: 0, // blind: vendedor doesn't know expected
+        efectivo_esperado: 0,
         efectivo_entregado: totalEfectivo,
-        diferencia_efectivo: 0, // will be calculated by admin
+        diferencia_efectivo: 0,
         notas: notas || null,
+        fecha_inicio: today,
+        fecha_fin: today,
       };
 
       if (cargaActiva) {
@@ -110,9 +138,10 @@ export default function RutaDescarga() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Liquidación enviada');
+      toast.success('Liquidación enviada ✓');
       qc.invalidateQueries({ queryKey: ['mi-descarga-hoy'] });
       qc.invalidateQueries({ queryKey: ['descargas'] });
+      nav('/ruta');
     },
     onError: (e: any) => toast.error(e.message),
   });
