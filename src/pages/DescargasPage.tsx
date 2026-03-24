@@ -55,7 +55,7 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
 /* ─── Detail / Approve panel — Full activity breakdown ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
-  const { user } = useAuth();
+  const { user, empresa } = useAuth();
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
