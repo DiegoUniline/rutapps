@@ -110,9 +110,10 @@ export default function RutaDescarga() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Liquidación enviada');
+      toast.success('Liquidación enviada ✓');
       qc.invalidateQueries({ queryKey: ['mi-descarga-hoy'] });
       qc.invalidateQueries({ queryKey: ['descargas'] });
+      nav('/ruta');
     },
     onError: (e: any) => toast.error(e.message),
   });
