@@ -10,7 +10,7 @@ import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarS
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
@@ -237,8 +237,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <p className="text-xs text-muted-foreground mt-0.5">
               {(descarga as any).vendedores?.nombre ?? 'Sin vendedor'} — {
                 descarga.fecha_inicio && descarga.fecha_fin && descarga.fecha_inicio !== descarga.fecha_fin
-                  ? `${descarga.fecha_inicio} al ${descarga.fecha_fin}`
-                  : descarga.fecha
+                  ? `${fmtDate(descarga.fecha_inicio)} al ${fmtDate(descarga.fecha_fin)}`
+                  : fmtDate(descarga.fecha)
               }
             </p>
           </div>
@@ -611,53 +611,76 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   // Calculate expected cash for the period
   const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;
 
-  const { data: resumen } = useQuery({
-    queryKey: ['liquidar-resumen', empresa?.id, vendedorId, fechaInicio, fechaFin],
+  // ── Detail queries for preview ──
+  const { data: ventasPreview } = useQuery({
+    queryKey: ['liquidar-ventas', empresa?.id, vendedorId, fechaInicio, fechaFin],
     enabled: canCalc,
     queryFn: async () => {
-      // Ventas contado
-      const { data: ventasContado } = await (supabase as any)
+      const { data } = await (supabase as any)
         .from('ventas')
-        .select('total')
+        .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id)
         .eq('vendedor_id', vendedorId)
-        .eq('condicion_pago', 'contado')
         .neq('status', 'cancelado')
         .gte('fecha', fechaInicio)
-        .lte('fecha', fechaFin);
-
-      const totalContado = (ventasContado || []).reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
-
-      // Cobros en efectivo
-      const { data: cobrosEfectivo } = await (supabase as any)
-        .from('cobros')
-        .select('monto')
-        .eq('empresa_id', empresa!.id)
-        .eq('user_id', selectedUserId)
-        .eq('metodo_pago', 'efectivo')
-        .gte('fecha', fechaInicio)
-        .lte('fecha', fechaFin);
-
-      const totalCobros = (cobrosEfectivo || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
-
-      // Gastos
-      const { data: gastos } = await (supabase as any)
-        .from('gastos')
-        .select('monto')
-        .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
-        .gte('fecha', fechaInicio)
-        .lte('fecha', fechaFin);
-
-      const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
-
-      const esperado = totalContado + totalCobros - totalGastos;
-
-      return { totalContado, totalCobros, totalGastos, esperado };
+        .lte('fecha', fechaFin)
+        .order('created_at', { ascending: true });
+      return data ?? [];
     },
   });
 
-  const efectivoEsperado = resumen?.esperado ?? 0;
+  const { data: cobrosPreview } = useQuery({
+    queryKey: ['liquidar-cobros', empresa?.id, selectedUserId, fechaInicio, fechaFin],
+    enabled: canCalc && !!selectedUserId,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('cobros')
+        .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
+        .eq('empresa_id', empresa!.id)
+        .eq('user_id', selectedUserId)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin)
+        .order('created_at', { ascending: true });
+      return data ?? [];
+    },
+  });
+
+  const { data: gastosPreview } = useQuery({
+    queryKey: ['liquidar-gastos', empresa?.id, vendedorId, fechaInicio, fechaFin],
+    enabled: canCalc,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('gastos')
+        .select('id, monto, concepto, fecha, notas')
+        .eq('empresa_id', empresa!.id)
+        .eq('vendedor_id', vendedorId)
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
+      return data ?? [];
+    },
+  });
+
+  // Computed from detail queries
+  const ventasContadoArr = (ventasPreview || []).filter((v: any) => v.condicion_pago === 'contado');
+  const totalContado = ventasContadoArr.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
+  const totalCobros = (cobrosPreview || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+  const cobrosEfectivoTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+  const totalGastos = (gastosPreview || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
+  const efectivoEsperado = totalContado + cobrosEfectivoTotal - totalGastos;
+
+  // Aggregate products
+  const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
+  (ventasPreview || []).forEach((v: any) => {
+    (v.venta_lineas || []).forEach((l: any) => {
+      const pid = l.producto_id;
+      if (!pid) return;
+      if (!productosSold[pid]) productosSold[pid] = { nombre: l.productos?.nombre || '—', codigo: l.productos?.codigo || '', cantidad: 0, total: 0 };
+      productosSold[pid].cantidad += Number(l.cantidad) || 0;
+      productosSold[pid].total += Number(l.total) || 0;
+    });
+  });
+  const productosArr = Object.values(productosSold).sort((a, b) => b.total - a.total);
+
   const diferenciaEfectivo = efectivoEntregado !== '' ? Number(efectivoEntregado) - efectivoEsperado : 0;
   const hayDiferencias = efectivoEntregado !== '' && Number(efectivoEntregado) !== efectivoEsperado;
 
@@ -727,7 +750,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Step 2: Cash reconciliation */}
-      {canCalc && resumen && (
+      {canCalc && (
         <div className="bg-card border border-border rounded-lg p-5 space-y-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
             <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
@@ -735,15 +758,15 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
             <div className="bg-muted/50 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Ventas contado</div>
-              <div className="font-bold text-foreground">${resumen.totalContado.toFixed(2)}</div>
+              <div className="font-bold text-foreground">${totalContado.toFixed(2)}</div>
             </div>
             <div className="bg-muted/50 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Cobros efectivo</div>
-              <div className="font-bold text-foreground">${resumen.totalCobros.toFixed(2)}</div>
+              <div className="font-bold text-foreground">${cobrosEfectivoTotal.toFixed(2)}</div>
             </div>
             <div className="bg-muted/50 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Gastos</div>
-              <div className="font-bold text-destructive">-${resumen.totalGastos.toFixed(2)}</div>
+              <div className="font-bold text-destructive">-${totalGastos.toFixed(2)}</div>
             </div>
             <div className="bg-primary/5 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Efectivo esperado</div>
@@ -769,6 +792,131 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ═══ DETALLE: Ventas del periodo ═══ */}
+      {canCalc && (
+        <SectionCard title={`Ventas del periodo (${(ventasPreview || []).length})`} icon={ShoppingCart} className="bg-card border border-border rounded-lg">
+          {(ventasPreview || []).length > 0 ? (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Folio</th>
+                  <th className="text-left py-2">Cliente</th>
+                  <th className="text-left py-2">Pago</th>
+                  <th className="text-right py-2">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(ventasPreview || []).map((v: any) => (
+                  <tr key={v.id} className="border-b border-border/50">
+                    <td className="py-1.5 font-mono text-foreground">{v.folio ?? '—'}</td>
+                    <td className="py-1.5">{v.clientes?.nombre ?? '—'}</td>
+                    <td className="py-1.5">
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+                        v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                      )}>{v.condicion_pago}</span>
+                    </td>
+                    <td className="py-1.5 text-right font-semibold">${Number(v.total).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <p className="text-sm text-muted-foreground">Sin ventas en este periodo</p>}
+        </SectionCard>
+      )}
+
+      {/* ═══ DETALLE: Productos vendidos ═══ */}
+      {canCalc && productosArr.length > 0 && (
+        <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck} className="bg-card border border-border rounded-lg">
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                <th className="text-left py-2">Producto</th>
+                <th className="text-left py-2">Código</th>
+                <th className="text-right py-2">Cantidad</th>
+                <th className="text-right py-2">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productosArr.map((p, i) => (
+                <tr key={i} className="border-b border-border/50">
+                  <td className="py-1.5 font-medium">{p.nombre}</td>
+                  <td className="py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
+                  <td className="py-1.5 text-right">{p.cantidad}</td>
+                  <td className="py-1.5 text-right font-semibold">${p.total.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </SectionCard>
+      )}
+
+      {/* ═══ DETALLE: Cobros ═══ */}
+      {canCalc && (
+        <SectionCard title={`Cobros recibidos (${(cobrosPreview || []).length})`} icon={CreditCard} className="bg-card border border-border rounded-lg">
+          {(cobrosPreview || []).length > 0 ? (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Cliente</th>
+                  <th className="text-left py-2">Método</th>
+                  <th className="text-left py-2">Referencia</th>
+                  <th className="text-right py-2">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(cobrosPreview || []).map((c: any) => (
+                  <tr key={c.id} className="border-b border-border/50">
+                    <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
+                    <td className="py-1.5 capitalize">{c.metodo_pago}</td>
+                    <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
+                    <td className="py-1.5 text-right font-semibold">${Number(c.monto).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold">
+                  <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
+                  <td className="py-2 text-right">${totalCobros.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : <p className="text-sm text-muted-foreground">Sin cobros en este periodo</p>}
+        </SectionCard>
+      )}
+
+      {/* ═══ DETALLE: Gastos ═══ */}
+      {canCalc && (
+        <SectionCard title={`Gastos (${(gastosPreview || []).length})`} icon={TrendingDown} className="bg-card border border-border rounded-lg">
+          {(gastosPreview || []).length > 0 ? (
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-2">Concepto</th>
+                  <th className="text-left py-2">Notas</th>
+                  <th className="text-right py-2">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(gastosPreview || []).map((g: any) => (
+                  <tr key={g.id} className="border-b border-border/50">
+                    <td className="py-1.5 font-medium">{g.concepto}</td>
+                    <td className="py-1.5 text-muted-foreground">{g.notas || '—'}</td>
+                    <td className="py-1.5 text-right font-semibold text-destructive">-${Number(g.monto).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-border font-bold">
+                  <td colSpan={2} className="py-2 text-right text-muted-foreground">Total gastos:</td>
+                  <td className="py-2 text-right text-destructive">-${totalGastos.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : <p className="text-sm text-muted-foreground">Sin gastos en este periodo</p>}
+        </SectionCard>
       )}
 
       {/* Notes & submit */}
@@ -878,7 +1026,7 @@ export default function DescargasPage() {
                 return (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                     <td className="py-2.5 px-4">
-                      {hasRange ? `${d.fecha_inicio} → ${d.fecha_fin}` : d.fecha}
+                      {hasRange ? `${fmtDate(d.fecha_inicio)} → ${fmtDate(d.fecha_fin)}` : fmtDate(d.fecha)}
                     </td>
                     <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
                     <td className="py-2.5 px-4">
