@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
            Tambi&eacute;n puedes pagar desde la app &rarr; Mi Suscripci&oacute;n
          </td></tr>`
       : `<tr><td style="padding:16px 0;text-align:center;">
-           <a href="https://rutapps.lovable.app/mi-suscripcion" style="display:inline-block;padding:14px 36px;background:#2563eb;color:#ffffff;font-weight:600;font-size:16px;border-radius:8px;text-decoration:none;">Ver mi suscripci&oacute;n</a>
+           <a href="<a href="https://rutapp.mx/mi-suscripcion" style="display:inline-block;padding:14px 36px;background:#2563eb;color:#ffffff;font-weight:600;font-size:16px;border-radius:8px;text-decoration:none;">Ver mi suscripci&oacute;n</a>" style="display:inline-block;padding:14px 36px;background:#2563eb;color:#ffffff;font-weight:600;font-size:16px;border-radius:8px;text-decoration:none;">Ver mi suscripci&oacute;n</a>
          </td></tr>`;
 
     const html = `<!DOCTYPE html>

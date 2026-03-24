@@ -494,7 +494,7 @@ ${itemsHtml}
 <tr><td style="background:#f8f9fc;padding:24px 40px;border-top:1px solid #e8e8e8;">
 <table width="100%" cellpadding="0" cellspacing="0"><tr>
 <td style="font-size:12px;color:#888;line-height:1.6;">
-🌐 <a href="https://rutapps.lovable.app" style="color:${primaryColor};text-decoration:none;">rutapps.lovable.app</a><br>
+🌐 <a href="https://rutapp.mx" style="color:${primaryColor};text-decoration:none;">rutapp.mx</a><br>
 📧 soporte@rutapp.mx<br>
 📱 +52 (xxx) xxx-xxxx
 </td>

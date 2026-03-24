@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const customers = await stripe.customers.list({ email: userData.user.email, limit: 1 });
     if (customers.data.length === 0) throw new Error("No se encontró cliente en Stripe");
 
-    const origin = req.headers.get("origin") || "https://rutapps.lovable.app";
+    const origin = req.headers.get("origin") || "https://rutapp.mx";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customers.data[0].id,
       return_url: `${origin}/configuracion`,
