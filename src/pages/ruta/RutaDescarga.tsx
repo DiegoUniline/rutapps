@@ -113,13 +113,16 @@ export default function RutaDescarga() {
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
+      const today = new Date().toISOString().slice(0, 10);
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        efectivo_esperado: 0, // blind: vendedor doesn't know expected
+        efectivo_esperado: 0,
         efectivo_entregado: totalEfectivo,
-        diferencia_efectivo: 0, // will be calculated by admin
+        diferencia_efectivo: 0,
         notas: notas || null,
+        fecha_inicio: today,
+        fecha_fin: today,
       };
 
       if (cargaActiva) {
