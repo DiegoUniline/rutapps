@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2 } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, FileBarChart, ShoppingCart } from 'lucide-react';
+
+const ReporteDiarioRuta = lazy(() => import('@/components/reportes/ReporteDiarioRuta'));
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -66,6 +68,7 @@ export default function VentasListPage() {
   const [tipoFilter, setTipoFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [tab, setTab] = useState<'ventas' | 'reporte'>('ventas');
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
   const { data: clientesList } = useClientes();
 
@@ -102,6 +105,34 @@ export default function VentasListPage() {
   return (
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /></h1>
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          onClick={() => setTab('ventas')}
+          className={cn(
+            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+            tab === 'ventas' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <ShoppingCart className="h-3.5 w-3.5 inline mr-1.5" />Ventas
+        </button>
+        <button
+          onClick={() => setTab('reporte')}
+          className={cn(
+            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+            tab === 'reporte' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <FileBarChart className="h-3.5 w-3.5 inline mr-1.5" />Reporte diario
+        </button>
+      </div>
+
+      {tab === 'reporte' ? (
+        <Suspense fallback={<div className="text-sm text-muted-foreground py-8 text-center">Cargando...</div>}>
+          <ReporteDiarioRuta />
+        </Suspense>
+      ) : (<>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
@@ -311,6 +342,7 @@ export default function VentasListPage() {
           )}
         </div>
       )}
+      </>)}
     </div>
   );
 }
