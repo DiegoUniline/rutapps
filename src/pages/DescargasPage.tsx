@@ -146,7 +146,45 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Computed values
+  // --- Stock a bordo (cargas) ---
+  const { data: cargaInicio } = useQuery({
+    queryKey: ['liq-stock-inicio', descarga.empresa_id, descarga.vendedor_id, fInicio],
+    enabled: !!descarga.vendedor_id && incluirStock,
+    queryFn: async () => {
+      const { data } = await supabase.from('cargas')
+        .select('id, fecha, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
+        .eq('empresa_id', descarga.empresa_id).eq('vendedor_id', descarga.vendedor_id)
+        .lte('fecha', fInicio).order('fecha', { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+  });
+  const { data: cargaFin } = useQuery({
+    queryKey: ['liq-stock-fin', descarga.empresa_id, descarga.vendedor_id, fFin],
+    enabled: !!descarga.vendedor_id && incluirStock,
+    queryFn: async () => {
+      const { data } = await supabase.from('cargas')
+        .select('id, fecha, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
+        .eq('empresa_id', descarga.empresa_id).eq('vendedor_id', descarga.vendedor_id)
+        .lte('fecha', fFin).order('fecha', { ascending: false }).limit(1).maybeSingle();
+      return data;
+    },
+  });
+
+  const buildStockArr = (carga: any) => {
+    if (!carga?.carga_lineas) return [];
+    return (carga.carga_lineas as any[]).map((l: any) => ({
+      nombre: l.productos?.nombre || '—',
+      codigo: l.productos?.codigo || '',
+      cargada: Number(l.cantidad_cargada) || 0,
+      vendida: Number(l.cantidad_vendida) || 0,
+      devuelta: Number(l.cantidad_devuelta) || 0,
+      restante: (Number(l.cantidad_cargada) || 0) - (Number(l.cantidad_vendida) || 0) - (Number(l.cantidad_devuelta) || 0),
+    })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+  };
+  const stockInicio = buildStockArr(cargaInicio);
+  const stockFin = buildStockArr(cargaFin);
+
+
   const ventasActivas = (ventasDia || []).filter((v: any) => v.status !== 'cancelado');
   const ventasCanceladas = (ventasDia || []).filter((v: any) => v.status === 'cancelado');
   const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
