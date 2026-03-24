@@ -87,8 +87,12 @@ export default function ReporteDiarioRuta() {
   const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
 
-  // Unique clients visited
-  const clientesVisitados = new Set(ventasActivas.map((v: any) => v.cliente_id).filter(Boolean));
+  // Unique clients visited (from ventas + visitas)
+  const clientesVisitados = new Set([
+    ...ventasActivas.map((v: any) => v.cliente_id).filter(Boolean),
+    ...(visitas || []).map((v: any) => v.clientes?.nombre).filter(Boolean),
+  ]);
+  const visitasSinCompra = (visitas || []).filter((v: any) => v.tipo === 'sin_compra');
 
   // Products sold aggregate
   const prodMap: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
