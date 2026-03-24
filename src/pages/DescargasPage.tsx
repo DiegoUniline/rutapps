@@ -398,8 +398,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         </SectionCard>
 
         {/* ═══ PRODUCTOS VENDIDOS (AGREGADO) ═══ */}
-        {productosArr.length > 0 ? (
-          <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
+        <SectionCard title={`Productos vendidos (${productosArr.length})`} icon={PackageCheck}>
+          {productosArr.length > 0 ? (
             <table className="w-full text-[12px]">
               <thead>
                 <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
@@ -420,8 +420,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 ))}
               </tbody>
             </table>
-          </SectionCard>
-        )}
+          ) : <p className="text-sm text-muted-foreground">Sin productos vendidos en este periodo</p>}
+        </SectionCard>
 
         {/* ═══ COBROS RECIBIDOS ═══ */}
         {(cobros || []).length > 0 && (
