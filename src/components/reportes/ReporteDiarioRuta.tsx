@@ -42,7 +42,7 @@ export default function ReporteDiarioRuta() {
     queryKey: ['rpt-diario-cobros', empresa?.id, vendedorId, fecha],
     enabled,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
+      const { data } = await (supabase as any).from('cobros').select('id, monto, metodo_pago, referencia, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', vendedorId).gte('fecha', fecha).lte('fecha', fecha).order('created_at');
       return data ?? [];
     },
   });
@@ -65,6 +65,16 @@ export default function ReporteDiarioRuta() {
     },
   });
 
+  // Visitas (clientes visitados, sin compra, etc.)
+  const { data: visitas } = useQuery<any[]>({
+    queryKey: ['rpt-diario-visitas', empresa?.id, vendedorId, fecha],
+    enabled,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from('visitas').select('id, tipo, motivo, notas, clientes(nombre)').eq('empresa_id', empresa!.id).eq('user_id', vendedorId).eq('fecha', fecha).order('created_at');
+      return data ?? [];
+    },
+  });
+
   const ventasActivas = (ventas || []).filter((v: any) => v.status !== 'cancelado');
   const ventasCanceladas = (ventas || []).filter((v: any) => v.status === 'cancelado');
   const ventasContado = ventasActivas.filter((v: any) => v.condicion_pago === 'contado');
@@ -77,8 +87,12 @@ export default function ReporteDiarioRuta() {
   const totalCobros = (cobros || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastos || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
 
-  // Unique clients visited
-  const clientesVisitados = new Set(ventasActivas.map((v: any) => v.cliente_id).filter(Boolean));
+  // Unique clients visited (from ventas + visitas)
+  const clientesVisitados = new Set([
+    ...ventasActivas.map((v: any) => v.cliente_id).filter(Boolean),
+    ...(visitas || []).map((v: any) => v.clientes?.nombre).filter(Boolean),
+  ]);
+  const visitasSinCompra = (visitas || []).filter((v: any) => v.tipo === 'sin_compra');
 
   // Products sold aggregate
   const prodMap: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
@@ -430,6 +444,33 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
+          {/* Visitas sin compra */}
+          {visitasSinCompra.length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
+                <MapPin className="h-3.5 w-3.5" /> Visitas sin compra ({visitasSinCompra.length})
+              </h2>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-1.5">Cliente</th>
+                    <th className="text-left py-1.5">Motivo</th>
+                    <th className="text-left py-1.5">Notas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visitasSinCompra.map((v: any, i: number) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
+                      <td className="py-1 text-muted-foreground">{v.motivo || '—'}</td>
+                      <td className="py-1 text-muted-foreground">{v.notas || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {/* Resumen final */}
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del día</h2>
@@ -440,6 +481,7 @@ export default function ReporteDiarioRuta() {
               <span className="text-muted-foreground">Gastos:</span><span className="text-right font-semibold text-destructive">-${fmt(totalGastos)}</span>
               <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">${fmt(totalCancelado)}</span>
               <span className="text-muted-foreground">Clientes visitados:</span><span className="text-right font-semibold">{clientesVisitados.size}</span>
+              <span className="text-muted-foreground">Visitas sin compra:</span><span className="text-right font-semibold">{visitasSinCompra.length}</span>
               <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{devLineas.length} productos</span>
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
