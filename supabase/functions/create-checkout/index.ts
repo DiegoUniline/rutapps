@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const now = new Date();
     const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     
-    const origin = req.headers.get("origin") || "https://rutapps.lovable.app";
+    const origin = req.headers.get("origin") || "https://rutapp.mx";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

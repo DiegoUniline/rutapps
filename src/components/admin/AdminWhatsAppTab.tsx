@@ -64,7 +64,7 @@ function getSampleData(tipo: string, campos: Record<string, boolean>, emoji: str
     fechaCobro: '1 de abril 2026',
     numUsuarios: 3,
     enlacePago: 'https://invoice.stripe.com/i/acct_xxx/inv_xxx',
-    enlaceFacturacion: 'https://rutapps.lovable.app/facturacion',
+    enlaceFacturacion: 'https://rutapp.mx/facturacion',
     fechaVigencia: '1 de mayo 2026',
     diasGracia: 3,
   };

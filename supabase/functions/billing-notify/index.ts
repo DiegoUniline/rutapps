@@ -16,7 +16,7 @@ const RUTAPP_PRODUCT_IDS = new Set([
 ]);
 
 const GRACE_DAYS = 3;
-const FACTURACION_URL = "https://rutapps.lovable.app/facturacion";
+const FACTURACION_URL = "https://rutapp.mx/facturacion";
 
 /* ─── Template types ─── */
 interface TemplateConfig {

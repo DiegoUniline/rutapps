@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     if (!plan_id) throw new Error("plan_id requerido");
 
     const qty = Math.max(3, parseInt(num_usuarios) || 3);
-    const origin = req.headers.get("origin") || "https://rutapps.lovable.app";
+    const origin = req.headers.get("origin") || "https://rutapp.mx";
 
     // Get user's empresa
     const { data: profile } = await supabase
