@@ -877,6 +877,7 @@ export default function DescargasPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showNew, setShowNew] = useState(false);
+  const [tab, setTab] = useState<'liquidaciones' | 'reporte'>('liquidaciones');
 
   const filtered = (descargas || []).filter((d: any) =>
     filterStatus === 'all' || d.status === filterStatus
@@ -899,91 +900,123 @@ export default function DescargasPage() {
           <PackageCheck className="h-5 w-5" /> Liquidar Ruta
           <HelpButton title={HELP.descargas.title} sections={HELP.descargas.sections} />
         </h1>
-        <div className="flex items-center gap-2">
-          <div className="flex gap-1">
-            {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
-              <button
-                key={s}
-                onClick={() => setFilterStatus(s)}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                  filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {s === 'all' ? 'Todas' : STATUS_MAP[s]?.label || s}
-              </button>
-            ))}
+        {tab === 'liquidaciones' && (
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              {['all', 'pendiente', 'aprobada', 'rechazada'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setFilterStatus(s)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {s === 'all' ? 'Todas' : STATUS_MAP[s]?.label || s}
+                </button>
+              ))}
+            </div>
+            <Button size="sm" onClick={() => setShowNew(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Nueva liquidación
+            </Button>
           </div>
-          <Button size="sm" onClick={() => setShowNew(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Nueva liquidación
-          </Button>
-        </div>
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="text-sm text-muted-foreground">Cargando...</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-12">
-          <PackageCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">No hay liquidaciones</p>
-          <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
-            <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
-          </Button>
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-border">
+        <button
+          onClick={() => setTab('liquidaciones')}
+          className={cn(
+            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+            tab === 'liquidaciones' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <PackageCheck className="h-3.5 w-3.5 inline mr-1.5" />Liquidaciones
+        </button>
+        <button
+          onClick={() => setTab('reporte')}
+          className={cn(
+            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors -mb-px",
+            tab === 'reporte' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <FileBarChart className="h-3.5 w-3.5 inline mr-1.5" />Reporte diario
+        </button>
+      </div>
+
+      {tab === 'reporte' ? (
+        <Suspense fallback={<div className="text-sm text-muted-foreground py-8 text-center">Cargando...</div>}>
+          <ReporteDiarioRuta />
+        </Suspense>
       ) : (
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="bg-muted/50 text-[11px] text-muted-foreground uppercase border-b border-border">
-                <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
-                <th className="text-left py-2.5 px-4">Vendedor</th>
-                <th className="text-left py-2.5 px-4">Tipo</th>
-                <th className="text-right py-2.5 px-4">Esperado</th>
-                <th className="text-right py-2.5 px-4">Entregado</th>
-                <th className="text-right py-2.5 px-4">Diferencia</th>
-                <th className="text-center py-2.5 px-4">Status</th>
-                <th className="text-center py-2.5 px-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((d: any) => {
-                const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
-                const dif = Number(d.diferencia_efectivo);
-                const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
-                const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
-                return (
-                  <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="py-2.5 px-4">
-                      {hasRange ? `${d.fecha_inicio} → ${d.fecha_fin}` : d.fecha}
-                    </td>
-                    <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
-                    <td className="py-2.5 px-4">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-medium">{tipoLabel}</span>
-                    </td>
-                    <td className="py-2.5 px-4 text-right">${Number(d.efectivo_esperado).toFixed(2)}</td>
-                    <td className="py-2.5 px-4 text-right font-semibold">${Number(d.efectivo_entregado).toFixed(2)}</td>
-                    <td className={cn(
-                      "py-2.5 px-4 text-right font-bold",
-                      dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : ""
-                    )}>
-                      {dif > 0 ? '+' : ''}${dif.toFixed(2)}
-                    </td>
-                    <td className="py-2.5 px-4 text-center">
-                      <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", s.color)}>
-                        <s.icon className="h-3 w-3" /> {s.label}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-center">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedId(d.id)}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                    </td>
+        <>
+          {isLoading ? (
+            <div className="text-sm text-muted-foreground">Cargando...</div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <PackageCheck className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-sm text-muted-foreground">No hay liquidaciones</p>
+              <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowNew(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Crear primera liquidación
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="bg-muted/50 text-[11px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
+                    <th className="text-left py-2.5 px-4">Vendedor</th>
+                    <th className="text-left py-2.5 px-4">Tipo</th>
+                    <th className="text-right py-2.5 px-4">Esperado</th>
+                    <th className="text-right py-2.5 px-4">Entregado</th>
+                    <th className="text-right py-2.5 px-4">Diferencia</th>
+                    <th className="text-center py-2.5 px-4">Status</th>
+                    <th className="text-center py-2.5 px-4"></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {filtered.map((d: any) => {
+                    const s = STATUS_MAP[d.status] || STATUS_MAP.pendiente;
+                    const dif = Number(d.diferencia_efectivo);
+                    const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
+                    const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
+                    return (
+                      <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 px-4">
+                          {hasRange ? `${d.fecha_inicio} → ${d.fecha_fin}` : d.fecha}
+                        </td>
+                        <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
+                        <td className="py-2.5 px-4">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-medium">{tipoLabel}</span>
+                        </td>
+                        <td className="py-2.5 px-4 text-right">${Number(d.efectivo_esperado).toFixed(2)}</td>
+                        <td className="py-2.5 px-4 text-right font-semibold">${Number(d.efectivo_entregado).toFixed(2)}</td>
+                        <td className={cn(
+                          "py-2.5 px-4 text-right font-bold",
+                          dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : ""
+                        )}>
+                          {dif > 0 ? '+' : ''}${dif.toFixed(2)}
+                        </td>
+                        <td className="py-2.5 px-4 text-center">
+                          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold", s.color)}>
+                            <s.icon className="h-3 w-3" /> {s.label}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-center">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedId(d.id)}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
 
       {selectedDescarga && (
