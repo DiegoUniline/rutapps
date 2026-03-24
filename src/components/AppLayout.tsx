@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -328,10 +328,13 @@ function SidebarNav({ collapsed, onNavigate, visibleNavItems, isSuperAdmin, setu
   );
 }
 
+const DemoWelcomeDialog = lazy(() => import('@/components/DemoWelcomeDialog'));
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+  const [showDemoWelcome, setShowDemoWelcome] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
@@ -340,6 +343,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile();
   const location = useLocation();
   useProductosRealtime();
+
+  useEffect(() => {
+    if (sessionStorage.getItem('demo_welcome') === '1') {
+      sessionStorage.removeItem('demo_welcome');
+      setShowDemoWelcome(true);
+    }
+  }, []);
 
   useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);
@@ -477,6 +487,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
         <NotificationRuntime overlaysOnly />
+        <Suspense fallback={null}>
+          <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
+        </Suspense>
       </div>
     );
   }
@@ -575,6 +588,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       </div>
       <NotificationRuntime overlaysOnly />
+      <Suspense fallback={null}>
+        <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
+      </Suspense>
     </div>
   );
 }
