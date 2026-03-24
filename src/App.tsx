@@ -71,6 +71,7 @@ const ConteoFisicoPage = lazy(() => import("@/pages/ConteoFisicoPage"));
 const SupervisorDashboardPage = lazy(() => import("@/pages/SupervisorDashboardPage"));
 const MonitorRutasPage = lazy(() => import("@/pages/MonitorRutasPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
+const ReporteDiarioPage = lazy(() => import("@/pages/ReporteDiarioPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
@@ -299,6 +300,7 @@ function desktopRoutes() {
       <Route path="/clientes" element={<ClientesListPage />} />
       <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
       <Route path="/ventas" element={<VentasListPage />} />
+      <Route path="/ventas/reporte-diario" element={<ReporteDiarioPage />} />
       <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/logistica/pedidos" element={<DemandaPage />} />
