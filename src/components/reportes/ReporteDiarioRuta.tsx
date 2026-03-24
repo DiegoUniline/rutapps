@@ -182,7 +182,7 @@ export default function ReporteDiarioRuta() {
             options={usuarioOpts}
             value={usuarioId}
             onChange={val => setUsuarioId(val)}
-            placeholder="Selecciona vendedor..."
+            placeholder="Selecciona usuario..."
           />
         </div>
         {enabled && (
