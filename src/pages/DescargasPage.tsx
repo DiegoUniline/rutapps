@@ -295,6 +295,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 </span>
               );
             })()}
+            <div className="flex items-center gap-1.5">
+              <input type="checkbox" id="liq-stock" checked={incluirStock} onChange={e => setIncluirStock(e.target.checked)} className="accent-primary" />
+              <label htmlFor="liq-stock" className="text-[10px] cursor-pointer text-muted-foreground">Stock</label>
+            </div>
             <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
               try {
                 const ticketData = {
