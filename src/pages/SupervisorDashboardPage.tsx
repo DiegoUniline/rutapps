@@ -826,10 +826,15 @@ export default function SupervisorDashboardPage() {
             const lineas = dev.devolucion_lineas ?? [];
             const uds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
             const motivos = [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
+            const productos = lineas.map((l: any) => {
+              const nombre = l.productos?.nombre ?? '—';
+              return `${nombre} x${Number(l.cantidad) || 0}`;
+            }).join(', ');
             return {
               id: dev.id,
               primary: dev.clientes?.nombre || '—',
               secondary: `${sellerNameMap.get(dev.vendedor_id) ?? '—'} · ${motivos}`,
+              badge: productos,
               value: `${uds} uds`,
             };
           })}
