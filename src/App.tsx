@@ -302,6 +302,7 @@ function desktopRoutes() {
       <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
       <Route path="/ventas" element={<VentasListPage />} />
       <Route path="/ventas/reporte-diario" element={<ReporteDiarioPage />} />
+      <Route path="/ventas/devoluciones" element={<DevolucionesListPage />} />
       <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/logistica/pedidos" element={<DemandaPage />} />
