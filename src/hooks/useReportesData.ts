@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[]) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds],
+    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async () => {
