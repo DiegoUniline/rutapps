@@ -53,14 +53,16 @@ export function DetalleView(p: Props) {
   );
 }
 
-function Header({ venta, onBack, clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handleEstadoCuenta, initEditar }: Props) {
+function Header({ venta, onBack, clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, initEditar }: Props) {
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
       <button onClick={onBack} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
       <div className="flex-1 min-w-0"><h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1><p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p></div>
       <div className="flex items-center gap-0.5">
-        <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }} className="p-2 rounded-lg hover:bg-accent active:scale-95"><MessageCircle className="h-4 w-4 text-muted-foreground" /></button>
+        <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }} className="p-2 rounded-lg hover:bg-accent active:scale-95"><MessageCircle className="h-4 w-4 text-[#25D366]" /></button>
         <button onClick={handleDownloadPDF} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Download className="h-4 w-4 text-muted-foreground" /></button>
+        <button onClick={handlePrintTicket} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Printer className="h-4 w-4 text-muted-foreground" /></button>
+        <button onClick={handleShareTicket} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Share2 className="h-4 w-4 text-muted-foreground" /></button>
         <button onClick={handleEstadoCuenta} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Receipt className="h-4 w-4 text-muted-foreground" /></button>
         {venta.status === 'borrador' && <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Pencil className="h-4 w-4 text-muted-foreground" /></button>}
       </div>
