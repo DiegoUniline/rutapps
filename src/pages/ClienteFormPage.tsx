@@ -244,6 +244,13 @@ export default function ClienteFormPage() {
     }
   }, [isNew, allListasPrecios]);
 
+  // Auto-assign vendedor when coming from ruta
+  useEffect(() => {
+    if (isNew && vendedorIdParam && !form.vendedor_id) {
+      set('vendedor_id', vendedorIdParam);
+    }
+  }, [isNew, vendedorIdParam]);
+
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
