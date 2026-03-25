@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useDescargaCalculos, DescargaLinea } from '@/hooks/useDescargaRuta';
-import { DollarSign, ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BILLETES = [
@@ -34,6 +33,20 @@ export default function RutaDescarga() {
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');
 
+  // Get user's vendedor profile
+  const { data: vendedorProfile } = useQuery({
+    queryKey: ['mi-vendedor-id', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('vendedores')
+        .select('id')
+        .eq('id', user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Get active carga
   const { data: cargaActiva } = useQuery({
     queryKey: ['mi-carga-activa-descarga'],
@@ -50,6 +63,45 @@ export default function RutaDescarga() {
     },
     enabled: !!empresa?.id,
   });
+
+  const vendedorId = cargaActiva?.vendedor_id || vendedorProfile?.id || user?.id;
+
+  // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const { data: financials } = useQuery({
+    queryKey: ['descarga-mobile-financials', vendedorId, today],
+    enabled: !!vendedorId,
+    queryFn: async () => {
+      const [ventasRes, cobrosRes, gastosRes] = await Promise.all([
+        supabase
+          .from('ventas')
+          .select('total')
+          .eq('vendedor_id', vendedorId!)
+          .eq('fecha', today)
+          .eq('condicion_pago', 'contado')
+          .neq('status', 'cancelado'),
+        supabase
+          .from('cobros')
+          .select('monto, metodo_pago')
+          .eq('empresa_id', empresa!.id)
+          .eq('fecha', today),
+        supabase
+          .from('gastos')
+          .select('monto')
+          .eq('vendedor_id', vendedorId!)
+          .eq('fecha', today),
+      ]);
+      const ventasContado = (ventasRes.data || []).reduce((s, v) => s + (Number(v.total) || 0), 0);
+      const cobrosEfectivo = (cobrosRes.data || [])
+        .filter(c => c.metodo_pago === 'efectivo')
+        .reduce((s, c) => s + (Number(c.monto) || 0), 0);
+      const gastosTotal = (gastosRes.data || []).reduce((s, g) => s + (Number(g.monto) || 0), 0);
+      return { ventasContado, cobrosEfectivo, gastosTotal };
+    },
+  });
+
+  const efectivoEsperado = (financials?.ventasContado ?? 0) + (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0);
 
   // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
@@ -113,13 +165,15 @@ export default function RutaDescarga() {
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
-      const today = new Date().toISOString().slice(0, 10);
+      const diferencia = totalEfectivo - efectivoEsperado;
+
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        efectivo_esperado: 0,
+        vendedor_id: vendedorId || user!.id,
+        efectivo_esperado: efectivoEsperado,
         efectivo_entregado: totalEfectivo,
-        diferencia_efectivo: 0,
+        diferencia_efectivo: diferencia,
         notas: notas || null,
         fecha_inicio: today,
         fecha_fin: today,
@@ -127,7 +181,6 @@ export default function RutaDescarga() {
 
       if (cargaActiva) {
         insertData.carga_id = cargaActiva.id;
-        insertData.vendedor_id = cargaActiva.vendedor_id;
       }
 
       const { data: descarga, error } = await supabase
@@ -197,12 +250,29 @@ export default function RutaDescarga() {
           </p>
         </div>
 
-        {/* Running total */}
+        {/* Running total + expected + difference */}
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total contado</p>
           <p className="text-3xl font-bold text-foreground tabular-nums">
             $ {fmt(totalEfectivo)}
           </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-card border border-border rounded-xl p-3 text-center">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Esperado</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">$ {fmt(efectivoEsperado)}</p>
+          </div>
+          <div className={`bg-card border rounded-xl p-3 text-center ${
+            totalEfectivo - efectivoEsperado < 0 ? 'border-destructive/40' : 'border-border'
+          }`}>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Diferencia</p>
+            <p className={`text-lg font-bold tabular-nums ${
+              totalEfectivo - efectivoEsperado < 0 ? 'text-destructive' : totalEfectivo - efectivoEsperado > 0 ? 'text-primary' : 'text-foreground'
+            }`}>
+              {totalEfectivo - efectivoEsperado >= 0 ? '+' : ''}$ {fmt(totalEfectivo - efectivoEsperado)}
+            </p>
+          </div>
         </div>
 
         {/* Bills */}
