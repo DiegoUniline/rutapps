@@ -7,6 +7,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user } = useAuth();
+  const { fmt } = useCurrency();
   const today = new Date().toISOString().slice(0, 10);
   const vendedorId = profile?.vendedor_id || profile?.id;
 
