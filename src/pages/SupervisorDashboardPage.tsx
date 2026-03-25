@@ -1004,7 +1004,7 @@ function SupervisorMap({ markers }: { markers: MarkerPoint[] }) {
 
   if (markers.length === 0) {
     return (
-      <div className="flex h-[460px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[920px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
         No hay clientes geolocalizados para mostrar.
       </div>
     );
