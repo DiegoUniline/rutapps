@@ -244,11 +244,11 @@ export function useRutaVenta() {
 
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
-    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = item.precio_unitario * item.cantidad; subtotal += lineaSub; const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0; ieps += lineIeps; if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100); items += item.cantidad; });
+    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = item.precio_unitario * item.cantidad; subtotal += lineaSub; if (!sinImpuestos) { const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0; ieps += lineIeps; if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100); } items += item.cantidad; });
     const totalDescuentos = totalDescuentoPromos + descuentoDevolucion;
     const total = Math.max(0, subtotal + ieps + iva - totalDescuentos);
     return { subtotal, iva, ieps, total, items, descuento: totalDescuentos, descuentoDevolucion };
-  }, [cart, totalDescuentoPromos, descuentoDevolucion]);
+  }, [cart, totalDescuentoPromos, descuentoDevolucion, sinImpuestos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
