@@ -2,6 +2,14 @@ import { Check, Printer, Share2, X } from 'lucide-react';
 import { useRef } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 
+interface DevolucionTicketItem {
+  nombre: string;
+  cantidad: number;
+  motivo: string;
+  accion: string;
+  monto: number;
+}
+
 interface TicketVentaProps {
   empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null };
   folio: string;
@@ -11,6 +19,8 @@ interface TicketVentaProps {
   subtotal: number;
   iva: number;
   ieps?: number;
+  descuentoDevolucion?: number;
+  devoluciones?: DevolucionTicketItem[];
   total: number;
   condicionPago: string;
   metodoPago?: string;
@@ -22,12 +32,22 @@ interface TicketVentaProps {
   onClose: () => void;
 }
 
+const MOTIVO_LABELS: Record<string, string> = {
+  no_vendido: 'No vendido', vencido: 'Vencido', caducado: 'Caducado',
+  danado: 'Dañado', cambio: 'Cambio', error_pedido: 'Error pedido', otro: 'Otro',
+};
+const ACCION_LABELS: Record<string, string> = {
+  reposicion: 'Reposición', nota_credito: 'Nota crédito',
+  devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
+};
+
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
     empresa, folio, fecha, clienteNombre, lineas,
-    subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
+    subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
+    total, condicionPago, metodoPago,
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onClose,
   } = props;
 
@@ -67,6 +87,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 .tk-tot-row .val{font-weight:500}
 .tk-grand{display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px dashed #aaa;padding-top:4px;margin-top:3px}
 .tk-footer{text-align:center;font-size:7px;color:#999;margin-top:6px;padding-top:4px;border-top:1px dashed #ccc}
+.tk-dev{font-size:8px;line-height:1.5}
 @media print{body{width:80mm}}
 </style></head><body><div class="tk">${content}</div>
 <script>window.onload=function(){window.print();window.close()}</script></body></html>`);
@@ -93,7 +114,13 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       `Subtotal: ${fmt(subtotal)}`,
       iva > 0 ? `IVA: ${fmt(iva)}` : '',
       ieps > 0 ? `IEPS: ${fmt(ieps)}` : '',
+      descuentoDevolucion > 0 ? `Desc. devolución: -${fmt(descuentoDevolucion)}` : '',
       `TOTAL: ${fmt(total)}`,
+      ...(devoluciones.length > 0 ? [
+        '─'.repeat(30),
+        'DEVOLUCIONES:',
+        ...devoluciones.map(d => `  ${d.cantidad}x ${d.nombre} → ${ACCION_LABELS[d.accion] || d.accion} (${MOTIVO_LABELS[d.motivo] || d.motivo})`),
+      ] : []),
       montoRecibido ? `Recibido: ${fmt(montoRecibido)}` : '',
       cambio && cambio > 0 ? `Cambio: ${fmt(cambio)}` : '',
       '',
@@ -164,7 +191,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
-            {/* Products — main section */}
+            {/* Products */}
             <div className="px-5 py-2">
               <p className="tk-section text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Productos</p>
               <div className="space-y-1">
@@ -192,6 +219,27 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               </div>
             </div>
 
+            {/* Devoluciones section */}
+            {devoluciones.length > 0 && (
+              <>
+                <div className="tk-dash mx-5 border-t border-dashed border-border" />
+                <div className="px-5 py-2">
+                  <p className="tk-section text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Devoluciones</p>
+                  <div className="space-y-0.5">
+                    {devoluciones.map((d, i) => (
+                      <div key={i} className="tk-dev text-[9px]">
+                        <div className="flex justify-between">
+                          <span className="text-foreground truncate flex-1 mr-2">{d.cantidad}x {d.nombre}</span>
+                          <span className="text-muted-foreground shrink-0">{ACCION_LABELS[d.accion] || d.accion}</span>
+                        </div>
+                        <span className="text-[8px] text-muted-foreground italic">{MOTIVO_LABELS[d.motivo] || d.motivo}{d.monto > 0 ? ` · ${fmt(d.monto)}` : ''}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
 
             {/* Totals */}
@@ -210,6 +258,12 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IEPS</span>
                   <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
+                </div>
+              )}
+              {descuentoDevolucion > 0 && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-amber-600">Desc. devolución</span>
+                  <span className="val text-amber-600 font-medium tabular-nums">-{fmt(descuentoDevolucion)}</span>
                 </div>
               )}
               <div className="tk-grand flex justify-between items-baseline pt-1.5 mt-1 border-t border-dashed border-border">
