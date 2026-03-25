@@ -1,4 +1,5 @@
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useCurrency } from '@/hooks/useCurrency';
