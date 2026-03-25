@@ -15,8 +15,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtLocal = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 function useCobros(search: string) {
   const { empresa } = useAuth();

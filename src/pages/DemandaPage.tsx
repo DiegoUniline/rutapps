@@ -12,6 +12,7 @@ import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
