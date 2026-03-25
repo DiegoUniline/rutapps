@@ -99,7 +99,7 @@ export default function CuentasCobrarPage() {
           ].map(a => (
             <div key={a.label}>
               <p className="text-[10px] text-muted-foreground">{a.label}</p>
-              <p className={cn("text-sm font-bold", a.color)}>$ {fmt(a.val)}</p>
+              <p className={cn("text-sm font-bold", a.color)}>{fmt(a.val)}</p>
             </div>
           ))}
         </div>
