@@ -12,8 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 function useGastos(search: string) {
   const { empresa } = useAuth();
