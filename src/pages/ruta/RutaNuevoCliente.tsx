@@ -103,7 +103,7 @@ export default function RutaNuevoCliente() {
     try {
       await saveMutation.mutateAsync(form);
       toast.success('Cliente creado');
-      navigate('/ruta/clientes', { replace: true });
+      navigate('/ruta', { replace: true });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -116,7 +116,7 @@ export default function RutaNuevoCliente() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3"
         style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
-        <button onClick={() => navigate('/ruta/clientes')} className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center active:scale-90 transition-transform">
+        <button onClick={() => navigate('/ruta')} className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center active:scale-90 transition-transform">
           <ArrowLeft className="h-4.5 w-4.5 text-foreground" />
         </button>
         <h1 className="text-lg font-bold text-foreground flex-1">Nuevo Cliente</h1>
