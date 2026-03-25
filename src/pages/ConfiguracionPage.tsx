@@ -382,7 +382,14 @@ export default function ConfiguracionPage() {
       qc.invalidateQueries({ queryKey: ['empresa'] });
       setLogoFile(null);
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any) => {
+      const msg = e.message?.includes('empresas_email_unique')
+        ? 'Este correo ya está registrado en otra empresa'
+        : e.message?.includes('empresas_telefono_unique')
+        ? 'Este teléfono ya está registrado en otra empresa'
+        : e.message;
+      toast.error(msg);
+    },
   });
 
   const field = (key: string, label: string, placeholder?: string) => (
