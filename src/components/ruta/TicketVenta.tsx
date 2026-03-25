@@ -261,17 +261,19 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Totals */}
             <div className="px-5 py-2 space-y-0.5">
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Subtotal</span>
-                <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
-              </div>
-              {iva > 0 && (
+              {taxMode !== 'ninguno' && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-muted-foreground">Subtotal</span>
+                  <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
+                </div>
+              )}
+              {taxMode !== 'ninguno' && iva > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IVA</span>
                   <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
                 </div>
               )}
-              {ieps > 0 && (
+              {taxMode !== 'ninguno' && ieps > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IEPS</span>
                   <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
