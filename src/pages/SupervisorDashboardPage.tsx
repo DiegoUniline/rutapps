@@ -323,6 +323,27 @@ export default function SupervisorDashboardPage() {
     [visitasHoy, selectedSeller],
   );
 
+  const filteredDevoluciones = useMemo(
+    () => (devolucionesHoy ?? []).filter((dev: any) => !selectedAliases || selectedAliases.includes(dev.vendedor_id)),
+    [devolucionesHoy, selectedAliases],
+  );
+
+  const devolucionesStats = useMemo(() => {
+    let totalUnidades = 0;
+    let totalCredito = 0;
+    const porMotivo: Record<string, number> = {};
+    filteredDevoluciones.forEach((d: any) => {
+      (d.devolucion_lineas ?? []).forEach((l: any) => {
+        const qty = Number(l.cantidad) || 0;
+        totalUnidades += qty;
+        totalCredito += Number(l.monto_credito) || 0;
+        const motivo = l.motivo || 'otro';
+        porMotivo[motivo] = (porMotivo[motivo] || 0) + qty;
+      });
+    });
+    return { totalUnidades, totalCredito, porMotivo, count: filteredDevoluciones.length };
+  }, [filteredDevoluciones]);
+
   const productosSummary = useMemo(() => {
     const summary: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
 
