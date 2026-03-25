@@ -99,11 +99,11 @@ export default function ComprasPage() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total compras</p>
-          <p className="text-2xl font-bold text-foreground">$ {fmt(totalCompras)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalCompras)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo por pagar</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalSaldo)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalSaldo)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
