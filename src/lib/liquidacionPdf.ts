@@ -68,6 +68,10 @@ export interface LiquidacionPdfParams {
     efectivoEsperado: number;
     diferencia: number;
   };
+  stockAlmacen?: {
+    almacenNombre: string;
+    lineas: { nombre: string; codigo: string; cantidad: number }[];
+  };
 }
 
 export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
@@ -299,7 +303,22 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
     );
   }
 
-  // ═══ NOTAS ═══
+  // ═══ STOCK ALMACÉN ═══
+  if (params.stockAlmacen && params.stockAlmacen.lineas.length > 0) {
+    y = checkPageBreak(doc, y, 30);
+    y = drawCleanTable(doc, y,
+      ['Código', `Producto — ${params.stockAlmacen.almacenNombre}`, 'Existencia'],
+      params.stockAlmacen.lineas.map(s => [
+        s.codigo,
+        s.nombre,
+        { content: String(s.cantidad), styles: { halign: 'right', fontStyle: 'bold' } },
+      ]),
+      {
+        0: { cellWidth: 28 },
+        2: { cellWidth: 25, halign: 'right' },
+      },
+    );
+  }
   if (notas) {
     y = drawNotes(doc, y, notas, 'Observaciones del vendedor');
   }

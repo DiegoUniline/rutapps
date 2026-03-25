@@ -105,34 +105,27 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  // --- Stock a bordo: carga más reciente <= fechaInicio y <= fechaFin ---
-  const { data: cargaInicio } = useQuery<any>({
-    queryKey: ['rpt-stock-inicio', empresa?.id, usuarioId, fechaInicio],
+  // --- Stock del almacén asignado al vendedor ---
+  const { data: rptVendedorAlmacen } = useQuery<any>({
+    queryKey: ['rpt-vendedor-almacen', usuarioId],
     enabled: enabled && incluirStock,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cargas')
-        .select('id, fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
-        .lte('fecha', fechaInicio)
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data } = await (supabase as any).from('profiles').select('almacen_id, almacenes(nombre)').eq('id', usuarioId).maybeSingle();
       return data;
     },
   });
 
-  const { data: cargaFin } = useQuery<any>({
-    queryKey: ['rpt-stock-fin', empresa?.id, usuarioId, fechaFin],
-    enabled: enabled && incluirStock,
+  const { data: rptStockAlmacen } = useQuery<any[]>({
+    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id],
+    enabled: !!rptVendedorAlmacen?.almacen_id && incluirStock,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cargas')
-        .select('id, fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
-        .lte('fecha', fechaFin)
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
+      const { data, error } = await (supabase as any).from('stock_almacen')
+        .select('producto_id, cantidad, productos(nombre, codigo)')
+        .eq('almacen_id', rptVendedorAlmacen!.almacen_id!)
+        .gt('cantidad', 0)
+        .order('producto_id');
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
@@ -189,21 +182,12 @@ export default function ReporteDiarioRuta() {
     });
   });
 
-  // Stock helpers
-  const buildStockArr = (carga: any) => {
-    if (!carga?.carga_lineas) return [];
-    return (carga.carga_lineas as any[]).map((l: any) => ({
-      nombre: l.productos?.nombre || '—',
-      codigo: l.productos?.codigo || '',
-      cargada: Number(l.cantidad_cargada) || 0,
-      vendida: Number(l.cantidad_vendida) || 0,
-      devuelta: Number(l.cantidad_devuelta) || 0,
-      restante: (Number(l.cantidad_cargada) || 0) - (Number(l.cantidad_vendida) || 0) - (Number(l.cantidad_devuelta) || 0),
-    })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
-  };
-
-  const stockInicio = buildStockArr(cargaInicio);
-  const stockFin = buildStockArr(cargaFin);
+  const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
+  const stockItems = (rptStockAlmacen || []).map((s: any) => ({
+    nombre: s.productos?.nombre || '—',
+    codigo: s.productos?.codigo || '',
+    cantidad: Number(s.cantidad) || 0,
+  })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
   const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
@@ -267,7 +251,7 @@ export default function ReporteDiarioRuta() {
         </div>
         <div className="flex items-center gap-2 pb-1">
           <Switch id="incluir-stock" checked={incluirStock} onCheckedChange={setIncluirStock} />
-          <Label htmlFor="incluir-stock" className="text-xs cursor-pointer">Incluir stock a bordo</Label>
+          <Label htmlFor="incluir-stock" className="text-xs cursor-pointer">Incluir stock en almacén</Label>
         </div>
         {enabled && (
           <Button variant="outline" size="sm" onClick={handlePrint}>
@@ -324,32 +308,26 @@ export default function ReporteDiarioRuta() {
             </div>
           </div>
 
-          {/* Stock a bordo - Inicio */}
-          {incluirStock && stockInicio.length > 0 && (
+          {/* Stock en almacén */}
+          {incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> Stock a bordo — Inicio ({cargaInicio?.fecha})
+                <Package className="h-3.5 w-3.5" /> Stock — {rptAlmacenNombre}
               </h2>
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
                     <th className="text-left py-1.5">Código</th>
                     <th className="text-left py-1.5">Producto</th>
-                    <th className="text-right py-1.5">Cargado</th>
-                    <th className="text-right py-1.5">Vendido</th>
-                    <th className="text-right py-1.5">Devuelto</th>
-                    <th className="text-right py-1.5">Restante</th>
+                    <th className="text-right py-1.5">Existencia</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stockInicio.map((p: any, i: number) => (
+                  {stockItems.map((p: any, i: number) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
-                      <td className="py-1 text-right">{p.cargada}</td>
-                      <td className="py-1 text-right">{p.vendida}</td>
-                      <td className="py-1 text-right">{p.devuelta}</td>
-                      <td className="py-1 text-right font-semibold">{p.restante}</td>
+                      <td className="py-1 text-right font-semibold">{p.cantidad}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -357,42 +335,9 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
-          {/* Stock a bordo - Fin */}
-          {incluirStock && stockFin.length > 0 && cargaFin?.id !== cargaInicio?.id && (
-            <div>
-              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> Stock a bordo — Fin ({cargaFin?.fecha})
-              </h2>
-              <table className="w-full text-[11px]">
-                <thead>
-                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Código</th>
-                    <th className="text-left py-1.5">Producto</th>
-                    <th className="text-right py-1.5">Cargado</th>
-                    <th className="text-right py-1.5">Vendido</th>
-                    <th className="text-right py-1.5">Devuelto</th>
-                    <th className="text-right py-1.5">Restante</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockFin.map((p: any, i: number) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
-                      <td className="py-1">{p.nombre}</td>
-                      <td className="py-1 text-right">{p.cargada}</td>
-                      <td className="py-1 text-right">{p.vendida}</td>
-                      <td className="py-1 text-right">{p.devuelta}</td>
-                      <td className="py-1 text-right font-semibold">{p.restante}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {incluirStock && stockInicio.length === 0 && stockFin.length === 0 && (
+          {incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
-              No se encontraron cargas para este usuario en el rango seleccionado.
+              No se encontró stock en el almacén asignado a este usuario.
             </div>
           )}
 
