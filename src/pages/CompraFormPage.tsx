@@ -853,7 +853,7 @@ export default function CompraFormPage() {
                             </td>
                             {/* Total */}
                             <td className="py-1.5 px-3 text-right font-medium text-xs">
-                              $ {fmt(line.total ?? 0)}
+                              {s}{fmt(line.total ?? 0)}
                             </td>
                             {isEditable && (
                               <td className="py-1.5 px-3">
