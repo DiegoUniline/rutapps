@@ -315,9 +315,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
-                  ...(incluirStock ? {
-                    stockInicio: cargaInicio ? { fecha: cargaInicio.fecha, lineas: stockInicio } : undefined,
-                    stockFin: cargaFin && cargaFin.id !== cargaInicio?.id ? { fecha: cargaFin.fecha, lineas: stockFin } : undefined,
+                  ...(incluirStock && stockItems.length > 0 ? {
+                    stockInicio: { fecha: almacenNombre, lineas: stockItems.map(s => ({ nombre: s.nombre, codigo: s.codigo, cargada: s.cantidad, vendida: 0, devuelta: 0, restante: s.cantidad })) },
                   } : {}),
                 };
                 const html = buildLiquidacionTicketHTML(ticketData);
