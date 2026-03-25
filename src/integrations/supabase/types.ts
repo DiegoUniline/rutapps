@@ -1912,6 +1912,7 @@ export type Database = {
           rfc: string | null
           telefono: string
           ticket_campos: Json | null
+          zona_horaria: string
         }
         Insert: {
           ciudad?: string | null
@@ -1932,6 +1933,7 @@ export type Database = {
           rfc?: string | null
           telefono: string
           ticket_campos?: Json | null
+          zona_horaria?: string
         }
         Update: {
           ciudad?: string | null
@@ -1952,6 +1954,7 @@ export type Database = {
           rfc?: string | null
           telefono?: string
           ticket_campos?: Json | null
+          zona_horaria?: string
         }
         Relationships: []
       }
