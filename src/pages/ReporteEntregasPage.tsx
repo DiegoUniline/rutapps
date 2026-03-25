@@ -309,7 +309,7 @@ export default function ReporteEntregasPage() {
                   <TableCell className="text-center text-[12px] py-1.5">{r.entregas.length}</TableCell>
                   <TableCell className="text-center text-[12px] text-warning font-bold py-1.5">{r.entregas.filter(e => e.status === 'confirmado').length}</TableCell>
                   <TableCell className="text-center text-[12px] text-success font-bold py-1.5">{r.entregas.filter(e => e.status === 'entregado').length}</TableCell>
-                  <TableCell className="text-right text-[12px] font-bold py-1.5">$ {r.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right text-[12px] font-bold py-1.5">{fmt(r.total)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

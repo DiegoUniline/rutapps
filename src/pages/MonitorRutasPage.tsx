@@ -46,6 +46,7 @@ interface ClientVisit {
 
 function MonitorContent() {
   const { empresa } = useAuth();
+  const { fmt: fmtMoney } = useCurrency();
   const { isLoaded } = useGoogleMaps();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [vendedorFilters, setVendedorFilters] = useState<string[]>([]);

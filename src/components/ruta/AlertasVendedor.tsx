@@ -39,7 +39,7 @@ export default function AlertasVendedor() {
       icon: Clock,
       color: 'text-destructive bg-destructive/10',
       text: `${saldos.length} clientes con saldo`,
-      detail: `$ ${fmt(totalPendiente)} por cobrar`,
+      detail: `${fmt(totalPendiente)} por cobrar`,
     });
   }
 

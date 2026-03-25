@@ -54,9 +54,9 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
           </div>
         </div>
         {!(form as any).usa_listas_precio && (
-          <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help onChange={v => set('precio_principal', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+          <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help onChange={v => set('precio_principal', +v)} format={v => `${symbol} ${(v ?? 0).toFixed(2)}`} />
         )}
-        <OdooField label="Costo" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+        <OdooField label="Costo" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `${symbol} ${(v ?? 0).toFixed(2)}`} />
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />

@@ -292,7 +292,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <div className="text-sm text-muted-foreground">
                       {positivas.filter((l: any) => !l.ajuste_aplicado).length} sobrantes,{' '}
                       {negativas.filter((l: any) => !l.ajuste_aplicado).length} faltantes.
-                      Valor neto: <span className={cn("font-medium", balanceNeto >= 0 ? "text-green-600" : "text-red-600")}>$ {fmt(balanceNeto)}</span>
+                      Valor neto: <span className={cn("font-medium", balanceNeto >= 0 ? "text-green-600" : "text-red-600")}>{fmt(balanceNeto)}</span>
                     </div>
                     <Button onClick={handleAjustarTodas} disabled={adjusting}>
                       {adjusting ? 'Ajustando...' : `Ajustar Todas las Líneas (${ajustables.length})`}

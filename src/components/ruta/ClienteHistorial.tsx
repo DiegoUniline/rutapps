@@ -94,7 +94,7 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
                         </p>
                         <p className="text-[11px] text-muted-foreground capitalize">{c.metodo_pago}</p>
                       </div>
-                      <p className="text-[13px] font-bold text-primary">$ {fmt(c.monto)}</p>
+                      <p className="text-[13px] font-bold text-primary">{fmt(c.monto)}</p>
                     </div>
                   ))}
                 </div>
