@@ -51,7 +51,7 @@ const money = (sym: string, n: number) => `${sym}${n.toFixed(2)}`;
 
 export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string }): Uint8Array {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
-  const W = is58 ? 24 : 42;
+  const W = is58 ? 32 : 48;
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
   const fmt = (n: number) => money(sym, n);
 
