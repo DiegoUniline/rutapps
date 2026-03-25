@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save } from 'lucide-react';
+import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText } from 'lucide-react';
 import type { CartItem, CuentaPendiente, DevolucionItem } from './types';
 import { ACCIONES } from './types';
 
