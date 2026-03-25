@@ -268,7 +268,7 @@ export default function RutaCobrar() {
                         {c.codigo && <p className="text-xs text-muted-foreground">{c.codigo}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-destructive">${fmt(c.saldoPendiente)}</p>
+                        <p className="text-sm font-bold text-destructive">{fmtM(c.saldoPendiente)}</p>
                         <p className="text-xs text-muted-foreground">pendiente</p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
