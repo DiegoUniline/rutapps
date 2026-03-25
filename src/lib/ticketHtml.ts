@@ -89,11 +89,13 @@ export function buildTicketHTML(data: TicketData): string {
   const telHtml = campos.telefono && empresa.telefono ? `<div style="font-size:8px;color:#888">Tel: ${empresa.telefono}</div>` : '';
   const emailHtml = empresa.email ? `<div style="font-size:8px;color:#888">${empresa.email}</div>` : '';
 
+  const showTax = campos.impuestos !== false;
+
   const lineasHtml = lineas.map(l => {
     const detailParts: string[] = [`${fmt(l.precio)} c/u`];
     if ((l.descuento_pct ?? 0) > 0) detailParts.push(`<span style="color:#3b82f6">-${l.descuento_pct}% dto</span>`);
-    if ((l.iva_monto ?? 0) > 0) detailParts.push(`IVA ${fmt(l.iva_monto!)}`);
-    if ((l.ieps_monto ?? 0) > 0) detailParts.push(`IEPS ${fmt(l.ieps_monto!)}`);
+    if (showTax && (l.iva_monto ?? 0) > 0) detailParts.push(`IVA ${fmt(l.iva_monto!)}`);
+    if (showTax && (l.ieps_monto ?? 0) > 0) detailParts.push(`IEPS ${fmt(l.ieps_monto!)}`);
 
     return `<div style="padding:2px 0${l.esCambio ? ';opacity:0.6' : ''}">
       <div style="display:flex;justify-content:space-between;font-size:11px">
