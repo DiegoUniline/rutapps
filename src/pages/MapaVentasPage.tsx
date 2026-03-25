@@ -40,6 +40,7 @@ type ViewMode = 'pedidos' | 'entregas';
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
+  const { fmt } = useCurrency();
   const { isLoaded } = useGoogleMaps();
   const [viewMode, setViewMode] = useState<ViewMode>('entregas');
   const [fechaDesde, setFechaDesde] = useState(weekAgo);
