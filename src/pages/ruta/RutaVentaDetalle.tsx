@@ -75,6 +75,9 @@ export default function RutaVentaDetalle() {
   const [editNotas, setEditNotas] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [searchProducto, setSearchProducto] = useState('');
+  const [editingPagoId, setEditingPagoId] = useState<string | null>(null);
+  const [editPagoMonto, setEditPagoMonto] = useState('');
+  const [editPagoMetodo, setEditPagoMetodo] = useState<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo');
 
   const clienteId = (venta as any)?.cliente_id;
 
@@ -908,38 +911,102 @@ export default function RutaVentaDetalle() {
               <div className="space-y-1.5">
                 {pagosVenta.map((pa: any) => {
                   const cobro = pa.cobros;
+                  const isEditing = editingPagoId === pa.id;
                   return (
-                    <div key={pa.id} className="flex items-center justify-between rounded-lg border border-border/60 p-2.5">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-medium text-foreground">{s}{fmt(pa.monto_aplicado)}</p>
-                        <p className="text-[10px] text-muted-foreground">{cobro?.metodo_pago ?? '—'} · {fmtDate(cobro?.fecha)}</p>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          if (!confirm('¿Eliminar este pago?')) return;
-                          setSaving(true);
-                          try {
-                            // Remove the application
-                            await supabase.from('cobro_aplicaciones').delete().eq('id', pa.id);
-                            // Update saldo
-                            const newSaldo = (venta?.saldo_pendiente ?? 0) + pa.monto_aplicado;
-                            await supabase.from('ventas').update({ saldo_pendiente: newSaldo }).eq('id', id!);
-                            // Log historial
-                            await supabase.from('venta_historial').insert({
-                              venta_id: id!, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '',
-                              user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'pago_eliminado',
-                              detalles: { monto: pa.monto_aplicado, metodo: cobro?.metodo_pago } as any,
-                            });
-                            toast.success('Pago eliminado');
-                            refetchPagos();
-                            queryClient.invalidateQueries({ queryKey: ['venta', id] });
-                          } catch (err: any) { toast.error(err.message); }
-                          finally { setSaving(false); }
-                        }}
-                        className="p-1.5 text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                    <div key={pa.id} className="rounded-lg border border-border/60 p-2.5">
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-[10px] text-muted-foreground">Monto</label>
+                            <input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              className="w-full bg-accent/40 rounded-md px-2.5 py-1.5 text-[12px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                              value={editPagoMonto}
+                              onChange={e => setEditPagoMonto(e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-muted-foreground">Método</label>
+                            <div className="flex gap-1 mt-0.5">
+                              {(['efectivo', 'transferencia', 'tarjeta'] as const).map(m => (
+                                <button key={m} type="button"
+                                  onClick={() => setEditPagoMetodo(m)}
+                                  className={cn('flex-1 py-1.5 rounded-md text-[10px] font-medium border transition-colors',
+                                    editPagoMetodo === m ? 'bg-primary text-primary-foreground border-primary' : 'bg-accent/40 text-muted-foreground border-border/60')}
+                                >{m === 'efectivo' ? 'Efectivo' : m === 'transferencia' ? 'Transfer.' : 'Tarjeta'}</button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex gap-1.5">
+                            <button disabled={saving}
+                              onClick={async () => {
+                                const nuevoMonto = parseFloat(editPagoMonto);
+                                if (isNaN(nuevoMonto) || nuevoMonto <= 0) { toast.error('Monto inválido'); return; }
+                                setSaving(true);
+                                try {
+                                  const diffMonto = nuevoMonto - pa.monto_aplicado;
+                                  // Update cobro
+                                  await supabase.from('cobros').update({ monto: nuevoMonto, metodo_pago: editPagoMetodo }).eq('id', cobro.id);
+                                  // Update application
+                                  await supabase.from('cobro_aplicaciones').update({ monto_aplicado: nuevoMonto }).eq('id', pa.id);
+                                  // Update saldo
+                                  const newSaldo = Math.max(0, (venta?.saldo_pendiente ?? 0) - diffMonto);
+                                  await supabase.from('ventas').update({ saldo_pendiente: newSaldo }).eq('id', id!);
+                                  // Log
+                                  await supabase.from('venta_historial').insert({
+                                    venta_id: id!, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '',
+                                    user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'pago_editado',
+                                    detalles: { monto_anterior: pa.monto_aplicado, monto_nuevo: nuevoMonto, metodo_anterior: cobro?.metodo_pago, metodo_nuevo: editPagoMetodo } as any,
+                                  });
+                                  toast.success('Pago actualizado');
+                                  setEditingPagoId(null);
+                                  refetchPagos();
+                                  queryClient.invalidateQueries({ queryKey: ['venta', id] });
+                                } catch (err: any) { toast.error(err.message); }
+                                finally { setSaving(false); }
+                              }}
+                              className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-md text-[11px] font-semibold"
+                            ><Check className="h-3 w-3 inline mr-1" />Guardar</button>
+                            <button onClick={() => setEditingPagoId(null)}
+                              className="px-3 py-1.5 bg-accent/60 text-muted-foreground rounded-md text-[11px]"
+                            >Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-medium text-foreground">{s}{fmt(pa.monto_aplicado)}</p>
+                            <p className="text-[10px] text-muted-foreground">{cobro?.metodo_pago ?? '—'} · {fmtDate(cobro?.fecha)}</p>
+                          </div>
+                          <div className="flex gap-1">
+                            <button onClick={() => { setEditingPagoId(pa.id); setEditPagoMonto(String(pa.monto_aplicado)); setEditPagoMetodo(cobro?.metodo_pago ?? 'efectivo'); }}
+                              className="p-1.5 text-primary"><Pencil className="h-3.5 w-3.5" /></button>
+                            <button
+                              onClick={async () => {
+                                if (!confirm('¿Eliminar este pago?')) return;
+                                setSaving(true);
+                                try {
+                                  await supabase.from('cobro_aplicaciones').delete().eq('id', pa.id);
+                                  const newSaldo = (venta?.saldo_pendiente ?? 0) + pa.monto_aplicado;
+                                  await supabase.from('ventas').update({ saldo_pendiente: newSaldo }).eq('id', id!);
+                                  await supabase.from('venta_historial').insert({
+                                    venta_id: id!, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '',
+                                    user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'pago_eliminado',
+                                    detalles: { monto: pa.monto_aplicado, metodo: cobro?.metodo_pago } as any,
+                                  });
+                                  toast.success('Pago eliminado');
+                                  refetchPagos();
+                                  queryClient.invalidateQueries({ queryKey: ['venta', id] });
+                                } catch (err: any) { toast.error(err.message); }
+                                finally { setSaving(false); }
+                              }}
+                              className="p-1.5 text-destructive"
+                            ><Trash2 className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
