@@ -200,8 +200,8 @@ export function useRutaVenta() {
     }
   };
 
-  const updateQty = (productoId: string, delta: number, esCambio?: boolean) => { setCart(prev => prev.map(c => { if (c.producto_id !== productoId || c.es_cambio !== esCambio) return c; const newQty = c.cantidad + delta; const maxQty = esCambio ? Infinity : getMaxQty(productoId); if (newQty > maxQty) return c; return newQty > 0 ? { ...c, cantidad: newQty } : c; })); };
-  const removeFromCart = (productoId: string, esCambio?: boolean) => { setCart(prev => prev.filter(c => !(c.producto_id === productoId && c.es_cambio === esCambio))); };
+  const updateQty = (productoId: string, delta: number, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.map(c => { if (c.producto_id !== productoId || !!c.es_cambio !== match) return c; const newQty = c.cantidad + delta; const maxQty = esCambio ? Infinity : getMaxQty(productoId); if (newQty > maxQty) return c; return newQty > 0 ? { ...c, cantidad: newQty } : c; })); };
+  const removeFromCart = (productoId: string, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match))); };
   const getItemInCart = (productoId: string) => cart.find(c => c.producto_id === productoId && !c.es_cambio);
 
   const addDevolucion = (p: any) => { if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: 'no_vendido' }]); };
