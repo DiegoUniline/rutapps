@@ -420,7 +420,7 @@ export default function RutaVentaDetalle() {
     finally { setSendingWA(false); }
   };
 
-  const ticketAncho = (empresa as any)?.ticket_ancho ?? '80';
+  const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
 
   const handleDownloadPDF = async () => {
     const td = getTicketData();
