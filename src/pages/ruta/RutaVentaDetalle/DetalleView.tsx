@@ -45,6 +45,7 @@ export function DetalleView(p: Props) {
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
+        <ActionsBar {...p} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
       </div>
       <BottomActions {...p} s={s} lineas={p.lineas} />
@@ -53,20 +54,34 @@ export function DetalleView(p: Props) {
   );
 }
 
-function Header({ venta, onBack, clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, initEditar }: Props) {
+function Header({ venta, onBack }: Props) {
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
       <button onClick={onBack} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
       <div className="flex-1 min-w-0"><h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1><p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p></div>
-      <div className="flex items-center gap-0.5">
-        <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }} className="p-2 rounded-lg hover:bg-accent active:scale-95"><MessageCircle className="h-4 w-4 text-[#25D366]" /></button>
-        <button onClick={handleDownloadPDF} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Download className="h-4 w-4 text-muted-foreground" /></button>
-        <button onClick={handlePrintTicket} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Printer className="h-4 w-4 text-muted-foreground" /></button>
-        <button onClick={handleShareTicket} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Share2 className="h-4 w-4 text-muted-foreground" /></button>
-        <button onClick={handleEstadoCuenta} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Receipt className="h-4 w-4 text-muted-foreground" /></button>
-        {venta.status === 'borrador' && <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Pencil className="h-4 w-4 text-muted-foreground" /></button>}
-      </div>
       <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[venta.status] ?? '')}>{venta.status}</span>
+    </div>
+  );
+}
+
+function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar }: Props) {
+  const actions = [
+    { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
+    { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
+    { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
+    { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
+    { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
+  ];
+  if (venta.status === 'borrador') actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
+
+  return (
+    <div className="grid grid-cols-5 gap-1">
+      {actions.map((a) => (
+        <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
+          <a.icon className={`h-5 w-5 ${a.color}`} />
+          <span className="text-[10px] font-medium text-foreground leading-tight">{a.label}</span>
+        </button>
+      ))}
     </div>
   );
 }
