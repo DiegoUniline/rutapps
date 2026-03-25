@@ -508,7 +508,7 @@ export default function RutaVentaDetalle() {
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho });
+    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho, showTax });
     document.body.appendChild(container);
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
@@ -531,7 +531,7 @@ export default function RutaVentaDetalle() {
         const printerName = getConnectedPrinterName();
         toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
         const conn = await connectPrinter();
-        const escposBytes = buildEscPosBytes(td, { ticketAncho });
+        const escposBytes = buildEscPosBytes(td, { ticketAncho, showTax });
         await sendBytes(conn, escposBytes);
         toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
         return;
@@ -547,7 +547,7 @@ export default function RutaVentaDetalle() {
     }
 
     // ── 2) Fallback: image PNG via share/download ──
-    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
+    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true, showTax });
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
