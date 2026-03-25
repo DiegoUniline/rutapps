@@ -45,6 +45,7 @@ interface PreviewProps {
   form: Record<string, string>;
   logoPreview: string | null;
   campos: Record<string, boolean>;
+  ticketAncho?: '58' | '80';
 }
 
 function TicketPreview({ form, logoPreview, campos }: PreviewProps) {
