@@ -1852,6 +1852,7 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_devolucion"]
           user_id: string
           vendedor_id: string | null
+          venta_id: string | null
         }
         Insert: {
           carga_id?: string | null
@@ -1864,6 +1865,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_devolucion"]
           user_id: string
           vendedor_id?: string | null
+          venta_id?: string | null
         }
         Update: {
           carga_id?: string | null
@@ -1876,6 +1878,7 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_devolucion"]
           user_id?: string
           vendedor_id?: string | null
+          venta_id?: string | null
         }
         Relationships: [
           {
@@ -1904,6 +1907,13 @@ export type Database = {
             columns: ["vendedor_id"]
             isOneToOne: false
             referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devoluciones_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
             referencedColumns: ["id"]
           },
         ]

@@ -1,0 +1,1 @@
+ALTER TABLE public.devoluciones ADD COLUMN venta_id uuid REFERENCES public.ventas(id) ON DELETE SET NULL;
