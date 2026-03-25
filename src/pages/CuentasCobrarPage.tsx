@@ -70,7 +70,7 @@ export default function CuentasCobrarPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total pendiente</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalPendiente)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalPendiente)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Documentos</p>
