@@ -49,12 +49,7 @@ export default function DevolucionesListPage() {
         </h1>
       </div>
 
-      <OdooFilterBar>
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input placeholder="Buscar por cliente o folio..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="pl-8 h-8 text-xs" />
-        </div>
-      </OdooFilterBar>
+      <OdooFilterBar search={search} onSearchChange={val => { setSearch(val); setPage(1); }} placeholder="Buscar por cliente o folio..." />
 
       <div className="bg-card border border-border rounded-md overflow-hidden">
         <table className="w-full text-[12px]">
