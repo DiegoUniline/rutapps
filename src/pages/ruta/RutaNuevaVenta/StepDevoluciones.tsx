@@ -9,10 +9,11 @@ interface Props {
   setSearchDevProducto: (v: string) => void;
   filteredDevProductos: any[] | undefined;
   devoluciones: DevolucionItem[];
-  addDevolucion: (p: any) => void;
+  addDevolucion: (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: AccionDevolucion }) => void;
   updateDevQty: (pid: string, qty: number) => void;
   updateDevMotivo: (pid: string, motivo: DevolucionItem['motivo']) => void;
   updateDevAccion: (pid: string, accion: AccionDevolucion) => void;
+  batchUpdateDevDefaults: (motivo: DevolucionItem['motivo'], accion: AccionDevolucion) => void;
   showReemplazoFor: string | null;
   setShowReemplazoFor: (v: string | null) => void;
   searchReemplazo: string;
@@ -121,7 +122,7 @@ function MotivoBadge({ motivo }: { motivo: MotivoDevolucion }) {
 export function StepDevoluciones(props: Props) {
   const {
     clienteNombre, searchDevProducto, setSearchDevProducto, filteredDevProductos,
-    devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion,
+    devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     filteredReemplazoProductos, setReemplazo, processDevolucionesAndGoToProductos, fmt,
   } = props;
@@ -158,18 +159,11 @@ export function StepDevoluciones(props: Props) {
 
   // Add with global defaults
   const handleAdd = (p: any) => {
-    addDevolucion(p);
-    setTimeout(() => {
-      updateDevMotivo(p.id, defaultMotivo);
-      updateDevAccion(p.id, defaultAccion);
-    }, 0);
+    addDevolucion(p, { motivo: defaultMotivo, accion: defaultAccion });
   };
 
   const applyDefaultsToAll = () => {
-    devoluciones.forEach(d => {
-      updateDevMotivo(d.producto_id, defaultMotivo);
-      updateDevAccion(d.producto_id, defaultAccion);
-    });
+    batchUpdateDevDefaults(defaultMotivo, defaultAccion);
   };
 
   const totalItems = devoluciones.reduce((s, d) => s + d.cantidad, 0);
