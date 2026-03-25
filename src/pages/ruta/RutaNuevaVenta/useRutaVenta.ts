@@ -293,7 +293,7 @@ export function useRutaVenta() {
 
       if (applyPayment && clienteId) {
         const cobroId = crypto.randomUUID();
-        await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: new Date().toISOString().split('T')[0], created_at: new Date().toISOString() });
+        await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: todayInTimezone(), created_at: new Date().toISOString() });
         const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
         if (condicionPago === 'contado') aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: totals.total });
         for (const cuenta of cuentasPendientes) { if (cuenta.montoAplicar > 0) { aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar }); await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar }); } }
