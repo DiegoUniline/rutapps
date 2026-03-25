@@ -1,6 +1,7 @@
 import { OdooField } from '@/components/OdooFormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   form: Partial<Producto>;
