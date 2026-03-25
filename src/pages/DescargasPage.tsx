@@ -27,9 +27,22 @@ const MOTIVO_LABELS: Record<string, string> = {
   error_entrega: 'Error de entrega',
   merma: 'Merma',
   danado: 'Dañado',
+  dañado: 'Dañado',
   faltante: 'Faltante',
   sobrante: 'Sobrante',
+  no_vendido: 'No vendido',
+  vencido: 'Vencido',
+  caducado: 'Caducado',
+  cambio: 'Cambio',
+  error_pedido: 'Error pedido',
   otro: 'Otro',
+};
+
+const ACCION_LABELS: Record<string, string> = {
+  reposicion: 'Reposición',
+  nota_credito: 'Nota crédito',
+  devolucion_dinero: 'Dev. dinero',
+  descuento_venta: 'Desc. venta',
 };
 
 const MOTIVOS = [
