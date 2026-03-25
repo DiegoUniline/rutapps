@@ -663,66 +663,30 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
         </SectionCard>
 
-        {/* ═══ STOCK A BORDO ═══ */}
-        {incluirStock && (stockInicio.length > 0 || stockFin.length > 0) && (
-          <SectionCard title="Stock a bordo" icon={Package}>
-            {stockInicio.length > 0 && (
-              <div className="mb-4">
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Inicio del periodo ({cargaInicio?.fecha})</div>
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                      <th className="text-left py-1.5">Producto</th>
-                      <th className="text-right py-1.5">Cargado</th>
-                      <th className="text-right py-1.5">Vendido</th>
-                      <th className="text-right py-1.5">Devuelto</th>
-                      <th className="text-right py-1.5">Restante</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stockInicio.map((p: any, i: number) => (
-                      <tr key={i} className="border-b border-border/50">
-                        <td className="py-1">{p.nombre} <span className="text-muted-foreground font-mono text-[10px]">{p.codigo}</span></td>
-                        <td className="py-1 text-right">{p.cargada}</td>
-                        <td className="py-1 text-right">{p.vendida}</td>
-                        <td className="py-1 text-right">{p.devuelta}</td>
-                        <td className="py-1 text-right font-semibold">{p.restante}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {stockFin.length > 0 && cargaFin?.id !== cargaInicio?.id && (
-              <div>
-                <div className="text-[11px] font-semibold text-muted-foreground uppercase mb-2">Fin del periodo ({cargaFin?.fecha})</div>
-                <table className="w-full text-[12px]">
-                  <thead>
-                    <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
-                      <th className="text-left py-1.5">Producto</th>
-                      <th className="text-right py-1.5">Cargado</th>
-                      <th className="text-right py-1.5">Vendido</th>
-                      <th className="text-right py-1.5">Devuelto</th>
-                      <th className="text-right py-1.5">Restante</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stockFin.map((p: any, i: number) => (
-                      <tr key={i} className="border-b border-border/50">
-                        <td className="py-1">{p.nombre} <span className="text-muted-foreground font-mono text-[10px]">{p.codigo}</span></td>
-                        <td className="py-1 text-right">{p.cargada}</td>
-                        <td className="py-1 text-right">{p.vendida}</td>
-                        <td className="py-1 text-right">{p.devuelta}</td>
-                        <td className="py-1 text-right font-semibold">{p.restante}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {stockInicio.length === 0 && stockFin.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">No se encontraron cargas para este vendedor.</p>
-            )}
+        {/* ═══ STOCK EN ALMACÉN ═══ */}
+        {incluirStock && stockItems.length > 0 && (
+          <SectionCard title={`Stock — ${almacenNombre}`} icon={Package}>
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                  <th className="text-left py-1.5">Producto</th>
+                  <th className="text-right py-1.5">Existencia</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stockItems.map((p: any, i: number) => (
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="py-1">{p.nombre} <span className="text-muted-foreground font-mono text-[10px]">{p.codigo}</span></td>
+                    <td className="py-1 text-right font-semibold">{p.cantidad}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </SectionCard>
+        )}
+        {incluirStock && stockItems.length === 0 && (
+          <SectionCard title="Stock" icon={Package}>
+            <p className="text-sm text-muted-foreground italic">No se encontró stock en el almacén asignado.</p>
           </SectionCard>
         )}
 
