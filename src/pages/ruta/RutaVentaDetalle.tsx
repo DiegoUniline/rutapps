@@ -205,10 +205,19 @@ export default function RutaVentaDetalle() {
   };
 
   const addProductToEdit = (p: any) => {
+    const maxStock = stockMap[p.id] ?? 0;
     const existing = editLineas.find(l => l.producto_id === p.id);
     if (existing) {
+      if (esVentaInmediata && existing.cantidad >= maxStock) {
+        toast.error(`Stock máximo: ${maxStock}`);
+        return;
+      }
       setEditLineas(prev => prev.map(l => l.producto_id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l));
     } else {
+      if (esVentaInmediata && maxStock <= 0) {
+        toast.error('Sin stock disponible');
+        return;
+      }
       setEditLineas(prev => [...prev, {
         producto_id: p.id,
         nombre: p.nombre,
