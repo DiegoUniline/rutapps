@@ -462,7 +462,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text('Subtotal:', totLabelX, y, { align: 'right' });
-  doc.text(`$${fmtCurrency(cfdi.subtotal)}`, rightX, y, { align: 'right' });
+  doc.text(`${s}${fmtCurrency(cfdi.subtotal)}`, rightX, y, { align: 'right' });
   y += 5.5;
 
   // IEPS if any
