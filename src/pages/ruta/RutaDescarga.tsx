@@ -47,8 +47,6 @@ export default function RutaDescarga() {
     enabled: !!user?.id,
   });
 
-  const vendedorId = cargaActiva?.vendedor_id || vendedorProfile?.id || user?.id;
-
   // Get active carga
   const { data: cargaActiva } = useQuery({
     queryKey: ['mi-carga-activa-descarga'],
@@ -65,6 +63,8 @@ export default function RutaDescarga() {
     },
     enabled: !!empresa?.id,
   });
+
+  const vendedorId = cargaActiva?.vendedor_id || vendedorProfile?.id || user?.id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
