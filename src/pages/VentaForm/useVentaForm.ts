@@ -148,11 +148,14 @@ export function useVentaForm() {
     lineas.forEach(l => {
       const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
       const lineSubtotal = qty * price, discountAmt = lineSubtotal * (desc / 100), base = lineSubtotal - discountAmt;
-      const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
-      subtotal += lineSubtotal; descuento_total += discountAmt; iva_total += iva; ieps_total += ieps;
+      if (!sinImpuestos) {
+        const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+        iva_total += iva; ieps_total += ieps;
+      }
+      subtotal += lineSubtotal; descuento_total += discountAmt;
     });
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
-  }, [lineas]);
+  }, [lineas, sinImpuestos]);
 
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
