@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 
 const statusColors: Record<string, string> = {
   borrador: 'bg-muted text-muted-foreground',
