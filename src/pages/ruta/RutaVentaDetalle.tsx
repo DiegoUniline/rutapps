@@ -296,6 +296,7 @@ export default function RutaVentaDetalle() {
       // Update venta totals + condicion
       const newSaldo = editCondicion === 'credito' ? editTotals.total : editTotals.total; // saldo = total until paid
       const { error: ventaErr } = await supabase.from('ventas').update({
+        status: 'confirmado',
         condicion_pago: editCondicion as any,
         notas: editNotas || null,
         subtotal: editTotals.subtotal,
