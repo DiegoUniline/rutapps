@@ -351,7 +351,7 @@ export default function RutaCobrar() {
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm font-bold text-foreground tabular-nums">${fmt(v.saldo_pendiente ?? 0)}</p>
+                        <p className="text-sm font-bold text-foreground tabular-nums">{fmtM(v.saldo_pendiente ?? 0)}</p>
                       </div>
                     );
                   })}
