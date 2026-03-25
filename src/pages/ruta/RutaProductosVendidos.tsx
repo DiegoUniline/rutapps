@@ -19,9 +19,9 @@ export default function RutaProductosVendidos() {
     vendedor_id: vendedorId,
   }, { enabled: !!empresa?.id && !!vendedorId });
 
-  const { data: ventaLineas } = useOfflineQuery('venta_lineas', {
-    empresa_id: empresa?.id,
-  }, { enabled: !!empresa?.id });
+  const { data: ventaLineas } = useOfflineQuery('venta_lineas', {}, {
+    enabled: !!empresa?.id,
+  });
 
   const { data: productos } = useOfflineQuery('productos', {
     empresa_id: empresa?.id,
