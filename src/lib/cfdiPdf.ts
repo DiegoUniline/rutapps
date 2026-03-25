@@ -480,7 +480,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // Retenciones if any
   if (cfdi.retenciones_total > 0) {
     doc.text('Retenciones:', totLabelX, y, { align: 'right' });
-    doc.text(`-$${fmtCurrency(cfdi.retenciones_total)}`, rightX, y, { align: 'right' });
+    doc.text(`-${s}${fmtCurrency(cfdi.retenciones_total)}`, rightX, y, { align: 'right' });
     y += 5.5;
   }
 
