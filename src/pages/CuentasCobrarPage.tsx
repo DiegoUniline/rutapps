@@ -39,6 +39,7 @@ function useCuentasCobrar(search: string) {
 }
 
 export default function CuentasCobrarPage() {
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const { data: cuentas, isLoading } = useCuentasCobrar(search);
 
