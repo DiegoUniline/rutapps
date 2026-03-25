@@ -23,7 +23,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
 
-const MAP_CONTAINER = { width: '100%', height: '460px' };
+const MAP_CONTAINER = { width: '100%', height: '920px' };
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
 
 type DashboardSeller = {
