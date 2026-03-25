@@ -55,6 +55,8 @@ export default function TicketVenta(props: TicketVentaProps) {
   const fmt = (n: number) => `${cs}${fmtNum(n)}`;
 
   const ticketRef = useRef<HTMLDivElement>(null);
+  // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
+  const [taxMode, setTaxMode] = useState<'ambos' | 'totales' | 'ninguno'>('ambos');
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
 
