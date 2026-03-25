@@ -1129,6 +1129,8 @@ export default function RutaVentaDetalle() {
             { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
             { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
+            ...(venta.status === 'borrador' ? [{ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar }] : []),
+            ...((venta.status === 'confirmado' || venta.status === 'entregado') ? [{ icon: X, label: 'Cancelar venta', color: 'text-destructive', onClick: () => setShowCancelModal(true) }] : []),
           ].map((a) => (
             <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
               <a.icon className={`h-5 w-5 ${a.color}`} />
@@ -1210,20 +1212,12 @@ export default function RutaVentaDetalle() {
       </div>
 
       {/* Bottom actions */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
-          {(venta.status === 'confirmado' || venta.status === 'entregado') && (
-            <button onClick={() => setShowCancelModal(true)} disabled={saving}
-              className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 disabled:opacity-40">
-              <X className="h-4 w-4" /> Cancelar
-            </button>
-          )}
-          {venta.status === 'borrador' && (
-            <button onClick={initEditar}
-              className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
-              <Pencil className="h-4 w-4" /> Editar
-            </button>
-          )}
+          <button onClick={() => navigate(-1)}
+            className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+            <ArrowLeft className="h-4 w-4" /> Volver
+          </button>
           {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && (
             <button onClick={initCobrar}
               className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
