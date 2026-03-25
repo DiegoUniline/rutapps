@@ -43,18 +43,24 @@ export default function MobileLayout() {
 
   const forceUpdate = async () => {
     try {
-      const reg = await navigator.serviceWorker?.getRegistration();
-      if (reg?.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } else {
-        if (reg) await reg.unregister();
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg?.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          // Give SW time to activate, then reload
+          await new Promise(r => setTimeout(r, 300));
+        } else if (reg) {
+          await reg.unregister();
+        }
+      }
+      if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
-        window.location.reload();
       }
     } catch {
-      window.location.reload();
+      // ignore errors
     }
+    window.location.reload();
   };
 
   return (
