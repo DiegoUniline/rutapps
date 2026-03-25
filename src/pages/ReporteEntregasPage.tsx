@@ -199,7 +199,7 @@ export default function ReporteEntregasPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Monto total</p>
-          <p className="text-2xl font-bold text-primary">$ {totalMonto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-primary">{fmt(totalMonto)}</p>
         </div>
       </div>
 
