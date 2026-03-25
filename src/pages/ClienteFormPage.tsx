@@ -192,6 +192,9 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
 
 export default function ClienteFormPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const fromRuta = searchParams.get('from') === 'ruta';
+  const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
