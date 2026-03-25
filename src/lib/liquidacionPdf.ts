@@ -68,6 +68,10 @@ export interface LiquidacionPdfParams {
     efectivoEsperado: number;
     diferencia: number;
   };
+  stockAlmacen?: {
+    almacenNombre: string;
+    lineas: { nombre: string; codigo: string; cantidad: number }[];
+  };
 }
 
 export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
