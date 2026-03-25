@@ -71,6 +71,11 @@ export default function SupervisorDashboardPage() {
   const { fmt: fmtMoney } = useCurrency();
   const today = todayInTimezone(empresa?.zona_horaria);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
+  const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
+  const [soloHoy, setSoloHoy] = useState(true);
+
+  const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const diaHoyLabel = DIAS_SEMANA[new Date().getDay()];
 
   const { data: vendedores } = useQuery({
     queryKey: ['supervisor-usuarios', empresa?.id],
