@@ -7,7 +7,7 @@ import {
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
   BarChart3, Users, Loader2, RotateCcw
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -247,7 +247,7 @@ export default function DashboardPage() {
         <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
         <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" />
         <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
-        <KpiCard title="Devoluciones" value={`${devStats.totalUnidades} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
+        <KpiCard title="Devoluciones" value={`${fmtNum(devStats.totalUnidades)} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
       </div>
 
       {/* Charts Row */}
@@ -388,9 +388,9 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <div className={cn("text-xs font-bold", Number(p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-[hsl(var(--warning))]")}>
-                      {Number(p.cantidad ?? 0)}
+                      {fmtNum(Number(p.cantidad ?? 0))}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">mín: {Number(p.min ?? 0)}</div>
+                    <div className="text-[10px] text-muted-foreground">mín: {fmtNum(Number(p.min ?? 0))}</div>
                   </div>
                 </div>
               ))}

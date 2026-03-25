@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate, fmtNum } from '@/lib/utils';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
@@ -293,9 +293,9 @@ export default function InventarioPage() {
       {/* Summary cards */}
       {data && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <SummaryCard icon={Warehouse} label="En almacén" value={`${data.totales.stockAlmacen} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoAlmacen)}`} color="text-primary" />
-          <SummaryCard icon={Truck} label="En ruta" value={`${data.totales.stockRuta} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoTotal - data.totales.valorCostoAlmacen)}`} color="text-warning" />
-          <SummaryCard icon={DollarSign} label="Valor total (costo)" value={`$ ${fmt(data.totales.valorCostoTotal)}`} sub={`${data.totales.stockTotal} unidades totales`} color="text-success" />
+          <SummaryCard icon={Warehouse} label="En almacén" value={`${fmtNum(data.totales.stockAlmacen)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoAlmacen)}`} color="text-primary" />
+          <SummaryCard icon={Truck} label="En ruta" value={`${fmtNum(data.totales.stockRuta)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoTotal - data.totales.valorCostoAlmacen)}`} color="text-warning" />
+          <SummaryCard icon={DollarSign} label="Valor total (costo)" value={`$ ${fmt(data.totales.valorCostoTotal)}`} sub={`${fmtNum(data.totales.stockTotal)} unidades totales`} color="text-success" />
           <SummaryCard icon={TrendingUp} label="Proyección ventas" value={`$ ${fmt(data.totales.valorVentaTotal)}`} sub={`Margen: $ ${fmt(data.totales.valorVentaTotal - data.totales.valorCostoTotal)}`} color="text-accent-foreground" />
         </div>
       )}
@@ -356,16 +356,16 @@ export default function InventarioPage() {
                   <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
                   <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
                   <TableCell className="text-center text-[11px] text-muted-foreground">{(p.unidades as any)?.abreviatura ?? 'pz'}</TableCell>
-                  <TableCell className="text-center">{p.stockAlmacen}</TableCell>
+                  <TableCell className="text-center">{fmtNum(p.stockAlmacen)}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const qty = r.stockByProduct[p.id] ?? 0;
                     return (
                       <TableCell key={r.id} className={cn("text-center", qty > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
-                        {qty || '—'}
+                        {qty ? fmtNum(qty) : '—'}
                       </TableCell>
                     );
                   })}
-                  <TableCell className="text-center font-bold">{p.stockTotal}</TableCell>
+                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">$ {fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">$ {fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
@@ -373,12 +373,12 @@ export default function InventarioPage() {
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-muted/50 font-bold">
                   <TableCell colSpan={3} className="sticky left-0 bg-muted/50">Totales</TableCell>
-                  <TableCell className="text-center">{data.totales.stockAlmacen}</TableCell>
+                  <TableCell className="text-center">{fmtNum(data.totales.stockAlmacen)}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
-                    return <TableCell key={r.id} className="text-center text-warning">{total}</TableCell>;
+                    return <TableCell key={r.id} className="text-center text-warning">{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{data.totales.stockTotal}</TableCell>
+                  <TableCell className="text-center">{fmtNum(data.totales.stockTotal)}</TableCell>
                   <TableCell className="text-right">$ {fmt(data.totales.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-success">$ {fmt(data.totales.valorVentaTotal)}</TableCell>
                 </TableRow>
@@ -417,12 +417,12 @@ export default function InventarioPage() {
                       const qty = data.stockAlmacenMap[a.id]?.[p.id] ?? 0;
                       return (
                         <TableCell key={a.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : "")}>
-                          {qty || '—'}
+                          {qty ? fmtNum(qty) : '—'}
                         </TableCell>
                       );
                     })}
                     <TableCell className={cn("text-center font-bold", totalAlm <= 0 ? "text-destructive" : "")}>
-                      {totalAlm}
+                      {fmtNum(totalAlm)}
                     </TableCell>
                     <TableCell className="text-right text-[12px]">$ {fmt(p.costo ?? 0)}</TableCell>
                     <TableCell className="text-right text-[12px]">$ {fmt(totalAlm * (p.costo ?? 0))}</TableCell>
@@ -434,9 +434,9 @@ export default function InventarioPage() {
                   <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
                   {(data.almacenes ?? []).map(a => {
                     const total = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
-                    return <TableCell key={a.id} className="text-center">{total}</TableCell>;
+                    return <TableCell key={a.id} className="text-center">{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0)}</TableCell>
+                  <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0))}</TableCell>
                   <TableCell className="text-right">—</TableCell>
                   <TableCell className="text-right">$ {fmt(filteredProducts.reduce((s, p) => {
                     const totalAlm = (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
@@ -482,7 +482,7 @@ export default function InventarioPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{c.totalUnidades} uds abordo</p>
+                    <p className="text-xs text-muted-foreground">{fmtNum(c.totalUnidades)} uds abordo</p>
                     <p className="text-sm font-bold text-foreground">$ {fmt(c.valorCosto)}</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -546,19 +546,19 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
         <div className="grid grid-cols-4 gap-3 mt-4">
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Cargado</p>
-            <p className="text-lg font-bold text-foreground">{totalCargado}</p>
+            <p className="text-lg font-bold text-foreground">{fmtNum(totalCargado)}</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Entregado</p>
-            <p className="text-lg font-bold text-success">{totalEntregado}</p>
+            <p className="text-lg font-bold text-success">{fmtNum(totalEntregado)}</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Devuelto</p>
-            <p className="text-lg font-bold text-warning">{totalDevuelto}</p>
+            <p className="text-lg font-bold text-warning">{fmtNum(totalDevuelto)}</p>
           </div>
           <div className="bg-primary/10 rounded-lg p-3 text-center">
             <p className="text-[10px] text-primary uppercase tracking-wide font-medium">Abordo</p>
-            <p className="text-lg font-bold text-primary">{totalAbordo}</p>
+            <p className="text-lg font-bold text-primary">{fmtNum(totalAbordo)}</p>
           </div>
         </div>
       </div>
@@ -589,14 +589,14 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
               <TableRow key={i}>
                 <TableCell className="font-mono text-[11px] text-muted-foreground">{l.codigo}</TableCell>
                 <TableCell className="text-[12px] font-medium">{l.nombre}</TableCell>
-                <TableCell className="text-center">{l.cargado}</TableCell>
+                 <TableCell className="text-center">{fmtNum(l.cargado)}</TableCell>
                 <TableCell className={cn("text-center", l.entregado > 0 ? "text-success font-medium" : "text-muted-foreground")}>
-                  {l.entregado}
+                  {fmtNum(l.entregado)}
                 </TableCell>
                 <TableCell className={cn("text-center", l.devuelto > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
-                  {l.devuelto}
+                  {fmtNum(l.devuelto)}
                 </TableCell>
-                <TableCell className="text-center font-bold text-primary">{l.abordo}</TableCell>
+                <TableCell className="text-center font-bold text-primary">{fmtNum(l.abordo)}</TableCell>
                 <TableCell className="text-right text-[12px]">$ {fmt(l.abordo * l.costo)}</TableCell>
                 <TableCell className="text-right text-[12px] text-success">$ {fmt(l.abordo * l.precio)}</TableCell>
               </TableRow>
@@ -604,10 +604,10 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
             {lineas.length > 0 && (
               <TableRow className="bg-muted/50 font-bold">
                 <TableCell colSpan={2}>Totales</TableCell>
-                <TableCell className="text-center">{totalCargado}</TableCell>
-                <TableCell className="text-center text-success">{totalEntregado}</TableCell>
-                <TableCell className="text-center text-warning">{totalDevuelto}</TableCell>
-                <TableCell className="text-center text-primary">{totalAbordo}</TableCell>
+                 <TableCell className="text-center">{fmtNum(totalCargado)}</TableCell>
+                <TableCell className="text-center text-success">{fmtNum(totalEntregado)}</TableCell>
+                <TableCell className="text-center text-warning">{fmtNum(totalDevuelto)}</TableCell>
+                <TableCell className="text-center text-primary">{fmtNum(totalAbordo)}</TableCell>
                 <TableCell className="text-right">$ {fmt(totalValorCosto)}</TableCell>
                 <TableCell className="text-right text-success">$ {fmt(totalValorVenta)}</TableCell>
               </TableRow>

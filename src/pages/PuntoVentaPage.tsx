@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, fmtNum } from '@/lib/utils';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
@@ -524,7 +524,7 @@ export default function PuntoVentaPage() {
                     <div className="flex items-baseline justify-between mt-1">
                       <span className="text-[14px] font-bold text-primary">${fmt(p.precio_principal ?? 0)}</span>
                       <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                        {stock} disp.
+                        {fmtNum(stock)} disp.
                       </span>
                     </div>
                   </button>

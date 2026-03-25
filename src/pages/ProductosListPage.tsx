@@ -13,7 +13,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductosPaginated } from '@/hooks/useData';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
+import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
@@ -127,7 +127,7 @@ export default function ProductosListPage() {
                 { label: 'Stock', value: <span className={cn(
                   "font-medium",
                   (p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-foreground"
-                )}>{p.cantidad ?? 0}</span> },
+                )}>{fmtNum(p.cantidad ?? 0)}</span> },
                 ...(p.clasificaciones?.nombre ? [{ label: 'Cat', value: p.clasificaciones.nombre }] : []),
                 ...(p.costo ? [{ label: 'Costo', value: fmt(p.costo) }] : []),
               ]}
@@ -207,7 +207,7 @@ export default function ProductosListPage() {
                       "font-medium",
                       (p.cantidad ?? 0) <= 0 ? "text-destructive" : (p.cantidad ?? 0) < (p.min ?? 0) ? "text-warning" : "text-foreground"
                     )}>
-                      {p.cantidad ?? 0}
+                      {fmtNum(p.cantidad ?? 0)}
                     </span>
                   </td>
                   <td className="py-1.5 px-3 hidden sm:table-cell text-center">

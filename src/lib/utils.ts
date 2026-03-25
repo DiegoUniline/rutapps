@@ -22,6 +22,14 @@ export function fmtCurrency(value: number | null | undefined, currencyCode?: str
   return formatCurrency(value, currencyCode);
 }
 
+/** Format a number with thousand separators (no fixed decimals for integers) */
+export function fmtNum(value: number | null | undefined): string {
+  if (value == null) return '0';
+  const n = Number(value);
+  if (Number.isInteger(n)) return n.toLocaleString('es-MX');
+  return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /**
  * Get today's date string (yyyy-mm-dd) in a given IANA timezone.
  * Falls back to 'America/Mexico_City' if the timezone is invalid.
