@@ -115,21 +115,21 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
 
   add(INIT);
 
-  // ── HEADER (centered) ──
+  // ── HEADER (centered via ESC/POS command) ──
   add(ALIGN_CENTER);
   add(BOLD_ON);
-  ln(center(data.empresa.nombre, W));
+  ln(clean(data.empresa.nombre).slice(0, W));
   add(BOLD_OFF);
-  if (data.empresa.razon_social) ln(center(data.empresa.razon_social, W));
-  if (data.empresa.rfc) ln(center(`RFC: ${data.empresa.rfc}`, W));
+  if (data.empresa.razon_social) ln(clean(data.empresa.razon_social).slice(0, W));
+  if (data.empresa.rfc) ln(clean(`RFC: ${data.empresa.rfc}`).slice(0, W));
   const dir = [data.empresa.direccion, data.empresa.colonia].filter(Boolean).join(', ');
   if (dir) {
     wrap(dir, W).forEach(l => ln(l.trim()));
   }
-  const dir2 = `${data.empresa.ciudad ?? ''}, ${data.empresa.estado ?? ''}, CP ${data.empresa.cp ?? ''}`;
-  if (dir2.replace(/[, ]/g, '').length > 2) ln(clean(dir2).substring(0, W));
-  if (data.empresa.telefono) ln(center(`Tel: ${data.empresa.telefono}`, W));
-  if (data.empresa.email) ln(center(data.empresa.email, W));
+  const dir2Parts = [data.empresa.ciudad, data.empresa.estado, data.empresa.cp ? `CP ${data.empresa.cp}` : ''].filter(Boolean).join(', ');
+  if (dir2Parts) ln(clean(dir2Parts).slice(0, W));
+  if (data.empresa.telefono) ln(clean(`Tel: ${data.empresa.telefono}`).slice(0, W));
+  if (data.empresa.email) ln(clean(data.empresa.email).slice(0, W));
   add(LF);
 
   // ── INFO (left) ──
