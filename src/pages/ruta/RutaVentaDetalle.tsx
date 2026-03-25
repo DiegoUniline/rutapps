@@ -353,7 +353,7 @@ export default function RutaVentaDetalle() {
       const prevStatus = venta.status;
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
       if (error) throw error;
-      await supabase.from('venta_historial').insert({ venta_id: venta.id, user_id: user?.id ?? null, user_nombre: user?.nombre ?? 'Sistema', accion: 'cancelada', detalles: { status: { anterior: prevStatus, nuevo: 'cancelado' } } });
+      await supabase.from('venta_historial').insert({ venta_id: venta.id, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '', user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'cancelada', detalles: { status: { anterior: prevStatus, nuevo: 'cancelado' } } as any });
       toast.success('Venta cancelada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
