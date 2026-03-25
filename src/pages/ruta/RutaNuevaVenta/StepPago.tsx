@@ -66,6 +66,19 @@ export function StepPago(props: Props) {
         </section>
 
         <section className="bg-card rounded-lg p-3">
+          <button onClick={() => setSinImpuestos(!sinImpuestos)} className={`w-full flex items-center justify-between rounded-md px-3 py-2.5 transition-all active:scale-[0.98] ${sinImpuestos ? 'bg-amber-500/15 border border-amber-500/40' : 'bg-accent/50 border border-border/40'}`}>
+            <div className="flex items-center gap-2">
+              <ReceiptText className={`h-4 w-4 ${sinImpuestos ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`} />
+              <span className={`text-[12px] font-semibold ${sinImpuestos ? 'text-amber-700 dark:text-amber-300' : 'text-foreground'}`}>Sin impuestos</span>
+            </div>
+            <div className={`w-9 h-5 rounded-full transition-colors relative ${sinImpuestos ? 'bg-amber-500' : 'bg-border'}`}>
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${sinImpuestos ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </div>
+          </button>
+          {sinImpuestos && <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1.5 px-1">IVA e IEPS no se cobrarán en esta venta</p>}
+        </section>
+
+        <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
           <div className="flex gap-1.5">
             {([['contado', 'Contado'], ...(clienteCredito?.credito ? [['credito', 'Crédito'] as const] : []), ['por_definir', 'Por definir']] as const).map(([val, label]) => (
