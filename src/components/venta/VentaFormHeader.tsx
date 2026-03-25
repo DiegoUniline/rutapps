@@ -30,6 +30,7 @@ interface VentaFormHeaderProps {
   onCreateEntrega: () => void;
   onNavigateEntrega: (id: string) => void;
   onGenerarPdf: () => void;
+  onPrintTicket?: () => void;
   onFacturar: () => void;
 }
 
