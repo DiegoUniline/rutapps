@@ -25,12 +25,14 @@ interface Props {
   setReferenciaPago: (v: string) => void;
   notas: string;
   setNotas: (v: string) => void;
-  totals: { subtotal: number; total: number; descuento?: number; descuentoDevolucion?: number };
+  totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number };
   totalACobrar: number;
   cambio: number;
   saving: boolean;
   cart: CartItem[];
   devoluciones: DevolucionItem[];
+  sinImpuestos: boolean;
+  setSinImpuestos: (v: boolean) => void;
   handleSave: () => Promise<void>;
   navigate: (to: any) => void;
   fmt: (n: number) => string;
