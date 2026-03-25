@@ -417,7 +417,8 @@ export default function RutaVentaDetalle() {
     finally { setSendingWA(false); }
   };
 
-  // ─── Handle PDF download ───
+  const ticketAncho = (empresa as any)?.ticket_ancho ?? '80';
+
   const handleDownloadPDF = async () => {
     const td = getTicketData();
     if (!td) return;
@@ -425,7 +426,7 @@ export default function RutaVentaDetalle() {
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.innerHTML = buildUnifiedTicketHTML(td);
+    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho });
     document.body.appendChild(container);
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
@@ -437,6 +438,46 @@ export default function RutaVentaDetalle() {
       toast.success('Ticket descargado');
     } catch { toast.error('Error generando imagen'); }
     finally { document.body.removeChild(container); }
+  };
+
+  const handlePrintTicket = () => {
+    const td = getTicketData(); if (!td) return;
+    const html = buildUnifiedTicketHTML(td, { ticketAncho });
+    const w = ticketAncho === '58' ? '58mm' : '80mm';
+    const printWindow = window.open('', '_blank', 'width=320,height=600');
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Ticket ${td.folio}</title>
+<style>@page{size:${w} auto;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{width:${w};padding:3mm;background:#fff}</style></head><body>${html}
+<script>window.onload=function(){window.print();window.close()}</script></body></html>`);
+    printWindow.document.close();
+  };
+
+  const handleShareTicket = async () => {
+    const td = getTicketData(); if (!td) return;
+    const text = [
+      td.empresa.nombre,
+      td.empresa.rfc ? `RFC: ${td.empresa.rfc}` : '',
+      td.empresa.direccion ?? '',
+      td.empresa.telefono ? `Tel: ${td.empresa.telefono}` : '',
+      '─'.repeat(30),
+      `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
+      `Pago: ${td.condicionPago === 'credito' ? 'Crédito' : td.condicionPago === 'contado' ? 'Contado' : 'Por definir'}`,
+      td.metodoPago ? `Método: ${td.metodoPago}` : '',
+      '─'.repeat(30),
+      ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} $${fmt(l.total)}`),
+      '─'.repeat(30),
+      `Subtotal: $${fmt(td.subtotal)}`,
+      td.iva > 0 ? `IVA: $${fmt(td.iva)}` : '',
+      (td.ieps ?? 0) > 0 ? `IEPS: $${fmt(td.ieps!)}` : '',
+      `TOTAL: $${fmt(td.total)}`,
+      '', 'Elaborado por Uniline — Innovación en la nube',
+    ].filter(Boolean).join('\n');
+    if (navigator.share) {
+      try { await navigator.share({ title: `Ticket ${td.folio}`, text }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast.success('Copiado al portapapeles');
+    }
   };
 
   if (isLoading) {
