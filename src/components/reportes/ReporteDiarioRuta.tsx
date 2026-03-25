@@ -81,12 +81,12 @@ export default function ReporteDiarioRuta() {
 
   // --- Devoluciones ---
   const { data: devoluciones } = useQuery<any[]>({
-    queryKey: ['rpt-diario-devs', empresa?.id, usuarioId, fechaInicio, fechaFin],
+    queryKey: ['rpt-diario-devs', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('devoluciones')
         .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin);
       return data ?? [];
     },
