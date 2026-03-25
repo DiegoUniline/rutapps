@@ -110,6 +110,7 @@ export default function VentaFormPage() {
         }}
         onNavigateEntrega={(eid) => navigate(`/logistica/entregas/${eid}`)}
         onGenerarPdf={handleGenerarPdf}
+        onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
       />
       {!isNew && <div className="px-5 pt-3"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>}
