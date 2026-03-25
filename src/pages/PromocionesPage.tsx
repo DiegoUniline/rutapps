@@ -42,6 +42,7 @@ const emptyPromo: Partial<Promocion> = {
 
 export default function PromocionesPage() {
   const { data: promociones, isLoading } = usePromociones();
+  const { symbol: s } = useCurrency();
   const savePromo = useSavePromocion();
   const deletePromo = useDeletePromocion();
   const [search, setSearch] = useState('');
