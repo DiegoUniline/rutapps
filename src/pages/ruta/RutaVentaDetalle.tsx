@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle, Printer, Share2, MessageCircle } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
+import { buildEscPosBytes } from '@/lib/escpos';
+import { isBluetoothAvailable, connectPrinter, sendBytes, getConnectedPrinterName } from '@/lib/bluetoothPrinter';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useVenta } from '@/hooks/useVentas';
