@@ -3,7 +3,7 @@
  */
 
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt = (n: number) => `$${fmtNum(n)}`;
+const makeFmt = (sym: string) => (n: number) => `${sym}${fmtNum(n)}`;
 
 export interface StockLineItem {
   nombre: string;
