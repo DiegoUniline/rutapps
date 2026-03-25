@@ -232,7 +232,7 @@ export default function ReporteEntregasPage() {
             <TableRow>
               <TableCell colSpan={2} className="text-[11px] font-semibold">Total</TableCell>
               <TableCell className="text-right text-[12px] font-bold">{totalUnidades}</TableCell>
-              <TableCell className="text-right text-[12px] font-bold">$ {totalMonto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+              <TableCell className="text-right text-[12px] font-bold">{fmt(totalMonto)}</TableCell>
             </TableRow>
           </TableFooter>
         </Table>
