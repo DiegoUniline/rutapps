@@ -593,6 +593,41 @@ export default function SupervisorDashboardPage() {
               );
             })}
           </div>
+
+          {/* Visit & day filters */}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Estado:</span>
+            {([['todos', 'Todos'], ['visitados', 'Visitados'], ['pendientes', 'Pendientes']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setVisitFilter(key)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                  visitFilter === key
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+
+            <div className="ml-3 h-5 w-px bg-border" />
+
+            <button
+              type="button"
+              onClick={() => setSoloHoy(!soloHoy)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors capitalize',
+                soloHoy
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-muted-foreground hover:text-foreground',
+              )}
+            >
+              📅 Solo {diaHoyLabel}
+            </button>
+          </div>
         </div>
       </section>
 
