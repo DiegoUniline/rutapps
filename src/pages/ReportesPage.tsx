@@ -14,6 +14,7 @@ import { ReporteCargas } from '@/components/reportes/ReporteCargas';
 import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
 import { ReportePromociones } from '@/components/reportes/ReportePromociones';
+import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 import {
