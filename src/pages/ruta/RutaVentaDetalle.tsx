@@ -89,14 +89,14 @@ export default function RutaVentaDetalle() {
   });
 
 
-  // Fetch products for adding
+  // Fetch products for adding (include stock)
   const { data: productos } = useQuery({
     queryKey: ['ruta-productos-edit', empresa?.id],
     enabled: !!empresa?.id && view === 'editar',
     queryFn: async () => {
       const { data } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)')
+        .select('id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, cantidad, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -104,6 +104,28 @@ export default function RutaVentaDetalle() {
       return data ?? [];
     },
   });
+
+  // Fetch existing payments for this sale (for editing)
+  const { data: pagosVenta, refetch: refetchPagos } = useQuery({
+    queryKey: ['ruta-pagos-venta', id],
+    enabled: !!id && view === 'editar',
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('id, monto_aplicado, cobro_id, cobros(id, fecha, metodo_pago, monto, referencia)')
+        .eq('venta_id', id!);
+      return data ?? [];
+    },
+  });
+
+  const esVentaInmediata = venta?.tipo === 'venta_directa' && venta?.entrega_inmediata;
+
+  // Build stock map from productos
+  const stockMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    productos?.forEach(p => { map[p.id] = p.cantidad ?? 0; });
+    return map;
+  }, [productos]);
 
   // Fetch other pending sales for this client (excluding current)
   const { data: otrasPendientes } = useQuery({
