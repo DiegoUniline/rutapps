@@ -590,6 +590,7 @@ export default function VentaFormPage() {
         }}
         onNavigateEntrega={(id) => navigate(`/logistica/entregas/${id}`)}
         onGenerarPdf={handleGenerarPdf}
+        onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
       />
 
