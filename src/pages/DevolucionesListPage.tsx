@@ -11,6 +11,7 @@ const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañad
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
 
 export default function DevolucionesListPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
