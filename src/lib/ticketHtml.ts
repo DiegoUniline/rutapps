@@ -77,9 +77,10 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     ? (is58 ? '384px' : '576px')
     : (is58 ? '210px' : '320px');
 
-  // Scale fonts proportionally: 384px print ≈ 1.83× of 210px screen
+  // Scale fonts proportionally — +3px base bump for print legibility
+  const bump = forPrint ? 3 : 0;
   const s = forPrint ? (is58 ? 1.83 : 1.8) : 1;
-  const px = (base: number) => `${Math.round(base * s)}px`;
+  const px = (base: number) => `${Math.round((base + bump) * s)}px`;
 
   const logoHtml = campos.logo && empresa.logo_url
     ? `<img src="${empresa.logo_url}" crossorigin="anonymous" style="max-height:${px(32)};max-width:${px(120)};margin:0 auto ${px(4)};display:block" />`
@@ -153,41 +154,41 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     ? `<div style="border-top:1px dashed #aaa;margin:${px(5)} 0"></div><div style="text-align:center;font-size:${px(8)};color:#888;padding:${px(4)} 0">${empresa.notas_ticket}</div>`
     : '';
 
-  return `<div style="width:${ticketWidth};padding:${px(12)} ${px(16)};font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4;font-size:${px(is58 ? 9 : 11)}">
+  return `<div style="width:${ticketWidth};padding:${px(12)} ${px(16)};font-family:'Courier New',Courier,monospace;background:#fff;color:#000;line-height:1.4;font-size:${px(is58 ? 9 : 11)};font-weight:600">
     <div style="text-align:center;padding-bottom:${px(6)}">
       ${logoHtml}
       ${nombreHtml}
       ${razonHtml}${rfcHtml}${dirHtml}${telHtml}${emailHtml}
     </div>
-    <div style="border-top:1px dashed #aaa;margin:${px(5)} 0"></div>
+    <div style="border-top:1px dashed #000;margin:${px(5)} 0"></div>
     <div style="font-size:${px(10)};padding:${px(4)} 0">
       <div style="display:flex;gap:${px(12)}">
-        <span><b>Folio</b> <span style="font-family:monospace;color:#666">${folio}</span></span>
-        <span><b>Fecha</b> <span style="color:#666">${fecha}</span></span>
+        <span><b>Folio</b> <span style="font-family:monospace">${folio}</span></span>
+        <span><b>Fecha</b> <span>${fecha}</span></span>
       </div>
-      <div><b>Cliente</b> <span style="color:#666">${clienteNombre}</span></div>
+      <div><b>Cliente</b> <span>${clienteNombre}</span></div>
       <div>
-        <span><b>Pago</b> <span style="color:#666">${pagoLabel}</span></span>
+        <span><b>Pago</b> <span>${pagoLabel}</span></span>
         ${metodoHtml}
       </div>
     </div>
-    <div style="border-top:1px dashed #aaa;margin:${px(5)} 0"></div>
+    <div style="border-top:1px dashed #000;margin:${px(5)} 0"></div>
     <div style="padding:${px(4)} 0">
-      <div style="font-size:${px(8)};font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:${px(4)}">Productos</div>
+      <div style="font-size:${px(8)};font-weight:700;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:${px(4)}">Productos</div>
       ${lineasHtml}
     </div>
-    <div style="border-top:1px dashed #aaa;margin:${px(5)} 0"></div>
+    <div style="border-top:1px dashed #000;margin:${px(5)} 0"></div>
     <div style="padding:${px(4)} 0">
-      ${showTax ? `<div style="display:flex;justify-content:space-between;font-size:${px(10)}"><span style="color:#666">Subtotal</span><span>${fmt(subtotal)}</span></div>` : ''}
-      ${showTax && iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:${px(10)}"><span style="color:#666">IVA</span><span>${fmt(iva)}</span></div>` : ''}
-      ${showTax && ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:${px(10)}"><span style="color:#666">IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:${px(13)};font-weight:700;${showTax ? `border-top:1px dashed #aaa;padding-top:${px(4)};margin-top:${px(4)}` : ''}">
-        <span>Total</span><span style="color:#3b82f6">${fmt(total)}</span>
+      ${showTax ? `<div style="display:flex;justify-content:space-between;font-size:${px(10)}"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>` : ''}
+      ${showTax && iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:${px(10)}"><span>IVA</span><span>${fmt(iva)}</span></div>` : ''}
+      ${showTax && ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:${px(10)}"><span>IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:${px(13)};font-weight:700;${showTax ? `border-top:1px dashed #000;padding-top:${px(4)};margin-top:${px(4)}` : ''}">
+        <span>Total</span><span>${fmt(total)}</span>
       </div>
       ${recibidoHtml}
     </div>
     ${saldoHtml}
     ${notasHtml}
-    <div style="border-top:1px dashed #ccc;margin-top:${px(6)};padding-top:${px(4)};text-align:center;font-size:${px(7)};color:#999">Elaborado por Uniline — Innovación en la nube</div>
+    <div style="border-top:1px dashed #000;margin-top:${px(6)};padding-top:${px(4)};text-align:center;font-size:${px(7)}">Elaborado por Uniline</div>
   </div>`;
 }
