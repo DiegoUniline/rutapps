@@ -48,10 +48,10 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <StatCard icon={ShoppingCart} label="Compras" value={`${numVentas}`} sub={`$ ${fmt(totalComprado)}`} color="text-primary bg-primary/10" />
-              <StatCard icon={Banknote} label="Saldo pendiente" value={`$ ${fmt(saldoTotal)}`} sub={saldoTotal > 0 ? 'Por cobrar' : 'Al corriente'} color={saldoTotal > 0 ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'} />
+              <StatCard icon={ShoppingCart} label="Compras" value={`${numVentas}`} sub={fmt(totalComprado)} color="text-primary bg-primary/10" />
+              <StatCard icon={Banknote} label="Saldo pendiente" value={fmt(saldoTotal)} sub={saldoTotal > 0 ? 'Por cobrar' : 'Al corriente'} color={saldoTotal > 0 ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'} />
               <StatCard icon={Calendar} label="Última compra" value={ultimaVisita ? new Date(ultimaVisita + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'} sub="" color="text-muted-foreground bg-muted" />
-              <StatCard icon={TrendingUp} label="Promedio" value={numVentas > 0 ? `$ ${fmt(totalComprado / numVentas)}` : '—'} sub="por compra" color="text-muted-foreground bg-muted" />
+              <StatCard icon={TrendingUp} label="Promedio" value={numVentas > 0 ? fmt(totalComprado / numVentas) : '—'} sub="por compra" color="text-muted-foreground bg-muted" />
             </div>
 
             <div>
