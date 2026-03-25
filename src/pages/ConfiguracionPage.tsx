@@ -48,12 +48,14 @@ interface PreviewProps {
   ticketAncho?: '58' | '80';
 }
 
-function TicketPreview({ form, logoPreview, campos }: PreviewProps) {
+function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: PreviewProps) {
   const nombre = form.nombre || 'Mi Empresa';
   const dir = [form.direccion, form.colonia, form.ciudad].filter(Boolean).join(', ');
+  const width = ticketAncho === '58' ? '210px' : '280px';
+  const fontSize = ticketAncho === '58' ? '9px' : '10px';
 
   return (
-    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width: '280px', fontFamily: "'Courier New', monospace" }}>
+    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width, fontFamily: "'Courier New', monospace" }}>
       <div className="px-4 pt-4 pb-2 text-center">
         {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />}
         {campos.nombre && <div className="font-bold text-[13px]">{nombre}</div>}
