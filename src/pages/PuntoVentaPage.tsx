@@ -42,6 +42,7 @@ interface PaySplit {
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
   const { empresa, user, profile } = useAuth();
+  const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
 
