@@ -138,7 +138,7 @@ export function StepPago(props: Props) {
                         : 'bg-accent/60 text-foreground'
                     }`}
                   >
-                    ${b}
+                    {s}{b}
                   </button>
                 ))}
                 <button
