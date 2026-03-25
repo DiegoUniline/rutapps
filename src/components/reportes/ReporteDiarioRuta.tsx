@@ -608,7 +608,10 @@ export default function ReporteDiarioRuta() {
               <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">${fmt(totalCancelado)}</span>
               <span className="text-muted-foreground">Clientes visitados:</span><span className="text-right font-semibold">{clientesVisitados.size}</span>
               <span className="text-muted-foreground">Visitas sin compra:</span><span className="text-right font-semibold">{visitasSinCompra.length}</span>
-              <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{devLineas.length} productos</span>
+              <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{totalDevUnidades} uds</span>
+              {totalDevCredito > 0 && (
+                <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-${fmt(totalDevCredito)}</span></>
+              )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
                 <span>${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
