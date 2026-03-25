@@ -287,7 +287,7 @@ export function useRutaVenta() {
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();
         const cargaIdForDev = activeCarga?.id || null;
-        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, carga_id: cargaIdForDev, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, vendedor_id: profile?.vendedor_id || profile?.id || null, cliente_id: clienteId, carga_id: cargaIdForDev, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
         for (const d of devoluciones) {
           const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
           await queueOperation('devolucion_lineas', 'insert', {
