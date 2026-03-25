@@ -172,6 +172,11 @@ function ClientesTable() {
                   <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
                   <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
                   <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
+                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
+                    {(c as any).dia_visita?.length > 0
+                      ? (c as any).dia_visita.map((d: string) => d.slice(0, 3)).join(', ')
+                      : '—'}
+                  </td>
                   <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{(c as any).zonas?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{(c as any).vendedores?.nombre ?? '—'}</td>
