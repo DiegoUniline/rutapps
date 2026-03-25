@@ -173,7 +173,7 @@ export default function ConteosFisicosPage() {
                   <TableCell className="text-right text-xs font-mono">
                     {c.status === 'cerrado' ? (
                       <span className={c.diferencia_total_valor >= 0 ? "text-green-600" : "text-red-600"}>
-                        $ {fmt(c.diferencia_total_valor ?? 0)}
+                        {fmt(c.diferencia_total_valor ?? 0)}
                       </span>
                     ) : '—'}
                   </TableCell>

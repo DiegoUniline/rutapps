@@ -134,9 +134,9 @@ export default function CuentasCobrarPage() {
                   <TableCell className="text-[12px] text-muted-foreground">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
-                  <TableCell className="text-right text-[12px]">$ {fmt(v.total ?? 0)}</TableCell>
-                  <TableCell className="text-right text-[12px] text-success">$ {fmt(pagado)}</TableCell>
-                  <TableCell className="text-right font-bold text-destructive">$ {fmt(v.saldo_pendiente ?? 0)}</TableCell>
+                  <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
+                  <TableCell className="text-right text-[12px] text-success">{fmt(pagado)}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                 </TableRow>
               );
             })}

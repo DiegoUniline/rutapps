@@ -108,7 +108,7 @@ export default function DevolucionesListPage() {
                     ))}
                   </td>
                   <td className="py-2 px-3 text-right font-semibold">
-                    {totalCredito > 0 ? <span className="text-destructive">${fmt(totalCredito)}</span> : '—'}
+                    {totalCredito > 0 ? <span className="text-destructive">{fmt(totalCredito)}</span> : '—'}
                   </td>
                 </tr>
               );

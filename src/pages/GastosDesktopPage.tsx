@@ -145,7 +145,7 @@ export default function GastosDesktopPage() {
                 <TableCell className="font-medium text-[12px]">{g.concepto}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(g.vendedores as any)?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground truncate max-w-[200px]">{g.notas ?? '—'}</TableCell>
-                <TableCell className="text-right font-bold text-destructive">$ {fmt(g.monto)}</TableCell>
+                <TableCell className="text-right font-bold text-destructive">{fmt(g.monto)}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm('¿Eliminar gasto?')) deleteGasto.mutate(g.id); }}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />

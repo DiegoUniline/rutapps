@@ -150,13 +150,13 @@ export default function CuentasPagarPage() {
                   <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
                   <td className="py-1.5 px-3 text-center text-muted-foreground">{c.dias_credito ?? 0} días</td>
-                  <td className="py-1.5 px-3 text-right">$ {fmt(c.total ?? 0)}</td>
-                  <td className="py-1.5 px-3 text-right text-success">$ {fmt(pagado)}</td>
+                  <td className="py-1.5 px-3 text-right">{fmt(c.total ?? 0)}</td>
+                  <td className="py-1.5 px-3 text-right text-success">{fmt(pagado)}</td>
                   <td className="py-1.5 px-3 text-right font-bold">
                     {(c.saldo_pendiente ?? 0) > 0 ? (
-                      <span className="text-destructive">$ {fmt(c.saldo_pendiente)}</span>
+                      <span className="text-destructive">{fmt(c.saldo_pendiente)}</span>
                     ) : (
-                      <span className="text-success">$ 0.00</span>
+                      <span className="text-success">{fmt(0)}</span>
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-center">
