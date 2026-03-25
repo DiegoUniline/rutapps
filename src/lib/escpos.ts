@@ -146,12 +146,13 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   // ── PRODUCTOS ──
   for (const l of data.lineas) {
     const desc = `${l.cantidad}x ${clean(l.nombre)}`;
-    const price = fmt(l.total);
+    const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
+    const price = fmt(lineAmt);
     itemLines(desc, price, W).forEach(x => ln(x));
     // Detail: unit price (smaller, indented)
     if (l.precio > 0) {
       const detParts = [`  @${fmt(l.precio)}`];
-      if ((l.iva_monto ?? 0) > 0) detParts.push(`IVA ${fmt(l.iva_monto!)}`);
+      if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA ${fmt(l.iva_monto!)}`);
       const det = detParts.join(' ');
       ln(clean(det).slice(0, W));
     }
@@ -159,12 +160,14 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   ln(divider(W));
 
   // ── TOTALES ──
-  ln(row('Subtotal', fmt(data.subtotal), W));
-  if (data.iva > 0) ln(row('IVA', fmt(data.iva), W));
-  if ((data.ieps ?? 0) > 0) ln(row('IEPS', fmt(data.ieps!), W));
-  ln(divider(W));
+  if (showTax) {
+    ln(row('Subtotal', fmt(data.subtotal), W));
+    if (data.iva > 0) ln(row('IVA', fmt(data.iva), W));
+    if ((data.ieps ?? 0) > 0) ln(row('IEPS', fmt(data.ieps!), W));
+    ln(divider(W));
+  }
   add(BOLD_ON);
-  ln(row('TOTAL', fmt(data.total), W));
+  ln(row('TOTAL', fmt(showTax ? data.total : data.subtotal), W));
   add(BOLD_OFF);
 
   if (data.montoRecibido && data.montoRecibido > 0) {
