@@ -18,7 +18,7 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
     queryKey: ['venta-devoluciones', ventaId],
     enabled: !!ventaId,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('devoluciones')
         .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, reemplazo_producto_id, productos(codigo, nombre))')
         .eq('venta_id', ventaId);
