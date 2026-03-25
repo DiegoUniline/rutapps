@@ -203,7 +203,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <TrendingDown className="h-4 w-4" />
                     <span className="text-xs">Faltantes</span>
                   </div>
-                  <p className="text-lg font-bold text-red-600">$ {fmt(Math.abs(montoNegativo))}</p>
+                  <p className="text-lg font-bold text-red-600">{fmt(Math.abs(montoNegativo))}</p>
                   <p className="text-xs text-muted-foreground">{negativas.length} productos</p>
                 </Card>
                 <Card className="p-3">
