@@ -16,13 +16,14 @@ import { cn } from '@/lib/utils';
 
 const DEFAULT_CAMPOS: Record<string, boolean> = {
   logo: true, nombre: true, razon_social: true, rfc: true,
-  direccion: true, telefono: true, notas_ticket: true, firmas: true,
+  direccion: true, telefono: true, notas_ticket: true, firmas: true, impuestos: true,
 };
 
 const CAMPO_LABELS: Record<string, string> = {
   logo: 'Logo', nombre: 'Nombre comercial', razon_social: 'Razón social',
   rfc: 'RFC', direccion: 'Dirección', telefono: 'Teléfono',
   notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
+  impuestos: 'Desglose de impuestos (IVA/IEPS)',
 };
 
 function useEmpresaConfig() {
