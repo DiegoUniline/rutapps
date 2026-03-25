@@ -111,7 +111,7 @@ export default function RutaVentaDetalle() {
   // Fetch existing payments for this sale (for editing)
   const { data: pagosVenta, refetch: refetchPagos } = useQuery({
     queryKey: ['ruta-pagos-venta', id],
-    enabled: !!id && view === 'editar',
+    enabled: !!id,
     queryFn: async () => {
       const { data } = await supabase
         .from('cobro_aplicaciones')
