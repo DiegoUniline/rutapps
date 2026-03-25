@@ -293,8 +293,9 @@ export default function RutaVentaDetalle() {
       const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas);
       if (linErr) throw linErr;
 
-      // Update venta totals + condicion
-      const newSaldo = editCondicion === 'credito' ? editTotals.total : editTotals.total; // saldo = total until paid
+      // Update venta totals + condicion — subtract already-paid amounts
+      const totalPagado = (pagosVenta ?? []).reduce((sum: number, pa: any) => sum + (pa.monto_aplicado ?? 0), 0);
+      const newSaldo = Math.max(0, editTotals.total - totalPagado);
       const { error: ventaErr } = await supabase.from('ventas').update({
         status: 'confirmado',
         condicion_pago: editCondicion as any,
