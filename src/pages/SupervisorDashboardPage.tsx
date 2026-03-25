@@ -4,7 +4,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { ShoppingCart, Banknote, Users, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
