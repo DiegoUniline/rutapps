@@ -4,7 +4,8 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe, Users } from 'lucide-react';
+import { Settings, Upload, Save, Building2, Receipt, FileText, Eye, KeyRound, Eye as EyeIcon, EyeOff, Loader2, Globe, Users, MapPin } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CURRENCIES } from '@/lib/currency';
 import SubscriptionCard from '@/components/SubscriptionCard';
 import { Button } from '@/components/ui/button';
@@ -390,199 +391,229 @@ export default function ConfiguracionPage() {
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
 
+  const [configTab, setConfigTab] = useState('empresa');
+
   return (
-    <div className="p-4 flex gap-6 min-h-full">
-      {/* Left: Form */}
-      <div className="flex-1 space-y-5 max-w-xl">
-        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-          <Settings className="h-5 w-5" /> Configuración de empresa
-          <HelpButton title={HELP.configuracion.title} sections={HELP.configuracion.sections} />
-        </h1>
+    <div className="p-4 space-y-4 max-w-4xl">
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+        <Settings className="h-5 w-5" /> Configuración de empresa
+        <HelpButton title={HELP.configuracion.title} sections={HELP.configuracion.sections} />
+      </h1>
 
-        {/* Logo */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Building2 className="h-4 w-4" /> Logo de la empresa
-          </h3>
-          <div className="flex items-center gap-6">
-            <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted/30">
-              {logoPreview ? (
-                <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
-              ) : (
-                <Building2 className="h-8 w-8 text-muted-foreground/40" />
-              )}
-            </div>
-            <div>
-              <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-                <Upload className="h-3.5 w-3.5 mr-1" /> Subir logo
-              </Button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
-              <p className="text-[11px] text-muted-foreground mt-2">PNG o JPG, máximo 2MB</p>
+      <Tabs value={configTab} onValueChange={setConfigTab} className="w-full">
+        <TabsList className="w-full justify-start">
+          <TabsTrigger value="empresa" className="gap-1.5"><Building2 className="h-3.5 w-3.5" /> Empresa</TabsTrigger>
+          <TabsTrigger value="ticket" className="gap-1.5"><Receipt className="h-3.5 w-3.5" /> Ticket</TabsTrigger>
+          <TabsTrigger value="visibilidad" className="gap-1.5"><Globe className="h-3.5 w-3.5" /> Visibilidad</TabsTrigger>
+          <TabsTrigger value="fiscal" className="gap-1.5"><FileText className="h-3.5 w-3.5" /> Fiscal y dirección</TabsTrigger>
+        </TabsList>
+
+        {/* ── TAB: Empresa ── */}
+        <TabsContent value="empresa" className="space-y-5 mt-4">
+          {/* Logo */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Building2 className="h-4 w-4" /> Logo de la empresa
+            </h3>
+            <div className="flex items-center gap-6">
+              <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted/30">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <Building2 className="h-8 w-8 text-muted-foreground/40" />
+                )}
+              </div>
+              <div>
+                <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                  <Upload className="h-3.5 w-3.5 mr-1" /> Subir logo
+                </Button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+                <p className="text-[11px] text-muted-foreground mt-2">PNG o JPG, máximo 2MB</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Campos visibles */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Eye className="h-4 w-4" /> Campos visibles en ticket / nota
-          </h3>
-          <p className="text-[11px] text-muted-foreground mb-3">Elige qué información aparece en tus documentos impresos.</p>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(CAMPO_LABELS).map(([key, label]) => (
-              <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors">
-                <Switch
-                  checked={campos[key] ?? true}
-                  onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
-                  className="scale-75"
-                />
-                <span className="text-[12px] text-foreground">{label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Visibilidad de datos */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Users className="h-4 w-4" /> Visibilidad de datos
-          </h3>
-          <p className="text-[11px] text-muted-foreground mb-3">
-            Controla qué datos puede ver cada vendedor/cobrador. Los usuarios con el permiso "Ver todos" siempre ven todo.
-          </p>
-          <div className="space-y-3">
-            <div>
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Clientes</label>
-              <select
-                value={clientesVisibilidad}
-                onChange={e => setClientesVisibilidad(e.target.value)}
-                className="input-odoo text-[13px] w-full max-w-xs"
-              >
-                <option value="todos">Todos los usuarios ven todos los clientes</option>
-                <option value="propios">Cada vendedor solo ve sus clientes asignados</option>
-              </select>
+          {/* Nombre y contacto */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Datos generales</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {field('nombre', 'Nombre comercial', 'Mi Empresa')}
+              {field('telefono', 'Teléfono', '33 1234 5678')}
+              {field('email', 'Email', 'contacto@empresa.com')}
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              <strong>Ventas, cobros y entregas</strong> siempre se filtran: cada usuario solo ve los registros donde es vendedor asignado o los que él creó. Los usuarios con permiso "Ver todos" ven todo.
+          </div>
+
+          {/* Notas ticket */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Notas para ticket</h3>
+            <textarea
+              value={form.notas_ticket ?? ''}
+              onChange={e => setForm(prev => ({ ...prev, notas_ticket: e.target.value }))}
+              placeholder="Ej: Gracias por su compra. No se aceptan devoluciones después de 7 días."
+              className="input-odoo min-h-[70px] text-[13px] w-full"
+            />
+          </div>
+        </TabsContent>
+
+        {/* ── TAB: Ticket ── */}
+        <TabsContent value="ticket" className="mt-4">
+          <div className="flex gap-6">
+            <div className="flex-1 space-y-5 max-w-md">
+              {/* Campos visibles */}
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Eye className="h-4 w-4" /> Campos visibles en ticket / nota
+                </h3>
+                <p className="text-[11px] text-muted-foreground mb-3">Elige qué información aparece en tus documentos impresos.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(CAMPO_LABELS).map(([key, label]) => (
+                    <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors">
+                      <Switch
+                        checked={campos[key] ?? true}
+                        onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
+                        className="scale-75"
+                      />
+                      <span className="text-[12px] text-foreground">{label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Live Preview */}
+            <div className="w-[440px] shrink-0">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Vista previa en tiempo real</span>
+              </div>
+              <div className="flex gap-1 mb-4">
+                <button
+                  onClick={() => setPreviewTab('ticket')}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Receipt className="h-3.5 w-3.5" /> Ticket
+                </button>
+                <button
+                  onClick={() => setPreviewTab('nota')}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
+                    previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <FileText className="h-3.5 w-3.5" /> Nota de venta
+                </button>
+              </div>
+              <div className="flex justify-center p-4 bg-muted/30 rounded-lg border border-border min-h-[500px]">
+                {previewTab === 'ticket' ? (
+                  <TicketPreview form={form} logoPreview={logoPreview} campos={campos} />
+                ) : (
+                  <NotaVentaPreview form={form} logoPreview={logoPreview} campos={campos} />
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── TAB: Visibilidad ── */}
+        <TabsContent value="visibilidad" className="space-y-5 mt-4 max-w-xl">
+          {/* Moneda */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Globe className="h-4 w-4" /> Moneda del sistema
+            </h3>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Esta moneda se usará en todos los documentos, tickets, reportes y pantallas del sistema.
             </p>
+            <select
+              value={moneda}
+              onChange={e => setMoneda(e.target.value)}
+              className="input-odoo text-[13px] w-full max-w-xs"
+            >
+              {CURRENCIES.map(c => (
+                <option key={c.code} value={c.code}>
+                  {c.symbol} — {c.name} ({c.code})
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        {/* Moneda */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Globe className="h-4 w-4" /> Moneda del sistema
-          </h3>
-          <p className="text-[11px] text-muted-foreground mb-3">
-            Esta moneda se usará en todos los documentos, tickets, reportes y pantallas del sistema.
-          </p>
-          <select
-            value={moneda}
-            onChange={e => setMoneda(e.target.value)}
-            className="input-odoo text-[13px] w-full max-w-xs"
-          >
-            {CURRENCIES.map(c => (
-              <option key={c.code} value={c.code}>
-                {c.symbol} — {c.name} ({c.code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Datos fiscales */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Datos fiscales</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {field('nombre', 'Nombre comercial', 'Mi Empresa')}
-            {field('razon_social', 'Razón social', 'Empresa SA de CV')}
-            {field('rfc', 'RFC', 'XAXX010101000')}
-            {field('regimen_fiscal', 'Régimen fiscal', '601 - General de Ley')}
+          {/* Visibilidad de datos */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" /> Visibilidad de datos
+            </h3>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Controla qué datos puede ver cada vendedor/cobrador. Los usuarios con el permiso "Ver todos" siempre ven todo.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide block mb-1">Clientes</label>
+                <select
+                  value={clientesVisibilidad}
+                  onChange={e => setClientesVisibilidad(e.target.value)}
+                  className="input-odoo text-[13px] w-full max-w-xs"
+                >
+                  <option value="todos">Todos los usuarios ven todos los clientes</option>
+                  <option value="propios">Cada vendedor solo ve sus clientes asignados</option>
+                </select>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                <strong>Ventas, cobros y entregas</strong> siempre se filtran: cada usuario solo ve los registros donde es vendedor asignado o los que él creó. Los usuarios con permiso "Ver todos" ven todo.
+              </p>
+            </div>
           </div>
-        </div>
+        </TabsContent>
 
-        {/* Dirección */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Dirección</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {field('direccion', 'Calle y número', 'Av. Principal 123')}
-            {field('colonia', 'Colonia', 'Centro')}
-            {field('ciudad', 'Ciudad', 'Guadalajara')}
-            {field('estado', 'Estado', 'Jalisco')}
-            {field('cp', 'Código postal', '44100')}
+        {/* ── TAB: Fiscal y dirección ── */}
+        <TabsContent value="fiscal" className="space-y-5 mt-4 max-w-xl">
+          {/* Datos fiscales */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Datos fiscales</h3>
+            <div className="grid grid-cols-2 gap-3">
+              {field('nombre', 'Nombre comercial', 'Mi Empresa')}
+              {field('razon_social', 'Razón social', 'Empresa SA de CV')}
+              {field('rfc', 'RFC', 'XAXX010101000')}
+              {field('regimen_fiscal', 'Régimen fiscal', '601 - General de Ley')}
+            </div>
           </div>
-        </div>
 
-        {/* Contacto */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Contacto</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {field('telefono', 'Teléfono', '33 1234 5678')}
-            {field('email', 'Email', 'contacto@empresa.com')}
+          {/* Dirección */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Dirección
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {field('direccion', 'Calle y número', 'Av. Principal 123')}
+              {field('colonia', 'Colonia', 'Centro')}
+              {field('ciudad', 'Ciudad', 'Guadalajara')}
+              {field('estado', 'Estado', 'Jalisco')}
+              {field('cp', 'Código postal', '44100')}
+            </div>
           </div>
-        </div>
+        </TabsContent>
+      </Tabs>
 
-        {/* Notas ticket */}
-        <div className="bg-card border border-border rounded-lg p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Notas para ticket</h3>
-          <textarea
-            value={form.notas_ticket ?? ''}
-            onChange={e => setForm(prev => ({ ...prev, notas_ticket: e.target.value }))}
-            placeholder="Ej: Gracias por su compra. No se aceptan devoluciones después de 7 días."
-            className="input-odoo min-h-[70px] text-[13px] w-full"
-          />
-        </div>
+      {/* Guardar — siempre visible */}
+      <Button
+        onClick={() => saveMutation.mutate()}
+        disabled={saveMutation.isPending || !hasChanges}
+        variant={hasChanges ? 'default' : 'outline'}
+        className={cn("w-full max-w-xl", !hasChanges && "opacity-50")}
+      >
+        {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+        {hasChanges ? 'Guardar configuración' : 'Sin cambios'}
+      </Button>
 
-        {/* Guardar */}
-        <Button
-          onClick={() => saveMutation.mutate()}
-          disabled={saveMutation.isPending || !hasChanges}
-          variant={hasChanges ? 'default' : 'outline'}
-          className={cn("w-full", !hasChanges && "opacity-50")}
-        >
-          {saveMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          {hasChanges ? 'Guardar configuración' : 'Sin cambios'}
-        </Button>
-
-        {/* Mi Suscripción */}
+      {/* Mi Suscripción */}
+      <div className="max-w-xl">
         <SubscriptionCard />
-
-        {/* Cambiar contraseña */}
-        <ChangePasswordCard />
       </div>
 
-      {/* Right: Live Preview */}
-      <div className="w-[440px] shrink-0 sticky top-0 self-start">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Vista previa en tiempo real</span>
-        </div>
-        <div className="flex gap-1 mb-4">
-          <button
-            onClick={() => setPreviewTab('ticket')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-              previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Receipt className="h-3.5 w-3.5" /> Ticket
-          </button>
-          <button
-            onClick={() => setPreviewTab('nota')}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-              previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <FileText className="h-3.5 w-3.5" /> Nota de venta
-          </button>
-        </div>
-
-        <div className="flex justify-center p-4 bg-muted/30 rounded-lg border border-border min-h-[500px]">
-          {previewTab === 'ticket' ? (
-            <TicketPreview form={form} logoPreview={logoPreview} campos={campos} />
-          ) : (
-            <NotaVentaPreview form={form} logoPreview={logoPreview} campos={campos} />
-          )}
-        </div>
+      {/* Cambiar contraseña */}
+      <div className="max-w-xl">
+        <ChangePasswordCard />
       </div>
     </div>
   );
