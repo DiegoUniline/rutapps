@@ -35,7 +35,7 @@ export function ReporteUtilidad({ data }: { data: any }) {
             {gastosDesglose.map((g: any, i: number) => (
               <div key={i} className="flex items-center justify-between text-[13px]">
                 <span className="text-foreground">{g.concepto}</span>
-                <span className="font-bold text-destructive">$ {fmt(g.monto)}</span>
+                <span className="font-bold text-destructive">{s} {fmt(g.monto)}</span>
               </div>
             ))}
             <div className="border-t border-border pt-2 flex items-center justify-between text-[13px] font-bold">
