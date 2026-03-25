@@ -583,7 +583,7 @@ export default function RutaCobrar() {
               className="w-full bg-success text-success-foreground rounded-xl py-4 text-base font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-2 min-h-[52px]"
             >
               <Check className="h-5 w-5" />
-              {saving ? 'Registrando...' : `Confirmar cobro · $${fmt(totalAplicado)}`}
+              {saving ? 'Registrando...' : `Confirmar cobro · ${fmtM(totalAplicado)}`}
             </button>
           </div>
         </div>
