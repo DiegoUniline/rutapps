@@ -182,21 +182,12 @@ export default function ReporteDiarioRuta() {
     });
   });
 
-  // Stock helpers
-  const buildStockArr = (carga: any) => {
-    if (!carga?.carga_lineas) return [];
-    return (carga.carga_lineas as any[]).map((l: any) => ({
-      nombre: l.productos?.nombre || '—',
-      codigo: l.productos?.codigo || '',
-      cargada: Number(l.cantidad_cargada) || 0,
-      vendida: Number(l.cantidad_vendida) || 0,
-      devuelta: Number(l.cantidad_devuelta) || 0,
-      restante: (Number(l.cantidad_cargada) || 0) - (Number(l.cantidad_vendida) || 0) - (Number(l.cantidad_devuelta) || 0),
-    })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
-  };
-
-  const stockInicio = buildStockArr(cargaInicio);
-  const stockFin = buildStockArr(cargaFin);
+  const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
+  const stockItems = (rptStockAlmacen || []).map((s: any) => ({
+    nombre: s.productos?.nombre || '—',
+    codigo: s.productos?.codigo || '',
+    cantidad: Number(s.cantidad) || 0,
+  })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
   const usuarioNombre = usuarios?.find((u: any) => u.id === usuarioId)?.nombre ?? '';
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
