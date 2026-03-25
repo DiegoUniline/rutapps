@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useGoogleMapsKey, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
