@@ -71,6 +71,11 @@ export default function SupervisorDashboardPage() {
   const { fmt: fmtMoney } = useCurrency();
   const today = todayInTimezone(empresa?.zona_horaria);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
+  const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
+  const [soloHoy, setSoloHoy] = useState(true);
+
+  const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const diaHoyLabel = DIAS_SEMANA[new Date().getDay()];
 
   const { data: vendedores } = useQuery({
     queryKey: ['supervisor-usuarios', empresa?.id],
@@ -449,6 +454,8 @@ export default function SupervisorDashboardPage() {
         const diasSinComprar = lastSale
           ? Math.floor((todayDate.getTime() - new Date(`${lastSale.ultima}T12:00:00`).getTime()) / 86400000)
           : null;
+        const diaVisita: string[] = (client.dia_visita ?? []).map((d: string) => d.toLowerCase());
+        const visitaHoy = diaVisita.some((d) => d === diaHoyLabel);
 
         return {
           id: client.id,
@@ -456,6 +463,7 @@ export default function SupervisorDashboardPage() {
           vendedor_id: canonicalSellerId,
           vendedorNombre: sellerNameMap.get(canonicalSellerId) ?? 'Sin asignar',
           visitado: visitedIds.has(client.id),
+          visitaHoy,
           gps_lat: client.gps_lat,
           gps_lng: client.gps_lng,
           ultimaVisitaFecha: lastSale?.ultima ?? null,
@@ -463,12 +471,18 @@ export default function SupervisorDashboardPage() {
           diasSinComprar,
         };
       })
-      .filter((client) => !selectedVendedor || client.vendedor_id === selectedVendedor)
+      .filter((client) => {
+        if (selectedVendedor && client.vendedor_id !== selectedVendedor) return false;
+        if (soloHoy && !client.visitaHoy) return false;
+        if (visitFilter === 'visitados' && !client.visitado) return false;
+        if (visitFilter === 'pendientes' && client.visitado) return false;
+        return true;
+      })
       .sort((a, b) => {
         if (a.visitado !== b.visitado) return a.visitado ? 1 : -1;
         return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999);
       });
-  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor]);
+  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor, soloHoy, visitFilter, diaHoyLabel]);
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => {
     return clienteActivity
@@ -578,6 +592,41 @@ export default function SupervisorDashboardPage() {
                 </button>
               );
             })}
+          </div>
+
+          {/* Visit & day filters */}
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="text-xs font-medium text-muted-foreground mr-1">Estado:</span>
+            {([['todos', 'Todos'], ['visitados', 'Visitados'], ['pendientes', 'Pendientes']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setVisitFilter(key)}
+                className={cn(
+                  'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                  visitFilter === key
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+
+            <div className="ml-3 h-5 w-px bg-border" />
+
+            <button
+              type="button"
+              onClick={() => setSoloHoy(!soloHoy)}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors capitalize',
+                soloHoy
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-background text-muted-foreground hover:text-foreground',
+              )}
+            >
+              📅 Solo {diaHoyLabel}
+            </button>
           </div>
         </div>
       </section>
