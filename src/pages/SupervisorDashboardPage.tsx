@@ -454,6 +454,8 @@ export default function SupervisorDashboardPage() {
         const diasSinComprar = lastSale
           ? Math.floor((todayDate.getTime() - new Date(`${lastSale.ultima}T12:00:00`).getTime()) / 86400000)
           : null;
+        const diaVisita: string[] = (client.dia_visita ?? []).map((d: string) => d.toLowerCase());
+        const visitaHoy = diaVisita.some((d) => d === diaHoyLabel);
 
         return {
           id: client.id,
@@ -461,6 +463,7 @@ export default function SupervisorDashboardPage() {
           vendedor_id: canonicalSellerId,
           vendedorNombre: sellerNameMap.get(canonicalSellerId) ?? 'Sin asignar',
           visitado: visitedIds.has(client.id),
+          visitaHoy,
           gps_lat: client.gps_lat,
           gps_lng: client.gps_lng,
           ultimaVisitaFecha: lastSale?.ultima ?? null,
@@ -468,12 +471,18 @@ export default function SupervisorDashboardPage() {
           diasSinComprar,
         };
       })
-      .filter((client) => !selectedVendedor || client.vendedor_id === selectedVendedor)
+      .filter((client) => {
+        if (selectedVendedor && client.vendedor_id !== selectedVendedor) return false;
+        if (soloHoy && !client.visitaHoy) return false;
+        if (visitFilter === 'visitados' && !client.visitado) return false;
+        if (visitFilter === 'pendientes' && client.visitado) return false;
+        return true;
+      })
       .sort((a, b) => {
         if (a.visitado !== b.visitado) return a.visitado ? 1 : -1;
         return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999);
       });
-  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor]);
+  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor, soloHoy, visitFilter, diaHoyLabel]);
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => {
     return clienteActivity
