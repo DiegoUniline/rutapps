@@ -1114,15 +1114,39 @@ export default function RutaVentaDetalle() {
           </div>
         </div>
 
+        {/* Totals with tax toggle */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-2">
-          <TotalRow label="Subtotal" value={venta.subtotal ?? 0} />
-          {(venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} />}
-          {(venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} />}
-          {(venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} />}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Totales</span>
+            <button onClick={() => setShowTax(!showTax)}
+              className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition-colors ${showTax ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+              {showTax ? 'Con impuestos' : 'Sin impuestos'}
+            </button>
+          </div>
+          {showTax && <TotalRow label="Subtotal" value={venta.subtotal ?? 0} />}
+          {showTax && (venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} />}
+          {showTax && (venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} />}
+          {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} />}
           <div className="border-t border-border pt-2 flex justify-between">
             <span className="text-[14px] font-bold text-foreground">Total</span>
             <span className="text-[14px] font-bold text-foreground">$ {fmt(venta.total ?? 0)}</span>
           </div>
+        </div>
+
+        {/* Action buttons grid */}
+        <div className="grid grid-cols-5 gap-1">
+          {[
+            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
+            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
+            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
+            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
+            { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
+          ].map((a) => (
+            <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
+              <a.icon className={`h-5 w-5 ${a.color}`} />
+              <span className="text-[10px] font-medium text-foreground leading-tight">{a.label}</span>
+            </button>
+          ))}
         </div>
 
         {venta.notas && (
