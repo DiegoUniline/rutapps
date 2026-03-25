@@ -110,8 +110,8 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   const fmt = (n: number) => `${sym}${fmtNum(n)}`;
 
   const parts: number[] = [];
-  const add = (b: number[]) => parts.push(...b);
-  const ln = (s: string) => add(Array.from(enc.encode(s + '\n')));
+  const add = (bytes: number[]) => { for (const b of bytes) parts.push(b); };
+  const ln = (s: string) => { const encoded = enc.encode(s + '\n'); for (const b of encoded) parts.push(b); };
 
   add(INIT);
 
