@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (nextProfile?.empresa_id) {
       try {
         const { data, error } = await supabase.from('empresas')
-          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda')
+          .select('id, nombre, direccion, colonia, ciudad, estado, cp, telefono, email, rfc, logo_url, razon_social, regimen_fiscal, notas_ticket, ticket_campos, moneda, zona_horaria')
           .eq('id', nextProfile.empresa_id)
           .maybeSingle();
 
