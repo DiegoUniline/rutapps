@@ -29,6 +29,7 @@ const METODOS_PAGO = [
 export default function RutaCobrar() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
+  const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>('cliente');
