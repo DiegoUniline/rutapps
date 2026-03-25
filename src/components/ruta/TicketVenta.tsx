@@ -1,5 +1,5 @@
 import { Check, Printer, Share2, X } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface DevolucionTicketItem {
@@ -55,6 +55,8 @@ export default function TicketVenta(props: TicketVentaProps) {
   const fmt = (n: number) => `${cs}${fmtNum(n)}`;
 
   const ticketRef = useRef<HTMLDivElement>(null);
+  // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos
+  const [taxMode, setTaxMode] = useState<'ambos' | 'totales' | 'ninguno'>('ambos');
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
 
@@ -158,6 +160,17 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
         </div>
       </div>
 
+      {/* Tax display mode selector */}
+      <div className="px-4 pt-3 flex items-center justify-center gap-1">
+        <span className="text-[11px] text-muted-foreground mr-1">Impuestos:</span>
+        {([['ambos', 'Producto + Total'], ['totales', 'Solo total'], ['ninguno', 'No mostrar']] as const).map(([val, label]) => (
+          <button key={val} onClick={() => setTaxMode(val)}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${taxMode === val ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 p-4 flex flex-col items-center">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
 
@@ -214,8 +227,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                       <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
                         <span>{fmt(l.precio)} c/u</span>
                         {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                        {(l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
-                        {(l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
+                        {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
+                        {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
                       </div>
                     )}
                   </div>
@@ -248,17 +261,19 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Totals */}
             <div className="px-5 py-2 space-y-0.5">
-              <div className="tk-tot-row flex justify-between text-[10px]">
-                <span className="lbl text-muted-foreground">Subtotal</span>
-                <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
-              </div>
-              {iva > 0 && (
+              {taxMode !== 'ninguno' && (
+                <div className="tk-tot-row flex justify-between text-[10px]">
+                  <span className="lbl text-muted-foreground">Subtotal</span>
+                  <span className="val text-foreground tabular-nums">{fmt(subtotal)}</span>
+                </div>
+              )}
+              {taxMode !== 'ninguno' && iva > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IVA</span>
                   <span className="val text-foreground tabular-nums">{fmt(iva)}</span>
                 </div>
               )}
-              {ieps > 0 && (
+              {taxMode !== 'ninguno' && ieps > 0 && (
                 <div className="tk-tot-row flex justify-between text-[10px]">
                   <span className="lbl text-muted-foreground">IEPS</span>
                   <span className="val text-foreground tabular-nums">{fmt(ieps)}</span>
