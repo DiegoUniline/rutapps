@@ -1121,6 +1121,22 @@ export default function RutaVentaDetalle() {
       )}
 
       <div className="p-4 space-y-4 pb-28">
+        {/* Action buttons grid - arriba */}
+        <div className="grid grid-cols-5 gap-1">
+          {[
+            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
+            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
+            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
+            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
+            { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
+          ].map((a) => (
+            <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
+              <a.icon className={`h-5 w-5 ${a.color}`} />
+              <span className="text-[10px] font-medium text-foreground leading-tight">{a.label}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[11px] text-muted-foreground mb-1">Total</p>
           <p className="text-[28px] font-bold text-foreground">$ {fmt(venta.total ?? 0)}</p>
