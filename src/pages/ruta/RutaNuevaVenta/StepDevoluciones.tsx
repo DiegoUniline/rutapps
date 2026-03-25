@@ -139,7 +139,7 @@ export function StepDevoluciones(props: Props) {
           <div className="px-3 pb-2.5 space-y-2 border-t border-border/50 pt-2">
             <div>
               <span className="text-[10px] text-muted-foreground mb-1 block">Motivo</span>
-              <ChipSelect options={MOTIVOS} value={defaultMotivo} onChange={setDefaultMotivo} />
+              <ChipSelect options={MOTIVOS} value={defaultMotivo} onChange={v => setDefaultMotivo(v as MotivoDevolucion)} />
             </div>
             <div>
               <span className="text-[10px] text-muted-foreground mb-1 block">Acción</span>
