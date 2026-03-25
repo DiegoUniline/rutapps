@@ -339,13 +339,21 @@ export default function ReportesPage() {
       </div>
 
       {/* Active filter chips */}
-      {selectedVendedores.length > 0 && (
+      {(selectedVendedores.length > 0 || selectedStatuses.length > 0) && (
         <div className="flex items-center gap-1.5 flex-wrap print:hidden">
           <span className="text-[11px] text-muted-foreground">Filtrando por:</span>
           {vendedorNames.map((name, i) => (
             <span key={selectedVendedores[i]} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium">
               {name}
               <button onClick={() => toggleVendedor(selectedVendedores[i])} className="hover:text-destructive">
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {selectedStatuses.map(st => (
+            <span key={st} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[11px] font-medium">
+              {statusOptions.find(o => o.value === st)?.label ?? st}
+              <button onClick={() => toggleStatus(st)} className="hover:text-destructive">
                 <X className="h-3 w-3" />
               </button>
             </span>
