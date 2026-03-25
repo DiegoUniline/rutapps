@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Eye, RefreshCw, TrendingUp, TrendingDown, Scale, CheckCircle, XCircle } from 'lucide-react';
 import ConteoKardexModal from './ConteoKardexModal';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   conteoId: string;
