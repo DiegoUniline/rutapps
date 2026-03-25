@@ -107,9 +107,13 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       `Pago: ${pagoLabel}`,
       metodoPago ? `Método: ${metodoPago}` : '',
       '─'.repeat(30),
-      ...lineas.map(l =>
-        `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}`
-      ),
+      ...lineas.map(l => {
+        const taxes = [
+          (l.iva_pct ?? 0) > 0 ? `IVA ${l.iva_pct}%` : '',
+          (l.ieps_pct ?? 0) > 0 ? `IEPS ${l.ieps_pct}%` : '',
+        ].filter(Boolean).join(' + ');
+        return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
+      }),
       '─'.repeat(30),
       `Subtotal: ${fmt(subtotal)}`,
       iva > 0 ? `IVA: ${fmt(iva)}` : '',
