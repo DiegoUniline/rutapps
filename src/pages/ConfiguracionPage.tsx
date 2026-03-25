@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
@@ -302,7 +302,11 @@ export default function ConfiguracionPage() {
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
   const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
 
-  if (config && !initialized) {
+  // Initialize form from config once loaded — must be in useEffect to avoid
+  // setting state during render (React error #310).
+  const configId = config?.id;
+  useEffect(() => {
+    if (!config || initialized) return;
     setForm({
       nombre: config.nombre ?? '',
       razon_social: (config as any).razon_social ?? '',
@@ -325,7 +329,8 @@ export default function ConfiguracionPage() {
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
     setInitialized(true);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configId]);
 
   const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || (initialized && config && (() => {
     const orig: Record<string, string> = {
