@@ -71,7 +71,7 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
                         </p>
                       </div>
                       <div className="text-right shrink-0 ml-2">
-                        <p className="text-[13px] font-bold text-foreground">$ {fmt(v.total ?? 0)}</p>
+                        <p className="text-[13px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
                         <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColor[v.status] ?? 'bg-muted text-muted-foreground'}`}>
                           {statusLabel[v.status] ?? v.status}
                         </span>
