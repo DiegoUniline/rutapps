@@ -625,7 +625,7 @@ export default function PuntoVentaPage() {
             {totals.iva > 0 && (
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">IVA</span>
-                <span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span>
+                <span className="font-medium text-foreground tabular-nums">{fmtM(totals.iva)}</span>
               </div>
             )}
             {totals.ieps > 0 && (
