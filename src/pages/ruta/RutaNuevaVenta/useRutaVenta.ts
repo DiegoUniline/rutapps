@@ -285,7 +285,8 @@ export function useRutaVenta() {
 
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();
-        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+        const cargaIdForDev = activeCarga?.id || null;
+        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, carga_id: cargaIdForDev, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
         for (const d of devoluciones) {
           const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
           await queueOperation('devolucion_lineas', 'insert', {
@@ -293,6 +294,71 @@ export function useRutaVenta() {
             motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
             monto_credito: montoCredito, created_at: new Date().toISOString(),
           });
+
+          // ── Restore inventory for returned products ──
+          const destAlmacenId = profile?.almacen_id || null;
+
+          if (activeCarga) {
+            // Has active carga → update carga_lineas devuelta count
+            try {
+              const cargaLineasTable = getOfflineTable('carga_lineas');
+              if (cargaLineasTable) {
+                const allCL = await cargaLineasTable.toArray();
+                const cl = allCL.find((l: any) => l.carga_id === activeCarga.id && l.producto_id === d.producto_id);
+                if (cl) {
+                  await queueOperation('carga_lineas', 'update', {
+                    id: cl.id, carga_id: cl.carga_id, producto_id: cl.producto_id,
+                    cantidad_cargada: cl.cantidad_cargada,
+                    cantidad_vendida: cl.cantidad_vendida ?? 0,
+                    cantidad_devuelta: (cl.cantidad_devuelta ?? 0) + d.cantidad,
+                  });
+                }
+              }
+            } catch (e) { console.error('Error updating carga devuelta:', e); }
+          } else if (destAlmacenId) {
+            // No carga → restore stock to warehouse directly
+            try {
+              const stockTable = getOfflineTable('stock_almacen');
+              if (stockTable) {
+                const allStock = await stockTable.toArray();
+                const existing = allStock.find((s: any) => s.almacen_id === destAlmacenId && s.producto_id === d.producto_id);
+                if (existing) {
+                  await queueOperation('stock_almacen', 'update', {
+                    id: existing.id, almacen_id: destAlmacenId, producto_id: d.producto_id,
+                    empresa_id: empresa.id, cantidad: (existing.cantidad ?? 0) + d.cantidad,
+                  });
+                } else {
+                  await queueOperation('stock_almacen', 'insert', {
+                    id: crypto.randomUUID(), almacen_id: destAlmacenId, producto_id: d.producto_id,
+                    empresa_id: empresa.id, cantidad: d.cantidad,
+                  });
+                }
+              }
+              // Also update global product stock
+              const prodTable = getOfflineTable('productos');
+              if (prodTable) {
+                const prod = await prodTable.get(d.producto_id);
+                if (prod) {
+                  await queueOperation('productos', 'update', {
+                    id: d.producto_id, cantidad: (prod.cantidad ?? 0) + d.cantidad,
+                  });
+                }
+              }
+            } catch (e) { console.error('Error restoring stock for devolution:', e); }
+          }
+
+          // Log inventory movement
+          if (destAlmacenId) {
+            await queueOperation('movimientos_inventario', 'insert', {
+              id: crypto.randomUUID(), empresa_id: empresa.id, tipo: 'entrada',
+              producto_id: d.producto_id, cantidad: d.cantidad,
+              almacen_destino_id: destAlmacenId,
+              referencia_tipo: 'devolucion', referencia_id: devId,
+              user_id: user.id, fecha: todayInTimezone(empresa.zona_horaria),
+              created_at: new Date().toISOString(),
+              notas: `Devolución ${d.nombre} - ${d.motivo}`,
+            });
+          }
         }
       }
 
