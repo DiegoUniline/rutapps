@@ -491,6 +491,30 @@ export default function ConfiguracionPage() {
         <TabsContent value="ticket" className="mt-4">
           <div className="flex gap-6">
             <div className="flex-1 space-y-5 max-w-md">
+              {/* Ancho de impresora */}
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Receipt className="h-4 w-4" /> Ancho de impresora
+                </h3>
+                <p className="text-[11px] text-muted-foreground mb-3">Selecciona el ancho del rollo de papel de tu impresora térmica.</p>
+                <div className="flex gap-2">
+                  {([['58', '58 mm'], ['80', '80 mm']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setTicketAncho(val)}
+                      className={cn(
+                        "flex-1 py-2.5 rounded-md text-[13px] font-semibold border transition-colors",
+                        ticketAncho === val
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-foreground border-input hover:bg-secondary"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Campos visibles */}
               <div className="bg-card border border-border rounded-lg p-5">
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
