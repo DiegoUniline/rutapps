@@ -385,6 +385,9 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
+                  ...(incluirStock && stockItems.length > 0 ? {
+                    stockAlmacen: { almacenNombre, lineas: stockItems },
+                  } : {}),
                 });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
