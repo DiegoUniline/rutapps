@@ -41,6 +41,7 @@ export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
 }
 
 function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; tarifaLineas?: any[] }) {
+  const { symbol: s, fmt } = useCurrency();
   const lineasConComision = (tarifaLineas ?? []).filter((l: any) => (l as any).comision_pct > 0);
   if (lineasConComision.length === 0) return (
     <>
