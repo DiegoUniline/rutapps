@@ -397,7 +397,7 @@ export default function MapaVentasPage() {
             </div>
             {viewMode === 'pedidos' && (
               <div className="bg-accent rounded-lg px-3 py-1.5 text-center">
-                <div className="text-lg font-bold text-foreground">${stats.montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 0 })}</div>
+                <div className="text-lg font-bold text-foreground">{fmt(stats.montoTotal)}</div>
                 <div className="text-[10px] text-muted-foreground font-medium">Total</div>
               </div>
             )}
