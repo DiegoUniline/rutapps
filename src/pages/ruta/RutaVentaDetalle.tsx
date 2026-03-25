@@ -1307,6 +1307,9 @@ export default function RutaVentaDetalle() {
               <X className="h-3.5 w-3.5" /> Cancelar
             </button>
           )}
+          <button onClick={handlePrintTicket} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-accent text-foreground text-[11px] font-semibold active:scale-95 transition-transform">
+            <Printer className="h-3.5 w-3.5" /> Imprimir
+          </button>
           <div className="ml-auto relative">
             <button onClick={() => setShowMoreMenu(!showMoreMenu)} className="p-2 rounded-lg hover:bg-accent active:scale-95 transition-transform">
               <MoreVertical className="h-5 w-5 text-muted-foreground" />
