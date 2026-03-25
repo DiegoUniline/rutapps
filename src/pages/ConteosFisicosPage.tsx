@@ -22,9 +22,8 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   cancelado: { label: 'Cancelado', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export default function ConteosFisicosPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
