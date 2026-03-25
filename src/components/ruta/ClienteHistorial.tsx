@@ -2,14 +2,13 @@ import { X, ShoppingCart, Banknote, Calendar, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   clienteId: string;
   clienteNombre: string;
   onClose: () => void;
 }
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: Props) {
   const navigate = useNavigate();
