@@ -1386,15 +1386,16 @@ export default function RutaVentaDetalle() {
           <div className="bg-card border border-border rounded-xl divide-y divide-border">
             {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
             {lineas.map((l: any) => {
-              const lineTotal = showTax ? (l.total ?? 0) : (l.subtotal ?? 0);
-              const lineUnit = showTax ? (l.precio_unitario ?? 0) : (l.precio_unitario ?? 0);
+              const lineSub = (l.precio_unitario ?? 0) * (l.cantidad ?? 0);
+              const lineTotal = showTax ? (l.total ?? 0) : (l.subtotal ?? lineSub);
+              const lineUnit = l.precio_unitario ?? 0;
               return (
                 <div key={l.id} className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p>
                       <p className="text-[11px] text-muted-foreground">
-                        {l.cantidad} × $ {fmt(lineUnit)}
+                        {l.cantidad} × {s}{fmt(lineUnit)}
                         {l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}
                       </p>
                     </div>
@@ -1421,7 +1422,7 @@ export default function RutaVentaDetalle() {
           {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} />}
           <div className="border-t border-border pt-2 flex justify-between">
             <span className="text-[14px] font-bold text-foreground">Total</span>
-            <span className="text-[14px] font-bold text-foreground">{s}{fmt(venta.total ?? 0)}</span>
+            <span className="text-[14px] font-bold text-foreground">{s}{fmt(showTax ? (venta.total ?? 0) : (venta.subtotal ?? 0))}</span>
           </div>
         </div>
 
