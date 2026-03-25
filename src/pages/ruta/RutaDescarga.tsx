@@ -275,7 +275,7 @@ export default function RutaDescarga() {
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total contado</p>
           <p className="text-3xl font-bold text-foreground tabular-nums">
-            $ {fmt(totalEfectivo)}
+            {s}{fmt(totalEfectivo)}
           </p>
         </div>
 
