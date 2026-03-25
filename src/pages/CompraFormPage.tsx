@@ -925,7 +925,7 @@ export default function CompraFormPage() {
                           <td className="py-1.5 px-3 text-xs capitalize">{p.metodo_pago}</td>
                           <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.referencia ?? '—'}</td>
                           <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.notas ?? '—'}</td>
-                          <td className="py-1.5 px-3 text-right font-medium text-xs text-success">$ {fmt(p.monto)}</td>
+                          <td className="py-1.5 px-3 text-right font-medium text-xs text-success">{s}{fmt(p.monto)}</td>
                           <td className="py-1.5 px-3">
                             {form.status !== 'pagada' && (
                               <button
@@ -990,12 +990,12 @@ export default function CompraFormPage() {
                       {/* Totals row */}
                       <tr className="bg-secondary/30">
                         <td colSpan={4} className="py-1.5 px-3 text-xs font-bold">Total pagado</td>
-                        <td className="py-1.5 px-3 text-right font-bold text-xs text-success">$ {fmt(totalPagado)}</td>
+                        <td className="py-1.5 px-3 text-right font-bold text-xs text-success">{s}{fmt(totalPagado)}</td>
                         <td></td>
                       </tr>
                       <tr className="bg-secondary/30">
                         <td colSpan={4} className="py-1.5 px-3 text-xs font-bold text-destructive">Saldo pendiente</td>
-                        <td className="py-1.5 px-3 text-right font-bold text-xs text-destructive">$ {fmt(saldoActual)}</td>
+                        <td className="py-1.5 px-3 text-right font-bold text-xs text-destructive">{s}{fmt(saldoActual)}</td>
                         <td></td>
                       </tr>
                     </tbody>
@@ -1023,25 +1023,25 @@ export default function CompraFormPage() {
         <div className="bg-card border border-border rounded-lg p-4 w-72 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-medium">$ {fmt(totals.subtotal)}</span>
+            <span className="font-medium">{s}{fmt(totals.subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Impuestos</span>
-            <span className="font-medium">$ {fmt(totals.iva_total)}</span>
+            <span className="font-medium">{s}{fmt(totals.iva_total)}</span>
           </div>
           <div className="border-t border-border pt-2 flex justify-between text-base">
             <span className="font-semibold">Total</span>
-            <span className="font-bold">$ {fmt(totals.total)}</span>
+            <span className="font-bold">{s}{fmt(totals.total)}</span>
           </div>
           {!isNew && (
             <>
               <div className="border-t border-border pt-2 flex justify-between text-sm">
                 <span className="text-success">Pagado</span>
-                <span className="font-medium text-success">$ {fmt(totalPagado)}</span>
+                <span className="font-medium text-success">{s}{fmt(totalPagado)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-destructive">Saldo</span>
-                <span className="font-bold text-destructive">$ {fmt(saldoActual)}</span>
+                <span className="font-bold text-destructive">{s}{fmt(saldoActual)}</span>
               </div>
             </>
           )}
