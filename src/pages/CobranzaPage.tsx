@@ -176,7 +176,7 @@ export default function CobranzaPage() {
                 }
                 fields={[
                   { label: 'Ventas pendientes', value: d.ventas },
-                  { label: 'Saldo', value: <span className="text-destructive font-bold">$ {fmt(d.total)}</span> },
+                  { label: 'Saldo', value: <span className="text-destructive font-bold">{fmtC(d.total)}</span> },
                 ]}
               />
             ))}
