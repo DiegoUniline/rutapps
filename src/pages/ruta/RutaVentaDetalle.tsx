@@ -349,9 +349,31 @@ export default function RutaVentaDetalle() {
     if (!venta) return;
     setSaving(true);
     try {
+      const prevStatus = venta.status;
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
       if (error) throw error;
+      await supabase.from('venta_historial').insert({ venta_id: venta.id, user_id: user?.id ?? null, user_nombre: user?.nombre ?? 'Sistema', accion: 'cancelada', detalles: { status: { anterior: prevStatus, nuevo: 'cancelado' } } });
       toast.success('Venta cancelada');
+      queryClient.invalidateQueries({ queryKey: ['venta', id] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Handle volver a borrador ───
+  const handleVolverBorrador = async () => {
+    if (!venta || venta.status === 'borrador' || venta.status === 'cancelado') return;
+    setSaving(true);
+    try {
+      const prevStatus = venta.status;
+      const { error } = await supabase.from('ventas').update({ status: 'borrador' as const }).eq('id', venta.id);
+      if (error) throw error;
+      await supabase.from('venta_historial').insert({ venta_id: venta.id, user_id: user?.id ?? null, user_nombre: user?.nombre ?? 'Sistema', accion: 'vuelta_borrador', detalles: { status: { anterior: prevStatus, nuevo: 'borrador' } } });
+      toast.success('Venta regresada a borrador');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
