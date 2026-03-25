@@ -15,6 +15,10 @@ const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits:
 export default function RutaDescarga() {
   const nav = useNavigate();
   const { user, empresa } = useAuth();
+  const { symbol: s } = useCurrency();
+  const fmt = fmtNum;
+  const BILLETES = BILLETES_VALUES.map(v => ({ label: `${s}${v.toLocaleString()}`, value: v }));
+  const MONEDAS = MONEDAS_VALUES.map(v => ({ label: `${s}${v}`, value: v }));
   const qc = useQueryClient();
 
   const [conteo, setConteo] = useState<Record<number, number>>({});
