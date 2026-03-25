@@ -51,6 +51,7 @@ function useVendedoresList() {
 }
 
 export default function ReporteEntregasPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const [vendedorId, setVendedorId] = useState('todos');
   const [fechaDesde, setFechaDesde] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d; });
