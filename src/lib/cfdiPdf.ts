@@ -494,7 +494,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text('Total:', totLabelX, y, { align: 'right' });
-  doc.text(`$${fmtCurrency(cfdi.total)}`, rightX, y, { align: 'right' });
+  doc.text(`${s}${fmtCurrency(cfdi.total)}`, rightX, y, { align: 'right' });
   y += 8;
 
   // ═══════════════════════════════════════════════════════
