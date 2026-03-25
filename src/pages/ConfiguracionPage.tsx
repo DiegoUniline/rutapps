@@ -327,7 +327,7 @@ export default function ConfiguracionPage() {
     setInitialized(true);
   }
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
