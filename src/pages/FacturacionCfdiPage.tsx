@@ -40,6 +40,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function FacturacionCfdiPage() {
   const { empresa } = useAuth();
+  const { fmt } = useCurrency();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
