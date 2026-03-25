@@ -232,6 +232,23 @@ export default function SupervisorDashboardPage() {
     refetchInterval: 30000,
   });
 
+  const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
+
+  const { data: devolucionesHoy } = useQuery({
+    queryKey: ['supervisor-devoluciones-hoy', today, empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('devoluciones')
+        .select('id, vendedor_id, tipo, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
+        .eq('empresa_id', empresa!.id)
+        .eq('fecha', today)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 30000,
+  });
+
   const { data: clientesAsignados } = useQuery({
     queryKey: ['supervisor-clientes-asignados', empresa?.id, allDashboardSellerIds],
     enabled: !!empresa?.id && allDashboardSellerIds.length > 0,
