@@ -1273,7 +1273,7 @@ export default function RutaVentaDetalle() {
                 {(venta.saldo_pendiente ?? 0) < (venta.total ?? 0) && (
                   <li className="flex items-start gap-2">
                     <span className="text-muted-foreground mt-0.5">•</span>
-                    <span>Los cobros aplicados (${fmt((venta.total ?? 0) - (venta.saldo_pendiente ?? 0))}) quedarán como saldo a favor del cliente.</span>
+                    <span>Los cobros aplicados ({s}{fmt((venta.total ?? 0) - (venta.saldo_pendiente ?? 0))}) quedarán como saldo a favor del cliente.</span>
                   </li>
                 )}
                 <li className="flex items-start gap-2">
