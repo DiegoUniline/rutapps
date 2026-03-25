@@ -339,6 +339,7 @@ export default function ConfiguracionPage() {
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
+    setTicketAncho((config as any).ticket_ancho ?? '80');
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
