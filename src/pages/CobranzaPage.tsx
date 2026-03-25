@@ -90,6 +90,7 @@ function buildDeudaMessage(deudor: { nombre: string; total: number; ventas: numb
 export default function CobranzaPage() {
   const { empresa } = useAuth();
   const isMobile = useIsMobile();
+  const { fmt: fmtC } = useCurrency();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'cobros' | 'deudores'>('deudores');
   const { data: cobros, isLoading } = useCobros(search);
