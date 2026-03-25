@@ -160,6 +160,17 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
         </div>
       </div>
 
+      {/* Tax display mode selector */}
+      <div className="px-4 pt-3 flex items-center justify-center gap-1">
+        <span className="text-[11px] text-muted-foreground mr-1">Impuestos:</span>
+        {([['ambos', 'Producto + Total'], ['totales', 'Solo total'], ['ninguno', 'No mostrar']] as const).map(([val, label]) => (
+          <button key={val} onClick={() => setTaxMode(val)}
+            className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${taxMode === val ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 p-4 flex flex-col items-center">
         <div className="w-full max-w-sm bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
 
