@@ -2,6 +2,7 @@ import { X, ShoppingCart, Banknote, Calendar, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   clienteId: string;
@@ -9,9 +10,8 @@ interface Props {
   onClose: () => void;
 }
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-
 export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: Props) {
+  const { fmt } = useCurrency();
   const navigate = useNavigate();
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', { cliente_id: clienteId }, { enabled: !!clienteId, orderBy: 'fecha', ascending: false });
@@ -48,10 +48,10 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
         ) : (
           <>
             <div className="grid grid-cols-2 gap-2">
-              <StatCard icon={ShoppingCart} label="Compras" value={`${numVentas}`} sub={`$ ${fmt(totalComprado)}`} color="text-primary bg-primary/10" />
-              <StatCard icon={Banknote} label="Saldo pendiente" value={`$ ${fmt(saldoTotal)}`} sub={saldoTotal > 0 ? 'Por cobrar' : 'Al corriente'} color={saldoTotal > 0 ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'} />
+              <StatCard icon={ShoppingCart} label="Compras" value={`${numVentas}`} sub={fmt(totalComprado)} color="text-primary bg-primary/10" />
+              <StatCard icon={Banknote} label="Saldo pendiente" value={fmt(saldoTotal)} sub={saldoTotal > 0 ? 'Por cobrar' : 'Al corriente'} color={saldoTotal > 0 ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'} />
               <StatCard icon={Calendar} label="Última compra" value={ultimaVisita ? new Date(ultimaVisita + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' }) : '—'} sub="" color="text-muted-foreground bg-muted" />
-              <StatCard icon={TrendingUp} label="Promedio" value={numVentas > 0 ? `$ ${fmt(totalComprado / numVentas)}` : '—'} sub="por compra" color="text-muted-foreground bg-muted" />
+              <StatCard icon={TrendingUp} label="Promedio" value={numVentas > 0 ? fmt(totalComprado / numVentas) : '—'} sub="por compra" color="text-muted-foreground bg-muted" />
             </div>
 
             <div>
@@ -71,7 +71,7 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
                         </p>
                       </div>
                       <div className="text-right shrink-0 ml-2">
-                        <p className="text-[13px] font-bold text-foreground">$ {fmt(v.total ?? 0)}</p>
+                        <p className="text-[13px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
                         <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${statusColor[v.status] ?? 'bg-muted text-muted-foreground'}`}>
                           {statusLabel[v.status] ?? v.status}
                         </span>
@@ -94,7 +94,7 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
                         </p>
                         <p className="text-[11px] text-muted-foreground capitalize">{c.metodo_pago}</p>
                       </div>
-                      <p className="text-[13px] font-bold text-primary">$ {fmt(c.monto)}</p>
+                      <p className="text-[13px] font-bold text-primary">{fmt(c.monto)}</p>
                     </div>
                   ))}
                 </div>

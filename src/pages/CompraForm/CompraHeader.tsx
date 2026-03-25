@@ -1,8 +1,7 @@
 import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   form: Record<string, any>;
@@ -23,6 +22,7 @@ interface Props {
 }
 
 export function CompraHeader(p: Props) {
+  const { fmt } = useCurrency();
   return (
     <>
       <div className="flex items-center justify-between">
@@ -30,7 +30,7 @@ export function CompraHeader(p: Props) {
           <button onClick={p.onBack} className="btn-odoo-icon"><ArrowLeft className="h-4 w-4" /></button>
           <div>
             <h1 className="text-xl font-semibold text-foreground">{p.isNew ? 'Nueva compra' : `Compra ${p.form.folio ?? ''}`}</h1>
-            {!p.isNew && <p className="text-xs text-muted-foreground">Pagado: $ {fmt(p.totalPagado)} / Saldo: $ {fmt(Math.max(0, p.totals.total - p.totalPagado))}</p>}
+            {!p.isNew && <p className="text-xs text-muted-foreground">Pagado: {fmt(p.totalPagado)} / Saldo: {fmt(Math.max(0, p.totals.total - p.totalPagado))}</p>}
           </div>
         </div>
         <div className="flex items-center gap-2">

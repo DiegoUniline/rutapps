@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn, fmtDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Date) {
   const { empresa } = useAuth();
@@ -50,6 +51,7 @@ function useVendedoresList() {
 }
 
 export default function ReporteEntregasPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const [vendedorId, setVendedorId] = useState('todos');
   const [fechaDesde, setFechaDesde] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 7); return d; });
@@ -197,7 +199,7 @@ export default function ReporteEntregasPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Monto total</p>
-          <p className="text-2xl font-bold text-primary">$ {totalMonto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-primary">{fmt(totalMonto)}</p>
         </div>
       </div>
 
@@ -222,7 +224,7 @@ export default function ReporteEntregasPage() {
                 <TableCell className="font-mono text-[11px] text-muted-foreground py-1.5">{p.codigo}</TableCell>
                 <TableCell className="text-[12px] font-medium py-1.5">{p.nombre}</TableCell>
                 <TableCell className="text-right text-[12px] font-bold py-1.5">{p.cantidad}</TableCell>
-                <TableCell className="text-right text-[12px] py-1.5">$ {p.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell className="text-right text-[12px] py-1.5">{fmt(p.total)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -230,7 +232,7 @@ export default function ReporteEntregasPage() {
             <TableRow>
               <TableCell colSpan={2} className="text-[11px] font-semibold">Total</TableCell>
               <TableCell className="text-right text-[12px] font-bold">{totalUnidades}</TableCell>
-              <TableCell className="text-right text-[12px] font-bold">$ {totalMonto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+              <TableCell className="text-right text-[12px] font-bold">{fmt(totalMonto)}</TableCell>
             </TableRow>
           </TableFooter>
         </Table>
@@ -248,7 +250,7 @@ export default function ReporteEntregasPage() {
               <span className="text-[12px] font-semibold text-foreground">{fmtDate(group.fecha)}</span>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] text-muted-foreground">{group.entregas.length} entregas</span>
-                <span className="text-[12px] font-bold text-foreground">$ {group.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                <span className="text-[12px] font-bold text-foreground">{fmt(group.total)}</span>
               </div>
             </div>
             <Table>
@@ -274,7 +276,7 @@ export default function ReporteEntregasPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center text-[11px] text-muted-foreground py-1.5">{e.venta_lineas?.length ?? 0}</TableCell>
-                    <TableCell className="text-right text-[11px] font-medium py-1.5">$ {(e.total ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-[11px] font-medium py-1.5">{fmt(e.total ?? 0)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -307,7 +309,7 @@ export default function ReporteEntregasPage() {
                   <TableCell className="text-center text-[12px] py-1.5">{r.entregas.length}</TableCell>
                   <TableCell className="text-center text-[12px] text-warning font-bold py-1.5">{r.entregas.filter(e => e.status === 'confirmado').length}</TableCell>
                   <TableCell className="text-center text-[12px] text-success font-bold py-1.5">{r.entregas.filter(e => e.status === 'entregado').length}</TableCell>
-                  <TableCell className="text-right text-[12px] font-bold py-1.5">$ {r.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right text-[12px] font-bold py-1.5">{fmt(r.total)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -2,8 +2,7 @@ import { Plus, X } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { Switch } from '@/components/ui/switch';
 import type { CompraLinea } from './types';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   lineas: Partial<CompraLinea>[];
@@ -15,6 +14,7 @@ interface Props {
 }
 
 export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea, addLine, removeLine }: Props) {
+  const { fmt } = useCurrency();
   return (
     <div className="space-y-3">
       <div className="bg-card border border-border rounded overflow-x-auto">
@@ -45,7 +45,7 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
                   <td className="py-1.5 px-3"><input type="number" className="input-odoo w-full text-right text-xs" value={line.precio_unitario ?? 0} onChange={e => updateLinea(idx, 'precio_unitario', Number(e.target.value))} disabled={!isEditable} step="0.01" /></td>
                   <td className="py-1.5 px-3 text-center"><div className="flex flex-col items-center gap-0.5"><Switch checked={line._tiene_iva ?? false} onCheckedChange={v => updateLinea(idx, '_tiene_iva', v)} disabled={!isEditable} className="scale-75" />{line._tiene_iva && <span className="text-[10px] text-muted-foreground">{line._iva_pct}%</span>}</div></td>
                   <td className="py-1.5 px-3 text-center"><div className="flex flex-col items-center gap-0.5"><Switch checked={line._tiene_ieps ?? false} onCheckedChange={v => updateLinea(idx, '_tiene_ieps', v)} disabled={!isEditable} className="scale-75" />{line._tiene_ieps && <span className="text-[10px] text-muted-foreground">{iepsLabel}</span>}</div></td>
-                  <td className="py-1.5 px-3 text-right font-medium text-xs">$ {fmt(line.total ?? 0)}</td>
+                  <td className="py-1.5 px-3 text-right font-medium text-xs">{fmt(line.total ?? 0)}</td>
                   {isEditable && <td className="py-1.5 px-3"><button onClick={() => removeLine(idx)} className="text-destructive hover:text-destructive/80"><X className="h-3.5 w-3.5" /></button></td>}
                 </tr>
               );

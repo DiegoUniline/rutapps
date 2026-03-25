@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn, fmtDate } from '@/lib/utils';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 function useCuentasCobrar(search: string) {
   const { empresa } = useAuth();
@@ -40,6 +39,7 @@ function useCuentasCobrar(search: string) {
 }
 
 export default function CuentasCobrarPage() {
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const { data: cuentas, isLoading } = useCuentasCobrar(search);
 
@@ -70,7 +70,7 @@ export default function CuentasCobrarPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total pendiente</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalPendiente)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalPendiente)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Documentos</p>
@@ -78,7 +78,7 @@ export default function CuentasCobrarPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
-          <p className="text-2xl font-bold text-foreground">$ {fmt(totalVentas)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalVentas)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">% Cobrado</p>
@@ -99,7 +99,7 @@ export default function CuentasCobrarPage() {
           ].map(a => (
             <div key={a.label}>
               <p className="text-[10px] text-muted-foreground">{a.label}</p>
-              <p className={cn("text-sm font-bold", a.color)}>$ {fmt(a.val)}</p>
+              <p className={cn("text-sm font-bold", a.color)}>{fmt(a.val)}</p>
             </div>
           ))}
         </div>
@@ -134,9 +134,9 @@ export default function CuentasCobrarPage() {
                   <TableCell className="text-[12px] text-muted-foreground">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
-                  <TableCell className="text-right text-[12px]">$ {fmt(v.total ?? 0)}</TableCell>
-                  <TableCell className="text-right text-[12px] text-success">$ {fmt(pagado)}</TableCell>
-                  <TableCell className="text-right font-bold text-destructive">$ {fmt(v.saldo_pendiente ?? 0)}</TableCell>
+                  <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
+                  <TableCell className="text-right text-[12px] text-success">{fmt(pagado)}</TableCell>
+                  <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
                 </TableRow>
               );
             })}

@@ -1,6 +1,7 @@
 import { OdooField } from '@/components/OdooFormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   form: Partial<Producto>;
@@ -27,6 +28,7 @@ const findUnit = (list: { id: string; nombre: string; abreviatura?: string }[] |
 const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último costo de compra', estandar: 'Estándar', manual: 'Manual', ultimo_compra: 'Último costo (compra directa)', ultimo_proveedor: 'Último costo del proveedor principal' };
 
 export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
+  const { fmt, symbol } = useCurrency();
   const isNew = !form.id;
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 mb-4 pb-4 border-b border-border">
@@ -52,9 +54,9 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
           </div>
         </div>
         {!(form as any).usa_listas_precio && (
-          <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help onChange={v => set('precio_principal', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+          <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help onChange={v => set('precio_principal', +v)} format={v => `${symbol} ${(v ?? 0).toFixed(2)}`} />
         )}
-        <OdooField label="Costo" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+        <OdooField label="Costo" value={form.costo} type="number" teal help onChange={v => set('costo', +v)} format={v => `${symbol} ${(v ?? 0).toFixed(2)}`} />
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />

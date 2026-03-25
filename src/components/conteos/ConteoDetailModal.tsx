@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Eye, RefreshCw, TrendingUp, TrendingDown, Scale, CheckCircle, XCircle } from 'lucide-react';
 import ConteoKardexModal from './ConteoKardexModal';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   conteoId: string;
@@ -21,7 +22,7 @@ interface Props {
   onClose: () => void;
 }
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// fmt moved inside component via useCurrency
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
@@ -30,6 +31,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
+  const { fmt } = useCurrency();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [kardexItemId, setKardexItemId] = useState<string | null>(null);
@@ -193,7 +195,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <TrendingUp className="h-4 w-4" />
                     <span className="text-xs">Sobrantes</span>
                   </div>
-                  <p className="text-lg font-bold text-green-600">$ {fmt(montoPositivo)}</p>
+                  <p className="text-lg font-bold text-green-600">{fmt(montoPositivo)}</p>
                   <p className="text-xs text-muted-foreground">{positivas.length} productos</p>
                 </Card>
                 <Card className="p-3">
@@ -201,7 +203,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <TrendingDown className="h-4 w-4" />
                     <span className="text-xs">Faltantes</span>
                   </div>
-                  <p className="text-lg font-bold text-red-600">$ {fmt(Math.abs(montoNegativo))}</p>
+                  <p className="text-lg font-bold text-red-600">{fmt(Math.abs(montoNegativo))}</p>
                   <p className="text-xs text-muted-foreground">{negativas.length} productos</p>
                 </Card>
                 <Card className="p-3">
@@ -210,7 +212,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <span className="text-xs">Balance</span>
                   </div>
                   <p className={cn("text-lg font-bold", balanceNeto >= 0 ? "text-green-600" : "text-red-600")}>
-                    $ {fmt(balanceNeto)}
+                    {fmt(balanceNeto)}
                   </p>
                 </Card>
               </div>
@@ -290,7 +292,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <div className="text-sm text-muted-foreground">
                       {positivas.filter((l: any) => !l.ajuste_aplicado).length} sobrantes,{' '}
                       {negativas.filter((l: any) => !l.ajuste_aplicado).length} faltantes.
-                      Valor neto: <span className={cn("font-medium", balanceNeto >= 0 ? "text-green-600" : "text-red-600")}>$ {fmt(balanceNeto)}</span>
+                      Valor neto: <span className={cn("font-medium", balanceNeto >= 0 ? "text-green-600" : "text-red-600")}>{fmt(balanceNeto)}</span>
                     </div>
                     <Button onClick={handleAjustarTodas} disabled={adjusting}>
                       {adjusting ? 'Ajustando...' : `Ajustar Todas las Líneas (${ajustables.length})`}

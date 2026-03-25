@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '@/hooks/useCurrency';
 import CrearConteoDialog from '@/components/conteos/CrearConteoDialog';
 import ConteoDetailModal from '@/components/conteos/ConteoDetailModal';
 
@@ -22,9 +23,8 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   cancelado: { label: 'Cancelado', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
 };
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export default function ConteosFisicosPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -96,7 +96,7 @@ export default function ConteosFisicosPage() {
         <Card className="p-3">
           <p className="text-xs text-muted-foreground">Diferencia (cerrados)</p>
           <p className={cn("text-2xl font-bold", difTotal >= 0 ? "text-green-600" : "text-red-600")}>
-            $ {fmt(difTotal)}
+            {fmt(difTotal)}
           </p>
         </Card>
       </div>
@@ -173,7 +173,7 @@ export default function ConteosFisicosPage() {
                   <TableCell className="text-right text-xs font-mono">
                     {c.status === 'cerrado' ? (
                       <span className={c.diferencia_total_valor >= 0 ? "text-green-600" : "text-red-600"}>
-                        $ {fmt(c.diferencia_total_valor ?? 0)}
+                        {fmt(c.diferencia_total_valor ?? 0)}
                       </span>
                     ) : '—'}
                   </TableCell>

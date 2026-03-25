@@ -11,8 +11,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, cn } from '@/lib/utils';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -51,6 +50,7 @@ function useCuentasPagar(search: string) {
 }
 
 export default function CuentasPagarPage() {
+  const { fmt } = useCurrency();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -85,11 +85,11 @@ export default function CuentasPagarPage() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total por pagar</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalPorPagar)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalPorPagar)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total compras crédito</p>
-          <p className="text-2xl font-bold text-foreground">$ {fmt(totalCompras)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalCompras)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Con saldo pendiente</p>
@@ -150,13 +150,13 @@ export default function CuentasPagarPage() {
                   <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
                   <td className="py-1.5 px-3 text-center text-muted-foreground">{c.dias_credito ?? 0} días</td>
-                  <td className="py-1.5 px-3 text-right">$ {fmt(c.total ?? 0)}</td>
-                  <td className="py-1.5 px-3 text-right text-success">$ {fmt(pagado)}</td>
+                  <td className="py-1.5 px-3 text-right">{fmt(c.total ?? 0)}</td>
+                  <td className="py-1.5 px-3 text-right text-success">{fmt(pagado)}</td>
                   <td className="py-1.5 px-3 text-right font-bold">
                     {(c.saldo_pendiente ?? 0) > 0 ? (
-                      <span className="text-destructive">$ {fmt(c.saldo_pendiente)}</span>
+                      <span className="text-destructive">{fmt(c.saldo_pendiente)}</span>
                     ) : (
-                      <span className="text-success">$ 0.00</span>
+                      <span className="text-success">{fmt(0)}</span>
                     )}
                   </td>
                   <td className="py-1.5 px-3 text-center">

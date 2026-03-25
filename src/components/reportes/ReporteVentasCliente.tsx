@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteVentasCliente({ data }: { data: any }) {
+  const { fmt } = useCurrency();
   const items = data.ventasPorCliente ?? [];
   const maxVal = items[0]?.total ?? 1;
 
@@ -14,11 +15,11 @@ export function ReporteVentasCliente({ data }: { data: any }) {
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Total vendido</p>
-          <p className="text-lg font-bold text-primary">$ {fmt(items.reduce((s: number, c: any) => s + c.total, 0))}</p>
+          <p className="text-lg font-bold text-primary">{fmt(items.reduce((s: number, c: any) => s + c.total, 0))}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Pendiente cobro</p>
-          <p className="text-lg font-bold text-warning">$ {fmt(items.reduce((s: number, c: any) => s + c.pendiente, 0))}</p>
+          <p className="text-lg font-bold text-warning">{fmt(items.reduce((s: number, c: any) => s + c.pendiente, 0))}</p>
         </div>
       </div>
 
@@ -40,8 +41,8 @@ export function ReporteVentasCliente({ data }: { data: any }) {
                 <td className="py-1.5 px-3 font-bold text-muted-foreground">{i + 1}</td>
                 <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
                 <td className="py-1.5 px-3 text-right">{c.ventas}</td>
-                <td className="py-1.5 px-3 text-right font-bold">$ {fmt(c.total)}</td>
-                <td className={cn("py-1.5 px-3 text-right", c.pendiente > 0 ? "text-warning font-bold" : "text-muted-foreground")}>$ {fmt(c.pendiente)}</td>
+                <td className="py-1.5 px-3 text-right font-bold">{fmt(c.total)}</td>
+                <td className={cn("py-1.5 px-3 text-right", c.pendiente > 0 ? "text-warning font-bold" : "text-muted-foreground")}>{fmt(c.pendiente)}</td>
                 <td className="py-1.5 px-3">
                   <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
                     <div className="h-full bg-primary/70 rounded-full" style={{ width: `${(c.total / maxVal) * 100}%` }} />

@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteVentasProducto({ data }: { data: any }) {
+  const { fmt } = useCurrency();
   const items = data.ventasPorProducto ?? [];
   const maxVal = items[0]?.total ?? 1;
   const totalGeneral = items.reduce((s: number, p: any) => s + p.total, 0);
@@ -19,7 +20,7 @@ export function ReporteVentasProducto({ data }: { data: any }) {
         </div>
         <div className="bg-card border border-border rounded-lg p-3">
           <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
-          <p className="text-lg font-bold text-primary">$ {fmt(totalGeneral)}</p>
+          <p className="text-lg font-bold text-primary">{fmt(totalGeneral)}</p>
         </div>
       </div>
 
@@ -43,8 +44,8 @@ export function ReporteVentasProducto({ data }: { data: any }) {
                 <td className="py-1.5 px-3 text-muted-foreground">{p.codigo}</td>
                 <td className="py-1.5 px-3 font-medium">{p.nombre}</td>
                 <td className="py-1.5 px-3 text-right">{p.cantidad}</td>
-                <td className="py-1.5 px-3 text-right font-bold">$ {fmt(p.total)}</td>
-                <td className={cn("py-1.5 px-3 text-right font-bold", p.utilidad >= 0 ? "text-success" : "text-destructive")}>$ {fmt(p.utilidad)}</td>
+                <td className="py-1.5 px-3 text-right font-bold">{fmt(p.total)}</td>
+                <td className={cn("py-1.5 px-3 text-right font-bold", p.utilidad >= 0 ? "text-success" : "text-destructive")}>{fmt(p.utilidad)}</td>
                 <td className="py-1.5 px-3">
                   <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
                     <div className="h-full bg-primary/70 rounded-full" style={{ width: `${(p.total / maxVal) * 100}%` }} />

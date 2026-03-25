@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteEntregas({ data }: { data: any }) {
+  const { fmt } = useCurrency();
   const [expandedRuta, setExpandedRuta] = useState<number | null>(null);
   const rutas = data.entregasPorRuta ?? [];
 
@@ -40,7 +40,7 @@ export function ReporteEntregas({ data }: { data: any }) {
                     <td className="py-2 px-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</td>
                     <td className="py-2 px-3 font-medium">{r.nombre}</td>
                     <td className="py-2 px-3 text-right">{r.entregas}</td>
-                    <td className="py-2 px-3 text-right font-bold">$ {fmt(r.total)}</td>
+                    <td className="py-2 px-3 text-right font-bold">{fmt(r.total)}</td>
                   </tr>
                   {isOpen && prods.length > 0 && (
                     <tr key={`${i}-detail`}>

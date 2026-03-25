@@ -6,11 +6,11 @@ import { useCompraForm } from './useCompraForm';
 import { CompraHeader } from './CompraHeader';
 import { CompraLineasTab } from './CompraLineasTab';
 import { CompraPagosTab } from './CompraPagosTab';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function CompraFormPage() {
   const h = useCompraForm();
+  const { fmt } = useCurrency();
   if (!h.isNew && h.isLoading) return <div className="p-6"><TableSkeleton rows={6} cols={4} /></div>;
 
   return (
@@ -42,10 +42,10 @@ export default function CompraFormPage() {
 
       <div className="flex justify-end">
         <div className="bg-card border border-border rounded-lg p-4 w-72 space-y-2">
-          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">$ {fmt(h.totals.subtotal)}</span></div>
-          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span className="font-medium">$ {fmt(h.totals.iva_total)}</span></div>
-          <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total</span><span className="font-bold">$ {fmt(h.totals.total)}</span></div>
-          {!h.isNew && (<><div className="border-t border-border pt-2 flex justify-between text-sm"><span className="text-success">Pagado</span><span className="font-medium text-success">$ {fmt(h.totalPagado)}</span></div><div className="flex justify-between text-sm"><span className="text-destructive">Saldo</span><span className="font-bold text-destructive">$ {fmt(h.saldoActual)}</span></div></>)}
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{fmt(h.totals.subtotal)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span className="font-medium">{fmt(h.totals.iva_total)}</span></div>
+          <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total</span><span className="font-bold">{fmt(h.totals.total)}</span></div>
+          {!h.isNew && (<><div className="border-t border-border pt-2 flex justify-between text-sm"><span className="text-success">Pagado</span><span className="font-medium text-success">{fmt(h.totalPagado)}</span></div><div className="flex justify-between text-sm"><span className="text-destructive">Saldo</span><span className="font-bold text-destructive">{fmt(h.saldoActual)}</span></div></>)}
         </div>
       </div>
     </div>

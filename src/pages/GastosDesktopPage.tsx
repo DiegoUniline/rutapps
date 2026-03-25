@@ -12,8 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 function useGastos(search: string) {
   const { empresa } = useAuth();
@@ -35,6 +34,7 @@ function useGastos(search: string) {
 }
 
 export default function GastosDesktopPage() {
+  const { fmt } = useCurrency();
   const { empresa, user } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
@@ -95,7 +95,7 @@ export default function GastosDesktopPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total gastos</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalGastos)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalGastos)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
@@ -145,7 +145,7 @@ export default function GastosDesktopPage() {
                 <TableCell className="font-medium text-[12px]">{g.concepto}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground">{(g.vendedores as any)?.nombre ?? '—'}</TableCell>
                 <TableCell className="text-[12px] text-muted-foreground truncate max-w-[200px]">{g.notas ?? '—'}</TableCell>
-                <TableCell className="text-right font-bold text-destructive">$ {fmt(g.monto)}</TableCell>
+                <TableCell className="text-right font-bold text-destructive">{fmt(g.monto)}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm('¿Eliminar gasto?')) deleteGasto.mutate(g.id); }}>
                     <Trash2 className="h-3.5 w-3.5 text-destructive" />

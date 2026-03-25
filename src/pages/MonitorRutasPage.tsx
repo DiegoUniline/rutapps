@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useVendedores } from '@/hooks/useClientes';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, MarkerF, InfoWindow } from '@react-google-maps/api';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Activity, Users, MapPin, CheckCircle2, XCircle, Clock, Truck,
   ShoppingCart, TrendingUp, Eye, BarChart3, Package, Navigation, CalendarIcon, Filter
@@ -23,7 +24,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const fmtMoney = (n: number) => '$' + n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered' | 'en_ruta';
 
@@ -46,6 +46,7 @@ interface ClientVisit {
 
 function MonitorContent() {
   const { empresa } = useAuth();
+  const { fmt: fmtMoney } = useCurrency();
   const { isLoaded } = useGoogleMaps();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [vendedorFilters, setVendedorFilters] = useState<string[]>([]);

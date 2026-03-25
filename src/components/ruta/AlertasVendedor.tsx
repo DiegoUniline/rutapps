@@ -1,10 +1,10 @@
 import { AlertTriangle, Clock, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function AlertasVendedor() {
+  const { fmt } = useCurrency();
   const { empresa, profile } = useAuth();
   const vendedorId = profile?.vendedor_id;
 
@@ -39,7 +39,7 @@ export default function AlertasVendedor() {
       icon: Clock,
       color: 'text-destructive bg-destructive/10',
       text: `${saldos.length} clientes con saldo`,
-      detail: `$ ${fmt(totalPendiente)} por cobrar`,
+      detail: `${fmt(totalPendiente)} por cobrar`,
     });
   }
 

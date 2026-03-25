@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Banknote, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Pago {
   id: string;
@@ -18,6 +19,7 @@ interface VentaPagosTabProps {
 }
 
 export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, onAddPago }: VentaPagosTabProps) {
+  const { fmt } = useCurrency();
   const [showForm, setShowForm] = useState(false);
   const [monto, setMonto] = useState('');
   const [metodo, setMetodo] = useState('efectivo');
@@ -42,10 +44,10 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
     <div className="p-3 sm:p-4 space-y-3">
       {/* Summary */}
       <div className={cn("bg-muted/40 border border-border rounded-md p-3 space-y-1 text-[13px]", isMobile ? "w-full" : "w-72")}>
-        <div className="flex justify-between"><span className="text-muted-foreground">Total pagado</span><span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Total pagado</span><span className="font-medium">{fmt(totalPagado)}</span></div>
         <div className="flex justify-between border-t border-border pt-1">
           <span className="font-medium">Saldo pendiente</span>
-          <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+          <span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>{fmt(saldoPendiente)}</span>
         </div>
       </div>
 
@@ -58,7 +60,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
                 <div className="text-sm font-medium capitalize">{(p.cobros as Record<string, string> | null)?.metodo_pago ?? '—'}</div>
                 <div className="text-xs text-muted-foreground">{(p.cobros as Record<string, string> | null)?.fecha ?? ''} {(p.cobros as Record<string, string> | null)?.referencia ? `· ${(p.cobros as Record<string, string> | null)?.referencia}` : ''}</div>
               </div>
-              <span className="font-semibold text-sm">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+              <span className="font-semibold text-sm">{fmt(Number(p.monto_aplicado))}</span>
             </div>
           ))}
         </div>
@@ -79,7 +81,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
                 <td className="py-2 px-2">{(p.cobros as Record<string, string> | null)?.fecha ?? ''}</td>
                 <td className="py-2 px-2 capitalize">{(p.cobros as Record<string, string> | null)?.metodo_pago ?? '—'}</td>
                 <td className="py-2 px-2 text-muted-foreground">{(p.cobros as Record<string, string> | null)?.referencia || '—'}</td>
-                <td className="py-2 px-2 text-right font-medium">${Number(p.monto_aplicado).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                <td className="py-2 px-2 text-right font-medium">{fmt(Number(p.monto_aplicado))}</td>
                 <td></td>
               </tr>
             ))}
@@ -117,7 +119,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
             <tfoot>
               <tr className="border-t-2 border-border">
                 <td colSpan={3} className="py-2 px-2 font-semibold text-right">Total pagado</td>
-                <td className="py-2 px-2 text-right font-semibold">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                <td className="py-2 px-2 text-right font-semibold">{fmt(totalPagado)}</td>
                 <td></td>
               </tr>
             </tfoot>
