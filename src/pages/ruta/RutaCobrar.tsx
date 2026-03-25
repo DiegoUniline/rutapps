@@ -445,7 +445,7 @@ export default function RutaCobrar() {
                   <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Aplicar:</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-foreground">$</span>
+                      <span className="text-sm text-foreground">{s}</span>
                       <input
                         type="number"
                         inputMode="decimal"
