@@ -99,6 +99,36 @@ export default function DashboardPage() {
   const { data: topProductos } = useDashboardTopProductos(dateRange);
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
+  const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
+
+  const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
+
+  const devStats = useMemo(() => {
+    let totalUnidades = 0;
+    let totalCredito = 0;
+    const porMotivo: Record<string, number> = {};
+    const porTipo: Record<string, number> = {};
+    const porVendedor: Record<string, { nombre: string; uds: number }> = {};
+    (devoluciones ?? []).forEach((d: any) => {
+      const tipo = d.tipo || 'otro';
+      (d.devolucion_lineas ?? []).forEach((l: any) => {
+        const qty = Number(l.cantidad) || 0;
+        totalUnidades += qty;
+        totalCredito += Number(l.monto_credito) || 0;
+        const motivo = l.motivo || 'otro';
+        porMotivo[motivo] = (porMotivo[motivo] || 0) + qty;
+        porTipo[tipo] = (porTipo[tipo] || 0) + qty;
+      });
+      const vNombre = d.vendedores?.nombre || 'Sin vendedor';
+      const vId = d.vendedor_id || 'none';
+      if (!porVendedor[vId]) porVendedor[vId] = { nombre: vNombre, uds: 0 };
+      porVendedor[vId].uds += (d.devolucion_lineas ?? []).reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+    });
+    const motivoChart = Object.entries(porMotivo).map(([key, value]) => ({ name: MOTIVO_LABELS[key] || key, value }));
+    const tipoChart = Object.entries(porTipo).map(([key, value]) => ({ name: key.charAt(0).toUpperCase() + key.slice(1), value }));
+    const vendedorChart = Object.values(porVendedor).sort((a, b) => b.uds - a.uds);
+    return { totalUnidades, totalCredito, count: (devoluciones ?? []).length, motivoChart, tipoChart, vendedorChart };
+  }, [devoluciones]);
 
   // KPI calculations
   const kpis = useMemo(() => {
