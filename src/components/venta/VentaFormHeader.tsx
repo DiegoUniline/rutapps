@@ -39,7 +39,7 @@ export function VentaFormHeader({
   requiereFactura, readOnly, canCreateEntrega, hayEntregas,
   entregasExistentes, lineasPendientesFactura, isSaving, isCreatingEntrega,
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
-  onNavigateEntrega, onGenerarPdf, onFacturar,
+  onNavigateEntrega, onGenerarPdf, onPrintTicket, onFacturar,
 }: VentaFormHeaderProps) {
   return (
     <div className="bg-card border-b border-border px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-3 sticky top-0 z-10">
