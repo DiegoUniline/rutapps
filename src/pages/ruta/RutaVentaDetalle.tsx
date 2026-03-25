@@ -442,8 +442,8 @@ export default function RutaVentaDetalle() {
 
   const handlePrintTicket = async () => {
     const td = getTicketData(); if (!td) return;
-    const html = buildUnifiedTicketHTML(td, { ticketAncho });
-    // Render ticket as image for thermal printer (RawBT compatible)
+    // Generate at native printer resolution (384px for 58mm, 576px for 80mm)
+    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
@@ -453,19 +453,14 @@ export default function RutaVentaDetalle() {
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 300)));
       const el = container.firstElementChild as HTMLElement;
-      // 384px is the standard width for 58mm at 203dpi; 576px for 80mm
-      const targetWidth = ticketAncho === '58' ? 384 : 576;
-      const currentWidth = el.offsetWidth || 210;
-      const ratio = targetWidth / currentWidth;
-      const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: ratio, backgroundColor: '#ffffff' });
+      // pixelRatio 1 = crisp 1:1 mapping to printer dots (no interpolation blur)
+      const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 1, backgroundColor: '#ffffff' });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `${venta?.folio ?? 'ticket'}.png`, { type: 'image/png' });
 
-      // Try navigator.share first (works great with RawBT on Android)
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: `Ticket ${td.folio}` });
       } else {
-        // Fallback: download the image
         const a = document.createElement('a');
         a.href = dataUrl;
         a.download = file.name;
