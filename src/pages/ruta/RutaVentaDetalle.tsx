@@ -892,6 +892,52 @@ export default function RutaVentaDetalle() {
             </div>
           )}
 
+          {/* Pagos existentes */}
+          {pagosVenta && pagosVenta.length > 0 && (
+            <section className="bg-card rounded-xl border border-border p-3.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos registrados</p>
+              <div className="space-y-1.5">
+                {pagosVenta.map((pa: any) => {
+                  const cobro = pa.cobros;
+                  return (
+                    <div key={pa.id} className="flex items-center justify-between rounded-lg border border-border/60 p-2.5">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium text-foreground">{s}{fmt(pa.monto_aplicado)}</p>
+                        <p className="text-[10px] text-muted-foreground">{cobro?.metodo_pago ?? '—'} · {fmtDate(cobro?.fecha)}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('¿Eliminar este pago?')) return;
+                          setSaving(true);
+                          try {
+                            // Remove the application
+                            await supabase.from('cobro_aplicaciones').delete().eq('id', pa.id);
+                            // Update saldo
+                            const newSaldo = (venta?.saldo_pendiente ?? 0) + pa.monto_aplicado;
+                            await supabase.from('ventas').update({ saldo_pendiente: newSaldo }).eq('id', id!);
+                            // Log historial
+                            await supabase.from('venta_historial').insert({
+                              venta_id: id!, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '',
+                              user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'pago_eliminado',
+                              detalles: { monto: pa.monto_aplicado, metodo: cobro?.metodo_pago } as any,
+                            });
+                            toast.success('Pago eliminado');
+                            refetchPagos();
+                            queryClient.invalidateQueries({ queryKey: ['venta', id] });
+                          } catch (err: any) { toast.error(err.message); }
+                          finally { setSaving(false); }
+                        }}
+                        className="p-1.5 text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <section className="bg-card rounded-xl border border-border p-3.5">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notas</p>
             <textarea
