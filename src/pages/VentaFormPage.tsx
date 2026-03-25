@@ -304,6 +304,7 @@ export default function VentaFormPage() {
     printTicket(td, { ticketAncho });
   };
 
+  const set = (field: string, val: any) => {
     if (readOnly) return;
     setForm(prev => ({ ...prev, [field]: val }));
     setDirty(true);
