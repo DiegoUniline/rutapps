@@ -7,7 +7,7 @@ import {
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
   BarChart3, Users, Loader2, RotateCcw
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
