@@ -167,7 +167,7 @@ export default function ComisionesPage() {
               ))}
             </div>
             <div className="ml-auto text-sm font-semibold text-foreground">
-              Total: <span className="text-odoo-teal font-mono">$ {totalMonto.toFixed(2)}</span>
+              Total: <span className="text-odoo-teal font-mono">{fmt(totalMonto)}</span>
             </div>
           </div>
 
