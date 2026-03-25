@@ -405,7 +405,7 @@ export default function RutaCobrar() {
             <div className="bg-card rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-foreground">{clienteNombre}</p>
-                <p className="text-lg font-bold text-primary tabular-nums">${montoRecibido}</p>
+                <p className="text-lg font-bold text-primary tabular-nums">{fmtM(parseFloat(montoRecibido) || 0)}</p>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0" />
