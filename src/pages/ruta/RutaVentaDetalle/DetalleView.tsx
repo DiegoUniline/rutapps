@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2, RotateCcw, Clock } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useCurrency } from '@/hooks/useCurrency';
 import { statusColors } from './types';
+import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 
 interface Props {
   venta: any;
@@ -48,6 +49,19 @@ export function DetalleView(p: Props) {
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
+        {/* Historial de cambios */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={() => document.getElementById('historial-section')?.classList.toggle('hidden')}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left"
+          >
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[13px] font-semibold text-foreground">Historial de cambios</span>
+          </button>
+          <div id="historial-section">
+            <VentaHistorialTab ventaId={p.venta.id} />
+          </div>
+        </div>
       </div>
       <BottomActions {...p} s={s} lineas={p.lineas} />
       <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={p.clienteData?.telefono ?? ''} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
@@ -65,15 +79,18 @@ function Header({ venta, onBack }: Props) {
   );
 }
 
-function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar }: Props) {
-  const actions = [
+function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar, handleVolverBorrador }: Props) {
+  const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
     { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
     { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
-    { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
     { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
     { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
   ];
-  if (venta.status === 'borrador') actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
+  if (venta.status === 'borrador') {
+    actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
+  } else if (venta.status !== 'cancelado') {
+    actions.push({ icon: RotateCcw, label: 'A borrador', color: 'text-warning', onClick: handleVolverBorrador });
+  }
 
   return (
     <div className="grid grid-cols-5 gap-1">
