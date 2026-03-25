@@ -792,12 +792,12 @@ export default function PuntoVentaPage() {
                       <div className="rounded-lg bg-accent/40 px-3 py-2 space-y-1">
                         <div className="flex justify-between text-[11px]">
                           <span className="text-muted-foreground">Total pagado</span>
-                          <span className="font-bold text-foreground tabular-nums">${fmt(totalPagado)}</span>
+                          <span className="font-bold text-foreground tabular-nums">{fmtM(totalPagado)}</span>
                         </div>
                         {faltante > 0 && (
                           <div className="flex justify-between text-[11px]">
                             <span className="text-destructive font-medium">Faltante</span>
-                            <span className="font-bold text-destructive tabular-nums">${fmt(faltante)}</span>
+                            <span className="font-bold text-destructive tabular-nums">{fmtM(faltante)}</span>
                           </div>
                         )}
                       </div>
