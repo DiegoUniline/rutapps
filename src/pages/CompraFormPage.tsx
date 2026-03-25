@@ -717,7 +717,7 @@ export default function CompraFormPage() {
                     <tbody>
                       {lineas.map((line, idx) => {
                         const iepsLabel = line._tiene_ieps
-                          ? (line._ieps_tipo === 'cuota' ? `$${line._ieps_pct}` : `${line._ieps_pct}%`)
+                          ? (line._ieps_tipo === 'cuota' ? `${s}${line._ieps_pct}` : `${line._ieps_pct}%`)
                           : '';
                         return (
                           <tr key={idx} className="border-b border-table-border" data-row={idx}>
