@@ -63,6 +63,7 @@ export function useVentaForm() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
+  const [sinImpuestos, setSinImpuestos] = useState(false);
   const readOnly = !isNew && form.status !== 'borrador';
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
