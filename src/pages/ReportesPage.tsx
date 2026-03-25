@@ -201,6 +201,12 @@ export default function ReportesPage() {
     );
   };
 
+  const toggleStatus = (val: string) => {
+    setSelectedStatuses(prev =>
+      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    );
+  };
+
   const handleExport = (format: 'excel' | 'pdf') => {
     if (!data) return;
     const config = getExportConfig(tab, data, desde, hasta);
