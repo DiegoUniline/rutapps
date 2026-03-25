@@ -468,7 +468,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // IEPS if any
   if (cfdi.ieps_total > 0) {
     doc.text('IEPS:', totLabelX, y, { align: 'right' });
-    doc.text(`$${fmtCurrency(cfdi.ieps_total)}`, rightX, y, { align: 'right' });
+    doc.text(`${s}${fmtCurrency(cfdi.ieps_total)}`, rightX, y, { align: 'right' });
     y += 5.5;
   }
 
