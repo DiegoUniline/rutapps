@@ -1098,7 +1098,7 @@ export default function RutaVentaDetalle() {
           <div className="bg-card border border-border rounded-xl divide-y divide-border">
             {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
             {lineas.map((l: any) => {
-              const lineTotal = showTax ? (l.total ?? 0) : (l.subtotal ?? l.precio_unitario * l.cantidad ?? 0);
+              const lineTotal = showTax ? (l.total ?? 0) : (l.subtotal ?? 0);
               const lineUnit = showTax ? (l.precio_unitario ?? 0) : (l.precio_unitario ?? 0);
               return (
                 <div key={l.id} className="p-3">
