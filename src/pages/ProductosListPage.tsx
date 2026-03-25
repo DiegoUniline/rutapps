@@ -127,7 +127,7 @@ export default function ProductosListPage() {
                 { label: 'Stock', value: <span className={cn(
                   "font-medium",
                   (p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-foreground"
-                )}>{p.cantidad ?? 0}</span> },
+                )}>{fmtNum(p.cantidad ?? 0)}</span> },
                 ...(p.clasificaciones?.nombre ? [{ label: 'Cat', value: p.clasificaciones.nombre }] : []),
                 ...(p.costo ? [{ label: 'Costo', value: fmt(p.costo) }] : []),
               ]}
