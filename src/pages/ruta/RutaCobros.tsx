@@ -62,7 +62,7 @@ export default function RutaCobros() {
           <div className="bg-success/8 rounded-xl p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total cobrado</p>
-              <p className="text-2xl font-bold text-success tabular-nums">${totalFiltrado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold text-success tabular-nums">{fmt(totalFiltrado)}</p>
             </div>
             <p className="text-sm text-muted-foreground">{filteredCobros.length} cobros</p>
           </div>
