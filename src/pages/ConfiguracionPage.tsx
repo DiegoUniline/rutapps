@@ -303,6 +303,7 @@ export default function ConfiguracionPage() {
   const [moneda, setMoneda] = useState('MXN');
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
   const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
+  const [ticketAncho, setTicketAncho] = useState<'58' | '80'>('80');
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
