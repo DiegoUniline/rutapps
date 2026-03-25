@@ -133,11 +133,15 @@ export function buildTicketHTML(data: TicketData): string {
     `;
   }
 
+  const notasHtml = campos.notas_ticket && empresa.notas_ticket
+    ? `<div style="border-top:1px dashed #aaa;margin:5px 0"></div><div style="text-align:center;font-size:8px;color:#888;padding:4px 0">${empresa.notas_ticket}</div>`
+    : '';
+
   return `<div style="width:320px;padding:12px 16px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4">
     <div style="text-align:center;padding-bottom:6px">
       ${logoHtml}
-      <div style="font-size:12px;font-weight:700">${empresa.nombre}</div>
-      ${rfcHtml}${dirHtml}${telHtml}
+      ${nombreHtml}
+      ${razonHtml}${rfcHtml}${dirHtml}${telHtml}${emailHtml}
     </div>
     <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
     <div style="font-size:10px;padding:4px 0">
@@ -167,6 +171,7 @@ export function buildTicketHTML(data: TicketData): string {
       ${recibidoHtml}
     </div>
     ${saldoHtml}
+    ${notasHtml}
     <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">Elaborado por Uniline — Innovación en la nube</div>
   </div>`;
 }
