@@ -281,7 +281,7 @@ export default function CobranzaPage() {
                       <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
                       <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
                       <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
-                      <TableCell className="text-right font-bold text-success">$ {fmt(c.monto)}</TableCell>
+                      <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
                       <TableCell className="text-center">
                         <Button
                           size="sm"
