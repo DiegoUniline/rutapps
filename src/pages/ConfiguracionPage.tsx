@@ -305,7 +305,7 @@ export default function ConfiguracionPage() {
   // Initialize form from config once loaded — must be in useEffect to avoid
   // setting state during render (React error #310).
   const configId = config?.id;
-  React.useEffect(() => {
+  useEffect(() => {
     if (!config || initialized) return;
     setForm({
       nombre: config.nombre ?? '',
