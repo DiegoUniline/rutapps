@@ -790,7 +790,7 @@ export default function SupervisorDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_1.05fr_0.9fr]">
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_1fr_1fr]">
         <ActivityList
           title="Ventas del día"
           description="Últimas ventas registradas"
@@ -816,6 +816,24 @@ export default function SupervisorDashboardPage() {
             value: fmtMoney(cobro.monto ?? 0),
           }))}
           emptyText="No hay cobros registrados hoy."
+        />
+
+        <ActivityList
+          title="Devoluciones del día"
+          description="Productos devueltos hoy"
+          icon={RotateCcw}
+          items={filteredDevoluciones.slice(0, 12).map((dev: any) => {
+            const lineas = dev.devolucion_lineas ?? [];
+            const uds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+            const motivos = [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
+            return {
+              id: dev.id,
+              primary: dev.clientes?.nombre || '—',
+              secondary: `${sellerNameMap.get(dev.vendedor_id) ?? '—'} · ${motivos}`,
+              value: `${uds} uds`,
+            };
+          })}
+          emptyText="No hay devoluciones registradas hoy."
         />
 
         <ProductPanel products={productosSummary.slice(0, 10)} fmtMoney={fmtMoney} />
