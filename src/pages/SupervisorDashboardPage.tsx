@@ -19,7 +19,7 @@ const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
   const { fmt: fmtMoney } = useCurrency();
-  const today = todayInTimezone((empresa as any)?.zona_horaria);
+  const today = todayInTimezone(empresa?.zona_horaria);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('resumen');
 
