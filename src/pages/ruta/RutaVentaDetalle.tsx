@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle, Printer, Share2, MessageCircle, RotateCcw, Clock } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle, Printer, Share2, MessageCircle, RotateCcw, Clock, MoreVertical, ChevronDown } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
