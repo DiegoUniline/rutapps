@@ -363,7 +363,7 @@ export default function RutaCobrar() {
             <div className="bg-card rounded-xl p-4 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">¿Cuánto te entrega el cliente?</p>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">{s}</span>
                 <input
                   type="number"
                   inputMode="decimal"
