@@ -1313,6 +1313,7 @@ function InfoRow({ icon: Icon, label, value }: { icon: any; label: string; value
 }
 
 function TotalRow({ label, value }: { label: string; value: number }) {
+  const { symbol: s } = useCurrency();
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
   return (
     <div className="flex justify-between">
