@@ -298,13 +298,21 @@ export default function ConfiguracionPage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [initializedForId, setInitializedForId] = useState<string | null>(null);
 
   const [moneda, setMoneda] = useState('MXN');
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
   const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
 
-  // Initialize form from config once loaded — must be in useEffect to avoid
-  // setting state during render (React error #310).
+  // Reset initialized when empresa changes (e.g. super admin switches)
+  const empresaId = empresa?.id;
+  useEffect(() => {
+    if (empresaId && initializedForId && empresaId !== initializedForId) {
+      setInitialized(false);
+      setInitializedForId(null);
+    }
+  }, [empresaId, initializedForId]);
+
   const configId = config?.id;
   useEffect(() => {
     if (!config || initialized) return;
@@ -323,15 +331,18 @@ export default function ConfiguracionPage() {
       notas_ticket: (config as any).notas_ticket ?? '',
     });
     if ((config as any).logo_url) setLogoPreview((config as any).logo_url);
+    else setLogoPreview(null);
     if ((config as any).ticket_campos) {
       setCampos({ ...DEFAULT_CAMPOS, ...((config as any).ticket_campos as Record<string, boolean>) });
     }
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
+    setLogoFile(null);
     setInitialized(true);
+    setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [configId]);
+  }, [configId, initialized]);
 
   const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || (initialized && config && (() => {
     const orig: Record<string, string> = {
