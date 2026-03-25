@@ -1,8 +1,7 @@
 import { AlertTriangle, Clock, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function AlertasVendedor() {
   const { empresa, profile } = useAuth();
