@@ -1,6 +1,7 @@
 import { Star } from 'lucide-react';
 import { OdooField } from '@/components/OdooFormField';
 import type { Producto } from '@/types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   form: Partial<Producto>;
@@ -11,6 +12,7 @@ interface Props {
 const comisionLabels: Record<string, string> = { porcentaje: 'Porcentaje', monto_fijo: 'Monto Fijo' };
 
 export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
+  const { symbol: s, fmt } = useCurrency();
   return (
     <div className="space-y-3">
       <div className="odoo-field-row">
@@ -39,6 +41,7 @@ export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
 }
 
 function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; tarifaLineas?: any[] }) {
+  const { symbol: s, fmt } = useCurrency();
   const lineasConComision = (tarifaLineas ?? []).filter((l: any) => (l as any).comision_pct > 0);
   if (lineasConComision.length === 0) return (
     <>
@@ -63,14 +66,14 @@ function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; t
               else if (l.tipo_calculo === 'descuento_precio') precio = Math.max(pr * (1 - (l.descuento_pct ?? 0) / 100), l.precio_minimo ?? 0);
               else precio = Math.max(l.precio ?? 0, l.precio_minimo ?? 0);
               const comisionMonto = (precio * (l.comision_pct ?? 0)) / 100;
-              const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo $${(l.precio ?? 0).toFixed(2)}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
+              const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo ${s}${(l.precio ?? 0).toFixed(2)}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
               return (
                 <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                   <td className="py-1.5 px-3 text-xs"><span className="flex items-center gap-1">{l.lista_precios?.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}{l.lista_precios?.nombre ?? l.tarifas?.nombre ?? '—'}</span></td>
                   <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(precio)}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{l.comision_pct}%</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-green-600">$ {comisionMonto.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-green-600">{fmt(comisionMonto)}</td>
                 </tr>
               );
             })}

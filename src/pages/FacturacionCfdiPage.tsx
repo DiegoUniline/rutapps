@@ -15,6 +15,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useCurrency } from '@/hooks/useCurrency';
 import { CatalogosTab } from '@/components/facturacion/CatalogosTab';
 import { TimbrarDialog } from '@/components/facturacion/TimbrarDialog';
 import { ConfigEmisorCard } from '@/components/facturacion/ConfigEmisorCard';
@@ -39,6 +40,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function FacturacionCfdiPage() {
   const { empresa } = useAuth();
+  const { fmt } = useCurrency();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -216,7 +218,7 @@ export default function FacturacionCfdiPage() {
                          {(cfdi.ventas as any)?.folio || '—'}
                        </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${Number(cfdi.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        {fmt(Number(cfdi.total || 0))}
                       </TableCell>
                       <TableCell>
                         <Badge variant={(STATUS_COLORS[cfdi.status] || 'secondary') as any} className="text-[10px]">

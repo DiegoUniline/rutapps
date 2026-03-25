@@ -15,6 +15,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
@@ -89,6 +90,7 @@ function buildDeudaMessage(deudor: { nombre: string; total: number; ventas: numb
 export default function CobranzaPage() {
   const { empresa } = useAuth();
   const isMobile = useIsMobile();
+  const { fmt: fmtC } = useCurrency();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'cobros' | 'deudores'>('deudores');
   const { data: cobros, isLoading } = useCobros(search);
@@ -131,7 +133,7 @@ export default function CobranzaPage() {
       <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-3")}>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total por cobrar</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalDeuda)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmtC(totalDeuda)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Clientes con deuda</p>
@@ -174,7 +176,7 @@ export default function CobranzaPage() {
                 }
                 fields={[
                   { label: 'Ventas pendientes', value: d.ventas },
-                  { label: 'Saldo', value: <span className="text-destructive font-bold">$ {fmt(d.total)}</span> },
+                  { label: 'Saldo', value: <span className="text-destructive font-bold">{fmtC(d.total)}</span> },
                 ]}
               />
             ))}
@@ -200,7 +202,7 @@ export default function CobranzaPage() {
                     <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
                     <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
                     <TableCell className="text-center">{d.ventas}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">$ {fmt(d.total)}</TableCell>
+                    <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
                     <TableCell className="text-center">
                       <Button
                         size="sm"
@@ -252,7 +254,7 @@ export default function CobranzaPage() {
                   }
                   fields={[
                     ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
-                    { label: 'Monto', value: <span className="text-success font-bold">$ {fmt(c.monto)}</span> },
+                    { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
                   ]}
                 />
               ))}
@@ -279,7 +281,7 @@ export default function CobranzaPage() {
                       <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
                       <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
                       <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
-                      <TableCell className="text-right font-bold text-success">$ {fmt(c.monto)}</TableCell>
+                      <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
                       <TableCell className="text-center">
                         <Button
                           size="sm"

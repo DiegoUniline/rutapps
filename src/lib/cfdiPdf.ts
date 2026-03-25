@@ -387,9 +387,9 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
       l.descripcion,
       { content: String(l.cantidad), styles: { halign: 'center' } },
       `${l.unit_code} ${l.unit_name}`,
-      { content: `$${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
+      { content: `${s}${fmtCurrency(l.precio_unitario)}`, styles: { halign: 'right' } },
       { content: ivaStr, styles: { halign: 'center' } },
-      { content: `$${fmtCurrency(l.subtotal)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: `${s}${fmtCurrency(l.subtotal)}`, styles: { halign: 'right', fontStyle: 'bold' } },
     ]);
   }
 
@@ -462,25 +462,25 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text('Subtotal:', totLabelX, y, { align: 'right' });
-  doc.text(`$${fmtCurrency(cfdi.subtotal)}`, rightX, y, { align: 'right' });
+  doc.text(`${s}${fmtCurrency(cfdi.subtotal)}`, rightX, y, { align: 'right' });
   y += 5.5;
 
   // IEPS if any
   if (cfdi.ieps_total > 0) {
     doc.text('IEPS:', totLabelX, y, { align: 'right' });
-    doc.text(`$${fmtCurrency(cfdi.ieps_total)}`, rightX, y, { align: 'right' });
+    doc.text(`${s}${fmtCurrency(cfdi.ieps_total)}`, rightX, y, { align: 'right' });
     y += 5.5;
   }
 
   // IVA
   doc.text('IVA 16%:', totLabelX, y, { align: 'right' });
-  doc.text(`$${fmtCurrency(cfdi.iva_total)}`, rightX, y, { align: 'right' });
+  doc.text(`${s}${fmtCurrency(cfdi.iva_total)}`, rightX, y, { align: 'right' });
   y += 5.5;
 
   // Retenciones if any
   if (cfdi.retenciones_total > 0) {
     doc.text('Retenciones:', totLabelX, y, { align: 'right' });
-    doc.text(`-$${fmtCurrency(cfdi.retenciones_total)}`, rightX, y, { align: 'right' });
+    doc.text(`-${s}${fmtCurrency(cfdi.retenciones_total)}`, rightX, y, { align: 'right' });
     y += 5.5;
   }
 
@@ -494,7 +494,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text('Total:', totLabelX, y, { align: 'right' });
-  doc.text(`$${fmtCurrency(cfdi.total)}`, rightX, y, { align: 'right' });
+  doc.text(`${s}${fmtCurrency(cfdi.total)}`, rightX, y, { align: 'right' });
   y += 8;
 
   // ═══════════════════════════════════════════════════════

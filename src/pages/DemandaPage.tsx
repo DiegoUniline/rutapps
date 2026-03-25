@@ -12,6 +12,7 @@ import ModalSelect from '@/components/ModalSelect';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
@@ -80,6 +81,7 @@ function usePedidosPendientes() {
 
 export default function DemandaPage() {
   const { empresa } = useAuth();
+  const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: pedidos, isLoading } = usePedidosPendientes();
@@ -226,7 +228,7 @@ export default function DemandaPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Valor pendiente</p>
-          <p className="text-2xl font-bold text-primary">$ {totalValorPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-primary">{fmt(totalValorPendiente)}</p>
         </div>
       </div>
 

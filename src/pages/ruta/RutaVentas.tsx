@@ -6,10 +6,12 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { fmtDate } from '@/lib/utils';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   const vendedorId = profile?.vendedor_id || profile?.id;
@@ -95,9 +97,9 @@ export default function RutaVentas() {
                 <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)}</p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-[15px] font-bold text-foreground">$ {(v.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                <p className="text-[15px] font-bold text-foreground">{fmt(v.total ?? 0)}</p>
                 {saldo > 0 && v.status !== 'cancelado' && (
-                  <p className="text-[11px] font-medium text-destructive">Saldo: ${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                  <p className="text-[11px] font-medium text-destructive">Saldo: {fmt(saldo)}</p>
                 )}
                 {saldo <= 0 && v.status !== 'borrador' && v.status !== 'cancelado' && (
                   <p className="text-[11px] font-medium text-primary">Pagado</p>

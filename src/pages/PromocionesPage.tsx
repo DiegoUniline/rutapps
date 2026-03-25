@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
@@ -41,6 +42,7 @@ const emptyPromo: Partial<Promocion> = {
 
 export default function PromocionesPage() {
   const { data: promociones, isLoading } = usePromociones();
+  const { symbol: s } = useCurrency();
   const savePromo = useSavePromocion();
   const deletePromo = useDeletePromocion();
   const [search, setSearch] = useState('');
@@ -112,7 +114,7 @@ export default function PromocionesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-foreground">
-                      {p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen' ? `${p.valor}%` : `$${p.valor}`}
+                      {p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen' ? `${p.valor}%` : `${s}${p.valor}`}
                       {p.cantidad_minima > 0 && <span className="text-xs text-muted-foreground ml-1">(min {p.cantidad_minima})</span>}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{APLICA_LABELS[p.aplica_a]}</td>

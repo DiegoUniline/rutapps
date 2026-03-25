@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const METODO_ICONS: Record<string, any> = {
   efectivo: Banknote,
@@ -16,6 +17,7 @@ const METODO_ICONS: Record<string, any> = {
 export default function RutaCobros() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
+  const { fmt } = useCurrency();
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const { data: cobros } = useOfflineQuery('cobros', {
@@ -61,7 +63,7 @@ export default function RutaCobros() {
           <div className="bg-success/8 rounded-xl p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total cobrado</p>
-              <p className="text-2xl font-bold text-success tabular-nums">${totalFiltrado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold text-success tabular-nums">{fmt(totalFiltrado)}</p>
             </div>
             <p className="text-sm text-muted-foreground">{filteredCobros.length} cobros</p>
           </div>
@@ -83,7 +85,7 @@ export default function RutaCobros() {
                   <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · {c.metodo_pago}</p>
                 </div>
                 <p className="text-sm font-bold text-success shrink-0 tabular-nums">
-                  +${(c.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  +{fmt(c.monto ?? 0)}
                 </p>
               </div>
             );

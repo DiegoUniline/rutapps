@@ -13,8 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn, fmtDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtLocal = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -64,6 +65,7 @@ function useCompras(search: string, statusFilter: string) {
 
 export default function ComprasPage() {
   const navigate = useNavigate();
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [page, setPage] = useState(1);
@@ -97,11 +99,11 @@ export default function ComprasPage() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total compras</p>
-          <p className="text-2xl font-bold text-foreground">$ {fmt(totalCompras)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalCompras)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Saldo por pagar</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalSaldo)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalSaldo)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
@@ -189,12 +191,12 @@ export default function ComprasPage() {
                         {c.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}
                       </span>
                     </td>
-                    <td className="py-1.5 px-3 text-right font-medium">$ {fmt(c.total ?? 0)}</td>
+                    <td className="py-1.5 px-3 text-right font-medium">{fmt(c.total ?? 0)}</td>
                     <td className="py-1.5 px-3 text-right hidden sm:table-cell">
                       {(c.saldo_pendiente ?? 0) > 0 ? (
-                        <span className="text-destructive font-medium">$ {fmt(c.saldo_pendiente)}</span>
+                        <span className="text-destructive font-medium">{fmt(c.saldo_pendiente)}</span>
                       ) : (
-                        <span className="text-muted-foreground">$ 0.00</span>
+                        <span className="text-muted-foreground">{fmt(0)}</span>
                       )}
                     </td>
                     <td className="py-1.5 px-3 text-center">

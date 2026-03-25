@@ -1,6 +1,7 @@
 import { OdooField } from '@/components/OdooFormField';
 import { calcTax } from '@/lib/taxUtils';
 import type { Producto, UnidadSat } from '@/types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   form: Partial<Producto>;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
+  const { symbol: s } = useCurrency();
   const findSat = (list: UnidadSat[] | undefined, id: string | undefined) => {
     const u = list?.find(i => i.id === id);
     return u ? `${u.clave} - ${u.nombre}` : '';
@@ -36,7 +38,7 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
             {(['porcentaje', 'cuota'] as const).map(t => (
               <button key={t} type="button" onClick={() => set('ieps_tipo', t)}
                 className={`text-[11px] px-3 py-1 rounded border transition-colors ${(form.ieps_tipo || 'porcentaje') === t ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
-                {t === 'porcentaje' ? '% Porcentaje' : '$ Cuota fija'}
+                {t === 'porcentaje' ? '% Porcentaje' : `${s} Cuota fija`}
               </button>
             ))}
           </div>
@@ -60,7 +62,7 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
           <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
             {(() => {
               const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, ieps_tipo: (form.ieps_tipo as any) || 'porcentaje', incluye_impuestos: true });
-              return <>Costo neto: <strong>$ {t.precio_neto.toFixed(2)}</strong> + IEPS: $ {t.ieps_monto.toFixed(2)} + IVA: $ {t.iva_monto.toFixed(2)}</>;
+              return <>Costo neto: <strong>{s} {t.precio_neto.toFixed(2)}</strong> + IEPS: {s} {t.ieps_monto.toFixed(2)} + IVA: {s} {t.iva_monto.toFixed(2)}</>;
             })()}
           </div>
         )}

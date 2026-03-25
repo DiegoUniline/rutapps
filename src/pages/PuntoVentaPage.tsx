@@ -13,6 +13,7 @@ import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
@@ -41,6 +42,7 @@ interface PaySplit {
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
   const { empresa, user, profile } = useAuth();
+  const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const scanRef = useRef<HTMLInputElement>(null);
 
@@ -240,6 +242,7 @@ export default function PuntoVentaPage() {
   const faltante = Math.max(0, totals.total - totalPagado);
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtM = (n: number) => `${s}${fmt(n)}`;
 
   const addSplit = () => setPaySplits(prev => [...prev, { id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
   const removeSplit = (id: string) => setPaySplits(prev => prev.length > 1 ? prev.filter(p => p.id !== id) : prev);
@@ -522,7 +525,7 @@ export default function PuntoVentaPage() {
                     <p className="text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
                     <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[14px] font-bold text-primary">${fmt(p.precio_principal ?? 0)}</span>
+                      <span className="text-[14px] font-bold text-primary">{fmtM(p.precio_principal ?? 0)}</span>
                       <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                         {fmtNum(stock)} disp.
                       </span>
@@ -606,7 +609,7 @@ export default function PuntoVentaPage() {
                       onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v); }}
                       onFocus={e => e.target.select()}
                     />
-                    <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">${fmt(lineTotal)}</span>
+                    <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
                 </div>
               );
@@ -617,23 +620,23 @@ export default function PuntoVentaPage() {
           <div className="border-t border-border px-4 py-3 space-y-2 bg-card">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground tabular-nums">${fmt(totals.subtotal)}</span>
+              <span className="font-medium text-foreground tabular-nums">{fmtM(totals.subtotal)}</span>
             </div>
             {totals.iva > 0 && (
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">IVA</span>
-                <span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span>
+                <span className="font-medium text-foreground tabular-nums">{fmtM(totals.iva)}</span>
               </div>
             )}
             {totals.ieps > 0 && (
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">IEPS</span>
-                <span className="font-medium text-foreground tabular-nums">${fmt(totals.ieps)}</span>
+                <span className="font-medium text-foreground tabular-nums">{fmtM(totals.ieps)}</span>
               </div>
             )}
             <div className="flex justify-between items-baseline pt-2 border-t border-border">
               <span className="text-[14px] font-bold text-foreground">Total</span>
-              <span className="text-[24px] font-black text-primary tabular-nums">${fmt(totals.total)}</span>
+              <span className="text-[24px] font-black text-primary tabular-nums">{fmtM(totals.total)}</span>
             </div>
 
             <button
@@ -701,7 +704,7 @@ export default function PuntoVentaPage() {
               </div>
               <div className="flex items-baseline justify-between mt-2">
                 <span className="text-[13px] text-muted-foreground">{clienteNombre} · {totals.items} artículos</span>
-                <span className="text-[28px] font-black text-primary tabular-nums">${fmt(totals.total)}</span>
+                <span className="text-[28px] font-black text-primary tabular-nums">{fmtM(totals.total)}</span>
               </div>
             </div>
 
@@ -749,7 +752,7 @@ export default function PuntoVentaPage() {
                         </div>
                         {/* Amount */}
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -789,12 +792,12 @@ export default function PuntoVentaPage() {
                       <div className="rounded-lg bg-accent/40 px-3 py-2 space-y-1">
                         <div className="flex justify-between text-[11px]">
                           <span className="text-muted-foreground">Total pagado</span>
-                          <span className="font-bold text-foreground tabular-nums">${fmt(totalPagado)}</span>
+                          <span className="font-bold text-foreground tabular-nums">{fmtM(totalPagado)}</span>
                         </div>
                         {faltante > 0 && (
                           <div className="flex justify-between text-[11px]">
                             <span className="text-destructive font-medium">Faltante</span>
-                            <span className="font-bold text-destructive tabular-nums">${fmt(faltante)}</span>
+                            <span className="font-bold text-destructive tabular-nums">{fmtM(faltante)}</span>
                           </div>
                         )}
                       </div>
@@ -803,7 +806,7 @@ export default function PuntoVentaPage() {
                     {cambio > 0 && (
                       <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2.5">
                         <span className="text-[13px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-                        <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">${fmt(cambio)}</span>
+                        <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">{fmtM(cambio)}</span>
                       </div>
                     )}
                   </div>
@@ -824,7 +827,7 @@ export default function PuntoVentaPage() {
                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 text-[16px] font-bold disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Check className="h-5 w-5" />
-                {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar $${fmt(totals.total)}`}
+                {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar ${fmtM(totals.total)}`}
               </button>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { queueOperation } from '@/lib/syncQueue';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
+import { useCurrency } from '@/hooks/useCurrency';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
@@ -28,6 +29,7 @@ const METODOS_PAGO = [
 export default function RutaCobrar() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
+  const { symbol: s, fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<Step>('cliente');
@@ -169,7 +171,7 @@ export default function RutaCobrar() {
         }
       }
 
-      toast.success(`¡Cobro de $${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} registrado!`);
+      toast.success(`¡Cobro de ${fmtC(totalAplicado)} registrado!`);
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       navigate('/ruta/cobros');
     } catch (err: any) {
@@ -202,6 +204,7 @@ export default function RutaCobrar() {
   };
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const fmtM = (n: number) => `${s}${fmt(n)}`;
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -265,7 +268,7 @@ export default function RutaCobrar() {
                         {c.codigo && <p className="text-xs text-muted-foreground">{c.codigo}</p>}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-destructive">${fmt(c.saldoPendiente)}</p>
+                        <p className="text-sm font-bold text-destructive">{fmtM(c.saldoPendiente)}</p>
                         <p className="text-xs text-muted-foreground">pendiente</p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground/40 shrink-0" />
@@ -316,7 +319,7 @@ export default function RutaCobrar() {
                 <p className="text-sm font-semibold text-foreground truncate">{clienteNombre}</p>
                 {totalPendienteCliente > 0 && (
                   <p className="text-xs text-destructive font-medium">
-                    Deuda total: ${fmt(totalPendienteCliente)}
+                    Deuda total: {fmtM(totalPendienteCliente)}
                     {ventasPendientes && ventasPendientes.length > 0 && ` · ${ventasPendientes.length} cuenta${ventasPendientes.length > 1 ? 's' : ''}`}
                   </p>
                 )}
@@ -348,7 +351,7 @@ export default function RutaCobrar() {
                             </p>
                           </div>
                         </div>
-                        <p className="text-sm font-bold text-foreground tabular-nums">${fmt(v.saldo_pendiente ?? 0)}</p>
+                        <p className="text-sm font-bold text-foreground tabular-nums">{fmtM(v.saldo_pendiente ?? 0)}</p>
                       </div>
                     );
                   })}
@@ -360,7 +363,7 @@ export default function RutaCobrar() {
             <div className="bg-card rounded-xl p-4 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">¿Cuánto te entrega el cliente?</p>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg text-muted-foreground">{s}</span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -376,7 +379,7 @@ export default function RutaCobrar() {
                   onClick={() => setMontoRecibido(totalPendienteCliente.toString())}
                   className="text-xs text-primary font-semibold active:underline"
                 >
-                  Liquidar todo · ${fmt(totalPendienteCliente)}
+                  Liquidar todo · {fmtM(totalPendienteCliente)}
                 </button>
               )}
             </div>
@@ -402,7 +405,7 @@ export default function RutaCobrar() {
             <div className="bg-card rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-foreground">{clienteNombre}</p>
-                <p className="text-lg font-bold text-primary tabular-nums">${montoRecibido}</p>
+                <p className="text-lg font-bold text-primary tabular-nums">{fmtM(parseFloat(montoRecibido) || 0)}</p>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Info className="h-3.5 w-3.5 shrink-0" />
@@ -434,7 +437,7 @@ export default function RutaCobrar() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDate(c.fecha)} · {dias}d · Saldo: ${fmt(c.saldo_pendiente)}
+                        {formatDate(c.fecha)} · {dias}d · Saldo: {fmtM(c.saldo_pendiente)}
                       </p>
                     </div>
                   </div>
@@ -442,7 +445,7 @@ export default function RutaCobrar() {
                   <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Aplicar:</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-foreground">$</span>
+                      <span className="text-sm text-foreground">{s}</span>
                       <input
                         type="number"
                         inputMode="decimal"
@@ -465,7 +468,7 @@ export default function RutaCobrar() {
               <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Sobrante: ${fmt(sobrante)}</p>
+                  <p className="text-sm font-semibold text-foreground">Sobrante: {fmtM(sobrante)}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     El cliente entrega más de lo que debe. Revisa los montos o registra como anticipo.
                   </p>
@@ -480,7 +483,7 @@ export default function RutaCobrar() {
               <span className="text-xs text-muted-foreground">
                 {cuentas.filter(c => c.montoAplicar > 0).length} cuentas
               </span>
-              <span className="text-sm font-bold text-foreground tabular-nums">Total: ${fmt(totalAplicado)}</span>
+              <span className="text-sm font-bold text-foreground tabular-nums">Total: {fmtM(totalAplicado)}</span>
             </div>
             <button
               onClick={() => setStep('pago')}
@@ -501,7 +504,7 @@ export default function RutaCobrar() {
             {/* Total to collect */}
             <section className="bg-card rounded-xl p-5 text-center">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total a cobrar</p>
-              <p className="text-3xl font-bold text-primary tabular-nums">${fmt(totalAplicado)}</p>
+              <p className="text-3xl font-bold text-primary tabular-nums">{fmtM(totalAplicado)}</p>
               <p className="text-sm text-muted-foreground mt-1">{clienteNombre}</p>
             </section>
 
@@ -546,10 +549,10 @@ export default function RutaCobrar() {
                   <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0">
                     <div>
                       <p className="text-sm font-medium text-foreground">{c.folio || 'Sin folio'}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · Saldo: ${fmt(c.saldo_pendiente)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · Saldo: {fmtM(c.saldo_pendiente)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-foreground tabular-nums">${fmt(c.montoAplicar)}</p>
+                      <p className="text-sm font-bold text-foreground tabular-nums">{fmtM(c.montoAplicar)}</p>
                       {c.montoAplicar >= c.saldo_pendiente && (
                         <span className="text-[11px] text-success font-medium">Liquidada</span>
                       )}
@@ -580,7 +583,7 @@ export default function RutaCobrar() {
               className="w-full bg-success text-success-foreground rounded-xl py-4 text-base font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-success/20 flex items-center justify-center gap-2 min-h-[52px]"
             >
               <Check className="h-5 w-5" />
-              {saving ? 'Registrando...' : `Confirmar cobro · $${fmt(totalAplicado)}`}
+              {saving ? 'Registrando...' : `Confirmar cobro · ${fmtM(totalAplicado)}`}
             </button>
           </div>
         </div>

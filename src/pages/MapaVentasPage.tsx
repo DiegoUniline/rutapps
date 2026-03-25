@@ -8,6 +8,7 @@ import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
 import { Filter, ShoppingCart, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import MapRecenterButton from '@/components/MapRecenterButton';
@@ -39,6 +40,7 @@ type ViewMode = 'pedidos' | 'entregas';
 
 export default function MapaVentasPage() {
   const { user, empresa } = useAuth();
+  const { fmt } = useCurrency();
   const { isLoaded } = useGoogleMaps();
   const [viewMode, setViewMode] = useState<ViewMode>('entregas');
   const [fechaDesde, setFechaDesde] = useState(weekAgo);
@@ -395,7 +397,7 @@ export default function MapaVentasPage() {
             </div>
             {viewMode === 'pedidos' && (
               <div className="bg-accent rounded-lg px-3 py-1.5 text-center">
-                <div className="text-lg font-bold text-foreground">${stats.montoTotal.toLocaleString('es-MX', { minimumFractionDigits: 0 })}</div>
+                <div className="text-lg font-bold text-foreground">{fmt(stats.montoTotal)}</div>
                 <div className="text-[10px] text-muted-foreground font-medium">Total</div>
               </div>
             )}
@@ -584,7 +586,7 @@ export default function MapaVentasPage() {
                   <div className="text-xs text-gray-500 mb-1">{selectedVenta.clientes?.direccion ?? ''}</div>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs text-gray-500">{new Date(selectedVenta.fecha).toLocaleDateString('es-MX')}</span>
-                    <span className="text-sm font-bold text-green-600">${(selectedVenta.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-sm font-bold text-green-600">{fmt(selectedVenta.total ?? 0)}</span>
                   </div>
                   {selectedVenta.vendedores?.nombre && <div className="text-[10px] text-gray-400">Vendedor: {selectedVenta.vendedores.nombre}</div>}
                   <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-gray-100">

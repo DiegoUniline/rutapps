@@ -3,7 +3,7 @@
  */
 
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmt = (n: number) => `$${fmtNum(n)}`;
+const makeFmt = (sym: string) => (n: number) => `${sym}${fmtNum(n)}`;
 
 export interface StockLineItem {
   nombre: string;
@@ -15,6 +15,7 @@ export interface StockLineItem {
 }
 
 export interface LiquidacionTicketData {
+  currencySymbol?: string;
   empresaNombre: string;
   vendedorNombre: string;
   fechaInicio: string;
@@ -46,6 +47,7 @@ export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string 
     empresaNombre, vendedorNombre, fechaInicio, fechaFin, status,
     efectivoEntregado, ventas, cobros, gastos, devoluciones, cuadre,
   } = data;
+  const fmt = makeFmt(data.currencySymbol ?? '$');
 
   const totalVentas = ventas.reduce((s, v) => s + v.total, 0);
   const totalCobros = cobros.reduce((s, c) => s + c.monto, 0);
