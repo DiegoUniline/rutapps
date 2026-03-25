@@ -11,6 +11,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Check, DollarSign } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
 
 const PAGE_SIZE = 20;
