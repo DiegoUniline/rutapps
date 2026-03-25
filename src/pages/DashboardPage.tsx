@@ -390,7 +390,7 @@ export default function DashboardPage() {
                     <div className={cn("text-xs font-bold", Number(p.cantidad ?? 0) <= 0 ? "text-destructive" : "text-[hsl(var(--warning))]")}>
                       {fmtNum(Number(p.cantidad ?? 0))}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">mín: {Number(p.min ?? 0)}</div>
+                    <div className="text-[10px] text-muted-foreground">mín: {fmtNum(Number(p.min ?? 0))}</div>
                   </div>
                 </div>
               ))}
