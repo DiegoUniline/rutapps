@@ -81,6 +81,7 @@ export default function VentaFormPage() {
     printTicket(td, { ticketAncho });
   };
 
+  const onClienteChange = (cId: string) => {
     set('cliente_id', cId);
     const c = clientesList?.find(cl => cl.id === cId);
     const clienteTarifa = c?.tarifa_id || tarifasList?.find(t => t.tipo === 'general')?.id;
