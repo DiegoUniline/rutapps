@@ -78,7 +78,7 @@ export default function CuentasCobrarPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
-          <p className="text-2xl font-bold text-foreground">$ {fmt(totalVentas)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalVentas)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">% Cobrado</p>
