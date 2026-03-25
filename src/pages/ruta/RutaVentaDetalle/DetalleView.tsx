@@ -41,10 +41,10 @@ export function DetalleView(p: Props) {
       <Header {...p} />
       <WADialog {...p} s={s} />
       <div className="p-4 space-y-4 pb-28">
+        <ActionsBar {...p} />
         <TotalCard venta={p.venta} fmt={p.fmt} s={s} />
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} />
-        <ActionsBar {...p} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
       </div>
