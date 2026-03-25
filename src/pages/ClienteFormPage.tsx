@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import GpsMapPicker from '@/components/GpsMapPicker';
@@ -192,6 +192,9 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
 
 export default function ClienteFormPage() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const fromRuta = searchParams.get('from') === 'ruta';
+  const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const isNew = id === 'nuevo';
@@ -241,6 +244,13 @@ export default function ClienteFormPage() {
     }
   }, [isNew, allListasPrecios]);
 
+  // Auto-assign vendedor when coming from ruta
+  useEffect(() => {
+    if (isNew && vendedorIdParam && !form.vendedor_id) {
+      set('vendedor_id', vendedorIdParam);
+    }
+  }, [isNew, vendedorIdParam]);
+
   useEffect(() => {
     if (existing) { setForm(existing); setOriginalForm(existing); }
   }, [existing]);
@@ -278,7 +288,9 @@ export default function ClienteFormPage() {
       }
       toast.success('Cliente guardado');
       setOriginalForm({ ...form });
-      if (isNew && result?.id) navigate(`/clientes/${result.id}`, { replace: true });
+      if (isNew && result?.id) {
+        navigate(fromRuta ? '/ruta/clientes' : `/clientes/${result.id}`, { replace: true });
+      }
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -288,7 +300,7 @@ export default function ClienteFormPage() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Cliente eliminado');
-      navigate('/clientes');
+      navigate(fromRuta ? '/ruta/clientes' : '/clientes');
     } catch (err: any) { toast.error(err.message); }
   };
 
@@ -396,7 +408,7 @@ export default function ClienteFormPage() {
   return (
     <div className="p-4 min-h-full">
       <div className="mb-0.5">
-        <Link to="/clientes" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">Clientes</Link>
+        <Link to={fromRuta ? '/ruta/clientes' : '/clientes'} className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">{fromRuta ? '← Ruta' : 'Clientes'}</Link>
       </div>
 
       {/* Title + Photos */}
