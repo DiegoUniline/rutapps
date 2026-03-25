@@ -767,7 +767,7 @@ export default function RutaVentaDetalle() {
                           <p className="text-[12.5px] font-medium text-foreground truncate">{p.nombre}</p>
                           <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span>
                           <p className="text-[13px] font-bold text-foreground mt-px">
-                            ${fmt(p.precio_principal ?? 0)}
+                            {s}{fmt(p.precio_principal ?? 0)}
                           </p>
                         </div>
 
