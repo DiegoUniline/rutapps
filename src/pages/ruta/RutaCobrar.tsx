@@ -171,7 +171,7 @@ export default function RutaCobrar() {
         }
       }
 
-      toast.success(`¡Cobro de $${totalAplicado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} registrado!`);
+      toast.success(`¡Cobro de ${fmtC(totalAplicado)} registrado!`);
       queryClient.invalidateQueries({ queryKey: ['ruta-stats'] });
       navigate('/ruta/cobros');
     } catch (err: any) {
