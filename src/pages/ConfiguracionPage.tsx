@@ -541,6 +541,37 @@ export default function ConfiguracionPage() {
             </select>
           </div>
 
+          {/* Zona horaria */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Zona horaria
+            </h3>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Define la zona horaria para que las fechas de ventas, cobros y reportes coincidan con tu hora local.
+            </p>
+            <select
+              value={zonaHoraria}
+              onChange={e => setZonaHoraria(e.target.value)}
+              className="input-odoo text-[13px] w-full max-w-xs"
+            >
+              <option value="America/Mexico_City">Ciudad de México (Centro)</option>
+              <option value="America/Monterrey">Monterrey (Centro)</option>
+              <option value="America/Cancun">Cancún (Sureste)</option>
+              <option value="America/Mazatlan">Mazatlán (Pacífico)</option>
+              <option value="America/Hermosillo">Hermosillo (Sonora)</option>
+              <option value="America/Tijuana">Tijuana (Noroeste)</option>
+              <option value="America/Chihuahua">Chihuahua</option>
+              <option value="America/Merida">Mérida</option>
+              <option value="America/Bogota">Bogotá, Colombia</option>
+              <option value="America/Lima">Lima, Perú</option>
+              <option value="America/Santiago">Santiago, Chile</option>
+              <option value="America/Argentina/Buenos_Aires">Buenos Aires, Argentina</option>
+              <option value="America/New_York">Nueva York (Este EUA)</option>
+              <option value="America/Los_Angeles">Los Ángeles (Pacífico EUA)</option>
+              <option value="Europe/Madrid">Madrid, España</option>
+            </select>
+          </div>
+
           {/* Visibilidad de datos */}
           <div className="bg-card border border-border rounded-lg p-5">
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
