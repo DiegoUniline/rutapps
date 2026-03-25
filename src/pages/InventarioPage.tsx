@@ -422,7 +422,7 @@ export default function InventarioPage() {
                       );
                     })}
                     <TableCell className={cn("text-center font-bold", totalAlm <= 0 ? "text-destructive" : "")}>
-                      {totalAlm}
+                      {fmtNum(totalAlm)}
                     </TableCell>
                     <TableCell className="text-right text-[12px]">$ {fmt(p.costo ?? 0)}</TableCell>
                     <TableCell className="text-right text-[12px]">$ {fmt(totalAlm * (p.costo ?? 0))}</TableCell>
