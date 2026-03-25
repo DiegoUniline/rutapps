@@ -66,15 +66,18 @@ function Header({ venta, onBack }: Props) {
   );
 }
 
-function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar }: Props) {
-  const actions = [
+function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, venta, initEditar, handleCancelar, handleVolverBorrador }: Props) {
+  const actions: { icon: any; label: string; color: string; onClick: () => void }[] = [
     { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
     { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
-    { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
     { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
     { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
   ];
-  if (venta.status === 'borrador') actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
+  if (venta.status === 'borrador') {
+    actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
+  } else if (venta.status !== 'cancelado') {
+    actions.push({ icon: RotateCcw, label: 'A borrador', color: 'text-warning', onClick: handleVolverBorrador });
+  }
 
   return (
     <div className="grid grid-cols-5 gap-1">
