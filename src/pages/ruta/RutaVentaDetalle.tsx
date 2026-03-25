@@ -1370,8 +1370,8 @@ export default function RutaVentaDetalle() {
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[11px] text-muted-foreground mb-1">Total</p>
           <p className="text-[28px] font-bold text-foreground">{s}{fmt(showTax ? (venta.total ?? 0) : (venta.subtotal ?? 0))}</p>
-          {(venta.saldo_pendiente ?? 0) > 0 && (
-            <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {s}{fmt(venta.saldo_pendiente ?? 0)}</p>
+          {realSaldo > 0 && (
+            <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {s}{fmt(realSaldo)}</p>
           )}
         </div>
 
