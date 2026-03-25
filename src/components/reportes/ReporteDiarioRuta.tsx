@@ -308,32 +308,26 @@ export default function ReporteDiarioRuta() {
             </div>
           </div>
 
-          {/* Stock a bordo - Inicio */}
-          {incluirStock && stockInicio.length > 0 && (
+          {/* Stock en almacén */}
+          {incluirStock && stockItems.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> Stock a bordo — Inicio ({cargaInicio?.fecha})
+                <Package className="h-3.5 w-3.5" /> Stock — {rptAlmacenNombre}
               </h2>
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
                     <th className="text-left py-1.5">Código</th>
                     <th className="text-left py-1.5">Producto</th>
-                    <th className="text-right py-1.5">Cargado</th>
-                    <th className="text-right py-1.5">Vendido</th>
-                    <th className="text-right py-1.5">Devuelto</th>
-                    <th className="text-right py-1.5">Restante</th>
+                    <th className="text-right py-1.5">Existencia</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {stockInicio.map((p: any, i: number) => (
+                  {stockItems.map((p: any, i: number) => (
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
-                      <td className="py-1 text-right">{p.cargada}</td>
-                      <td className="py-1 text-right">{p.vendida}</td>
-                      <td className="py-1 text-right">{p.devuelta}</td>
-                      <td className="py-1 text-right font-semibold">{p.restante}</td>
+                      <td className="py-1 text-right font-semibold">{p.cantidad}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -341,42 +335,9 @@ export default function ReporteDiarioRuta() {
             </div>
           )}
 
-          {/* Stock a bordo - Fin */}
-          {incluirStock && stockFin.length > 0 && cargaFin?.id !== cargaInicio?.id && (
-            <div>
-              <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <Package className="h-3.5 w-3.5" /> Stock a bordo — Fin ({cargaFin?.fecha})
-              </h2>
-              <table className="w-full text-[11px]">
-                <thead>
-                  <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
-                    <th className="text-left py-1.5">Código</th>
-                    <th className="text-left py-1.5">Producto</th>
-                    <th className="text-right py-1.5">Cargado</th>
-                    <th className="text-right py-1.5">Vendido</th>
-                    <th className="text-right py-1.5">Devuelto</th>
-                    <th className="text-right py-1.5">Restante</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockFin.map((p: any, i: number) => (
-                    <tr key={i} className="border-b border-border/50">
-                      <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
-                      <td className="py-1">{p.nombre}</td>
-                      <td className="py-1 text-right">{p.cargada}</td>
-                      <td className="py-1 text-right">{p.vendida}</td>
-                      <td className="py-1 text-right">{p.devuelta}</td>
-                      <td className="py-1 text-right font-semibold">{p.restante}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {incluirStock && stockInicio.length === 0 && stockFin.length === 0 && (
+          {incluirStock && stockItems.length === 0 && (
             <div className="text-[11px] text-muted-foreground italic py-2">
-              No se encontraron cargas para este usuario en el rango seleccionado.
+              No se encontró stock en el almacén asignado a este usuario.
             </div>
           )}
 
