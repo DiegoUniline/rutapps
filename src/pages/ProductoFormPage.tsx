@@ -14,6 +14,7 @@ import type { Producto } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { compressPhoto } from '@/lib/imageCompressor';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrency } from '@/hooks/useCurrency';
 import { useQueryClient } from '@tanstack/react-query';
 
 /** Quick-create a catalog item (marcas, clasificaciones, unidades, listas, proveedores) */

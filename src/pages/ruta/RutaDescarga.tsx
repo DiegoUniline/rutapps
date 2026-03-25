@@ -5,29 +5,20 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const BILLETES = [
-  { label: '$1,000', value: 1000 },
-  { label: '$500', value: 500 },
-  { label: '$200', value: 200 },
-  { label: '$100', value: 100 },
-  { label: '$50', value: 50 },
-  { label: '$20', value: 20 },
-];
+const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
+const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
 
-const MONEDAS = [
-  { label: '$10', value: 10 },
-  { label: '$5', value: 5 },
-  { label: '$2', value: 2 },
-  { label: '$1', value: 1 },
-  { label: '$0.50', value: 0.5 },
-];
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function RutaDescarga() {
   const nav = useNavigate();
   const { user, empresa } = useAuth();
+  const { symbol: s } = useCurrency();
+  const fmt = fmtNum;
+  const BILLETES = BILLETES_VALUES.map(v => ({ label: `${s}${v.toLocaleString()}`, value: v }));
+  const MONEDAS = MONEDAS_VALUES.map(v => ({ label: `${s}${v}`, value: v }));
   const qc = useQueryClient();
 
   const [conteo, setConteo] = useState<Record<number, number>>({});
@@ -284,14 +275,14 @@ export default function RutaDescarga() {
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total contado</p>
           <p className="text-3xl font-bold text-foreground tabular-nums">
-            $ {fmt(totalEfectivo)}
+            {s}{fmt(totalEfectivo)}
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-card border border-border rounded-xl p-3 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Esperado</p>
-            <p className="text-lg font-bold text-foreground tabular-nums">$ {fmt(efectivoEsperado)}</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">{s}{fmt(efectivoEsperado)}</p>
           </div>
           <div className={`bg-card border rounded-xl p-3 text-center ${
             totalEfectivo - efectivoEsperado < 0 ? 'border-destructive/40' : 'border-border'
@@ -300,7 +291,7 @@ export default function RutaDescarga() {
             <p className={`text-lg font-bold tabular-nums ${
               totalEfectivo - efectivoEsperado < 0 ? 'text-destructive' : totalEfectivo - efectivoEsperado > 0 ? 'text-primary' : 'text-foreground'
             }`}>
-              {totalEfectivo - efectivoEsperado >= 0 ? '+' : ''}$ {fmt(totalEfectivo - efectivoEsperado)}
+              {totalEfectivo - efectivoEsperado >= 0 ? '+' : ''}{s}{fmt(totalEfectivo - efectivoEsperado)}
             </p>
           </div>
         </div>
@@ -339,7 +330,7 @@ export default function RutaDescarga() {
                     </button>
                   </div>
                   <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
-                    {subtotal > 0 ? `$ ${fmt(subtotal)}` : '—'}
+                    {subtotal > 0 ? `${s}${fmt(subtotal)}` : '—'}
                   </span>
                 </div>
               );
@@ -381,7 +372,7 @@ export default function RutaDescarga() {
                     </button>
                   </div>
                   <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
-                    {subtotal > 0 ? `$ ${fmt(subtotal)}` : '—'}
+                    {subtotal > 0 ? `${s}${fmt(subtotal)}` : '—'}
                   </span>
                 </div>
               );
@@ -430,7 +421,7 @@ export default function RutaDescarga() {
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
           <Send className="h-4 w-4" />
-          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — $ ${fmt(totalEfectivo)}`}
+          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${s}${fmt(totalEfectivo)}`}
         </button>
       </div>
     </div>
