@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN ticket_ancho text NOT NULL DEFAULT '80';

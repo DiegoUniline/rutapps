@@ -45,14 +45,17 @@ interface PreviewProps {
   form: Record<string, string>;
   logoPreview: string | null;
   campos: Record<string, boolean>;
+  ticketAncho?: '58' | '80';
 }
 
-function TicketPreview({ form, logoPreview, campos }: PreviewProps) {
+function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: PreviewProps) {
   const nombre = form.nombre || 'Mi Empresa';
   const dir = [form.direccion, form.colonia, form.ciudad].filter(Boolean).join(', ');
+  const width = ticketAncho === '58' ? '210px' : '280px';
+  const fontSize = ticketAncho === '58' ? '9px' : '10px';
 
   return (
-    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width: '280px', fontFamily: "'Courier New', monospace" }}>
+    <div className="bg-white text-black rounded-lg shadow-lg border border-border overflow-hidden" style={{ width, fontFamily: "'Courier New', monospace" }}>
       <div className="px-4 pt-4 pb-2 text-center">
         {campos.logo && logoPreview && <img src={logoPreview} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />}
         {campos.nombre && <div className="font-bold text-[13px]">{nombre}</div>}
@@ -303,6 +306,7 @@ export default function ConfiguracionPage() {
   const [moneda, setMoneda] = useState('MXN');
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
   const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
+  const [ticketAncho, setTicketAncho] = useState<'58' | '80'>('80');
 
   // Reset initialized when empresa changes (e.g. super admin switches)
   const empresaId = empresa?.id;
@@ -338,13 +342,14 @@ export default function ConfiguracionPage() {
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
     setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
+    setTicketAncho((config as any).ticket_ancho ?? '80');
     setLogoFile(null);
     setInitialized(true);
     setInitializedForId(config.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [configId, initialized]);
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || ticketAncho !== ((config as any)?.ticket_ancho ?? '80') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -384,6 +389,7 @@ export default function ConfiguracionPage() {
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
         ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
+        ticket_ancho: ticketAncho,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -485,6 +491,30 @@ export default function ConfiguracionPage() {
         <TabsContent value="ticket" className="mt-4">
           <div className="flex gap-6">
             <div className="flex-1 space-y-5 max-w-md">
+              {/* Ancho de impresora */}
+              <div className="bg-card border border-border rounded-lg p-5">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Receipt className="h-4 w-4" /> Ancho de impresora
+                </h3>
+                <p className="text-[11px] text-muted-foreground mb-3">Selecciona el ancho del rollo de papel de tu impresora térmica.</p>
+                <div className="flex gap-2">
+                  {([['58', '58 mm'], ['80', '80 mm']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => setTicketAncho(val)}
+                      className={cn(
+                        "flex-1 py-2.5 rounded-md text-[13px] font-semibold border transition-colors",
+                        ticketAncho === val
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-foreground border-input hover:bg-secondary"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Campos visibles */}
               <div className="bg-card border border-border rounded-lg p-5">
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -533,7 +563,7 @@ export default function ConfiguracionPage() {
               </div>
               <div className="flex justify-center p-4 bg-muted/30 rounded-lg border border-border min-h-[500px]">
                 {previewTab === 'ticket' ? (
-                  <TicketPreview form={form} logoPreview={logoPreview} campos={campos} />
+                  <TicketPreview form={form} logoPreview={logoPreview} campos={campos} ticketAncho={ticketAncho} />
                 ) : (
                   <NotaVentaPreview form={form} logoPreview={logoPreview} campos={campos} />
                 )}
