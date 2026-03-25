@@ -53,7 +53,7 @@ export interface TicketData {
 
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function buildTicketHTML(data: TicketData): string {
+export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string }): string {
   const {
     empresa, folio, fecha, clienteNombre, lineas,
     subtotal, iva, ieps = 0, total, condicionPago, metodoPago,
