@@ -79,7 +79,7 @@ export default function RutaDescarga() {
     queryKey: ['descarga-mobile-financials', vendedorId, today],
     enabled: !!vendedorId,
     queryFn: async () => {
-      const [ventasRes, cobrosRes, gastosRes] = await Promise.all([
+      const [ventasRes, cobrosRes, gastosRes, devsRes] = await Promise.all([
         supabase
           .from('ventas')
           .select('total')
@@ -97,13 +97,34 @@ export default function RutaDescarga() {
           .select('monto')
           .eq('vendedor_id', vendedorId!)
           .eq('fecha', today),
+        supabase
+          .from('devoluciones')
+          .select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, productos(nombre))')
+          .eq('empresa_id', empresa!.id)
+          .eq('vendedor_id', vendedorId!)
+          .eq('fecha', today),
       ]);
       const ventasContado = (ventasRes.data || []).reduce((s, v) => s + (Number(v.total) || 0), 0);
       const cobrosEfectivo = (cobrosRes.data || [])
         .filter(c => c.metodo_pago === 'efectivo')
         .reduce((s, c) => s + (Number(c.monto) || 0), 0);
       const gastosTotal = (gastosRes.data || []).reduce((s, g) => s + (Number(g.monto) || 0), 0);
-      return { ventasContado, cobrosEfectivo, gastosTotal };
+
+      // Process devoluciones
+      const devItems: { nombre: string; cantidad: number; motivo: string; accion: string; cliente: string }[] = [];
+      (devsRes.data || []).forEach((d: any) => {
+        (d.devolucion_lineas || []).forEach((l: any) => {
+          devItems.push({
+            nombre: l.productos?.nombre || '—',
+            cantidad: Number(l.cantidad),
+            motivo: l.motivo || '—',
+            accion: l.accion || 'reposicion',
+            cliente: d.clientes?.nombre || '—',
+          });
+        });
+      });
+
+      return { ventasContado, cobrosEfectivo, gastosTotal, devItems };
     },
   });
 
