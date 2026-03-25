@@ -195,7 +195,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <TrendingUp className="h-4 w-4" />
                     <span className="text-xs">Sobrantes</span>
                   </div>
-                  <p className="text-lg font-bold text-green-600">$ {fmt(montoPositivo)}</p>
+                  <p className="text-lg font-bold text-green-600">{fmt(montoPositivo)}</p>
                   <p className="text-xs text-muted-foreground">{positivas.length} productos</p>
                 </Card>
                 <Card className="p-3">
