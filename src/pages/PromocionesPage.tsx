@@ -113,7 +113,7 @@ export default function PromocionesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono text-foreground">
-                      {p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen' ? `${p.valor}%` : `$${p.valor}`}
+                      {p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen' ? `${p.valor}%` : `${s}${p.valor}`}
                       {p.cantidad_minima > 0 && <span className="text-xs text-muted-foreground ml-1">(min {p.cantidad_minima})</span>}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{APLICA_LABELS[p.aplica_a]}</td>

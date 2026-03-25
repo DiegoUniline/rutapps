@@ -70,9 +70,9 @@ function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; t
                 <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                   <td className="py-1.5 px-3 text-xs"><span className="flex items-center gap-1">{l.lista_precios?.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}{l.lista_precios?.nombre ?? l.tarifas?.nombre ?? '—'}</span></td>
                   <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(precio)}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{l.comision_pct}%</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-green-600">$ {comisionMonto.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-green-600">{fmt(comisionMonto)}</td>
                 </tr>
               );
             })}

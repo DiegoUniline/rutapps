@@ -51,7 +51,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
   const totalFacturado = facturadas.reduce((s, l) => s + (l.total ?? 0), 0);
   const totalVenta = lineas.filter(l => l.producto_id).reduce((s, l) => s + (l.total ?? 0), 0);
 
-  const fmt = (v: number) => `$${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const { fmt } = useCurrency();
 
   // Create CFDI borrador and navigate to form
   const handleCrearBorrador = async () => {
