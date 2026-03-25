@@ -199,39 +199,195 @@ export default function ReporteDiarioRuta() {
   const fechaLabel = fechaInicio === fechaFin ? fechaInicio : `${fechaInicio} al ${fechaFin}`;
 
   const handlePrint = () => {
-    const content = printRef.current;
-    if (!content) return;
     const win = window.open('', '_blank');
     if (!win) return;
-    win.document.write(`<!DOCTYPE html><html><head><title>Reporte - ${usuarioNombre} - ${fechaLabel}</title>
+
+    // --- Build sections ---
+    const sec = (title: string, html: string) => html ? `<div class="section"><h2>${title}</h2>${html}</div>` : '';
+
+    const tableRow = (cells: string[], tag = 'td') => `<tr>${cells.map(c => `<${tag}>${c}</${tag}>`).join('')}</tr>`;
+
+    const makeTable = (headers: string[], rows: string[][], footer?: string[]) => {
+      const aligns = headers.map(h => /total|monto|cant|precio|exist/i.test(h) ? 'right' : 'left');
+      const hRow = headers.map((h, i) => `<th style="text-align:${aligns[i]}">${h}</th>`).join('');
+      const bRows = rows.map(r => '<tr>' + r.map((c, i) => `<td style="text-align:${aligns[i]}">${c}</td>`).join('') + '</tr>').join('');
+      const fRow = footer ? '<tfoot><tr>' + footer.map((c, i) => `<td style="text-align:${aligns[i]}">${c}</td>`).join('') + '</tr></tfoot>' : '';
+      return `<table><thead><tr>${hRow}</tr></thead><tbody>${bRows}</tbody>${fRow}</table>`;
+    };
+
+    // Summary grid
+    const kpi = (label: string, value: string, sub?: string) =>
+      `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div>${sub ? `<div class="kpi-sub">${sub}</div>` : ''}</div>`;
+
+    const summaryHtml = `<div class="kpi-grid">
+      ${kpi('Ventas totales', `$ ${fmt(totalVentas)}`, `${ventasActivas.length} ventas`)}
+      ${kpi('Contado', `$ ${fmt(totalContado)}`, `${ventasContado.length}`)}
+      ${kpi('Crédito', `$ ${fmt(totalCredito)}`, `${ventasCredito.length}`)}
+      ${kpi('Cobros', `$ ${fmt(totalCobros)}`, `${(cobros || []).length}`)}
+      ${kpi('Gastos', `- $ ${fmt(totalGastos)}`, `${(gastos || []).length}`)}
+      ${kpi('Devoluciones', `${totalDevUnidades} uds`, `${(devoluciones || []).length} registros`)}
+      ${kpi('Clientes visitados', `${clientesVisitados.size}`)}
+    </div>`;
+
+    // Stock
+    const stockHtml = incluirStock && stockItems.length > 0
+      ? sec(`Stock — ${rptAlmacenNombre}`, makeTable(
+          ['Código', 'Producto', 'Existencia'],
+          stockItems.map((p: any) => [p.codigo, p.nombre, String(p.cantidad)])
+        ))
+      : '';
+
+    // Ventas
+    const ventasHtml = ventasActivas.length > 0
+      ? sec(`Ventas (${ventasActivas.length})`, makeTable(
+          ['Folio', 'Cliente', 'Pago', 'Total'],
+          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', v.condicion_pago, `$ ${fmt(Number(v.total))}`]),
+          ['', '', 'Total', `$ ${fmt(totalVentas)}`]
+        ))
+      : '';
+
+    // Canceladas
+    const cancelHtml = ventasCanceladas.length > 0
+      ? sec(`Canceladas (${ventasCanceladas.length})`, makeTable(
+          ['Folio', 'Cliente', 'Total'],
+          ventasCanceladas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', `$ ${fmt(Number(v.total))}`]),
+          ['', 'Total cancelado', `$ ${fmt(totalCancelado)}`]
+        ))
+      : '';
+
+    // Productos vendidos
+    const prodsHtml = productosArr.length > 0
+      ? sec(`Productos vendidos (${productosArr.length})`, makeTable(
+          ['Código', 'Producto', 'Cantidad', 'Total'],
+          productosArr.map(p => [p.codigo, p.nombre, String(p.cantidad), `$ ${fmt(p.total)}`])
+        ))
+      : '';
+
+    // Cobros
+    const cobrosMetodoHtml = Object.entries(cobrosPorMetodo).map(([m, t]) => `<span class="chip">${m}: $ ${fmt(t)}</span>`).join(' ');
+    const cobrosHtml = (cobros || []).length > 0
+      ? sec(`Cobros (${(cobros || []).length})`, `<div class="chips">${cobrosMetodoHtml}</div>` + makeTable(
+          ['Cliente', 'Método', 'Referencia', 'Monto'],
+          (cobros || []).map((c: any) => [c.clientes?.nombre ?? '—', c.metodo_pago, c.referencia || '—', `$ ${fmt(Number(c.monto))}`]),
+          ['', '', 'Total cobros', `$ ${fmt(totalCobros)}`]
+        ))
+      : '';
+
+    // Gastos
+    const gastosHtml = (gastos || []).length > 0
+      ? sec(`Gastos (${(gastos || []).length})`, makeTable(
+          ['Concepto', 'Notas', 'Monto'],
+          (gastos || []).map((g: any) => [g.concepto, g.notas || '—', `- $ ${fmt(Number(g.monto))}`]),
+          ['', 'Total gastos', `- $ ${fmt(totalGastos)}`]
+        ))
+      : '';
+
+    // Devoluciones
+    const devsHtml = devLineas.length > 0
+      ? sec(`Devoluciones (${totalDevUnidades} uds — ${(devoluciones || []).length} registros)`, makeTable(
+          ['Producto', 'Cliente', 'Motivo', 'Acción', 'Cant.'],
+          devLineas.map(d => [`${d.nombre} ${d.codigo}`, d.cliente, d.motivo.replace(/_/g, ' '), ACCION_LABELS[d.accion] || d.accion, String(d.cantidad)]),
+          totalDevCredito > 0 ? ['', '', '', 'Total crédito', `$ ${fmt(totalDevCredito)}`] : undefined
+        ))
+      : '';
+
+    // Visitas sin compra
+    const visitasHtml = visitasSinCompra.length > 0
+      ? sec(`Visitas sin compra (${visitasSinCompra.length})`, makeTable(
+          ['Cliente', 'Motivo', 'Notas'],
+          visitasSinCompra.map((v: any) => [v.clientes?.nombre ?? '—', v.motivo || '—', v.notas || '—'])
+        ))
+      : '';
+
+    // Resumen final
+    const resumenRow = (label: string, value: string) => `<tr><td class="res-label">${label}</td><td class="res-value">${value}</td></tr>`;
+    const resumenHtml = `<div class="section"><h2>Resumen del período</h2><table class="resumen">
+      ${resumenRow('Ventas (contado)', `$ ${fmt(totalContado)}`)}
+      ${resumenRow('Ventas (crédito)', `$ ${fmt(totalCredito)}`)}
+      ${resumenRow('Cobros recibidos', `$ ${fmt(totalCobros)}`)}
+      ${resumenRow('Gastos', `- $ ${fmt(totalGastos)}`)}
+      ${resumenRow('Canceladas', `$ ${fmt(totalCancelado)}`)}
+      ${resumenRow('Clientes visitados', `${clientesVisitados.size}`)}
+      ${resumenRow('Visitas sin compra', `${visitasSinCompra.length}`)}
+      ${resumenRow('Devoluciones', `${totalDevUnidades} uds`)}
+      ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- $ ${fmt(totalDevCredito)}`) : ''}
+      <tr class="res-total"><td>Efectivo esperado</td><td>$ ${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
+    </table></div>`;
+
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte - ${usuarioNombre} - ${fechaLabel}</title>
     <style>
+      @page { size: letter; margin: 15mm 12mm; }
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 20px; }
-      h1 { font-size: 16px; margin-bottom: 4px; }
-      h2 { font-size: 13px; margin: 14px 0 6px; border-bottom: 1.5px solid #333; padding-bottom: 3px; }
-      .meta { font-size: 11px; color: #555; margin-bottom: 12px; }
-      .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-      .summary-box { border: 1px solid #ccc; border-radius: 4px; padding: 6px 8px; text-align: center; }
-      .summary-box .label { font-size: 9px; text-transform: uppercase; color: #888; }
-      .summary-box .value { font-size: 15px; font-weight: bold; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-      th { text-align: left; font-size: 9px; text-transform: uppercase; color: #666; border-bottom: 1.5px solid #999; padding: 4px 6px; }
-      td { padding: 3px 6px; border-bottom: 1px solid #eee; font-size: 11px; }
-      .text-right { text-align: right; }
-      .text-center { text-align: center; }
-      .font-bold { font-weight: bold; }
-      .text-red { color: #dc2626; }
-      .text-green { color: #16a34a; }
-      .badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; }
-      .badge-contado { background: #dcfce7; color: #166534; }
-      .badge-credito { background: #dbeafe; color: #1e40af; }
-      tfoot td { border-top: 1.5px solid #999; font-weight: bold; }
-      @media print { body { padding: 10px; } }
-    </style></head><body>`);
-    win.document.write(content.innerHTML);
-    win.document.write('</body></html>');
+      body { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: #1a1a1a; line-height: 1.5; }
+
+      /* Header */
+      .doc-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid #e0e0e0; margin-bottom: 20px; }
+      .company-name { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+      .company-detail { font-size: 9px; color: #777; line-height: 1.6; }
+      .doc-title { font-size: 20px; font-weight: 700; color: #1a1a1a; text-align: right; }
+      .doc-meta { font-size: 10px; color: #777; text-align: right; margin-top: 4px; }
+
+      /* KPI grid */
+      .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+      .kpi { border: 1px solid #e0e0e0; border-radius: 3px; padding: 10px 12px; text-align: center; }
+      .kpi-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.5px; color: #888; font-weight: 600; margin-bottom: 4px; }
+      .kpi-value { font-size: 16px; font-weight: 700; color: #1a1a1a; }
+      .kpi-sub { font-size: 8px; color: #aaa; margin-top: 2px; }
+
+      /* Sections */
+      .section { margin-bottom: 22px; }
+      .section h2 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #333; border-bottom: 2px solid #e0e0e0; padding-bottom: 6px; margin-bottom: 10px; }
+
+      /* Tables */
+      table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+      thead th { font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.3px; color: #555; background: #f7f7f7; border-bottom: 2px solid #e0e0e0; padding: 7px 10px; }
+      tbody td { padding: 6px 10px; border-bottom: 1px solid #eee; font-size: 10px; vertical-align: top; }
+      tbody tr:last-child td { border-bottom: none; }
+      tfoot td { border-top: 2px solid #e0e0e0; font-weight: 700; padding: 8px 10px; font-size: 10px; background: #fafafa; }
+
+      /* Chips */
+      .chips { margin-bottom: 10px; }
+      .chip { display: inline-block; font-size: 9px; background: #f0f0f0; border-radius: 3px; padding: 3px 8px; margin-right: 6px; color: #555; font-weight: 600; }
+
+      /* Resumen */
+      table.resumen { width: 320px; }
+      table.resumen td { padding: 4px 0; border: none; font-size: 11px; }
+      table.resumen .res-label { color: #777; font-weight: 500; }
+      table.resumen .res-value { text-align: right; font-weight: 600; }
+      table.resumen .res-total td { border-top: 2px solid #1a1a1a; font-weight: 700; font-size: 12px; padding-top: 8px; margin-top: 4px; }
+
+      /* Footer */
+      .doc-footer { margin-top: 32px; padding-top: 10px; border-top: 1px solid #e0e0e0; font-size: 8px; color: #aaa; text-align: center; }
+
+      @media print { body { padding: 0; } }
+    </style></head><body>
+      <div class="doc-header">
+        <div>
+          <div class="company-name">${empresa?.razon_social || empresa?.nombre || ''}</div>
+          ${empresa?.rfc ? `<div class="company-detail">${empresa.rfc}</div>` : ''}
+          ${empresa?.direccion ? `<div class="company-detail">${[empresa.direccion, empresa.colonia, empresa.ciudad, empresa.estado, empresa.cp].filter(Boolean).join(', ')}</div>` : ''}
+          ${empresa?.telefono ? `<div class="company-detail">Tel: ${empresa.telefono}</div>` : ''}
+        </div>
+        <div>
+          <div class="doc-title">Reporte de Ruta</div>
+          <div class="doc-meta">${usuarioNombre}</div>
+          <div class="doc-meta">${fechaLabel}</div>
+        </div>
+      </div>
+      ${summaryHtml}
+      ${stockHtml}
+      ${ventasHtml}
+      ${cancelHtml}
+      ${prodsHtml}
+      ${cobrosHtml}
+      ${gastosHtml}
+      ${devsHtml}
+      ${visitasHtml}
+      ${resumenHtml}
+      <div class="doc-footer">Este documento es una representación impresa. Generado por Rutapp · ${new Date().toLocaleString('es-MX')}</div>
+    </body></html>`);
     win.document.close();
-    win.print();
+    setTimeout(() => win.print(), 300);
   };
 
   return (
