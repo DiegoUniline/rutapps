@@ -456,8 +456,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             )}
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Devoluciones</div>
-              <div className="text-lg font-bold text-foreground">{devLineas.length}</div>
-              <div className="text-[10px] text-muted-foreground">productos devueltos</div>
+              <div className="text-lg font-bold text-foreground">{totalDevUnidades}</div>
+              <div className="text-[10px] text-muted-foreground">{devLineas.length} líneas</div>
             </div>
           </div>
         </div>
