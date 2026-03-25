@@ -118,7 +118,13 @@ export default function DevolucionesListPage() {
       </div>
 
       {total > pageSize && (
-        <OdooPagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+        <OdooPagination
+          from={(page - 1) * pageSize + 1}
+          to={Math.min(page * pageSize, total)}
+          total={total}
+          onPrev={() => setPage(p => Math.max(1, p - 1))}
+          onNext={() => setPage(p => p + 1)}
+        />
       )}
     </div>
   );
