@@ -28,8 +28,9 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 
 const VENTA_STEPS_FULL: { key: StatusVenta; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
