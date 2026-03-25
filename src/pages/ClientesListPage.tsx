@@ -144,6 +144,7 @@ function ClientesTable() {
                 <th className="th-odoo text-left">Código</th>
                 <th className="th-odoo text-left">Nombre</th>
                 <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
+                <th className="th-odoo text-left hidden md:table-cell">Días de visita</th>
                 <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
                 <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
                 <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
@@ -153,7 +154,7 @@ function ClientesTable() {
             <tbody>
               {pageData.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
                 </tr>
               )}
               {pageData.map(c => (
@@ -171,6 +172,11 @@ function ClientesTable() {
                   <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
                   <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
                   <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
+                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
+                    {(c as any).dia_visita?.length > 0
+                      ? (c as any).dia_visita.map((d: string) => d.slice(0, 3)).join(', ')
+                      : '—'}
+                  </td>
                   <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{(c as any).zonas?.nombre ?? '—'}</td>
                   <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{(c as any).vendedores?.nombre ?? '—'}</td>
