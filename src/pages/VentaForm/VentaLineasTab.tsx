@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ReceiptText } from 'lucide-react';
 import ProductSearchInput from '@/components/ProductSearchInput';
 import { VentaTotals } from '@/components/venta/VentaTotals';
 import { useIsMobile } from '@/hooks/use-mobile';
