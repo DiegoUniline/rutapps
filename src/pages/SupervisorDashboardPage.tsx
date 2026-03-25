@@ -996,7 +996,7 @@ function SupervisorMap({ markers }: { markers: MarkerPoint[] }) {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-[460px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[920px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
         Cargando mapa...
       </div>
     );
