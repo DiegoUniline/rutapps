@@ -604,10 +604,10 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
             {lineas.length > 0 && (
               <TableRow className="bg-muted/50 font-bold">
                 <TableCell colSpan={2}>Totales</TableCell>
-                <TableCell className="text-center">{totalCargado}</TableCell>
-                <TableCell className="text-center text-success">{totalEntregado}</TableCell>
-                <TableCell className="text-center text-warning">{totalDevuelto}</TableCell>
-                <TableCell className="text-center text-primary">{totalAbordo}</TableCell>
+                 <TableCell className="text-center">{fmtNum(totalCargado)}</TableCell>
+                <TableCell className="text-center text-success">{fmtNum(totalEntregado)}</TableCell>
+                <TableCell className="text-center text-warning">{fmtNum(totalDevuelto)}</TableCell>
+                <TableCell className="text-center text-primary">{fmtNum(totalAbordo)}</TableCell>
                 <TableCell className="text-right">$ {fmt(totalValorCosto)}</TableCell>
                 <TableCell className="text-right text-success">$ {fmt(totalValorVenta)}</TableCell>
               </TableRow>
