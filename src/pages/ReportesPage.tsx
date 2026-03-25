@@ -14,13 +14,14 @@ import { ReporteCargas } from '@/components/reportes/ReporteCargas';
 import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
 import { ReportePromociones } from '@/components/reportes/ReportePromociones';
+import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
@@ -187,6 +188,7 @@ export default function ReportesPage() {
     { key: 'resumen', label: 'Resumen', icon: BarChart3 },
     { key: 'ventas_producto', label: 'Ventas x Producto', icon: Package },
     { key: 'ventas_cliente', label: 'Ventas x Cliente', icon: Users },
+    { key: 'producto_cliente', label: 'Producto x Cliente', icon: ShoppingCart },
     { key: 'vendedores', label: 'Vendedores', icon: TrendingUp },
     { key: 'entregas', label: 'Entregas', icon: Truck },
     { key: 'cargas', label: 'Cargas', icon: BoxIcon },
@@ -380,6 +382,7 @@ export default function ReportesPage() {
           {tab === 'resumen' && <ReporteResumen data={data} />}
           {tab === 'ventas_producto' && <ReporteVentasProducto data={data} />}
           {tab === 'ventas_cliente' && <ReporteVentasCliente data={data} />}
+          {tab === 'producto_cliente' && <ReporteProductoCliente data={data} />}
           {tab === 'vendedores' && <ReporteVendedores data={data} />}
           {tab === 'entregas' && <ReporteEntregas data={data} />}
           {tab === 'cargas' && <ReporteCargas data={data} />}
