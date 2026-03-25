@@ -378,7 +378,7 @@ export default function InventarioPage() {
                     const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
                     return <TableCell key={r.id} className="text-center text-warning">{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{data.totales.stockTotal}</TableCell>
+                  <TableCell className="text-center">{fmtNum(data.totales.stockTotal)}</TableCell>
                   <TableCell className="text-right">$ {fmt(data.totales.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-success">$ {fmt(data.totales.valorVentaTotal)}</TableCell>
                 </TableRow>
