@@ -161,6 +161,45 @@ function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string
         },
       };
     }
+    case 'producto_cliente': {
+      const ventaLineas: any[] = data.ventaLineas ?? [];
+      // Flatten: one row per client+product
+      const map: Record<string, any> = {};
+      for (const l of ventaLineas) {
+        const cid = l.ventas?.cliente_id ?? 'sin-cliente';
+        const pid = l.producto_id ?? '';
+        const key = `${cid}__${pid}`;
+        if (!map[key]) {
+          map[key] = {
+            cliente: (l.ventas?.clientes as any)?.nombre ?? 'Sin cliente',
+            vendedor: (l.ventas?.vendedores as any)?.nombre ?? '—',
+            codigo: (l.productos as any)?.codigo ?? '',
+            producto: (l.productos as any)?.nombre ?? '',
+            cantidad: 0,
+            total: 0,
+          };
+        }
+        map[key].cantidad += l.cantidad ?? 0;
+        map[key].total += l.total ?? 0;
+      }
+      const items = Object.values(map).sort((a: any, b: any) => a.cliente.localeCompare(b.cliente) || b.total - a.total);
+      return {
+        fileName: 'Producto_por_Cliente', title: 'Producto por Cliente', dateRange,
+        columns: [
+          { key: 'cliente', header: 'Cliente', width: 25 },
+          { key: 'vendedor', header: 'Vendedor', width: 20 },
+          { key: 'codigo', header: 'Código', width: 12 },
+          { key: 'producto', header: 'Producto', width: 28 },
+          { key: 'cantidad', header: 'Uds', format: 'number' as const, width: 10 },
+          { key: 'total', header: 'Total', format: 'currency' as const, width: 14 },
+        ],
+        data: items,
+        totals: {
+          cantidad: items.reduce((s: number, i: any) => s + i.cantidad, 0),
+          total: items.reduce((s: number, i: any) => s + i.total, 0),
+        },
+      };
+    }
     default: return null;
   }
 }
