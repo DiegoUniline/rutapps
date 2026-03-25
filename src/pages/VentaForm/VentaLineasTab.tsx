@@ -62,9 +62,20 @@ export function VentaLineasTab(props: Props) {
         </div>
       )}
       {!readOnly && (
-        <button onClick={onAddLine} className="btn-odoo-secondary text-xs">
-          <Plus className="h-3 w-3" /> Agregar producto
-        </button>
+        <div className="flex items-center justify-between">
+          <button onClick={onAddLine} className="btn-odoo-secondary text-xs">
+            <Plus className="h-3 w-3" /> Agregar producto
+          </button>
+          {setSinImpuestos && !readOnlyForm && (
+            <button onClick={() => setSinImpuestos(!sinImpuestos)} className={cn("flex items-center gap-2 rounded-md px-3 py-1.5 text-[12px] font-medium transition-all border", sinImpuestos ? "bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300" : "bg-accent/50 border-border/40 text-muted-foreground")}>
+              <ReceiptText className="h-3.5 w-3.5" />
+              Sin impuestos
+              <div className={cn("w-8 h-4 rounded-full relative transition-colors", sinImpuestos ? "bg-amber-500" : "bg-border")}>
+                <div className={cn("absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform", sinImpuestos ? "translate-x-4" : "translate-x-0.5")} />
+              </div>
+            </button>
+          )}
+        </div>
       )}
       <VentaTotals {...totals} isMobile={isMobile} />
     </div>
