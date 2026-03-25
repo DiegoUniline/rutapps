@@ -32,7 +32,7 @@ export default function RutaDashboard() {
 
   const cards = [
     { key: 'ventas', label: 'Ventas de hoy', icon: ShoppingCart, color: 'bg-primary/10 text-primary', path: '/ruta/ventas',
-      stat: `${stats.ventasHoy} ventas`, sub: `$ ${stats.totalVentas.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+      stat: `${stats.ventasHoy} ventas`, sub: fmt(stats.totalVentas) },
     { key: 'clientes', label: 'Clientes', icon: Users, color: 'bg-success/10 text-success', path: '/ruta/clientes',
       stat: `${stats.clientesActivos} activos`, sub: 'Ver todos' },
     { key: 'stock', label: 'Stock abordo', icon: Package, color: 'bg-warning/10 text-warning', path: '/ruta/stock',
