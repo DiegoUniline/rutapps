@@ -397,9 +397,9 @@ export default function ConfiguracionPage() {
     </div>
   );
 
-  if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
-
   const [configTab, setConfigTab] = useState('empresa');
+
+  if (isLoading) return <div className="p-6 text-muted-foreground">Cargando...</div>;
 
   return (
     <div className="p-4 space-y-4 max-w-4xl">
