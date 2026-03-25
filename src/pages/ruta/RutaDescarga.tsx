@@ -33,14 +33,14 @@ export default function RutaDescarga() {
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');
 
-  // Get user's vendedor profile
-  const { data: vendedorProfile } = useQuery({
-    queryKey: ['mi-vendedor-id', user?.id],
+  // Get user's profile to find vendedor_id
+  const { data: myProfile } = useQuery({
+    queryKey: ['mi-profile-vendedor', user?.id],
     queryFn: async () => {
       const { data } = await supabase
-        .from('vendedores')
-        .select('id')
-        .eq('id', user!.id)
+        .from('profiles')
+        .select('vendedor_id')
+        .eq('user_id', user!.id)
         .maybeSingle();
       return data;
     },
@@ -64,7 +64,7 @@ export default function RutaDescarga() {
     enabled: !!empresa?.id,
   });
 
-  const vendedorId = cargaActiva?.vendedor_id || vendedorProfile?.id || user?.id;
+  const vendedorId = cargaActiva?.vendedor_id || myProfile?.vendedor_id || user?.id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -167,7 +167,7 @@ export default function RutaDescarga() {
 
       const diferencia = totalEfectivo - efectivoEsperado;
 
-      const vId = cargaActiva?.vendedor_id || vendedorProfile?.id || null;
+      const vId = cargaActiva?.vendedor_id || myProfile?.vendedor_id || null;
 
       const insertData: any = {
         empresa_id: empresa!.id,
