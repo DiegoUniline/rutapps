@@ -42,12 +42,13 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
+    // Signal that this reload is user-initiated
+    window.dispatchEvent(new Event('uniline:sw-apply-update'));
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg?.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          // Give SW time to activate, then reload
           await new Promise(r => setTimeout(r, 300));
         } else if (reg) {
           await reg.unregister();

@@ -360,17 +360,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applySwUpdate = async () => {
+    // Signal that this reload is user-initiated
+    window.dispatchEvent(new Event('uniline:sw-apply-update'));
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg?.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          // Give the SW time to activate before reloading
           await new Promise(r => setTimeout(r, 300));
           window.location.reload();
           return;
         }
-        // No waiting SW → unregister and clear all caches
         if (reg) await reg.unregister();
       }
       if ('caches' in window) {
@@ -379,7 +379,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
       window.location.reload();
     } catch {
-      // Fallback: just force reload
       window.location.reload();
     }
   };
