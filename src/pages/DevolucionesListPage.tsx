@@ -24,7 +24,7 @@ export default function DevolucionesListPage() {
     queryFn: async () => {
       let q = (supabase as any)
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, venta_id, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos(codigo, nombre))', { count: 'exact' })
+        .select('id, fecha, tipo, notas, venta_id, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), ventas(folio), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))', { count: 'exact' })
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
