@@ -84,7 +84,7 @@ export default function RutaCobros() {
                   <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · {c.metodo_pago}</p>
                 </div>
                 <p className="text-sm font-bold text-success shrink-0 tabular-nums">
-                  +${(c.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  +{fmt(c.monto ?? 0)}
                 </p>
               </div>
             );

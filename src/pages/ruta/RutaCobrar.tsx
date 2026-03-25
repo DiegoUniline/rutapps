@@ -6,6 +6,7 @@ import { queueOperation } from '@/lib/syncQueue';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
+import { useCurrency } from '@/hooks/useCurrency';
 
 type Step = 'cliente' | 'monto' | 'cuentas' | 'pago';
 
