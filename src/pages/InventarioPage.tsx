@@ -436,7 +436,7 @@ export default function InventarioPage() {
                     const total = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
                     return <TableCell key={a.id} className="text-center">{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0)}</TableCell>
+                  <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0))}</TableCell>
                   <TableCell className="text-right">—</TableCell>
                   <TableCell className="text-right">$ {fmt(filteredProducts.reduce((s, p) => {
                     const totalAlm = (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
