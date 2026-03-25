@@ -33,6 +33,22 @@ export default function RutaDescarga() {
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');
 
+  // Get user's vendedor profile
+  const { data: vendedorProfile } = useQuery({
+    queryKey: ['mi-vendedor-id', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('vendedores')
+        .select('id')
+        .eq('id', user!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  const vendedorId = cargaActiva?.vendedor_id || vendedorProfile?.id || user?.id;
+
   // Get active carga
   const { data: cargaActiva } = useQuery({
     queryKey: ['mi-carga-activa-descarga'],
@@ -49,6 +65,43 @@ export default function RutaDescarga() {
     },
     enabled: !!empresa?.id,
   });
+
+  // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const { data: financials } = useQuery({
+    queryKey: ['descarga-mobile-financials', vendedorId, today],
+    enabled: !!vendedorId,
+    queryFn: async () => {
+      const [ventasRes, cobrosRes, gastosRes] = await Promise.all([
+        supabase
+          .from('ventas')
+          .select('total')
+          .eq('vendedor_id', vendedorId!)
+          .eq('fecha', today)
+          .eq('condicion_pago', 'contado')
+          .neq('status', 'cancelado'),
+        supabase
+          .from('cobros')
+          .select('monto, metodo_pago')
+          .eq('empresa_id', empresa!.id)
+          .eq('fecha', today),
+        supabase
+          .from('gastos')
+          .select('monto')
+          .eq('vendedor_id', vendedorId!)
+          .eq('fecha', today),
+      ]);
+      const ventasContado = (ventasRes.data || []).reduce((s, v) => s + (Number(v.total) || 0), 0);
+      const cobrosEfectivo = (cobrosRes.data || [])
+        .filter(c => c.metodo_pago === 'efectivo')
+        .reduce((s, c) => s + (Number(c.monto) || 0), 0);
+      const gastosTotal = (gastosRes.data || []).reduce((s, g) => s + (Number(g.monto) || 0), 0);
+      return { ventasContado, cobrosEfectivo, gastosTotal };
+    },
+  });
+
+  const efectivoEsperado = (financials?.ventasContado ?? 0) + (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0);
 
   // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
