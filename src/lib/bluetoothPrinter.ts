@@ -24,7 +24,13 @@ let cachedConnection: PrinterConnection | null = null;
 
 /** Check if Web Bluetooth is available */
 export function isBluetoothAvailable(): boolean {
-  return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+  if (typeof navigator === 'undefined') return false;
+  // Chrome on Android exposes navigator.bluetooth in secure contexts
+  if ('bluetooth' in navigator) return true;
+  // Some PWA/WebView contexts hide it — check userAgent as hint
+  const ua = navigator.userAgent || '';
+  const isAndroidChrome = /Android/i.test(ua) && /Chrome/i.test(ua) && !/OPR|Edge|SamsungBrowser/i.test(ua);
+  return isAndroidChrome && window.isSecureContext === true;
 }
 
 /** Request a BLE printer device from the user */

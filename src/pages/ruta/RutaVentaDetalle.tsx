@@ -446,7 +446,11 @@ export default function RutaVentaDetalle() {
     const td = getTicketData(); if (!td) return;
 
     // ── Try Bluetooth ESC/POS first ──
-    if (isBluetoothAvailable()) {
+    const btAvail = isBluetoothAvailable();
+    const hasBtApi = typeof navigator !== 'undefined' && 'bluetooth' in navigator;
+    console.log('[Print] BT available:', btAvail, '| navigator.bluetooth exists:', hasBtApi, '| secure:', window.isSecureContext);
+
+    if (btAvail || hasBtApi) {
       try {
         const printerName = getConnectedPrinterName();
         toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
@@ -456,13 +460,16 @@ export default function RutaVentaDetalle() {
         toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
         return;
       } catch (err: any) {
-        // User cancelled picker or BT failed — fall through to image method
-        if (err?.name === 'NotFoundError' || err?.message?.includes('cancelled')) {
+        console.warn('[Print] BT error:', err?.name, err?.message);
+        // User cancelled picker — don't fallback
+        if (err?.name === 'NotFoundError' || err?.message?.includes('cancelled') || err?.message?.includes('User cancelled')) {
           toast.dismiss('bt-print');
-          return; // User cancelled the picker
+          return;
         }
-        toast.error('Bluetooth no disponible, generando imagen…', { id: 'bt-print' });
+        toast.error('Bluetooth falló, generando imagen…', { id: 'bt-print' });
       }
+    } else {
+      console.warn('[Print] No Bluetooth API detected, falling back to image');
     }
 
     // ── Fallback: image via share/download ──
