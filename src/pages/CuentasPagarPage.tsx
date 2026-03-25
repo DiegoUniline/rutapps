@@ -85,7 +85,7 @@ export default function CuentasPagarPage() {
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total por pagar</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalPorPagar)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalPorPagar)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total compras crédito</p>
