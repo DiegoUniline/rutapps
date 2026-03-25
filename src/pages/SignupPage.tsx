@@ -466,6 +466,44 @@ export default function SignupPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* OTP Verification Dialog */}
+      <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              Verificación de identidad
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Te enviamos un código de 6 dígitos a tu celular por WhatsApp. Ingrésalo a continuación para verificar tu número y continuar con el registro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="flex justify-center">
+              <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleSendOtp} disabled={sendingOtp} className="flex-1">
+                {sendingOtp ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Reenviar'}
+              </Button>
+              <Button type="button" size="sm" onClick={handleVerifyOtp} disabled={verifyingOtp || otpCode.length !== 6} className="flex-1">
+                {verifyingOtp ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShieldCheck className="h-3 w-3 mr-1" />}
+                Verificar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
