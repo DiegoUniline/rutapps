@@ -1937,6 +1937,7 @@ export type Database = {
           regimen_fiscal: string | null
           rfc: string | null
           telefono: string
+          ticket_ancho: string
           ticket_campos: Json | null
           zona_horaria: string
         }
@@ -1958,6 +1959,7 @@ export type Database = {
           regimen_fiscal?: string | null
           rfc?: string | null
           telefono: string
+          ticket_ancho?: string
           ticket_campos?: Json | null
           zona_horaria?: string
         }
@@ -1979,6 +1981,7 @@ export type Database = {
           regimen_fiscal?: string | null
           rfc?: string | null
           telefono?: string
+          ticket_ancho?: string
           ticket_campos?: Json | null
           zona_horaria?: string
         }
