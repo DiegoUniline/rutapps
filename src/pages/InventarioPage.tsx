@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate, fmtNum } from '@/lib/utils';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
