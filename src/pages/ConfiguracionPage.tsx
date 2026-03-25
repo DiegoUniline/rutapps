@@ -300,6 +300,7 @@ export default function ConfiguracionPage() {
 
   const [moneda, setMoneda] = useState('MXN');
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
+  const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
 
   if (config && !initialized) {
     setForm({
@@ -322,10 +323,11 @@ export default function ConfiguracionPage() {
     }
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
+    setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
     setInitialized(true);
   }
 
-  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || (initialized && config && (() => {
+  const hasChanges = !!logoFile || moneda !== ((config as any)?.moneda ?? 'MXN') || clientesVisibilidad !== ((config as any)?.clientes_visibilidad ?? 'todos') || zonaHoraria !== ((config as any)?.zona_horaria ?? 'America/Mexico_City') || (initialized && config && (() => {
     const orig: Record<string, string> = {
       nombre: config.nombre ?? '', razon_social: (config as any).razon_social ?? '',
       rfc: (config as any).rfc ?? '', regimen_fiscal: (config as any).regimen_fiscal ?? '',
@@ -364,7 +366,7 @@ export default function ConfiguracionPage() {
         regimen_fiscal: form.regimen_fiscal, direccion: form.direccion, colonia: form.colonia,
         ciudad: form.ciudad, estado: form.estado, cp: form.cp, telefono: form.telefono,
         email: form.email, notas_ticket: form.notas_ticket, logo_url,
-        ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad,
+        ticket_campos: campos, moneda, clientes_visibilidad: clientesVisibilidad, zona_horaria: zonaHoraria,
       } as any).eq('id', empresa!.id);
       if (error) throw error;
     },
@@ -536,6 +538,37 @@ export default function ConfiguracionPage() {
                   {c.symbol} — {c.name} ({c.code})
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Zona horaria */}
+          <div className="bg-card border border-border rounded-lg p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <MapPin className="h-4 w-4" /> Zona horaria
+            </h3>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              Define la zona horaria para que las fechas de ventas, cobros y reportes coincidan con tu hora local.
+            </p>
+            <select
+              value={zonaHoraria}
+              onChange={e => setZonaHoraria(e.target.value)}
+              className="input-odoo text-[13px] w-full max-w-xs"
+            >
+              <option value="America/Mexico_City">Ciudad de México (Centro)</option>
+              <option value="America/Monterrey">Monterrey (Centro)</option>
+              <option value="America/Cancun">Cancún (Sureste)</option>
+              <option value="America/Mazatlan">Mazatlán (Pacífico)</option>
+              <option value="America/Hermosillo">Hermosillo (Sonora)</option>
+              <option value="America/Tijuana">Tijuana (Noroeste)</option>
+              <option value="America/Chihuahua">Chihuahua</option>
+              <option value="America/Merida">Mérida</option>
+              <option value="America/Bogota">Bogotá, Colombia</option>
+              <option value="America/Lima">Lima, Perú</option>
+              <option value="America/Santiago">Santiago, Chile</option>
+              <option value="America/Argentina/Buenos_Aires">Buenos Aires, Argentina</option>
+              <option value="America/New_York">Nueva York (Este EUA)</option>
+              <option value="America/Los_Angeles">Los Ángeles (Pacífico EUA)</option>
+              <option value="Europe/Madrid">Madrid, España</option>
             </select>
           </div>
 

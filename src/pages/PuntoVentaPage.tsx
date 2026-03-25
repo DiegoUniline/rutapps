@@ -267,7 +267,7 @@ export default function PuntoVentaPage() {
     try {
       const ventaId = crypto.randomUUID();
       const almacenId = profile?.almacen_id || null;
-      const today = todayInTimezone();
+      const today = todayInTimezone(empresa?.zona_horaria);
 
       // 1. Insert venta
       const { data: ventaData, error: ventaErr } = await supabase.from('ventas').insert({
