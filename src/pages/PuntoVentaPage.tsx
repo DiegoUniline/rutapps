@@ -636,7 +636,7 @@ export default function PuntoVentaPage() {
             )}
             <div className="flex justify-between items-baseline pt-2 border-t border-border">
               <span className="text-[14px] font-bold text-foreground">Total</span>
-              <span className="text-[24px] font-black text-primary tabular-nums">${fmt(totals.total)}</span>
+              <span className="text-[24px] font-black text-primary tabular-nums">{fmtM(totals.total)}</span>
             </div>
 
             <button
