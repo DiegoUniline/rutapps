@@ -1126,7 +1126,6 @@ export default function RutaVentaDetalle() {
           {[
             { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
             { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
-            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
             { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
             ...(venta.status === 'borrador' ? [{ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar }] : []),
