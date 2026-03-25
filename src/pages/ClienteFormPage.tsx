@@ -300,7 +300,7 @@ export default function ClienteFormPage() {
     try {
       await deleteMutation.mutateAsync(id);
       toast.success('Cliente eliminado');
-      navigate('/clientes');
+      navigate(fromRuta ? '/ruta/clientes' : '/clientes');
     } catch (err: any) { toast.error(err.message); }
   };
 
