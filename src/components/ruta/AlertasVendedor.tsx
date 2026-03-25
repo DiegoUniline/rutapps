@@ -4,6 +4,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useCurrency } from '@/hooks/useCurrency';
 
 export default function AlertasVendedor() {
+  const { fmt } = useCurrency();
   const { empresa, profile } = useAuth();
   const vendedorId = profile?.vendedor_id;
 
