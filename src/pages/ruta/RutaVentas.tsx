@@ -72,28 +72,41 @@ export default function RutaVentas() {
 
       <div className="flex-1 px-4 space-y-2 pb-4">
         {isLoading && <p className="text-center text-muted-foreground text-[13px] py-8">Cargando...</p>}
-        {filtered.map((v: any) => (
-          <button
-            key={v.id}
-            onClick={() => navigate(`/ruta/ventas/${v.id}`)}
-            className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[14px] font-semibold text-foreground">{v.folio ?? '—'}</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[v.status] ?? ''}`}>
-                  {v.status}
-                </span>
+        {filtered.map((v: any) => {
+          const saldo = v.saldo_pendiente ?? 0;
+          const esCredito = v.condicion_pago === 'credito';
+          return (
+            <button
+              key={v.id}
+              onClick={() => navigate(`/ruta/ventas/${v.id}`)}
+              className="w-full bg-card border border-border rounded-xl p-3.5 flex items-center gap-3 active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[14px] font-semibold text-foreground">{v.folio ?? '—'}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[v.status] ?? ''}`}>
+                    {v.status}
+                  </span>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${esCredito ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'}`}>
+                    {esCredito ? 'Crédito' : 'Contado'}
+                  </span>
+                </div>
+                <p className="text-[12px] text-muted-foreground truncate mt-0.5">{v._clienteNombre}</p>
+                <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)}</p>
               </div>
-              <p className="text-[12px] text-muted-foreground truncate mt-0.5">{v._clienteNombre}</p>
-              <p className="text-[11px] text-muted-foreground">{fmtDate(v.fecha)}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p className="text-[15px] font-bold text-foreground">$ {(v.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-          </button>
-        ))}
+              <div className="text-right shrink-0">
+                <p className="text-[15px] font-bold text-foreground">$ {(v.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                {saldo > 0 && v.status !== 'cancelado' && (
+                  <p className="text-[11px] font-medium text-destructive">Saldo: ${saldo.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+                )}
+                {saldo <= 0 && v.status !== 'borrador' && v.status !== 'cancelado' && (
+                  <p className="text-[11px] font-medium text-primary">Pagado</p>
+                )}
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
+          );
+        })}
         {!isLoading && filtered.length === 0 && (
           <p className="text-center text-muted-foreground text-[13px] py-8">No hay ventas</p>
         )}
