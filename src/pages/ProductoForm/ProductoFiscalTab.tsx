@@ -10,6 +10,7 @@ interface Props {
 }
 
 export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
+  const { symbol: s } = useCurrency();
   const findSat = (list: UnidadSat[] | undefined, id: string | undefined) => {
     const u = list?.find(i => i.id === id);
     return u ? `${u.clave} - ${u.nombre}` : '';
