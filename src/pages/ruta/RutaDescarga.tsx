@@ -67,7 +67,13 @@ export default function RutaDescarga() {
   const vendedorId = cargaActiva?.vendedor_id || myProfile?.vendedor_id || user?.id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
 
   const { data: financials } = useQuery({
     queryKey: ['descarga-mobile-financials', vendedorId, today],
