@@ -146,43 +146,37 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // --- Stock a bordo (cargas) ---
-  const { data: cargaInicio } = useQuery({
-    queryKey: ['liq-stock-inicio', descarga.empresa_id, descarga.vendedor_id, fInicio],
+  // --- Stock del almacén asignado al vendedor ---
+  const { data: vendedorAlmacen } = useQuery({
+    queryKey: ['vendedor-almacen', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id && incluirStock,
     queryFn: async () => {
-      const { data } = await supabase.from('cargas')
-        .select('id, fecha, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
-        .eq('empresa_id', descarga.empresa_id).eq('vendedor_id', descarga.vendedor_id)
-        .lte('fecha', fInicio).order('fecha', { ascending: false }).limit(1).maybeSingle();
-      return data;
-    },
-  });
-  const { data: cargaFin } = useQuery({
-    queryKey: ['liq-stock-fin', descarga.empresa_id, descarga.vendedor_id, fFin],
-    enabled: !!descarga.vendedor_id && incluirStock,
-    queryFn: async () => {
-      const { data } = await supabase.from('cargas')
-        .select('id, fecha, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
-        .eq('empresa_id', descarga.empresa_id).eq('vendedor_id', descarga.vendedor_id)
-        .lte('fecha', fFin).order('fecha', { ascending: false }).limit(1).maybeSingle();
+      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
 
-  const buildStockArr = (carga: any) => {
-    if (!carga?.carga_lineas) return [];
-    return (carga.carga_lineas as any[]).map((l: any) => ({
-      nombre: l.productos?.nombre || '—',
-      codigo: l.productos?.codigo || '',
-      cargada: Number(l.cantidad_cargada) || 0,
-      vendida: Number(l.cantidad_vendida) || 0,
-      devuelta: Number(l.cantidad_devuelta) || 0,
-      restante: (Number(l.cantidad_cargada) || 0) - (Number(l.cantidad_vendida) || 0) - (Number(l.cantidad_devuelta) || 0),
-    })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
-  };
-  const stockInicio = buildStockArr(cargaInicio);
-  const stockFin = buildStockArr(cargaFin);
+  const { data: stockAlmacenData } = useQuery({
+    queryKey: ['liq-stock-almacen', descarga.empresa_id, vendedorAlmacen?.almacen_id],
+    enabled: !!vendedorAlmacen?.almacen_id && incluirStock,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad, productos(nombre, codigo)')
+        .eq('almacen_id', vendedorAlmacen!.almacen_id!)
+        .gt('cantidad', 0)
+        .order('producto_id');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const almacenNombre = (vendedorAlmacen as any)?.almacenes?.nombre || 'Almacén asignado';
+
+  const stockItems = (stockAlmacenData || []).map((s: any) => ({
+    nombre: s.productos?.nombre || '—',
+    codigo: s.productos?.codigo || '',
+    cantidad: Number(s.cantidad) || 0,
+  })).sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
 
 
   const ventasActivas = (ventasDia || []).filter((v: any) => v.status !== 'cancelado');
