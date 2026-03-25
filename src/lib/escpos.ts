@@ -1,6 +1,6 @@
 /**
  * ESC/POS command builder for 58mm and 80mm thermal printers.
- * 58mm = 32 columns (Font A), 80mm = 48 columns.
+ * Fixed-width column layout to prevent price overflow / line jumping.
  */
 import type { TicketData } from './ticketHtml';
 import { getCurrencyConfig } from './currency';
@@ -19,31 +19,87 @@ const BOLD_OFF     = [ESC, 0x45, 0x00];
 const CUT          = [GS, 0x56, 0x42, 0x00];
 const LF           = [0x0A];
 
-const encoder = new TextEncoder();
+const enc = new TextEncoder();
 
 /** Strip accents and non-ASCII so byte length = char count */
 function clean(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '');
 }
 
-function center(s: string, w: number): string {
-  s = clean(s).substring(0, w);
-  const pad = Math.floor((w - s.length) / 2);
-  return ' '.repeat(Math.max(0, pad)) + s;
+/** Format number without locale (avoids non-ASCII separators) */
+function fmtNum(n: number): string {
+  const abs = Math.abs(n);
+  const fixed = abs.toFixed(2);
+  // Add thousand separators manually with comma
+  const [int, dec] = fixed.split('.');
+  const withCommas = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (n < 0 ? '-' : '') + withCommas + '.' + dec;
 }
 
-function row(left: string, right: string, w: number): string {
-  left = clean(left);
+/** Pad-right a string to exactly w chars, truncating if needed */
+function padR(s: string, w: number): string {
+  if (s.length >= w) return s.slice(0, w);
+  return s + ' '.repeat(w - s.length);
+}
+
+/** Pad-left a string to exactly w chars, truncating if needed */
+function padL(s: string, w: number): string {
+  if (s.length >= w) return s.slice(0, w);
+  return ' '.repeat(w - s.length) + s;
+}
+
+/** Build a row: left text padded-right + right text padded-left = exactly W chars */
+function row(left: string, right: string, W: number): string {
   right = clean(right);
-  const space = w - left.length - right.length;
-  if (space <= 0) {
-    return (left.substring(0, w - right.length - 1) + ' ' + right).substring(0, w);
+  left = clean(left);
+  const rightW = Math.max(right.length, 1);
+  const leftW = W - rightW;
+  if (leftW < 1) return (left.slice(0, W - right.length - 1) + ' ' + right).slice(0, W);
+  return padR(left, leftW) + padL(right, rightW);
+}
+
+/**
+ * Word-wrap text into lines of max `w` chars.
+ * Returns array of strings, each padded to exactly `w` chars.
+ */
+function wrap(s: string, w: number): string[] {
+  s = clean(s).trim();
+  if (s.length <= w) return [padR(s, w)];
+  const result: string[] = [];
+  while (s.length > w) {
+    let cut = s.lastIndexOf(' ', w);
+    if (cut < 1) cut = w;
+    result.push(padR(s.slice(0, cut), w));
+    s = s.slice(cut).trim();
   }
-  return left + ' '.repeat(space) + right;
+  if (s.length > 0) result.push(padR(s, w));
+  return result;
+}
+
+/**
+ * Build item lines with fixed price column on the RIGHT.
+ * Product description wraps; price appears only on the first line.
+ */
+function itemLines(desc: string, price: string, W: number): string[] {
+  const PRICE_W = Math.min(price.length + 1, 12); // +1 for spacing
+  const LEFT_W = W - PRICE_W;
+  const descLines = wrap(desc, LEFT_W);
+  return [
+    descLines[0] + padL(price, PRICE_W),
+    ...descLines.slice(1).map(l => l + ' '.repeat(PRICE_W)),
+  ];
 }
 
 function divider(w: number): string {
   return '-'.repeat(w);
+}
+
+/** Center text within w chars */
+function center(s: string, w: number): string {
+  s = clean(s);
+  if (s.length >= w) return s.slice(0, w);
+  const pad = Math.floor((w - s.length) / 2);
+  return ' '.repeat(pad) + s;
 }
 
 export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string }): Uint8Array {
@@ -51,96 +107,94 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   const W = is58 ? COLS_58 : COLS_80;
 
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
-  const fmt = (n: number) =>
-    `${sym}${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmt = (n: number) => `${sym}${fmtNum(n)}`;
 
   const parts: number[] = [];
-  const add = (bytes: number[]) => parts.push(...bytes);
-  const line = (s: string) => {
-    add(Array.from(encoder.encode(s + '\n')));
-  };
+  const add = (b: number[]) => parts.push(...b);
+  const ln = (s: string) => add(Array.from(enc.encode(s + '\n')));
 
   add(INIT);
 
-  // ── HEADER ──
+  // ── HEADER (centered) ──
   add(ALIGN_CENTER);
   add(BOLD_ON);
-  line(clean(data.empresa.nombre).substring(0, W));
+  ln(center(data.empresa.nombre, W));
   add(BOLD_OFF);
-  if (data.empresa.razon_social) line(clean(data.empresa.razon_social).substring(0, W));
-  if (data.empresa.rfc) line(`RFC: ${data.empresa.rfc}`);
+  if (data.empresa.razon_social) ln(center(data.empresa.razon_social, W));
+  if (data.empresa.rfc) ln(center(`RFC: ${data.empresa.rfc}`, W));
   const dir = [data.empresa.direccion, data.empresa.colonia].filter(Boolean).join(', ');
-  if (dir) line(clean(dir).substring(0, W));
+  if (dir) {
+    wrap(dir, W).forEach(l => ln(l.trim()));
+  }
   const dir2 = [data.empresa.ciudad, data.empresa.estado, data.empresa.cp ? `CP ${data.empresa.cp}` : ''].filter(Boolean).join(', ');
-  if (dir2) line(clean(dir2).substring(0, W));
-  if (data.empresa.telefono) line(`Tel: ${data.empresa.telefono}`);
-  if (data.empresa.email) line(data.empresa.email);
+  if (dir2) ln(center(dir2, W));
+  if (data.empresa.telefono) ln(center(`Tel: ${data.empresa.telefono}`, W));
+  if (data.empresa.email) ln(center(data.empresa.email, W));
   add(LF);
 
-  // ── INFO ──
+  // ── INFO (left) ──
   add(ALIGN_LEFT);
-  line(divider(W));
-  line(`Folio: ${data.folio}`);
-  line(`Fecha: ${data.fecha}`);
-  line(`Cliente: ${clean(data.clienteNombre).substring(0, W - 9)}`);
+  ln(divider(W));
+  ln(`Folio: ${clean(data.folio).slice(0, W - 7)}`);
+  ln(`Fecha: ${clean(data.fecha).slice(0, W - 7)}`);
+  ln(`Cliente: ${clean(data.clienteNombre).slice(0, W - 9)}`);
   const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : 'Contado';
-  line(`Pago: ${pagoLabel}`);
-  line(divider(W));
+  ln(`Pago: ${pagoLabel}`);
+  ln(divider(W));
 
-  // ── PRODUCTOS HEADER ──
-  add(BOLD_ON);
-  line(row('Cant Producto', 'Importe', W));
-  add(BOLD_OFF);
-  line(divider(W));
-
-  // ── LÍNEAS ──
+  // ── PRODUCTOS ──
   for (const l of data.lineas) {
-    const nombre = clean(l.nombre).substring(0, W - 10);
-    const importe = fmt(l.total);
-    line(row(`${l.cantidad}x ${nombre}`, importe, W));
-    // detalle precio unitario + IVA
-    const det = `  ${fmt(l.precio)}c/u${(l.iva_monto ?? 0) > 0 ? ` IVA${fmt(l.iva_monto!)}` : ''}`;
-    line(clean(det).substring(0, W));
+    const desc = `${l.cantidad}x ${clean(l.nombre)}`;
+    const price = fmt(l.total);
+    itemLines(desc, price, W).forEach(x => ln(x));
+    // Detail: unit price (smaller, indented)
+    if (l.precio > 0) {
+      const detParts = [`  @${fmt(l.precio)}`];
+      if ((l.iva_monto ?? 0) > 0) detParts.push(`IVA ${fmt(l.iva_monto!)}`);
+      const det = detParts.join(' ');
+      ln(clean(det).slice(0, W));
+    }
   }
-  line(divider(W));
+  ln(divider(W));
 
   // ── TOTALES ──
-  add(LF);
-  line(row('Subtotal', fmt(data.subtotal), W));
-  if (data.iva > 0) line(row('IVA', fmt(data.iva), W));
-  if ((data.ieps ?? 0) > 0) line(row('IEPS', fmt(data.ieps!), W));
-  line(divider(W));
+  ln(row('Subtotal', fmt(data.subtotal), W));
+  if (data.iva > 0) ln(row('IVA', fmt(data.iva), W));
+  if ((data.ieps ?? 0) > 0) ln(row('IEPS', fmt(data.ieps!), W));
+  ln(divider(W));
   add(BOLD_ON);
-  line(row('TOTAL', fmt(data.total), W));
+  ln(row('TOTAL', fmt(data.total), W));
   add(BOLD_OFF);
 
   if (data.montoRecibido && data.montoRecibido > 0) {
-    line(row('Recibido', fmt(data.montoRecibido), W));
-    if ((data.cambio ?? 0) > 0) line(row('Cambio', fmt(data.cambio!), W));
+    ln(row('Recibido', fmt(data.montoRecibido), W));
+    if ((data.cambio ?? 0) > 0) ln(row('Cambio', fmt(data.cambio!), W));
   }
 
   // ── SALDO ──
   if ((data.saldoAnterior != null && data.saldoAnterior > 0) || (data.saldoNuevo != null && (data.saldoNuevo ?? 0) > 0)) {
-    line(divider(W));
+    ln(divider(W));
     add(BOLD_ON);
-    line(clean('EDO. CUENTA'));
+    ln('EDO. CUENTA');
     add(BOLD_OFF);
-    if (data.saldoAnterior != null && data.saldoAnterior > 0) line(row('Saldo ant', fmt(data.saldoAnterior), W));
-    if (data.pagoAplicado != null && data.pagoAplicado > 0) line(row('Pago', `-${fmt(data.pagoAplicado)}`, W));
-    if (data.condicionPago === 'credito') line(row('+Venta', fmt(data.total), W));
-    line(divider(W));
+    if (data.saldoAnterior != null && data.saldoAnterior > 0) ln(row('Saldo ant', fmt(data.saldoAnterior), W));
+    if (data.pagoAplicado != null && data.pagoAplicado > 0) ln(row('Pago', `-${fmt(data.pagoAplicado)}`, W));
+    if (data.condicionPago === 'credito') ln(row('+Venta', fmt(data.total), W));
+    ln(divider(W));
     add(BOLD_ON);
-    line(row('Saldo', fmt(data.saldoNuevo ?? 0), W));
+    ln(row('Saldo', fmt(data.saldoNuevo ?? 0), W));
     add(BOLD_OFF);
   }
 
   // ── FOOTER ──
   add(LF);
   add(ALIGN_CENTER);
-  line('Gracias por su compra');
-  if (data.empresa.notas_ticket) line(clean(data.empresa.notas_ticket).substring(0, W));
-  line('');
-  line('Elaborado por Uniline');
+  ln('Gracias por su compra');
+  if (data.empresa.notas_ticket) {
+    wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
+  }
+  ln('');
+  ln('Elaborado por Uniline');
   add(LF); add(LF); add(LF);
   add(CUT);
 
