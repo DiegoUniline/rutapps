@@ -145,7 +145,7 @@ export function useVentaDetalle() {
   };
 
   const handleCancelar = async () => {
-    if (!venta || !confirm('¿Estás seguro de cancelar esta venta?')) return;
+    if (!venta) return;
     setSaving(true);
     try {
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
