@@ -106,6 +106,7 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   const is58 = (opts?.ticketAncho ?? '80') === '58';
   const W = is58 ? COLS_58 : COLS_80;
 
+  const showTax = opts?.showTax ?? (data.empresa.ticket_campos?.impuestos !== false);
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
   const fmt = (n: number) => `${sym}${fmtNum(n)}`;
 
