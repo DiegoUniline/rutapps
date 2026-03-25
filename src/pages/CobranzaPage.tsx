@@ -254,7 +254,7 @@ export default function CobranzaPage() {
                   }
                   fields={[
                     ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
-                    { label: 'Monto', value: <span className="text-success font-bold">$ {fmt(c.monto)}</span> },
+                    { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
                   ]}
                 />
               ))}
