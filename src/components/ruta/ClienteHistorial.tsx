@@ -11,6 +11,7 @@ interface Props {
 }
 
 export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: Props) {
+  const { fmt } = useCurrency();
   const navigate = useNavigate();
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', { cliente_id: clienteId }, { enabled: !!clienteId, orderBy: 'fecha', ascending: false });
