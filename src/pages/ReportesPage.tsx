@@ -188,6 +188,7 @@ export default function ReportesPage() {
     { key: 'resumen', label: 'Resumen', icon: BarChart3 },
     { key: 'ventas_producto', label: 'Ventas x Producto', icon: Package },
     { key: 'ventas_cliente', label: 'Ventas x Cliente', icon: Users },
+    { key: 'producto_cliente', label: 'Producto x Cliente', icon: ShoppingCart },
     { key: 'vendedores', label: 'Vendedores', icon: TrendingUp },
     { key: 'entregas', label: 'Entregas', icon: Truck },
     { key: 'cargas', label: 'Cargas', icon: BoxIcon },
