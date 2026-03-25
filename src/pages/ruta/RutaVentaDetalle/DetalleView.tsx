@@ -44,7 +44,7 @@ export function DetalleView(p: Props) {
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
       </div>
-      <BottomActions {...p} s={s} />
+      <BottomActions {...p} s={s} lineas={p.lineas} />
       <DocumentPreviewModal open={p.showEcPreview} onClose={() => p.setShowEcPreview(false)} pdfBlob={p.ecPdfBlob} fileName={`Estado-Cuenta-${p.clienteNombre.replace(/\s+/g, '-')}.pdf`} empresaId={p.empresa?.id ?? ''} defaultPhone={p.clienteData?.telefono ?? ''} caption={`Estado de cuenta - ${p.clienteNombre}`} tipo="estado_cuenta" />
     </div>
   );
