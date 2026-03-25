@@ -7,10 +7,18 @@ import { getCurrencyConfig } from '@/lib/currency';
 export interface TicketEmpresa {
   nombre: string;
   rfc?: string | null;
+  razon_social?: string | null;
   direccion?: string | null;
+  colonia?: string | null;
+  ciudad?: string | null;
+  estado?: string | null;
+  cp?: string | null;
   telefono?: string | null;
+  email?: string | null;
   logo_url?: string | null;
   moneda?: string | null;
+  notas_ticket?: string | null;
+  ticket_campos?: Record<string, boolean> | null;
 }
 
 export interface TicketLinea {
