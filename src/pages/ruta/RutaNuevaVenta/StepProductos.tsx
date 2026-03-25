@@ -1,3 +1,4 @@
+import { useCurrency } from '@/hooks/useCurrency';
 import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw } from 'lucide-react';
 import type { CartItem, DevolucionItem } from './types';
 
@@ -25,6 +26,7 @@ interface Props {
 
 export function StepProductos(props: Props) {
   const { clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos, cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt } = props;
+  const { symbol: s } = useCurrency();
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -51,7 +53,7 @@ export function StepProductos(props: Props) {
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Cambios (sin cargo)</p>
           {cambioItems.map(item => (
             <div key={`cambio-${item.producto_id}`} className="flex justify-between text-[11px] py-0.5">
-              <span className="text-foreground">{item.cantidad}x {item.nombre}</span><span className="text-muted-foreground">$0.00</span>
+              <span className="text-foreground">{item.cantidad}x {item.nombre}</span><span className="text-muted-foreground"{s}0.00</span>
             </div>
           ))}
         </div>
@@ -96,7 +98,7 @@ export function StepProductos(props: Props) {
         <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
           <button onClick={() => setStep('resumen')} className="w-full bg-primary text-primary-foreground rounded-xl py-3 flex items-center justify-between px-4 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20">
             <div className="flex items-center gap-1.5"><ShoppingCart className="h-4 w-4 opacity-80" /><span className="text-[13px] font-medium">{totals.items} {totals.items === 1 ? 'producto' : 'productos'}</span></div>
-            <span className="text-[14px] font-bold">${fmt(totals.total)}</span>
+            <span className="text-[14px] font-bold">{s}{fmt(totals.total)}</span>
           </button>
         </div>
       )}
