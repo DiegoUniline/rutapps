@@ -468,7 +468,7 @@ export default function SupervisorDashboardPage() {
         if (a.visitado !== b.visitado) return a.visitado ? 1 : -1;
         return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999);
       });
-  }, [filteredVisitas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor]);
+  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor]);
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => {
     return clienteActivity
