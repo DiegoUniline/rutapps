@@ -4,6 +4,7 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
 import { VentaPagosTab } from '@/components/venta/VentaPagosTab';
 import { VentaEntregasTab } from '@/components/venta/VentaEntregasTab';
+import { VentaDevolucionesTab } from '@/components/venta/VentaDevolucionesTab';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
 import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { TableSkeleton } from '@/components/TableSkeleton';
