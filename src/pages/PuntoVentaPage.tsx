@@ -609,7 +609,7 @@ export default function PuntoVentaPage() {
                       onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v); }}
                       onFocus={e => e.target.select()}
                     />
-                    <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">${fmt(lineTotal)}</span>
+                    <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
                 </div>
               );
