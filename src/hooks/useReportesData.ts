@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 
-export function useReportesData(desde: string, hasta: string, vendedorIds?: string[]) {
+export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[]) {
   const { empresa } = useAuth();
   return useQuery({
     queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds],
