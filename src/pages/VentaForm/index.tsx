@@ -15,6 +15,8 @@ import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVent
 import { VentaFormFields } from './VentaFormFields';
 import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
+import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { fmtDate } from '@/lib/utils';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
