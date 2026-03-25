@@ -360,17 +360,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const applySwUpdate = async () => {
     try {
-      const reg = await navigator.serviceWorker?.getRegistration();
-      if (reg?.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } else {
-        // Unregister SW and clear caches for a hard refresh
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg?.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          // Give the SW time to activate before reloading
+          await new Promise(r => setTimeout(r, 300));
+          window.location.reload();
+          return;
+        }
+        // No waiting SW → unregister and clear all caches
         if (reg) await reg.unregister();
+      }
+      if ('caches' in window) {
         const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map(name => caches.delete(name)));
-        window.location.reload();
       }
+      window.location.reload();
     } catch {
+      // Fallback: just force reload
       window.location.reload();
     }
   };
@@ -547,15 +555,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Smartphone className="h-4 w-4" />
             </Link>
             <button
-              onClick={() => {
-                navigator.serviceWorker?.getRegistration().then((reg) => {
-                  if (reg?.waiting) {
-                    reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                  } else {
-                    window.location.reload();
-                  }
-                });
-              }}
+              onClick={applySwUpdate}
               className="p-2 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-hover transition-all"
               title="Actualizar app"
             >
