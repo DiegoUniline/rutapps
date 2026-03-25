@@ -246,7 +246,7 @@ export function useRutaVenta() {
     const totalDescuentos = totalDescuentoPromos + descuentoDevolucion;
     const total = Math.max(0, subtotal + ieps + iva - totalDescuentos);
     return { subtotal, iva, ieps, total, items, descuento: totalDescuentos, descuentoDevolucion };
-  }, [cart, totalDescuentoPromos]);
+  }, [cart, totalDescuentoPromos, descuentoDevolucion]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
