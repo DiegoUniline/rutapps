@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Upload } from 'lucide-react';
@@ -10,9 +10,11 @@ import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useClientesPaginated } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
@@ -33,14 +35,36 @@ const CLIENTES_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
+const FILTER_OPTIONS = [
+  {
+    key: 'status',
+    label: 'Estado',
+    options: [
+      { value: 'todos', label: 'Todos' },
+      { value: 'activo', label: 'Activo' },
+      { value: 'inactivo', label: 'Inactivo' },
+      { value: 'suspendido', label: 'Suspendido' },
+    ],
+  },
+];
+
+const GROUP_BY_OPTIONS = [
+  { value: 'status', label: 'Estado' },
+  { value: 'vendedor', label: 'Vendedor' },
+  { value: 'zona', label: 'Zona' },
+  { value: 'credito', label: 'Tipo crédito' },
+];
+
 function ClientesTable() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
+  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('clientes');
+
+  const statusFilter = filters.status || 'todos';
   const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, PAGE_SIZE);
 
   const clientes = clientesData?.rows ?? [];
@@ -60,6 +84,71 @@ function ClientesTable() {
     setSelected(next);
   };
 
+  const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
+    if (key === 'status') return (item.status ?? 'activo').charAt(0).toUpperCase() + (item.status ?? 'activo').slice(1);
+    if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
+    if (key === 'zona') return item.zonas?.nombre ?? 'Sin zona';
+    if (key === 'credito') return item.credito ? 'Con crédito' : 'Sin crédito';
+    return '';
+  }), [pageData, groupBy]);
+
+  const renderTable = (items: any[]) => (
+    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-table-border">
+            <th className="th-odoo w-10 text-center">
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+            </th>
+            <th className="th-odoo text-left">Código</th>
+            <th className="th-odoo text-left">Nombre</th>
+            <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
+            <th className="th-odoo text-left hidden md:table-cell">Días de visita</th>
+            <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
+            <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
+            <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
+            <th className="th-odoo text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && (
+            <tr>
+              <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
+            </tr>
+          )}
+          {items.map((c: any) => (
+            <tr
+              key={c.id}
+              className={cn(
+                "border-b border-table-border cursor-pointer transition-colors",
+                selected.has(c.id) ? "bg-primary/5" : "hover:bg-table-hover"
+              )}
+              onClick={() => navigate(`/clientes/${c.id}`)}
+            >
+              <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
+                <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
+              </td>
+              <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
+              <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
+              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
+                {c.dia_visita?.length > 0
+                  ? c.dia_visita.map((d: string) => d.slice(0, 3)).join(', ')
+                  : '—'}
+              </td>
+              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.zonas?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{c.vendedores?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3 text-center">
+                <StatusChip status={c.status ?? 'activo'} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -67,19 +156,14 @@ function ClientesTable() {
           search={search}
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar por nombre o código..."
-        >
-          <SearchableSelect
-            options={[
-              { value: 'todos', label: 'Todos' },
-              { value: 'activo', label: 'Activo' },
-              { value: 'inactivo', label: 'Inactivo' },
-              { value: 'suspendido', label: 'Suspendido' },
-            ]}
-            value={statusFilter}
-            onChange={val => { setStatusFilter(val); setPage(1); }}
-            placeholder="Estado..."
-          />
-        </OdooFilterBar>
+          filterOptions={FILTER_OPTIONS}
+          activeFilters={filters}
+          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setPage(1); }}
+          groupByOptions={GROUP_BY_OPTIONS}
+          activeGroupBy={groupBy}
+          onGroupByChange={setGroupBy}
+        />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
             <>
@@ -134,63 +218,12 @@ function ClientesTable() {
           )}
         </div>
       ) : (
-        <div className="bg-card border border-border rounded overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-table-border">
-                <th className="th-odoo w-10 text-center">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
-                </th>
-                <th className="th-odoo text-left">Código</th>
-                <th className="th-odoo text-left">Nombre</th>
-                <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
-                <th className="th-odoo text-left hidden md:table-cell">Días de visita</th>
-                <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
-                <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
-                <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
-                <th className="th-odoo text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
-                </tr>
-              )}
-              {pageData.map(c => (
-                <tr
-                  key={c.id}
-                  className={cn(
-                    "border-b border-table-border cursor-pointer transition-colors",
-                    selected.has(c.id) ? "bg-primary/5" : "hover:bg-table-hover"
-                  )}
-                  onClick={() => navigate(`/clientes/${c.id}`)}
-                >
-                  <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(c.id); }}>
-                    <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggleOne(c.id)} className="rounded border-input" />
-                  </td>
-                  <td className="py-1.5 px-3 font-mono text-xs">{c.codigo ?? '—'}</td>
-                  <td className="py-1.5 px-3 font-medium">{c.nombre}</td>
-                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.contacto ?? '—'}</td>
-                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">
-                    {(c as any).dia_visita?.length > 0
-                      ? (c as any).dia_visita.map((d: string) => d.slice(0, 3)).join(', ')
-                      : '—'}
-                  </td>
-                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{c.telefono ?? '—'}</td>
-                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground">{(c as any).zonas?.nombre ?? '—'}</td>
-                  <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground">{(c as any).vendedores?.nombre ?? '—'}</td>
-                  <td className="py-1.5 px-3 text-center">
-                    <StatusChip status={c.status ?? 'activo'} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {total > 0 && (
+        <>
+          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
+          {!groupBy && total > 0 && (
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
-        </div>
+        </>
       )}
     </div>
   );

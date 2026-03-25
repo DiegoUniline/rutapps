@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -12,11 +12,13 @@ import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentasPaginated } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { cn, fmtDate } from '@/lib/utils';
@@ -57,17 +59,52 @@ const STATUS_LABELS: Record<string, string> = {
   cancelado: 'Cancelado',
 };
 
+const FILTER_OPTIONS = [
+  {
+    key: 'tipo',
+    label: 'Tipo',
+    options: [
+      { value: 'todos', label: 'Todos' },
+      { value: 'pedido', label: 'Pedido' },
+      { value: 'venta_directa', label: 'Venta directa' },
+    ],
+  },
+  {
+    key: 'status',
+    label: 'Estado',
+    options: [
+      { value: 'todos', label: 'Todos' },
+      { value: 'borrador', label: 'Borrador' },
+      { value: 'confirmado', label: 'Confirmado' },
+      { value: 'entregado', label: 'Entregado' },
+      { value: 'facturado', label: 'Facturado' },
+      { value: 'cancelado', label: 'Cancelado' },
+    ],
+  },
+];
+
+const GROUP_BY_OPTIONS = [
+  { value: 'status', label: 'Estado' },
+  { value: 'tipo', label: 'Tipo' },
+  { value: 'condicion_pago', label: 'Condición de pago' },
+  { value: 'vendedor', label: 'Vendedor' },
+  { value: 'cliente', label: 'Cliente' },
+  { value: 'fecha', label: 'Fecha' },
+];
+
 export default function VentasListPage() {
   const { profile, empresa } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
-  const [tipoFilter, setTipoFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  
+  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('ventas');
+
+  const statusFilter = filters.status || 'todos';
+  const tipoFilter = filters.tipo || 'todos';
+
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
   const { data: clientesList } = useClientes();
 
@@ -101,6 +138,92 @@ export default function VentasListPage() {
   const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
+  const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
+    if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
+    if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo;
+    if (key === 'condicion_pago') return CONDICION_LABELS[item.condicion_pago] ?? item.condicion_pago;
+    if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
+    if (key === 'cliente') return item.clientes?.nombre ?? 'Sin cliente';
+    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    return '';
+  }), [pageData, groupBy]);
+
+  const renderTableRows = (items: any[]) => (
+    <>
+      {items.map((v: any) => (
+        <tr
+          key={v.id}
+          className={cn(
+            "border-b border-table-border cursor-pointer transition-colors",
+            selected.has(v.id) ? "bg-primary/5" : "hover:bg-table-hover"
+          )}
+          onClick={() => navigate(`/ventas/${v.id}`)}
+        >
+          <td className="py-2 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(v.id); }}>
+            <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggleOne(v.id)} className="rounded border-input" />
+          </td>
+          <td className="py-2 px-3 font-mono text-xs font-medium">{v.folio || v.id.slice(0, 8)}</td>
+          <td className="py-2 px-3">
+            <span className={cn(
+              "text-[11px] font-medium px-2 py-0.5 rounded",
+              v.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
+            )}>
+              {TIPO_LABELS[v.tipo] || v.tipo}
+            </span>
+          </td>
+          <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}</td>
+          <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
+          <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
+          <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
+          <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
+          <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(v.total)}</td>
+          <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+            {(v.saldo_pendiente ?? 0) > 0 ? (
+              <span className="text-warning font-medium">{fmt(v.saldo_pendiente)}</span>
+            ) : (
+              <span className="text-muted-foreground">$0.00</span>
+            )}
+          </td>
+          <td className="py-2 px-3 text-center">
+            <StatusChip status={v.status} />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+
+  const renderTable = (items: any[]) => (
+    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+      <table className="w-full text-[13px]">
+        <thead>
+          <tr className="border-b border-table-border text-left">
+            <th className="py-2 px-3 w-10 text-center">
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+            </th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && (
+            <tr>
+              <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
+            </tr>
+          )}
+          {renderTableRows(items)}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Ventas <HelpButton title={HELP.ventas.title} sections={HELP.ventas.sections} /></h1>
@@ -112,31 +235,14 @@ export default function VentasListPage() {
           search={search}
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar por folio o cliente..."
-        >
-          <SearchableSelect
-            options={[
-              { value: 'todos', label: 'Todos los tipos' },
-              { value: 'pedido', label: 'Pedido' },
-              { value: 'venta_directa', label: 'Venta directa' },
-            ]}
-            value={tipoFilter}
-            onChange={val => { setTipoFilter(val); setPage(1); }}
-            placeholder="Tipo..."
-          />
-          <SearchableSelect
-            options={[
-              { value: 'todos', label: 'Todos los estados' },
-              { value: 'borrador', label: 'Borrador' },
-              { value: 'confirmado', label: 'Confirmado' },
-              { value: 'entregado', label: 'Entregado' },
-              { value: 'facturado', label: 'Facturado' },
-              { value: 'cancelado', label: 'Cancelado' },
-            ]}
-            value={statusFilter}
-            onChange={val => { setStatusFilter(val); setPage(1); }}
-            placeholder="Estado..."
-          />
-        </OdooFilterBar>
+          filterOptions={FILTER_OPTIONS}
+          activeFilters={filters}
+          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setPage(1); }}
+          groupByOptions={GROUP_BY_OPTIONS}
+          activeGroupBy={groupBy}
+          onGroupByChange={setGroupBy}
+        />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
             <ExportButton
@@ -243,77 +349,22 @@ export default function VentasListPage() {
           <WhatsAppPreviewDialog open={waOpen} onClose={() => { setWaOpen(false); setWaPdfBlob(null); }} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" pdfBlob={waPdfBlob} pdfFileName={waPdfName} />
         </div>
       ) : (
-        /* Desktop table */
-        <div className="bg-card border border-border rounded overflow-x-auto">
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr className="border-b border-table-border text-left">
-                <th className="py-2 px-3 w-10 text-center">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
-                </th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Folio</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Tipo</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
-                <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.length === 0 && (
-                <tr>
-                  <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
-                </tr>
-              )}
-              {pageData.map((v: any) => (
-                <tr
-                  key={v.id}
-                  className={cn(
-                    "border-b border-table-border cursor-pointer transition-colors",
-                    selected.has(v.id) ? "bg-primary/5" : "hover:bg-table-hover"
-                  )}
-                  onClick={() => navigate(`/ventas/${v.id}`)}
-                >
-                  <td className="py-2 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(v.id); }}>
-                    <input type="checkbox" checked={selected.has(v.id)} onChange={() => toggleOne(v.id)} className="rounded border-input" />
-                  </td>
-                  <td className="py-2 px-3 font-mono text-xs font-medium">{v.folio || v.id.slice(0, 8)}</td>
-                  <td className="py-2 px-3">
-                    <span className={cn(
-                      "text-[11px] font-medium px-2 py-0.5 rounded",
-                      v.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
-                    )}>
-                      {TIPO_LABELS[v.tipo] || v.tipo}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}</td>
-                  <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
-                  <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
-                  <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
-                  <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
-                  <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(v.total)}</td>
-                  <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
-                    {(v.saldo_pendiente ?? 0) > 0 ? (
-                      <span className="text-warning font-medium">{fmt(v.saldo_pendiente)}</span>
-                    ) : (
-                      <span className="text-muted-foreground">$0.00</span>
-                    )}
-                  </td>
-                  <td className="py-2 px-3 text-center">
-                    <StatusChip status={v.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {total > 0 && (
+        /* Desktop table with grouping */
+        <>
+          <GroupedTableWrapper
+            groupBy={groupBy}
+            groups={groups}
+            renderTable={renderTable}
+            renderSummary={(items) => (
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {fmtCurrency(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}
+              </span>
+            )}
+          />
+          {!groupBy && total > 0 && (
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
-        </div>
+        </>
       )}
       </>
     </div>
