@@ -50,7 +50,7 @@ type View = 'detalle' | 'editar' | 'cobrar' | 'ticket';
 export default function RutaVentaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, empresa } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const queryClient = useQueryClient();
   const { data: venta, isLoading } = useVenta(id);
 
