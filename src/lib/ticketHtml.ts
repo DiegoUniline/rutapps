@@ -65,7 +65,7 @@ export function buildTicketHTML(data: TicketData): string {
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
 
-  const campos = { logo: true, nombre: true, razon_social: true, rfc: true, direccion: true, telefono: true, notas_ticket: true, ...((empresa.ticket_campos as Record<string, boolean>) ?? {}) };
+  const campos = { logo: true, nombre: true, razon_social: true, rfc: true, direccion: true, telefono: true, notas_ticket: true, impuestos: true, ...((empresa.ticket_campos as Record<string, boolean>) ?? {}) };
 
   const logoHtml = campos.logo && empresa.logo_url
     ? `<img src="${empresa.logo_url}" crossorigin="anonymous" style="max-height:32px;max-width:120px;margin:0 auto 4px;display:block" />`
