@@ -96,7 +96,7 @@ export default function ConteosFisicosPage() {
         <Card className="p-3">
           <p className="text-xs text-muted-foreground">Diferencia (cerrados)</p>
           <p className={cn("text-2xl font-bold", difTotal >= 0 ? "text-green-600" : "text-red-600")}>
-            $ {fmt(difTotal)}
+            {fmt(difTotal)}
           </p>
         </Card>
       </div>
