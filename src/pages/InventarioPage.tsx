@@ -554,7 +554,7 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Devuelto</p>
-            <p className="text-lg font-bold text-warning">{totalDevuelto}</p>
+            <p className="text-lg font-bold text-warning">{fmtNum(totalDevuelto)}</p>
           </div>
           <div className="bg-primary/10 rounded-lg p-3 text-center">
             <p className="text-[10px] text-primary uppercase tracking-wide font-medium">Abordo</p>
