@@ -20,13 +20,34 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-usuarios', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
+      // Get admin role IDs to exclude
+      const { data: adminRoles } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('empresa_id', empresa!.id)
+        .eq('nombre', 'Administrador');
+      const adminRoleIds = (adminRoles ?? []).map(r => r.id);
+
+      // Get user_ids that have admin role
+      let adminUserIds: string[] = [];
+      if (adminRoleIds.length > 0) {
+        const { data: adminAssignments } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .in('role_id', adminRoleIds);
+        adminUserIds = (adminAssignments ?? []).map(a => a.user_id);
+      }
+
       const { data } = await supabase
         .from('profiles')
         .select('user_id, nombre, estado')
         .eq('empresa_id', empresa!.id)
         .eq('estado', 'activo')
         .order('nombre');
-      return (data ?? []).map(p => ({ id: p.user_id, nombre: p.nombre }));
+
+      return (data ?? [])
+        .filter(p => !adminUserIds.includes(p.user_id))
+        .map(p => ({ id: p.user_id, nombre: p.nombre }));
     },
   });
 
