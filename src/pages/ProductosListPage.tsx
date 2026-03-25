@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -10,9 +10,11 @@ import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductosPaginated } from '@/hooks/useData';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -27,15 +29,37 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
+const FILTER_OPTIONS = [
+  {
+    key: 'status',
+    label: 'Estado',
+    options: [
+      { value: 'todos', label: 'Todos' },
+      { value: 'activo', label: 'Activo' },
+      { value: 'inactivo', label: 'Inactivo' },
+      { value: 'borrador', label: 'Borrador' },
+    ],
+  },
+];
+
+const GROUP_BY_OPTIONS = [
+  { value: 'status', label: 'Estado' },
+  { value: 'clasificacion', label: 'Categoría' },
+  { value: 'marca', label: 'Marca' },
+  { value: 'proveedor', label: 'Proveedor' },
+];
+
 export default function ProductosListPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('activo');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
+  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('productos');
+
+  const statusFilter = filters.status || 'activo';
   const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE);
 
   const productos = productosData?.rows ?? [];
@@ -57,6 +81,104 @@ export default function ProductosListPage() {
 
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
 
+  const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
+    if (key === 'status') return (item.status ?? 'activo').charAt(0).toUpperCase() + (item.status ?? 'activo').slice(1);
+    if (key === 'clasificacion') return item.clasificaciones?.nombre ?? 'Sin categoría';
+    if (key === 'marca') return item.marcas?.nombre ?? 'Sin marca';
+    if (key === 'proveedor') return item.proveedores?.nombre ?? 'Sin proveedor';
+    return '';
+  }), [pageData, groupBy]);
+
+  const renderTable = (items: any[]) => (
+    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-table-border">
+            <th className="th-odoo w-10 text-center">
+              <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
+            </th>
+             <th className="th-odoo w-10">Img</th>
+             <th className="th-odoo text-left">Código</th>
+             <th className="th-odoo text-left">Nombre</th>
+             <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
+             <th className="th-odoo text-left hidden md:table-cell">Marca</th>
+             <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
+             <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
+             <th className="th-odoo text-center hidden xl:table-cell">U. compra</th>
+             <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
+             <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
+             <th className="th-odoo text-right">Precio</th>
+             <th className="th-odoo text-right hidden md:table-cell">Costo</th>
+             <th className="th-odoo text-right hidden xl:table-cell">Costo/u</th>
+             <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
+             <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
+             <th className="th-odoo text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && (
+            <tr>
+              <td colSpan={16} className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</td>
+            </tr>
+          )}
+          {items.map((p: any) => (
+            <tr
+              key={p.id}
+              className={cn(
+                "border-b border-table-border cursor-pointer transition-colors",
+                selected.has(p.id) ? "bg-primary/5" : "hover:bg-table-hover"
+              )}
+              onClick={() => navigate(`/productos/${p.id}`)}
+            >
+              <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(p.id); }}>
+                <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} className="rounded border-input" />
+              </td>
+              <td className="py-1.5 px-2">
+                {p.imagen_url ? (
+                  <img src={p.imagen_url} alt="" className="h-7 w-7 rounded object-cover" />
+                ) : (
+                  <div className="h-7 w-7 rounded bg-secondary flex items-center justify-center text-xxs text-muted-foreground">—</div>
+                )}
+              </td>
+              <td className="py-1.5 px-3 font-mono text-xs">{p.codigo}</td>
+              <td className="py-1.5 px-3 font-medium max-w-[200px] truncate">{p.nombre}</td>
+              <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
+               <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
+               <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_compra?.abreviatura ?? '—'}</td>
+               <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>
+               <td className="py-1.5 px-3 hidden xl:table-cell text-center font-mono text-xs">{p.factor_conversion ?? 1}</td>
+               <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
+               <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
+               <td className="py-1.5 px-3 text-right hidden xl:table-cell text-muted-foreground tabular-nums font-mono text-xs">
+                 {fmt((p.costo ?? 0) / (p.factor_conversion || 1))}
+               </td>
+              <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
+                <span className={cn(
+                  "font-medium",
+                  (p.cantidad ?? 0) <= 0 ? "text-destructive" : (p.cantidad ?? 0) < (p.min ?? 0) ? "text-warning" : "text-foreground"
+                )}>
+                  {fmtNum(p.cantidad ?? 0)}
+                </span>
+              </td>
+              <td className="py-1.5 px-3 hidden sm:table-cell text-center">
+                {p.tiene_iva ? (
+                  <span className="text-xxs font-medium text-success">{p.iva_pct ?? 16}%</span>
+                ) : (
+                  <span className="text-xxs text-muted-foreground">No</span>
+                )}
+              </td>
+              <td className="py-1.5 px-3 text-center">
+                <StatusChip status={p.status} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   return (
     <div className="p-4 space-y-3 min-h-full">
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /></h1>
@@ -66,18 +188,14 @@ export default function ProductosListPage() {
           search={search}
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar por nombre o código..."
-        >
-          <select
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="input-odoo w-auto min-w-[120px]"
-          >
-            <option value="todos">Todos</option>
-            <option value="activo">Activo</option>
-            <option value="inactivo">Inactivo</option>
-            <option value="borrador">Borrador</option>
-          </select>
-        </OdooFilterBar>
+          filterOptions={FILTER_OPTIONS}
+          activeFilters={filters}
+          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setPage(1); }}
+          groupByOptions={GROUP_BY_OPTIONS}
+          activeGroupBy={groupBy}
+          onGroupByChange={setGroupBy}
+        />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
             <>
@@ -138,96 +256,12 @@ export default function ProductosListPage() {
           )}
         </div>
       ) : (
-        <div className="bg-card border border-border rounded overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-table-border">
-                <th className="th-odoo w-10 text-center">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded border-input" />
-                </th>
-                 <th className="th-odoo w-10">Img</th>
-                 <th className="th-odoo text-left">Código</th>
-                 <th className="th-odoo text-left">Nombre</th>
-                 <th className="th-odoo text-left hidden lg:table-cell">Categoría</th>
-                 <th className="th-odoo text-left hidden md:table-cell">Marca</th>
-                 <th className="th-odoo text-left hidden xl:table-cell">Proveedor</th>
-                 <th className="th-odoo text-left hidden xl:table-cell">Lista</th>
-                 <th className="th-odoo text-center hidden xl:table-cell">U. compra</th>
-                 <th className="th-odoo text-center hidden xl:table-cell">U. venta</th>
-                 <th className="th-odoo text-center hidden xl:table-cell">Factor</th>
-                 <th className="th-odoo text-right">Precio</th>
-                 <th className="th-odoo text-right hidden md:table-cell">Costo</th>
-                 <th className="th-odoo text-right hidden xl:table-cell">Costo/u</th>
-                 <th className="th-odoo text-right hidden lg:table-cell">Stock</th>
-                 <th className="th-odoo text-center hidden sm:table-cell">IVA</th>
-                 <th className="th-odoo text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.length === 0 && (
-                <tr>
-                  <td colSpan={16} className="text-center py-12 text-muted-foreground text-sm">No hay productos. Crea el primero.</td>
-                </tr>
-              )}
-              {pageData.map((p: any) => (
-                <tr
-                  key={p.id}
-                  className={cn(
-                    "border-b border-table-border cursor-pointer transition-colors",
-                    selected.has(p.id) ? "bg-primary/5" : "hover:bg-table-hover"
-                  )}
-                  onClick={() => navigate(`/productos/${p.id}`)}
-                >
-                  <td className="py-1.5 px-3 text-center" onClick={e => { e.stopPropagation(); toggleOne(p.id); }}>
-                    <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} className="rounded border-input" />
-                  </td>
-                  <td className="py-1.5 px-2">
-                    {p.imagen_url ? (
-                      <img src={p.imagen_url} alt="" className="h-7 w-7 rounded object-cover" />
-                    ) : (
-                      <div className="h-7 w-7 rounded bg-secondary flex items-center justify-center text-xxs text-muted-foreground">—</div>
-                    )}
-                  </td>
-                  <td className="py-1.5 px-3 font-mono text-xs">{p.codigo}</td>
-                  <td className="py-1.5 px-3 font-medium max-w-[200px] truncate">{p.nombre}</td>
-                  <td className="py-1.5 px-3 hidden lg:table-cell text-muted-foreground text-xs">{p.clasificaciones?.nombre ?? '—'}</td>
-                  <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground text-xs">{p.marcas?.nombre ?? '—'}</td>
-                  <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.proveedores?.nombre ?? '—'}</td>
-                   <td className="py-1.5 px-3 hidden xl:table-cell text-muted-foreground text-xs">{p.listas?.nombre ?? '—'}</td>
-                   <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_compra?.abreviatura ?? '—'}</td>
-                   <td className="py-1.5 px-3 hidden xl:table-cell text-center text-muted-foreground text-xs">{p.unidades_venta?.abreviatura ?? '—'}</td>
-                   <td className="py-1.5 px-3 hidden xl:table-cell text-center font-mono text-xs">{p.factor_conversion ?? 1}</td>
-                   <td className="py-1.5 px-3 text-right font-medium tabular-nums">{fmt(p.precio_principal)}</td>
-                   <td className="py-1.5 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(p.costo)}</td>
-                   <td className="py-1.5 px-3 text-right hidden xl:table-cell text-muted-foreground tabular-nums font-mono text-xs">
-                     {fmt((p.costo ?? 0) / (p.factor_conversion || 1))}
-                   </td>
-                  <td className="py-1.5 px-3 text-right hidden lg:table-cell tabular-nums">
-                    <span className={cn(
-                      "font-medium",
-                      (p.cantidad ?? 0) <= 0 ? "text-destructive" : (p.cantidad ?? 0) < (p.min ?? 0) ? "text-warning" : "text-foreground"
-                    )}>
-                      {fmtNum(p.cantidad ?? 0)}
-                    </span>
-                  </td>
-                  <td className="py-1.5 px-3 hidden sm:table-cell text-center">
-                    {p.tiene_iva ? (
-                      <span className="text-xxs font-medium text-success">{p.iva_pct ?? 16}%</span>
-                    ) : (
-                      <span className="text-xxs text-muted-foreground">No</span>
-                    )}
-                  </td>
-                  <td className="py-1.5 px-3 text-center">
-                    <StatusChip status={p.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {total > 0 && (
+        <>
+          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
+          {!groupBy && total > 0 && (
             <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
           )}
-        </div>
+        </>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -8,14 +8,14 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-
-const fmtLocal = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -38,6 +38,28 @@ const COMPRAS_COLUMNS: ExportColumn[] = [
 ];
 
 const PAGE_SIZE = 80;
+
+const FILTER_OPTIONS = [
+  {
+    key: 'status',
+    label: 'Estado',
+    options: [
+      { value: 'todos', label: 'Todos' },
+      { value: 'borrador', label: 'Borrador' },
+      { value: 'confirmada', label: 'Confirmada' },
+      { value: 'recibida', label: 'Recibida' },
+      { value: 'pagada', label: 'Pagada' },
+      { value: 'cancelada', label: 'Cancelada' },
+    ],
+  },
+];
+
+const GROUP_BY_OPTIONS = [
+  { value: 'status', label: 'Estado' },
+  { value: 'proveedor', label: 'Proveedor' },
+  { value: 'condicion_pago', label: 'Condición de pago' },
+  { value: 'fecha', label: 'Fecha' },
+];
 
 function useCompras(search: string, statusFilter: string) {
   return useQuery({
@@ -67,8 +89,10 @@ export default function ComprasPage() {
   const navigate = useNavigate();
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
   const [page, setPage] = useState(1);
+  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('compras');
+
+  const statusFilter = filters.status || 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter);
 
   const total = compras?.length ?? 0;
@@ -90,6 +114,69 @@ export default function ComprasPage() {
     saldo_pendiente: c.saldo_pendiente ?? 0,
     status: STATUS_MAP[c.status]?.label ?? c.status,
   }));
+
+  const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
+    if (key === 'status') return STATUS_MAP[item.status]?.label ?? item.status;
+    if (key === 'proveedor') return item.proveedores?.nombre ?? 'Sin proveedor';
+    if (key === 'condicion_pago') return item.condicion_pago === 'credito' ? 'Crédito' : 'Contado';
+    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    return '';
+  }), [pageData, groupBy]);
+
+  const renderTable = (items: any[]) => (
+    <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-table-border">
+            <th className="th-odoo text-left">Folio</th>
+            <th className="th-odoo text-left">Proveedor</th>
+            <th className="th-odoo text-left hidden md:table-cell">Almacén</th>
+            <th className="th-odoo text-left">Fecha</th>
+            <th className="th-odoo text-center hidden sm:table-cell">Condición</th>
+            <th className="th-odoo text-right">Total</th>
+            <th className="th-odoo text-right hidden sm:table-cell">Saldo</th>
+            <th className="th-odoo text-center">Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && (
+            <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
+          )}
+          {items.map((c: any) => (
+            <tr
+              key={c.id}
+              className="border-b border-table-border cursor-pointer hover:bg-table-hover transition-colors"
+              onClick={() => navigate(`/almacen/compras/${c.id}`)}
+            >
+              <td className="py-1.5 px-3 font-mono text-xs">{c.folio ?? c.id.slice(0, 8)}</td>
+              <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
+              <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
+              <td className="py-1.5 px-3 hidden sm:table-cell text-center">
+                <span className={cn(
+                  "text-xxs font-medium px-2 py-0.5 rounded-full",
+                  c.condicion_pago === 'credito' ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
+                )}>
+                  {c.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}
+                </span>
+              </td>
+              <td className="py-1.5 px-3 text-right font-medium">{fmt(c.total ?? 0)}</td>
+              <td className="py-1.5 px-3 text-right hidden sm:table-cell">
+                {(c.saldo_pendiente ?? 0) > 0 ? (
+                  <span className="text-destructive font-medium">{fmt(c.saldo_pendiente)}</span>
+                ) : (
+                  <span className="text-muted-foreground">{fmt(0)}</span>
+                )}
+              </td>
+              <td className="py-1.5 px-3 text-center">
+                <StatusChip status={c.status} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
   return (
     <div className="p-4 space-y-3 min-h-full">
@@ -117,20 +204,14 @@ export default function ComprasPage() {
           search={search}
           onSearchChange={val => { setSearch(val); setPage(1); }}
           placeholder="Buscar por folio o proveedor..."
-        >
-          <select
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            className="input-odoo w-auto min-w-[120px]"
-          >
-            <option value="todos">Todos</option>
-            <option value="borrador">Borrador</option>
-            <option value="confirmada">Confirmada</option>
-            <option value="recibida">Recibida</option>
-            <option value="pagada">Pagada</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
-        </OdooFilterBar>
+          filterOptions={FILTER_OPTIONS}
+          activeFilters={filters}
+          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setPage(1); }}
+          groupByOptions={GROUP_BY_OPTIONS}
+          activeGroupBy={groupBy}
+          onGroupByChange={setGroupBy}
+        />
         <div className="flex items-center gap-2 shrink-0">
           <ExportButton
             onExcel={() => exportToExcel({
@@ -151,70 +232,28 @@ export default function ComprasPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded overflow-x-auto">
-        {isLoading ? (
-          <div className="p-4"><TableSkeleton rows={8} cols={8} /></div>
-        ) : (
-          <>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-table-border">
-                  <th className="th-odoo text-left">Folio</th>
-                  <th className="th-odoo text-left">Proveedor</th>
-                  <th className="th-odoo text-left hidden md:table-cell">Almacén</th>
-                  <th className="th-odoo text-left">Fecha</th>
-                  <th className="th-odoo text-center hidden sm:table-cell">Condición</th>
-                  <th className="th-odoo text-right">Total</th>
-                  <th className="th-odoo text-right hidden sm:table-cell">Saldo</th>
-                  <th className="th-odoo text-center">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pageData.length === 0 && (
-                  <tr><td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No hay compras.</td></tr>
-                )}
-                {pageData.map((c: any) => (
-                  <tr
-                    key={c.id}
-                    className="border-b border-table-border cursor-pointer hover:bg-table-hover transition-colors"
-                    onClick={() => navigate(`/almacen/compras/${c.id}`)}
-                  >
-                    <td className="py-1.5 px-3 font-mono text-xs">{c.folio ?? c.id.slice(0, 8)}</td>
-                    <td className="py-1.5 px-3 font-medium">{c.proveedores?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3 hidden md:table-cell text-muted-foreground">{c.almacenes?.nombre ?? '—'}</td>
-                    <td className="py-1.5 px-3">{fmtDate(c.fecha)}</td>
-                    <td className="py-1.5 px-3 hidden sm:table-cell text-center">
-                      <span className={cn(
-                        "text-xxs font-medium px-2 py-0.5 rounded-full",
-                        c.condicion_pago === 'credito' ? "bg-warning/10 text-warning" : "bg-success/10 text-success"
-                      )}>
-                        {c.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}
-                      </span>
-                    </td>
-                    <td className="py-1.5 px-3 text-right font-medium">{fmt(c.total ?? 0)}</td>
-                    <td className="py-1.5 px-3 text-right hidden sm:table-cell">
-                      {(c.saldo_pendiente ?? 0) > 0 ? (
-                        <span className="text-destructive font-medium">{fmt(c.saldo_pendiente)}</span>
-                      ) : (
-                        <span className="text-muted-foreground">{fmt(0)}</span>
-                      )}
-                    </td>
-                    <td className="py-1.5 px-3 text-center">
-                      <StatusChip status={c.status} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {total > 0 && (
-              <OdooPagination from={from} to={to} total={total}
-                onPrev={() => setPage(p => Math.max(1, p - 1))}
-                onNext={() => setPage(p => p + 1)}
-              />
+      {isLoading ? (
+        <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={8} /></div>
+      ) : (
+        <>
+          <GroupedTableWrapper
+            groupBy={groupBy}
+            groups={groups}
+            renderTable={renderTable}
+            renderSummary={(items) => (
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {fmt(items.reduce((s: number, c: any) => s + (c.total ?? 0), 0))}
+              </span>
             )}
-          </>
-        )}
-      </div>
+          />
+          {!groupBy && total > 0 && (
+            <OdooPagination from={from} to={to} total={total}
+              onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => p + 1)}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
