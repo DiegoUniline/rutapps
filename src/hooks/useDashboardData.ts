@@ -237,3 +237,23 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
     },
   });
 }
+
+export function useDashboardDevoluciones(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-devoluciones', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from('devoluciones')
+        .select('id, fecha, tipo, vendedor_id, vendedores(nombre), clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+        .eq('empresa_id', empresa!.id)
+        .gte('fecha', fmt(range.from))
+        .lte('fecha', fmt(range.to));
+      if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}

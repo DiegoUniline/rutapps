@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import {
   DollarSign, TrendingUp, TrendingDown, ShoppingCart, CreditCard,
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
-  BarChart3, Users, Loader2
+  BarChart3, Users, Loader2, RotateCcw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -16,6 +16,7 @@ import {
   useDashboardVentas, useDashboardCobros, useDashboardCompras,
   useDashboardGastos, useDashboardCartera, useDashboardStock,
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
+  useDashboardDevoluciones,
   type DateRange
 } from '@/hooks/useDashboardData';
 import {
@@ -98,6 +99,36 @@ export default function DashboardPage() {
   const { data: topProductos } = useDashboardTopProductos(dateRange);
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
+  const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
+
+  const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
+
+  const devStats = useMemo(() => {
+    let totalUnidades = 0;
+    let totalCredito = 0;
+    const porMotivo: Record<string, number> = {};
+    const porTipo: Record<string, number> = {};
+    const porVendedor: Record<string, { nombre: string; uds: number }> = {};
+    (devoluciones ?? []).forEach((d: any) => {
+      const tipo = d.tipo || 'otro';
+      (d.devolucion_lineas ?? []).forEach((l: any) => {
+        const qty = Number(l.cantidad) || 0;
+        totalUnidades += qty;
+        totalCredito += Number(l.monto_credito) || 0;
+        const motivo = l.motivo || 'otro';
+        porMotivo[motivo] = (porMotivo[motivo] || 0) + qty;
+        porTipo[tipo] = (porTipo[tipo] || 0) + qty;
+      });
+      const vNombre = d.vendedores?.nombre || 'Sin vendedor';
+      const vId = d.vendedor_id || 'none';
+      if (!porVendedor[vId]) porVendedor[vId] = { nombre: vNombre, uds: 0 };
+      porVendedor[vId].uds += (d.devolucion_lineas ?? []).reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+    });
+    const motivoChart = Object.entries(porMotivo).map(([key, value]) => ({ name: MOTIVO_LABELS[key] || key, value }));
+    const tipoChart = Object.entries(porTipo).map(([key, value]) => ({ name: key.charAt(0).toUpperCase() + key.slice(1), value }));
+    const vendedorChart = Object.values(porVendedor).sort((a, b) => b.uds - a.uds);
+    return { totalUnidades, totalCredito, count: (devoluciones ?? []).length, motivoChart, tipoChart, vendedorChart };
+  }, [devoluciones]);
 
   // KPI calculations
   const kpis = useMemo(() => {
@@ -216,6 +247,7 @@ export default function DashboardPage() {
         <KpiCard title="Cartera" value={money(kpis.totalCartera)} subtitle={`${kpis.clientesMorosos} clientes`} icon={CreditCard} color="bg-[hsl(var(--warning))]" />
         <KpiCard title="Compras" value={money(kpis.totalCompras)} subtitle={`Pendiente: ${money(kpis.saldoProveedores)}`} icon={Package} color="bg-[hsl(var(--chart-3))]" />
         <KpiCard title="Gastos" value={money(kpis.totalGastos)} subtitle={`Utilidad: ${money(kpis.utilidadBruta)}`} icon={DollarSign} color={kpis.utilidadBruta >= 0 ? "bg-[hsl(var(--success))]" : "bg-[hsl(var(--destructive))]"} />
+        <KpiCard title="Devoluciones" value={`${devStats.totalUnidades} uds`} subtitle={`${devStats.count} registros · ${money(devStats.totalCredito)} crédito`} icon={RotateCcw} color="bg-[hsl(var(--chart-5))]" />
       </div>
 
       {/* Charts Row */}
@@ -261,6 +293,44 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Devoluciones charts */}
+      {devStats.count > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones por motivo
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={devStats.motivoChart} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={false} fontSize={10}>
+                  {devStats.motivoChart.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: number) => [`${v} uds`, 'Cantidad']} contentStyle={{ fontSize: 12 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-card border border-border rounded-xl p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-primary" /> Devoluciones por tipo
+            </h3>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={devStats.tipoChart} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} width={80} />
+                <Tooltip formatter={(v: number) => [`${v} uds`, 'Cantidad']} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }} />
+                <Bar dataKey="value" fill="hsl(var(--chart-5))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Bottom row: Top products, Top clients, Low stock */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">

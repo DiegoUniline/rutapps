@@ -10,6 +10,7 @@ import {
   Eye,
   MapPin,
   Package,
+  RotateCcw,
   ShoppingCart,
   TrendingUp,
   Truck,
@@ -231,6 +232,23 @@ export default function SupervisorDashboardPage() {
     refetchInterval: 30000,
   });
 
+  const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
+
+  const { data: devolucionesHoy } = useQuery({
+    queryKey: ['supervisor-devoluciones-hoy', today, empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('devoluciones')
+        .select('id, vendedor_id, tipo, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
+        .eq('empresa_id', empresa!.id)
+        .eq('fecha', today)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 30000,
+  });
+
   const { data: clientesAsignados } = useQuery({
     queryKey: ['supervisor-clientes-asignados', empresa?.id, allDashboardSellerIds],
     enabled: !!empresa?.id && allDashboardSellerIds.length > 0,
@@ -304,6 +322,27 @@ export default function SupervisorDashboardPage() {
     () => (visitasHoy ?? []).filter((visita) => !selectedSeller || visita.user_id === selectedSeller.user_id),
     [visitasHoy, selectedSeller],
   );
+
+  const filteredDevoluciones = useMemo(
+    () => (devolucionesHoy ?? []).filter((dev: any) => !selectedAliases || selectedAliases.includes(dev.vendedor_id)),
+    [devolucionesHoy, selectedAliases],
+  );
+
+  const devolucionesStats = useMemo(() => {
+    let totalUnidades = 0;
+    let totalCredito = 0;
+    const porMotivo: Record<string, number> = {};
+    filteredDevoluciones.forEach((d: any) => {
+      (d.devolucion_lineas ?? []).forEach((l: any) => {
+        const qty = Number(l.cantidad) || 0;
+        totalUnidades += qty;
+        totalCredito += Number(l.monto_credito) || 0;
+        const motivo = l.motivo || 'otro';
+        porMotivo[motivo] = (porMotivo[motivo] || 0) + qty;
+      });
+    });
+    return { totalUnidades, totalCredito, porMotivo, count: filteredDevoluciones.length };
+  }, [filteredDevoluciones]);
 
   const productosSummary = useMemo(() => {
     const summary: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
@@ -639,6 +678,7 @@ export default function SupervisorDashboardPage() {
         <KpiCard icon={Eye} label="Visitas" value={String(dashboardStats.numVisitas)} sub={`${dashboardStats.visitasConCompra} con compra`} />
         <KpiCard icon={MapPin} label="Por visitar" value={String(dashboardStats.clientesPorVisitar)} sub={`${dashboardStats.clientesVisitados} visitados`} tone="warning" />
         <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="Hechas / total" />
+        <KpiCard icon={RotateCcw} label="Devoluciones" value={`${devolucionesStats.totalUnidades} uds`} sub={`${devolucionesStats.count} registros`} tone="warning" />
         <KpiCard icon={Users} label="Activos" value={String(dashboardStats.sellersWithActivity)} sub={`de ${sellerRows.length} vendedores`} />
       </section>
 
@@ -750,7 +790,7 @@ export default function SupervisorDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.05fr_1.05fr_0.9fr]">
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_1fr_1fr]">
         <ActivityList
           title="Ventas del día"
           description="Últimas ventas registradas"
@@ -776,6 +816,24 @@ export default function SupervisorDashboardPage() {
             value: fmtMoney(cobro.monto ?? 0),
           }))}
           emptyText="No hay cobros registrados hoy."
+        />
+
+        <ActivityList
+          title="Devoluciones del día"
+          description="Productos devueltos hoy"
+          icon={RotateCcw}
+          items={filteredDevoluciones.slice(0, 12).map((dev: any) => {
+            const lineas = dev.devolucion_lineas ?? [];
+            const uds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+            const motivos = [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
+            return {
+              id: dev.id,
+              primary: dev.clientes?.nombre || '—',
+              secondary: `${sellerNameMap.get(dev.vendedor_id) ?? '—'} · ${motivos}`,
+              value: `${uds} uds`,
+            };
+          })}
+          emptyText="No hay devoluciones registradas hoy."
         />
 
         <ProductPanel products={productosSummary.slice(0, 10)} fmtMoney={fmtMoney} />
