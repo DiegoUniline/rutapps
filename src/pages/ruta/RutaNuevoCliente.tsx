@@ -103,7 +103,7 @@ export default function RutaNuevoCliente() {
     try {
       await saveMutation.mutateAsync(form);
       toast.success('Cliente creado');
-      navigate('/ruta/clientes', { replace: true });
+      navigate('/ruta', { replace: true });
     } catch (err: any) {
       toast.error(err.message);
     } finally {
