@@ -1126,7 +1126,6 @@ export default function RutaVentaDetalle() {
           {[
             { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
             { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
-            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
             { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
             ...(venta.status === 'borrador' ? [{ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar }] : []),
@@ -1215,13 +1214,18 @@ export default function RutaVentaDetalle() {
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
           <button onClick={() => navigate(-1)}
-            className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+            className="flex-1 bg-muted border border-border text-foreground rounded-xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Volver
           </button>
-          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && (
+          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' ? (
             <button onClick={initCobrar}
               className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
               <Banknote className="h-5 w-5" /> Cobrar ${fmt(venta.saldo_pendiente ?? 0)}
+            </button>
+          ) : (
+            <button onClick={handlePrintTicket}
+              className="flex-1 bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+              <Printer className="h-5 w-5" /> Imprimir
             </button>
           )}
         </div>
