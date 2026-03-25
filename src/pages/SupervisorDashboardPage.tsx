@@ -613,12 +613,12 @@ function SupervisorMap({ markers }: { markers: { id: string; nombre: string; lat
           onClick={() => setSelected(m)}
           icon={{
             path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z',
-            fillColor: m.visitado ? 'hsl(var(--primary))' : 'hsl(var(--destructive))',
+            fillColor: m.visitado ? '#22c55e' : '#ef4444',
             fillOpacity: 0.9,
             strokeWeight: 1.5,
             strokeColor: '#fff',
             scale: 1.4,
-            anchor: new google.maps.Point(12, 22),
+            anchor: window.google ? new window.google.maps.Point(12, 22) : undefined,
           }}
         />
       ))}
