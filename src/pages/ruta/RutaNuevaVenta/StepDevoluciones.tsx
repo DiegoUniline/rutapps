@@ -159,18 +159,11 @@ export function StepDevoluciones(props: Props) {
 
   // Add with global defaults
   const handleAdd = (p: any) => {
-    addDevolucion(p);
-    setTimeout(() => {
-      updateDevMotivo(p.id, defaultMotivo);
-      updateDevAccion(p.id, defaultAccion);
-    }, 0);
+    addDevolucion(p, { motivo: defaultMotivo, accion: defaultAccion });
   };
 
   const applyDefaultsToAll = () => {
-    devoluciones.forEach(d => {
-      updateDevMotivo(d.producto_id, defaultMotivo);
-      updateDevAccion(d.producto_id, defaultAccion);
-    });
+    batchUpdateDevDefaults(defaultMotivo, defaultAccion);
   };
 
   const totalItems = devoluciones.reduce((s, d) => s + d.cantidad, 0);
