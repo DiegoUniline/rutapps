@@ -319,7 +319,7 @@ export default function RutaCobrar() {
                 <p className="text-sm font-semibold text-foreground truncate">{clienteNombre}</p>
                 {totalPendienteCliente > 0 && (
                   <p className="text-xs text-destructive font-medium">
-                    Deuda total: ${fmt(totalPendienteCliente)}
+                    Deuda total: {fmtM(totalPendienteCliente)}
                     {ventasPendientes && ventasPendientes.length > 0 && ` · ${ventasPendientes.length} cuenta${ventasPendientes.length > 1 ? 's' : ''}`}
                   </p>
                 )}
