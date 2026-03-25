@@ -212,7 +212,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
                     <span className="text-xs">Balance</span>
                   </div>
                   <p className={cn("text-lg font-bold", balanceNeto >= 0 ? "text-green-600" : "text-red-600")}>
-                    $ {fmt(balanceNeto)}
+                    {fmt(balanceNeto)}
                   </p>
                 </Card>
               </div>
