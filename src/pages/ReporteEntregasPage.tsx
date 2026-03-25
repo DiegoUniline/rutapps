@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn, fmtDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Date) {
   const { empresa } = useAuth();
