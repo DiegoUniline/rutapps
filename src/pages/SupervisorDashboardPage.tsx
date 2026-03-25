@@ -40,14 +40,14 @@ export default function SupervisorDashboardPage() {
 
       const { data } = await supabase
         .from('profiles')
-        .select('user_id, nombre, estado')
+        .select('id, user_id, nombre, estado')
         .eq('empresa_id', empresa!.id)
         .eq('estado', 'activo')
         .order('nombre');
 
       return (data ?? [])
         .filter(p => !adminUserIds.includes(p.user_id))
-        .map(p => ({ id: p.user_id, nombre: p.nombre }));
+        .map(p => ({ id: p.id, nombre: p.nombre }));
     },
   });
 
