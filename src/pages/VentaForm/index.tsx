@@ -6,6 +6,7 @@ import { VentaPagosTab } from '@/components/venta/VentaPagosTab';
 import { VentaEntregasTab } from '@/components/venta/VentaEntregasTab';
 import { VentaDevolucionesTab } from '@/components/venta/VentaDevolucionesTab';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
+import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
