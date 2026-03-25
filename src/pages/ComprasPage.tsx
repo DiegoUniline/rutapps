@@ -65,6 +65,7 @@ function useCompras(search: string, statusFilter: string) {
 
 export default function ComprasPage() {
   const navigate = useNavigate();
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [page, setPage] = useState(1);
