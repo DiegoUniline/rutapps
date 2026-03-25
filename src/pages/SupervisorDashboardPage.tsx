@@ -424,7 +424,10 @@ export default function SupervisorDashboardPage() {
   }, [vendedores, vendedorStats]);
 
   const clienteActivity = useMemo(() => {
-    const visitedIds = new Set(filteredVisitas.map((visita) => visita.cliente_id).filter(Boolean));
+    const visitedIds = new Set([
+      ...filteredVisitas.map((visita) => visita.cliente_id).filter(Boolean),
+      ...filteredVentas.map((venta) => venta.cliente_id).filter(Boolean),
+    ]);
     const lastSaleByClient: Record<string, { ultima: string; total: number }> = {};
 
     (ventasRecientes ?? []).forEach((venta) => {
