@@ -549,10 +549,10 @@ export default function RutaCobrar() {
                   <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-border/40 last:border-0">
                     <div>
                       <p className="text-sm font-medium text-foreground">{c.folio || 'Sin folio'}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · Saldo: ${fmt(c.saldo_pendiente)}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(c.fecha)} · Saldo: {fmtM(c.saldo_pendiente)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-foreground tabular-nums">${fmt(c.montoAplicar)}</p>
+                      <p className="text-sm font-bold text-foreground tabular-nums">{fmtM(c.montoAplicar)}</p>
                       {c.montoAplicar >= c.saldo_pendiente && (
                         <span className="text-[11px] text-success font-medium">Liquidada</span>
                       )}
