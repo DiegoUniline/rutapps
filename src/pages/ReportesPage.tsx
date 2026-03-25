@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
-import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown } from 'lucide-react';
+import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportesData } from '@/hooks/useReportesData';
 import { useVendedores } from '@/hooks/useClientes';
