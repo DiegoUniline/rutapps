@@ -251,7 +251,7 @@ function Breadcrumb() {
     'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
     logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
     asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
-    'facturacion-cfdi': 'Facturación',
+    'facturacion-cfdi': 'Facturación', devoluciones: 'Devoluciones',
   };
 
   if (segments.length <= 1) return null;
