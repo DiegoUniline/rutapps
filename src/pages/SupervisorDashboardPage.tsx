@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useGoogleMapsKey, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
@@ -19,7 +19,7 @@ const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
   const { fmt: fmtMoney } = useCurrency();
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayInTimezone(empresa?.zona_horaria);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('resumen');
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.empresas ADD COLUMN zona_horaria text NOT NULL DEFAULT 'America/Mexico_City';

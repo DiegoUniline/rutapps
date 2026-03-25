@@ -169,6 +169,7 @@ export interface Empresa {
   logo_url?: string;
   notas_ticket?: string;
   moneda?: string;
+  zona_horaria?: string;
 }
 
 export interface Gasto {
