@@ -90,8 +90,8 @@ function TicketPreview({ form, logoPreview, campos }: PreviewProps) {
       </div>
       <div className="border-t border-dashed border-gray-300 mx-3" />
       <div className="px-4 py-2 space-y-0.5">
-        <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>$ 515.00</span></div>
-        <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>$ 82.40</span></div>
+        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>$ 515.00</span></div>}
+        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>$ 82.40</span></div>}
         <div className="flex justify-between text-[12px] font-bold border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
       </div>
       {campos.notas_ticket && form.notas_ticket && (
