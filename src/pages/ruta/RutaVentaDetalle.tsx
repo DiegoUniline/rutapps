@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle, Printer, Share2, MessageCircle } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle, Printer, Share2, MessageCircle, RotateCcw, Clock } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 
 const statusColors: Record<string, string> = {
   borrador: 'bg-muted text-muted-foreground',
@@ -49,7 +50,7 @@ type View = 'detalle' | 'editar' | 'cobrar' | 'ticket';
 export default function RutaVentaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, empresa } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const queryClient = useQueryClient();
   const { data: venta, isLoading } = useVenta(id);
 
@@ -349,9 +350,31 @@ export default function RutaVentaDetalle() {
     if (!venta) return;
     setSaving(true);
     try {
+      const prevStatus = venta.status;
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
       if (error) throw error;
+      await supabase.from('venta_historial').insert({ venta_id: venta.id, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '', user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'cancelada', detalles: { status: { anterior: prevStatus, nuevo: 'cancelado' } } as any });
       toast.success('Venta cancelada');
+      queryClient.invalidateQueries({ queryKey: ['venta', id] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
+      queryClient.invalidateQueries({ queryKey: ['ventas'] });
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Handle volver a borrador ───
+  const handleVolverBorrador = async () => {
+    if (!venta || venta.status === 'borrador' || venta.status === 'cancelado') return;
+    setSaving(true);
+    try {
+      const prevStatus = venta.status;
+      const { error } = await supabase.from('ventas').update({ status: 'borrador' as const }).eq('id', venta.id);
+      if (error) throw error;
+      await supabase.from('venta_historial').insert({ venta_id: venta.id, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '', user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'vuelta_borrador', detalles: { status: { anterior: prevStatus, nuevo: 'borrador' } } as any });
+      toast.success('Venta regresada a borrador');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
@@ -1131,7 +1154,8 @@ export default function RutaVentaDetalle() {
             { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
             ...(venta.status === 'borrador' ? [{ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar }] : []),
-            ...((venta.status === 'confirmado' || venta.status === 'entregado') ? [{ icon: X, label: 'Cancelar venta', color: 'text-destructive', onClick: () => setShowCancelModal(true) }] : []),
+            ...(venta.status !== 'borrador' && venta.status !== 'cancelado' ? [{ icon: RotateCcw, label: 'A borrador', color: 'text-warning', onClick: handleVolverBorrador }] : []),
+            ...((venta.status === 'confirmado' || venta.status === 'entregado') ? [{ icon: X, label: 'Cancelar', color: 'text-destructive', onClick: () => setShowCancelModal(true) }] : []),
           ].map((a) => (
             <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
               <a.icon className={`h-5 w-5 ${a.color}`} />
@@ -1210,6 +1234,23 @@ export default function RutaVentaDetalle() {
             <p className="text-[13px] text-foreground">{venta.notas}</p>
           </div>
         )}
+
+        {/* Historial de cambios */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={(e) => {
+              const section = (e.currentTarget.nextElementSibling as HTMLElement);
+              section?.classList.toggle('hidden');
+            }}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left"
+          >
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[13px] font-semibold text-foreground">Historial de cambios</span>
+          </button>
+          <div>
+            <VentaHistorialTab ventaId={venta.id} />
+          </div>
+        </div>
       </div>
 
       {/* Bottom actions */}
