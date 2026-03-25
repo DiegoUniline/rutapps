@@ -25,7 +25,7 @@ export default function ReporteDiarioRuta() {
     queryKey: ['usuarios-list-report', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('profiles').select('id, user_id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+      const { data } = await (supabase as any).from('profiles').select('id, user_id, nombre, vendedor_id').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
       return data ?? [];
     },
   });
@@ -33,17 +33,18 @@ export default function ReporteDiarioRuta() {
   const usuarioOpts = (usuarios || []).map((u: any) => ({ value: u.id, label: u.nombre }));
   const selectedProfile = (usuarios || []).find((u: any) => u.id === usuarioId);
   const selectedUserId = selectedProfile?.user_id ?? usuarioId;
+  const selectedVendedorId = selectedProfile?.vendedor_id ?? usuarioId;
 
   const enabled = !!empresa?.id && !!usuarioId && !!fechaInicio && !!fechaFin;
 
   // --- Ventas ---
   const { data: ventas } = useQuery<any[]>({
-    queryKey: ['rpt-diario-ventas', empresa?.id, usuarioId, fechaInicio, fechaFin],
+    queryKey: ['rpt-diario-ventas', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('ventas')
         .select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
       return data ?? [];
@@ -66,12 +67,12 @@ export default function ReporteDiarioRuta() {
 
   // --- Gastos ---
   const { data: gastos } = useQuery<any[]>({
-    queryKey: ['rpt-diario-gastos', empresa?.id, usuarioId, fechaInicio, fechaFin],
+    queryKey: ['rpt-diario-gastos', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('gastos')
         .select('id, monto, concepto, notas')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
       return data ?? [];
@@ -80,12 +81,12 @@ export default function ReporteDiarioRuta() {
 
   // --- Devoluciones ---
   const { data: devoluciones } = useQuery<any[]>({
-    queryKey: ['rpt-diario-devs', empresa?.id, usuarioId, fechaInicio, fechaFin],
+    queryKey: ['rpt-diario-devs', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('devoluciones')
         .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin);
       return data ?? [];
     },
