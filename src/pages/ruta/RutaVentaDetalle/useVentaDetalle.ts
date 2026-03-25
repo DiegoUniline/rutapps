@@ -146,18 +146,47 @@ export function useVentaDetalle() {
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
+  const logHistorial = async (ventaId: string, accion: string, detalles: any = {}) => {
+    try {
+      await supabase.from('venta_historial').insert({
+        venta_id: ventaId,
+        empresa_id: empresa!.id,
+        user_id: user!.id,
+        user_nombre: (user as any)?.user_metadata?.full_name ?? user?.email ?? '',
+        accion,
+        detalles,
+      });
+    } catch (e) { console.error('Error logging historial', e); }
+  };
+
   const handleCancelar = async () => {
     if (!venta) return;
     setSaving(true);
     try {
+      const prevStatus = venta.status;
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
       if (error) throw error;
+      await logHistorial(venta.id, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
       toast.success('Venta cancelada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       queryClient.invalidateQueries({ queryKey: ['stock-almacen'] });
       queryClient.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
+  };
+
+  const handleVolverBorrador = async () => {
+    if (!venta || venta.status === 'borrador' || venta.status === 'cancelado') return;
+    setSaving(true);
+    try {
+      const prevStatus = venta.status;
+      const { error } = await supabase.from('ventas').update({ status: 'borrador' as const }).eq('id', venta.id);
+      if (error) throw error;
+      await logHistorial(venta.id, 'vuelta_borrador', { status: { anterior: prevStatus, nuevo: 'borrador' } });
+      toast.success('Venta regresada a borrador');
+      queryClient.invalidateQueries({ queryKey: ['venta', id] });
+      queryClient.invalidateQueries({ queryKey: ['ruta-ventas'] });
     } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
   };
 
