@@ -521,7 +521,7 @@ export default function VentaFormPage() {
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const tarifaOptions = (tarifasList ?? []).map(t => ({ value: t.id, label: t.nombre }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
-  const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre;
+  const clienteNombre = clientesList?.find(c => c.id === form.cliente_id)?.nombre || (!form.cliente_id ? 'Público en general' : undefined);
 
   const steps = form.entrega_inmediata ? VENTA_STEPS_INMEDIATA : VENTA_STEPS_FULL;
 
