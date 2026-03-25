@@ -250,12 +250,29 @@ export default function RutaDescarga() {
           </p>
         </div>
 
-        {/* Running total */}
+        {/* Running total + expected + difference */}
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total contado</p>
           <p className="text-3xl font-bold text-foreground tabular-nums">
             $ {fmt(totalEfectivo)}
           </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-card border border-border rounded-xl p-3 text-center">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Esperado</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">$ {fmt(efectivoEsperado)}</p>
+          </div>
+          <div className={`bg-card border rounded-xl p-3 text-center ${
+            totalEfectivo - efectivoEsperado < 0 ? 'border-destructive/40' : 'border-border'
+          }`}>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Diferencia</p>
+            <p className={`text-lg font-bold tabular-nums ${
+              totalEfectivo - efectivoEsperado < 0 ? 'text-destructive' : totalEfectivo - efectivoEsperado > 0 ? 'text-primary' : 'text-foreground'
+            }`}>
+              {totalEfectivo - efectivoEsperado >= 0 ? '+' : ''}$ {fmt(totalEfectivo - efectivoEsperado)}
+            </p>
+          </div>
         </div>
 
         {/* Bills */}
