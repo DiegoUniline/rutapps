@@ -122,6 +122,10 @@ export default function RutaVentaDetalle() {
     },
   });
 
+  // Compute real saldo from actual payments
+  const totalPagado = useMemo(() => (pagosVenta ?? []).reduce((sum: number, pa: any) => sum + (pa.monto_aplicado ?? 0), 0), [pagosVenta]);
+  const realSaldo = Math.max(0, (venta?.total ?? 0) - totalPagado);
+
   const esVentaInmediata = venta?.tipo === 'venta_directa' && venta?.entrega_inmediata;
 
   // Build stock map from productos
