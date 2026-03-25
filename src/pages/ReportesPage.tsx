@@ -170,9 +170,18 @@ export default function ReportesPage() {
   const [desde, setDesde] = useState(mesActual + '-01');
   const [hasta, setHasta] = useState(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]);
   const [selectedVendedores, setSelectedVendedores] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const { data: vendedoresList } = useVendedores();
-  const { data, isLoading } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined);
+  const { data, isLoading } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined);
   const [tab, setTab] = useState<ReportTab>('resumen');
+
+  const statusOptions = [
+    { value: 'borrador', label: 'Borrador' },
+    { value: 'confirmado', label: 'Confirmado' },
+    { value: 'entregado', label: 'Entregado' },
+    { value: 'facturado', label: 'Facturado' },
+    { value: 'cancelado', label: 'Cancelado' },
+  ];
 
   const tabs: { key: ReportTab; label: string; icon: React.ElementType }[] = [
     { key: 'resumen', label: 'Resumen', icon: BarChart3 },
