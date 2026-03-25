@@ -424,7 +424,10 @@ export default function SupervisorDashboardPage() {
   }, [vendedores, vendedorStats]);
 
   const clienteActivity = useMemo(() => {
-    const visitedIds = new Set(filteredVisitas.map((visita) => visita.cliente_id).filter(Boolean));
+    const visitedIds = new Set([
+      ...filteredVisitas.map((visita) => visita.cliente_id).filter(Boolean),
+      ...filteredVentas.map((venta) => venta.cliente_id).filter(Boolean),
+    ]);
     const lastSaleByClient: Record<string, { ultima: string; total: number }> = {};
 
     (ventasRecientes ?? []).forEach((venta) => {
@@ -465,7 +468,7 @@ export default function SupervisorDashboardPage() {
         if (a.visitado !== b.visitado) return a.visitado ? 1 : -1;
         return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999);
       });
-  }, [filteredVisitas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor]);
+  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor]);
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => {
     return clienteActivity
