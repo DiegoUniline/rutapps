@@ -474,7 +474,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
 
   // IVA
   doc.text('IVA 16%:', totLabelX, y, { align: 'right' });
-  doc.text(`$${fmtCurrency(cfdi.iva_total)}`, rightX, y, { align: 'right' });
+  doc.text(`${s}${fmtCurrency(cfdi.iva_total)}`, rightX, y, { align: 'right' });
   y += 5.5;
 
   // Retenciones if any
