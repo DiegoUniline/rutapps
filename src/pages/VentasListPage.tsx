@@ -290,7 +290,7 @@ export default function VentasListPage() {
                       {TIPO_LABELS[v.tipo] || v.tipo}
                     </span>
                   </td>
-                  <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre ?? '—'}</td>
+                  <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}</td>
                   <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
                   <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
                   <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
