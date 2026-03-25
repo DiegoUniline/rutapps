@@ -761,12 +761,15 @@ export default function RutaVentaDetalle() {
               )}
               {editLineas.map((item, idx) => {
                 const lineTotal = item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0));
+                const maxStock = esVentaInmediata ? (stockMap[item.producto_id] ?? 0) : Infinity;
+                const excedeStock = esVentaInmediata && item.cantidad > maxStock;
                 return (
-                  <div key={`${item.producto_id}-${idx}`} className="rounded-lg border border-border/60 p-2.5">
+                  <div key={`${item.producto_id}-${idx}`} className={`rounded-lg border p-2.5 ${excedeStock ? 'border-destructive/50 bg-destructive/5' : 'border-border/60'}`}>
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
                         <p className="text-[10px] text-muted-foreground">{item.codigo} · {s}{fmt(item.precio_unitario)} / {item.unidad}</p>
+                        {esVentaInmediata && <p className="text-[9px] text-muted-foreground">Stock: {maxStock}</p>}
                       </div>
                       <button onClick={() => removeEditLine(idx)} className="p-1">
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -775,7 +778,13 @@ export default function RutaVentaDetalle() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 bg-accent/50 rounded-lg px-1">
                         <button onClick={() => updateEditQty(idx, -1)} className="p-1.5"><Minus className="h-3 w-3" /></button>
-                        <span className="text-[13px] font-bold w-8 text-center text-foreground">{item.cantidad}</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          className="text-[13px] font-bold w-12 text-center text-foreground bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={item.cantidad}
+                          onChange={e => setEditQty(idx, parseInt(e.target.value) || 0)}
+                        />
                         <button onClick={() => updateEditQty(idx, 1)} className="p-1.5"><Plus className="h-3 w-3" /></button>
                       </div>
                       <span className="text-[14px] font-bold text-foreground">{s}{fmt(lineTotal)}</span>
