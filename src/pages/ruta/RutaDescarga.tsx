@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BILLETES = [
@@ -79,7 +79,7 @@ export default function RutaDescarga() {
     queryKey: ['descarga-mobile-financials', vendedorId, today],
     enabled: !!vendedorId,
     queryFn: async () => {
-      const [ventasRes, cobrosRes, gastosRes] = await Promise.all([
+      const [ventasRes, cobrosRes, gastosRes, devsRes] = await Promise.all([
         supabase
           .from('ventas')
           .select('total')
@@ -97,13 +97,34 @@ export default function RutaDescarga() {
           .select('monto')
           .eq('vendedor_id', vendedorId!)
           .eq('fecha', today),
+        supabase
+          .from('devoluciones')
+          .select('id, tipo, clientes(nombre), devolucion_lineas(cantidad, motivo, accion, productos(nombre))')
+          .eq('empresa_id', empresa!.id)
+          .eq('vendedor_id', vendedorId!)
+          .eq('fecha', today),
       ]);
       const ventasContado = (ventasRes.data || []).reduce((s, v) => s + (Number(v.total) || 0), 0);
       const cobrosEfectivo = (cobrosRes.data || [])
         .filter(c => c.metodo_pago === 'efectivo')
         .reduce((s, c) => s + (Number(c.monto) || 0), 0);
       const gastosTotal = (gastosRes.data || []).reduce((s, g) => s + (Number(g.monto) || 0), 0);
-      return { ventasContado, cobrosEfectivo, gastosTotal };
+
+      // Process devoluciones
+      const devItems: { nombre: string; cantidad: number; motivo: string; accion: string; cliente: string }[] = [];
+      (devsRes.data || []).forEach((d: any) => {
+        (d.devolucion_lineas || []).forEach((l: any) => {
+          devItems.push({
+            nombre: l.productos?.nombre || '—',
+            cantidad: Number(l.cantidad),
+            motivo: l.motivo || '—',
+            accion: l.accion || 'reposicion',
+            cliente: d.clientes?.nombre || '—',
+          });
+        });
+      });
+
+      return { ventasContado, cobrosEfectivo, gastosTotal, devItems };
     },
   });
 
@@ -367,6 +388,26 @@ export default function RutaDescarga() {
             })}
           </div>
         </div>
+
+        {/* Devoluciones del día */}
+        {(financials?.devItems || []).length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+              <RotateCcw className="h-3 w-3" /> Devoluciones del día ({financials!.devItems.reduce((s, d) => s + d.cantidad, 0)} uds)
+            </p>
+            <div className="space-y-1">
+              {financials!.devItems.map((d, i) => (
+                <div key={i} className="flex items-center gap-2 text-[11px]">
+                  <span className="flex-1 truncate text-foreground">{d.cantidad}x {d.nombre}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground capitalize shrink-0">{d.motivo.replace(/_/g, ' ')}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium shrink-0">
+                    {d.accion === 'reposicion' ? 'Repos.' : d.accion === 'nota_credito' ? 'N. crédito' : d.accion === 'descuento_venta' ? 'Desc.' : d.accion === 'devolucion_dinero' ? 'Dev. $' : d.accion}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Notes */}
         <div className="bg-card border border-border rounded-xl p-3">

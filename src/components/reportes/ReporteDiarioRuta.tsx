@@ -84,7 +84,7 @@ export default function ReporteDiarioRuta() {
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('devoluciones')
-        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))')
+        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin);
       return data ?? [];
@@ -169,7 +169,8 @@ export default function ReporteDiarioRuta() {
   });
 
   // Dev lines
-  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string; cliente: string }[] = [];
+  const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
+  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string; accion: string; monto_credito: number; cliente: string }[] = [];
   (devoluciones || []).forEach((d: any) => {
     (d.devolucion_lineas || []).forEach((l: any) => {
       devLineas.push({
@@ -177,10 +178,14 @@ export default function ReporteDiarioRuta() {
         codigo: l.productos?.codigo || '',
         cantidad: Number(l.cantidad),
         motivo: l.motivo || '—',
+        accion: l.accion || 'reposicion',
+        monto_credito: Number(l.monto_credito) || 0,
         cliente: (d as any).clientes?.nombre || '—',
       });
     });
   });
+  const totalDevUnidades = devLineas.reduce((s, d) => s + d.cantidad, 0);
+  const totalDevCredito = devLineas.reduce((s, d) => s + d.monto_credito, 0);
 
   const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
   const stockItems = (rptStockAlmacen || []).map((s: any) => ({
@@ -301,6 +306,11 @@ export default function ReporteDiarioRuta() {
               <div className="text-[9px] text-muted-foreground uppercase">Gastos</div>
               <div className="text-lg font-bold text-destructive">-${fmt(totalGastos)}</div>
               <div className="text-[9px] text-muted-foreground">{(gastos || []).length}</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[9px] text-muted-foreground uppercase">Devoluciones</div>
+              <div className="text-lg font-bold text-foreground">{totalDevUnidades} uds</div>
+              <div className="text-[9px] text-muted-foreground">{(devoluciones || []).length} devol.</div>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Clientes visitados</div>
@@ -521,7 +531,7 @@ export default function ReporteDiarioRuta() {
           {devLineas.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <RotateCcw className="h-3.5 w-3.5" /> Devoluciones ({devLineas.length} productos)
+                <RotateCcw className="h-3.5 w-3.5" /> Devoluciones ({totalDevUnidades} uds en {(devoluciones || []).length} registros)
               </h2>
               <table className="w-full text-[11px]">
                 <thead>
@@ -529,6 +539,7 @@ export default function ReporteDiarioRuta() {
                     <th className="text-left py-1.5">Producto</th>
                     <th className="text-left py-1.5">Cliente</th>
                     <th className="text-left py-1.5">Motivo</th>
+                    <th className="text-left py-1.5">Acción</th>
                     <th className="text-right py-1.5">Cant.</th>
                   </tr>
                 </thead>
@@ -537,11 +548,24 @@ export default function ReporteDiarioRuta() {
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1">{d.nombre} <span className="text-muted-foreground font-mono">{d.codigo}</span></td>
                       <td className="py-1">{d.cliente}</td>
-                      <td className="py-1 text-muted-foreground">{d.motivo}</td>
+                      <td className="py-1 text-muted-foreground capitalize">{d.motivo.replace(/_/g, ' ')}</td>
+                      <td className="py-1">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-accent text-foreground">
+                          {ACCION_LABELS[d.accion] || d.accion}
+                        </span>
+                      </td>
                       <td className="py-1 text-right font-semibold">{d.cantidad}</td>
                     </tr>
                   ))}
                 </tbody>
+                {totalDevCredito > 0 && (
+                  <tfoot>
+                    <tr className="border-t border-border font-bold">
+                      <td colSpan={4} className="py-1.5 text-right text-muted-foreground text-[10px]">Total crédito/descuento:</td>
+                      <td className="py-1.5 text-right text-destructive">${fmt(totalDevCredito)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           )}
@@ -584,7 +608,10 @@ export default function ReporteDiarioRuta() {
               <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">${fmt(totalCancelado)}</span>
               <span className="text-muted-foreground">Clientes visitados:</span><span className="text-right font-semibold">{clientesVisitados.size}</span>
               <span className="text-muted-foreground">Visitas sin compra:</span><span className="text-right font-semibold">{visitasSinCompra.length}</span>
-              <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{devLineas.length} productos</span>
+              <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{totalDevUnidades} uds</span>
+              {totalDevCredito > 0 && (
+                <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-${fmt(totalDevCredito)}</span></>
+              )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
                 <span>${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
