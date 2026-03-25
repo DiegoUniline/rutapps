@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { useDateFilter } from '@/hooks/useDateFilter';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const METODO_ICONS: Record<string, any> = {
   efectivo: Banknote,
