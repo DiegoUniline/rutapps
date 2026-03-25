@@ -1388,6 +1388,7 @@ export default function RutaVentaDetalle() {
             {lineas.map((l: any) => {
               const lineSub = (l.precio_unitario ?? 0) * (l.cantidad ?? 0);
               const lineTotal = showTax ? (l.total ?? 0) : (l.subtotal ?? lineSub);
+              const lineUnit = l.precio_unitario ?? 0;
               return (
                 <div key={l.id} className="p-3">
                   <div className="flex items-start justify-between gap-2">
