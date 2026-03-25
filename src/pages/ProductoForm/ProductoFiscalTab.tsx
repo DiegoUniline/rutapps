@@ -38,7 +38,7 @@ export function ProductoFiscalTab({ form, set, unidadesSat }: Props) {
             {(['porcentaje', 'cuota'] as const).map(t => (
               <button key={t} type="button" onClick={() => set('ieps_tipo', t)}
                 className={`text-[11px] px-3 py-1 rounded border transition-colors ${(form.ieps_tipo || 'porcentaje') === t ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/50'}`}>
-                {t === 'porcentaje' ? '% Porcentaje' : '$ Cuota fija'}
+                {t === 'porcentaje' ? '% Porcentaje' : `${s} Cuota fija`}
               </button>
             ))}
           </div>
