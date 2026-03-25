@@ -550,7 +550,7 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Entregado</p>
-            <p className="text-lg font-bold text-success">{totalEntregado}</p>
+            <p className="text-lg font-bold text-success">{fmtNum(totalEntregado)}</p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Devuelto</p>
