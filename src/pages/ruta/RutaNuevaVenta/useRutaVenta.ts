@@ -315,8 +315,10 @@ export function useRutaVenta() {
                 }
               }
             } catch (e) { console.error('Error updating carga devuelta:', e); }
-          } else if (destAlmacenId) {
-            // No carga → restore stock to warehouse directly
+          }
+
+          // Always restore stock to user's assigned warehouse
+          if (destAlmacenId) {
             try {
               const stockTable = getOfflineTable('stock_almacen');
               if (stockTable) {
@@ -345,10 +347,8 @@ export function useRutaVenta() {
                 }
               }
             } catch (e) { console.error('Error restoring stock for devolution:', e); }
-          }
 
-          // Log inventory movement
-          if (destAlmacenId) {
+            // Log inventory movement
             await queueOperation('movimientos_inventario', 'insert', {
               id: crypto.randomUUID(), empresa_id: empresa.id, tipo: 'entrada',
               producto_id: d.producto_id, cantidad: d.cantidad,
