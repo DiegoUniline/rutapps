@@ -144,6 +144,7 @@ function ClientesTable() {
                 <th className="th-odoo text-left">Código</th>
                 <th className="th-odoo text-left">Nombre</th>
                 <th className="th-odoo text-left hidden md:table-cell">Contacto</th>
+                <th className="th-odoo text-left hidden md:table-cell">Días de visita</th>
                 <th className="th-odoo text-left hidden lg:table-cell">Teléfono</th>
                 <th className="th-odoo text-left hidden lg:table-cell">Zona</th>
                 <th className="th-odoo text-left hidden xl:table-cell">Vendedor</th>
