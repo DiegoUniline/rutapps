@@ -282,7 +282,7 @@ export default function RutaDescarga() {
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-card border border-border rounded-xl p-3 text-center">
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-0.5">Esperado</p>
-            <p className="text-lg font-bold text-foreground tabular-nums">$ {fmt(efectivoEsperado)}</p>
+            <p className="text-lg font-bold text-foreground tabular-nums">{s}{fmt(efectivoEsperado)}</p>
           </div>
           <div className={`bg-card border rounded-xl p-3 text-center ${
             totalEfectivo - efectivoEsperado < 0 ? 'border-destructive/40' : 'border-border'
@@ -330,7 +330,7 @@ export default function RutaDescarga() {
                     </button>
                   </div>
                   <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
-                    {subtotal > 0 ? `$ ${fmt(subtotal)}` : '—'}
+                    {subtotal > 0 ? `${s}${fmt(subtotal)}` : '—'}
                   </span>
                 </div>
               );
@@ -372,7 +372,7 @@ export default function RutaDescarga() {
                     </button>
                   </div>
                   <span className="text-[12px] text-muted-foreground w-20 text-right tabular-nums">
-                    {subtotal > 0 ? `$ ${fmt(subtotal)}` : '—'}
+                    {subtotal > 0 ? `${s}${fmt(subtotal)}` : '—'}
                   </span>
                 </div>
               );
@@ -421,7 +421,7 @@ export default function RutaDescarga() {
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
           <Send className="h-4 w-4" />
-          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — $ ${fmt(totalEfectivo)}`}
+          {submitMutation.isPending ? 'Enviando...' : `Enviar liquidación — ${s}${fmt(totalEfectivo)}`}
         </button>
       </div>
     </div>
