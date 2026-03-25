@@ -133,7 +133,7 @@ export default function CobranzaPage() {
       <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-3")}>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total por cobrar</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalDeuda)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmtC(totalDeuda)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Clientes con deuda</p>
