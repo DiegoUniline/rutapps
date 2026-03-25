@@ -589,14 +589,14 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
               <TableRow key={i}>
                 <TableCell className="font-mono text-[11px] text-muted-foreground">{l.codigo}</TableCell>
                 <TableCell className="text-[12px] font-medium">{l.nombre}</TableCell>
-                <TableCell className="text-center">{l.cargado}</TableCell>
+                 <TableCell className="text-center">{fmtNum(l.cargado)}</TableCell>
                 <TableCell className={cn("text-center", l.entregado > 0 ? "text-success font-medium" : "text-muted-foreground")}>
-                  {l.entregado}
+                  {fmtNum(l.entregado)}
                 </TableCell>
                 <TableCell className={cn("text-center", l.devuelto > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
-                  {l.devuelto}
+                  {fmtNum(l.devuelto)}
                 </TableCell>
-                <TableCell className="text-center font-bold text-primary">{l.abordo}</TableCell>
+                <TableCell className="text-center font-bold text-primary">{fmtNum(l.abordo)}</TableCell>
                 <TableCell className="text-right text-[12px]">$ {fmt(l.abordo * l.costo)}</TableCell>
                 <TableCell className="text-right text-[12px] text-success">$ {fmt(l.abordo * l.precio)}</TableCell>
               </TableRow>
