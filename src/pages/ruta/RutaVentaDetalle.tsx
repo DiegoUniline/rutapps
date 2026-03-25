@@ -226,7 +226,24 @@ export default function RutaVentaDetalle() {
     setEditLineas(prev => prev.map((l, i) => {
       if (i !== idx) return l;
       const newQty = l.cantidad + delta;
-      return newQty > 0 ? { ...l, cantidad: newQty } : l;
+      if (newQty <= 0) return l;
+      if (esVentaInmediata) {
+        const maxStock = stockMap[l.producto_id] ?? 0;
+        return { ...l, cantidad: Math.min(newQty, maxStock) };
+      }
+      return { ...l, cantidad: newQty };
+    }));
+  };
+
+  const setEditQty = (idx: number, qty: number) => {
+    setEditLineas(prev => prev.map((l, i) => {
+      if (i !== idx) return l;
+      if (qty <= 0) return { ...l, cantidad: 1 };
+      if (esVentaInmediata) {
+        const maxStock = stockMap[l.producto_id] ?? 0;
+        return { ...l, cantidad: Math.min(qty, maxStock) };
+      }
+      return { ...l, cantidad: qty };
     }));
   };
 
