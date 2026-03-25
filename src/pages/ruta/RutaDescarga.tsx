@@ -165,13 +165,15 @@ export default function RutaDescarga() {
     mutationFn: async () => {
       if (totalEfectivo <= 0) throw new Error('Ingresa el efectivo que entregas');
 
-      const today = new Date().toISOString().slice(0, 10);
+      const diferencia = totalEfectivo - efectivoEsperado;
+
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        efectivo_esperado: 0,
+        vendedor_id: vendedorId || user!.id,
+        efectivo_esperado: efectivoEsperado,
         efectivo_entregado: totalEfectivo,
-        diferencia_efectivo: 0,
+        diferencia_efectivo: diferencia,
         notas: notas || null,
         fecha_inicio: today,
         fecha_fin: today,
@@ -179,7 +181,6 @@ export default function RutaDescarga() {
 
       if (cargaActiva) {
         insertData.carga_id = cargaActiva.id;
-        insertData.vendedor_id = cargaActiva.vendedor_id;
       }
 
       const { data: descarga, error } = await supabase
