@@ -23,6 +23,8 @@ interface Props {
   saving: boolean;
   handleWhatsAppSend: () => void;
   handleDownloadPDF: () => void;
+  handlePrintTicket: () => void;
+  handleShareTicket: () => void;
   handleEstadoCuenta: () => void;
   initEditar: () => void;
   initCobrar: () => void;
