@@ -361,7 +361,7 @@ export default function InventarioPage() {
                     const qty = r.stockByProduct[p.id] ?? 0;
                     return (
                       <TableCell key={r.id} className={cn("text-center", qty > 0 ? "text-warning font-medium" : "text-muted-foreground")}>
-                        {qty || '—'}
+                        {qty ? fmtNum(qty) : '—'}
                       </TableCell>
                     );
                   })}
