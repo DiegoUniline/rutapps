@@ -704,7 +704,7 @@ export default function PuntoVentaPage() {
               </div>
               <div className="flex items-baseline justify-between mt-2">
                 <span className="text-[13px] text-muted-foreground">{clienteNombre} · {totals.items} artículos</span>
-                <span className="text-[28px] font-black text-primary tabular-nums">${fmt(totals.total)}</span>
+                <span className="text-[28px] font-black text-primary tabular-nums">{fmtM(totals.total)}</span>
               </div>
             </div>
 
