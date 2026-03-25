@@ -308,6 +308,11 @@ export default function ReporteDiarioRuta() {
               <div className="text-[9px] text-muted-foreground">{(gastos || []).length}</div>
             </div>
             <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <div className="text-[9px] text-muted-foreground uppercase">Devoluciones</div>
+              <div className="text-lg font-bold text-foreground">{totalDevUnidades} uds</div>
+              <div className="text-[9px] text-muted-foreground">{(devoluciones || []).length} devol.</div>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Clientes visitados</div>
               <div className="text-lg font-bold text-foreground">{clientesVisitados.size}</div>
             </div>
