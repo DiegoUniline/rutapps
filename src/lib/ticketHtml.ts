@@ -85,7 +85,7 @@ function wrapText(s: string, cols = COLS): string[] {
 
 const div = '-'.repeat(COLS);
 
-export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean }): string {
+export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
   const { empresa, folio, fecha, clienteNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo } = data;
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
