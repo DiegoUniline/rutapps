@@ -631,7 +631,7 @@ export default function PuntoVentaPage() {
             {totals.ieps > 0 && (
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">IEPS</span>
-                <span className="font-medium text-foreground tabular-nums">${fmt(totals.ieps)}</span>
+                <span className="font-medium text-foreground tabular-nums">{fmtM(totals.ieps)}</span>
               </div>
             )}
             <div className="flex justify-between items-baseline pt-2 border-t border-border">
