@@ -508,7 +508,7 @@ export default function RutaVentaDetalle() {
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho });
+    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho, showTax });
     document.body.appendChild(container);
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
