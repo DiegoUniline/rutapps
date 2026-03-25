@@ -67,12 +67,12 @@ export default function ReporteDiarioRuta() {
 
   // --- Gastos ---
   const { data: gastos } = useQuery<any[]>({
-    queryKey: ['rpt-diario-gastos', empresa?.id, usuarioId, fechaInicio, fechaFin],
+    queryKey: ['rpt-diario-gastos', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('gastos')
         .select('id, monto, concepto, notas')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
       return data ?? [];
