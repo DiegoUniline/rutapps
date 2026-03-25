@@ -291,7 +291,7 @@ export default function RutaDescarga() {
             <p className={`text-lg font-bold tabular-nums ${
               totalEfectivo - efectivoEsperado < 0 ? 'text-destructive' : totalEfectivo - efectivoEsperado > 0 ? 'text-primary' : 'text-foreground'
             }`}>
-              {totalEfectivo - efectivoEsperado >= 0 ? '+' : ''}$ {fmt(totalEfectivo - efectivoEsperado)}
+              {totalEfectivo - efectivoEsperado >= 0 ? '+' : ''}{s}{fmt(totalEfectivo - efectivoEsperado)}
             </p>
           </div>
         </div>
