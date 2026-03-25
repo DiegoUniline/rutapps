@@ -12,6 +12,7 @@ interface Props {
 const comisionLabels: Record<string, string> = { porcentaje: 'Porcentaje', monto_fijo: 'Monto Fijo' };
 
 export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
+  const { symbol: s, fmt } = useCurrency();
   return (
     <div className="space-y-3">
       <div className="odoo-field-row">
