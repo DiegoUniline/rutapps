@@ -169,7 +169,8 @@ export default function ReporteDiarioRuta() {
   });
 
   // Dev lines
-  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string; cliente: string }[] = [];
+  const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
+  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string; accion: string; monto_credito: number; cliente: string }[] = [];
   (devoluciones || []).forEach((d: any) => {
     (d.devolucion_lineas || []).forEach((l: any) => {
       devLineas.push({
@@ -177,10 +178,14 @@ export default function ReporteDiarioRuta() {
         codigo: l.productos?.codigo || '',
         cantidad: Number(l.cantidad),
         motivo: l.motivo || '—',
+        accion: l.accion || 'reposicion',
+        monto_credito: Number(l.monto_credito) || 0,
         cliente: (d as any).clientes?.nombre || '—',
       });
     });
   });
+  const totalDevUnidades = devLineas.reduce((s, d) => s + d.cantidad, 0);
+  const totalDevCredito = devLineas.reduce((s, d) => s + d.monto_credito, 0);
 
   const rptAlmacenNombre = rptVendedorAlmacen?.almacenes?.nombre || 'Almacén asignado';
   const stockItems = (rptStockAlmacen || []).map((s: any) => ({
