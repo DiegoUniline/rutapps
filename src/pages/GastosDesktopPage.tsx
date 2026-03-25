@@ -95,7 +95,7 @@ export default function GastosDesktopPage() {
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total gastos</p>
-          <p className="text-2xl font-bold text-destructive">$ {fmt(totalGastos)}</p>
+          <p className="text-2xl font-bold text-destructive">{fmt(totalGastos)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Registros</p>
