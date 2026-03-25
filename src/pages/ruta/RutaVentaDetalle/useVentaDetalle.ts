@@ -7,6 +7,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
+import { buildEscPosBytes } from '@/lib/escpos';
+import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetoothPrinter';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { toPng } from 'html-to-image';
 import type { View, CuentaPendiente, EditLinea } from './types';
@@ -161,7 +163,43 @@ export function useVentaDetalle() {
 
   const getTicketData = (): TicketData | null => {
     if (!venta) return null;
-    return { empresa: { nombre: empresa?.nombre ?? '', rfc: (empresa as any)?.rfc ?? null, telefono: empresa?.telefono ?? null, direccion: empresa?.direccion ?? null, logo_url: empresa?.logo_url ?? null }, folio: venta.folio ?? 'Sin folio', fecha: fmtDate(venta.fecha), clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente', lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({ nombre: l.productos?.nombre ?? l.descripcion ?? '—', cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0, iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0, descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0 })), subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0, ieps: venta.ieps_total ?? 0, total: venta.total ?? 0, condicionPago: venta.condicion_pago, metodoPago: (venta as any).metodo_pago ?? undefined };
+    const e = empresa as any;
+    return {
+      empresa: {
+        nombre: e?.nombre ?? '',
+        rfc: e?.rfc ?? null,
+        razon_social: e?.razon_social ?? null,
+        telefono: e?.telefono ?? null,
+        direccion: e?.direccion ?? null,
+        colonia: e?.colonia ?? null,
+        ciudad: e?.ciudad ?? null,
+        estado: e?.estado ?? null,
+        cp: e?.cp ?? null,
+        email: e?.email ?? null,
+        logo_url: e?.logo_url ?? null,
+        moneda: e?.moneda ?? 'MXN',
+        notas_ticket: e?.notas_ticket ?? null,
+        ticket_campos: e?.ticket_campos ?? null,
+      },
+      folio: venta.folio ?? 'Sin folio',
+      fecha: fmtDate(venta.fecha),
+      clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente',
+      lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({
+        nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+        cantidad: l.cantidad,
+        precio: l.precio_unitario ?? 0,
+        total: l.total ?? 0,
+        iva_monto: l.iva_monto ?? 0,
+        ieps_monto: l.ieps_monto ?? 0,
+        descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+      })),
+      subtotal: venta.subtotal ?? 0,
+      iva: venta.iva_total ?? 0,
+      ieps: (venta as any).ieps_total ?? 0,
+      total: venta.total ?? 0,
+      condicionPago: venta.condicion_pago,
+      metodoPago: (venta as any).metodo_pago ?? undefined,
+    };
   };
 
   const handleWhatsAppSend = async () => {
@@ -183,16 +221,48 @@ export function useVentaDetalle() {
     try { await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200))); const dataUrl = await toPng(container.firstElementChild as HTMLElement, { cacheBust: true, pixelRatio: 3, backgroundColor: '#ffffff' }); const a = document.createElement('a'); a.href = dataUrl; a.download = `${venta?.folio ?? 'ticket'}.png`; a.click(); toast.success('Ticket descargado'); } catch { toast.error('Error generando imagen'); } finally { document.body.removeChild(container); }
   };
 
-  const handlePrintTicket = () => {
-    const td = getTicketData(); if (!td) return;
-    const html = buildUnifiedTicketHTML(td, { ticketAncho });
-    const w = ticketAncho === '58' ? '58mm' : '80mm';
-    const printWindow = window.open('', '_blank', 'width=320,height=600');
-    if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Ticket ${td.folio}</title>
-<style>@page{size:${w} auto;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{width:${w};padding:3mm;background:#fff}</style></head><body>${html}
-<script>window.onload=function(){window.print();window.close()}</script></body></html>`);
-    printWindow.document.close();
+  const handlePrintTicket = async () => {
+    const td = getTicketData();
+    if (!td) return;
+
+    // 1) Try direct BLE ESC/POS
+    if (isBluetoothAvailable()) {
+      try {
+        const conn = await connectPrinter();
+        const escposBytes = buildEscPosBytes(td, { ticketAncho });
+        await sendBytes(conn, escposBytes);
+        toast.success('Ticket impreso');
+        return;
+      } catch (e) {
+        console.warn('BLE falló, usando imagen:', e);
+      }
+    }
+
+    // 2) Fallback: PNG share / download
+    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;left:-9999px;top:0';
+    container.innerHTML = html;
+    document.body.appendChild(container);
+    const el = container.firstElementChild as HTMLElement;
+    try {
+      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
+      const dataUrl = await toPng(el, { pixelRatio: 2, backgroundColor: '#ffffff' });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `${td.folio}.png`, { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `Ticket ${td.folio}` });
+      } else {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = file.name;
+        a.click();
+      }
+    } catch {
+      toast.error('Error generando imagen');
+    } finally {
+      document.body.removeChild(container);
+    }
   };
 
   const handleShareTicket = async () => {

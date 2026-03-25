@@ -1,138 +1,148 @@
 /**
  * ESC/POS command builder for 58mm and 80mm thermal printers.
- * Uses W=24 and strips accents so byte-length matches print columns.
+ * 58mm = 32 columns (Font A), 80mm = 48 columns.
  */
 import type { TicketData } from './ticketHtml';
 import { getCurrencyConfig } from './currency';
 
+const COLS_58 = 32;
+const COLS_80 = 48;
+
 const ESC = 0x1B;
 const GS  = 0x1D;
-const LF  = 0x0A;
 
 const INIT         = [ESC, 0x40];
 const ALIGN_CENTER = [ESC, 0x61, 0x01];
 const ALIGN_LEFT   = [ESC, 0x61, 0x00];
 const BOLD_ON      = [ESC, 0x45, 0x01];
 const BOLD_OFF     = [ESC, 0x45, 0x00];
-const CUT          = [GS, 0x56, 0x41, 0x00];
-const FEED2        = [ESC, 0x64, 0x02];
+const CUT          = [GS, 0x56, 0x42, 0x00];
+const LF           = [0x0A];
 
 const encoder = new TextEncoder();
 
 /** Strip accents and non-ASCII so byte length = char count */
 function clean(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '');
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
 }
 
-function bytes(s: string): number[] { return Array.from(encoder.encode(s)); }
-function line(s: string): number[] { return [...bytes(s), LF]; }
+function center(s: string, w: number): string {
+  s = clean(s).substring(0, w);
+  const pad = Math.floor((w - s.length) / 2);
+  return ' '.repeat(Math.max(0, pad)) + s;
+}
 
-function sep(w: number): string { return '-'.repeat(w); }
-
-/** Two-column row: left-aligned text + right-aligned text, fits in exactly w chars */
 function row(left: string, right: string, w: number): string {
   left = clean(left);
   right = clean(right);
-  const maxLeft = Math.max(1, w - right.length - 1);
-  if (left.length > maxLeft) left = left.slice(0, maxLeft);
-  const gap = w - left.length - right.length;
-  return left + ' '.repeat(Math.max(gap, 1)) + right;
+  const space = w - left.length - right.length;
+  if (space <= 0) {
+    return (left.substring(0, w - right.length - 1) + ' ' + right).substring(0, w);
+  }
+  return left + ' '.repeat(space) + right;
 }
 
-/** Center text within w chars */
-function center(s: string, w: number): string {
-  s = clean(s);
-  if (s.length >= w) return s.slice(0, w);
-  const pad = Math.floor((w - s.length) / 2);
-  return ' '.repeat(pad) + s;
+function divider(w: number): string {
+  return '-'.repeat(w);
 }
-
-const money = (sym: string, n: number) => `${sym}${n.toFixed(2)}`;
 
 export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string }): Uint8Array {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
-  const W = is58 ? 32 : 48;
-  const sym = getCurrencyConfig(data.empresa.moneda).symbol;
-  const fmt = (n: number) => money(sym, n);
+  const W = is58 ? COLS_58 : COLS_80;
 
-  const campos = {
-    logo: true, nombre: true, razon_social: true, rfc: true,
-    direccion: true, telefono: true, notas_ticket: true, impuestos: true,
-    ...((data.empresa.ticket_campos as Record<string, boolean>) ?? {}),
+  const sym = getCurrencyConfig(data.empresa.moneda).symbol;
+  const fmt = (n: number) =>
+    `${sym}${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const parts: number[] = [];
+  const add = (bytes: number[]) => parts.push(...bytes);
+  const line = (s: string) => {
+    add(Array.from(encoder.encode(s + '\n')));
   };
 
-  const showTax = campos.impuestos !== false;
-  const buf: number[] = [...INIT];
+  add(INIT);
 
-  // ── Header ──
-  buf.push(...ALIGN_CENTER);
-  if (campos.nombre) {
-    buf.push(...BOLD_ON, ...line(clean(data.empresa.nombre)), ...BOLD_OFF);
-  }
-  if (campos.razon_social && data.empresa.razon_social) buf.push(...line(clean(data.empresa.razon_social)));
-  if (campos.rfc && data.empresa.rfc) buf.push(...line(clean(`RFC:${data.empresa.rfc}`)));
-  if (campos.direccion) {
-    const p: string[] = [];
-    if (data.empresa.direccion) p.push(data.empresa.direccion);
-    if (data.empresa.colonia) p.push(data.empresa.colonia);
-    if (p.length) buf.push(...line(clean(p.join(','))));
-    const p2: string[] = [];
-    if (data.empresa.ciudad) p2.push(data.empresa.ciudad);
-    if (data.empresa.estado) p2.push(data.empresa.estado);
-    if (data.empresa.cp) p2.push(`CP${data.empresa.cp}`);
-    if (p2.length) buf.push(...line(clean(p2.join(','))));
-  }
-  if (campos.telefono && data.empresa.telefono) buf.push(...line(clean(`Tel:${data.empresa.telefono}`)));
-  if (data.empresa.email) buf.push(...line(clean(data.empresa.email)));
-  buf.push(...ALIGN_LEFT, ...line(sep(W)));
+  // ── HEADER ──
+  add(ALIGN_CENTER);
+  add(BOLD_ON);
+  line(clean(data.empresa.nombre).substring(0, W));
+  add(BOLD_OFF);
+  if (data.empresa.razon_social) line(clean(data.empresa.razon_social).substring(0, W));
+  if (data.empresa.rfc) line(`RFC: ${data.empresa.rfc}`);
+  const dir = [data.empresa.direccion, data.empresa.colonia].filter(Boolean).join(', ');
+  if (dir) line(clean(dir).substring(0, W));
+  const dir2 = [data.empresa.ciudad, data.empresa.estado, data.empresa.cp ? `CP ${data.empresa.cp}` : ''].filter(Boolean).join(', ');
+  if (dir2) line(clean(dir2).substring(0, W));
+  if (data.empresa.telefono) line(`Tel: ${data.empresa.telefono}`);
+  if (data.empresa.email) line(data.empresa.email);
+  add(LF);
 
-  // ── Info ──
-  buf.push(...line(clean(`Folio:${data.folio}`)));
-  buf.push(...line(clean(`Fecha:${data.fecha}`)));
-  buf.push(...line(clean(`Cliente:${data.clienteNombre}`)));
-  const pago = data.condicionPago === 'credito' ? 'Credito' : data.condicionPago === 'contado' ? 'Contado' : 'P/definir';
-  buf.push(...line(clean(`Pago:${pago}${data.metodoPago ? ' ' + data.metodoPago : ''}`)));
-  buf.push(...line(sep(W)));
+  // ── INFO ──
+  add(ALIGN_LEFT);
+  line(divider(W));
+  line(`Folio: ${data.folio}`);
+  line(`Fecha: ${data.fecha}`);
+  line(`Cliente: ${clean(data.clienteNombre).substring(0, W - 9)}`);
+  const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : 'Contado';
+  line(`Pago: ${pagoLabel}`);
+  line(divider(W));
 
-  // ── Products: one line each ──
+  // ── PRODUCTOS HEADER ──
+  add(BOLD_ON);
+  line(row('Cant Producto', 'Importe', W));
+  add(BOLD_OFF);
+  line(divider(W));
+
+  // ── LÍNEAS ──
   for (const l of data.lineas) {
-    buf.push(...line(row(`${l.cantidad}x ${l.nombre}`, fmt(l.total), W)));
+    const nombre = clean(l.nombre).substring(0, W - 10);
+    const importe = fmt(l.total);
+    line(row(`${l.cantidad}x ${nombre}`, importe, W));
+    // detalle precio unitario + IVA
+    const det = `  ${fmt(l.precio)}c/u${(l.iva_monto ?? 0) > 0 ? ` IVA${fmt(l.iva_monto!)}` : ''}`;
+    line(clean(det).substring(0, W));
   }
-  buf.push(...line(sep(W)));
+  line(divider(W));
 
-  // ── Totals ──
-  if (showTax) {
-    buf.push(...line(row('SUBTOTAL', fmt(data.subtotal), W)));
-    if (data.iva > 0) buf.push(...line(row('IVA', fmt(data.iva), W)));
-    if ((data.ieps ?? 0) > 0) buf.push(...line(row('IEPS', fmt(data.ieps!), W)));
-    buf.push(...line(sep(W)));
+  // ── TOTALES ──
+  add(LF);
+  line(row('Subtotal', fmt(data.subtotal), W));
+  if (data.iva > 0) line(row('IVA', fmt(data.iva), W));
+  if ((data.ieps ?? 0) > 0) line(row('IEPS', fmt(data.ieps!), W));
+  line(divider(W));
+  add(BOLD_ON);
+  line(row('TOTAL', fmt(data.total), W));
+  add(BOLD_OFF);
+
+  if (data.montoRecibido && data.montoRecibido > 0) {
+    line(row('Recibido', fmt(data.montoRecibido), W));
+    if ((data.cambio ?? 0) > 0) line(row('Cambio', fmt(data.cambio!), W));
   }
-  buf.push(...BOLD_ON, ...line(row('TOTAL', fmt(data.total), W)), ...BOLD_OFF);
 
-  if (data.montoRecibido != null && data.montoRecibido > 0) {
-    buf.push(...line(row('Recibido', fmt(data.montoRecibido), W)));
-    if ((data.cambio ?? 0) > 0) buf.push(...line(row('Cambio', fmt(data.cambio!), W)));
-  }
-
-  // ── Saldo ──
+  // ── SALDO ──
   if ((data.saldoAnterior != null && data.saldoAnterior > 0) || (data.saldoNuevo != null && (data.saldoNuevo ?? 0) > 0)) {
-    buf.push(...line(sep(W)));
-    buf.push(...BOLD_ON, ...line(clean('EDO.CUENTA')), ...BOLD_OFF);
-    if (data.saldoAnterior != null && data.saldoAnterior > 0) buf.push(...line(row('Saldo ant', fmt(data.saldoAnterior), W)));
-    if (data.pagoAplicado != null && data.pagoAplicado > 0) buf.push(...line(row('Pago', `-${fmt(data.pagoAplicado)}`, W)));
-    if (data.condicionPago === 'credito') buf.push(...line(row('+Venta', fmt(data.total), W)));
-    buf.push(...line(sep(W)));
-    buf.push(...BOLD_ON, ...line(row('Saldo', fmt(data.saldoNuevo ?? 0), W)), ...BOLD_OFF);
+    line(divider(W));
+    add(BOLD_ON);
+    line(clean('EDO. CUENTA'));
+    add(BOLD_OFF);
+    if (data.saldoAnterior != null && data.saldoAnterior > 0) line(row('Saldo ant', fmt(data.saldoAnterior), W));
+    if (data.pagoAplicado != null && data.pagoAplicado > 0) line(row('Pago', `-${fmt(data.pagoAplicado)}`, W));
+    if (data.condicionPago === 'credito') line(row('+Venta', fmt(data.total), W));
+    line(divider(W));
+    add(BOLD_ON);
+    line(row('Saldo', fmt(data.saldoNuevo ?? 0), W));
+    add(BOLD_OFF);
   }
 
-  // ── Footer ──
-  if (campos.notas_ticket && data.empresa.notas_ticket) {
-    buf.push(...line(sep(W)));
-    buf.push(...ALIGN_CENTER, ...line(clean(data.empresa.notas_ticket)));
-  }
-  buf.push(...ALIGN_CENTER, ...line(sep(W)));
-  buf.push(...line(clean('Uniline')));
+  // ── FOOTER ──
+  add(LF);
+  add(ALIGN_CENTER);
+  line('Gracias por su compra');
+  if (data.empresa.notas_ticket) line(clean(data.empresa.notas_ticket).substring(0, W));
+  line('');
+  line('Elaborado por Uniline');
+  add(LF); add(LF); add(LF);
+  add(CUT);
 
-  buf.push(...FEED2, ...CUT);
-  return new Uint8Array(buf);
+  return new Uint8Array(parts);
 }
