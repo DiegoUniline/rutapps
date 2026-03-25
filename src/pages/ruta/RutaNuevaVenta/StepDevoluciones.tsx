@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ChevronRight, Check, X } from 'lucide-react';
 import type { DevolucionItem, AccionDevolucion, MotivoDevolucion } from './types';
 import { MOTIVOS, ACCIONES } from './types';
 
@@ -23,40 +23,81 @@ interface Props {
   fmt: (n: number) => string;
 }
 
-/* ── Chip selector ───────────────────────────────── */
-function ChipSelect<T extends string>({
+/* ── Bottom sheet for picking motivo / acción ─── */
+function PickerSheet<T extends string>({
+  title,
   options,
   value,
-  onChange,
+  onSelect,
+  onClose,
 }: {
-  options: { value: T; label: string; icon?: string }[];
+  title: string;
+  options: { value: T; label: string; icon?: string; desc?: string }[];
   value: T;
-  onChange: (v: T) => void;
+  onSelect: (v: T) => void;
+  onClose: () => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {options.map(o => {
-        const active = o.value === value;
-        return (
-          <button
-            key={o.value}
-            onClick={() => onChange(o.value)}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all active:scale-95 ${
-              active
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-accent/70 text-muted-foreground hover:bg-accent'
-            }`}
-          >
-            {o.icon && <span className="mr-0.5">{o.icon}</span>}
-            {o.label}
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+      {/* Sheet */}
+      <div
+        className="relative w-full max-w-md bg-card rounded-t-2xl shadow-2xl animate-in slide-in-from-bottom duration-200 safe-area-bottom"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 rounded-full bg-muted-foreground/20" />
+        </div>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pb-2">
+          <h3 className="text-[15px] font-bold text-foreground">{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
+            <X className="h-4 w-4 text-muted-foreground" />
           </button>
-        );
-      })}
+        </div>
+        {/* Options */}
+        <div className="px-3 pb-4 space-y-1">
+          {options.map(o => {
+            const active = o.value === value;
+            return (
+              <button
+                key={o.value}
+                onClick={() => onSelect(o.value)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all active:scale-[0.98] ${
+                  active
+                    ? 'bg-primary/10 ring-1.5 ring-primary/30'
+                    : 'bg-accent/50 hover:bg-accent'
+                }`}
+              >
+                {o.icon && <span className="text-lg shrink-0">{o.icon}</span>}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[13px] font-semibold ${active ? 'text-primary' : 'text-foreground'}`}>{o.label}</p>
+                  {o.desc && <p className="text-[10.5px] text-muted-foreground mt-0.5">{o.desc}</p>}
+                </div>
+                {active && <Check className="h-4.5 w-4.5 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
 
-/* ── Compact action badge ────────────────────────── */
+/* ── Motivos with icons for the sheet ─── */
+const MOTIVOS_SHEET: { value: MotivoDevolucion; label: string; icon: string; desc: string }[] = [
+  { value: 'no_vendido', label: 'No vendido', icon: '📦', desc: 'El cliente no vendió el producto' },
+  { value: 'vencido', label: 'Vencido', icon: '⏰', desc: 'Producto pasó fecha de vencimiento' },
+  { value: 'caducado', label: 'Caducado', icon: '📅', desc: 'Producto caducó en anaquel' },
+  { value: 'danado', label: 'Dañado', icon: '💔', desc: 'Producto con daño físico' },
+  { value: 'cambio', label: 'Cambio', icon: '🔄', desc: 'Cliente quiere otro producto' },
+  { value: 'error_pedido', label: 'Error de pedido', icon: '❌', desc: 'Se envió producto equivocado' },
+  { value: 'otro', label: 'Otro', icon: '📝', desc: 'Motivo diferente' },
+];
+
+/* ── Small badges ─── */
 function AccionBadge({ accion }: { accion: AccionDevolucion }) {
   const a = ACCIONES.find(x => x.value === accion);
   if (!a) return null;
@@ -68,11 +109,11 @@ function AccionBadge({ accion }: { accion: AccionDevolucion }) {
 }
 
 function MotivoBadge({ motivo }: { motivo: MotivoDevolucion }) {
-  const m = MOTIVOS.find(x => x.value === motivo);
+  const m = MOTIVOS_SHEET.find(x => x.value === motivo);
   if (!m) return null;
   return (
-    <span className="inline-flex px-1.5 py-0.5 rounded-md bg-destructive/10 text-[9px] font-medium text-destructive/80 whitespace-nowrap">
-      {m.label}
+    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-destructive/10 text-[9px] font-medium text-destructive/80 whitespace-nowrap">
+      {m.icon} {m.label}
     </span>
   );
 }
@@ -88,20 +129,42 @@ export function StepDevoluciones(props: Props) {
   // Global defaults
   const [defaultMotivo, setDefaultMotivo] = useState<MotivoDevolucion>('no_vendido');
   const [defaultAccion, setDefaultAccion] = useState<AccionDevolucion>('reposicion');
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [showDefaults, setShowDefaults] = useState(true);
 
-  // Override addDevolucion to apply global defaults
+  // Sheet state: 'motivo' | 'accion' | null — and target ('global' | producto_id)
+  const [sheetType, setSheetType] = useState<'motivo' | 'accion' | null>(null);
+  const [sheetTarget, setSheetTarget] = useState<string>('global');
+
+  const openSheet = (type: 'motivo' | 'accion', target: string) => {
+    setSheetType(type);
+    setSheetTarget(target);
+  };
+
+  const handleSheetSelect = (value: string) => {
+    if (sheetType === 'motivo') {
+      if (sheetTarget === 'global') {
+        setDefaultMotivo(value as MotivoDevolucion);
+      } else {
+        updateDevMotivo(sheetTarget, value as MotivoDevolucion);
+      }
+    } else {
+      if (sheetTarget === 'global') {
+        setDefaultAccion(value as AccionDevolucion);
+      } else {
+        updateDevAccion(sheetTarget, value as AccionDevolucion);
+      }
+    }
+    setSheetType(null);
+  };
+
+  // Add with global defaults
   const handleAdd = (p: any) => {
     addDevolucion(p);
-    // Apply global defaults after adding
     setTimeout(() => {
       updateDevMotivo(p.id, defaultMotivo);
       updateDevAccion(p.id, defaultAccion);
     }, 0);
   };
 
-  // Apply defaults to all existing items
   const applyDefaultsToAll = () => {
     devoluciones.forEach(d => {
       updateDevMotivo(d.producto_id, defaultMotivo);
@@ -110,6 +173,11 @@ export function StepDevoluciones(props: Props) {
   };
 
   const totalItems = devoluciones.reduce((s, d) => s + d.cantidad, 0);
+  const motivoDefault = MOTIVOS_SHEET.find(m => m.value === defaultMotivo);
+  const accionDefault = ACCIONES.find(a => a.value === defaultAccion);
+
+  // Expanded item for per-item override
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -126,34 +194,38 @@ export function StepDevoluciones(props: Props) {
         )}
       </div>
 
-      {/* Global defaults panel */}
-      <div className="mx-3 mb-2 rounded-xl bg-card border border-border overflow-hidden">
-        <button
-          onClick={() => setShowDefaults(!showDefaults)}
-          className="w-full flex items-center justify-between px-3 py-2"
-        >
-          <span className="text-[11px] font-semibold text-foreground">Motivo y acción por defecto</span>
-          {showDefaults ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-        </button>
-        {showDefaults && (
-          <div className="px-3 pb-2.5 space-y-2 border-t border-border/50 pt-2">
-            <div>
-              <span className="text-[10px] text-muted-foreground mb-1 block">Motivo</span>
-              <ChipSelect options={MOTIVOS} value={defaultMotivo} onChange={v => setDefaultMotivo(v as MotivoDevolucion)} />
+      {/* Global defaults — compact tappable buttons */}
+      <div className="mx-3 mb-2 rounded-xl bg-card border border-border p-2.5 space-y-2">
+        <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Por defecto para todos</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => openSheet('motivo', 'global')}
+            className="flex-1 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent/60 active:scale-[0.97] transition-all"
+          >
+            <span className="text-sm">{motivoDefault?.icon}</span>
+            <div className="text-left min-w-0">
+              <p className="text-[9px] text-muted-foreground">Motivo</p>
+              <p className="text-[11.5px] font-semibold text-foreground truncate">{motivoDefault?.label}</p>
             </div>
-            <div>
-              <span className="text-[10px] text-muted-foreground mb-1 block">Acción</span>
-              <ChipSelect options={ACCIONES} value={defaultAccion} onChange={v => setDefaultAccion(v as AccionDevolucion)} />
+          </button>
+          <button
+            onClick={() => openSheet('accion', 'global')}
+            className="flex-1 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent/60 active:scale-[0.97] transition-all"
+          >
+            <span className="text-sm">{accionDefault?.icon}</span>
+            <div className="text-left min-w-0">
+              <p className="text-[9px] text-muted-foreground">Acción</p>
+              <p className="text-[11.5px] font-semibold text-foreground truncate">{accionDefault?.label}</p>
             </div>
-            {devoluciones.length > 0 && (
-              <button
-                onClick={applyDefaultsToAll}
-                className="w-full text-[11px] font-medium text-primary bg-primary/10 rounded-lg py-1.5 active:scale-[0.98] transition-all"
-              >
-                Aplicar a los {devoluciones.length} productos
-              </button>
-            )}
-          </div>
+          </button>
+        </div>
+        {devoluciones.length > 0 && (
+          <button
+            onClick={applyDefaultsToAll}
+            className="w-full text-[11px] font-medium text-primary bg-primary/10 rounded-lg py-1.5 active:scale-[0.98] transition-all"
+          >
+            Aplicar a los {devoluciones.length} productos
+          </button>
         )}
       </div>
 
@@ -193,7 +265,7 @@ export function StepDevoluciones(props: Props) {
                   }}
                 >
                   <p className="text-[12px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
+                  <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                     <span className="text-[9.5px] text-muted-foreground font-mono">{p.codigo}</span>
                     {qty > 0 && dev && (
                       <>
@@ -227,16 +299,30 @@ export function StepDevoluciones(props: Props) {
                 )}
               </div>
 
-              {/* Expanded: override motivo/acción for this item */}
+              {/* Expanded per-item override */}
               {qty > 0 && isExpanded && dev && (
-                <div className="px-3 pb-2.5 pt-1 border-t border-border/30 space-y-2">
-                  <div>
-                    <span className="text-[10px] text-muted-foreground mb-1 block">Motivo</span>
-                    <ChipSelect options={MOTIVOS} value={dev.motivo} onChange={v => updateDevMotivo(p.id, v)} />
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-muted-foreground mb-1 block">Acción</span>
-                    <ChipSelect options={ACCIONES} value={dev.accion} onChange={v => updateDevAccion(p.id, v)} />
+                <div className="px-3 pb-2 pt-1 border-t border-border/30">
+                  <div className="flex gap-2 mb-1.5">
+                    <button
+                      onClick={() => openSheet('motivo', p.id)}
+                      className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-accent/50 active:scale-[0.97] transition-all"
+                    >
+                      <span className="text-xs">{MOTIVOS_SHEET.find(m => m.value === dev.motivo)?.icon}</span>
+                      <div className="text-left min-w-0">
+                        <p className="text-[8.5px] text-muted-foreground">Motivo</p>
+                        <p className="text-[11px] font-semibold text-foreground truncate">{MOTIVOS_SHEET.find(m => m.value === dev.motivo)?.label}</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => openSheet('accion', p.id)}
+                      className="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-accent/50 active:scale-[0.97] transition-all"
+                    >
+                      <span className="text-xs">{ACCIONES.find(a => a.value === dev.accion)?.icon}</span>
+                      <div className="text-left min-w-0">
+                        <p className="text-[8.5px] text-muted-foreground">Acción</p>
+                        <p className="text-[11px] font-semibold text-foreground truncate">{ACCIONES.find(a => a.value === dev.accion)?.label}</p>
+                      </div>
+                    </button>
                   </div>
 
                   {dev.accion === 'reposicion' && (
@@ -251,7 +337,7 @@ export function StepDevoluciones(props: Props) {
                   )}
 
                   {(dev.accion === 'nota_credito' || dev.accion === 'descuento_venta' || dev.accion === 'devolucion_dinero') && (
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground mt-1">
                       Valor: <span className="font-semibold text-foreground">${fmt(dev.precio_unitario * dev.cantidad)}</span>
                     </p>
                   )}
@@ -261,6 +347,28 @@ export function StepDevoluciones(props: Props) {
           );
         })}
       </div>
+
+      {/* Bottom sheet for motivo */}
+      {sheetType === 'motivo' && (
+        <PickerSheet
+          title="Motivo de devolución"
+          options={MOTIVOS_SHEET}
+          value={sheetTarget === 'global' ? defaultMotivo : (devoluciones.find(d => d.producto_id === sheetTarget)?.motivo ?? defaultMotivo)}
+          onSelect={handleSheetSelect}
+          onClose={() => setSheetType(null)}
+        />
+      )}
+
+      {/* Bottom sheet for acción */}
+      {sheetType === 'accion' && (
+        <PickerSheet
+          title="Acción a tomar"
+          options={ACCIONES}
+          value={sheetTarget === 'global' ? defaultAccion : (devoluciones.find(d => d.producto_id === sheetTarget)?.accion ?? defaultAccion)}
+          onSelect={handleSheetSelect}
+          onClose={() => setSheetType(null)}
+        />
+      )}
 
       {/* Reemplazo fullscreen */}
       {showReemplazoFor && (
