@@ -110,6 +110,11 @@ export function VentaFormHeader({
             <Check className="h-3.5 w-3.5" /> Guardar y confirmar
           </button>
         )}
+        {!isNew && status !== 'cancelado' && status !== 'borrador' && (
+          <button onClick={() => onStatusChange('borrador' as any)} className="btn-odoo-secondary text-warning text-xs">
+            <RotateCcw className="h-3.5 w-3.5" /> A borrador
+          </button>
+        )}
         {!isNew && status !== 'cancelado' && (
           <button onClick={() => onStatusChange('cancelado')} className="btn-odoo-secondary text-destructive text-xs">Cancelar</button>
         )}
