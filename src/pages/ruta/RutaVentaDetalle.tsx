@@ -1109,7 +1109,7 @@ export default function RutaVentaDetalle() {
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
           {(venta.status === 'confirmado' || venta.status === 'entregado') && (
-            <button onClick={handleCancelar} disabled={saving}
+            <button onClick={() => setShowCancelModal(true)} disabled={saving}
               className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5 disabled:opacity-40">
               <X className="h-4 w-4" /> Cancelar
             </button>
