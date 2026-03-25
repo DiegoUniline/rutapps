@@ -28,8 +28,9 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 
 const VENTA_STEPS_FULL: { key: StatusVenta; label: string }[] = [
   { key: 'borrador', label: 'Borrador' },
@@ -274,6 +275,33 @@ export default function VentaFormPage() {
     });
     setPdfBlob(blob);
     setShowPdfModal(true);
+  };
+
+  const handlePrintTicket = () => {
+    const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const td = buildTicketDataFromVenta({
+      empresa,
+      venta: {
+        folio: form.folio,
+        fecha: fmtDate(form.fecha),
+        subtotal: totals.subtotal,
+        iva_total: totals.iva_total,
+        ieps_total: totals.ieps_total,
+        total: totals.total,
+        condicion_pago: form.condicion_pago,
+      },
+      clienteNombre: clienteData?.nombre ?? 'Sin cliente',
+      lineas: lineas.filter(l => l.producto_id).map(l => ({
+        nombre: productosList?.find(p => p.id === l.producto_id)?.nombre ?? '—',
+        cantidad: Number(l.cantidad),
+        precio_unitario: Number(l.precio_unitario),
+        total: Number(l.total ?? 0),
+        iva_monto: Number(l.iva_monto ?? 0),
+        ieps_monto: Number(l.ieps_monto ?? 0),
+      })),
+    });
+    const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+    printTicket(td, { ticketAncho });
   };
 
   const set = (field: string, val: any) => {
@@ -562,6 +590,7 @@ export default function VentaFormPage() {
         }}
         onNavigateEntrega={(id) => navigate(`/logistica/entregas/${id}`)}
         onGenerarPdf={handleGenerarPdf}
+        onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
       />
 

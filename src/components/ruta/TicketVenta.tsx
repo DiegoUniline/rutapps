@@ -29,6 +29,7 @@ interface TicketVentaProps {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
+  onPrintTicket?: () => void;
   onClose: () => void;
 }
 
@@ -48,7 +49,7 @@ export default function TicketVenta(props: TicketVentaProps) {
     empresa, folio, fecha, clienteNombre, lineas,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
-    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onPrintTicket, onClose,
   } = props;
 
   const { symbol: cs } = useCurrency();
@@ -149,7 +150,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
           <h1 className="text-[16px] font-bold text-foreground">Comprobante</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handlePrint}
+          <button onClick={onPrintTicket ?? handlePrint}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-foreground/10 text-foreground text-[12px] font-semibold active:scale-95 transition-transform">
             <Printer className="h-3.5 w-3.5" /> Imprimir
           </button>

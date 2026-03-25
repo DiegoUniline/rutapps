@@ -11,6 +11,8 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
+import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { fmtDate } from '@/lib/utils';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
@@ -853,6 +855,34 @@ export default function PuntoVentaPage() {
             metodoPago={lastVentaData.metodoPago}
             montoRecibido={lastVentaData.montoRecibido}
             cambio={lastVentaData.cambio}
+            onPrintTicket={() => {
+              const td = buildTicketDataFromVenta({
+                empresa,
+                venta: {
+                  folio: lastVentaData.folio,
+                  fecha: lastVentaData.fecha,
+                  subtotal: lastVentaData.subtotal,
+                  iva_total: lastVentaData.iva,
+                  ieps_total: lastVentaData.ieps,
+                  total: lastVentaData.total,
+                  condicion_pago: lastVentaData.condicionPago,
+                  metodo_pago: lastVentaData.metodoPago,
+                },
+                clienteNombre: lastVentaData.clienteNombre,
+                lineas: lastVentaData.lineas.map((l: any) => ({
+                  nombre: l.nombre,
+                  cantidad: l.cantidad,
+                  precio_unitario: l.precio,
+                  total: l.total,
+                  iva_monto: l.iva_monto,
+                  ieps_monto: l.ieps_monto,
+                })),
+                montoRecibido: lastVentaData.montoRecibido,
+                cambio: lastVentaData.cambio,
+              });
+              const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+              printTicket(td, { ticketAncho });
+            }}
             onClose={() => {
               setShowTicket(false);
               setLastVentaData(null);

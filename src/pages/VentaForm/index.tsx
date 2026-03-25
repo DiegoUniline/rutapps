@@ -15,6 +15,8 @@ import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVent
 import { VentaFormFields } from './VentaFormFields';
 import { VentaLineasTab } from './VentaLineasTab';
 import { generarVentaPdf } from './VentaPdfHandler';
+import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { fmtDate } from '@/lib/utils';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
@@ -51,6 +53,34 @@ export default function VentaFormPage() {
     setShowPdfModal(true);
   };
 
+  const handlePrintTicket = () => {
+    const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const td = buildTicketDataFromVenta({
+      empresa,
+      venta: {
+        folio: form.folio,
+        fecha: fmtDate(form.fecha),
+        subtotal: totals.subtotal,
+        iva_total: totals.iva_total,
+        ieps_total: totals.ieps_total,
+        total: totals.total,
+        condicion_pago: form.condicion_pago,
+      },
+      clienteNombre: clienteData?.nombre ?? 'Sin cliente',
+      lineas: lineas.filter(l => l.producto_id).map(l => ({
+        nombre: productosList?.find(p => p.id === l.producto_id)?.nombre ?? l.descripcion ?? '—',
+        cantidad: Number(l.cantidad),
+        precio_unitario: Number(l.precio_unitario),
+        total: Number(l.total ?? 0),
+        iva_monto: Number(l.iva_monto ?? 0),
+        ieps_monto: Number(l.ieps_monto ?? 0),
+        descuento_pct: Number((l as any).descuento_porcentaje ?? (l as any).descuento_pct ?? 0),
+      })),
+    });
+    const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+    printTicket(td, { ticketAncho });
+  };
+
   const onClienteChange = (cId: string) => {
     set('cliente_id', cId);
     const c = clientesList?.find(cl => cl.id === cId);
@@ -80,6 +110,7 @@ export default function VentaFormPage() {
         }}
         onNavigateEntrega={(eid) => navigate(`/logistica/entregas/${eid}`)}
         onGenerarPdf={handleGenerarPdf}
+        onPrintTicket={!isNew ? handlePrintTicket : undefined}
         onFacturar={() => setShowFacturaDrawer(true)}
       />
       {!isNew && <div className="px-5 pt-3"><OdooStatusbar steps={steps} current={form.status as string} onStepClick={readOnly ? undefined : (k => handleStatusChange(k as StatusVenta))} /></div>}
