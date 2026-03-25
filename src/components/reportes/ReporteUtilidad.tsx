@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteUtilidad({ data }: { data: any }) {
   const { totalVentas, costoTotal, totalGastos, utilidadBruta, utilidadNeta, gastosDesglose } = data;
