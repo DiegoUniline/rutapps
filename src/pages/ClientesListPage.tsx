@@ -154,7 +154,7 @@ function ClientesTable() {
             <tbody>
               {pageData.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
+                  <td colSpan={9} className="text-center py-12 text-muted-foreground text-sm">No hay clientes. Crea el primero.</td>
                 </tr>
               )}
               {pageData.map(c => (
