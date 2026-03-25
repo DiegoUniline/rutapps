@@ -665,22 +665,62 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         </SectionCard>
 
         {/* ═══ DEVOLUCIONES ═══ */}
-        <SectionCard title={`Devoluciones (${devLineas.length} productos)`} icon={RotateCcw}>
+        <SectionCard title={`Devoluciones (${totalDevUnidades} uds · ${devLineas.length} líneas)`} icon={RotateCcw}>
           {devLineas.length > 0 ? (
-            <div className="space-y-1">
-              {devLineas.map((d, i) => (
-                <div key={i} className="flex items-center justify-between bg-muted/30 rounded px-3 py-1.5 text-[12px]">
-                  <div>
-                    <span className="font-medium">{d.nombre}</span>
-                    <span className="text-muted-foreground font-mono ml-2">{d.codigo}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{d.motivo}</span>
-                    <span className="font-bold">{d.cantidad}</span>
-                  </div>
+            <>
+              {totalDevCredito > 0 && (
+                <div className="flex items-center gap-2 mb-3 text-xs">
+                  <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">
+                    Crédito total: ${totalDevCredito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
-              ))}
-            </div>
+              )}
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-2">Producto</th>
+                    <th className="text-left py-2">Cliente</th>
+                    <th className="text-right py-2">Cant.</th>
+                    <th className="text-left py-2">Motivo</th>
+                    <th className="text-left py-2">Acción</th>
+                    <th className="text-right py-2">Crédito</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {devLineas.map((d, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1.5">
+                        <span className="font-medium">{d.nombre}</span>
+                        {d.codigo && <span className="text-muted-foreground font-mono ml-1 text-[10px]">{d.codigo}</span>}
+                      </td>
+                      <td className="py-1.5 text-muted-foreground">{d.cliente}</td>
+                      <td className="py-1.5 text-right font-semibold">{d.cantidad}</td>
+                      <td className="py-1.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium">
+                          {MOTIVO_LABELS[d.motivo] ?? d.motivo.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-1.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-foreground font-medium">
+                          {ACCION_LABELS[d.accion] ?? d.accion}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-right font-semibold">
+                        {d.monto_credito > 0 ? <span className="text-destructive">${d.monto_credito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span> : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {totalDevCredito > 0 && (
+                  <tfoot>
+                    <tr className="border-t border-border font-bold text-[12px]">
+                      <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
+                      <td className="py-2 text-right text-destructive">${totalDevCredito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </>
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
         </SectionCard>
 
