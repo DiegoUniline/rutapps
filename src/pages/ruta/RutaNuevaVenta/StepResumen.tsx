@@ -1,6 +1,6 @@
 import { Check, Receipt, Tag } from 'lucide-react';
 import type { CartItem, DevolucionItem } from './types';
-import { MOTIVOS } from './types';
+import { MOTIVOS, ACCIONES } from './types';
 import type { PromoResult } from '@/hooks/usePromociones';
 
 interface Props {
