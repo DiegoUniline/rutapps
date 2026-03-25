@@ -272,6 +272,7 @@ export function useVentaForm() {
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
+    sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
