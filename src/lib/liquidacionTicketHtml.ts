@@ -47,6 +47,7 @@ export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string 
     empresaNombre, vendedorNombre, fechaInicio, fechaFin, status,
     efectivoEntregado, ventas, cobros, gastos, devoluciones, cuadre,
   } = data;
+  const fmt = makeFmt(data.currencySymbol ?? '$');
 
   const totalVentas = ventas.reduce((s, v) => s + v.total, 0);
   const totalCobros = cobros.reduce((s, c) => s + c.monto, 0);
