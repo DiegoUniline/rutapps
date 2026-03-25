@@ -241,7 +241,7 @@ export default function RutaClientes() {
             />
           </div>
           <button
-            onClick={() => navigate(`/clientes/nuevo?from=ruta&vendedorId=${profile?.vendedor_id ?? ''}`)}
+            onClick={() => navigate(`/ruta/clientes/nuevo?vendedorId=${profile?.vendedor_id ?? ''}`)}
             className="shrink-0 h-[44px] w-[44px] rounded-xl bg-primary text-primary-foreground flex items-center justify-center active:scale-90 transition-transform"
             title="Nuevo cliente"
           >
