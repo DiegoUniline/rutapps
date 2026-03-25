@@ -341,7 +341,7 @@ export default function RutaVentaDetalle() {
 
   // ─── Handle cancelar ───
   const handleCancelar = async () => {
-    if (!venta || !confirm('¿Estás seguro de cancelar esta venta? Esta acción no se puede deshacer.')) return;
+    if (!venta) return;
     setSaving(true);
     try {
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
