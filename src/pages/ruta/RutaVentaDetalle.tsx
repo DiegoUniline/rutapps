@@ -62,6 +62,7 @@ export default function RutaVentaDetalle() {
   const [waPhone, setWaPhone] = useState('');
   const [ecPdfBlob, setEcPdfBlob] = useState<Blob | null>(null);
   const [showEcPreview, setShowEcPreview] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Edit state
   const [editLineas, setEditLineas] = useState<EditLinea[]>([]);
