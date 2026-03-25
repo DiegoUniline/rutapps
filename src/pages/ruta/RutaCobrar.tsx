@@ -504,7 +504,7 @@ export default function RutaCobrar() {
             {/* Total to collect */}
             <section className="bg-card rounded-xl p-5 text-center">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Total a cobrar</p>
-              <p className="text-3xl font-bold text-primary tabular-nums">${fmt(totalAplicado)}</p>
+              <p className="text-3xl font-bold text-primary tabular-nums">{fmtM(totalAplicado)}</p>
               <p className="text-sm text-muted-foreground mt-1">{clienteNombre}</p>
             </section>
 
