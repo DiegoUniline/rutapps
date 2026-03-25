@@ -827,7 +827,7 @@ export default function PuntoVentaPage() {
                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 text-[16px] font-bold disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Check className="h-5 w-5" />
-                {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar $${fmt(totals.total)}`}
+                {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar ${fmtM(totals.total)}`}
               </button>
             </div>
           </div>
