@@ -445,9 +445,28 @@ export default function RutaVentaDetalle() {
   const handlePrintTicket = async () => {
     const td = getTicketData(); if (!td) return;
 
-    // ── Direct image printing (share PNG to RawBT or download) ──
+    // ── 1) Try Bluetooth ESC/POS direct ──
+    if (isBluetoothAvailable()) {
+      try {
+        const printerName = getConnectedPrinterName();
+        toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
+        const conn = await connectPrinter();
+        const escposBytes = buildEscPosBytes(td, { ticketAncho });
+        await sendBytes(conn, escposBytes);
+        toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
+        return;
+      } catch (err: any) {
+        // User cancelled the BLE picker — don't fallback
+        if (err?.name === 'NotFoundError' || err?.message?.includes('cancelled') || err?.message?.includes('User cancelled')) {
+          toast.dismiss('bt-print');
+          return;
+        }
+        console.warn('[Print] BT failed, falling back to image:', err?.message);
+        toast.error('Bluetooth no disponible, generando imagen…', { id: 'bt-print' });
+      }
+    }
 
-    // ── Fallback: image via share/download ──
+    // ── 2) Fallback: image PNG via share/download ──
     const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
     const container = document.createElement('div');
     container.style.position = 'fixed';
