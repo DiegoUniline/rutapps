@@ -43,6 +43,7 @@ export function useRutaVenta() {
   const [searchReemplazo, setSearchReemplazo] = useState('');
   const [ticketInfo, setTicketInfo] = useState<{ folio: string; fecha: string } | null>(null);
   const [sinCompra, setSinCompra] = useState(false);
+  const [sinImpuestos, setSinImpuestos] = useState(false);
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
 
@@ -243,11 +244,11 @@ export function useRutaVenta() {
 
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
-    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = item.precio_unitario * item.cantidad; subtotal += lineaSub; const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0; ieps += lineIeps; if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100); items += item.cantidad; });
+    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = item.precio_unitario * item.cantidad; subtotal += lineaSub; if (!sinImpuestos) { const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0; ieps += lineIeps; if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100); } items += item.cantidad; });
     const totalDescuentos = totalDescuentoPromos + descuentoDevolucion;
     const total = Math.max(0, subtotal + ieps + iva - totalDescuentos);
     return { subtotal, iva, ieps, total, items, descuento: totalDescuentos, descuentoDevolucion };
-  }, [cart, totalDescuentoPromos, descuentoDevolucion]);
+  }, [cart, totalDescuentoPromos, descuentoDevolucion, sinImpuestos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
@@ -368,7 +369,7 @@ export function useRutaVenta() {
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
       await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.vendedor_id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, total: totals.total, saldo_pendiente: saldoPendienteVenta, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
-      for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: item.iva_pct, iva_monto: lineIva, ieps_pct: item.ieps_pct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
+      for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
       if (applyPayment && clienteId) {
         const cobroId = crypto.randomUUID();
@@ -410,7 +411,7 @@ export function useRutaVenta() {
     metodoPago, setMetodoPago, montoRecibido, setMontoRecibido,
     referenciaPago, setReferenciaPago, cuentasPendientes, showDevSearch, setShowDevSearch,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
-    ticketInfo, sinCompra, setSinCompra, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra,
+    ticketInfo, sinCompra, setSinCompra, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra, sinImpuestos, setSinImpuestos,
     entregaInmediata, stockAbordo, usandoAlmacen: useFallbackStock, clientes, productos, filteredClientes,
     filteredProductos, filteredDevProductos, filteredReemplazoProductos, pedidoSugerido,
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,

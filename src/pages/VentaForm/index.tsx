@@ -26,6 +26,7 @@ export default function VentaFormPage() {
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
+    sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
@@ -89,7 +90,7 @@ export default function VentaFormPage() {
         </div>
         <div className="bg-card border border-border rounded-md">
           <OdooTabs tabs={[
-            { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} productosList={productosList ?? []} readOnly={readOnly} totals={totals} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} /> },
+            { key: 'lineas', label: 'Líneas de venta', content: <VentaLineasTab lineas={lineas} productosList={productosList ?? []} readOnly={readOnly} totals={totals} onProductSelect={handleProductSelect} onUpdateLine={updateLine} onRemoveLine={removeLine} onAddLine={addLine} setCellRef={setCellRef} onCellKeyDown={handleCellKeyDown} navigateCell={navigateCell} setLineas={setLineas} sinImpuestos={sinImpuestos} setSinImpuestos={setSinImpuestos} readOnlyForm={readOnly} /> },
             ...(!isNew ? [{ key: 'pagos', label: `Pagos (${(pagosData ?? []).length})`, content: <VentaPagosTab pagos={(pagosData ?? []) as any} totalPagado={totalPagado} saldoPendiente={saldoPendiente} isMobile={isMobile} onAddPago={handleAddPago} /> }] : []),
             ...(!isNew && form.tipo === 'pedido' ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(!isNew ? [{ key: 'devoluciones', label: 'Devoluciones', content: <VentaDevolucionesTab ventaId={form.id!} /> }] : []),

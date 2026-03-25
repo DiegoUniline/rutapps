@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save } from 'lucide-react';
+import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText } from 'lucide-react';
 import type { CartItem, CuentaPendiente, DevolucionItem } from './types';
 import { ACCIONES } from './types';
 
@@ -25,12 +25,14 @@ interface Props {
   setReferenciaPago: (v: string) => void;
   notas: string;
   setNotas: (v: string) => void;
-  totals: { subtotal: number; total: number; descuento?: number; descuentoDevolucion?: number };
+  totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number };
   totalACobrar: number;
   cambio: number;
   saving: boolean;
   cart: CartItem[];
   devoluciones: DevolucionItem[];
+  sinImpuestos: boolean;
+  setSinImpuestos: (v: boolean) => void;
   handleSave: () => Promise<void>;
   navigate: (to: any) => void;
   fmt: (n: number) => string;
@@ -39,7 +41,7 @@ interface Props {
 const BILLETES = [50, 100, 200, 500];
 
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, metodoPago, setMetodoPago, montoRecibido, setMontoRecibido, referenciaPago, setReferenciaPago, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, handleSave, navigate, fmt } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, metodoPago, setMetodoPago, montoRecibido, setMontoRecibido, referenciaPago, setReferenciaPago, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt } = props;
 
   const descDevolucion = totals.descuentoDevolucion ?? 0;
   const descPromos = (totals.descuento ?? 0) - descDevolucion;
@@ -61,6 +63,19 @@ export function StepPago(props: Props) {
               </div>
             </div>
           )}
+        </section>
+
+        <section className="bg-card rounded-lg p-3">
+          <button onClick={() => setSinImpuestos(!sinImpuestos)} className={`w-full flex items-center justify-between rounded-md px-3 py-2.5 transition-all active:scale-[0.98] ${sinImpuestos ? 'bg-amber-500/15 border border-amber-500/40' : 'bg-accent/50 border border-border/40'}`}>
+            <div className="flex items-center gap-2">
+              <ReceiptText className={`h-4 w-4 ${sinImpuestos ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`} />
+              <span className={`text-[12px] font-semibold ${sinImpuestos ? 'text-amber-700 dark:text-amber-300' : 'text-foreground'}`}>Sin impuestos</span>
+            </div>
+            <div className={`w-9 h-5 rounded-full transition-colors relative ${sinImpuestos ? 'bg-amber-500' : 'bg-border'}`}>
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${sinImpuestos ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </div>
+          </button>
+          {sinImpuestos && <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1.5 px-1">IVA e IEPS no se cobrarán en esta venta</p>}
         </section>
 
         <section className="bg-card rounded-lg p-3">

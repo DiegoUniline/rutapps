@@ -63,6 +63,7 @@ export function useVentaForm() {
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
+  const [sinImpuestos, setSinImpuestos] = useState(false);
   const readOnly = !isNew && form.status !== 'borrador';
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
@@ -147,11 +148,14 @@ export function useVentaForm() {
     lineas.forEach(l => {
       const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
       const lineSubtotal = qty * price, discountAmt = lineSubtotal * (desc / 100), base = lineSubtotal - discountAmt;
-      const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
-      subtotal += lineSubtotal; descuento_total += discountAmt; iva_total += iva; ieps_total += ieps;
+      if (!sinImpuestos) {
+        const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+        iva_total += iva; ieps_total += ieps;
+      }
+      subtotal += lineSubtotal; descuento_total += discountAmt;
     });
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
-  }, [lineas]);
+  }, [lineas, sinImpuestos]);
 
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
@@ -201,8 +205,11 @@ export function useVentaForm() {
         if (!l.producto_id) continue;
         const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
         const lineSubtotal = qty * price, discountAmt = lineSubtotal * (desc / 100), base = lineSubtotal - discountAmt;
-        const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
-        await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_monto: iva, ieps_monto: ieps, total: base + iva + ieps } as any);
+        const ieps = sinImpuestos ? 0 : base * ((Number(l.ieps_pct) || 0) / 100);
+        const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+        const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
+        const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
+        await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps } as any);
       }
       if (isNew && autoConfirm) {
         const saldo = form.condicion_pago === 'contado' ? 0 : totals.total;
@@ -265,6 +272,7 @@ export function useVentaForm() {
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
+    sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
     set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
