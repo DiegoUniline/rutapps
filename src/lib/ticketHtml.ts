@@ -164,10 +164,10 @@ export function buildTicketHTML(data: TicketData): string {
     </div>
     <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
     <div style="padding:4px 0">
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>${fmt(subtotal)}</span></div>
-      ${iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>${fmt(iva)}</span></div>` : ''}
-      ${ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px dashed #aaa;padding-top:4px;margin-top:4px">
+      ${showTax ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>${fmt(subtotal)}</span></div>` : ''}
+      ${showTax && iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>${fmt(iva)}</span></div>` : ''}
+      ${showTax && ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;${showTax ? 'border-top:1px dashed #aaa;padding-top:4px;margin-top:4px' : ''}">
         <span>Total</span><span style="color:#3b82f6">${fmt(total)}</span>
       </div>
       ${recibidoHtml}

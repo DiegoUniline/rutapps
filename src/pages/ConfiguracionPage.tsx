@@ -180,8 +180,8 @@ function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
       {/* Totals */}
       <div className="flex justify-end p-3">
         <div className="w-48 space-y-0.5 text-[10px]">
-          <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>$ 515.00</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">IVA 16%</span><span>$ 82.40</span></div>
+          {campos.impuestos && <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>$ 515.00</span></div>}
+          {campos.impuestos && <div className="flex justify-between"><span className="text-gray-500">IVA 16%</span><span>$ 82.40</span></div>}
           <div className="flex justify-between font-bold text-[13px] border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
         </div>
       </div>
