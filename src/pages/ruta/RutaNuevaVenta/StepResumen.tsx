@@ -64,7 +64,8 @@ export function StepResumen(props: Props) {
           <div className="space-y-1">
             <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Subtotal</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.subtotal)}</span></div>
             {totals.iva > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IVA</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span></div>}
-            {totals.descuento > 0 && <div className="flex justify-between text-[12px]"><span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(totals.descuento)}</span></div>}
+            {(totals.descuento - (totals.descuentoDevolucion ?? 0)) > 0 && <div className="flex justify-between text-[12px]"><span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(totals.descuento - (totals.descuentoDevolucion ?? 0))}</span></div>}
+            {(totals.descuentoDevolucion ?? 0) > 0 && <div className="flex justify-between text-[12px]"><span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">🏷️ Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">-${fmt(totals.descuentoDevolucion!)}</span></div>}
           </div>
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total</span><span className="text-[18px] font-bold text-primary tabular-nums">${fmt(totals.total)}</span></div>
         </section>
