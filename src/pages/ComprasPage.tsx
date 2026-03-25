@@ -191,12 +191,12 @@ export default function ComprasPage() {
                         {c.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}
                       </span>
                     </td>
-                    <td className="py-1.5 px-3 text-right font-medium">$ {fmt(c.total ?? 0)}</td>
+                    <td className="py-1.5 px-3 text-right font-medium">{fmt(c.total ?? 0)}</td>
                     <td className="py-1.5 px-3 text-right hidden sm:table-cell">
                       {(c.saldo_pendiente ?? 0) > 0 ? (
-                        <span className="text-destructive font-medium">$ {fmt(c.saldo_pendiente)}</span>
+                        <span className="text-destructive font-medium">{fmt(c.saldo_pendiente)}</span>
                       ) : (
-                        <span className="text-muted-foreground">$ 0.00</span>
+                        <span className="text-muted-foreground">{fmt(0)}</span>
                       )}
                     </td>
                     <td className="py-1.5 px-3 text-center">
