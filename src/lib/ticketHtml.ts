@@ -89,24 +89,31 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const { empresa, folio, fecha, clienteNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo } = data;
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
-  const fmt = (n: number) => `${sym}${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  // ASCII-only formatter — no multi-byte locale chars
+  const fmt = (n: number) => {
+    const [intPart, decPart] = Math.abs(n).toFixed(2).split('.');
+    const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return `${n < 0 ? '-' : ''}${sym}${formatted}.${decPart}`;
+  };
 
+  // ── Header (real HTML, text-align:center) ──
+  const hLines: string[] = [];
+  hLines.push(`<div style="font-weight:700;font-size:22px">${empresa.nombre.toUpperCase()}</div>`);
+  if (empresa.razon_social) hLines.push(`<div style="font-size:14px">${empresa.razon_social}</div>`);
+  if (empresa.rfc) hLines.push(`<div style="font-size:14px">RFC: ${empresa.rfc}</div>`);
+  const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', ');
+  if (dir1) hLines.push(`<div style="font-size:13px">${dir1}</div>`);
+  const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', ');
+  if (dir2) hLines.push(`<div style="font-size:13px">${dir2}</div>`);
+  if (empresa.telefono) hLines.push(`<div style="font-size:13px">Tel: ${empresa.telefono}</div>`);
+  if (empresa.email) hLines.push(`<div style="font-size:13px">${empresa.email}</div>`);
+  const headerHtml = hLines.join('');
+
+  // ── Body (monospace <pre> grid) ──
   const rows: string[] = [];
   const add = (s: string) => rows.push(s);
 
-  // HEADER centrado
-  add(centerText(empresa.nombre.toUpperCase()));
-  if (empresa.razon_social) add(centerText(empresa.razon_social));
-  if (empresa.rfc) add(centerText(`RFC: ${empresa.rfc}`));
-  const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', ');
-  if (dir1) wrapText(dir1, COLS).forEach(l => add(centerText(l)));
-  const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', ');
-  if (dir2) wrapText(dir2, COLS).forEach(l => add(centerText(l)));
-  if (empresa.telefono) add(centerText(`Tel: ${empresa.telefono}`));
-  if (empresa.email) add(centerText(empresa.email));
   add(div);
-
-  // INFO
   add(`Folio: ${folio}`);
   add(`Fecha: ${fecha}`);
   add(`Cliente: ${clienteNombre}`.substring(0, COLS));
@@ -114,11 +121,9 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(`Pago: ${pagoLabel}${metodoPago ? ` (${metodoPago})` : ''}`);
   add(div);
 
-  // PRODUCTOS header
   add(pad('Cant Producto', 'Importe'));
   add(div);
 
-  // LÍNEAS
   for (const l of lineas) {
     const imp = fmt(l.total);
     const nombre = `${l.cantidad}x ${l.nombre}`;
@@ -129,7 +134,6 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
   add(div);
 
-  // TOTALES
   add('');
   add(pad('Subtotal', fmt(subtotal)));
   if (iva > 0) add(pad('IVA', fmt(iva)));
@@ -142,7 +146,6 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if ((cambio ?? 0) > 0) add(pad('Cambio', fmt(cambio!)));
   }
 
-  // SALDO
   if ((saldoAnterior != null && saldoAnterior > 0) || (saldoNuevo != null && (saldoNuevo ?? 0) > 0)) {
     add(div);
     add('EDO. CUENTA');
@@ -153,13 +156,12 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     add(pad('Saldo', fmt(saldoNuevo ?? 0)));
   }
 
-  // FOOTER
   add('');
   add(centerText('Gracias por su compra'));
   if (empresa.notas_ticket) add(centerText(empresa.notas_ticket));
   add(centerText('Elaborado por Uniline'));
 
-  const content = rows.join('\n');
+  const bodyContent = rows.join('\n');
 
-  return `<div style="width:380px;padding:12px 16px;background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:13px;font-weight:600;line-height:1.5;white-space:pre">${content}</div>`;
+  return `<div style="width:380px;padding:12px 16px;background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:600;line-height:1.2"><div style="text-align:center;margin-bottom:8px">${headerHtml}</div><pre style="margin:0;white-space:pre;font:inherit;line-height:1.4">${bodyContent}</pre></div>`;
 }
