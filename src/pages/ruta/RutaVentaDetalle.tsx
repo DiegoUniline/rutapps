@@ -512,12 +512,12 @@ export default function RutaVentaDetalle() {
       `Pago: ${td.condicionPago === 'credito' ? 'Crédito' : td.condicionPago === 'contado' ? 'Contado' : 'Por definir'}`,
       td.metodoPago ? `Método: ${td.metodoPago}` : '',
       '─'.repeat(30),
-      ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} $${fmt(l.total)}`),
+      ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} ${s}${fmt(l.total)}`),
       '─'.repeat(30),
-      `Subtotal: $${fmt(td.subtotal)}`,
-      td.iva > 0 ? `IVA: $${fmt(td.iva)}` : '',
-      (td.ieps ?? 0) > 0 ? `IEPS: $${fmt(td.ieps!)}` : '',
-      `TOTAL: $${fmt(td.total)}`,
+      `Subtotal: ${s}${fmt(td.subtotal)}`,
+      td.iva > 0 ? `IVA: ${s}${fmt(td.iva)}` : '',
+      (td.ieps ?? 0) > 0 ? `IEPS: ${s}${fmt(td.ieps!)}` : '',
+      `TOTAL: ${s}${fmt(td.total)}`,
       '', 'Elaborado por Uniline — Innovación en la nube',
     ].filter(Boolean).join('\n');
     if (navigator.share) {
@@ -568,9 +568,9 @@ export default function RutaVentaDetalle() {
                 <Check className="h-7 w-7 text-white" />
               </div>
               <p className="text-white/80 text-[12px] font-medium">Cobro exitoso</p>
-              <p className="text-white text-[32px] font-bold mt-1">${fmt(ticketData.monto)}</p>
+              <p className="text-white text-[32px] font-bold mt-1">{s}{fmt(ticketData.monto)}</p>
               {ticketData.cambio > 0 && (
-                <p className="text-white/70 text-[13px] mt-1">Cambio: ${fmt(ticketData.cambio)}</p>
+                <p className="text-white/70 text-[13px] mt-1">Cambio: {s}{fmt(ticketData.cambio)}</p>
               )}
             </div>
             <div className="px-5 py-4 space-y-3">
@@ -584,7 +584,7 @@ export default function RutaVentaDetalle() {
                   {cuentasPendientes.filter(c => c.montoAplicar > 0).map(c => (
                     <div key={c.id} className="flex justify-between text-[12px] py-0.5">
                       <span className="text-muted-foreground">{c.folio ?? '—'}</span>
-                      <span className="text-foreground font-medium">${fmt(c.montoAplicar)}</span>
+                      <span className="text-foreground font-medium">{s}{fmt(c.montoAplicar)}</span>
                     </div>
                   ))}
                 </div>
@@ -594,12 +594,12 @@ export default function RutaVentaDetalle() {
                 {lineas.map((l: any) => (
                   <div key={l.id} className="flex justify-between text-[12px] py-0.5">
                     <span className="text-foreground truncate flex-1 mr-2">{l.cantidad}x {l.productos?.nombre ?? l.descripcion ?? '—'}</span>
-                    <span className="text-foreground font-medium shrink-0">${fmt(l.total ?? 0)}</span>
+                    <span className="text-foreground font-medium shrink-0">{s}{fmt(l.total ?? 0)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between text-[13px] font-bold mt-2 pt-2 border-t border-dashed border-border">
                   <span className="text-foreground">Total venta</span>
-                  <span className="text-foreground">${fmt(venta.total ?? 0)}</span>
+                  <span className="text-foreground">{s}{fmt(venta.total ?? 0)}</span>
                 </div>
               </div>
             </div>
@@ -658,11 +658,11 @@ export default function RutaVentaDetalle() {
               <div className={`mt-2.5 rounded-lg px-2.5 py-2 text-[11px] space-y-1 ${excedeCredito ? 'bg-destructive/8' : 'bg-accent/50'}`}>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Límite</span>
-                  <span className="font-medium text-foreground">${fmt(clienteData.limite_credito ?? 0)}</span>
+                  <span className="font-medium text-foreground">{s}{fmt(clienteData.limite_credito ?? 0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Saldo otras ventas</span>
-                  <span className="font-medium text-foreground">${fmt(saldoPendienteOtras)}</span>
+                  <span className="font-medium text-foreground">{s}{fmt(saldoPendienteOtras)}</span>
                 </div>
                 <div className="flex justify-between border-t border-border/40 pt-1">
                   <span className="text-muted-foreground">Disponible</span>
@@ -704,7 +704,7 @@ export default function RutaVentaDetalle() {
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
-                        <p className="text-[10px] text-muted-foreground">{item.codigo} · ${fmt(item.precio_unitario)} / {item.unidad}</p>
+                        <p className="text-[10px] text-muted-foreground">{item.codigo} · {s}{fmt(item.precio_unitario)} / {item.unidad}</p>
                       </div>
                       <button onClick={() => removeEditLine(idx)} className="p-1">
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -716,7 +716,7 @@ export default function RutaVentaDetalle() {
                         <span className="text-[13px] font-bold w-8 text-center text-foreground">{item.cantidad}</span>
                         <button onClick={() => updateEditQty(idx, 1)} className="p-1.5"><Plus className="h-3 w-3" /></button>
                       </div>
-                      <span className="text-[14px] font-bold text-foreground">${fmt(lineTotal)}</span>
+                      <span className="text-[14px] font-bold text-foreground">{s}{fmt(lineTotal)}</span>
                     </div>
                   </div>
                 );
@@ -814,7 +814,7 @@ export default function RutaVentaDetalle() {
                       <Package className="h-4 w-4 opacity-80" />
                       <span className="text-[13px] font-medium">{editLineas.length} {editLineas.length === 1 ? 'producto' : 'productos'}</span>
                     </div>
-                    <span className="text-[14px] font-bold">${fmt(editTotals.total)}</span>
+                    <span className="text-[14px] font-bold">{s}{fmt(editTotals.total)}</span>
                   </button>
                 </div>
               )}
@@ -836,17 +836,17 @@ export default function RutaVentaDetalle() {
           <section className="bg-card rounded-xl border border-border p-3.5 space-y-1.5">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground tabular-nums">${fmt(editTotals.subtotal)}</span>
+              <span className="font-medium text-foreground tabular-nums">{s}{fmt(editTotals.subtotal)}</span>
             </div>
             {editTotals.iva > 0 && (
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">IVA</span>
-                <span className="font-medium text-foreground tabular-nums">${fmt(editTotals.iva)}</span>
+                <span className="font-medium text-foreground tabular-nums">{s}{fmt(editTotals.iva)}</span>
               </div>
             )}
             <div className="flex justify-between items-baseline pt-1.5 border-t border-border/60">
               <span className="text-[13px] font-semibold text-foreground">Total</span>
-              <span className="text-[20px] font-bold text-primary tabular-nums">${fmt(editTotals.total)}</span>
+              <span className="text-[20px] font-bold text-primary tabular-nums">{s}{fmt(editTotals.total)}</span>
             </div>
           </section>
         </div>
@@ -887,7 +887,7 @@ export default function RutaVentaDetalle() {
             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Venta actual</p>
             <div className="flex justify-between items-baseline">
               <span className="text-[13px] text-foreground">{venta.folio ?? 'Sin folio'}</span>
-              <span className="text-[18px] font-bold text-foreground">${fmt(saldoActual)}</span>
+              <span className="text-[18px] font-bold text-foreground">{s}{fmt(saldoActual)}</span>
             </div>
           </section>
 
@@ -905,7 +905,7 @@ export default function RutaVentaDetalle() {
                         <span className="text-[11px] font-semibold text-foreground">{cuenta.folio ?? '—'}</span>
                         <span className="text-[10px] text-muted-foreground ml-2">{fmtDate(cuenta.fecha)}</span>
                       </div>
-                      <span className="text-[11px] font-medium text-destructive">Debe: ${fmt(cuenta.saldo_pendiente)}</span>
+                      <span className="text-[11px] font-medium text-destructive">Debe: {s}{fmt(cuenta.saldo_pendiente)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -930,7 +930,7 @@ export default function RutaVentaDetalle() {
               {totalAplicarOtras > 0 && (
                 <div className="mt-2 pt-2 border-t border-border/60 flex justify-between">
                   <span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span>
-                  <span className="text-[12px] font-bold text-foreground">${fmt(totalAplicarOtras)}</span>
+                  <span className="text-[12px] font-bold text-foreground">{s}{fmt(totalAplicarOtras)}</span>
                 </div>
               )}
             </section>
@@ -965,7 +965,7 @@ export default function RutaVentaDetalle() {
                 {cambio > 0 && (
                   <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2">
                     <span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-                    <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">${fmt(cambio)}</span>
+                    <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{s}{fmt(cambio)}</span>
                   </div>
                 )}
               </div>
@@ -985,18 +985,18 @@ export default function RutaVentaDetalle() {
             <div className="space-y-1">
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">Saldo de esta venta</span>
-                <span className="font-medium text-foreground tabular-nums">${fmt(saldoActual)}</span>
+                <span className="font-medium text-foreground tabular-nums">{s}{fmt(saldoActual)}</span>
               </div>
               {totalAplicarOtras > 0 && (
                 <div className="flex justify-between text-[12px]">
                   <span className="text-muted-foreground">Cuentas anteriores</span>
-                  <span className="font-medium text-foreground tabular-nums">${fmt(totalAplicarOtras)}</span>
+                  <span className="font-medium text-foreground tabular-nums">{s}{fmt(totalAplicarOtras)}</span>
                 </div>
               )}
             </div>
             <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60">
               <span className="text-[13px] font-semibold text-foreground">Total a cobrar</span>
-              <span className="text-[20px] font-bold text-primary tabular-nums">${fmt(totalACobrar)}</span>
+              <span className="text-[20px] font-bold text-primary tabular-nums">{s}{fmt(totalACobrar)}</span>
             </div>
           </section>
         </div>
@@ -1005,7 +1005,7 @@ export default function RutaVentaDetalle() {
           <button onClick={handleCobrar} disabled={saving || totalACobrar <= 0}
             className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
             <Check className="h-4 w-4" />
-            {saving ? 'Procesando...' : `Cobrar $${fmt(totalACobrar)}`}
+            {saving ? 'Procesando...' : `Cobrar ${s}${fmt(totalACobrar)}`}
           </button>
         </div>
       </div>
@@ -1142,7 +1142,7 @@ export default function RutaVentaDetalle() {
 
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[11px] text-muted-foreground mb-1">Total</p>
-          <p className="text-[28px] font-bold text-foreground">$ {fmt(venta.total ?? 0)}</p>
+          <p className="text-[28px] font-bold text-foreground">{s}{fmt(venta.total ?? 0)}</p>
           {(venta.saldo_pendiente ?? 0) > 0 && (
             <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: $ {fmt(venta.saldo_pendiente ?? 0)}</p>
           )}
@@ -1175,7 +1175,7 @@ export default function RutaVentaDetalle() {
                         {l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}
                       </p>
                     </div>
-                    <p className="text-[14px] font-bold text-foreground shrink-0">$ {fmt(lineTotal)}</p>
+                    <p className="text-[14px] font-bold text-foreground shrink-0">{s}{fmt(lineTotal)}</p>
                   </div>
                 </div>
               );
@@ -1198,7 +1198,7 @@ export default function RutaVentaDetalle() {
           {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} />}
           <div className="border-t border-border pt-2 flex justify-between">
             <span className="text-[14px] font-bold text-foreground">Total</span>
-            <span className="text-[14px] font-bold text-foreground">$ {fmt(venta.total ?? 0)}</span>
+            <span className="text-[14px] font-bold text-foreground">{s}{fmt(venta.total ?? 0)}</span>
           </div>
         </div>
 
@@ -1222,7 +1222,7 @@ export default function RutaVentaDetalle() {
           {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' ? (
             <button onClick={initCobrar}
               className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-              <Banknote className="h-5 w-5" /> Cobrar ${fmt(venta.saldo_pendiente ?? 0)}
+              <Banknote className="h-5 w-5" /> Cobrar {s}{fmt(venta.saldo_pendiente ?? 0)}
             </button>
           ) : (
             <button onClick={handlePrintTicket}
@@ -1317,7 +1317,7 @@ function TotalRow({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between">
       <span className="text-[12px] text-muted-foreground">{label}</span>
-      <span className="text-[13px] text-foreground">$ {fmt(value)}</span>
+      <span className="text-[13px] text-foreground">{s}{fmt(value)}</span>
     </div>
   );
 }
