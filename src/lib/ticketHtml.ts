@@ -65,7 +65,7 @@ export function buildTicketHTML(data: TicketData): string {
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
 
-  const campos = { logo: true, nombre: true, razon_social: true, rfc: true, direccion: true, telefono: true, notas_ticket: true, ...((empresa.ticket_campos as Record<string, boolean>) ?? {}) };
+  const campos = { logo: true, nombre: true, razon_social: true, rfc: true, direccion: true, telefono: true, notas_ticket: true, impuestos: true, ...((empresa.ticket_campos as Record<string, boolean>) ?? {}) };
 
   const logoHtml = campos.logo && empresa.logo_url
     ? `<img src="${empresa.logo_url}" crossorigin="anonymous" style="max-height:32px;max-width:120px;margin:0 auto 4px;display:block" />`
@@ -89,11 +89,13 @@ export function buildTicketHTML(data: TicketData): string {
   const telHtml = campos.telefono && empresa.telefono ? `<div style="font-size:8px;color:#888">Tel: ${empresa.telefono}</div>` : '';
   const emailHtml = empresa.email ? `<div style="font-size:8px;color:#888">${empresa.email}</div>` : '';
 
+  const showTax = campos.impuestos !== false;
+
   const lineasHtml = lineas.map(l => {
     const detailParts: string[] = [`${fmt(l.precio)} c/u`];
     if ((l.descuento_pct ?? 0) > 0) detailParts.push(`<span style="color:#3b82f6">-${l.descuento_pct}% dto</span>`);
-    if ((l.iva_monto ?? 0) > 0) detailParts.push(`IVA ${fmt(l.iva_monto!)}`);
-    if ((l.ieps_monto ?? 0) > 0) detailParts.push(`IEPS ${fmt(l.ieps_monto!)}`);
+    if (showTax && (l.iva_monto ?? 0) > 0) detailParts.push(`IVA ${fmt(l.iva_monto!)}`);
+    if (showTax && (l.ieps_monto ?? 0) > 0) detailParts.push(`IEPS ${fmt(l.ieps_monto!)}`);
 
     return `<div style="padding:2px 0${l.esCambio ? ';opacity:0.6' : ''}">
       <div style="display:flex;justify-content:space-between;font-size:11px">
@@ -162,10 +164,10 @@ export function buildTicketHTML(data: TicketData): string {
     </div>
     <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
     <div style="padding:4px 0">
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>${fmt(subtotal)}</span></div>
-      ${iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>${fmt(iva)}</span></div>` : ''}
-      ${ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
-      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;border-top:1px dashed #aaa;padding-top:4px;margin-top:4px">
+      ${showTax ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Subtotal</span><span>${fmt(subtotal)}</span></div>` : ''}
+      ${showTax && iva > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IVA</span><span>${fmt(iva)}</span></div>` : ''}
+      ${showTax && ieps > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">IEPS</span><span>${fmt(ieps)}</span></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;${showTax ? 'border-top:1px dashed #aaa;padding-top:4px;margin-top:4px' : ''}">
         <span>Total</span><span style="color:#3b82f6">${fmt(total)}</span>
       </div>
       ${recibidoHtml}

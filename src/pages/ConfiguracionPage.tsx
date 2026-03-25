@@ -16,13 +16,14 @@ import { cn } from '@/lib/utils';
 
 const DEFAULT_CAMPOS: Record<string, boolean> = {
   logo: true, nombre: true, razon_social: true, rfc: true,
-  direccion: true, telefono: true, notas_ticket: true, firmas: true,
+  direccion: true, telefono: true, notas_ticket: true, firmas: true, impuestos: true,
 };
 
 const CAMPO_LABELS: Record<string, string> = {
   logo: 'Logo', nombre: 'Nombre comercial', razon_social: 'Razón social',
   rfc: 'RFC', direccion: 'Dirección', telefono: 'Teléfono',
   notas_ticket: 'Notas de ticket', firmas: 'Firmas (nota de venta)',
+  impuestos: 'Desglose de impuestos (IVA/IEPS)',
 };
 
 function useEmpresaConfig() {
@@ -89,8 +90,8 @@ function TicketPreview({ form, logoPreview, campos }: PreviewProps) {
       </div>
       <div className="border-t border-dashed border-gray-300 mx-3" />
       <div className="px-4 py-2 space-y-0.5">
-        <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>$ 515.00</span></div>
-        <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>$ 82.40</span></div>
+        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>$ 515.00</span></div>}
+        {campos.impuestos && <div className="flex justify-between text-[10px]"><span>IVA 16%</span><span>$ 82.40</span></div>}
         <div className="flex justify-between text-[12px] font-bold border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
       </div>
       {campos.notas_ticket && form.notas_ticket && (
@@ -179,8 +180,8 @@ function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
       {/* Totals */}
       <div className="flex justify-end p-3">
         <div className="w-48 space-y-0.5 text-[10px]">
-          <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>$ 515.00</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">IVA 16%</span><span>$ 82.40</span></div>
+          {campos.impuestos && <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>$ 515.00</span></div>}
+          {campos.impuestos && <div className="flex justify-between"><span className="text-gray-500">IVA 16%</span><span>$ 82.40</span></div>}
           <div className="flex justify-between font-bold text-[13px] border-t border-gray-300 pt-1 mt-1"><span>Total</span><span>$ 597.40</span></div>
         </div>
       </div>
