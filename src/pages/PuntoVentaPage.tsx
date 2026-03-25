@@ -13,6 +13,7 @@ import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
