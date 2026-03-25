@@ -121,13 +121,20 @@ function ProductosCard({ lineas, fmt, s }: { lineas: any[]; fmt: (n: number) => 
   );
 }
 
-function TotalesCard({ venta, fmt, s }: { venta: any; fmt: (n: number) => string; s: string }) {
+function TotalesCard({ venta, fmt, s, showTax, setShowTax }: { venta: any; fmt: (n: number) => string; s: string; showTax: boolean; setShowTax: (v: boolean) => void }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-2">
-      <TotalRow label="Subtotal" value={venta.subtotal ?? 0} fmt={fmt} s={s} />
-      {(venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} fmt={fmt} s={s} />}
-      {(venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} fmt={fmt} s={s} />}
-      {(venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} fmt={fmt} s={s} />}
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Totales</span>
+        <button onClick={() => setShowTax(!showTax)}
+          className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition-colors ${showTax ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+          {showTax ? 'Con impuestos' : 'Sin impuestos'}
+        </button>
+      </div>
+      {showTax && <TotalRow label="Subtotal" value={venta.subtotal ?? 0} fmt={fmt} s={s} />}
+      {showTax && (venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} fmt={fmt} s={s} />}
+      {showTax && (venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} fmt={fmt} s={s} />}
+      {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} fmt={fmt} s={s} />}
       <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{s} {fmt(venta.total ?? 0)}</span></div>
     </div>
   );
