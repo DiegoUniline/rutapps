@@ -16,8 +16,20 @@ export default function SupervisorDashboardPage() {
   const today = new Date().toISOString().split('T')[0];
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
 
-  // All vendedores (filtered by empresa via centralized hook)
-  const { data: vendedores } = useVendedores();
+  // Users from profiles table (actual users, not vendedores table)
+  const { data: vendedores } = useQuery({
+    queryKey: ['supervisor-usuarios', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, nombre, estado')
+        .eq('empresa_id', empresa!.id)
+        .eq('estado', 'activo')
+        .order('nombre');
+      return (data ?? []).map(p => ({ id: p.user_id, nombre: p.nombre }));
+    },
+  });
 
   // Today's sales for all vendedores
   const { data: ventasHoy } = useQuery({
