@@ -417,7 +417,7 @@ export function useRutaVenta() {
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty,
-    addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, setReemplazo, removeDevolucion,
+    addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave,
   };
