@@ -531,7 +531,7 @@ export default function ReporteDiarioRuta() {
           {devLineas.length > 0 && (
             <div>
               <h2 className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1.5 mb-2 border-b border-border pb-1">
-                <RotateCcw className="h-3.5 w-3.5" /> Devoluciones ({devLineas.length} productos)
+                <RotateCcw className="h-3.5 w-3.5" /> Devoluciones ({totalDevUnidades} uds en {(devoluciones || []).length} registros)
               </h2>
               <table className="w-full text-[11px]">
                 <thead>
@@ -539,6 +539,7 @@ export default function ReporteDiarioRuta() {
                     <th className="text-left py-1.5">Producto</th>
                     <th className="text-left py-1.5">Cliente</th>
                     <th className="text-left py-1.5">Motivo</th>
+                    <th className="text-left py-1.5">Acción</th>
                     <th className="text-right py-1.5">Cant.</th>
                   </tr>
                 </thead>
@@ -547,11 +548,24 @@ export default function ReporteDiarioRuta() {
                     <tr key={i} className="border-b border-border/50">
                       <td className="py-1">{d.nombre} <span className="text-muted-foreground font-mono">{d.codigo}</span></td>
                       <td className="py-1">{d.cliente}</td>
-                      <td className="py-1 text-muted-foreground">{d.motivo}</td>
+                      <td className="py-1 text-muted-foreground capitalize">{d.motivo.replace(/_/g, ' ')}</td>
+                      <td className="py-1">
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold bg-accent text-foreground">
+                          {ACCION_LABELS[d.accion] || d.accion}
+                        </span>
+                      </td>
                       <td className="py-1 text-right font-semibold">{d.cantidad}</td>
                     </tr>
                   ))}
                 </tbody>
+                {totalDevCredito > 0 && (
+                  <tfoot>
+                    <tr className="border-t border-border font-bold">
+                      <td colSpan={4} className="py-1.5 text-right text-muted-foreground text-[10px]">Total crédito/descuento:</td>
+                      <td className="py-1.5 text-right text-destructive">${fmt(totalDevCredito)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
           )}
