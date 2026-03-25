@@ -280,7 +280,7 @@ export function useRutaVenta() {
 
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();
-        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda', fecha: todayInTimezone(), created_at: new Date().toISOString() });
+        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
         for (const d of devoluciones) await queueOperation('devolucion_lineas', 'insert', { id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, created_at: new Date().toISOString() });
       }
 
