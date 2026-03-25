@@ -276,7 +276,7 @@ export default function ReporteEntregasPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center text-[11px] text-muted-foreground py-1.5">{e.venta_lineas?.length ?? 0}</TableCell>
-                    <TableCell className="text-right text-[11px] font-medium py-1.5">$ {(e.total ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right text-[11px] font-medium py-1.5">{fmt(e.total ?? 0)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
