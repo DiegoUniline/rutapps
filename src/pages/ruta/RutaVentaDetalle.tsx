@@ -376,6 +376,7 @@ export default function RutaVentaDetalle() {
         cp: (empresa as any)?.cp ?? null,
         email: (empresa as any)?.email ?? null,
         logo_url: empresa?.logo_url ?? null,
+        moneda: (empresa as any)?.moneda ?? 'MXN',
         notas_ticket: (empresa as any)?.notas_ticket ?? null,
         ticket_campos: (empresa as any)?.ticket_campos ?? null,
       },
@@ -477,7 +478,7 @@ export default function RutaVentaDetalle() {
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 300)));
       const el = container.firstElementChild as HTMLElement;
-      const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 1, backgroundColor: '#ffffff' });
+      const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `${venta?.folio ?? 'ticket'}.png`, { type: 'image/png' });
 
