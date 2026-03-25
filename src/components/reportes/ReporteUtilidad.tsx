@@ -48,10 +48,10 @@ export function ReporteUtilidad({ data }: { data: any }) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Ventas" value={`$ ${fmt(totalVentas)}`} color="text-primary" />
-        <KpiCard label="Costo mercancía" value={`$ ${fmt(costoTotal)}`} color="text-muted-foreground" />
-        <KpiCard label="Utilidad bruta" value={`$ ${fmt(utilidadBruta)}`} color={utilidadBruta >= 0 ? 'text-success' : 'text-destructive'} />
-        <KpiCard label="Utilidad neta" value={`$ ${fmt(utilidadNeta)}`} color={utilidadNeta >= 0 ? 'text-success' : 'text-destructive'} />
+        <KpiCard label="Ventas" value={`${s} ${fmt(totalVentas)}`} color="text-primary" />
+        <KpiCard label="Costo mercancía" value={`${s} ${fmt(costoTotal)}`} color="text-muted-foreground" />
+        <KpiCard label="Utilidad bruta" value={`${s} ${fmt(utilidadBruta)}`} color={utilidadBruta >= 0 ? 'text-success' : 'text-destructive'} />
+        <KpiCard label="Utilidad neta" value={`${s} ${fmt(utilidadNeta)}`} color={utilidadNeta >= 0 ? 'text-success' : 'text-destructive'} />
       </div>
     </div>
   );
