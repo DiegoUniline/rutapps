@@ -113,7 +113,8 @@ export default function RutaDescarga() {
   const { data: existingDescarga } = useQuery({
     queryKey: ['mi-descarga-hoy', cargaActiva?.id, user?.id],
     queryFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       // Check by carga_id
       if (cargaActiva?.id) {
         const { data } = await supabase
