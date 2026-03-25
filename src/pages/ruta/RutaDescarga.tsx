@@ -389,6 +389,26 @@ export default function RutaDescarga() {
           </div>
         </div>
 
+        {/* Devoluciones del día */}
+        {(financials?.devItems || []).length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1">
+              <RotateCcw className="h-3 w-3" /> Devoluciones del día ({financials!.devItems.reduce((s, d) => s + d.cantidad, 0)} uds)
+            </p>
+            <div className="space-y-1">
+              {financials!.devItems.map((d, i) => (
+                <div key={i} className="flex items-center gap-2 text-[11px]">
+                  <span className="flex-1 truncate text-foreground">{d.cantidad}x {d.nombre}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent text-muted-foreground capitalize shrink-0">{d.motivo.replace(/_/g, ' ')}</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium shrink-0">
+                    {d.accion === 'reposicion' ? 'Repos.' : d.accion === 'nota_credito' ? 'N. crédito' : d.accion === 'descuento_venta' ? 'Desc.' : d.accion === 'devolucion_dinero' ? 'Dev. $' : d.accion}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Notes */}
         <div className="bg-card border border-border rounded-xl p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Observaciones</p>
