@@ -243,9 +243,9 @@ export default function ComisionesPage() {
                       <td className="py-1.5 px-3 text-xs font-mono">{c.ventas?.folio ?? '—'}</td>
                       <td className="py-1.5 px-3 text-xs">{c.vendedores?.nombre ?? '—'}</td>
                       <td className="py-1.5 px-3 text-xs">{c.productos?.nombre ?? '—'}</td>
-                      <td className="py-1.5 px-3 text-right font-mono text-xs">$ {c.monto_venta?.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs">{fmt(c.monto_venta)}</td>
                       <td className="py-1.5 px-3 text-right font-mono text-xs">{c.comision_pct}%</td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {c.comision_monto?.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{fmt(c.comision_monto)}</td>
                       <td className="py-1.5 px-3 text-center">
                         {c.pagada ? (
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary">Pagada</span>

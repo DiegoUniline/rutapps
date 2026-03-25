@@ -242,6 +242,7 @@ export default function PuntoVentaPage() {
   const faltante = Math.max(0, totals.total - totalPagado);
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtM = (n: number) => `${s}${fmt(n)}`;
 
   const addSplit = () => setPaySplits(prev => [...prev, { id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
   const removeSplit = (id: string) => setPaySplits(prev => prev.length > 1 ? prev.filter(p => p.id !== id) : prev);
