@@ -15,7 +15,7 @@ interface TicketVentaProps {
   folio: string;
   fecha: string;
   clienteNombre: string;
-  lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_monto?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean }[];
+  lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean }[];
   subtotal: number;
   iva: number;
   ieps?: number;
