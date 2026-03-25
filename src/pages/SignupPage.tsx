@@ -46,6 +46,7 @@ export default function SignupPage() {
   const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
