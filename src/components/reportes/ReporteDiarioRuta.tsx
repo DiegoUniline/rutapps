@@ -105,34 +105,27 @@ export default function ReporteDiarioRuta() {
     },
   });
 
-  // --- Stock a bordo: carga más reciente <= fechaInicio y <= fechaFin ---
-  const { data: cargaInicio } = useQuery<any>({
-    queryKey: ['rpt-stock-inicio', empresa?.id, usuarioId, fechaInicio],
+  // --- Stock del almacén asignado al vendedor ---
+  const { data: rptVendedorAlmacen } = useQuery<any>({
+    queryKey: ['rpt-vendedor-almacen', usuarioId],
     enabled: enabled && incluirStock,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cargas')
-        .select('id, fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
-        .lte('fecha', fechaInicio)
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data } = await (supabase as any).from('profiles').select('almacen_id, almacenes(nombre)').eq('id', usuarioId).maybeSingle();
       return data;
     },
   });
 
-  const { data: cargaFin } = useQuery<any>({
-    queryKey: ['rpt-stock-fin', empresa?.id, usuarioId, fechaFin],
-    enabled: enabled && incluirStock,
+  const { data: rptStockAlmacen } = useQuery<any[]>({
+    queryKey: ['rpt-stock-almacen', empresa?.id, rptVendedorAlmacen?.almacen_id],
+    enabled: !!rptVendedorAlmacen?.almacen_id && incluirStock,
     queryFn: async () => {
-      const { data } = await (supabase as any).from('cargas')
-        .select('id, fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
-        .lte('fecha', fechaFin)
-        .order('fecha', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return data;
+      const { data, error } = await (supabase as any).from('stock_almacen')
+        .select('producto_id, cantidad, productos(nombre, codigo)')
+        .eq('almacen_id', rptVendedorAlmacen!.almacen_id!)
+        .gt('cantidad', 0)
+        .order('producto_id');
+      if (error) throw error;
+      return data ?? [];
     },
   });
 
