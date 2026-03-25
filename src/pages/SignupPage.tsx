@@ -93,6 +93,7 @@ export default function SignupPage() {
       if (error) throw new Error(error.message || 'Error al enviar código');
       if (data?.error) throw new Error(data.error);
       setOtpSent(true);
+      setShowOtpDialog(true);
       toast.success('Código enviado por WhatsApp 📲');
     } catch (err: any) {
       toast.error(err.message || 'Error al enviar el código');
