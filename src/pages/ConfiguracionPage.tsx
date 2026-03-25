@@ -323,6 +323,7 @@ export default function ConfiguracionPage() {
     }
     setMoneda((config as any).moneda ?? 'MXN');
     setClientesVisibilidad((config as any).clientes_visibilidad ?? 'todos');
+    setZonaHoraria((config as any).zona_horaria ?? 'America/Mexico_City');
     setInitialized(true);
   }
 
