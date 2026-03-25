@@ -74,7 +74,7 @@ export default function VentaFormPage() {
         total: Number(l.total ?? 0),
         iva_monto: Number(l.iva_monto ?? 0),
         ieps_monto: Number(l.ieps_monto ?? 0),
-        descuento_pct: Number(l.descuento_porcentaje ?? 0),
+        descuento_pct: Number((l as any).descuento_porcentaje ?? (l as any).descuento_pct ?? 0),
       })),
     });
     const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
