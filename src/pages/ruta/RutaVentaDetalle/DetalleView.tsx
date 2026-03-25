@@ -29,6 +29,7 @@ interface Props {
   initEditar: () => void;
   initCobrar: () => void;
   handleCancelar: () => void;
+  handleVolverBorrador: () => void;
   onBack: () => void;
   fmt: (n: number) => string;
 }
