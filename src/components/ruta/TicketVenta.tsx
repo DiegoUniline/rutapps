@@ -15,7 +15,7 @@ interface TicketVentaProps {
   folio: string;
   fecha: string;
   clienteNombre: string;
-  lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_monto?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean }[];
+  lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean }[];
   subtotal: number;
   iva: number;
   ieps?: number;
@@ -107,9 +107,13 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
       `Pago: ${pagoLabel}`,
       metodoPago ? `Método: ${metodoPago}` : '',
       '─'.repeat(30),
-      ...lineas.map(l =>
-        `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}`
-      ),
+      ...lineas.map(l => {
+        const taxes = [
+          (l.iva_pct ?? 0) > 0 ? `IVA ${l.iva_pct}%` : '',
+          (l.ieps_pct ?? 0) > 0 ? `IEPS ${l.ieps_pct}%` : '',
+        ].filter(Boolean).join(' + ');
+        return `${l.cantidad}x ${l.nombre}${l.esCambio ? ' (CAMBIO)' : ''} ${fmt(l.total)}${taxes ? ` [${taxes}]` : ''}`;
+      }),
       '─'.repeat(30),
       `Subtotal: ${fmt(subtotal)}`,
       iva > 0 ? `IVA: ${fmt(iva)}` : '',
@@ -210,8 +214,8 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                       <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
                         <span>{fmt(l.precio)} c/u</span>
                         {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                        {(l.iva_monto ?? 0) > 0 && <span>IVA {fmt(l.iva_monto!)}</span>}
-                        {(l.ieps_monto ?? 0) > 0 && <span>IEPS {fmt(l.ieps_monto!)}</span>}
+                        {(l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
+                        {(l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
                       </div>
                     )}
                   </div>
