@@ -21,3 +21,18 @@ export function fmtDate(dateStr: string | null | undefined): string {
 export function fmtCurrency(value: number | null | undefined, currencyCode?: string | null): string {
   return formatCurrency(value, currencyCode);
 }
+
+/**
+ * Get today's date string (yyyy-mm-dd) in a given IANA timezone.
+ * Falls back to 'America/Mexico_City' if the timezone is invalid.
+ */
+export function todayInTimezone(tz?: string | null): string {
+  const zone = tz || 'America/Mexico_City';
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return parts; // en-CA gives yyyy-mm-dd
+  } catch {
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    return parts;
+  }
+}
