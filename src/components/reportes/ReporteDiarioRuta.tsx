@@ -39,7 +39,7 @@ export default function ReporteDiarioRuta() {
 
   // --- Ventas ---
   const { data: ventas } = useQuery<any[]>({
-    queryKey: ['rpt-diario-ventas', empresa?.id, usuarioId, fechaInicio, fechaFin],
+    queryKey: ['rpt-diario-ventas', empresa?.id, selectedVendedorId, fechaInicio, fechaFin],
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('ventas')
