@@ -379,7 +379,7 @@ export default function RutaCobrar() {
                   onClick={() => setMontoRecibido(totalPendienteCliente.toString())}
                   className="text-xs text-primary font-semibold active:underline"
                 >
-                  Liquidar todo · ${fmt(totalPendienteCliente)}
+                  Liquidar todo · {fmtM(totalPendienteCliente)}
                 </button>
               )}
             </div>
