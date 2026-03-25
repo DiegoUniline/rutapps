@@ -482,7 +482,7 @@ export default function InventarioPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{c.totalUnidades} uds abordo</p>
+                    <p className="text-xs text-muted-foreground">{fmtNum(c.totalUnidades)} uds abordo</p>
                     <p className="text-sm font-bold text-foreground">$ {fmt(c.valorCosto)}</p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
