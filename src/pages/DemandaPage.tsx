@@ -228,7 +228,7 @@ export default function DemandaPage() {
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Valor pendiente</p>
-          <p className="text-2xl font-bold text-primary">$ {totalValorPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+          <p className="text-2xl font-bold text-primary">{fmt(totalValorPendiente)}</p>
         </div>
       </div>
 

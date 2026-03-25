@@ -218,7 +218,7 @@ export default function FacturacionCfdiPage() {
                          {(cfdi.ventas as any)?.folio || '—'}
                        </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${Number(cfdi.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        {fmt(Number(cfdi.total || 0))}
                       </TableCell>
                       <TableCell>
                         <Badge variant={(STATUS_COLORS[cfdi.status] || 'secondary') as any} className="text-[10px]">
