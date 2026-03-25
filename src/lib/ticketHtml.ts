@@ -72,14 +72,15 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   const is58 = opts?.ticketAncho === '58';
   const forPrint = opts?.forPrint === true;
 
-  // When forPrint, use the actual printer dot resolution so image is 1:1 crisp
+  // When forPrint, render at native dot resolution for crisp output
   const ticketWidth = forPrint
-    ? (is58 ? '384px' : '576px')
+    ? (is58 ? '576px' : '832px')
     : (is58 ? '210px' : '320px');
 
-  // Scale fonts proportionally — +3px base bump for print legibility
-  const bump = forPrint ? 3 : 0;
-  const s = forPrint ? (is58 ? 1.83 : 1.8) : 1;
+  // Scale fonts: bigger for print so text is legible on thermal paper
+  // +4px bump for print readability
+  const bump = forPrint ? 4 : 0;
+  const s = forPrint ? (is58 ? 2.7 : 2.6) : 1;
   const px = (base: number) => `${Math.round((base + bump) * s)}px`;
 
   const logoHtml = campos.logo && empresa.logo_url

@@ -445,32 +445,7 @@ export default function RutaVentaDetalle() {
   const handlePrintTicket = async () => {
     const td = getTicketData(); if (!td) return;
 
-    // ── Try Bluetooth ESC/POS first ──
-    const btAvail = isBluetoothAvailable();
-    const hasBtApi = typeof navigator !== 'undefined' && 'bluetooth' in navigator;
-    console.log('[Print] BT available:', btAvail, '| navigator.bluetooth exists:', hasBtApi, '| secure:', window.isSecureContext);
-
-    if (btAvail || hasBtApi) {
-      try {
-        const printerName = getConnectedPrinterName();
-        toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
-        const conn = await connectPrinter();
-        const bytes = buildEscPosBytes(td, { ticketAncho });
-        await sendBytes(conn, bytes);
-        toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
-        return;
-      } catch (err: any) {
-        console.warn('[Print] BT error:', err?.name, err?.message);
-        // User cancelled picker — don't fallback
-        if (err?.name === 'NotFoundError' || err?.message?.includes('cancelled') || err?.message?.includes('User cancelled')) {
-          toast.dismiss('bt-print');
-          return;
-        }
-        toast.error('Bluetooth falló, generando imagen…', { id: 'bt-print' });
-      }
-    } else {
-      console.warn('[Print] No Bluetooth API detected, falling back to image');
-    }
+    // ── Direct image printing (share PNG to RawBT or download) ──
 
     // ── Fallback: image via share/download ──
     const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
