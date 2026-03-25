@@ -1,65 +1,34 @@
 
-Problema aislado: sí sé qué está pasando. El stock actual y el historial de ajustes se están mezclando de forma engañosa.
 
-1. Hallazgo principal
-- En los datos actuales de RubiPets, hoy:
-  - GUA20 tiene 10 en Ruta Chica y 0 en Ruta Grande.
-  - GUAJR20 está en 0.
-- El desfase que ves no parece ser solo “stock mal guardado”; también hay un error de historial:
-  - `src/pages/AjustesInventarioPage.tsx` agrupa por `fecha + user + motivo + almacen`.
-  - Eso junta varios conteos/ajustes distintos del mismo día en una sola tarjeta.
-  - Por eso una tarjeta puede enseñar movimientos mezclados que no corresponden al stock final actual.
+## Problem
 
-2. Plan de corrección
-- Separar cada corrida de ajuste en un lote real:
-  - agregar un `batch_id`/`lote_id` en `ajustes_inventario`
-  - al aplicar ajustes o reinicio, generar un solo lote y guardarlo en todas las filas de esa operación
-  - mostrar el historial agrupado por ese lote, no por día/motivo
-- Unificar la lógica de actualización de stock:
-  - crear una sola rutina reutilizable para:
-    1) guardar ajuste
-    2) upsert en `stock_almacen`
-    3) recalcular `productos.cantidad` como suma de ubicaciones
-    4) registrar movimiento
-  - reutilizarla tanto en `AjustesInventarioPage` como en `ConteoDetailModal`
-- Corregir refresco/caché:
-  - agregar `stock_almacen` al offline cache (`offlineDb` y `offlineSync`)
-  - forzar refresco local después de ajustes para que móvil, ubicaciones y rutas vean el mismo dato
-- Validar con el caso RubiPets:
-  - revisar GUA20 y GUAJR20 después del cambio
-  - confirmar que historial y stock final coincidan en Ruta Chica, Ruta Grande y Almacén General
+The ticket PNG has two issues:
+1. **Header not centered** — using spaces to center text inside `white-space: pre` doesn't work reliably in HTML rendering because even "monospace" fonts have slight variations in browser rendering
+2. **Prices misaligned / jumping lines** — the entire ticket is in a single `<pre>`-style div, and `toLocaleString('es-MX')` produces multi-byte Unicode characters (non-breaking spaces, special comma chars) that break the 32-char column math
 
-3. Archivos a tocar
-- `src/pages/AjustesInventarioPage.tsx`
-- `src/components/conteos/ConteoDetailModal.tsx`
-- `src/lib/offlineDb.ts`
-- `src/lib/offlineSync.ts`
-- `src/hooks/useOfflineData.ts`
-- posible migración nueva en `supabase/migrations/` para `ajustes_inventario.batch_id`
+## Solution
 
-4. Cambio técnico propuesto
-- Base de datos:
-  - añadir `batch_id uuid`
-  - indexarlo
-  - opcionalmente backfill básico para históricos recientes usando cercanía de `created_at`
-- Frontend:
-  - reemplazar el agrupado actual del historial por `batch_id`
-  - al terminar un ajuste, invalidar queries y disparar refresco offline
-- Integridad:
-  - usar `upsert` consistente en `stock_almacen`
-  - recalcular siempre el global desde ubicaciones, nunca “a ojo”
+Split the ticket HTML into two zones as the technical advisor suggested:
 
-5. Resultado esperado
-- Cada ajuste aparecerá como una operación separada y entendible.
-- El stock final de cada ubicación coincidirá con el historial de esa operación.
-- Las vistas de inventario, rutas activas y móvil dejarán de mostrar números distintos por caché o agrupación incorrecta.
+1. **Header** — Real HTML with `text-align: center` (no space padding)
+2. **Body** — `<pre>` block with monospace font for the product/totals grid
 
-6. Validación que haré al implementarlo
-- Caso 1: mismo producto ajustado varias veces el mismo día en la misma ruta
-  - debe verse en varias tarjetas/lotes separados
-- Caso 2: reinicio a ceros después de un conteo
-  - el historial debe mostrar primero el conteo y luego el reinicio, no mezclados
-- Caso 3: RubiPets
-  - GUA20: Ruta Chica 10
-  - GUAJR20: 0
-  - historial separado y consistente con esas existencias
+Also fix `fmt()` to use ASCII-only characters (replace locale separators with plain `,` and `.`).
+
+## Changes
+
+### File: `src/lib/ticketHtml.ts`
+
+Rewrite `buildTicketHTML` to:
+
+- **Header section**: Use a `<div style="text-align:center">` with real HTML `<div>` elements for empresa name, RFC, address, phone, email — no space-padding
+- **Body section**: Use `<pre style="margin:0;white-space:pre;font:inherit">` containing the monospace-aligned grid for folio, date, client, products, totals
+- **ASCII-safe fmt()**: Replace `toLocaleString` with manual formatting: `n.toFixed(2)` + regex for comma thousands separator — guarantees single-byte chars so column math works
+- **Font size**: Bump to `font-size:20px` for readability on thermal prints
+- Keep the same `pad()`, `wrapText()` helpers but only use them inside the `<pre>` block
+- Container: `width:380px; background:#fff; color:#000; font-family:'Courier New',monospace; font-size:20px; line-height:1.2`
+
+### No other files changed
+
+The `handlePrintTicket` fallback flow and `getTicketData()` mapping are correct — `total` maps properly from `venta.total ?? 0`.
+
