@@ -752,7 +752,7 @@ export default function PuntoVentaPage() {
                         </div>
                         {/* Amount */}
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
                           <input
                             type="number"
                             inputMode="decimal"
