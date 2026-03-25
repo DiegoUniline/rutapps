@@ -678,6 +678,7 @@ export default function SupervisorDashboardPage() {
         <KpiCard icon={Eye} label="Visitas" value={String(dashboardStats.numVisitas)} sub={`${dashboardStats.visitasConCompra} con compra`} />
         <KpiCard icon={MapPin} label="Por visitar" value={String(dashboardStats.clientesPorVisitar)} sub={`${dashboardStats.clientesVisitados} visitados`} tone="warning" />
         <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="Hechas / total" />
+        <KpiCard icon={RotateCcw} label="Devoluciones" value={`${devolucionesStats.totalUnidades} uds`} sub={`${devolucionesStats.count} registros`} tone="warning" />
         <KpiCard icon={Users} label="Activos" value={String(dashboardStats.sellersWithActivity)} sub={`de ${sellerRows.length} vendedores`} />
       </section>
 
