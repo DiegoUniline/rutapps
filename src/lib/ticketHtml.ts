@@ -77,9 +77,10 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     ? (is58 ? '384px' : '576px')
     : (is58 ? '210px' : '320px');
 
-  // Scale fonts proportionally: 384px print ≈ 1.83× of 210px screen
+  // Scale fonts proportionally — +3px base bump for print legibility
+  const bump = forPrint ? 3 : 0;
   const s = forPrint ? (is58 ? 1.83 : 1.8) : 1;
-  const px = (base: number) => `${Math.round(base * s)}px`;
+  const px = (base: number) => `${Math.round((base + bump) * s)}px`;
 
   const logoHtml = campos.logo && empresa.logo_url
     ? `<img src="${empresa.logo_url}" crossorigin="anonymous" style="max-height:${px(32)};max-width:${px(120)};margin:0 auto ${px(4)};display:block" />`
