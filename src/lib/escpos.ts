@@ -102,7 +102,7 @@ function center(s: string, w: number): string {
   return ' '.repeat(pad) + s;
 }
 
-export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string }): Uint8Array {
+export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean }): Uint8Array {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
   const W = is58 ? COLS_58 : COLS_80;
 
