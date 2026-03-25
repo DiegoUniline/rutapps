@@ -376,6 +376,7 @@ export default function RutaVentaDetalle() {
         cp: (empresa as any)?.cp ?? null,
         email: (empresa as any)?.email ?? null,
         logo_url: empresa?.logo_url ?? null,
+        moneda: (empresa as any)?.moneda ?? 'MXN',
         notas_ticket: (empresa as any)?.notas_ticket ?? null,
         ticket_campos: (empresa as any)?.ticket_campos ?? null,
       },
