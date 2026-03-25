@@ -1,6 +1,6 @@
 import { Check, Receipt, Tag } from 'lucide-react';
 import type { CartItem, DevolucionItem } from './types';
-import { MOTIVOS } from './types';
+import { MOTIVOS, ACCIONES } from './types';
 import type { PromoResult } from '@/hooks/usePromociones';
 
 interface Props {
@@ -9,7 +9,7 @@ interface Props {
   cambioItems: CartItem[];
   chargedItems: CartItem[];
   promoResults: PromoResult[];
-  totals: { subtotal: number; iva: number; ieps: number; total: number; descuento: number };
+  totals: { subtotal: number; iva: number; ieps: number; total: number; descuento: number; descuentoDevolucion?: number };
   saldoPendienteTotal: number;
   setStep: (s: any) => void;
   goToPayment: () => void;
@@ -32,7 +32,19 @@ export function StepResumen(props: Props) {
         {devoluciones.length > 0 && (
           <section className="bg-card rounded-lg p-3">
             <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Devoluciones ({devoluciones.length})</p><button onClick={() => setStep('devoluciones')} className="text-[10.5px] text-primary font-medium">Editar</button></div>
-            {devoluciones.map(d => (<div key={d.producto_id} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0 text-[11px]"><span className="text-foreground truncate flex-1 mr-2">{d.cantidad}x {d.nombre}</span><span className={`shrink-0 px-1.5 py-0.5 rounded text-[9px] font-medium ${d.motivo === 'cambio' ? 'bg-primary/10 text-primary' : 'bg-accent text-muted-foreground'}`}>{MOTIVOS.find(m => m.value === d.motivo)?.label}</span></div>))}
+            {devoluciones.map(d => (
+              <div key={d.producto_id} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0 text-[11px]">
+                <span className="text-foreground truncate flex-1 mr-2">{d.cantidad}x {d.nombre}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${d.accion === 'reposicion' ? 'bg-primary/10 text-primary' : d.accion === 'descuento_venta' ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400' : 'bg-accent text-muted-foreground'}`}>
+                    {ACCIONES.find(a => a.value === d.accion)?.label}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-accent text-muted-foreground">
+                    {MOTIVOS.find(m => m.value === d.motivo)?.label}
+                  </span>
+                </div>
+              </div>
+            ))}
           </section>
         )}
         {cambioItems.length > 0 && (
@@ -52,7 +64,8 @@ export function StepResumen(props: Props) {
           <div className="space-y-1">
             <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Subtotal</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.subtotal)}</span></div>
             {totals.iva > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">IVA</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.iva)}</span></div>}
-            {totals.descuento > 0 && <div className="flex justify-between text-[12px]"><span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(totals.descuento)}</span></div>}
+            {(totals.descuento - (totals.descuentoDevolucion ?? 0)) > 0 && <div className="flex justify-between text-[12px]"><span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><Tag className="h-3 w-3" /> Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(totals.descuento - (totals.descuentoDevolucion ?? 0))}</span></div>}
+            {(totals.descuentoDevolucion ?? 0) > 0 && <div className="flex justify-between text-[12px]"><span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">🏷️ Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">-${fmt(totals.descuentoDevolucion!)}</span></div>}
           </div>
           <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total</span><span className="text-[18px] font-bold text-primary tabular-nums">${fmt(totals.total)}</span></div>
         </section>

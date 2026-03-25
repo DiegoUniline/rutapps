@@ -1781,31 +1781,40 @@ export type Database = {
       }
       devolucion_lineas: {
         Row: {
+          accion: Database["public"]["Enums"]["accion_devolucion"]
           cantidad: number
           created_at: string
           devolucion_id: string
           id: string
+          monto_credito: number
           motivo: Database["public"]["Enums"]["motivo_devolucion"]
           notas: string | null
           producto_id: string
+          reemplazo_producto_id: string | null
         }
         Insert: {
+          accion?: Database["public"]["Enums"]["accion_devolucion"]
           cantidad?: number
           created_at?: string
           devolucion_id: string
           id?: string
+          monto_credito?: number
           motivo?: Database["public"]["Enums"]["motivo_devolucion"]
           notas?: string | null
           producto_id: string
+          reemplazo_producto_id?: string | null
         }
         Update: {
+          accion?: Database["public"]["Enums"]["accion_devolucion"]
           cantidad?: number
           created_at?: string
           devolucion_id?: string
           id?: string
+          monto_credito?: number
           motivo?: Database["public"]["Enums"]["motivo_devolucion"]
           notas?: string | null
           producto_id?: string
+          reemplazo_producto_id?: string | null
         }
         Relationships: [
           {
@@ -1818,6 +1827,13 @@ export type Database = {
           {
             foreignKeyName: "devolucion_lineas_producto_id_fkey"
             columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "devolucion_lineas_reemplazo_producto_id_fkey"
+            columns: ["reemplazo_producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
             referencedColumns: ["id"]
@@ -5080,6 +5096,11 @@ export type Database = {
       }
     }
     Enums: {
+      accion_devolucion:
+        | "reposicion"
+        | "nota_credito"
+        | "devolucion_dinero"
+        | "descuento_venta"
       aplica_a_tarifa: "todos" | "categoria" | "producto"
       aplica_promocion:
         | "todos"
@@ -5096,7 +5117,14 @@ export type Database = {
         | "ultimo_proveedor"
       condicion_pago: "contado" | "credito" | "por_definir"
       frecuencia_visita: "diaria" | "semanal" | "quincenal" | "mensual"
-      motivo_devolucion: "no_vendido" | "vencido" | "danado" | "cambio" | "otro"
+      motivo_devolucion:
+        | "no_vendido"
+        | "vencido"
+        | "danado"
+        | "cambio"
+        | "otro"
+        | "error_pedido"
+        | "caducado"
       motivo_diferencia:
         | "error_entrega"
         | "merma"
@@ -5273,6 +5301,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      accion_devolucion: [
+        "reposicion",
+        "nota_credito",
+        "devolucion_dinero",
+        "descuento_venta",
+      ],
       aplica_a_tarifa: ["todos", "categoria", "producto"],
       aplica_promocion: [
         "todos",
@@ -5291,7 +5325,15 @@ export const Constants = {
       ],
       condicion_pago: ["contado", "credito", "por_definir"],
       frecuencia_visita: ["diaria", "semanal", "quincenal", "mensual"],
-      motivo_devolucion: ["no_vendido", "vencido", "danado", "cambio", "otro"],
+      motivo_devolucion: [
+        "no_vendido",
+        "vencido",
+        "danado",
+        "cambio",
+        "otro",
+        "error_pedido",
+        "caducado",
+      ],
       motivo_diferencia: [
         "error_entrega",
         "merma",

@@ -205,9 +205,10 @@ export function useRutaVenta() {
   const removeFromCart = (productoId: string, esCambio?: boolean) => { const match = !!esCambio; setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match))); };
   const getItemInCart = (productoId: string) => cart.find(c => c.producto_id === productoId && !c.es_cambio);
 
-  const addDevolucion = (p: any) => { if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: 'no_vendido' }]); };
+  const addDevolucion = (p: any) => { if (devoluciones.find(d => d.producto_id === p.id)) { updateDevQty(p.id, (devoluciones.find(d => d.producto_id === p.id)?.cantidad ?? 0) + 1); return; } setDevoluciones(prev => [...prev, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, cantidad: 1, motivo: 'no_vendido', accion: 'reposicion', precio_unitario: p.precio_principal ?? 0 }]); };
   const updateDevQty = (productoId: string, qty: number) => { if (qty <= 0) setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); else setDevoluciones(prev => prev.map(d => d.producto_id === productoId ? { ...d, cantidad: qty } : d)); };
-  const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, motivo }; if (motivo !== 'cambio') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
+  const updateDevMotivo = (productoId: string, motivo: DevolucionItem['motivo']) => { setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, motivo }; if (updated.accion === 'reposicion' && motivo !== 'cambio' && motivo !== 'danado' && motivo !== 'caducado' && motivo !== 'error_pedido') { /* keep accion */ } return updated; })); };
+  const updateDevAccion = (productoId: string, accion: DevolucionItem['accion']) => { setDevoluciones(prev => prev.map(d => { if (d.producto_id !== productoId) return d; const updated = { ...d, accion }; if (accion !== 'reposicion') { delete updated.reemplazo_producto_id; delete updated.reemplazo_nombre; } return updated; })); };
   const setReemplazo = (devProductoId: string, p: any) => { setDevoluciones(prev => prev.map(d => d.producto_id === devProductoId ? { ...d, reemplazo_producto_id: p.id, reemplazo_nombre: p.nombre } : d)); setShowReemplazoFor(null); setSearchReemplazo(''); };
   const removeDevolucion = (productoId: string) => { setDevoluciones(prev => prev.filter(d => d.producto_id !== productoId)); };
 
@@ -216,7 +217,8 @@ export function useRutaVenta() {
     if (newCart.length === 0 && pedidoSugerido && pedidoSugerido.length > 0) {
       newCart = pedidoSugerido.map((ps: any) => ({ producto_id: ps.productos.id, codigo: ps.productos.codigo, nombre: ps.productos.nombre, precio_unitario: resolvePrice(ps.productos), cantidad: ps.cantidad, unidad: (ps.productos.unidades as any)?.abreviatura || 'pz', unidad_id: ps.productos.unidad_venta_id ?? undefined, tiene_iva: ps.productos.tiene_iva ?? false, iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0, tiene_ieps: ps.productos.tiene_ieps ?? false, ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0 }));
     }
-    devoluciones.filter(d => d.motivo === 'cambio' && d.reemplazo_producto_id).forEach(d => {
+    // Add replacement products (reposición) at $0
+    devoluciones.filter(d => d.accion === 'reposicion' && d.reemplazo_producto_id).forEach(d => {
       const p = productos?.find(pr => pr.id === d.reemplazo_producto_id);
       if (p) {
         const existing = newCart.find(c => c.producto_id === p.id && c.es_cambio);
@@ -236,11 +238,14 @@ export function useRutaVenta() {
   }, [promocionesActivas, cart, clienteId, selectedCliente]);
   const totalDescuentoPromos = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
 
+  const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
+
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
     cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = item.precio_unitario * item.cantidad; subtotal += lineaSub; const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0; ieps += lineIeps; if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100); items += item.cantidad; });
-    const total = Math.max(0, subtotal + ieps + iva - totalDescuentoPromos);
-    return { subtotal, iva, ieps, total, items, descuento: totalDescuentoPromos };
+    const totalDescuentos = totalDescuentoPromos + descuentoDevolucion;
+    const total = Math.max(0, subtotal + ieps + iva - totalDescuentos);
+    return { subtotal, iva, ieps, total, items, descuento: totalDescuentos, descuentoDevolucion };
   }, [cart, totalDescuentoPromos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
@@ -281,7 +286,14 @@ export function useRutaVenta() {
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();
         await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda', fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-        for (const d of devoluciones) await queueOperation('devolucion_lineas', 'insert', { id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, created_at: new Date().toISOString() });
+        for (const d of devoluciones) {
+          const montoCredito = (d.accion === 'nota_credito' || d.accion === 'devolucion_dinero' || d.accion === 'descuento_venta') ? d.precio_unitario * d.cantidad : 0;
+          await queueOperation('devolucion_lineas', 'insert', {
+            id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad,
+            motivo: d.motivo, accion: d.accion, reemplazo_producto_id: d.reemplazo_producto_id || null,
+            monto_credito: montoCredito, created_at: new Date().toISOString(),
+          });
+        }
       }
 
       const applyPayment = totalACobrar > 0;
@@ -338,7 +350,7 @@ export function useRutaVenta() {
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
     addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty,
-    addDevolucion, updateDevQty, updateDevMotivo, setReemplazo, removeDevolucion,
+    addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave,
   };
