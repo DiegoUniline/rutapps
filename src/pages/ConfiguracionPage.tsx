@@ -300,6 +300,7 @@ export default function ConfiguracionPage() {
 
   const [moneda, setMoneda] = useState('MXN');
   const [clientesVisibilidad, setClientesVisibilidad] = useState('todos');
+  const [zonaHoraria, setZonaHoraria] = useState('America/Mexico_City');
 
   if (config && !initialized) {
     setForm({
