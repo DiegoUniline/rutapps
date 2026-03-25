@@ -1,6 +1,6 @@
 /**
  * ESC/POS command builder for 58mm and 80mm thermal printers.
- * Ultra-compact: everything fits on single lines, no wrapping.
+ * Uses W=24 and strips accents so byte-length matches print columns.
  */
 import type { TicketData } from './ticketHtml';
 import { getCurrencyConfig } from './currency';
@@ -19,26 +19,41 @@ const FEED2        = [ESC, 0x64, 0x02];
 
 const encoder = new TextEncoder();
 
-function text(s: string): number[] { return Array.from(encoder.encode(s)); }
-function line(s: string): number[] { return [...text(s), LF]; }
-
-/** Right-align a value after left text, pad with spaces, truncate to fit W */
-function row(left: string, right: string, w: number): string {
-  const maxLeft = w - right.length - 1;
-  const l = left.length > maxLeft ? left.slice(0, maxLeft) : left;
-  const gap = w - l.length - right.length;
-  return l + ' '.repeat(Math.max(gap, 1)) + right;
+/** Strip accents and non-ASCII so byte length = char count */
+function clean(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '');
 }
+
+function bytes(s: string): number[] { return Array.from(encoder.encode(s)); }
+function line(s: string): number[] { return [...bytes(s), LF]; }
 
 function sep(w: number): string { return '-'.repeat(w); }
 
-const fmtN = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Two-column row: left-aligned text + right-aligned text, fits in exactly w chars */
+function row(left: string, right: string, w: number): string {
+  left = clean(left);
+  right = clean(right);
+  const maxLeft = Math.max(1, w - right.length - 1);
+  if (left.length > maxLeft) left = left.slice(0, maxLeft);
+  const gap = w - left.length - right.length;
+  return left + ' '.repeat(Math.max(gap, 1)) + right;
+}
+
+/** Center text within w chars */
+function center(s: string, w: number): string {
+  s = clean(s);
+  if (s.length >= w) return s.slice(0, w);
+  const pad = Math.floor((w - s.length) / 2);
+  return ' '.repeat(pad) + s;
+}
+
+const money = (sym: string, n: number) => `${sym}${n.toFixed(2)}`;
 
 export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string }): Uint8Array {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
-  const W = is58 ? 32 : 48;
+  const W = is58 ? 24 : 42;
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
-  const fmt = (n: number) => `${sym}${fmtN(n)}`;
+  const fmt = (n: number) => money(sym, n);
 
   const campos = {
     logo: true, nombre: true, razon_social: true, rfc: true,
@@ -49,51 +64,45 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   const showTax = campos.impuestos !== false;
   const buf: number[] = [...INIT];
 
-  // ── Header (center) ──
+  // ── Header ──
   buf.push(...ALIGN_CENTER);
   if (campos.nombre) {
-    buf.push(...BOLD_ON, ...line(data.empresa.nombre), ...BOLD_OFF);
+    buf.push(...BOLD_ON, ...line(clean(data.empresa.nombre)), ...BOLD_OFF);
   }
-  if (campos.razon_social && data.empresa.razon_social) buf.push(...line(data.empresa.razon_social));
-  if (campos.rfc && data.empresa.rfc) buf.push(...line(`RFC: ${data.empresa.rfc}`));
+  if (campos.razon_social && data.empresa.razon_social) buf.push(...line(clean(data.empresa.razon_social)));
+  if (campos.rfc && data.empresa.rfc) buf.push(...line(clean(`RFC:${data.empresa.rfc}`)));
   if (campos.direccion) {
-    const p1: string[] = [];
-    if (data.empresa.direccion) p1.push(data.empresa.direccion);
-    if (data.empresa.colonia) p1.push(data.empresa.colonia);
-    if (p1.length) buf.push(...line(p1.join(', ')));
+    const p: string[] = [];
+    if (data.empresa.direccion) p.push(data.empresa.direccion);
+    if (data.empresa.colonia) p.push(data.empresa.colonia);
+    if (p.length) buf.push(...line(clean(p.join(','))));
     const p2: string[] = [];
     if (data.empresa.ciudad) p2.push(data.empresa.ciudad);
     if (data.empresa.estado) p2.push(data.empresa.estado);
     if (data.empresa.cp) p2.push(`CP${data.empresa.cp}`);
-    if (p2.length) buf.push(...line(p2.join(', ')));
+    if (p2.length) buf.push(...line(clean(p2.join(','))));
   }
-  if (campos.telefono && data.empresa.telefono) buf.push(...line(`Tel:${data.empresa.telefono}`));
-  if (data.empresa.email) buf.push(...line(data.empresa.email));
+  if (campos.telefono && data.empresa.telefono) buf.push(...line(clean(`Tel:${data.empresa.telefono}`)));
+  if (data.empresa.email) buf.push(...line(clean(data.empresa.email)));
   buf.push(...ALIGN_LEFT, ...line(sep(W)));
 
   // ── Info ──
-  buf.push(...line(row(`Folio:${data.folio}`, data.fecha, W)));
-  buf.push(...line(`Cliente:${data.clienteNombre}`));
+  buf.push(...line(clean(`Folio:${data.folio}`)));
+  buf.push(...line(clean(`Fecha:${data.fecha}`)));
+  buf.push(...line(clean(`Cliente:${data.clienteNombre}`)));
   const pago = data.condicionPago === 'credito' ? 'Credito' : data.condicionPago === 'contado' ? 'Contado' : 'P/definir';
-  buf.push(...line(`Pago:${pago}${data.metodoPago ? ' ' + data.metodoPago : ''}`));
+  buf.push(...line(clean(`Pago:${pago}${data.metodoPago ? ' ' + data.metodoPago : ''}`)));
   buf.push(...line(sep(W)));
 
-  // ── Products: single line each ──
-  // Format: "2 Producto       $123.00"
+  // ── Products: one line each ──
   for (const l of data.lineas) {
-    const prefix = `${l.cantidad} `;
-    const price = fmt(l.total);
-    // Name gets whatever space is left
-    const nameMax = W - prefix.length - price.length - 1;
-    const name = l.nombre.length > nameMax ? l.nombre.slice(0, nameMax) : l.nombre;
-    const gap = W - prefix.length - name.length - price.length;
-    buf.push(...line(prefix + name + ' '.repeat(Math.max(gap, 1)) + price));
+    buf.push(...line(row(`${l.cantidad}x ${l.nombre}`, fmt(l.total), W)));
   }
   buf.push(...line(sep(W)));
 
   // ── Totals ──
   if (showTax) {
-    buf.push(...line(row('Subtotal', fmt(data.subtotal), W)));
+    buf.push(...line(row('SUBTOTAL', fmt(data.subtotal), W)));
     if (data.iva > 0) buf.push(...line(row('IVA', fmt(data.iva), W)));
     if ((data.ieps ?? 0) > 0) buf.push(...line(row('IEPS', fmt(data.ieps!), W)));
     buf.push(...line(sep(W)));
@@ -108,21 +117,21 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   // ── Saldo ──
   if ((data.saldoAnterior != null && data.saldoAnterior > 0) || (data.saldoNuevo != null && (data.saldoNuevo ?? 0) > 0)) {
     buf.push(...line(sep(W)));
-    buf.push(...BOLD_ON, ...line('EDO.CUENTA'), ...BOLD_OFF);
+    buf.push(...BOLD_ON, ...line(clean('EDO.CUENTA')), ...BOLD_OFF);
     if (data.saldoAnterior != null && data.saldoAnterior > 0) buf.push(...line(row('Saldo ant', fmt(data.saldoAnterior), W)));
     if (data.pagoAplicado != null && data.pagoAplicado > 0) buf.push(...line(row('Pago', `-${fmt(data.pagoAplicado)}`, W)));
     if (data.condicionPago === 'credito') buf.push(...line(row('+Venta', fmt(data.total), W)));
     buf.push(...line(sep(W)));
-    buf.push(...BOLD_ON, ...line(row('Nuevo saldo', fmt(data.saldoNuevo ?? 0), W)), ...BOLD_OFF);
+    buf.push(...BOLD_ON, ...line(row('Saldo', fmt(data.saldoNuevo ?? 0), W)), ...BOLD_OFF);
   }
 
   // ── Footer ──
   if (campos.notas_ticket && data.empresa.notas_ticket) {
     buf.push(...line(sep(W)));
-    buf.push(...ALIGN_CENTER, ...line(data.empresa.notas_ticket));
+    buf.push(...ALIGN_CENTER, ...line(clean(data.empresa.notas_ticket)));
   }
   buf.push(...ALIGN_CENTER, ...line(sep(W)));
-  buf.push(...line('Uniline'));
+  buf.push(...line(clean('Uniline')));
 
   buf.push(...FEED2, ...CUT);
   return new Uint8Array(buf);
