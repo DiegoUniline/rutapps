@@ -1,5 +1,6 @@
 import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save } from 'lucide-react';
-import type { CartItem, CuentaPendiente } from './types';
+import type { CartItem, CuentaPendiente, DevolucionItem } from './types';
+import { ACCIONES } from './types';
 
 interface Props {
   tipoVenta: 'venta_directa' | 'pedido';
@@ -24,18 +25,24 @@ interface Props {
   setReferenciaPago: (v: string) => void;
   notas: string;
   setNotas: (v: string) => void;
-  totals: { subtotal: number; total: number };
+  totals: { subtotal: number; total: number; descuento?: number; descuentoDevolucion?: number };
   totalACobrar: number;
   cambio: number;
   saving: boolean;
   cart: CartItem[];
+  devoluciones: DevolucionItem[];
   handleSave: () => Promise<void>;
   navigate: (to: any) => void;
   fmt: (n: number) => string;
 }
 
+const BILLETES = [50, 100, 200, 500];
+
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, metodoPago, setMetodoPago, montoRecibido, setMontoRecibido, referenciaPago, setReferenciaPago, notas, setNotas, totals, totalACobrar, cambio, saving, cart, handleSave, navigate, fmt } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, metodoPago, setMetodoPago, montoRecibido, setMontoRecibido, referenciaPago, setReferenciaPago, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, handleSave, navigate, fmt } = props;
+
+  const descDevolucion = totals.descuentoDevolucion ?? 0;
+  const descPromos = (totals.descuento ?? 0) - descDevolucion;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -55,6 +62,7 @@ export function StepPago(props: Props) {
             </div>
           )}
         </section>
+
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Condición de pago</p>
           <div className="flex gap-1.5">
@@ -71,6 +79,7 @@ export function StepPago(props: Props) {
             </div>
           )}
         </section>
+
         {cuentasPendientes.length > 0 && (
           <section className="bg-card rounded-lg p-3">
             <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cuentas pendientes ({cuentasPendientes.length})</p><button onClick={liquidarTodas} className="text-[10.5px] text-primary font-semibold">Liquidar todas</button></div>
@@ -87,6 +96,7 @@ export function StepPago(props: Props) {
             {totalAplicarCuentas > 0 && <div className="mt-2 pt-2 border-t border-border/60 flex justify-between"><span className="text-[11px] text-muted-foreground">Total a cuentas anteriores</span><span className="text-[12px] font-bold text-foreground">${fmt(totalAplicarCuentas)}</span></div>}
           </section>
         )}
+
         <section className="bg-card rounded-lg p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recibir pago</p>
           <div className="flex gap-1.5">
@@ -95,9 +105,37 @@ export function StepPago(props: Props) {
             ))}
           </div>
           {metodoPago === 'efectivo' && (
-            <div className="mt-2.5 space-y-1.5">
+            <div className="mt-2.5 space-y-2">
               <label className="text-[10px] text-muted-foreground font-medium">Monto recibido</label>
               <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">$</span><input type="number" inputMode="decimal" className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={montoRecibido} placeholder={fmt(totalACobrar)} onChange={e => setMontoRecibido(e.target.value)} /></div>
+
+              {/* Quick bill buttons */}
+              <div className="flex gap-1.5">
+                {BILLETES.map(b => (
+                  <button
+                    key={b}
+                    onClick={() => setMontoRecibido(b.toString())}
+                    className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${
+                      montoRecibido === b.toString()
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'bg-accent/60 text-foreground'
+                    }`}
+                  >
+                    ${b}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setMontoRecibido(totalACobrar > 0 ? totalACobrar.toFixed(2) : '')}
+                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
+                    parseFloat(montoRecibido) === totalACobrar && totalACobrar > 0
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'bg-accent/60 text-foreground'
+                  }`}
+                >
+                  Exacto
+                </button>
+              </div>
+
               {cambio > 0 && <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2"><span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span><span className="text-[14px] text-green-700 dark:text-green-400 font-bold">${fmt(cambio)}</span></div>}
             </div>
           )}
@@ -105,10 +143,34 @@ export function StepPago(props: Props) {
             <div className="mt-2.5"><label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label><input type="text" className="w-full mt-1 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={referenciaPago} placeholder="No. de referencia o autorización" onChange={e => setReferenciaPago(e.target.value)} /></div>
           )}
         </section>
+
         <section className="bg-card rounded-lg p-3"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Notas</p><textarea className="w-full bg-accent/40 rounded-md px-2.5 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40 resize-none" rows={2} placeholder="Instrucciones o comentarios..." value={notas} onChange={e => setNotas(e.target.value)} /></section>
+
+        {/* Totals summary */}
         <section className="bg-card rounded-lg p-3">
           <div className="space-y-1">
-            <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Venta actual</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.total)}</span></div>
+            <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Venta actual</span><span className="font-medium text-foreground tabular-nums">${fmt(totals.subtotal)}</span></div>
+            {descPromos > 0 && (
+              <div className="flex justify-between text-[11px]"><span className="text-emerald-600 dark:text-emerald-400">🏷️ Promociones</span><span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">-${fmt(descPromos)}</span></div>
+            )}
+            {descDevolucion > 0 && (
+              <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">-${fmt(descDevolucion)}</span></div>
+            )}
+            {/* Devolution detail summary */}
+            {devoluciones.length > 0 && (
+              <div className="mt-1 pt-1 border-t border-border/30 space-y-0.5">
+                <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Devoluciones ({devoluciones.reduce((s, d) => s + d.cantidad, 0)} uds)</p>
+                {devoluciones.map(d => {
+                  const accion = ACCIONES.find(a => a.value === d.accion);
+                  return (
+                    <div key={d.producto_id} className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground truncate flex-1 mr-2">{d.cantidad}x {d.nombre}</span>
+                      <span className="text-muted-foreground shrink-0">{accion?.icon} {accion?.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {condicionPago === 'credito' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Se deja a crédito</span><span className="text-muted-foreground italic">$0.00 hoy</span></div>}
             {condicionPago === 'por_definir' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Pago por definir</span><span className="text-muted-foreground italic">$0.00 hoy</span></div>}
             {totalAplicarCuentas > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">${fmt(totalAplicarCuentas)}</span></div>}
@@ -117,6 +179,7 @@ export function StepPago(props: Props) {
           {totalACobrar === 0 && (condicionPago === 'credito' || condicionPago === 'por_definir') && <div className="mt-2 pt-2 border-t border-border/60"><p className="text-[12px] text-muted-foreground text-center">{condicionPago === 'credito' ? 'No hay cobro por ahora — se registra a crédito' : 'No hay cobro por ahora — pago por definir'}</p></div>}
         </section>
       </div>
+
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <div className="flex gap-2">
           <button onClick={() => navigate(-1)} className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">Cancelar</button>
