@@ -563,7 +563,7 @@ export default function ConfiguracionPage() {
               </div>
               <div className="flex justify-center p-4 bg-muted/30 rounded-lg border border-border min-h-[500px]">
                 {previewTab === 'ticket' ? (
-                  <TicketPreview form={form} logoPreview={logoPreview} campos={campos} />
+                  <TicketPreview form={form} logoPreview={logoPreview} campos={campos} ticketAncho={ticketAncho} />
                 ) : (
                   <NotaVentaPreview form={form} logoPreview={logoPreview} campos={campos} />
                 )}
