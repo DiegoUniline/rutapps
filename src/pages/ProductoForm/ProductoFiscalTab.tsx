@@ -1,6 +1,7 @@
 import { OdooField } from '@/components/OdooFormField';
 import { calcTax } from '@/lib/taxUtils';
 import type { Producto, UnidadSat } from '@/types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   form: Partial<Producto>;
