@@ -282,6 +282,52 @@ export default function ReportesPage() {
             </PopoverContent>
           </Popover>
 
+          {/* Status filter */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={cn(
+                "input-odoo text-[13px] flex items-center gap-1.5 min-w-[120px] max-w-[200px] truncate",
+                selectedStatuses.length > 0 && "border-primary/60 bg-primary/5"
+              )}>
+                <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="truncate">
+                  {selectedStatuses.length === 0
+                    ? 'Todos los estados'
+                    : `${selectedStatuses.length} estado${selectedStatuses.length > 1 ? 's' : ''}`}
+                </span>
+                <ChevronDown className="h-3 w-3 shrink-0 ml-auto text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-0" align="end">
+              <div className="p-1">
+                {statusOptions.map(o => (
+                  <label
+                    key={o.value}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded hover:bg-accent cursor-pointer text-[13px]"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedStatuses.includes(o.value)}
+                      onChange={() => toggleStatus(o.value)}
+                      className="rounded border-input"
+                    />
+                    <span>{o.label}</span>
+                  </label>
+                ))}
+              </div>
+              {selectedStatuses.length > 0 && (
+                <div className="border-t border-border p-1.5">
+                  <button
+                    onClick={() => setSelectedStatuses([])}
+                    className="w-full text-[12px] text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1"
+                  >
+                    <X className="h-3 w-3" /> Limpiar
+                  </button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           <ExportButton
             onExcel={() => handleExport('excel')}
             onPDF={() => handleExport('pdf')}
