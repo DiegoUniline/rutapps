@@ -826,10 +826,15 @@ export default function SupervisorDashboardPage() {
             const lineas = dev.devolucion_lineas ?? [];
             const uds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
             const motivos = [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
+            const productos = lineas.map((l: any) => {
+              const nombre = l.productos?.nombre ?? '—';
+              return `${nombre} x${Number(l.cantidad) || 0}`;
+            }).join(', ');
             return {
               id: dev.id,
               primary: dev.clientes?.nombre || '—',
               secondary: `${sellerNameMap.get(dev.vendedor_id) ?? '—'} · ${motivos}`,
+              badge: productos,
               value: `${uds} uds`,
             };
           })}
@@ -1031,10 +1036,8 @@ function ActivityList({
               <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-foreground">{item.primary}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {item.secondary}
-                    {item.badge && <Badge className="ml-2">{item.badge}</Badge>}
-                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{item.secondary}</p>
+                  {item.badge && <p className="truncate text-xs text-muted-foreground/70 mt-0.5 italic">{item.badge}</p>}
                 </div>
                 <span className="text-sm font-semibold tabular-nums text-foreground">{item.value}</span>
               </div>
