@@ -45,6 +45,7 @@ export function DetalleView(p: Props) {
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} />
         <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
+        <ActionsBar {...p} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
       </div>
       <BottomActions {...p} s={s} lineas={p.lineas} />
