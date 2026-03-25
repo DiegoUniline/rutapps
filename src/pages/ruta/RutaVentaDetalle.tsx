@@ -1129,6 +1129,8 @@ export default function RutaVentaDetalle() {
             { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
             { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
+            ...(venta.status === 'borrador' ? [{ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar }] : []),
+            ...((venta.status === 'confirmado' || venta.status === 'entregado') ? [{ icon: X, label: 'Cancelar venta', color: 'text-destructive', onClick: () => setShowCancelModal(true) }] : []),
           ].map((a) => (
             <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
               <a.icon className={`h-5 w-5 ${a.color}`} />
