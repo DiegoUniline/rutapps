@@ -20,6 +20,9 @@ interface Props {
   onCellKeyDown: (e: React.KeyboardEvent, row: number, col: number) => void;
   navigateCell: (row: number, col: number, dir: 'next' | 'prev') => void;
   setLineas: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
+  sinImpuestos?: boolean;
+  setSinImpuestos?: (v: boolean) => void;
+  readOnlyForm?: boolean;
 }
 
 export function VentaLineasTab(props: Props) {
