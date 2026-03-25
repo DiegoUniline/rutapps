@@ -1,18 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Truck, Package, ChevronRight } from 'lucide-react';
-import { useCargas, useDeleteCarga } from '@/hooks/useCargas';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Plus, Truck, Package, ChevronRight } from 'lucide-react';
+import { useCargas } from '@/hooks/useCargas';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
+import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 
 const CARGAS_COLUMNS: ExportColumn[] = [
   { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
@@ -29,12 +29,82 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   cancelada: { label: 'Cancelada', variant: 'destructive' },
 };
 
+const FILTER_OPTIONS = [
+  {
+    key: 'status',
+    label: 'Estado',
+    options: [
+      { value: 'todos', label: 'Todos' },
+      { value: 'pendiente', label: 'Pendiente' },
+      { value: 'en_ruta', label: 'En ruta' },
+      { value: 'completada', label: 'Completada' },
+      { value: 'cancelada', label: 'Cancelada' },
+    ],
+  },
+];
+
+const GROUP_BY_OPTIONS = [
+  { value: 'status', label: 'Estado' },
+  { value: 'vendedor', label: 'Responsable' },
+  { value: 'fecha', label: 'Fecha' },
+];
+
 export default function CargasListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
+  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('cargas');
+
+  const statusFilter = filters.status || 'todos';
   const { data: cargas, isLoading } = useCargas(search, statusFilter);
-  const deleteCarga = useDeleteCarga();
+
+  const groups = useMemo(() => groupData(cargas ?? [], groupBy, (item: any, key) => {
+    if (key === 'status') return statusConfig[item.status]?.label ?? item.status;
+    if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin responsable';
+    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    return '';
+  }), [cargas, groupBy]);
+
+  const renderTable = (items: any[]) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Fecha</TableHead>
+          <TableHead>Origen</TableHead>
+          <TableHead>Destino</TableHead>
+          <TableHead>Responsable</TableHead>
+          <TableHead>Productos</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="w-10"></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.length === 0 && (
+          <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell></TableRow>
+        )}
+        {items.map((c: any) => {
+          const sc = statusConfig[c.status] ?? statusConfig.pendiente;
+          const totalItems = (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0);
+          const origen = c.almacen_origen?.nombre ?? '—';
+          const destino = c.almacen_destino?.nombre ?? '—';
+          return (
+            <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/almacen/cargas/${c.id}`)}>
+              <TableCell className="font-medium">{fmtDate(c.fecha)}</TableCell>
+              <TableCell className="text-[13px]">{origen}</TableCell>
+              <TableCell className="text-[13px]">{destino}</TableCell>
+              <TableCell>{(c.vendedores as any)?.nombre ?? '—'}</TableCell>
+              <TableCell>
+                <span className="flex items-center gap-1 text-muted-foreground">
+                  <Package className="h-3.5 w-3.5" /> {(c.carga_lineas ?? []).length} productos · {totalItems} uds
+                </span>
+              </TableCell>
+              <TableCell><Badge variant={sc.variant}>{sc.label}</Badge></TableCell>
+              <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <div className="p-6 space-y-5">
@@ -59,67 +129,28 @@ export default function CargasListPage() {
               data: (cargas ?? []).map((c: any) => ({ ...c, vendedor_nombre: c.vendedores?.nombre || '', origen: c.almacen_origen?.nombre || '—', destino: c.almacen_destino?.nombre || '—' })),
             })}
           />
-          <Button onClick={() => navigate('/almacen/cargas/nuevo')} size="sm">
-            <Plus className="h-4 w-4 mr-1" /> Nueva carga
-          </Button>
+          <button onClick={() => navigate('/almacen/cargas/nuevo')} className="btn-odoo-primary shrink-0">
+            <Plus className="h-3.5 w-3.5" /> Nueva carga
+          </button>
         </div>
       </div>
 
-      <div className="flex gap-2 items-center">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar..." className="pl-8" value={search} onChange={e => setSearch(e.target.value)} />
-        </div>
-        <div className="flex gap-1">
-          {['todos', 'pendiente', 'en_ruta', 'completada'].map(s => (
-            <Button key={s} variant={statusFilter === s ? 'default' : 'outline'} size="sm" onClick={() => setStatusFilter(s)}>
-              {s === 'todos' ? 'Todos' : statusConfig[s]?.label ?? s}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <OdooFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar..."
+        filterOptions={FILTER_OPTIONS}
+        activeFilters={filters}
+        onFilterChange={setFilter}
+        onClearFilters={clearFilters}
+        groupByOptions={GROUP_BY_OPTIONS}
+        activeGroupBy={groupBy}
+        onGroupByChange={setGroupBy}
+      />
 
       {isLoading ? <TableSkeleton /> : (
         <div className="border border-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Origen</TableHead>
-                <TableHead>Destino</TableHead>
-                <TableHead>Responsable</TableHead>
-                <TableHead>Productos</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(!cargas || cargas.length === 0) && (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Sin cargas registradas</TableCell></TableRow>
-              )}
-              {cargas?.map((c: any) => {
-                const sc = statusConfig[c.status] ?? statusConfig.pendiente;
-                const totalItems = (c.carga_lineas ?? []).reduce((s: number, l: any) => s + (l.cantidad_cargada ?? 0), 0);
-                const origen = (c as any).almacen_origen?.nombre ?? '—';
-                const destino = (c as any).almacen_destino?.nombre ?? '—';
-                return (
-                  <TableRow key={c.id} className="cursor-pointer hover:bg-accent/40" onClick={() => navigate(`/almacen/cargas/${c.id}`)}>
-                    <TableCell className="font-medium">{fmtDate(c.fecha)}</TableCell>
-                    <TableCell className="text-[13px]">{origen}</TableCell>
-                    <TableCell className="text-[13px]">{destino}</TableCell>
-                    <TableCell>{(c.vendedores as any)?.nombre ?? '—'}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Package className="h-3.5 w-3.5" /> {(c.carga_lineas ?? []).length} productos · {totalItems} uds
-                      </span>
-                    </TableCell>
-                    <TableCell><Badge variant={sc.variant}>{sc.label}</Badge></TableCell>
-                    <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
         </div>
       )}
     </div>
