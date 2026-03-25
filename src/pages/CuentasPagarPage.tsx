@@ -11,8 +11,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, cn } from '@/lib/utils';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
