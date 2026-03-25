@@ -806,7 +806,7 @@ export default function PuntoVentaPage() {
                     {cambio > 0 && (
                       <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2.5">
                         <span className="text-[13px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-                        <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">${fmt(cambio)}</span>
+                        <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">{fmtM(cambio)}</span>
                       </div>
                     )}
                   </div>
