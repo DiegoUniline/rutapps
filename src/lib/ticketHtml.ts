@@ -7,10 +7,18 @@ import { getCurrencyConfig } from '@/lib/currency';
 export interface TicketEmpresa {
   nombre: string;
   rfc?: string | null;
+  razon_social?: string | null;
   direccion?: string | null;
+  colonia?: string | null;
+  ciudad?: string | null;
+  estado?: string | null;
+  cp?: string | null;
   telefono?: string | null;
+  email?: string | null;
   logo_url?: string | null;
   moneda?: string | null;
+  notas_ticket?: string | null;
+  ticket_campos?: Record<string, boolean> | null;
 }
 
 export interface TicketLinea {
@@ -57,13 +65,29 @@ export function buildTicketHTML(data: TicketData): string {
 
   const pagoLabel = condicionPago === 'credito' ? 'Crédito' : condicionPago === 'contado' ? 'Contado' : 'Por definir';
 
-  const logoHtml = empresa.logo_url
+  const campos = { logo: true, nombre: true, razon_social: true, rfc: true, direccion: true, telefono: true, notas_ticket: true, ...((empresa.ticket_campos as Record<string, boolean>) ?? {}) };
+
+  const logoHtml = campos.logo && empresa.logo_url
     ? `<img src="${empresa.logo_url}" crossorigin="anonymous" style="max-height:32px;max-width:120px;margin:0 auto 4px;display:block" />`
     : '';
 
-  const rfcHtml = empresa.rfc ? `<div style="font-size:9px;color:#888">RFC: ${empresa.rfc}</div>` : '';
-  const dirHtml = empresa.direccion ? `<div style="font-size:8px;color:#888">${empresa.direccion}</div>` : '';
-  const telHtml = empresa.telefono ? `<div style="font-size:8px;color:#888">Tel: ${empresa.telefono}</div>` : '';
+  const nombreHtml = campos.nombre ? `<div style="font-size:12px;font-weight:700">${empresa.nombre}</div>` : '';
+  const razonHtml = campos.razon_social && empresa.razon_social ? `<div style="font-size:9px;color:#888">${empresa.razon_social}</div>` : '';
+  const rfcHtml = campos.rfc && empresa.rfc ? `<div style="font-size:9px;color:#888">RFC: ${empresa.rfc}</div>` : '';
+
+  const dirParts: string[] = [];
+  if (empresa.direccion) dirParts.push(empresa.direccion);
+  if (empresa.colonia) dirParts.push(empresa.colonia);
+  const dirLine2Parts: string[] = [];
+  if (empresa.ciudad) dirLine2Parts.push(empresa.ciudad);
+  if (empresa.estado) dirLine2Parts.push(empresa.estado);
+  if (empresa.cp) dirLine2Parts.push(`C.P. ${empresa.cp}`);
+
+  const dirHtml = campos.direccion && dirParts.length > 0
+    ? `<div style="font-size:8px;color:#888">${dirParts.join(', ')}</div>${dirLine2Parts.length > 0 ? `<div style="font-size:8px;color:#888">${dirLine2Parts.join(', ')}</div>` : ''}`
+    : '';
+  const telHtml = campos.telefono && empresa.telefono ? `<div style="font-size:8px;color:#888">Tel: ${empresa.telefono}</div>` : '';
+  const emailHtml = empresa.email ? `<div style="font-size:8px;color:#888">${empresa.email}</div>` : '';
 
   const lineasHtml = lineas.map(l => {
     const detailParts: string[] = [`${fmt(l.precio)} c/u`];
@@ -109,11 +133,15 @@ export function buildTicketHTML(data: TicketData): string {
     `;
   }
 
+  const notasHtml = campos.notas_ticket && empresa.notas_ticket
+    ? `<div style="border-top:1px dashed #aaa;margin:5px 0"></div><div style="text-align:center;font-size:8px;color:#888;padding:4px 0">${empresa.notas_ticket}</div>`
+    : '';
+
   return `<div style="width:320px;padding:12px 16px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4">
     <div style="text-align:center;padding-bottom:6px">
       ${logoHtml}
-      <div style="font-size:12px;font-weight:700">${empresa.nombre}</div>
-      ${rfcHtml}${dirHtml}${telHtml}
+      ${nombreHtml}
+      ${razonHtml}${rfcHtml}${dirHtml}${telHtml}${emailHtml}
     </div>
     <div style="border-top:1px dashed #aaa;margin:5px 0"></div>
     <div style="font-size:10px;padding:4px 0">
@@ -143,6 +171,7 @@ export function buildTicketHTML(data: TicketData): string {
       ${recibidoHtml}
     </div>
     ${saldoHtml}
+    ${notasHtml}
     <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">Elaborado por Uniline — Innovación en la nube</div>
   </div>`;
 }
