@@ -233,7 +233,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const productosArr = Object.values(productosSold).sort((a, b) => b.total - a.total);
 
   // Devoluciones summary
-  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string }[] = [];
+  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string; accion: string; monto_credito: number; cliente: string }[] = [];
   (devoluciones || []).forEach((d: any) => {
     (d.devolucion_lineas || []).forEach((l: any) => {
       devLineas.push({
@@ -241,9 +241,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         codigo: l.productos?.codigo || '',
         cantidad: Number(l.cantidad),
         motivo: l.motivo || '—',
+        accion: l.accion || 'reposicion',
+        monto_credito: Number(l.monto_credito) || 0,
+        cliente: d.clientes?.nombre || '—',
       });
     });
   });
+  const totalDevUnidades = devLineas.reduce((s, l) => s + l.cantidad, 0);
+  const totalDevCredito = devLineas.reduce((s, l) => s + l.monto_credito, 0);
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
   const isPendiente = descarga.status === 'pendiente';
