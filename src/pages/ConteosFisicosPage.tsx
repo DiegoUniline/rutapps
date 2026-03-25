@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { useCurrency } from '@/hooks/useCurrency';
 import CrearConteoDialog from '@/components/conteos/CrearConteoDialog';
 import ConteoDetailModal from '@/components/conteos/ConteoDetailModal';
 
