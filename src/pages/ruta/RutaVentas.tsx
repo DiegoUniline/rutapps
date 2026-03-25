@@ -87,8 +87,8 @@ export default function RutaVentas() {
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${statusColors[v.status] ?? ''}`}>
                     {v.status}
                   </span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${esCredito ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'}`}>
-                    {esCredito ? 'Crédito' : 'Contado'}
+                  <span className={`text-[10px] font-medium ${esCredito ? 'text-warning' : 'text-muted-foreground'}`}>
+                    {esCredito ? '· Crédito' : '· Contado'}
                   </span>
                 </div>
                 <p className="text-[12px] text-muted-foreground truncate mt-0.5">{v._clienteNombre}</p>
