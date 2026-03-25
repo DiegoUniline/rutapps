@@ -344,6 +344,6 @@ export function useVentaDetalle() {
     saldoActual, totalAplicarOtras, totalACobrar, montoRecibidoNum, cambio,
     filteredProductos, initEditar, addProductToEdit, updateEditQty, removeEditLine,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
-    handleCancelar, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
+    handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
   };
 }
