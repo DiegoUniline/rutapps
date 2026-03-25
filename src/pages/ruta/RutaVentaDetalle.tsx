@@ -122,6 +122,10 @@ export default function RutaVentaDetalle() {
     },
   });
 
+  // Compute real saldo from actual payments
+  const totalPagado = useMemo(() => (pagosVenta ?? []).reduce((sum: number, pa: any) => sum + (pa.monto_aplicado ?? 0), 0), [pagosVenta]);
+  const realSaldo = Math.max(0, (venta?.total ?? 0) - totalPagado);
+
   const esVentaInmediata = venta?.tipo === 'venta_directa' && venta?.entrega_inmediata;
 
   // Build stock map from productos
@@ -1370,8 +1374,8 @@ export default function RutaVentaDetalle() {
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[11px] text-muted-foreground mb-1">Total</p>
           <p className="text-[28px] font-bold text-foreground">{s}{fmt(showTax ? (venta.total ?? 0) : (venta.subtotal ?? 0))}</p>
-          {(venta.saldo_pendiente ?? 0) > 0 && (
-            <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {s}{fmt(venta.saldo_pendiente ?? 0)}</p>
+          {realSaldo > 0 && (
+            <p className="text-[12px] text-destructive font-medium mt-1">Saldo pendiente: {s}{fmt(realSaldo)}</p>
           )}
         </div>
 
@@ -1430,7 +1434,24 @@ export default function RutaVentaDetalle() {
           </div>
         </div>
 
-
+        {/* Pagos aplicados */}
+        {pagosVenta && pagosVenta.length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Pagos aplicados</p>
+            {pagosVenta.map((pa: any) => {
+              const cobro = pa.cobros;
+              return (
+                <div key={pa.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                  <div>
+                    <p className="text-[12px] font-medium text-foreground capitalize">{cobro?.metodo_pago ?? '—'}</p>
+                    <p className="text-[10px] text-muted-foreground">{cobro?.fecha ? fmtDate(cobro.fecha) : ''}{cobro?.referencia ? ` • ${cobro.referencia}` : ''}</p>
+                  </div>
+                  <p className="text-[13px] font-bold text-green-600">{s}{fmt(pa.monto_aplicado ?? 0)}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {venta.notas && (
           <div className="bg-card border border-border rounded-xl p-4">
@@ -1460,14 +1481,14 @@ export default function RutaVentaDetalle() {
       {/* Bottom actions */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
-          <button onClick={() => navigate(-1)}
+          <button onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/ruta/ventas')}
             className="flex-1 bg-muted border border-border text-foreground rounded-xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Volver
           </button>
-          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' ? (
+          {realSaldo > 0 && venta.status !== 'cancelado' ? (
             <button onClick={initCobrar}
               className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-              <Banknote className="h-5 w-5" /> Cobrar {s}{fmt(venta.saldo_pendiente ?? 0)}
+              <Banknote className="h-5 w-5" /> Cobrar {s}{fmt(realSaldo)}
             </button>
           ) : (
             <button onClick={handlePrintTicket}
