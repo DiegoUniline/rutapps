@@ -15,6 +15,7 @@ export interface StockLineItem {
 }
 
 export interface LiquidacionTicketData {
+  currencySymbol?: string;
   empresaNombre: string;
   vendedorNombre: string;
   fechaInicio: string;
