@@ -81,6 +81,7 @@ function usePedidosPendientes() {
 
 export default function DemandaPage() {
   const { empresa } = useAuth();
+  const { fmt } = useCurrency();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { data: pedidos, isLoading } = usePedidosPendientes();
