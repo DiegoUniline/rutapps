@@ -277,7 +277,33 @@ export default function VentaFormPage() {
     setShowPdfModal(true);
   };
 
-  const set = (field: string, val: any) => {
+  const handlePrintTicket = () => {
+    const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const td = buildTicketDataFromVenta({
+      empresa,
+      venta: {
+        folio: form.folio,
+        fecha: fmtDate(form.fecha),
+        subtotal: totals.subtotal,
+        iva_total: totals.iva_total,
+        ieps_total: totals.ieps_total,
+        total: totals.total,
+        condicion_pago: form.condicion_pago,
+      },
+      clienteNombre: clienteData?.nombre ?? 'Sin cliente',
+      lineas: lineas.filter(l => l.producto_id).map(l => ({
+        nombre: productosList?.find(p => p.id === l.producto_id)?.nombre ?? '—',
+        cantidad: Number(l.cantidad),
+        precio_unitario: Number(l.precio_unitario),
+        total: Number(l.total ?? 0),
+        iva_monto: Number(l.iva_monto ?? 0),
+        ieps_monto: Number(l.ieps_monto ?? 0),
+      })),
+    });
+    const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+    printTicket(td, { ticketAncho });
+  };
+
     if (readOnly) return;
     setForm(prev => ({ ...prev, [field]: val }));
     setDirty(true);
