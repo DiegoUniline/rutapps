@@ -143,7 +143,7 @@ export function StepDevoluciones(props: Props) {
             </div>
             <div>
               <span className="text-[10px] text-muted-foreground mb-1 block">Acción</span>
-              <ChipSelect options={ACCIONES} value={defaultAccion} onChange={setDefaultAccion} />
+              <ChipSelect options={ACCIONES} value={defaultAccion} onChange={v => setDefaultAccion(v as AccionDevolucion)} />
             </div>
             {devoluciones.length > 0 && (
               <button
