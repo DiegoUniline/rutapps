@@ -139,7 +139,10 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string 
     ? `<div style="border-top:1px dashed #aaa;margin:5px 0"></div><div style="text-align:center;font-size:8px;color:#888;padding:4px 0">${empresa.notas_ticket}</div>`
     : '';
 
-  return `<div style="width:320px;padding:12px 16px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4">
+  const ticketWidth = opts?.ticketAncho === '58' ? '210px' : '320px';
+  const baseFontSize = opts?.ticketAncho === '58' ? '9px' : '11px';
+
+  return `<div style="width:${ticketWidth};padding:12px 16px;font-family:'Helvetica Neue',Arial,sans-serif;background:#fff;color:#222;line-height:1.4;font-size:${baseFontSize}">
     <div style="text-align:center;padding-bottom:6px">
       ${logoHtml}
       ${nombreHtml}
