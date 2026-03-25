@@ -167,10 +167,12 @@ export default function RutaDescarga() {
 
       const diferencia = totalEfectivo - efectivoEsperado;
 
+      const vId = cargaActiva?.vendedor_id || vendedorProfile?.id || null;
+
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        vendedor_id: vendedorId || user!.id,
+        vendedor_id: vId,
         efectivo_esperado: efectivoEsperado,
         efectivo_entregado: totalEfectivo,
         diferencia_efectivo: diferencia,
