@@ -12,7 +12,9 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const eid = empresa!.id;
       const hasVendorFilter = vendedorIds && vendedorIds.length > 0;
 
-      let ventasQ = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
+      const activeStatuses = statusFilter && statusFilter.length > 0 ? statusFilter : ['borrador', 'confirmado', 'confirmada', 'entregado', 'facturado', 'pagada'];
+
+      let ventasQ = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses);
       if (hasVendorFilter) ventasQ = ventasQ.in('vendedor_id', vendedorIds);
 
       let cobrosQ = supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
