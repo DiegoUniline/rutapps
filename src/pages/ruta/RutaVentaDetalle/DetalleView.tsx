@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Pencil, X, MessageCircle, Download, Receipt, AlertTriangle, Printer, Share2 } from 'lucide-react';
 import { cn, fmtDate } from '@/lib/utils';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -23,6 +23,8 @@ interface Props {
   saving: boolean;
   handleWhatsAppSend: () => void;
   handleDownloadPDF: () => void;
+  handlePrintTicket: () => void;
+  handleShareTicket: () => void;
   handleEstadoCuenta: () => void;
   initEditar: () => void;
   initCobrar: () => void;
@@ -33,6 +35,7 @@ interface Props {
 
 export function DetalleView(p: Props) {
   const { symbol: s } = useCurrency();
+  const [showTax, setShowTax] = useState(true);
   return (
     <div className="min-h-screen bg-background">
       <Header {...p} />
@@ -41,7 +44,7 @@ export function DetalleView(p: Props) {
         <TotalCard venta={p.venta} fmt={p.fmt} s={s} />
         <InfoCard venta={p.venta} clienteNombre={p.clienteNombre} vendedorNombre={p.vendedorNombre} />
         <ProductosCard lineas={p.lineas} fmt={p.fmt} s={s} />
-        <TotalesCard venta={p.venta} fmt={p.fmt} s={s} />
+        <TotalesCard venta={p.venta} fmt={p.fmt} s={s} showTax={showTax} setShowTax={setShowTax} />
         {p.venta.notas && <div className="bg-card border border-border rounded-xl p-4"><p className="text-[11px] text-muted-foreground mb-1">Notas</p><p className="text-[13px] text-foreground">{p.venta.notas}</p></div>}
       </div>
       <BottomActions {...p} s={s} lineas={p.lineas} />
@@ -50,14 +53,16 @@ export function DetalleView(p: Props) {
   );
 }
 
-function Header({ venta, onBack, clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handleEstadoCuenta, initEditar }: Props) {
+function Header({ venta, onBack, clienteData, setShowWADialog, setWaPhone, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta, initEditar }: Props) {
   return (
     <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
       <button onClick={onBack} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
       <div className="flex-1 min-w-0"><h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1><p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p></div>
       <div className="flex items-center gap-0.5">
-        <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }} className="p-2 rounded-lg hover:bg-accent active:scale-95"><MessageCircle className="h-4 w-4 text-muted-foreground" /></button>
+        <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }} className="p-2 rounded-lg hover:bg-accent active:scale-95"><MessageCircle className="h-4 w-4 text-[#25D366]" /></button>
         <button onClick={handleDownloadPDF} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Download className="h-4 w-4 text-muted-foreground" /></button>
+        <button onClick={handlePrintTicket} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Printer className="h-4 w-4 text-muted-foreground" /></button>
+        <button onClick={handleShareTicket} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Share2 className="h-4 w-4 text-muted-foreground" /></button>
         <button onClick={handleEstadoCuenta} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Receipt className="h-4 w-4 text-muted-foreground" /></button>
         {venta.status === 'borrador' && <button onClick={initEditar} className="p-2 rounded-lg hover:bg-accent active:scale-95"><Pencil className="h-4 w-4 text-muted-foreground" /></button>}
       </div>
@@ -116,13 +121,20 @@ function ProductosCard({ lineas, fmt, s }: { lineas: any[]; fmt: (n: number) => 
   );
 }
 
-function TotalesCard({ venta, fmt, s }: { venta: any; fmt: (n: number) => string; s: string }) {
+function TotalesCard({ venta, fmt, s, showTax, setShowTax }: { venta: any; fmt: (n: number) => string; s: string; showTax: boolean; setShowTax: (v: boolean) => void }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-2">
-      <TotalRow label="Subtotal" value={venta.subtotal ?? 0} fmt={fmt} s={s} />
-      {(venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} fmt={fmt} s={s} />}
-      {(venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} fmt={fmt} s={s} />}
-      {(venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} fmt={fmt} s={s} />}
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Totales</span>
+        <button onClick={() => setShowTax(!showTax)}
+          className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition-colors ${showTax ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+          {showTax ? 'Con impuestos' : 'Sin impuestos'}
+        </button>
+      </div>
+      {showTax && <TotalRow label="Subtotal" value={venta.subtotal ?? 0} fmt={fmt} s={s} />}
+      {showTax && (venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} fmt={fmt} s={s} />}
+      {showTax && (venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} fmt={fmt} s={s} />}
+      {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} fmt={fmt} s={s} />}
       <div className="border-t border-border pt-2 flex justify-between"><span className="text-[14px] font-bold text-foreground">Total</span><span className="text-[14px] font-bold text-foreground">{s} {fmt(venta.total ?? 0)}</span></div>
     </div>
   );
