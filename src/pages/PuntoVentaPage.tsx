@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { todayInTimezone } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
@@ -266,7 +267,7 @@ export default function PuntoVentaPage() {
     try {
       const ventaId = crypto.randomUUID();
       const almacenId = profile?.almacen_id || null;
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayInTimezone();
 
       // 1. Insert venta
       const { data: ventaData, error: ventaErr } = await supabase.from('ventas').insert({

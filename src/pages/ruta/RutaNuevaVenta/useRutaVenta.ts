@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { todayInTimezone } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
@@ -279,20 +280,20 @@ export function useRutaVenta() {
 
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();
-        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda', fecha: new Date().toISOString().split('T')[0], created_at: new Date().toISOString() });
+        await queueOperation('devoluciones', 'insert', { id: devId, empresa_id: empresa.id, user_id: user.id, cliente_id: clienteId, tipo: 'tienda', fecha: todayInTimezone(), created_at: new Date().toISOString() });
         for (const d of devoluciones) await queueOperation('devolucion_lineas', 'insert', { id: crypto.randomUUID(), devolucion_id: devId, producto_id: d.producto_id, cantidad: d.cantidad, motivo: d.motivo, created_at: new Date().toISOString() });
       }
 
       const applyPayment = totalACobrar > 0;
       const saldoPendienteVenta = applyPayment && condicionPago === 'contado' ? 0 : totals.total;
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.vendedor_id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, total: totals.total, saldo_pendiente: saldoPendienteVenta, fecha: new Date().toISOString().split('T')[0], created_at: new Date().toISOString() });
+      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.vendedor_id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, total: totals.total, saldo_pendiente: saldoPendienteVenta, fecha: todayInTimezone(), created_at: new Date().toISOString() });
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: item.iva_pct, iva_monto: lineIva, ieps_pct: item.ieps_pct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
       if (applyPayment && clienteId) {
         const cobroId = crypto.randomUUID();
-        await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: new Date().toISOString().split('T')[0], created_at: new Date().toISOString() });
+        await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: todayInTimezone(), created_at: new Date().toISOString() });
         const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
         if (condicionPago === 'contado') aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: totals.total });
         for (const cuenta of cuentasPendientes) { if (cuenta.montoAplicar > 0) { aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar }); await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar }); } }
