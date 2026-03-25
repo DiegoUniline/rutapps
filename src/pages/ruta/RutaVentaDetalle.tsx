@@ -135,6 +135,7 @@ export default function RutaVentaDetalle() {
     },
   });
 
+  const { symbol: s, fmt: fmtC } = useCurrency();
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
   // ─── Edit calculations ───

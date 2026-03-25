@@ -5,25 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const BILLETES = [
-  { label: '$1,000', value: 1000 },
-  { label: '$500', value: 500 },
-  { label: '$200', value: 200 },
-  { label: '$100', value: 100 },
-  { label: '$50', value: 50 },
-  { label: '$20', value: 20 },
-];
+const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
+const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
 
-const MONEDAS = [
-  { label: '$10', value: 10 },
-  { label: '$5', value: 5 },
-  { label: '$2', value: 2 },
-  { label: '$1', value: 1 },
-  { label: '$0.50', value: 0.5 },
-];
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function RutaDescarga() {
   const nav = useNavigate();

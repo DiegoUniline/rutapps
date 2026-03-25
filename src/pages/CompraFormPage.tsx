@@ -14,8 +14,9 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 const COMPRA_STEPS = [
   { key: 'borrador', label: 'Borrador' },
