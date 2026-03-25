@@ -205,8 +205,11 @@ export function useVentaForm() {
         if (!l.producto_id) continue;
         const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
         const lineSubtotal = qty * price, discountAmt = lineSubtotal * (desc / 100), base = lineSubtotal - discountAmt;
-        const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
-        await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_monto: iva, ieps_monto: ieps, total: base + iva + ieps } as any);
+        const ieps = sinImpuestos ? 0 : base * ((Number(l.ieps_pct) || 0) / 100);
+        const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+        const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
+        const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
+        await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps } as any);
       }
       if (isNew && autoConfirm) {
         const saldo = form.condicion_pago === 'contado' ? 0 : totals.total;
