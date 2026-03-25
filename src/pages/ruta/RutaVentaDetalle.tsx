@@ -78,6 +78,7 @@ export default function RutaVentaDetalle() {
   const [editingPagoId, setEditingPagoId] = useState<string | null>(null);
   const [editPagoMonto, setEditPagoMonto] = useState('');
   const [editPagoMetodo, setEditPagoMetodo] = useState<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   const clienteId = (venta as any)?.cliente_id;
 
