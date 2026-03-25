@@ -200,7 +200,7 @@ export default function VentasListPage() {
             return (
               <MobileListCard
                 key={v.id}
-                title={v.clientes?.nombre ?? '—'}
+                title={v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}
                 subtitle={`${v.folio || v.id.slice(0, 8)} · ${TIPO_LABELS[v.tipo] || v.tipo}`}
                 badge={
                   <div className="flex items-center gap-1">
