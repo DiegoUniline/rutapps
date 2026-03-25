@@ -1233,6 +1233,23 @@ export default function RutaVentaDetalle() {
             <p className="text-[13px] text-foreground">{venta.notas}</p>
           </div>
         )}
+
+        {/* Historial de cambios */}
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <button
+            onClick={(e) => {
+              const section = (e.currentTarget.nextElementSibling as HTMLElement);
+              section?.classList.toggle('hidden');
+            }}
+            className="w-full flex items-center gap-2 px-4 py-3 text-left"
+          >
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="text-[13px] font-semibold text-foreground">Historial de cambios</span>
+          </button>
+          <div>
+            <VentaHistorialTab ventaId={venta.id} />
+          </div>
+        </div>
       </div>
 
       {/* Bottom actions */}
