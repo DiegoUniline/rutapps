@@ -50,6 +50,7 @@ function useCuentasPagar(search: string) {
 }
 
 export default function CuentasPagarPage() {
+  const { fmt } = useCurrency();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
