@@ -128,15 +128,74 @@ function TotalesCard({ venta, fmt, s }: { venta: any; fmt: (n: number) => string
   );
 }
 
-function BottomActions({ venta, saving, initEditar, initCobrar, handleCancelar, fmt, s }: Props & { s: string }) {
+function BottomActions({ venta, saving, initEditar, initCobrar, handleCancelar, fmt, s, lineas }: Props & { s: string }) {
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const esEntregaInmediata = venta.tipo === 'venta_directa' && venta.entrega_inmediata;
+  const totalProductos = (lineas ?? []).reduce((acc: number, l: any) => acc + (l.cantidad ?? 0), 0);
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-      <div className="flex gap-2">
-        {(venta.status === 'confirmado' || venta.status === 'entregado') && <button onClick={handleCancelar} disabled={saving} className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40"><X className="h-4 w-4" /> Cancelar</button>}
-        {venta.status === 'borrador' && <button onClick={initEditar} className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5"><Pencil className="h-4 w-4" /> Editar</button>}
-        {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && <button onClick={initCobrar} className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"><Banknote className="h-5 w-5" /> Cobrar {s}{fmt(venta.saldo_pendiente ?? 0)}</button>}
+    <>
+      <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
+        <div className="flex gap-2">
+          {(venta.status === 'confirmado' || venta.status === 'entregado') && <button onClick={() => setShowCancelModal(true)} disabled={saving} className="flex-1 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40"><X className="h-4 w-4" /> Cancelar</button>}
+          {venta.status === 'borrador' && <button onClick={initEditar} className="flex-1 bg-card border border-border text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5"><Pencil className="h-4 w-4" /> Editar</button>}
+          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' && <button onClick={initCobrar} className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5"><Banknote className="h-5 w-5" /> Cobrar {s}{fmt(venta.saldo_pendiente ?? 0)}</button>}
+        </div>
       </div>
-    </div>
+
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center px-6" onClick={() => setShowCancelModal(false)}>
+          <div className="bg-card rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <h3 className="text-[16px] font-bold text-foreground">Cancelar venta {venta.folio}</h3>
+            </div>
+
+            <div className="bg-accent/40 rounded-xl p-3.5 space-y-2 text-[12px] text-foreground">
+              <p className="font-medium text-[13px] text-destructive">Esta acción no se puede deshacer.</p>
+              <p>Al cancelar esta venta ocurrirá lo siguiente:</p>
+              <ul className="space-y-1.5 ml-1">
+                <li className="flex items-start gap-2">
+                  <span className="text-muted-foreground mt-0.5">•</span>
+                  <span>El estatus cambiará a <span className="font-semibold">cancelado</span> permanentemente.</span>
+                </li>
+                {esEntregaInmediata && (
+                  <li className="flex items-start gap-2">
+                    <span className="text-muted-foreground mt-0.5">•</span>
+                    <span>Se <span className="font-semibold">devolverán {totalProductos} unidades</span> al inventario del almacén.</span>
+                  </li>
+                )}
+                {(venta.saldo_pendiente ?? 0) < (venta.total ?? 0) && (
+                  <li className="flex items-start gap-2">
+                    <span className="text-muted-foreground mt-0.5">•</span>
+                    <span>Los cobros aplicados ({s}{fmt((venta.total ?? 0) - (venta.saldo_pendiente ?? 0))}) quedarán como saldo a favor del cliente.</span>
+                  </li>
+                )}
+                <li className="flex items-start gap-2">
+                  <span className="text-muted-foreground mt-0.5">•</span>
+                  <span>Se registrará el movimiento en el Kardex.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowCancelModal(false)} className="flex-1 bg-accent/60 text-foreground rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98]">
+                No, volver
+              </button>
+              <button
+                onClick={() => { setShowCancelModal(false); handleCancelar(); }}
+                disabled={saving}
+                className="flex-1 bg-destructive text-white rounded-xl py-3 text-[13px] font-bold active:scale-[0.98] disabled:opacity-40"
+              >
+                {saving ? 'Cancelando...' : 'Sí, cancelar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
