@@ -122,7 +122,7 @@ function MotivoBadge({ motivo }: { motivo: MotivoDevolucion }) {
 export function StepDevoluciones(props: Props) {
   const {
     clienteNombre, searchDevProducto, setSearchDevProducto, filteredDevProductos,
-    devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion,
+    devoluciones, addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     filteredReemplazoProductos, setReemplazo, processDevolucionesAndGoToProductos, fmt,
   } = props;
