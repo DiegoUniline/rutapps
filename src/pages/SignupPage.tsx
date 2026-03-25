@@ -116,6 +116,7 @@ export default function SignupPage() {
       if (data?.error) throw new Error(data.error);
       if (data?.verified) {
         setOtpVerified(true);
+        setShowOtpDialog(false);
         toast.success('Número verificado ✓');
       }
     } catch (err: any) {
