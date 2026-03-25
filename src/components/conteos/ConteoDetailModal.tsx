@@ -31,6 +31,7 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'default' | 'second
 };
 
 export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
+  const { fmt } = useCurrency();
   const { user } = useAuth();
   const qc = useQueryClient();
   const [kardexItemId, setKardexItemId] = useState<string | null>(null);
