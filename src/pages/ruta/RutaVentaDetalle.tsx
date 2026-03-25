@@ -1430,7 +1430,24 @@ export default function RutaVentaDetalle() {
           </div>
         </div>
 
-
+        {/* Pagos aplicados */}
+        {pagosVenta && pagosVenta.length > 0 && (
+          <div className="bg-card border border-border rounded-xl p-4 space-y-2">
+            <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Pagos aplicados</p>
+            {pagosVenta.map((pa: any) => {
+              const cobro = pa.cobros;
+              return (
+                <div key={pa.id} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+                  <div>
+                    <p className="text-[12px] font-medium text-foreground capitalize">{cobro?.metodo_pago ?? '—'}</p>
+                    <p className="text-[10px] text-muted-foreground">{cobro?.fecha ? fmtDate(cobro.fecha) : ''}{cobro?.referencia ? ` • ${cobro.referencia}` : ''}</p>
+                  </div>
+                  <p className="text-[13px] font-bold text-green-600">{s}{fmt(pa.monto_aplicado ?? 0)}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {venta.notas && (
           <div className="bg-card border border-border rounded-xl p-4">
