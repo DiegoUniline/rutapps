@@ -126,21 +126,24 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(div);
 
   for (const l of lineas) {
-    const imp = fmt(l.total);
+    const lineAmt = showTax ? l.total : (l.total - (l.iva_monto ?? 0) - (l.ieps_monto ?? 0));
+    const imp = fmt(lineAmt);
     const nombre = `${l.cantidad}x ${l.nombre}`;
     add(pad(nombre.substring(0, COLS - imp.length - 1), imp));
     const detParts = [`  ${fmt(l.precio)}c/u`];
-    if ((l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
+    if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
     add(detParts.join(' ').substring(0, COLS));
   }
   add(div);
 
   add('');
-  add(pad('Subtotal', fmt(subtotal)));
-  if (iva > 0) add(pad('IVA', fmt(iva)));
-  if (ieps > 0) add(pad('IEPS', fmt(ieps)));
-  add(div);
-  add(pad('TOTAL', fmt(total)));
+  if (showTax) {
+    add(pad('Subtotal', fmt(subtotal)));
+    if (iva > 0) add(pad('IVA', fmt(iva)));
+    if (ieps > 0) add(pad('IEPS', fmt(ieps)));
+    add(div);
+  }
+  add(pad('TOTAL', fmt(showTax ? total : subtotal)));
 
   if (montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));
