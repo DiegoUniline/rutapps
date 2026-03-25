@@ -16,11 +16,11 @@ export default function UpdateBanner() {
   }, []);
 
   const applyUpdate = () => {
+    window.dispatchEvent(new Event('uniline:sw-apply-update'));
     navigator.serviceWorker.getRegistration().then((reg) => {
       if (reg?.waiting) {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       } else {
-        // fallback: just reload
         window.location.reload();
       }
     });

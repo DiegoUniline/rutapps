@@ -19,10 +19,8 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      registerType: "prompt",
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Precache all built assets + index.html
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

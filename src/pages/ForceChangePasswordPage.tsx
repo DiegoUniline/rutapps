@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function ForceChangePasswordPage() {
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -32,8 +34,7 @@ export default function ForceChangePasswordPage() {
       }
 
       toast.success('Contraseña actualizada correctamente');
-      // Force reload to clear the flag from context
-      window.location.href = '/dashboard';
+      navigate('/dashboard');
     } catch (err: any) {
       toast.error(err.message || 'Error al cambiar contraseña');
     } finally {
