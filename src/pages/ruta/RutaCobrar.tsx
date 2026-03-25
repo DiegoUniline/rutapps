@@ -468,7 +468,7 @@ export default function RutaCobrar() {
               <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Sobrante: ${fmt(sobrante)}</p>
+                  <p className="text-sm font-semibold text-foreground">Sobrante: {fmtM(sobrante)}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     El cliente entrega más de lo que debe. Revisa los montos o registra como anticipo.
                   </p>
