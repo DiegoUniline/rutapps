@@ -224,7 +224,7 @@ export default function ReporteEntregasPage() {
                 <TableCell className="font-mono text-[11px] text-muted-foreground py-1.5">{p.codigo}</TableCell>
                 <TableCell className="text-[12px] font-medium py-1.5">{p.nombre}</TableCell>
                 <TableCell className="text-right text-[12px] font-bold py-1.5">{p.cantidad}</TableCell>
-                <TableCell className="text-right text-[12px] py-1.5">$ {p.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</TableCell>
+                <TableCell className="text-right text-[12px] py-1.5">{fmt(p.total)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
