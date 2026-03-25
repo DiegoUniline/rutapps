@@ -9,7 +9,7 @@ interface Props {
   cambioItems: CartItem[];
   chargedItems: CartItem[];
   promoResults: PromoResult[];
-  totals: { subtotal: number; iva: number; ieps: number; total: number; descuento: number };
+  totals: { subtotal: number; iva: number; ieps: number; total: number; descuento: number; descuentoDevolucion?: number };
   saldoPendienteTotal: number;
   setStep: (s: any) => void;
   goToPayment: () => void;
