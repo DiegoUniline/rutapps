@@ -11,6 +11,8 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
+import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
+import { fmtDate } from '@/lib/utils';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
