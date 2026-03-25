@@ -47,6 +47,23 @@ export default function RutaDescarga() {
     enabled: !!user?.id,
   });
 
+  // Get active carga
+  const { data: cargaActiva } = useQuery({
+    queryKey: ['mi-carga-activa-descarga'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cargas')
+        .select('id, fecha, vendedor_id')
+        .eq('empresa_id', empresa!.id)
+        .in('status', ['en_ruta', 'completada'])
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!empresa?.id,
+  });
+
   const vendedorId = cargaActiva?.vendedor_id || myProfile?.vendedor_id || user?.id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
