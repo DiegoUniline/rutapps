@@ -1,4 +1,4 @@
-import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Check, Truck, FileText, Receipt, Printer, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StatusVenta } from '@/types';
 
@@ -108,6 +108,11 @@ export function VentaFormHeader({
         {isNew && (
           <button onClick={() => onSave(true)} disabled={isSaving} className="btn-odoo-primary">
             <Check className="h-3.5 w-3.5" /> Guardar y confirmar
+          </button>
+        )}
+        {!isNew && status !== 'cancelado' && status !== 'borrador' && (
+          <button onClick={() => onStatusChange('borrador' as any)} className="btn-odoo-secondary text-warning text-xs">
+            <RotateCcw className="h-3.5 w-3.5" /> A borrador
           </button>
         )}
         {!isNew && status !== 'cancelado' && (

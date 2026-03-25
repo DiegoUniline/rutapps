@@ -4611,6 +4611,54 @@ export type Database = {
           },
         ]
       }
+      venta_historial: {
+        Row: {
+          accion: string
+          created_at: string
+          detalles: Json | null
+          empresa_id: string
+          id: string
+          user_id: string
+          user_nombre: string
+          venta_id: string
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          detalles?: Json | null
+          empresa_id: string
+          id?: string
+          user_id: string
+          user_nombre?: string
+          venta_id: string
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          detalles?: Json | null
+          empresa_id?: string
+          id?: string
+          user_id?: string
+          user_nombre?: string
+          venta_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venta_historial_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_historial_venta_id_fkey"
+            columns: ["venta_id"]
+            isOneToOne: false
+            referencedRelation: "ventas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venta_lineas: {
         Row: {
           cantidad: number

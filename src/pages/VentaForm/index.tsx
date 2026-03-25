@@ -6,6 +6,7 @@ import { VentaPagosTab } from '@/components/venta/VentaPagosTab';
 import { VentaEntregasTab } from '@/components/venta/VentaEntregasTab';
 import { VentaDevolucionesTab } from '@/components/venta/VentaDevolucionesTab';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
+import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
@@ -126,6 +127,7 @@ export default function VentaFormPage() {
             ...(!isNew && form.tipo === 'pedido' ? [{ key: 'entregas', label: `Entregas (${entregasActivas.length})`, content: <VentaEntregasTab lineas={lineas} productosList={(productosList ?? []).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre }))} entregasExistentes={(entregasExistentes ?? []) as any} entregasActivas={entregasActivas as any} lineDeliverySummary={lineDeliverySummary} canCreateEntrega={canCreateEntrega} fullyDelivered={fullyDelivered} remaining={remaining} isCreatingEntrega={crearEntrega.isPending} isMobile={isMobile} onCreateEntrega={async (items) => { try { const entrega = await crearEntrega.mutateAsync({ pedidoId: form.id, vendedorId: form.vendedor_id ?? undefined, clienteId: form.cliente_id ?? undefined, almacenId: form.almacen_id ?? undefined, lineas: items }); toast.success(`Entrega ${entrega.folio} creada`); } catch (e: any) { toast.error(e.message); } }} /> }] : []),
             ...(!isNew ? [{ key: 'devoluciones', label: 'Devoluciones', content: <VentaDevolucionesTab ventaId={form.id!} /> }] : []),
             { key: 'notas', label: 'Notas', content: <div className="p-4">{readOnly ? <p className="text-[13px] text-foreground whitespace-pre-wrap">{form.notas || 'Sin notas'}</p> : <textarea className="input-odoo w-full min-h-[100px]" value={form.notas ?? ''} onChange={e => set('notas', e.target.value)} placeholder="Notas internas de la venta..." />}</div> },
+            ...(!isNew ? [{ key: 'historial', label: 'Historial', content: <VentaHistorialTab ventaId={form.id!} /> }] : []),
             ...(!isNew && (form as any).requiere_factura ? [{ key: 'facturacion', label: `Facturación (${lineas.filter(l => l.producto_id && l.facturado).length}/${lineas.filter(l => l.producto_id).length})`, content: <div className="p-4"><CfdiHistory ventaId={form.id!} lineas={lineas} productosList={productosList ?? []} />{lineas.every(l => !l.producto_id || l.facturado) && lineas.some(l => l.facturado) && <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground mt-4"><span className="inline-block w-2 h-2 rounded-full bg-primary" />Todas las líneas facturadas</div>}{!lineas.some(l => l.facturado) && <p className="text-muted-foreground text-sm">Sin facturas emitidas aún</p>}</div> }] : []),
           ]} />
         </div>

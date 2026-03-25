@@ -223,18 +223,44 @@ export function useVentaForm() {
 
   const handleDelete = async () => { if (!form.id || !confirm('¿Eliminar esta venta?')) return; await deleteVenta.mutateAsync(form.id); toast.success('Venta eliminada'); navigate('/ventas'); };
 
+  const logHistorial = async (ventaId: string, accion: string, detalles: any = {}) => {
+    try {
+      await supabase.from('venta_historial').insert({
+        venta_id: ventaId,
+        empresa_id: empresa!.id,
+        user_id: user!.id,
+        user_nombre: profile?.nombre ?? user?.email ?? '',
+        accion,
+        detalles,
+      });
+    } catch (e) { console.error('Error logging historial', e); }
+  };
+
   const handleStatusChange = async (newStatus: StatusVenta) => {
     if (!form.id) return;
     if (newStatus === 'cancelado') {
       requestPin('Cancelar venta', 'Ingresa tu PIN de autorización para cancelar esta venta.', async () => {
+        const prevStatus = form.status;
         setForm(prev => ({ ...prev, status: newStatus }));
         await saveVenta.mutateAsync({ id: form.id!, status: newStatus } as any);
+        await logHistorial(form.id!, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
         toast.success('Venta cancelada');
       });
       return;
     }
+    if (newStatus === 'borrador') {
+      const prevStatus = form.status;
+      setForm(prev => ({ ...prev, status: 'borrador' }));
+      await saveVenta.mutateAsync({ id: form.id, status: 'borrador' } as any);
+      await logHistorial(form.id!, 'vuelta_borrador', { status: { anterior: prevStatus, nuevo: 'borrador' } });
+      toast.success('Venta regresada a borrador');
+      queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
+      return;
+    }
+    const prevStatus = form.status;
     setForm(prev => ({ ...prev, status: newStatus }));
     await saveVenta.mutateAsync({ id: form.id, status: newStatus } as any);
+    await logHistorial(form.id!, newStatus === 'confirmado' ? 'confirmada' : newStatus === 'entregado' ? 'entregada' : newStatus === 'facturado' ? 'facturada' : 'editada', { status: { anterior: prevStatus, nuevo: newStatus } });
     if (newStatus === 'confirmado' && form.vendedor_id && form.tarifa_id) {
       try {
         const { data: tarifaLineas } = await supabase.from('tarifa_lineas').select('comision_pct, aplica_a, producto_ids, clasificacion_ids').eq('tarifa_id', form.tarifa_id);
