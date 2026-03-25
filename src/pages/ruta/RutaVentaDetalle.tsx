@@ -89,14 +89,14 @@ export default function RutaVentaDetalle() {
   });
 
 
-  // Fetch products for adding
+  // Fetch products for adding (include stock)
   const { data: productos } = useQuery({
     queryKey: ['ruta-productos-edit', empresa?.id],
     enabled: !!empresa?.id && view === 'editar',
     queryFn: async () => {
       const { data } = await supabase
         .from('productos')
-        .select('id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)')
+        .select('id, codigo, nombre, precio_principal, tiene_iva, tasa_iva_id, cantidad, unidades:unidad_venta_id(nombre, abreviatura), tasas_iva:tasa_iva_id(porcentaje)')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -104,6 +104,28 @@ export default function RutaVentaDetalle() {
       return data ?? [];
     },
   });
+
+  // Fetch existing payments for this sale (for editing)
+  const { data: pagosVenta, refetch: refetchPagos } = useQuery({
+    queryKey: ['ruta-pagos-venta', id],
+    enabled: !!id && view === 'editar',
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cobro_aplicaciones')
+        .select('id, monto_aplicado, cobro_id, cobros(id, fecha, metodo_pago, monto, referencia)')
+        .eq('venta_id', id!);
+      return data ?? [];
+    },
+  });
+
+  const esVentaInmediata = venta?.tipo === 'venta_directa' && venta?.entrega_inmediata;
+
+  // Build stock map from productos
+  const stockMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    productos?.forEach(p => { map[p.id] = p.cantidad ?? 0; });
+    return map;
+  }, [productos]);
 
   // Fetch other pending sales for this client (excluding current)
   const { data: otrasPendientes } = useQuery({
@@ -183,10 +205,19 @@ export default function RutaVentaDetalle() {
   };
 
   const addProductToEdit = (p: any) => {
+    const maxStock = stockMap[p.id] ?? 0;
     const existing = editLineas.find(l => l.producto_id === p.id);
     if (existing) {
+      if (esVentaInmediata && existing.cantidad >= maxStock) {
+        toast.error(`Stock máximo: ${maxStock}`);
+        return;
+      }
       setEditLineas(prev => prev.map(l => l.producto_id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l));
     } else {
+      if (esVentaInmediata && maxStock <= 0) {
+        toast.error('Sin stock disponible');
+        return;
+      }
       setEditLineas(prev => [...prev, {
         producto_id: p.id,
         nombre: p.nombre,
@@ -204,7 +235,24 @@ export default function RutaVentaDetalle() {
     setEditLineas(prev => prev.map((l, i) => {
       if (i !== idx) return l;
       const newQty = l.cantidad + delta;
-      return newQty > 0 ? { ...l, cantidad: newQty } : l;
+      if (newQty <= 0) return l;
+      if (esVentaInmediata) {
+        const maxStock = stockMap[l.producto_id] ?? 0;
+        return { ...l, cantidad: Math.min(newQty, maxStock) };
+      }
+      return { ...l, cantidad: newQty };
+    }));
+  };
+
+  const setEditQty = (idx: number, qty: number) => {
+    setEditLineas(prev => prev.map((l, i) => {
+      if (i !== idx) return l;
+      if (qty <= 0) return { ...l, cantidad: 1 };
+      if (esVentaInmediata) {
+        const maxStock = stockMap[l.producto_id] ?? 0;
+        return { ...l, cantidad: Math.min(qty, maxStock) };
+      }
+      return { ...l, cantidad: qty };
     }));
   };
 
@@ -722,12 +770,15 @@ export default function RutaVentaDetalle() {
               )}
               {editLineas.map((item, idx) => {
                 const lineTotal = item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0));
+                const maxStock = esVentaInmediata ? (stockMap[item.producto_id] ?? 0) : Infinity;
+                const excedeStock = esVentaInmediata && item.cantidad > maxStock;
                 return (
-                  <div key={`${item.producto_id}-${idx}`} className="rounded-lg border border-border/60 p-2.5">
+                  <div key={`${item.producto_id}-${idx}`} className={`rounded-lg border p-2.5 ${excedeStock ? 'border-destructive/50 bg-destructive/5' : 'border-border/60'}`}>
                     <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p>
                         <p className="text-[10px] text-muted-foreground">{item.codigo} · {s}{fmt(item.precio_unitario)} / {item.unidad}</p>
+                        {esVentaInmediata && <p className="text-[9px] text-muted-foreground">Stock: {maxStock}</p>}
                       </div>
                       <button onClick={() => removeEditLine(idx)} className="p-1">
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -736,7 +787,13 @@ export default function RutaVentaDetalle() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1 bg-accent/50 rounded-lg px-1">
                         <button onClick={() => updateEditQty(idx, -1)} className="p-1.5"><Minus className="h-3 w-3" /></button>
-                        <span className="text-[13px] font-bold w-8 text-center text-foreground">{item.cantidad}</span>
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          className="text-[13px] font-bold w-12 text-center text-foreground bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={item.cantidad}
+                          onChange={e => setEditQty(idx, parseInt(e.target.value) || 0)}
+                        />
                         <button onClick={() => updateEditQty(idx, 1)} className="p-1.5"><Plus className="h-3 w-3" /></button>
                       </div>
                       <span className="text-[14px] font-bold text-foreground">{s}{fmt(lineTotal)}</span>
@@ -842,6 +899,52 @@ export default function RutaVentaDetalle() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Pagos existentes */}
+          {pagosVenta && pagosVenta.length > 0 && (
+            <section className="bg-card rounded-xl border border-border p-3.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos registrados</p>
+              <div className="space-y-1.5">
+                {pagosVenta.map((pa: any) => {
+                  const cobro = pa.cobros;
+                  return (
+                    <div key={pa.id} className="flex items-center justify-between rounded-lg border border-border/60 p-2.5">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium text-foreground">{s}{fmt(pa.monto_aplicado)}</p>
+                        <p className="text-[10px] text-muted-foreground">{cobro?.metodo_pago ?? '—'} · {fmtDate(cobro?.fecha)}</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('¿Eliminar este pago?')) return;
+                          setSaving(true);
+                          try {
+                            // Remove the application
+                            await supabase.from('cobro_aplicaciones').delete().eq('id', pa.id);
+                            // Update saldo
+                            const newSaldo = (venta?.saldo_pendiente ?? 0) + pa.monto_aplicado;
+                            await supabase.from('ventas').update({ saldo_pendiente: newSaldo }).eq('id', id!);
+                            // Log historial
+                            await supabase.from('venta_historial').insert({
+                              venta_id: id!, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '',
+                              user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'pago_eliminado',
+                              detalles: { monto: pa.monto_aplicado, metodo: cobro?.metodo_pago } as any,
+                            });
+                            toast.success('Pago eliminado');
+                            refetchPagos();
+                            queryClient.invalidateQueries({ queryKey: ['venta', id] });
+                          } catch (err: any) { toast.error(err.message); }
+                          finally { setSaving(false); }
+                        }}
+                        className="p-1.5 text-destructive"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           )}
 
           <section className="bg-card rounded-xl border border-border p-3.5">
