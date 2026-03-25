@@ -226,6 +226,7 @@ export function useVentaDetalle() {
     if (!td) return;
 
     // 1) Try direct BLE ESC/POS
+    console.log('BLE disponible:', isBluetoothAvailable());
     if (isBluetoothAvailable()) {
       try {
         const conn = await connectPrinter();

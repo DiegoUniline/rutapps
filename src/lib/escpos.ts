@@ -110,8 +110,8 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   const fmt = (n: number) => `${sym}${fmtNum(n)}`;
 
   const parts: number[] = [];
-  const add = (b: number[]) => parts.push(...b);
-  const ln = (s: string) => add(Array.from(enc.encode(s + '\n')));
+  const add = (bytes: number[]) => { for (const b of bytes) parts.push(b); };
+  const ln = (s: string) => { const encoded = enc.encode(s + '\n'); for (const b of encoded) parts.push(b); };
 
   add(INIT);
 
@@ -126,8 +126,8 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   if (dir) {
     wrap(dir, W).forEach(l => ln(l.trim()));
   }
-  const dir2 = [data.empresa.ciudad, data.empresa.estado, data.empresa.cp ? `CP ${data.empresa.cp}` : ''].filter(Boolean).join(', ');
-  if (dir2) ln(center(dir2, W));
+  const dir2 = `${data.empresa.ciudad ?? ''}, ${data.empresa.estado ?? ''}, CP ${data.empresa.cp ?? ''}`;
+  if (dir2.replace(/[, ]/g, '').length > 2) ln(clean(dir2).substring(0, W));
   if (data.empresa.telefono) ln(center(`Tel: ${data.empresa.telefono}`, W));
   if (data.empresa.email) ln(center(data.empresa.email, W));
   add(LF);
