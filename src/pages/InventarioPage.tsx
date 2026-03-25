@@ -417,7 +417,7 @@ export default function InventarioPage() {
                       const qty = data.stockAlmacenMap[a.id]?.[p.id] ?? 0;
                       return (
                         <TableCell key={a.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : "")}>
-                          {qty || '—'}
+                          {qty ? fmtNum(qty) : '—'}
                         </TableCell>
                       );
                     })}
