@@ -1,5 +1,5 @@
 import { Check, Printer, Share2, X } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface DevolucionTicketItem {
