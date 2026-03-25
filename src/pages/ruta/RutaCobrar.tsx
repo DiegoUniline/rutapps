@@ -204,6 +204,7 @@ export default function RutaCobrar() {
   };
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const fmtM = (n: number) => `${s}${fmt(n)}`;
 
   return (
     <div className="flex flex-col h-screen bg-background">
