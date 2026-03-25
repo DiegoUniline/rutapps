@@ -251,7 +251,7 @@ export default function ReporteDiarioRuta() {
         </div>
         <div className="flex items-center gap-2 pb-1">
           <Switch id="incluir-stock" checked={incluirStock} onCheckedChange={setIncluirStock} />
-          <Label htmlFor="incluir-stock" className="text-xs cursor-pointer">Incluir stock a bordo</Label>
+          <Label htmlFor="incluir-stock" className="text-xs cursor-pointer">Incluir stock en almacén</Label>
         </div>
         {enabled && (
           <Button variant="outline" size="sm" onClick={handlePrint}>
