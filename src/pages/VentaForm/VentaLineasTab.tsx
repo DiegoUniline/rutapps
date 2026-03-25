@@ -27,7 +27,7 @@ interface Props {
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
-  const { lineas, readOnly, totals, onAddLine } = props;
+  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm } = props;
 
   return (
     <div className="p-3 sm:p-4 space-y-3">
