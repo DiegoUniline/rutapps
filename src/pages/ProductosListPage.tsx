@@ -13,7 +13,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useProductosPaginated } from '@/hooks/useData';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
+import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
 const PRODUCTOS_COLUMNS: ExportColumn[] = [
