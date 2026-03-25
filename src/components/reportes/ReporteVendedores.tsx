@@ -1,7 +1,7 @@
-import { cn } from '@/lib/utils';
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteVendedores({ data }: { data: any }) {
+  const { fmt } = useCurrency();
   const items = data.topVendedores ?? [];
   const maxVal = items[0]?.total ?? 1;
 
@@ -23,7 +23,7 @@ export function ReporteVendedores({ data }: { data: any }) {
               <td className="py-1.5 px-3 font-bold text-muted-foreground">{i + 1}</td>
               <td className="py-1.5 px-3 font-medium">{v.nombre}</td>
               <td className="py-1.5 px-3 text-right">{v.ventas}</td>
-              <td className="py-1.5 px-3 text-right font-bold">$ {fmt(v.total)}</td>
+              <td className="py-1.5 px-3 text-right font-bold">{fmt(v.total)}</td>
               <td className="py-1.5 px-3">
                 <div className="h-2.5 bg-secondary rounded-full overflow-hidden">
                   <div className="h-full bg-primary/70 rounded-full" style={{ width: `${(v.total / maxVal) * 100}%` }} />

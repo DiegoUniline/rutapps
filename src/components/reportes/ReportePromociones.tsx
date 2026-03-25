@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Tag } from 'lucide-react';
-
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReportePromociones({ desde, hasta }: { desde: string; hasta: string }) {
+  const { fmt } = useCurrency();
+
   const { data: promoAplicadas, isLoading } = useQuery({
     queryKey: ['reporte-promociones', desde, hasta],
     queryFn: async () => {
@@ -27,7 +28,6 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
         .gte('created_at', desde)
         .lte('created_at', hasta + 'T23:59:59');
       
-      // Aggregate by promo
       const summary: Record<string, { nombre: string; tipo: string; veces: number; totalDescuento: number }> = {};
       (data ?? []).forEach((r: any) => {
         const key = r.promocion_id;
@@ -52,11 +52,10 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
 
   return (
     <div className="space-y-4">
-      {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-xs text-muted-foreground">Total descuentos otorgados</p>
-          <p className="text-2xl font-bold text-foreground">${fmt(totalDescuentos)}</p>
+          <p className="text-2xl font-bold text-foreground">{fmt(totalDescuentos)}</p>
         </div>
         <div className="bg-card border border-border rounded-xl p-4">
           <p className="text-xs text-muted-foreground">Promociones activas usadas</p>
@@ -68,7 +67,6 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
         </div>
       </div>
 
-      {/* By promotion */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -87,7 +85,7 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{p.tipo}</td>
                 <td className="px-4 py-3 text-right text-foreground">{p.veces}</td>
-                <td className="px-4 py-3 text-right font-semibold text-foreground">${fmt(p.totalDescuento)}</td>
+                <td className="px-4 py-3 text-right font-semibold text-foreground">{fmt(p.totalDescuento)}</td>
               </tr>
             ))}
             {(promociones ?? []).length === 0 && (
