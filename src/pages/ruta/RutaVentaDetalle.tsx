@@ -444,7 +444,28 @@ export default function RutaVentaDetalle() {
 
   const handlePrintTicket = async () => {
     const td = getTicketData(); if (!td) return;
-    // Generate at native printer resolution (384px for 58mm, 576px for 80mm)
+
+    // ── Try Bluetooth ESC/POS first ──
+    if (isBluetoothAvailable()) {
+      try {
+        const printerName = getConnectedPrinterName();
+        toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
+        const conn = await connectPrinter();
+        const bytes = buildEscPosBytes(td, { ticketAncho });
+        await sendBytes(conn, bytes);
+        toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
+        return;
+      } catch (err: any) {
+        // User cancelled picker or BT failed — fall through to image method
+        if (err?.name === 'NotFoundError' || err?.message?.includes('cancelled')) {
+          toast.dismiss('bt-print');
+          return; // User cancelled the picker
+        }
+        toast.error('Bluetooth no disponible, generando imagen…', { id: 'bt-print' });
+      }
+    }
+
+    // ── Fallback: image via share/download ──
     const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
     const container = document.createElement('div');
     container.style.position = 'fixed';
@@ -455,7 +476,6 @@ export default function RutaVentaDetalle() {
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 300)));
       const el = container.firstElementChild as HTMLElement;
-      // pixelRatio 1 = crisp 1:1 mapping to printer dots (no interpolation blur)
       const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 1, backgroundColor: '#ffffff' });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `${venta?.folio ?? 'ticket'}.png`, { type: 'image/png' });
