@@ -365,7 +365,7 @@ export default function InventarioPage() {
                       </TableCell>
                     );
                   })}
-                  <TableCell className="text-center font-bold">{p.stockTotal}</TableCell>
+                  <TableCell className="text-center font-bold">{fmtNum(p.stockTotal)}</TableCell>
                   <TableCell className="text-right text-[12px]">$ {fmt(p.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">$ {fmt(p.valorVentaTotal)}</TableCell>
                 </TableRow>
