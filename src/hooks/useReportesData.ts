@@ -2,17 +2,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 
-export function useReportesData(desde: string, hasta: string, vendedorIds?: string[]) {
+export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[]) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds],
+    queryKey: ['reportes-full', empresa?.id, desde, hasta, vendedorIds, statusFilter],
     enabled: !!empresa?.id,
     staleTime: 2 * 60 * 1000, // 2 min stale for reports
     queryFn: async () => {
       const eid = empresa!.id;
       const hasVendorFilter = vendedorIds && vendedorIds.length > 0;
 
-      let ventasQ = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
+      const activeStatuses = (statusFilter && statusFilter.length > 0 ? statusFilter : ['borrador', 'confirmado', 'confirmada', 'entregado', 'facturado', 'pagada']) as any;
+
+      let ventasQ = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses);
       if (hasVendorFilter) ventasQ = ventasQ.in('vendedor_id', vendedorIds);
 
       let cobrosQ = supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta);
@@ -23,7 +25,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const clientesQ = supabase.from('clientes').select('id, nombre, codigo, status').eq('empresa_id', eid);
       const productosQ = supabase.from('productos').select('id, codigo, nombre, cantidad, costo, precio_principal').eq('empresa_id', eid).eq('status', 'activo');
 
-      let ventaLineasQ = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta);
+      let ventaLineasQ = supabase.from('venta_lineas').select('producto_id, cantidad, precio_unitario, total, subtotal, productos(codigo, nombre), venta_id, ventas!inner(empresa_id, fecha, status, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre))').eq('ventas.empresa_id', eid).gte('ventas.fecha', desde).lte('ventas.fecha', hasta).in('ventas.status', activeStatuses);
       if (hasVendorFilter) ventaLineasQ = ventaLineasQ.in('ventas.vendedor_id', vendedorIds);
 
       let cargasQ = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false });

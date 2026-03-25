@@ -1,7 +1,8 @@
 import { cn } from '@/lib/utils';
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReporteUtilidad({ data }: { data: any }) {
+  const { symbol: s, fmt } = useCurrency();
   const { totalVentas, costoTotal, totalGastos, utilidadBruta, utilidadNeta, gastosDesglose } = data;
   const margenBruto = totalVentas > 0 ? Math.round((utilidadBruta / totalVentas) * 100) : 0;
   const margenNeto = totalVentas > 0 ? Math.round((utilidadNeta / totalVentas) * 100) : 0;
@@ -34,12 +35,12 @@ export function ReporteUtilidad({ data }: { data: any }) {
             {gastosDesglose.map((g: any, i: number) => (
               <div key={i} className="flex items-center justify-between text-[13px]">
                 <span className="text-foreground">{g.concepto}</span>
-                <span className="font-bold text-destructive">$ {fmt(g.monto)}</span>
+                <span className="font-bold text-destructive">{s} {fmt(g.monto)}</span>
               </div>
             ))}
             <div className="border-t border-border pt-2 flex items-center justify-between text-[13px] font-bold">
               <span>Total gastos</span>
-              <span className="text-destructive">$ {fmt(totalGastos)}</span>
+              <span className="text-destructive">{s} {fmt(totalGastos)}</span>
             </div>
           </div>
         </div>
@@ -47,10 +48,10 @@ export function ReporteUtilidad({ data }: { data: any }) {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Ventas" value={`$ ${fmt(totalVentas)}`} color="text-primary" />
-        <KpiCard label="Costo mercancía" value={`$ ${fmt(costoTotal)}`} color="text-muted-foreground" />
-        <KpiCard label="Utilidad bruta" value={`$ ${fmt(utilidadBruta)}`} color={utilidadBruta >= 0 ? 'text-success' : 'text-destructive'} />
-        <KpiCard label="Utilidad neta" value={`$ ${fmt(utilidadNeta)}`} color={utilidadNeta >= 0 ? 'text-success' : 'text-destructive'} />
+        <KpiCard label="Ventas" value={`${s} ${fmt(totalVentas)}`} color="text-primary" />
+        <KpiCard label="Costo mercancía" value={`${s} ${fmt(costoTotal)}`} color="text-muted-foreground" />
+        <KpiCard label="Utilidad bruta" value={`${s} ${fmt(utilidadBruta)}`} color={utilidadBruta >= 0 ? 'text-success' : 'text-destructive'} />
+        <KpiCard label="Utilidad neta" value={`${s} ${fmt(utilidadNeta)}`} color={utilidadNeta >= 0 ? 'text-success' : 'text-destructive'} />
       </div>
     </div>
   );
