@@ -91,7 +91,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryFn: async () => {
       let q = supabase
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos(nombre, codigo))')
+        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin);

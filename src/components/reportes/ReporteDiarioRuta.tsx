@@ -85,7 +85,7 @@ export default function ReporteDiarioRuta() {
     enabled,
     queryFn: async () => {
       const { data } = await (supabase as any).from('devoluciones')
-        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos(nombre, codigo))')
+        .select('id, tipo, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
         .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin);
       return data ?? [];
