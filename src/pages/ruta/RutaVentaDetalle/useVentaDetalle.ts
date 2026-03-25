@@ -163,7 +163,43 @@ export function useVentaDetalle() {
 
   const getTicketData = (): TicketData | null => {
     if (!venta) return null;
-    return { empresa: { nombre: empresa?.nombre ?? '', rfc: (empresa as any)?.rfc ?? null, telefono: empresa?.telefono ?? null, direccion: empresa?.direccion ?? null, logo_url: empresa?.logo_url ?? null }, folio: venta.folio ?? 'Sin folio', fecha: fmtDate(venta.fecha), clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente', lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({ nombre: l.productos?.nombre ?? l.descripcion ?? '—', cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0, iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0, descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0 })), subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0, ieps: venta.ieps_total ?? 0, total: venta.total ?? 0, condicionPago: venta.condicion_pago, metodoPago: (venta as any).metodo_pago ?? undefined };
+    const e = empresa as any;
+    return {
+      empresa: {
+        nombre: e?.nombre ?? '',
+        rfc: e?.rfc ?? null,
+        razon_social: e?.razon_social ?? null,
+        telefono: e?.telefono ?? null,
+        direccion: e?.direccion ?? null,
+        colonia: e?.colonia ?? null,
+        ciudad: e?.ciudad ?? null,
+        estado: e?.estado ?? null,
+        cp: e?.cp ?? null,
+        email: e?.email ?? null,
+        logo_url: e?.logo_url ?? null,
+        moneda: e?.moneda ?? 'MXN',
+        notas_ticket: e?.notas_ticket ?? null,
+        ticket_campos: e?.ticket_campos ?? null,
+      },
+      folio: venta.folio ?? 'Sin folio',
+      fecha: fmtDate(venta.fecha),
+      clienteNombre: (venta as any).clientes?.nombre ?? 'Sin cliente',
+      lineas: ((venta as any).venta_lineas ?? []).map((l: any) => ({
+        nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+        cantidad: l.cantidad,
+        precio: l.precio_unitario ?? 0,
+        total: l.total ?? 0,
+        iva_monto: l.iva_monto ?? 0,
+        ieps_monto: l.ieps_monto ?? 0,
+        descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+      })),
+      subtotal: venta.subtotal ?? 0,
+      iva: venta.iva_total ?? 0,
+      ieps: (venta as any).ieps_total ?? 0,
+      total: venta.total ?? 0,
+      condicionPago: venta.condicion_pago,
+      metodoPago: (venta as any).metodo_pago ?? undefined,
+    };
   };
 
   const handleWhatsAppSend = async () => {
