@@ -23,7 +23,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
 
-const MAP_CONTAINER = { width: '100%', height: '460px' };
+const MAP_CONTAINER = { width: '100%', height: '920px' };
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
 
 type DashboardSeller = {
@@ -996,7 +996,7 @@ function SupervisorMap({ markers }: { markers: MarkerPoint[] }) {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-[460px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[920px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
         Cargando mapa...
       </div>
     );
@@ -1004,7 +1004,7 @@ function SupervisorMap({ markers }: { markers: MarkerPoint[] }) {
 
   if (markers.length === 0) {
     return (
-      <div className="flex h-[460px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[920px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
         No hay clientes geolocalizados para mostrar.
       </div>
     );
