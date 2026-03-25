@@ -112,6 +112,8 @@ export default function CompraFormPage() {
   const navigate = useNavigate();
   const isNew = id === 'nueva';
   const { empresa, user } = useAuth();
+  const { symbol: s } = useCurrency();
+  const fmt = fmtNum;
   const qc = useQueryClient();
   const { data: existingCompra, isLoading } = useCompra(isNew ? undefined : id);
   const { data: pagos } = usePagosCompra(isNew ? undefined : id);
