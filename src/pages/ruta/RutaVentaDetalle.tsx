@@ -1477,14 +1477,14 @@ export default function RutaVentaDetalle() {
       {/* Bottom actions */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
-          <button onClick={() => navigate(-1)}
+          <button onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/ruta/ventas')}
             className="flex-1 bg-muted border border-border text-foreground rounded-xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Volver
           </button>
-          {(venta.saldo_pendiente ?? 0) > 0 && venta.status !== 'cancelado' ? (
+          {realSaldo > 0 && venta.status !== 'cancelado' ? (
             <button onClick={initCobrar}
               className="flex-1 bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
-              <Banknote className="h-5 w-5" /> Cobrar {s}{fmt(venta.saldo_pendiente ?? 0)}
+              <Banknote className="h-5 w-5" /> Cobrar {s}{fmt(realSaldo)}
             </button>
           ) : (
             <button onClick={handlePrintTicket}
