@@ -86,6 +86,7 @@ const CancelSubscriptionPage = lazy(() => import("@/pages/CancelSubscriptionPage
 const CatalogoPublicoPage = lazy(() => import("@/pages/CatalogoPublicoPage"));
 const PagarPage = lazy(() => import("@/pages/PagarPage"));
 const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
+const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 
 
 // Logistica pages
@@ -301,6 +302,7 @@ function desktopRoutes() {
       <Route path="/clientes/:id" element={<GoogleMapsProvider><ClienteFormPage /></GoogleMapsProvider>} />
       <Route path="/ventas" element={<VentasListPage />} />
       <Route path="/ventas/reporte-diario" element={<ReporteDiarioPage />} />
+      <Route path="/ventas/devoluciones" element={<DevolucionesListPage />} />
       <Route path="/ventas/surtido" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/ventas/demanda" element={<Navigate to="/logistica/pedidos" replace />} />
       <Route path="/logistica/pedidos" element={<DemandaPage />} />
