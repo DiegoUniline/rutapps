@@ -44,7 +44,7 @@ export default function ReporteDiarioRuta() {
     queryFn: async () => {
       const { data } = await (supabase as any).from('ventas')
         .select('id, folio, total, condicion_pago, status, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
-        .eq('empresa_id', empresa!.id).eq('vendedor_id', usuarioId)
+        .eq('empresa_id', empresa!.id).eq('vendedor_id', selectedVendedorId)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
       return data ?? [];
