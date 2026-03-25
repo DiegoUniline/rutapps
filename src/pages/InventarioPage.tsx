@@ -434,7 +434,7 @@ export default function InventarioPage() {
                   <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
                   {(data.almacenes ?? []).map(a => {
                     const total = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
-                    return <TableCell key={a.id} className="text-center">{total}</TableCell>;
+                    return <TableCell key={a.id} className="text-center">{fmtNum(total)}</TableCell>;
                   })}
                   <TableCell className="text-center">{filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0)}</TableCell>
                   <TableCell className="text-right">—</TableCell>
