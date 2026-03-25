@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, User, Package, FileText, Banknote, Calendar, Wallet, CreditCard, Check, X, Pencil, Plus, Minus, Trash2, Search, Save, Download, Receipt, AlertTriangle, Printer, Share2, MessageCircle } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
@@ -63,6 +63,7 @@ export default function RutaVentaDetalle() {
   const [ecPdfBlob, setEcPdfBlob] = useState<Blob | null>(null);
   const [showEcPreview, setShowEcPreview] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showTax, setShowTax] = useState(true);
 
   // Edit state
   const [editLineas, setEditLineas] = useState<EditLinea[]>([]);
@@ -416,7 +417,8 @@ export default function RutaVentaDetalle() {
     finally { setSendingWA(false); }
   };
 
-  // ─── Handle PDF download ───
+  const ticketAncho = (empresa as any)?.ticket_ancho ?? '80';
+
   const handleDownloadPDF = async () => {
     const td = getTicketData();
     if (!td) return;
@@ -424,7 +426,7 @@ export default function RutaVentaDetalle() {
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.innerHTML = buildUnifiedTicketHTML(td);
+    container.innerHTML = buildUnifiedTicketHTML(td, { ticketAncho });
     document.body.appendChild(container);
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
@@ -436,6 +438,46 @@ export default function RutaVentaDetalle() {
       toast.success('Ticket descargado');
     } catch { toast.error('Error generando imagen'); }
     finally { document.body.removeChild(container); }
+  };
+
+  const handlePrintTicket = () => {
+    const td = getTicketData(); if (!td) return;
+    const html = buildUnifiedTicketHTML(td, { ticketAncho });
+    const w = ticketAncho === '58' ? '58mm' : '80mm';
+    const printWindow = window.open('', '_blank', 'width=320,height=600');
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Ticket ${td.folio}</title>
+<style>@page{size:${w} auto;margin:0}*{box-sizing:border-box;margin:0;padding:0}body{width:${w};padding:3mm;background:#fff}</style></head><body>${html}
+<script>window.onload=function(){window.print();window.close()}</script></body></html>`);
+    printWindow.document.close();
+  };
+
+  const handleShareTicket = async () => {
+    const td = getTicketData(); if (!td) return;
+    const text = [
+      td.empresa.nombre,
+      td.empresa.rfc ? `RFC: ${td.empresa.rfc}` : '',
+      td.empresa.direccion ?? '',
+      td.empresa.telefono ? `Tel: ${td.empresa.telefono}` : '',
+      '─'.repeat(30),
+      `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
+      `Pago: ${td.condicionPago === 'credito' ? 'Crédito' : td.condicionPago === 'contado' ? 'Contado' : 'Por definir'}`,
+      td.metodoPago ? `Método: ${td.metodoPago}` : '',
+      '─'.repeat(30),
+      ...td.lineas.map(l => `${l.cantidad}x ${l.nombre} $${fmt(l.total)}`),
+      '─'.repeat(30),
+      `Subtotal: $${fmt(td.subtotal)}`,
+      td.iva > 0 ? `IVA: $${fmt(td.iva)}` : '',
+      (td.ieps ?? 0) > 0 ? `IEPS: $${fmt(td.ieps!)}` : '',
+      `TOTAL: $${fmt(td.total)}`,
+      '', 'Elaborado por Uniline — Innovación en la nube',
+    ].filter(Boolean).join('\n');
+    if (navigator.share) {
+      try { await navigator.share({ title: `Ticket ${td.folio}`, text }); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast.success('Copiado al portapapeles');
+    }
   };
 
   if (isLoading) {
@@ -990,6 +1032,7 @@ export default function RutaVentaDetalle() {
   // ═══════════════════════════════════════
   return (
     <div className="min-h-screen bg-background">
+      {/* Header - clean, just folio + status */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-2">
         <button onClick={() => navigate(-1)} className="p-1 -ml-1">
           <ArrowLeft className="h-5 w-5 text-foreground" />
@@ -997,29 +1040,6 @@ export default function RutaVentaDetalle() {
         <div className="flex-1 min-w-0">
           <h1 className="text-[16px] font-bold text-foreground truncate">{venta.folio ?? 'Sin folio'}</h1>
           <p className="text-[11px] text-muted-foreground">{venta.tipo === 'venta_directa' ? 'Venta directa' : 'Pedido'}</p>
-        </div>
-        <div className="flex items-center gap-1">
-          {/* WhatsApp */}
-          <button onClick={() => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); }}
-            className="p-2.5 rounded-xl hover:bg-[#25D366]/10 active:scale-95 transition-all" title="Enviar por WhatsApp">
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </button>
-          {/* Download */}
-          <button onClick={handleDownloadPDF}
-            className="p-2.5 rounded-xl hover:bg-accent active:scale-95 transition-all" title="Descargar ticket">
-            <Download className="h-5 w-5 text-muted-foreground" />
-          </button>
-          {/* Estado de cuenta */}
-          <button onClick={handleEstadoCuenta}
-            className="p-2.5 rounded-xl hover:bg-accent active:scale-95 transition-all" title="Estado de cuenta">
-            <Receipt className="h-5 w-5 text-muted-foreground" />
-          </button>
-          {/* Edit button - only for borrador */}
-          {venta.status === 'borrador' && (
-            <button onClick={initEditar} className="p-2.5 rounded-xl hover:bg-accent active:scale-95 transition-all" title="Editar">
-              <Pencil className="h-5 w-5 text-muted-foreground" />
-            </button>
-          )}
         </div>
         <span className={cn('text-[11px] px-2.5 py-1 rounded-full font-medium shrink-0', statusColors[venta.status] ?? '')}>
           {venta.status}
@@ -1094,15 +1114,39 @@ export default function RutaVentaDetalle() {
           </div>
         </div>
 
+        {/* Totals with tax toggle */}
         <div className="bg-card border border-border rounded-xl p-4 space-y-2">
-          <TotalRow label="Subtotal" value={venta.subtotal ?? 0} />
-          {(venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} />}
-          {(venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} />}
-          {(venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} />}
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Totales</span>
+            <button onClick={() => setShowTax(!showTax)}
+              className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition-colors ${showTax ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+              {showTax ? 'Con impuestos' : 'Sin impuestos'}
+            </button>
+          </div>
+          {showTax && <TotalRow label="Subtotal" value={venta.subtotal ?? 0} />}
+          {showTax && (venta.descuento_total ?? 0) > 0 && <TotalRow label="Descuento" value={-(venta.descuento_total ?? 0)} />}
+          {showTax && (venta.iva_total ?? 0) > 0 && <TotalRow label="IVA" value={venta.iva_total ?? 0} />}
+          {showTax && (venta.ieps_total ?? 0) > 0 && <TotalRow label="IEPS" value={venta.ieps_total ?? 0} />}
           <div className="border-t border-border pt-2 flex justify-between">
             <span className="text-[14px] font-bold text-foreground">Total</span>
             <span className="text-[14px] font-bold text-foreground">$ {fmt(venta.total ?? 0)}</span>
           </div>
+        </div>
+
+        {/* Action buttons grid */}
+        <div className="grid grid-cols-5 gap-1">
+          {[
+            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(clienteData?.telefono ?? ''); setShowWADialog(true); } },
+            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadPDF },
+            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket },
+            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket },
+            { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta },
+          ].map((a) => (
+            <button key={a.label} onClick={a.onClick} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-card border border-border active:scale-95 transition-transform">
+              <a.icon className={`h-5 w-5 ${a.color}`} />
+              <span className="text-[10px] font-medium text-foreground leading-tight">{a.label}</span>
+            </button>
+          ))}
         </div>
 
         {venta.notas && (
