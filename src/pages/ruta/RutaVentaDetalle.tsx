@@ -667,7 +667,7 @@ export default function RutaVentaDetalle() {
                 <div className="flex justify-between border-t border-border/40 pt-1">
                   <span className="text-muted-foreground">Disponible</span>
                   <span className={`font-bold ${excedeCredito ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
-                    ${fmt(creditoDisponible)}
+                    {s}{fmt(creditoDisponible)}
                   </span>
                 </div>
                 {excedeCredito && (
