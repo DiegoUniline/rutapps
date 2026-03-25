@@ -188,8 +188,8 @@ export function StepPago(props: Props) {
                 })}
               </div>
             )}
-            {condicionPago === 'credito' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Se deja a crédito</span><span className="text-muted-foreground italic"{s}0.00 hoy</span></div>}
-            {condicionPago === 'por_definir' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Pago por definir</span><span className="text-muted-foreground italic"{s}0.00 hoy</span></div>}
+            {condicionPago === 'credito' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Se deja a crédito</span><span className="text-muted-foreground italic">{s}0.00 hoy</span></div>}
+            {condicionPago === 'por_definir' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Pago por definir</span><span className="text-muted-foreground italic">{s}0.00 hoy</span></div>}
             {totalAplicarCuentas > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">{s}{fmt(totalAplicarCuentas)}</span></div>}
           </div>
           {totalACobrar > 0 && <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total a cobrar</span><span className="text-[20px] font-bold text-primary tabular-nums">{s}{fmt(totalACobrar)}</span></div>}

@@ -50,7 +50,7 @@ export function StepResumen(props: Props) {
           </section>
         )}
         {cambioItems.length > 0 && (
-          <section className="bg-card rounded-lg p-3"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cambios (sin cargo)</p>{cambioItems.map(item => (<div key={`cambio-${item.producto_id}`} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0"><div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10.5px] text-muted-foreground">{item.cantidad} × $0.00</p></div><span className="text-[12.5px] font-semibold text-muted-foreground shrink-0"{s}0.00</span></div>))}</section>
+          <section className="bg-card rounded-lg p-3"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Cambios (sin cargo)</p>{cambioItems.map(item => (<div key={`cambio-${item.producto_id}`} className="flex items-center justify-between py-1 border-b border-border/40 last:border-0"><div className="flex-1 min-w-0"><p className="text-[12px] font-medium text-foreground truncate">{item.nombre}</p><p className="text-[10.5px] text-muted-foreground">{item.cantidad} × {s}0.00</p></div><span className="text-[12.5px] font-semibold text-muted-foreground shrink-0">{s}0.00</span></div>))}</section>
         )}
         <section className="bg-card rounded-lg p-3">
           <div className="flex items-center justify-between mb-2"><p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Productos ({chargedItems.length})</p><button onClick={() => setStep('productos')} className="text-[10.5px] text-primary font-medium">Editar</button></div>

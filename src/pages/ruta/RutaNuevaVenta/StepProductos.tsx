@@ -53,7 +53,7 @@ export function StepProductos(props: Props) {
           <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1">Cambios (sin cargo)</p>
           {cambioItems.map(item => (
             <div key={`cambio-${item.producto_id}`} className="flex justify-between text-[11px] py-0.5">
-              <span className="text-foreground">{item.cantidad}x {item.nombre}</span><span className="text-muted-foreground"{s}0.00</span>
+              <span className="text-foreground">{item.cantidad}x {item.nombre}</span><span className="text-muted-foreground">{s}0.00</span>
             </div>
           ))}
         </div>
