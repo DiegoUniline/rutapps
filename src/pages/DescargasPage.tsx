@@ -27,9 +27,22 @@ const MOTIVO_LABELS: Record<string, string> = {
   error_entrega: 'Error de entrega',
   merma: 'Merma',
   danado: 'Dañado',
+  dañado: 'Dañado',
   faltante: 'Faltante',
   sobrante: 'Sobrante',
+  no_vendido: 'No vendido',
+  vencido: 'Vencido',
+  caducado: 'Caducado',
+  cambio: 'Cambio',
+  error_pedido: 'Error pedido',
   otro: 'Otro',
+};
+
+const ACCION_LABELS: Record<string, string> = {
+  reposicion: 'Reposición',
+  nota_credito: 'Nota crédito',
+  devolucion_dinero: 'Dev. dinero',
+  descuento_venta: 'Desc. venta',
 };
 
 const MOTIVOS = [
@@ -91,7 +104,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryFn: async () => {
       let q = supabase
         .from('devoluciones')
-        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+        .select('id, fecha, tipo, notas, clientes(nombre), devolucion_lineas(producto_id, cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
         .eq('empresa_id', descarga.empresa_id)
         .gte('fecha', fInicio)
         .lte('fecha', fFin);
@@ -220,7 +233,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const productosArr = Object.values(productosSold).sort((a, b) => b.total - a.total);
 
   // Devoluciones summary
-  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string }[] = [];
+  const devLineas: { nombre: string; codigo: string; cantidad: number; motivo: string; accion: string; monto_credito: number; cliente: string }[] = [];
   (devoluciones || []).forEach((d: any) => {
     (d.devolucion_lineas || []).forEach((l: any) => {
       devLineas.push({
@@ -228,9 +241,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         codigo: l.productos?.codigo || '',
         cantidad: Number(l.cantidad),
         motivo: l.motivo || '—',
+        accion: l.accion || 'reposicion',
+        monto_credito: Number(l.monto_credito) || 0,
+        cliente: d.clientes?.nombre || '—',
       });
     });
   });
+  const totalDevUnidades = devLineas.reduce((s, l) => s + l.cantidad, 0);
+  const totalDevCredito = devLineas.reduce((s, l) => s + l.monto_credito, 0);
 
   const conDiferencias = (lineas || []).filter((l: any) => Number(l.diferencia) !== 0);
   const isPendiente = descarga.status === 'pendiente';
@@ -438,8 +456,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             )}
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Devoluciones</div>
-              <div className="text-lg font-bold text-foreground">{devLineas.length}</div>
-              <div className="text-[10px] text-muted-foreground">productos devueltos</div>
+              <div className="text-lg font-bold text-foreground">{totalDevUnidades}</div>
+              <div className="text-[10px] text-muted-foreground">{devLineas.length} líneas</div>
             </div>
           </div>
         </div>
@@ -647,22 +665,62 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         </SectionCard>
 
         {/* ═══ DEVOLUCIONES ═══ */}
-        <SectionCard title={`Devoluciones (${devLineas.length} productos)`} icon={RotateCcw}>
+        <SectionCard title={`Devoluciones (${totalDevUnidades} uds · ${devLineas.length} líneas)`} icon={RotateCcw}>
           {devLineas.length > 0 ? (
-            <div className="space-y-1">
-              {devLineas.map((d, i) => (
-                <div key={i} className="flex items-center justify-between bg-muted/30 rounded px-3 py-1.5 text-[12px]">
-                  <div>
-                    <span className="font-medium">{d.nombre}</span>
-                    <span className="text-muted-foreground font-mono ml-2">{d.codigo}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{d.motivo}</span>
-                    <span className="font-bold">{d.cantidad}</span>
-                  </div>
+            <>
+              {totalDevCredito > 0 && (
+                <div className="flex items-center gap-2 mb-3 text-xs">
+                  <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">
+                    Crédito total: ${totalDevCredito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
-              ))}
-            </div>
+              )}
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground uppercase border-b border-border">
+                    <th className="text-left py-2">Producto</th>
+                    <th className="text-left py-2">Cliente</th>
+                    <th className="text-right py-2">Cant.</th>
+                    <th className="text-left py-2">Motivo</th>
+                    <th className="text-left py-2">Acción</th>
+                    <th className="text-right py-2">Crédito</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {devLineas.map((d, i) => (
+                    <tr key={i} className="border-b border-border/50">
+                      <td className="py-1.5">
+                        <span className="font-medium">{d.nombre}</span>
+                        {d.codigo && <span className="text-muted-foreground font-mono ml-1 text-[10px]">{d.codigo}</span>}
+                      </td>
+                      <td className="py-1.5 text-muted-foreground">{d.cliente}</td>
+                      <td className="py-1.5 text-right font-semibold">{d.cantidad}</td>
+                      <td className="py-1.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium">
+                          {MOTIVO_LABELS[d.motivo] ?? d.motivo.replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="py-1.5">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent text-foreground font-medium">
+                          {ACCION_LABELS[d.accion] ?? d.accion}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-right font-semibold">
+                        {d.monto_credito > 0 ? <span className="text-destructive">${d.monto_credito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span> : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {totalDevCredito > 0 && (
+                  <tfoot>
+                    <tr className="border-t border-border font-bold text-[12px]">
+                      <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
+                      <td className="py-2 text-right text-destructive">${totalDevCredito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </>
           ) : <p className="text-sm text-muted-foreground">Sin devoluciones en este periodo</p>}
         </SectionCard>
 
