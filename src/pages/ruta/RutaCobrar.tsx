@@ -483,7 +483,7 @@ export default function RutaCobrar() {
               <span className="text-xs text-muted-foreground">
                 {cuentas.filter(c => c.montoAplicar > 0).length} cuentas
               </span>
-              <span className="text-sm font-bold text-foreground tabular-nums">Total: ${fmt(totalAplicado)}</span>
+              <span className="text-sm font-bold text-foreground tabular-nums">Total: {fmtM(totalAplicado)}</span>
             </div>
             <button
               onClick={() => setStep('pago')}
