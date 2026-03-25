@@ -11,6 +11,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 export default function RutaVentas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   const vendedorId = profile?.vendedor_id || profile?.id;

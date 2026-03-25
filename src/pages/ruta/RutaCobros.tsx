@@ -17,6 +17,7 @@ const METODO_ICONS: Record<string, any> = {
 export default function RutaCobros() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
+  const { fmt } = useCurrency();
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const { data: cobros } = useOfflineQuery('cobros', {
