@@ -620,7 +620,7 @@ export default function PuntoVentaPage() {
           <div className="border-t border-border px-4 py-3 space-y-2 bg-card">
             <div className="flex justify-between text-[12px]">
               <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground tabular-nums">${fmt(totals.subtotal)}</span>
+              <span className="font-medium text-foreground tabular-nums">{fmtM(totals.subtotal)}</span>
             </div>
             {totals.iva > 0 && (
               <div className="flex justify-between text-[12px]">
