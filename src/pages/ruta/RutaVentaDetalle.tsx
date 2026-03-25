@@ -1097,20 +1097,24 @@ export default function RutaVentaDetalle() {
           </h2>
           <div className="bg-card border border-border rounded-xl divide-y divide-border">
             {lineas.length === 0 && <p className="text-muted-foreground text-[12px] p-4 text-center">Sin productos</p>}
-            {lineas.map((l: any) => (
-              <div key={l.id} className="p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {l.cantidad} × $ {fmt(l.precio_unitario ?? 0)}
-                      {l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}
-                    </p>
+            {lineas.map((l: any) => {
+              const lineTotal = showTax ? (l.total ?? 0) : (l.subtotal ?? l.precio_unitario * l.cantidad ?? 0);
+              const lineUnit = showTax ? (l.precio_unitario ?? 0) : (l.precio_unitario ?? 0);
+              return (
+                <div key={l.id} className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-foreground truncate">{l.productos?.nombre ?? l.descripcion ?? '—'}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {l.cantidad} × $ {fmt(lineUnit)}
+                        {l.unidades?.abreviatura ? ` / ${l.unidades.abreviatura}` : ''}
+                      </p>
+                    </div>
+                    <p className="text-[14px] font-bold text-foreground shrink-0">$ {fmt(lineTotal)}</p>
                   </div>
-                  <p className="text-[14px] font-bold text-foreground shrink-0">$ {fmt(l.total ?? 0)}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
