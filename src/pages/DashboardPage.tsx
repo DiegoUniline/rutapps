@@ -16,6 +16,7 @@ import {
   useDashboardVentas, useDashboardCobros, useDashboardCompras,
   useDashboardGastos, useDashboardCartera, useDashboardStock,
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
+  useDashboardDevoluciones,
   type DateRange
 } from '@/hooks/useDashboardData';
 import {
