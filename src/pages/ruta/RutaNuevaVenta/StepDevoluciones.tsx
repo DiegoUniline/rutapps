@@ -9,10 +9,11 @@ interface Props {
   setSearchDevProducto: (v: string) => void;
   filteredDevProductos: any[] | undefined;
   devoluciones: DevolucionItem[];
-  addDevolucion: (p: any) => void;
+  addDevolucion: (p: any, defaults?: { motivo?: DevolucionItem['motivo']; accion?: AccionDevolucion }) => void;
   updateDevQty: (pid: string, qty: number) => void;
   updateDevMotivo: (pid: string, motivo: DevolucionItem['motivo']) => void;
   updateDevAccion: (pid: string, accion: AccionDevolucion) => void;
+  batchUpdateDevDefaults: (motivo: DevolucionItem['motivo'], accion: AccionDevolucion) => void;
   showReemplazoFor: string | null;
   setShowReemplazoFor: (v: string | null) => void;
   searchReemplazo: string;
