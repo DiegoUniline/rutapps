@@ -38,7 +38,7 @@ export default function RutaDashboard() {
     { key: 'stock', label: 'Stock abordo', icon: Package, color: 'bg-warning/10 text-warning', path: '/ruta/stock',
       stat: 'Consultar', sub: 'Productos cargados' },
     { key: 'cobros', label: 'Cobros de hoy', icon: Banknote, color: 'bg-success/10 text-success', path: '/ruta/cobros',
-      stat: `${stats.numCobros} cobros`, sub: `$ ${stats.cobrosHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+      stat: `${stats.numCobros} cobros`, sub: fmt(stats.cobrosHoy) },
   ];
 
   return (
