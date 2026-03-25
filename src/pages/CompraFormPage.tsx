@@ -500,7 +500,7 @@ export default function CompraFormPage() {
             </h1>
             {!isNew && (
               <p className="text-xs text-muted-foreground">
-                Pagado: $ {fmt(totalPagado)} / Saldo: $ {fmt(Math.max(0, totals.total - totalPagado))}
+                Pagado: {s}{fmt(totalPagado)} / Saldo: {s}{fmt(Math.max(0, totals.total - totalPagado))}
               </p>
             )}
           </div>
