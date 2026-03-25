@@ -478,7 +478,7 @@ export default function RutaVentaDetalle() {
     try {
       await new Promise(r => requestAnimationFrame(() => setTimeout(r, 300)));
       const el = container.firstElementChild as HTMLElement;
-      const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 1, backgroundColor: '#ffffff' });
+      const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
       const blob = await (await fetch(dataUrl)).blob();
       const file = new File([blob], `${venta?.folio ?? 'ticket'}.png`, { type: 'image/png' });
 
