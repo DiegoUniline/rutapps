@@ -437,7 +437,7 @@ export default function RutaCobrar() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {formatDate(c.fecha)} · {dias}d · Saldo: ${fmt(c.saldo_pendiente)}
+                        {formatDate(c.fecha)} · {dias}d · Saldo: {fmtM(c.saldo_pendiente)}
                       </p>
                     </div>
                   </div>
