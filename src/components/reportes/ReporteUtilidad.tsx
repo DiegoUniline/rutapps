@@ -40,7 +40,7 @@ export function ReporteUtilidad({ data }: { data: any }) {
             ))}
             <div className="border-t border-border pt-2 flex items-center justify-between text-[13px] font-bold">
               <span>Total gastos</span>
-              <span className="text-destructive">$ {fmt(totalGastos)}</span>
+              <span className="text-destructive">{s} {fmt(totalGastos)}</span>
             </div>
           </div>
         </div>
