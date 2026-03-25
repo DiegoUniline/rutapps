@@ -1333,6 +1333,35 @@ export default function RutaVentaDetalle() {
         </div>
       </div>
 
+      {/* WhatsApp Dialog */}
+      {showWADialog && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowWADialog(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-foreground">Enviar por WhatsApp</h3>
+              <button onClick={() => setShowWADialog(false)} className="p-1"><X className="h-4 w-4 text-muted-foreground" /></button>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] text-muted-foreground font-medium">Número de WhatsApp</label>
+              <input type="tel" inputMode="tel"
+                className="w-full bg-accent/40 rounded-lg px-3 py-2.5 text-[14px] text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40"
+                value={waPhone} placeholder="521234567890" onChange={e => setWaPhone(e.target.value)}
+              />
+              <p className="text-[10px] text-muted-foreground">Incluye código de país (ej: 52 para México)</p>
+            </div>
+            <div className="bg-accent/30 rounded-lg p-3">
+              <p className="text-[11px] text-muted-foreground mb-1">Se enviará:</p>
+              <p className="text-[12px] text-foreground font-medium">Ticket de venta {venta.folio} por {s}{fmt(venta.total ?? 0)}</p>
+            </div>
+            <button onClick={handleWhatsAppSend} disabled={sendingWA || !waPhone.trim()}
+              className="w-full bg-[#25D366] hover:bg-[#25D366]/90 text-white rounded-xl py-3 text-[14px] font-bold active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-40">
+              {sendingWA ? 'Enviando...' : <><MessageCircle className="h-4 w-4" /> Enviar</>}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="p-4 space-y-4 pb-28">
         <div className="bg-card border border-border rounded-xl p-4 text-center">
           <p className="text-[11px] text-muted-foreground mb-1">Total</p>
           <p className="text-[28px] font-bold text-foreground">{s}{fmt(venta.total ?? 0)}</p>
