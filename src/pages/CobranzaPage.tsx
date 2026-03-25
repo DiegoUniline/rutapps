@@ -202,7 +202,7 @@ export default function CobranzaPage() {
                     <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
                     <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
                     <TableCell className="text-center">{d.ventas}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">$ {fmt(d.total)}</TableCell>
+                    <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
                     <TableCell className="text-center">
                       <Button
                         size="sm"
