@@ -250,7 +250,7 @@ export default function ReporteEntregasPage() {
               <span className="text-[12px] font-semibold text-foreground">{fmtDate(group.fecha)}</span>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] text-muted-foreground">{group.entregas.length} entregas</span>
-                <span className="text-[12px] font-bold text-foreground">$ {group.total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+                <span className="text-[12px] font-bold text-foreground">{fmt(group.total)}</span>
               </div>
             </div>
             <Table>
