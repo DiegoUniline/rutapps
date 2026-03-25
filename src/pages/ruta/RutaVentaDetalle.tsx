@@ -547,7 +547,7 @@ export default function RutaVentaDetalle() {
     }
 
     // ── 2) Fallback: image PNG via share/download ──
-    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
+    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true, showTax });
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
