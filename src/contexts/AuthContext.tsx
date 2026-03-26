@@ -111,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setEmpresa(nextEmpresa);
     setRealEmpresa(nextEmpresa);
+    setGlobalTimezone(nextEmpresa?.zona_horaria);
   }, []);
 
   // Handle override empresa for super admin
