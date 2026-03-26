@@ -120,7 +120,7 @@ export default function RutaDescarga() {
     },
   });
 
-  const efectivoEsperado = (financials?.ventasContado ?? 0) + (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0);
+  const efectivoEsperado = (financials?.cobrosEfectivo ?? 0) - (financials?.gastosTotal ?? 0);
 
   // Check if already submitted for this carga OR for today's date
   const { data: existingDescarga } = useQuery({
