@@ -952,7 +952,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        vendedor_id: vendedorId,
+        vendedor_id: vendedorRealId,
         efectivo_esperado: efectivoEsperado,
         efectivo_entregado: efectivoReal,
         diferencia_efectivo: efectivoReal - efectivoEsperado,
