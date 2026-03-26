@@ -358,7 +358,7 @@ export default function CargaFormPage() {
                       <TableCell className="text-[11px] text-muted-foreground font-mono py-1.5">{p.codigo}</TableCell>
                       <TableCell className="text-[12px] py-1.5">{p.nombre}</TableCell>
                       <TableCell className="text-right text-[12px] py-1.5">{p.cantidad ?? 0}</TableCell>
-                      <TableCell className="text-right text-[12px] py-1.5">$ {(p.precio_principal ?? 0).toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-[12px] py-1.5">$ {(p.precio_principal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
                       <TableCell className="py-1.5">
                         <Button size="sm" variant="ghost" className="h-6 text-[11px] text-primary">+ Agregar</Button>
                       </TableCell>

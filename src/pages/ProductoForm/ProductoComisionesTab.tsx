@@ -66,7 +66,7 @@ function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; t
               else if (l.tipo_calculo === 'descuento_precio') precio = Math.max(pr * (1 - (l.descuento_pct ?? 0) / 100), l.precio_minimo ?? 0);
               else precio = Math.max(l.precio ?? 0, l.precio_minimo ?? 0);
               const comisionMonto = (precio * (l.comision_pct ?? 0)) / 100;
-              const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo ${s}${(l.precio ?? 0).toFixed(2)}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
+              const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo ${s}${(l.precio ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
               return (
                 <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                   <td className="py-1.5 px-3 text-xs"><span className="flex items-center gap-1">{l.lista_precios?.es_principal && <Star className="h-3 w-3 text-amber-500 fill-amber-500" />}{l.lista_precios?.nombre ?? l.tarifas?.nombre ?? '—'}</span></td>

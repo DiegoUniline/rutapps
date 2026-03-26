@@ -187,7 +187,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         `Venta: ${timbresCount} timbres (${timbresForm.paquetes} paq × $${timbresForm.precio_timbre}/timbre)`,
       ];
       if (timbresForm.descuento_pct > 0) notaParts.push(`Descuento: ${timbresForm.descuento_pct}%`);
-      notaParts.push(`Total: $${timbresTotal.toFixed(2)} MXN`);
+      notaParts.push(`Total: $${timbresTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} MXN`);
       if (timbresForm.notas) notaParts.push(timbresForm.notas);
 
       if (timbresForm.generar_factura && subscription?.stripe_customer_id) {
@@ -234,7 +234,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         );
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        toast.success(`Factura creada por ${timbresCount} timbres — $${timbresTotal.toFixed(2)} MXN`);
+        toast.success(`Factura creada por ${timbresCount} timbres — $${timbresTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} MXN`);
       } else {
         const { data, error } = await supabase.rpc('add_timbres', {
           p_empresa_id: empresaId,

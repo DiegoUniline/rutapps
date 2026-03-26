@@ -104,7 +104,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
                 </td>
                 <td className="py-1.5 px-2">
                   <input type="number" className="input-odoo text-xs w-full text-right" value={monto} onChange={e => setMonto(e.target.value)}
-                    min="0" step="0.01" placeholder={saldoPendiente.toFixed(2)} autoFocus
+                    min="0" step="0.01" placeholder={saldoPendiente.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} autoFocus
                     onKeyDown={e => { if (e.key === 'Enter') handleSubmit(); if (e.key === 'Escape') setShowForm(false); }} />
                 </td>
                 <td className="py-1.5 px-2">
@@ -143,7 +143,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
             <div>
               <label className="text-[10px] text-muted-foreground">Monto</label>
               <input type="number" className="input-odoo text-xs w-full text-right" value={monto} onChange={e => setMonto(e.target.value)}
-                min="0" step="0.01" placeholder={saldoPendiente.toFixed(2)} autoFocus />
+                min="0" step="0.01" placeholder={saldoPendiente.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} autoFocus />
             </div>
           </div>
           <input className="input-odoo text-xs w-full" value={referencia} onChange={e => setReferencia(e.target.value)} placeholder="Referencia..." />

@@ -360,17 +360,17 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                 <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {p.precio_con_imp.toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{p.regla}</td>
                   <td className="py-1.5 px-3 text-center">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
                       {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
                     </span>
                   </td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
                   <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
                 </tr>
@@ -632,7 +632,7 @@ export default function TarifaFormPage() {
   const getCalculoDisplay = (l: TarifaLinea) => {
     if (l.tipo_calculo === 'margen_costo') return `+${l.margen_pct}% s/costo`;
     if (l.tipo_calculo === 'descuento_precio') return `-${l.descuento_pct}% s/precio`;
-    return `$ ${l.precio.toFixed(2)}`;
+    return `$ ${l.precio.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
   };
 
   const getAplicaBadge = (aplica: AplicaATarifa) => {
@@ -850,7 +850,7 @@ export default function TarifaFormPage() {
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('precio_min')}>
                               {ec('precio_min') ? (
                                 <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio_minimo || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
-                              ) : <span className="font-mono text-xs">$ {l.precio_minimo.toFixed(2)}</span>}
+                              ) : <span className="font-mono text-xs">$ {l.precio_minimo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>}
                             </td>
                             {/* Redondeo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('redondeo')}>

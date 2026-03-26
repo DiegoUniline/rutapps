@@ -171,8 +171,8 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
                 <td style={{ fontFamily: 'monospace', fontSize: '11px' }}>{l.productos?.codigo ?? '—'}</td>
                 <td style={{ fontWeight: 500 }}>{l.productos?.nombre ?? '—'}</td>
                 <td className="text-center">{l.cantidad} {l.unidades?.abreviatura ?? ''}</td>
-                <td className="text-right">$ {(l.precio_unitario ?? 0).toFixed(2)}</td>
-                <td className="text-right">$ {((l.cantidad ?? 0) * (l.precio_unitario ?? 0)).toFixed(2)}</td>
+                <td className="text-right">$ {(l.precio_unitario ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td className="text-right">$ {((l.cantidad ?? 0) * (l.precio_unitario ?? 0)).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
               </tr>
             ))}
           </tbody>
@@ -180,10 +180,10 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
 
         <div className="totals">
           <div className="totals-box">
-            <div className="total-row"><span>Subtotal</span><span>$ {(entrega.subtotal ?? 0).toFixed(2)}</span></div>
-            {(entrega.iva_total ?? 0) > 0 && <div className="total-row"><span>IVA</span><span>$ {(entrega.iva_total ?? 0).toFixed(2)}</span></div>}
-            {(entrega.ieps_total ?? 0) > 0 && <div className="total-row"><span>IEPS</span><span>$ {(entrega.ieps_total ?? 0).toFixed(2)}</span></div>}
-            <div className="total-row grand"><span>Total</span><span>$ {(entrega.total ?? 0).toFixed(2)}</span></div>
+            <div className="total-row"><span>Subtotal</span><span>$ {(entrega.subtotal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+            {(entrega.iva_total ?? 0) > 0 && <div className="total-row"><span>IVA</span><span>$ {(entrega.iva_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
+            {(entrega.ieps_total ?? 0) > 0 && <div className="total-row"><span>IEPS</span><span>$ {(entrega.ieps_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
+            <div className="total-row grand"><span>Total</span><span>$ {(entrega.total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
           </div>
         </div>
 
@@ -447,8 +447,8 @@ export default function EntregasPage() {
                                     <TableCell className="text-[11px] font-mono text-muted-foreground py-1.5">{l.productos?.codigo ?? '—'}</TableCell>
                                     <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? '—'}</TableCell>
                                     <TableCell className="text-center text-[12px] py-1.5">{l.cantidad} {l.unidades?.abreviatura ?? ''}</TableCell>
-                                    <TableCell className="text-right text-[12px] py-1.5">$ {(l.precio_unitario ?? 0).toFixed(2)}</TableCell>
-                                    <TableCell className="text-right text-[12px] font-medium py-1.5">$ {((l.cantidad ?? 0) * (l.precio_unitario ?? 0)).toFixed(2)}</TableCell>
+                                    <TableCell className="text-right text-[12px] py-1.5">$ {(l.precio_unitario ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                    <TableCell className="text-right text-[12px] font-medium py-1.5">$ {((l.cantidad ?? 0) * (l.precio_unitario ?? 0)).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -459,23 +459,23 @@ export default function EntregasPage() {
                               <div className="w-64 space-y-1">
                                 <div className="flex justify-between text-[12px] text-muted-foreground">
                                   <span>Subtotal</span>
-                                  <span>$ {(e.subtotal ?? 0).toFixed(2)}</span>
+                                  <span>$ {(e.subtotal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                 </div>
                                 {(e.iva_total ?? 0) > 0 && (
                                   <div className="flex justify-between text-[12px] text-muted-foreground">
                                     <span>IVA</span>
-                                    <span>$ {(e.iva_total ?? 0).toFixed(2)}</span>
+                                    <span>$ {(e.iva_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                   </div>
                                 )}
                                 {(e.ieps_total ?? 0) > 0 && (
                                   <div className="flex justify-between text-[12px] text-muted-foreground">
                                     <span>IEPS</span>
-                                    <span>$ {(e.ieps_total ?? 0).toFixed(2)}</span>
+                                    <span>$ {(e.ieps_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                   </div>
                                 )}
                                 <div className="flex justify-between text-[14px] font-bold text-foreground border-t border-border pt-1.5">
                                   <span>Total</span>
-                                  <span>$ {(e.total ?? 0).toFixed(2)}</span>
+                                  <span>$ {(e.total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                 </div>
                               </div>
                             </div>

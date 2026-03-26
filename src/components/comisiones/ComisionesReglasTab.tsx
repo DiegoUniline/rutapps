@@ -103,7 +103,7 @@ export default function ComisionesReglasTab() {
   };
 
   const tipoLabel = (r: any) => {
-    if (r.tipo_calculo === 'precio_fijo') return `Fijo $${r.precio?.toFixed(2)}`;
+    if (r.tipo_calculo === 'precio_fijo') return `Fijo $${r.precio?.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     if (r.tipo_calculo === 'margen_costo') return `Margen ${r.margen_pct}%`;
     if (r.tipo_calculo === 'descuento_precio') return `Desc. ${r.descuento_pct}%`;
     return r.tipo_calculo;
@@ -156,8 +156,8 @@ export default function ComisionesReglasTab() {
                       </td>
                       <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel(r)}</td>
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{r.comision_pct}%</td>
-                      <td className="py-1.5 px-3 text-right font-mono text-xs text-muted-foreground">$ {exVenta.toFixed(2)}</td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {comisionEj.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs text-muted-foreground">$ {exVenta.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {comisionEj.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                   );
                 })}

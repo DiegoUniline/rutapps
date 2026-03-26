@@ -357,10 +357,10 @@ export default function ProductoFormPage() {
             </div>
             {!(form as any).usa_listas_precio && (
               <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
-                onChange={v => set('precio_principal', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+                onChange={v => set('precio_principal', +v)} format={v => `$ ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
             )}
             <OdooField label="Costo" value={form.costo} type="number" teal help
-              onChange={v => set('costo', +v)} format={v => `$ ${(v ?? 0).toFixed(2)}`} />
+              onChange={v => set('costo', +v)} format={v => `$ ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
             <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
               options={[
                 { value: 'manual', label: 'Manual' },
@@ -493,7 +493,7 @@ export default function ProductoFormPage() {
                       <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
                         {(() => {
                           const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, ieps_tipo: (form.ieps_tipo as any) || 'porcentaje', incluye_impuestos: true });
-                          return <>Costo neto: <strong>$ {t.precio_neto.toFixed(2)}</strong> + IEPS: $ {t.ieps_monto.toFixed(2)} + IVA: $ {t.iva_monto.toFixed(2)}</>;
+                          return <>Costo neto: <strong>$ {t.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong> + IEPS: $ {t.ieps_monto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + IVA: $ {t.iva_monto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</>;
                         })()}
                       </div>
                     )}
@@ -548,7 +548,7 @@ export default function ProductoFormPage() {
                                     else if (l.tipo_calculo === 'descuento_precio') precio = Math.max(pr * (1 - (l.descuento_pct ?? 0) / 100), l.precio_minimo ?? 0);
                                     else precio = Math.max(l.precio ?? 0, l.precio_minimo ?? 0);
                                     const comisionMonto = (precio * (l.comision_pct ?? 0)) / 100;
-                                    const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo $${(l.precio ?? 0).toFixed(2)}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
+                                    const tipoLabel = l.tipo_calculo === 'precio_fijo' ? `Fijo $${(l.precio ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : l.tipo_calculo === 'margen_costo' ? `Margen ${l.margen_pct}%` : `Desc. ${l.descuento_pct}%`;
                                     return (
                                       <tr key={l.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                                         <td className="py-1.5 px-3 text-xs">
@@ -560,9 +560,9 @@ export default function ProductoFormPage() {
                                           ) : l.tarifas?.nombre ?? '—'}
                                         </td>
                                         <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel}</td>
-                                        <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toFixed(2)}</td>
+                                        <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {precio.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                         <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{l.comision_pct}%</td>
-                                        <td className="py-1.5 px-3 text-right font-mono font-semibold text-green-600">$ {comisionMonto.toFixed(2)}</td>
+                                        <td className="py-1.5 px-3 text-right font-mono font-semibold text-green-600">$ {comisionMonto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                       </tr>
                                     );
                                   })}
