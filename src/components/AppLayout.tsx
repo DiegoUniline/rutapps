@@ -450,6 +450,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </SheetContent>
             </Sheet>
+            <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-6 w-6 rounded object-contain" />
             <span className="text-[16px] font-black text-primary tracking-tight">Rutapp</span>
           </div>
           <div className="flex items-center gap-1">
