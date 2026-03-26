@@ -13,7 +13,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import ModalSelect from '@/components/ModalSelect';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useEntregasList, useVendedoresList, useAsignarEntrega, useCargarEntrega, useAsignarYCargar } from '@/hooks/useEntregas';
-import { fmtDate, cn } from '@/lib/utils';
+import { fmtDate, cn , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 
 const STATUS_BADGE: Record<string, { label: string; variant: 'secondary' | 'default' | 'outline' | 'destructive' }> = {
@@ -111,7 +111,7 @@ export default function EntregaListPage() {
       if (selectedEntregas.length === 0) throw new Error('Selecciona al menos una entrega');
       if (!almacenId) throw new Error('Selecciona un almacén origen');
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
 
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
@@ -206,7 +206,7 @@ export default function EntregaListPage() {
   const bulkAsignarMut = useMutation({
     mutationFn: async ({ cargarTambien }: { cargarTambien: boolean }) => {
       if (!vendedorRutaId) throw new Error('Selecciona un repartidor');
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
         await supabase.from('entregas').update({
@@ -235,7 +235,7 @@ export default function EntregaListPage() {
 
   const bulkCargarMut = useMutation({
     mutationFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;

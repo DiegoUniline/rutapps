@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { generarAuditoriaPdf } from '@/lib/auditoriaPdf';
@@ -166,7 +166,7 @@ export default function AuditoriaResultadosPage() {
 
   const aprobarAuditoria = useMutation({
     mutationFn: async () => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const batchId = crypto.randomUUID();
       const almacenIdAuditoria = auditoria?.almacen_id ?? null;
       const adjustedProductIds: string[] = [];

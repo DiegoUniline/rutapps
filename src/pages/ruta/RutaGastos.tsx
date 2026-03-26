@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +7,7 @@ import { toast } from 'sonner';
 
 export default function RutaGastos() {
   const { empresa, user } = useAuth();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
   const [monto, setMonto] = useState('');

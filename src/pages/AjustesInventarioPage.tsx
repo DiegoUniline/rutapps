@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAlmacenes } from '@/hooks/useData';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate , todayLocal } from '@/lib/utils';
 import { toast } from 'sonner';
 import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
@@ -69,7 +69,7 @@ export default function AjustesInventarioPage() {
         telefono: empresa?.telefono,
       },
       ajuste: {
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: todayLocal(),
         motivo,
         almacen: almacenNombre,
         responsable: profile?.nombre,
@@ -248,7 +248,7 @@ export default function AjustesInventarioPage() {
     ws['!cols'] = [{ wch: 14 }, { wch: 35 }, { wch: 8 }, { wch: 14 }, { wch: 14 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Ajuste');
-    XLSX.writeFile(wb, `plantilla-ajuste-${almacenNombre}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.writeFile(wb, `plantilla-ajuste-${almacenNombre}-${todayLocal()}.xlsx`);
     toast.success('Plantilla descargada');
   };
 
@@ -331,7 +331,7 @@ export default function AjustesInventarioPage() {
     if (!motivo.trim()) { toast.error('Indica un motivo para el ajuste'); return; }
     setApplying(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const batchId = crypto.randomUUID();
 
       for (const row of changedRows) {
@@ -393,7 +393,7 @@ export default function AjustesInventarioPage() {
     if (!almacenId) { toast.error('Selecciona un almacén primero'); return; }
     setResetting(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const allProds = productos ?? [];
       const nonZero = allProds.filter((p: any) => (p.cantidad ?? 0) !== 0);
       const batchId = crypto.randomUUID();
@@ -774,7 +774,7 @@ export default function AjustesInventarioPage() {
         open={showPdfModal}
         onClose={() => { setShowPdfModal(false); setPdfBlob(null); }}
         pdfBlob={pdfBlob}
-        fileName={`ajuste-inventario-${new Date().toISOString().slice(0, 10)}.pdf`}
+        fileName={`ajuste-inventario-${todayLocal()}.pdf`}
         empresaId={empresa?.id ?? ''}
         defaultPhone=""
         caption="Ajuste de inventario"

@@ -5,7 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
@@ -15,7 +15,7 @@ const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', '
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
 // Persist visited clients per day in localStorage
-const VISITED_KEY = () => `rutapp_visited_${new Date().toISOString().slice(0, 10)}`;
+const VISITED_KEY = () => `rutapp_visited_${todayLocal()}`;
 
 function getVisitedSet(): Set<string> {
   try {

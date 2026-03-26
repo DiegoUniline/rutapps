@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -123,7 +124,7 @@ export function useSurtirLinea() {
       } as any).eq('id', lineaId);
 
       // 4. Log movimiento (salida de almacén)
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       await supabase.from('movimientos_inventario').insert({
         empresa_id: empresaId,
         tipo: 'salida',
@@ -157,7 +158,7 @@ export function useSurtirTodo() {
       empresaId: string;
       almacenDefaultId?: string;
     }) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
       const pendientes = lineas.filter(l => !l.hecho);
       
       // First validate all stock
@@ -253,7 +254,7 @@ export function useCargarEntrega() {
         .select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id')
         .eq('entrega_id', entregaId);
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
 
       for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
         // Insert into stock_camion

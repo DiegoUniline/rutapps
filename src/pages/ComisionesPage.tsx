@@ -9,7 +9,7 @@ import { OdooPagination } from '@/components/OdooPagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 import { Check, DollarSign } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
@@ -26,7 +26,7 @@ export default function ComisionesPage() {
   const [page, setPage] = useState(0);
 
   const [payVendedor, setPayVendedor] = useState<string>('');
-  const [payFechaCorte, setPayFechaCorte] = useState(new Date().toISOString().slice(0, 10));
+  const [payFechaCorte, setPayFechaCorte] = useState(todayLocal());
   const [showPayForm, setShowPayForm] = useState(false);
 
   const { data: vendedores } = useVendedores();

@@ -11,7 +11,7 @@ import { PackageCheck, CheckCircle2, XCircle, Clock, Eye, AlertTriangle, DollarS
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidacionPdf';
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
@@ -821,8 +821,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const [vendedorId, setVendedorId] = useState<string>('');
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
   const [notas, setNotas] = useState('');
-  const [fechaInicio, setFechaInicio] = useState(() => new Date().toISOString().slice(0, 10));
-  const [fechaFin, setFechaFin] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fechaInicio, setFechaInicio] = useState(() => todayLocal());
+  const [fechaFin, setFechaFin] = useState(() => todayLocal());
 
   // All active users
   const { data: usuarios } = useQuery({

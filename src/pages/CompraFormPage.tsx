@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -125,7 +125,7 @@ export default function CompraFormPage() {
   const [form, setForm] = useState<Record<string, any>>({
     status: 'borrador',
     condicion_pago: 'contado',
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: todayLocal(),
     dias_credito: 0,
     subtotal: 0, iva_total: 0, total: 0, saldo_pendiente: 0,
   });
@@ -133,7 +133,7 @@ export default function CompraFormPage() {
   const [dirty, setDirty] = useState(false);
   const [showPago, setShowPago] = useState(false);
   const [addingPago, setAddingPago] = useState(false);
-  const [newPago, setNewPago] = useState({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
+  const [newPago, setNewPago] = useState({ fecha: todayLocal(), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
   const { requestPin, PinDialog } = usePinAuth();
 
@@ -322,7 +322,7 @@ export default function CompraFormPage() {
       // When marking as "recibida", add stock to almacén and log movements
       if (newStatus === 'recibida') {
         const almacenId = form.almacen_id;
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
         const validLines = lineas.filter(l => l.producto_id);
 
         for (const l of validLines) {
@@ -377,7 +377,7 @@ export default function CompraFormPage() {
       // If stock was already added (recibida or pagada), reverse it
       if (['recibida', 'pagada'].includes(form.status)) {
         const validLines = lineas.filter(l => l.producto_id);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
 
         // Fetch all product quantities in parallel
         const prodResults = await Promise.all(
@@ -1004,7 +1004,7 @@ export default function CompraFormPage() {
                 {!addingPago && form.status !== 'pagada' && form.status !== 'borrador' && saldoActual > 0 && (
                   <button
                     onClick={() => {
-                      setNewPago({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: saldoActual });
+                      setNewPago({ fecha: todayLocal(), metodo_pago: 'transferencia', referencia: '', notas: '', monto: saldoActual });
                       setAddingPago(true);
                     }}
                     className="btn-odoo-secondary text-xs gap-1"

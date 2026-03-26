@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
 
 const TIPO_LABELS: Record<string, string> = {
@@ -73,7 +73,7 @@ export default function TraspasoFormPage() {
       },
       traspaso: {
         folio: folio || 'Nuevo',
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: todayLocal(),
         status,
         tipo,
         notas: notas || undefined,
@@ -387,7 +387,7 @@ export default function TraspasoFormPage() {
       if (!traspaso) throw new Error('Traspaso no encontrado');
 
       const { data: tLineas } = await supabase.from('traspaso_lineas').select('*').eq('traspaso_id', traspasoId);
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayLocal();
 
       for (const l of tLineas ?? []) {
         // --- Deduct from origin ---
@@ -511,7 +511,7 @@ export default function TraspasoFormPage() {
       // Only reverse stock if it was confirmed (stock was already moved)
       if (traspaso.status === 'confirmado') {
         const { data: tLineas } = await supabase.from('traspaso_lineas').select('*').eq('traspaso_id', traspasoId);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
 
         for (const l of tLineas ?? []) {
           // Reverse: add back to origin

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pendiente: { label: 'Pendiente', variant: 'outline' },
@@ -31,7 +31,7 @@ function KpiCard({ icon: Icon, label, value, color }: { icon: React.ElementType;
 
 export default function LogisticaDashboardPage() {
   const navigate = useNavigate();
-  const [fecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha] = useState(() => todayLocal());
   const { data: kpis, isLoading: loadingKpis } = useLogisticaKpis(fecha);
   const { data: cargas, isLoading: loadingCargas } = useCargasDia(fecha);
 

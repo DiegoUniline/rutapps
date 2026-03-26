@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Banknote, Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface Pago {
@@ -88,7 +88,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
             {saldoPendiente > 0.01 && showForm && (
               <tr className="border-b border-table-border bg-card">
                 <td className="py-1.5 px-2">
-                  <input type="date" className="input-odoo text-xs w-full" defaultValue={new Date().toISOString().slice(0, 10)} readOnly />
+                  <input type="date" className="input-odoo text-xs w-full" defaultValue={todayLocal()} readOnly />
                 </td>
                 <td className="py-1.5 px-2">
                   <select className="input-odoo text-xs w-full" value={metodo} onChange={e => setMetodo(e.target.value)}>

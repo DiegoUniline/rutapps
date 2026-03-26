@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Users, Package, Banknote, TrendingUp, MapPinned, RotateCcw, PackageCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,7 +9,7 @@ export default function RutaDashboard() {
   const navigate = useNavigate();
   const { profile, empresa, user } = useAuth();
   const { fmt } = useCurrency();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const vendedorId = profile?.vendedor_id || profile?.id;
 
   const { data: ventas } = useOfflineQuery('ventas', { empresa_id: empresa?.id, vendedor_id: vendedorId }, { enabled: !!empresa?.id && !!vendedorId });
