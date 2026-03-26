@@ -707,7 +707,7 @@ export default function VentaFormPage() {
               </div>
               {/* Saldo info */}
               {!isNew && form.status !== 'borrador' && (
-                <div className="bg-muted/40 border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
+                <div className="bg-card border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
                   <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
                   <div className="flex justify-between border-t border-border pt-0.5"><span className="font-medium">Saldo</span><span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
@@ -1062,7 +1062,7 @@ export default function VentaFormPage() {
                                         setLineas(prev => { const next = [...prev]; (next[idx] as any).impuestos_label = taxes.join(', '); return next; });
                                       }}
                                       className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
-                                        Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                        Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60"
                                       )}
                                       title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}
                                     >
@@ -1084,7 +1084,7 @@ export default function VentaFormPage() {
                                           setLineas(prev => { const next = [...prev]; (next[idx] as any).impuestos_label = taxes.join(', '); return next; });
                                         }}
                                         className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer",
-                                          Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60"
+                                          Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60"
                                         )}
                                       >
                                         IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}

@@ -363,21 +363,21 @@ export default function AuditoriaResultadosPage() {
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-muted/50 rounded-lg p-2 text-center">
+          <div className="bg-card rounded-lg p-2 text-center">
             <div className="flex items-center justify-center gap-1 text-destructive">
               <TrendingDown className="h-3.5 w-3.5" />
               <span className="text-lg font-bold">{stats.faltantes.length}</span>
             </div>
             <p className="text-[10px] text-muted-foreground">Faltantes</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-2 text-center">
+          <div className="bg-card rounded-lg p-2 text-center">
             <div className="flex items-center justify-center gap-1 text-green-600">
               <TrendingUp className="h-3.5 w-3.5" />
               <span className="text-lg font-bold">{stats.excedentes.length}</span>
             </div>
             <p className="text-[10px] text-muted-foreground">Excedentes</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-2 text-center">
+          <div className="bg-card rounded-lg p-2 text-center">
             <div className="flex items-center justify-center gap-1 text-muted-foreground">
               <Equal className="h-3.5 w-3.5" />
               <span className="text-lg font-bold">{stats.iguales.length}</span>
@@ -451,7 +451,7 @@ export default function AuditoriaResultadosPage() {
                         <div className="border rounded-lg overflow-hidden">
                           <table className="w-full text-sm">
                             <thead>
-                              <tr className="text-xs text-muted-foreground border-b bg-muted/30">
+                              <tr className="text-xs text-muted-foreground border-b bg-card">
                                 <th className="text-left py-1.5 px-2 font-medium">#</th>
                                 <th className="text-left py-1.5 px-2 font-medium">Fecha / Hora</th>
                                 <th className="text-right py-1.5 px-2 font-medium">Cantidad</th>

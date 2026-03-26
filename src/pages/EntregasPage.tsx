@@ -324,7 +324,7 @@ export default function EntregasPage() {
       {/* Grouped by vendedor */}
       {grouped.map(group => (
         <div key={group.vendedorId} className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-2 bg-muted/40 border-b border-border flex items-center gap-2">
+          <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
             <Truck className="h-4 w-4 text-primary" />
             <span className="text-[13px] font-semibold text-foreground">{group.vendedor}</span>
             <Badge variant="secondary" className="text-[10px] ml-auto">
@@ -408,7 +408,7 @@ export default function EntregasPage() {
                     {/* Expanded detail */}
                     {isExpanded && (
                       <TableRow>
-                        <TableCell colSpan={9} className="p-0 bg-muted/20">
+                        <TableCell colSpan={9} className="p-0 bg-card/50">
                           <div className="px-8 py-4">
                             {/* Client info */}
                             <div className="grid grid-cols-3 gap-4 mb-4">

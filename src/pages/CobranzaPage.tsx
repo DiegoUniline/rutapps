@@ -186,7 +186,7 @@ export default function CobranzaPage() {
       </TableBody>
       {items.length > 0 && (
         <tfoot>
-          <TableRow className="bg-muted/30 border-t border-border font-semibold">
+          <TableRow className="bg-card border-t border-border font-semibold">
             <TableCell colSpan={5} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
             <TableCell className="text-right text-[12px] text-success font-bold">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
             <TableCell />

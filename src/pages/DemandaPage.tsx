@@ -352,7 +352,7 @@ export default function DemandaPage() {
             <div className="border border-border rounded-md max-h-48 overflow-y-auto">
               <table className="w-full text-[12px]">
                 <thead>
-                  <tr className="border-b bg-muted/30">
+                  <tr className="border-b bg-card">
                     <th className="px-3 py-1.5 text-left text-muted-foreground font-medium">Folio</th>
                     <th className="px-3 py-1.5 text-left text-muted-foreground font-medium">Cliente</th>
                     <th className="px-3 py-1.5 text-right text-muted-foreground font-medium">Líneas pend.</th>

@@ -55,7 +55,7 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center gap-3 text-xs">
-        <span className="bg-muted px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>
+        <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>
         {totalCredito > 0 && (
           <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: ${fmt(totalCredito)}</span>
         )}
@@ -81,7 +81,7 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
               </td>
               <td className="py-2 text-right font-semibold">{l.cantidad}</td>
               <td className="py-2">
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium capitalize">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium capitalize">
                   {MOTIVO_LABELS[l.motivo] ?? l.motivo.replace(/_/g, ' ')}
                 </span>
               </td>

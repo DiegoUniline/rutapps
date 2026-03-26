@@ -487,7 +487,7 @@ export default function MiSuscripcionPage() {
 
               {selectedPlan && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-4 bg-muted/50 rounded-xl p-4">
+                  <div className="flex items-center gap-4 bg-card rounded-xl p-4">
                     <span className="text-sm text-muted-foreground shrink-0">Usuarios:</span>
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => Math.max(3, q - 1))} disabled={planQty <= 3}>
@@ -541,7 +541,7 @@ export default function MiSuscripcionPage() {
                 <br />Tu saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
               </p>
 
-              <div className="flex items-center gap-4 bg-muted/50 rounded-xl p-4">
+              <div className="flex items-center gap-4 bg-card rounded-xl p-4">
                 <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
@@ -591,7 +591,7 @@ export default function MiSuscripcionPage() {
                     </thead>
                     <tbody>
                       {facturas.map(f => (
-                        <tr key={f.id} className="border-b border-border/50 hover:bg-muted/30">
+                        <tr key={f.id} className="border-b border-border/50 hover:bg-card">
                           <td className="py-2.5 px-2">
                             <div className="flex items-center gap-1.5">
                               <FileText className="h-3.5 w-3.5 text-muted-foreground" />
@@ -655,7 +655,7 @@ export default function MiSuscripcionPage() {
                 <>
                   <div className="space-y-3">
                     {cart.map(item => (
-                      <div key={item.type} className="flex items-start justify-between gap-2 bg-muted/50 rounded-lg p-3">
+                      <div key={item.type} className="flex items-start justify-between gap-2 bg-card rounded-lg p-3">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-foreground">{item.label}</div>
                           <div className="text-[11px] text-muted-foreground">{item.detail}</div>

@@ -43,7 +43,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
   return (
     <div className="p-3 sm:p-4 space-y-3">
       {/* Summary */}
-      <div className={cn("bg-muted/40 border border-border rounded-md p-3 space-y-1 text-[13px]", isMobile ? "w-full" : "w-72")}>
+      <div className={cn("bg-card border border-border rounded-md p-3 space-y-1 text-[13px]", isMobile ? "w-full" : "w-72")}>
         <div className="flex justify-between"><span className="text-muted-foreground">Total pagado</span><span className="font-medium">{fmt(totalPagado)}</span></div>
         <div className="flex justify-between border-t border-border pt-1">
           <span className="font-medium">Saldo pendiente</span>
@@ -86,7 +86,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
               </tr>
             ))}
             {saldoPendiente > 0.01 && showForm && (
-              <tr className="border-b border-table-border bg-muted/30">
+              <tr className="border-b border-table-border bg-card">
                 <td className="py-1.5 px-2">
                   <input type="date" className="input-odoo text-xs w-full" defaultValue={new Date().toISOString().slice(0, 10)} readOnly />
                 </td>
@@ -129,7 +129,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
 
       {/* Mobile inline form */}
       {isMobile && saldoPendiente > 0.01 && showForm && (
-        <div className="border border-border rounded-lg p-3 bg-muted/20 space-y-2">
+        <div className="border border-border rounded-lg p-3 bg-card/50 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="text-[10px] text-muted-foreground">Método</label>

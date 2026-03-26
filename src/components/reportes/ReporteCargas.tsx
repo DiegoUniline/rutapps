@@ -43,7 +43,7 @@ export function ReporteCargas({ data }: { data: any }) {
               const isOpen = expanded === c.id;
               return (
                 <>
-                  <tr key={c.id} className="border-b border-border/50 cursor-pointer hover:bg-muted/30" onClick={() => setExpanded(isOpen ? null : c.id)}>
+                  <tr key={c.id} className="border-b border-border/50 cursor-pointer hover:bg-card" onClick={() => setExpanded(isOpen ? null : c.id)}>
                     <td className="py-2 px-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</td>
                     <td className="py-2 px-3">{c.fecha}</td>
                     <td className="py-2 px-3 font-medium">{c.vendedor}</td>
@@ -54,7 +54,7 @@ export function ReporteCargas({ data }: { data: any }) {
                   {isOpen && c.lineas.length > 0 && (
                     <tr key={`${c.id}-d`}>
                       <td colSpan={6} className="p-0">
-                        <div className="bg-muted/20 px-6 py-2">
+                        <div className="bg-card/50 px-6 py-2">
                           <table className="w-full text-[12px]">
                             <thead><tr className="text-muted-foreground"><th className="py-1 text-left">Código</th><th className="py-1 text-left">Producto</th><th className="py-1 text-right">Cargado</th><th className="py-1 text-right">Vendido</th><th className="py-1 text-right">Devuelto</th></tr></thead>
                             <tbody>

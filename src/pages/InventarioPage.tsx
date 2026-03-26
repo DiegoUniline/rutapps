@@ -371,8 +371,8 @@ export default function InventarioPage() {
                 </TableRow>
               ))}
               {filteredProducts && filteredProducts.length > 0 && (
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={3} className="sticky left-0 bg-muted/50">Totales</TableCell>
+                <TableRow className="bg-card font-bold">
+                  <TableCell colSpan={3} className="sticky left-0 bg-card">Totales</TableCell>
                   <TableCell className="text-center">{fmtNum(data.totales.stockAlmacen)}</TableCell>
                   {(data.rutas ?? []).map(r => {
                     const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
@@ -430,8 +430,8 @@ export default function InventarioPage() {
                 );
               })}
               {filteredProducts && filteredProducts.length > 0 && (
-                <TableRow className="bg-muted/50 font-bold">
-                  <TableCell colSpan={2} className="sticky left-0 bg-muted/50">Totales</TableCell>
+                <TableRow className="bg-card font-bold">
+                  <TableCell colSpan={2} className="sticky left-0 bg-card">Totales</TableCell>
                   {(data.almacenes ?? []).map(a => {
                     const total = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
                     return <TableCell key={a.id} className="text-center">{fmtNum(total)}</TableCell>;
@@ -544,15 +544,15 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
         </div>
 
         <div className="grid grid-cols-4 gap-3 mt-4">
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <div className="bg-card rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Cargado</p>
             <p className="text-lg font-bold text-foreground">{fmtNum(totalCargado)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <div className="bg-card rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Entregado</p>
             <p className="text-lg font-bold text-success">{fmtNum(totalEntregado)}</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <div className="bg-card rounded-lg p-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Devuelto</p>
             <p className="text-lg font-bold text-warning">{fmtNum(totalDevuelto)}</p>
           </div>
@@ -602,7 +602,7 @@ function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
               </TableRow>
             ))}
             {lineas.length > 0 && (
-              <TableRow className="bg-muted/50 font-bold">
+              <TableRow className="bg-card font-bold">
                 <TableCell colSpan={2}>Totales</TableCell>
                  <TableCell className="text-center">{fmtNum(totalCargado)}</TableCell>
                 <TableCell className="text-center text-success">{fmtNum(totalEntregado)}</TableCell>

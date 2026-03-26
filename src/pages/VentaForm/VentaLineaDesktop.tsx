@@ -97,13 +97,13 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         {isEmpty ? '' : (
           <div className="inline-flex flex-wrap gap-1 justify-center">
             <button type="button" disabled={readOnly} onClick={handleIvaToggle}
-              className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60")}
+              className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.iva_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}
               title={Number(l.iva_pct) > 0 ? "Clic para quitar IVA" : "Clic para aplicar IVA"}>
               IVA {Number(l.iva_pct) > 0 ? `${l.iva_pct}%` : ''}
             </button>
             {(Number(l.ieps_pct) > 0 || (impuestosLabel).includes('IEPS')) && (
               <button type="button" disabled={readOnly} onClick={handleIepsToggle}
-                className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-muted/50 text-muted-foreground line-through opacity-60")}>
+                className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium transition-colors cursor-pointer", Number(l.ieps_pct) > 0 ? "bg-accent text-accent-foreground" : "bg-card text-muted-foreground line-through opacity-60")}>
                 IEPS {Number(l.ieps_pct) > 0 ? `${l.ieps_pct}%` : ''}
               </button>
             )}

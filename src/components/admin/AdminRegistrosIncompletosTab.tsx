@@ -279,7 +279,7 @@ export default function AdminRegistrosIncompletosTab() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-3">
+            <div className="flex items-center gap-2 bg-card rounded-lg p-3">
               <Phone className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{selectedPhone}</span>
             </div>

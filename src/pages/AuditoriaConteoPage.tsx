@@ -301,7 +301,7 @@ export default function AuditoriaConteoPage() {
           </Badge>
         </div>
 
-        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
           <div
             className="h-full bg-primary rounded-full transition-all duration-300"
             style={{ width: `${(contadas / Math.max(totalLineas, 1)) * 100}%` }}
@@ -381,8 +381,8 @@ export default function AuditoriaConteoPage() {
                       key={line.id}
                       className={cn(
                         'cursor-pointer',
-                        line.cerrada && 'opacity-60 bg-muted/20',
-                        !line.cerrada && total > 0 && 'bg-muted/30',
+                        line.cerrada && 'opacity-60 bg-card/50',
+                        !line.cerrada && total > 0 && 'bg-card',
                       )}
                       onClick={() => setExpandedLine(isExpanded ? null : line.id)}
                     >

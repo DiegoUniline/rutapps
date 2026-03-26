@@ -166,7 +166,7 @@ export default function FacturacionCfdiPage() {
       </div>
 
       <Tabs defaultValue="facturas" className="w-full">
-        <TabsList className="bg-muted/50">
+        <TabsList className="bg-card">
           <TabsTrigger value="facturas">Facturas</TabsTrigger>
           <TabsTrigger value="config">Configuración Emisor</TabsTrigger>
           <TabsTrigger value="catalogos">Catálogos SAT</TabsTrigger>
@@ -195,7 +195,7 @@ export default function FacturacionCfdiPage() {
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
+                  <TableRow className="bg-card">
                      <TableHead className="w-[100px]">Folio</TableHead>
                      <TableHead>Receptor</TableHead>
                      <TableHead className="w-[120px]">RFC</TableHead>

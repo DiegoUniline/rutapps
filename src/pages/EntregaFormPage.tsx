@@ -583,7 +583,7 @@ export default function EntregaFormPage() {
             </div>
 
             {/* Resumen de productos y stock */}
-            <div className="bg-muted/50 rounded-lg overflow-hidden">
+            <div className="bg-card rounded-lg overflow-hidden">
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-border">

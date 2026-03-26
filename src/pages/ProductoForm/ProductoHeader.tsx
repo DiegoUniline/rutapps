@@ -72,7 +72,7 @@ export function ProductoHeader({ form, set, isNew, isDirty, starred, setStarred,
               <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-6 w-6 text-white" /></div>
             </div>
           ) : (
-            <div onClick={() => imageInputRef.current?.click()} className={`w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-muted/30 cursor-pointer hover:border-primary/40 transition-colors ${uploadingImage ? 'animate-pulse' : ''}`}>
+            <div onClick={() => imageInputRef.current?.click()} className={`w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-card cursor-pointer hover:border-primary/40 transition-colors ${uploadingImage ? 'animate-pulse' : ''}`}>
               <Camera className="h-7 w-7 text-muted-foreground/40" />
             </div>
           )}

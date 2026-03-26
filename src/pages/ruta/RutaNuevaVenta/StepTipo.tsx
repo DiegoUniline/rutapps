@@ -38,7 +38,7 @@ export function StepTipo({ sinCompra, setSinCompra, setTipoVenta, setCondicionPa
         <button onClick={() => setSinCompra(true)}
           className="w-full rounded-xl border-2 border-border bg-card p-4 text-left active:scale-[0.98] transition-all hover:border-muted-foreground/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0"><EyeOff className="h-5 w-5 text-muted-foreground" /></div>
+            <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center shrink-0"><EyeOff className="h-5 w-5 text-muted-foreground" /></div>
             <div><p className="text-[14px] font-bold text-foreground">Sin compra</p><p className="text-[11px] text-muted-foreground mt-0.5">Se visitó pero no compró · Registrar motivo</p></div>
           </div>
         </button>

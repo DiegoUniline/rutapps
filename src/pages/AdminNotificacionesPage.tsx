@@ -217,7 +217,7 @@ export default function AdminNotificacionesPage() {
         <div className="border border-border rounded-lg overflow-hidden bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/50 text-left">
+              <tr className="bg-card text-left">
                 <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Título</th>
                 <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Tipo</th>
                 <th className="px-4 py-2.5 font-semibold text-foreground text-xs">Activa</th>
@@ -228,7 +228,7 @@ export default function AdminNotificacionesPage() {
             </thead>
             <tbody>
               {notifications.map(n => (
-                <tr key={n.id} className="border-t border-border hover:bg-muted/30 transition-colors">
+                <tr key={n.id} className="border-t border-border hover:bg-card transition-colors">
                   <td className="px-4 py-2.5 text-foreground font-medium">{n.title}</td>
                   <td className="px-4 py-2.5">
                     <span className={cn('inline-block px-2 py-0.5 rounded text-[11px] font-semibold', TYPE_COLORS[n.type])}>

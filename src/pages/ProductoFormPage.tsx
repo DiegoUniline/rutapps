@@ -292,7 +292,7 @@ export default function ProductoFormPage() {
           ) : (
             <div
               onClick={() => imageInputRef.current?.click()}
-              className={`w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-muted/30 cursor-pointer hover:border-primary/40 transition-colors ${uploadingImage ? 'animate-pulse' : ''}`}
+              className={`w-[100px] h-[100px] rounded border-2 border-dashed border-border flex items-center justify-center bg-card cursor-pointer hover:border-primary/40 transition-colors ${uploadingImage ? 'animate-pulse' : ''}`}
             >
               <Camera className="h-7 w-7 text-muted-foreground/40" />
             </div>

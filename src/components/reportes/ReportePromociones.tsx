@@ -70,7 +70,7 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border bg-muted/50">
+            <tr className="border-b border-border bg-card">
               <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Promoción</th>
               <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Tipo</th>
               <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Veces aplicada</th>
@@ -79,7 +79,7 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
           </thead>
           <tbody>
             {(promociones ?? []).map((p, i) => (
-              <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/30">
+              <tr key={i} className="border-b border-border last:border-0 hover:bg-card">
                 <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
                   <Tag className="h-3.5 w-3.5 text-primary shrink-0" /> {p.nombre}
                 </td>

@@ -460,7 +460,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
               <div className="border border-border/60 rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/30">
+                    <TableRow className="bg-card">
                       <TableHead className="font-semibold">Nombre</TableHead>
                       <TableHead className="font-semibold">Email</TableHead>
                       <TableHead className="font-semibold">Teléfono</TableHead>
@@ -472,7 +472,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   </TableHeader>
                   <TableBody>
                     {allUsers.map((u: any) => (
-                      <TableRow key={u.id} className="hover:bg-muted/20">
+                      <TableRow key={u.id} className="hover:bg-card/50">
                         <TableCell className="font-medium">{u.nombre || 'Sin nombre'}</TableCell>
                         <TableCell className="text-muted-foreground">{u.email || '—'}</TableCell>
                         <TableCell className="text-muted-foreground">{u.telefono || '—'}</TableCell>
@@ -656,7 +656,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between bg-muted/30 rounded-lg p-4">
+                <div className="flex items-center justify-between bg-card rounded-lg p-4">
                   <span className="text-muted-foreground">Saldo actual</span>
                   <span className={`text-3xl font-bold font-mono ${timbres > 0 ? 'text-primary' : 'text-destructive'}`}>
                     {timbres}
@@ -664,7 +664,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 </div>
 
                 {showTimbresSale && (
-                  <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-muted/10">
+                  <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-card/80">
                     <p className="text-sm font-semibold flex items-center gap-1.5">
                       <ShoppingCart className="h-4 w-4 text-primary" /> Registrar venta de timbres
                     </p>
@@ -793,7 +793,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   <div className="border border-border/60 rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/30">
+                        <TableRow className="bg-card">
                           <TableHead>Número</TableHead>
                           <TableHead>Período</TableHead>
                           <TableHead>Usuarios</TableHead>
@@ -838,7 +838,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                   <div className="border border-border/60 rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/30">
+                        <TableRow className="bg-card">
                           <TableHead>Número</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Monto</TableHead>
@@ -907,7 +907,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 className="font-mono text-base"
               />
             </div>
-            <div className="flex items-center gap-3 bg-muted/30 rounded-lg p-3">
+            <div className="flex items-center gap-3 bg-card rounded-lg p-3">
               <Checkbox
                 id="force-change"
                 checked={resetForceChange}

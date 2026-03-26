@@ -375,7 +375,7 @@ function MonitorContent() {
             {/* Left panel with Tabs */}
             <div className="w-80 lg:w-96 border-r border-border bg-card flex flex-col shrink-0">
               <Tabs defaultValue="visitas" className="flex flex-col h-full">
-                <TabsList className="w-full rounded-none border-b border-border bg-muted/50 h-10 shrink-0">
+                <TabsList className="w-full rounded-none border-b border-border bg-card h-10 shrink-0">
                   <TabsTrigger value="visitas" className="flex-1 text-xs gap-1.5 data-[state=active]:bg-background">
                     <Eye className="h-3.5 w-3.5" /> Visitas
                     <Badge variant="secondary" className="text-[9px] ml-1 px-1.5">{filtered.length}</Badge>
@@ -391,7 +391,7 @@ function MonitorContent() {
                   <ScrollArea className="h-full">
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-card z-[1]">
-                        <tr className="bg-muted/50">
+                        <tr className="bg-card">
                           <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</th>
                           <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
                           <th className="text-center px-2 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
@@ -403,7 +403,7 @@ function MonitorContent() {
                           <tr
                             key={v.id}
                             className={cn(
-                              "border-t border-border/30 hover:bg-muted/40 cursor-pointer transition-colors",
+                              "border-t border-border/30 hover:bg-card cursor-pointer transition-colors",
                               selectedClient?.id === v.id && "bg-primary/5"
                             )}
                             onClick={() => setSelectedClient(v)}
@@ -450,7 +450,7 @@ function MonitorContent() {
                   <ScrollArea className="h-full">
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 bg-card z-[1]">
-                        <tr className="bg-muted/50">
+                        <tr className="bg-card">
                           <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">#</th>
                           <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
                           <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Folio</th>
@@ -465,7 +465,7 @@ function MonitorContent() {
                           return (
                             <tr
                               key={e.id}
-                              className="border-t border-border/30 hover:bg-muted/40 cursor-pointer transition-colors"
+                              className="border-t border-border/30 hover:bg-card cursor-pointer transition-colors"
                               onClick={() => {
                                 if (cli?.gps_lat) {
                                   setSelectedClient({
@@ -624,7 +624,7 @@ function MonitorContent() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-muted/50">
+                      <tr className="bg-card">
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Vendedor</th>
                         <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Programados</th>
                         <th className="text-center px-3 py-2.5 text-xs font-semibold text-muted-foreground">Visitados</th>
@@ -637,7 +637,7 @@ function MonitorContent() {
                       {vendedorSummary.map(vs => {
                         const rate = vs.scheduled > 0 ? Math.round((vs.visited / vs.scheduled) * 100) : 0;
                         return (
-                          <tr key={vs.id} className="border-t border-border/30 hover:bg-muted/30">
+                          <tr key={vs.id} className="border-t border-border/30 hover:bg-card">
                             <td className="px-4 py-2.5 font-medium text-foreground">{vs.nombre}</td>
                             <td className="text-center px-3 py-2.5 text-muted-foreground">{vs.scheduled}</td>
                             <td className="text-center px-3 py-2.5">
@@ -649,7 +649,7 @@ function MonitorContent() {
                             <td className="text-right px-4 py-2.5 font-semibold text-emerald-600">{fmtMoney(vs.salesTotal)}</td>
                             <td className="text-center px-3 py-2.5">
                               <div className="flex items-center justify-center gap-2">
-                                <div className="w-16 h-2 rounded-full bg-muted">
+                                <div className="w-16 h-2 rounded-full bg-card">
                                   <div className="h-full rounded-full" style={{
                                     width: `${rate}%`,
                                     backgroundColor: rate >= 80 ? '#22c55e' : rate >= 50 ? '#f59e0b' : '#ef4444'
@@ -679,7 +679,7 @@ function MonitorContent() {
                 <div className="overflow-x-auto max-h-[50vh]">
                   <table className="w-full text-sm">
                     <thead className="sticky top-0 bg-card z-[1]">
-                      <tr className="bg-muted/50">
+                      <tr className="bg-card">
                         <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Cliente</th>
                         <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Vendedor</th>
                         <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Dirección</th>
@@ -690,7 +690,7 @@ function MonitorContent() {
                     </thead>
                     <tbody>
                       {filtered.map(v => (
-                        <tr key={v.id} className="border-t border-border/30 hover:bg-muted/30">
+                        <tr key={v.id} className="border-t border-border/30 hover:bg-card">
                           <td className="px-4 py-2.5">
                             <p className="font-medium text-foreground text-sm">{v.nombre}</p>
                             {v.codigo && <p className="text-[10px] font-mono text-muted-foreground">{v.codigo}</p>}

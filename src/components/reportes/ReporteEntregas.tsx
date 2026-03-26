@@ -36,7 +36,7 @@ export function ReporteEntregas({ data }: { data: any }) {
               const isOpen = expandedRuta === i;
               return (
                 <>
-                  <tr key={i} className="border-b border-border/50 cursor-pointer hover:bg-muted/30" onClick={() => setExpandedRuta(isOpen ? null : i)}>
+                  <tr key={i} className="border-b border-border/50 cursor-pointer hover:bg-card" onClick={() => setExpandedRuta(isOpen ? null : i)}>
                     <td className="py-2 px-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</td>
                     <td className="py-2 px-3 font-medium">{r.nombre}</td>
                     <td className="py-2 px-3 text-right">{r.entregas}</td>
@@ -45,7 +45,7 @@ export function ReporteEntregas({ data }: { data: any }) {
                   {isOpen && prods.length > 0 && (
                     <tr key={`${i}-detail`}>
                       <td colSpan={4} className="p-0">
-                        <div className="bg-muted/20 px-6 py-2">
+                        <div className="bg-card/50 px-6 py-2">
                           <table className="w-full text-[12px]">
                             <thead><tr className="text-muted-foreground"><th className="py-1 text-left">Código</th><th className="py-1 text-left">Producto</th><th className="py-1 text-right">Cantidad</th></tr></thead>
                             <tbody>

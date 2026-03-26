@@ -362,7 +362,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                 <div className="border rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="bg-muted/50 text-muted-foreground">
+                      <tr className="bg-card text-muted-foreground">
                         <th className="text-left p-2">Descripción</th>
                         <th className="text-right p-2 w-16">Cant</th>
                         <th className="text-right p-2 w-20">P.U.</th>

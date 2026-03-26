@@ -54,7 +54,7 @@ export default function DevolucionesListPage() {
       <div className="bg-card border border-border rounded-md overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="text-[10px] text-muted-foreground uppercase border-b border-border bg-muted/30">
+            <tr className="text-[10px] text-muted-foreground uppercase border-b border-border bg-card">
               <th className="text-left py-2.5 px-3 font-medium">Fecha</th>
               <th className="text-left py-2.5 px-3 font-medium">Cliente</th>
               <th className="text-left py-2.5 px-3 font-medium">Vendedor</th>
@@ -82,7 +82,7 @@ export default function DevolucionesListPage() {
               const productosText = lineas.map((l: any) => `${l.productos?.nombre ?? '?'} (${l.cantidad})`).join(', ');
 
               return (
-                <tr key={d.id} className="border-b border-border/50 hover:bg-muted/20 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
+                <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
                   <td className="py-2 px-3 font-mono text-muted-foreground">{d.fecha}</td>
                   <td className="py-2 px-3 font-medium">{d.clientes?.nombre ?? '—'}</td>
                   <td className="py-2 px-3 text-muted-foreground">{d.vendedores?.nombre ?? '—'}</td>
@@ -95,7 +95,7 @@ export default function DevolucionesListPage() {
                   <td className="py-2 px-3 text-right font-semibold">{totalUds}</td>
                   <td className="py-2 px-3">
                     {motivos.map((m: string) => (
-                      <span key={m} className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium capitalize mr-1">
+                      <span key={m} className="text-[9px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium capitalize mr-1">
                         {MOTIVO_LABELS[m] ?? m.replace(/_/g, ' ')}
                       </span>
                     ))}

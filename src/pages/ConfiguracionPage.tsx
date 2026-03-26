@@ -448,7 +448,7 @@ export default function ConfiguracionPage() {
               <Building2 className="h-4 w-4" /> Logo de la empresa
             </h3>
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden bg-muted/30">
+              <div className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex items-center justify-center overflow-hidden bg-card">
                 {logoPreview ? (
                   <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain" />
                 ) : (
@@ -523,7 +523,7 @@ export default function ConfiguracionPage() {
                 <p className="text-[11px] text-muted-foreground mb-3">Elige qué información aparece en tus documentos impresos.</p>
                 <div className="grid grid-cols-2 gap-2">
                   {Object.entries(CAMPO_LABELS).map(([key, label]) => (
-                    <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors">
+                    <label key={key} className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-card cursor-pointer transition-colors">
                       <Switch
                         checked={campos[key] ?? true}
                         onCheckedChange={(v) => setCampos(prev => ({ ...prev, [key]: v }))}
@@ -546,7 +546,7 @@ export default function ConfiguracionPage() {
                   onClick={() => setPreviewTab('ticket')}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                    previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                    previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <Receipt className="h-3.5 w-3.5" /> Ticket
@@ -555,13 +555,13 @@ export default function ConfiguracionPage() {
                   onClick={() => setPreviewTab('nota')}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                    previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                    previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <FileText className="h-3.5 w-3.5" /> Nota de venta
                 </button>
               </div>
-              <div className="flex justify-center p-4 bg-muted/30 rounded-lg border border-border min-h-[500px]">
+              <div className="flex justify-center p-4 bg-card rounded-lg border border-border min-h-[500px]">
                 {previewTab === 'ticket' ? (
                   <TicketPreview form={form} logoPreview={logoPreview} campos={campos} ticketAncho={ticketAncho} />
                 ) : (

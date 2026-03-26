@@ -103,7 +103,7 @@ export default function RutaEntregas() {
 
             <p className="text-[11px] text-muted-foreground">{fmtDate(e.fecha)}</p>
 
-            <div className="bg-muted/50 rounded-xl p-3 space-y-1">
+            <div className="bg-card rounded-xl p-3 space-y-1">
               {e._lineas.map((l: any, i: number) => (
                 <div key={i} className="flex justify-between text-[12px]">
                   <span className="text-foreground">{l._productoNombre}</span>

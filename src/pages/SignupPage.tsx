@@ -243,7 +243,7 @@ export default function SignupPage() {
     form.password === confirmPassword;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-muted/30">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-card">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
@@ -314,7 +314,7 @@ export default function SignupPage() {
             </div>
 
             {/* Verification method */}
-            <div className="space-y-3 p-3 bg-muted/40 rounded-lg border">
+            <div className="space-y-3 p-3 bg-card rounded-lg border">
               <p className="text-sm font-medium text-center">Verifica tu identidad</p>
 
               {otpVerified && verificationMethod === 'whatsapp' ? (

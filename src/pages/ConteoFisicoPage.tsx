@@ -252,7 +252,7 @@ export default function ConteoFisicoPage() {
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
           <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
         </div>
 
@@ -324,9 +324,9 @@ export default function ConteoFisicoPage() {
                 key={item.id}
                 className={cn(
                   'w-full p-3 flex items-center gap-3 text-left transition-colors',
-                  isCerrado && 'opacity-60 bg-muted/50',
+                  isCerrado && 'opacity-60 bg-card',
                   isSelected && 'ring-2 ring-primary bg-primary/5',
-                  !isCerrado && !isSelected && 'hover:bg-muted/30',
+                  !isCerrado && !isSelected && 'hover:bg-card',
                 )}
                 onClick={() => {
                   if (isClosed) return;

@@ -523,7 +523,7 @@ function NavegacionContent() {
                     onClick={() => startNavigation(stop)}
                     className={cn(
                       "flex items-center gap-3 w-full px-4 py-3 border-b border-border/50 text-left transition-colors",
-                      isCompleted ? "opacity-40" : "active:bg-muted/50"
+                      isCompleted ? "opacity-40" : "active:bg-card"
                     )}
                   >
                     <div className={cn(

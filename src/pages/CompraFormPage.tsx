@@ -525,7 +525,7 @@ export default function CompraFormPage() {
           {/* Current status badge */}
           <span className={cn(
             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide",
-            form.status === 'borrador' && "bg-muted text-muted-foreground",
+            form.status === 'borrador' && "bg-card border border-border text-muted-foreground",
             form.status === 'confirmada' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
             form.status === 'recibida' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
             form.status === 'pagada' && "bg-primary/10 text-primary",

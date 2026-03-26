@@ -103,7 +103,7 @@ export default function DocumentPreviewModal({
         )}
 
         {showSendForm && (
-          <div className="space-y-2 border border-border rounded-lg p-3 bg-muted/20">
+          <div className="space-y-2 border border-border rounded-lg p-3 bg-card/50">
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Número de WhatsApp</label>
               <Input

@@ -161,7 +161,7 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                     const usersCount = e.profiles?.length || 0;
 
                     return (
-                      <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onSelectEmpresa?.(e.id)}>
+                      <TableRow key={e.id} className="cursor-pointer hover:bg-card" onClick={() => onSelectEmpresa?.(e.id)}>
                         <TableCell>
                           <div className="font-medium">{e.nombre}</div>
                           <div className="text-[10px] text-muted-foreground">{usersCount} usuario{usersCount !== 1 ? 's' : ''}</div>

@@ -116,7 +116,7 @@ export default function RutaNuevoCliente() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3"
         style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
-        <button onClick={() => navigate('/ruta')} className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center active:scale-90 transition-transform">
+        <button onClick={() => navigate('/ruta')} className="h-9 w-9 rounded-lg bg-card border border-border flex items-center justify-center active:scale-90 transition-transform">
           <ArrowLeft className="h-4.5 w-4.5 text-foreground" />
         </button>
         <h1 className="text-lg font-bold text-foreground flex-1">Nuevo Cliente</h1>
@@ -142,7 +142,7 @@ export default function RutaNuevoCliente() {
           </MField>
 
           <MField label="Código">
-            <input className={cn(inputCls, "bg-muted text-muted-foreground")} placeholder="Se asigna automáticamente" value={form.codigo ?? ''} readOnly />
+            <input className={cn(inputCls, "bg-card border border-border text-muted-foreground")} placeholder="Se asigna automáticamente" value={form.codigo ?? ''} readOnly />
           </MField>
 
           <div className="grid grid-cols-2 gap-3">
@@ -272,7 +272,7 @@ export default function RutaNuevoCliente() {
               onClick={() => set('credito', !form.credito)}
               className={cn(
                 "h-8 w-14 rounded-full transition-colors relative",
-                form.credito ? "bg-primary" : "bg-muted"
+                form.credito ? "bg-primary" : "bg-input"
               )}
             >
               <span className={cn(

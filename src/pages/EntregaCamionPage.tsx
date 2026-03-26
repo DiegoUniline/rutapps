@@ -114,7 +114,7 @@ export default function EntregaCamionPage() {
 
       {/* Consolidated */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-4 py-2 bg-muted/40 border-b border-border">
+        <div className="px-4 py-2 bg-card border-b border-border">
           <span className="text-[13px] font-semibold text-foreground">Consolidado de productos</span>
         </div>
         <Table>

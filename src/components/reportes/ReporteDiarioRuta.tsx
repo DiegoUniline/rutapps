@@ -439,37 +439,37 @@ export default function ReporteDiarioRuta() {
 
           {/* Summary cards */}
           <div className="summary-grid grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Ventas totales</div>
               <div className="text-lg font-bold text-foreground">${fmt(totalVentas)}</div>
               <div className="text-[9px] text-muted-foreground">{ventasActivas.length} ventas</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Contado</div>
               <div className="text-lg font-bold text-foreground">${fmt(totalContado)}</div>
               <div className="text-[9px] text-muted-foreground">{ventasContado.length}</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Crédito</div>
               <div className="text-lg font-bold text-foreground">${fmt(totalCredito)}</div>
               <div className="text-[9px] text-muted-foreground">{ventasCredito.length}</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Cobros</div>
               <div className="text-lg font-bold text-foreground">${fmt(totalCobros)}</div>
               <div className="text-[9px] text-muted-foreground">{(cobros || []).length}</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Gastos</div>
               <div className="text-lg font-bold text-destructive">-${fmt(totalGastos)}</div>
               <div className="text-[9px] text-muted-foreground">{(gastos || []).length}</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Devoluciones</div>
               <div className="text-lg font-bold text-foreground">{totalDevUnidades} uds</div>
               <div className="text-[9px] text-muted-foreground">{(devoluciones || []).length} devol.</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Clientes visitados</div>
               <div className="text-lg font-bold text-foreground">{clientesVisitados.size}</div>
             </div>
@@ -617,7 +617,7 @@ export default function ReporteDiarioRuta() {
               </h2>
               <div className="flex flex-wrap gap-2 mb-2">
                 {Object.entries(cobrosPorMetodo).map(([m, t]) => (
-                  <span key={m} className="text-[10px] bg-muted/50 rounded px-2 py-1">
+                  <span key={m} className="text-[10px] bg-card rounded px-2 py-1">
                     <span className="text-muted-foreground capitalize">{m}:</span> <span className="font-bold">${fmt(t)}</span>
                   </span>
                 ))}

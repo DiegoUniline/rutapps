@@ -708,7 +708,7 @@ export default function TraspasoFormPage() {
               key={key}
               className={cn(
                 "px-3 py-1 rounded-full text-xs font-medium transition-all",
-                status === key ? cfg.color : "bg-muted/40 text-muted-foreground/50"
+                status === key ? cfg.color : "bg-card text-muted-foreground/50"
               )}
             >
               {cfg.label}

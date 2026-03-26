@@ -168,7 +168,7 @@ export function ReporteProductoCliente({ data }: { data: any }) {
                         </td>
                       </tr>
                     ))}
-                    <tr className="bg-muted/30">
+                    <tr className="bg-card">
                       <td colSpan={2} className="py-1.5 px-3 font-semibold text-[12px]">Total</td>
                       <td className="py-1.5 px-3 text-right font-bold">{c.cantidadTotal}</td>
                       <td className="py-1.5 px-3 text-right font-bold text-primary">{fmt(c.totalGeneral)}</td>

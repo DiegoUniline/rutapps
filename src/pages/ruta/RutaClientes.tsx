@@ -259,7 +259,7 @@ export default function RutaClientes() {
           const isVisited = visited.has(c.id);
           return (
             <div key={c.id} className={cn(
-              "bg-card border rounded-xl px-2.5 py-2 active:bg-muted/30 transition-colors",
+              "bg-card border rounded-xl px-2.5 py-2 active:bg-card transition-colors",
               isVisited ? "border-emerald-500/40 bg-emerald-500/5" : "border-border"
             )}>
               <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ export default function RutaClientes() {
                       {c.dia_visita.map((d: string) => (
                         <span key={d} className={cn(
                           "text-[9px] px-1 py-px rounded-full font-medium capitalize",
-                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
                         )}>
                           {d.slice(0, 3)}
                         </span>

@@ -316,7 +316,7 @@ function SuscribirEmpresaSection() {
                   className={`w-full text-left px-3 py-2.5 rounded-lg border transition-colors ${
                     selectedEmpresa?.id === emp.id
                       ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'border-border hover:bg-muted/50'
+                      : 'border-border hover:bg-card'
                   }`}
                 >
                   <p className="text-sm font-medium">{emp.nombre}</p>
@@ -351,7 +351,7 @@ function SuscribirEmpresaSection() {
                     </div>
                   </div>
                 ) : metodo !== 'stripe' ? (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-card border border-border">
                     <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
                     <p className="text-sm text-muted-foreground">Se creará como nuevo cliente en OpenPay</p>
                   </div>
@@ -406,7 +406,7 @@ function SuscribirEmpresaSection() {
 
                 {/* Summary */}
                 {selectedPlanId && (
-                  <div className="rounded-lg border border-border p-3 bg-muted/30 space-y-1">
+                  <div className="rounded-lg border border-border p-3 bg-card space-y-1">
                     <p className="text-xs font-semibold text-foreground">Resumen:</p>
                     <p className="text-xs text-muted-foreground">
                       Empresa: <span className="font-medium text-foreground">{selectedEmpresa.nombre}</span>

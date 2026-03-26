@@ -701,7 +701,7 @@ export default function SupervisorDashboardPage() {
             <GoogleMapsProvider>
               <SupervisorMap markers={mapMarkers} />
             </GoogleMapsProvider>
-            <div className="grid grid-cols-3 border-t border-border bg-muted/20">
+            <div className="grid grid-cols-3 border-t border-border bg-card/50">
               <MiniSummary label="Visitados" value={String(dashboardStats.clientesVisitados)} />
               <MiniSummary label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} />
               <MiniSummary label="Sin geolocalizar" value={String(dashboardStats.sinGeo)} />
@@ -763,7 +763,7 @@ export default function SupervisorDashboardPage() {
                 <EmptyBlock text="Sin alertas relevantes por ahora." />
               ) : (
                 alertClients.map((client) => (
-                  <div key={client.id} className="flex items-start gap-3 rounded-2xl border border-border bg-muted/20 p-3">
+                  <div key={client.id} className="flex items-start gap-3 rounded-2xl border border-border bg-card/50 p-3">
                     {client.visitado ? (
                       <Clock className="mt-0.5 h-4 w-4 text-primary" />
                     ) : (
@@ -865,7 +865,7 @@ export default function SupervisorDashboardPage() {
             <div className="max-h-[520px] overflow-auto">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-card">
-                  <tr className="border-y border-border bg-muted/30 text-left text-xs uppercase tracking-[0.08em] text-muted-foreground">
+                  <tr className="border-y border-border bg-card text-left text-xs uppercase tracking-[0.08em] text-muted-foreground">
                     <th className="px-4 py-3">Estado</th>
                     <th className="px-4 py-3">Cliente</th>
                     <th className="px-4 py-3">Vendedor</th>
@@ -876,7 +876,7 @@ export default function SupervisorDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {clienteActivity.map((client) => (
-                    <tr key={client.id} className={cn('transition-colors hover:bg-muted/20', !client.visitado && 'bg-destructive/5')}>
+                    <tr key={client.id} className={cn('transition-colors hover:bg-card/50', !client.visitado && 'bg-destructive/5')}>
                       <td className="px-4 py-3">
                         <StatusPill visitado={client.visitado} />
                       </td>
@@ -958,7 +958,7 @@ function KpiCard({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-muted/40 px-2 py-2 text-center">
+    <div className="rounded-xl bg-card px-2 py-2 text-center">
       <p className="text-sm font-bold tabular-nums text-foreground">{value}</p>
       <p className="mt-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
     </div>
@@ -998,7 +998,7 @@ function StatusPill({ visitado }: { visitado: boolean }) {
 }
 
 function EmptyBlock({ text }: { text: string }) {
-  return <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-sm text-muted-foreground">{text}</div>;
+  return <div className="rounded-2xl border border-dashed border-border bg-card/50 p-6 text-sm text-muted-foreground">{text}</div>;
 }
 
 function ActivityList({
@@ -1033,7 +1033,7 @@ function ActivityList({
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 p-3">
+              <div key={item.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card/50 p-3">
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-foreground">{item.primary}</p>
                   <p className="truncate text-xs text-muted-foreground">{item.secondary}</p>
@@ -1069,7 +1069,7 @@ function ProductPanel({ products, fmtMoney }: { products: { nombre: string; codi
         ) : (
           <div className="space-y-2">
             {products.map((product) => (
-              <div key={`${product.codigo}-${product.nombre}`} className="rounded-2xl border border-border bg-muted/20 p-3">
+              <div key={`${product.codigo}-${product.nombre}`} className="rounded-2xl border border-border bg-card/50 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">{product.nombre}</p>
@@ -1109,7 +1109,7 @@ function SupervisorMap({ markers }: { markers: MarkerPoint[] }) {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-[920px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[920px] items-center justify-center bg-card/50 text-sm text-muted-foreground">
         Cargando mapa...
       </div>
     );
@@ -1117,7 +1117,7 @@ function SupervisorMap({ markers }: { markers: MarkerPoint[] }) {
 
   if (markers.length === 0) {
     return (
-      <div className="flex h-[920px] items-center justify-center bg-muted/20 text-sm text-muted-foreground">
+      <div className="flex h-[920px] items-center justify-center bg-card/50 text-sm text-muted-foreground">
         No hay clientes geolocalizados para mostrar.
       </div>
     );

@@ -159,7 +159,7 @@ export default function ConfiguracionInicialPage() {
           <span>{completed.length} de {STEPS.length} completados</span>
           <span>{Math.round(progress * 100)}%</span>
         </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
+        <div className="h-2 bg-border rounded-full overflow-hidden">
           <div
             className="h-full bg-primary rounded-full transition-all duration-500"
             style={{ width: `${progress * 100}%` }}
@@ -180,7 +180,7 @@ export default function ConfiguracionInicialPage() {
             <div className="flex items-start gap-4">
               <div className={cn(
                 "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
-                i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                i === 0 ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"
               )}>
                 <step.icon className="h-5 w-5" />
               </div>

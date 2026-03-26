@@ -84,7 +84,7 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
       <div className="border rounded-lg overflow-hidden flex-1 overflow-y-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow className="bg-card">
               {catalog.isTasa ? (
                 <>
                   <TableHead className="w-[200px]">Nombre</TableHead>
@@ -152,7 +152,7 @@ function CatalogTable({ catalog }: { catalog: CatalogDef }) {
 export function CatalogosTab() {
   return (
     <Tabs defaultValue="regimen" className="w-full">
-      <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+      <TabsList className="flex flex-wrap h-auto gap-1 bg-card p-1">
         {CATALOGS.map((c) => (
           <TabsTrigger key={c.key} value={c.key} className="text-xs">{c.label}</TabsTrigger>
         ))}
