@@ -126,9 +126,22 @@ export default function VentasListPage() {
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
+  const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
+  const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE, condicionFilter, vendedorFilter);
   const { data: clientesList } = useClientes();
+  const { data: vendedoresList } = useVendedoresForFilter();
+
+  const FILTER_OPTIONS = useMemo(() => {
+    const vendedorOpts = (vendedoresList ?? []).map((v: any) => ({ value: v.id, label: v.nombre }));
+    const clienteOpts = (clientesList ?? []).map(c => ({ value: c.id, label: c.nombre }));
+    return [
+      ...STATIC_FILTER_OPTIONS,
+      { key: 'vendedor', label: 'Vendedor', options: vendedorOpts },
+      { key: 'cliente', label: 'Cliente', options: clienteOpts },
+    ];
+  }, [vendedoresList, clientesList]);
 
   // WhatsApp state
   const [waOpen, setWaOpen] = useState(false);
