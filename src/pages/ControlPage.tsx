@@ -49,8 +49,8 @@ export default function ControlPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <OdooDatePicker label="Desde" value={dateRange.from} onChange={(d) => d && setDateRange(prev => ({ ...prev, from: d }))} />
-          <OdooDatePicker label="Hasta" value={dateRange.to} onChange={(d) => d && setDateRange(prev => ({ ...prev, to: d }))} />
+          <OdooDatePicker value={dateFrom} onChange={setDateFrom} />
+          <OdooDatePicker value={dateTo} onChange={setDateTo} />
         </div>
       </div>
 
