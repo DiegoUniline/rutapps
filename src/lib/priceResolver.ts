@@ -75,11 +75,14 @@ function findMatchingRule(
  * Calculate price from a tarifa rule and product data.
  * Returns the price BEFORE taxes (unit price for the sale line).
  */
-export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricing): number {
+export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricing): number | null {
   let precio = 0;
 
   if (rule.tipo_calculo === 'precio_fijo') {
     precio = rule.precio ?? 0;
+    // A precio_fijo of 0 is a placeholder rule (e.g. category template);
+    // return null so the resolver falls back to the next rule or precio_principal
+    if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
   } else if (rule.tipo_calculo === 'margen_costo') {
     precio = (producto.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
   } else if (rule.tipo_calculo === 'descuento_precio') {
@@ -116,5 +119,7 @@ export function resolveProductPrice(
 ): number {
   const rule = findMatchingRule(rules, producto, listaPrecioId);
   if (!rule) return producto.precio_principal;
-  return calculatePrice(rule, producto);
+  const price = calculatePrice(rule, producto);
+  // If calculatePrice returns null (e.g. placeholder rule), fall back to precio_principal
+  return price ?? producto.precio_principal;
 }

@@ -158,6 +158,24 @@ export function useVentaForm() {
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
   }, [lineas, sinImpuestos]);
 
+  // Re-price existing lines when tarifa rules or lista_precio changes
+  useEffect(() => {
+    if (!tarifaRules?.length || !productosList || readOnly) return;
+    const listaPrecioId = (form as any).lista_precio_id || null;
+    setLineas(prev => prev.map(l => {
+      if (!l.producto_id) return l;
+      const prod = productosList.find((p: any) => p.id === l.producto_id);
+      if (!prod) return l;
+      const newPrice = resolveProductPrice(tarifaRules, {
+        id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
+        clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16),
+        tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
+      } as ProductForPricing, listaPrecioId);
+      if (newPrice === Number(l.precio_unitario)) return l;
+      return { ...l, precio_unitario: newPrice };
+    }));
+  }, [tarifaRules, (form as any).lista_precio_id]);
+
   const set = (field: string, val: any) => { if (readOnly) return; setForm(prev => ({ ...prev, [field]: val })); setDirty(true); };
 
   const handleProductSelect = (idx: number, productoId: string) => {
