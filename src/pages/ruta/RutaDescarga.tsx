@@ -55,7 +55,7 @@ export default function RutaDescarga() {
     enabled: !!empresa?.id,
   });
 
-  const vendedorId = cargaActiva?.vendedor_id || myProfile?.vendedor_id || user?.id;
+  const vendedorId = cargaActiva?.vendedor_id || myProfile?.vendedor_id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
   const today = useMemo(() => {

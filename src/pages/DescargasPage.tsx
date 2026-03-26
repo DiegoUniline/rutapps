@@ -165,7 +165,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id && incluirStock,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('id', descarga.vendedor_id).maybeSingle();
+      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('vendedor_id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
@@ -832,17 +832,19 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('profiles')
-        .select('id, user_id, nombre')
+        .select('id, user_id, nombre, vendedor_id')
         .eq('empresa_id', empresa!.id)
         .eq('estado', 'activo')
         .order('nombre');
-      return (data ?? []) as { id: string; user_id: string; nombre: string }[];
+      return (data ?? []) as { id: string; user_id: string; nombre: string; vendedor_id: string | null }[];
     },
   });
 
   const usuarioOpts = (usuarios || []).map(u => ({ value: u.id, label: u.nombre }));
   const selectedProfile = (usuarios || []).find(u => u.id === vendedorId);
   const selectedUserId = selectedProfile?.user_id ?? vendedorId;
+  // ventas.vendedor_id references vendedores.id, NOT profiles.id
+  const vendedorRealId = selectedProfile?.vendedor_id ?? vendedorId;
 
   // Calculate expected cash for the period
   const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;
@@ -857,7 +859,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .from('descarga_ruta')
         .select('id, fecha, fecha_inicio, fecha_fin, status')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
+        .eq('vendedor_id', vendedorRealId)
         .lte('fecha_inicio', fechaFin)
         .gte('fecha_fin', fechaInicio)
         .limit(1)
@@ -875,7 +877,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .from('ventas')
         .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
+        .eq('vendedor_id', vendedorRealId)
         .neq('status', 'cancelado')
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin)
@@ -909,7 +911,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .from('gastos')
         .select('id, monto, concepto, fecha, notas')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
+        .eq('vendedor_id', vendedorRealId)
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin);
       return data ?? [];
@@ -950,7 +952,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
       const insertData: any = {
         empresa_id: empresa!.id,
         user_id: user!.id,
-        vendedor_id: vendedorId,
+        vendedor_id: vendedorRealId,
         efectivo_esperado: efectivoEsperado,
         efectivo_entregado: efectivoReal,
         diferencia_efectivo: efectivoReal - efectivoEsperado,
