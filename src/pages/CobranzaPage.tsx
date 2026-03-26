@@ -30,6 +30,7 @@ function useCobros() {
         .from('cobros')
         .select('*, clientes(nombre, telefono)')
         .eq('empresa_id', empresa!.id)
+        .neq('status', 'cancelado')
         .order('fecha', { ascending: false });
       if (error) throw error;
       return data ?? [];

@@ -134,6 +134,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
         .eq('empresa_id', descarga.empresa_id)
         .eq('user_id', vendedorProfile!.user_id)
+        .neq('status', 'cancelado')
         .gte('fecha', fInicio)
         .lte('fecha', fFin)
         .order('created_at', { ascending: true });
@@ -892,6 +893,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
         .eq('empresa_id', empresa!.id)
         .eq('user_id', selectedUserId)
+        .neq('status', 'cancelado')
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin)
         .order('created_at', { ascending: true });

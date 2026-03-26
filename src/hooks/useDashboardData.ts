@@ -42,6 +42,7 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
         .from('cobros')
         .select('id, fecha, monto, metodo_pago, cliente_id')
         .eq('empresa_id', empresa!.id)
+        .neq('status', 'cancelado')
         .gte('fecha', fmt(range.from))
         .lte('fecha', fmt(range.to));
       const { data, error } = await q;

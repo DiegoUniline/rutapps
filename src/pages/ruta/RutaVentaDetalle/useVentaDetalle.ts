@@ -166,19 +166,15 @@ export function useVentaDetalle() {
       const prevStatus = venta.status;
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
       if (error) throw error;
-      // Reverse associated cobros
+      // Cancel associated cobros
       const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', venta.id);
       if (apps && apps.length > 0) {
-        await supabase.from('cobro_aplicaciones').delete().eq('venta_id', venta.id);
         const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
         for (const cid of cobroIds) {
-          const { data: remaining } = await supabase.from('cobro_aplicaciones').select('id').eq('cobro_id', cid);
-          if (!remaining || remaining.length === 0) {
-            await supabase.from('cobros').delete().eq('id', cid);
-          } else {
-            const { data: sumData } = await supabase.from('cobro_aplicaciones').select('monto_aplicado').eq('cobro_id', cid);
-            const newTotal = (sumData ?? []).reduce((s, r) => s + (r.monto_aplicado ?? 0), 0);
-            await supabase.from('cobros').update({ monto: newTotal }).eq('id', cid);
+          const { data: allApps } = await supabase.from('cobro_aplicaciones').select('venta_id').eq('cobro_id', cid);
+          const onlyThisVenta = (allApps ?? []).every(a => a.venta_id === venta.id);
+          if (onlyThisVenta) {
+            await supabase.from('cobros').update({ status: 'cancelado' } as any).eq('id', cid);
           }
         }
       }

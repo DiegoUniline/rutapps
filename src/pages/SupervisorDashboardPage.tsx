@@ -182,6 +182,7 @@ export default function SupervisorDashboardPage() {
         .select('id, user_id, monto, metodo_pago, created_at, cliente_id, clientes(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('fecha', today)
+        .neq('status', 'cancelado')
         .order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
