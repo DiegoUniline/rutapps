@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   Package, Users, ShoppingCart, BarChart3,
   LogOut, ChevronDown, PanelLeftClose, PanelLeft, Warehouse,
-  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download
+  DollarSign, Settings, Smartphone, Moon, Sun, MapPin, Shield, Sparkles, FileText, Menu, RefreshCw, Download, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
@@ -105,6 +105,11 @@ const navItems: NavItem[] = [
       { label: 'Reportes generales', path: '/reportes' },
       { label: 'Reporte entregas', path: '/reportes/entregas' },
     ],
+  },
+  {
+    label: 'Control',
+    icon: ShieldAlert,
+    path: '/control',
   },
   {
     label: 'Facturación',
