@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Layers, X, Check } from 'lucide-react';
+import { Search, ChevronDown, Layers, X, Check, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface FilterOption {
