@@ -11,8 +11,8 @@ export default function RutaClientesEntregas() {
   return (
     <div className="flex flex-col h-full">
       {/* Tabs */}
-      <div className="sticky top-0 z-20 bg-background px-4 pt-2 pb-0.5">
-        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
+        <div className="sticky top-0 z-20 bg-card px-4 pt-2 pb-0.5">
+        <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
           <button
             onClick={() => setTab('clientes')}
             className={cn(

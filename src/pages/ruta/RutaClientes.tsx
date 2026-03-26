@@ -218,7 +218,7 @@ export default function RutaClientes() {
                   onClick={() => setDiaFiltro(d)}
                   className={cn(
                     "shrink-0 px-3 py-2 rounded-full text-xs font-semibold transition-colors capitalize",
-                    diaFiltro === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    diaFiltro === d ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"
                   )}
                 >
                   {d.slice(0, 3)}
