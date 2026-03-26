@@ -133,8 +133,8 @@ export default function ComprasPage() {
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = filteredCompras.slice(from - 1, to);
 
-  const totalCompras = compras?.reduce((s, c) => s + ((c as any).total ?? 0), 0) ?? 0;
-  const totalSaldo = compras?.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0) ?? 0;
+  const totalCompras = filteredCompras.reduce((s, c) => s + ((c as any).total ?? 0), 0);
+  const totalSaldo = filteredCompras.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0);
 
   const exportData = (compras ?? []).map((c: any) => ({
     folio: c.folio ?? '',
