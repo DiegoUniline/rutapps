@@ -159,10 +159,14 @@ export function OdooFilterBar({
     return () => document.removeEventListener('mousedown', handler);
   }, [groupOpen]);
 
+  const hasDateFilter = !!(dateFrom || dateTo);
+
   const activeCount = useMemo(() => {
-    if (!activeFilters) return 0;
-    return Object.values(activeFilters).filter(v => v && v.length > 0).length;
-  }, [activeFilters]);
+    let count = 0;
+    if (activeFilters) count += Object.values(activeFilters).filter(v => v && v.length > 0).length;
+    if (hasDateFilter) count++;
+    return count;
+  }, [activeFilters, hasDateFilter]);
 
   const hasGroupBy = !!activeGroupBy;
 
