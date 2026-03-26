@@ -34,7 +34,6 @@ const FILTER_OPTIONS = [
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'pendiente', label: 'Pendiente' },
       { value: 'en_ruta', label: 'En ruta' },
       { value: 'completada', label: 'Completada' },

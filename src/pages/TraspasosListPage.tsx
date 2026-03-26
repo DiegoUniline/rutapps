@@ -27,10 +27,18 @@ const FILTER_OPTIONS = [
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'borrador', label: 'Borrador' },
       { value: 'confirmado', label: 'Confirmado' },
       { value: 'cancelado', label: 'Cancelado' },
+    ],
+  },
+  {
+    key: 'tipo',
+    label: 'Tipo',
+    options: [
+      { value: 'almacen_almacen', label: 'Almacén → Almacén' },
+      { value: 'almacen_ruta', label: 'Almacén → Ruta' },
+      { value: 'ruta_almacen', label: 'Ruta → Almacén' },
     ],
   },
 ];
