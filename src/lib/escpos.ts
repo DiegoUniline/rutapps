@@ -151,7 +151,7 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
     itemLines(desc, price, W).forEach(x => ln(x));
     // Detail: unit price (smaller, indented)
     if (l.precio > 0) {
-      const detParts = [`  @${fmt(l.precio)}`];
+      const detParts = [`  ${fmt(l.precio)}c/u`];
       if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA ${fmt(l.iva_monto!)}`);
       const det = detParts.join(' ');
       ln(clean(det).slice(0, W));
