@@ -55,6 +55,8 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         if (arr.length > 1) q = q.in('vendedor_id', arr as any);
         else q = q.eq('vendedor_id', vendedorFilter);
       }
+      if (dateFrom) q = q.gte('fecha', dateFrom);
+      if (dateTo) q = q.lte('fecha', dateTo);
       const { data, error, count } = await q;
       if (error) throw error;
       return { rows: (data ?? []) as Venta[], total: count ?? 0 };
