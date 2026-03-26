@@ -118,10 +118,20 @@ export default function ComprasPage() {
     { key: 'proveedor', label: 'Proveedor', options: proveedorOptions },
   ], [proveedorOptions]);
 
-  const total = compras?.length ?? 0;
+  // Apply client-side filters for condicion_pago and proveedor
+  const filteredCompras = useMemo(() => {
+    let list = compras ?? [];
+    const condF = filters.condicion_pago;
+    if (condF && condF.length > 0) list = list.filter((c: any) => condF.includes(c.condicion_pago));
+    const provF = filters.proveedor;
+    if (provF && provF.length > 0) list = list.filter((c: any) => provF.includes(c.proveedor_id));
+    return list;
+  }, [compras, filters]);
+
+  const total = filteredCompras.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = compras?.slice(from - 1, to) ?? [];
+  const pageData = filteredCompras.slice(from - 1, to);
 
   const totalCompras = compras?.reduce((s, c) => s + ((c as any).total ?? 0), 0) ?? 0;
   const totalSaldo = compras?.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0) ?? 0;
