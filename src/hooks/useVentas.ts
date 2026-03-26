@@ -34,7 +34,10 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterOwn) q = q.eq('vendedor_id', profileId!);
-      if (search) q = q.or(`folio.ilike.%${search}%`);
+      if (search) {
+        const s = search.replace(/'/g, "''");
+        q = q.or(`folio.ilike.%${s}%,status.ilike.%${s}%,tipo.ilike.%${s}%,condicion_pago.ilike.%${s}%,clientes.nombre.ilike.%${s}%,vendedores.nombre.ilike.%${s}%`);
+      }
       if (statusFilter && statusFilter !== 'todos') {
         const arr = statusFilter.split(',');
         if (arr.length > 1) q = q.in('status', arr as any);
