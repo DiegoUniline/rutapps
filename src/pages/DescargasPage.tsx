@@ -859,7 +859,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .from('descarga_ruta')
         .select('id, fecha, fecha_inicio, fecha_fin, status')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
+        .eq('vendedor_id', vendedorRealId)
         .lte('fecha_inicio', fechaFin)
         .gte('fecha_fin', fechaInicio)
         .limit(1)
