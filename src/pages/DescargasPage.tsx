@@ -1248,7 +1248,7 @@ export default function DescargasPage() {
                 onClick={() => setFilterStatus(s)}
                 className={cn(
                   "px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                  filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  filterStatus === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
                 )}
               >
                 {s === 'all' ? 'Todas' : STATUS_MAP[s]?.label || s}

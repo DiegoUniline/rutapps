@@ -649,7 +649,7 @@ function MonitorContent() {
                             <td className="text-right px-4 py-2.5 font-semibold text-emerald-600">{fmtMoney(vs.salesTotal)}</td>
                             <td className="text-center px-3 py-2.5">
                               <div className="flex items-center justify-center gap-2">
-                                <div className="w-16 h-2 rounded-full bg-muted">
+                                <div className="w-16 h-2 rounded-full bg-card">
                                   <div className="h-full rounded-full" style={{
                                     width: `${rate}%`,
                                     backgroundColor: rate >= 80 ? '#22c55e' : rate >= 50 ? '#f59e0b' : '#ef4444'

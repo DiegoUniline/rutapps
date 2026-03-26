@@ -297,7 +297,7 @@ export default function RutaClientes() {
                       {c.dia_visita.map((d: string) => (
                         <span key={d} className={cn(
                           "text-[9px] px-1 py-px rounded-full font-medium capitalize",
-                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
                         )}>
                           {d.slice(0, 3)}
                         </span>

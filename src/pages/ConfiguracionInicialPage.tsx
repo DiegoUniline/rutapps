@@ -180,7 +180,7 @@ export default function ConfiguracionInicialPage() {
             <div className="flex items-start gap-4">
               <div className={cn(
                 "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
-                i === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                i === 0 ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"
               )}>
                 <step.icon className="h-5 w-5" />
               </div>

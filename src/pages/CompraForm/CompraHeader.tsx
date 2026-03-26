@@ -48,7 +48,7 @@ function StatusBar({ form, setConfirmDialog, saldoActual }: Props) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide",
-        form.status === 'borrador' && "bg-muted text-muted-foreground", form.status === 'confirmada' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+        form.status === 'borrador' && "bg-card border border-border text-muted-foreground", form.status === 'confirmada' && "bg-blue-500/10 text-blue-600 dark:text-blue-400",
         form.status === 'recibida' && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", form.status === 'pagada' && "bg-primary/10 text-primary",
         form.status === 'cancelada' && "bg-destructive/10 text-destructive")}>
         {form.status === 'cancelada' && <Ban className="h-3 w-3" />}{form.status === 'pagada' && <CheckCircle2 className="h-3 w-3" />}{form.status === 'recibida' && <PackageCheck className="h-3 w-3" />}{form.status}

@@ -142,7 +142,7 @@ export default function RutaNuevoCliente() {
           </MField>
 
           <MField label="Código">
-            <input className={cn(inputCls, "bg-muted text-muted-foreground")} placeholder="Se asigna automáticamente" value={form.codigo ?? ''} readOnly />
+            <input className={cn(inputCls, "bg-card border border-border text-muted-foreground")} placeholder="Se asigna automáticamente" value={form.codigo ?? ''} readOnly />
           </MField>
 
           <div className="grid grid-cols-2 gap-3">

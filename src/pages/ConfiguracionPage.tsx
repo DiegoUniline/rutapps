@@ -546,7 +546,7 @@ export default function ConfiguracionPage() {
                   onClick={() => setPreviewTab('ticket')}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                    previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                    previewTab === 'ticket' ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <Receipt className="h-3.5 w-3.5" /> Ticket
@@ -555,7 +555,7 @@ export default function ConfiguracionPage() {
                   onClick={() => setPreviewTab('nota')}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors",
-                    previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                    previewTab === 'nota' ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <FileText className="h-3.5 w-3.5" /> Nota de venta

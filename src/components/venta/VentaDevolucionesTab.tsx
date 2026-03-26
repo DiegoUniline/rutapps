@@ -55,7 +55,7 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center gap-3 text-xs">
-        <span className="bg-muted px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>
+        <span className="bg-card border border-border px-2 py-1 rounded font-medium">{totalUnidades} unidades devueltas</span>
         {totalCredito > 0 && (
           <span className="bg-destructive/10 text-destructive px-2 py-1 rounded font-medium">Crédito: ${fmt(totalCredito)}</span>
         )}
