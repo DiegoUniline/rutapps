@@ -9,13 +9,13 @@ import type { Cliente, Zona, Vendedor, Cobrador } from '@/types';
 const CATALOG_STALE = CATALOG_STALE_TIME;
 
 /** Paginated clients for list views */
-export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
+export function useClientesPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, vendedorFilter?: string, zonaFilter?: string) {
   const { empresa } = useAuth();
   const { seeAll, profileId, clientesVisibilidad } = useDataVisibility('clientes');
   const filterByVendedor = clientesVisibilidad === 'propios' && !seeAll && !!profileId;
 
   return useQuery({
-    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all'],
+    queryKey: ['clientes-page', empresa?.id, search, statusFilter, page, pageSize, filterByVendedor ? profileId : 'all', vendedorFilter, zonaFilter],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
@@ -30,6 +30,16 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         const arr = statusFilter.split(',');
         if (arr.length > 1) q = q.in('status', arr as any);
         else q = q.eq('status', statusFilter as Cliente['status']);
+      }
+      if (vendedorFilter && vendedorFilter !== 'todos') {
+        const arr = vendedorFilter.split(',');
+        if (arr.length > 1) q = q.in('vendedor_id', arr as any);
+        else q = q.eq('vendedor_id', vendedorFilter);
+      }
+      if (zonaFilter && zonaFilter !== 'todos') {
+        const arr = zonaFilter.split(',');
+        if (arr.length > 1) q = q.in('zona_id', arr as any);
+        else q = q.eq('zona_id', zonaFilter);
       }
       const { data, error, count } = await q;
       if (error) throw error;
