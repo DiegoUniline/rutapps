@@ -47,9 +47,9 @@ export default function TraspasosListPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('traspasos');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('traspasos');
 
-  const statusFilter = filters.status || 'todos';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
 
   const { data: traspasos, isLoading } = useQuery({
     queryKey: ['traspasos', empresa?.id],
