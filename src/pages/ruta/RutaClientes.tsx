@@ -164,9 +164,9 @@ export default function RutaClientes() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-background px-4 pt-2 pb-1 space-y-2">
+      <div className="sticky top-0 z-10 bg-card px-4 pt-2 pb-1 space-y-2">
 
-        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
+        <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
           <button
             onClick={() => setModo('visitas')}
             className={cn(
@@ -218,7 +218,7 @@ export default function RutaClientes() {
                   onClick={() => setDiaFiltro(d)}
                   className={cn(
                     "shrink-0 px-3 py-2 rounded-full text-xs font-semibold transition-colors capitalize",
-                    diaFiltro === d ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    diaFiltro === d ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground"
                   )}
                 >
                   {d.slice(0, 3)}
