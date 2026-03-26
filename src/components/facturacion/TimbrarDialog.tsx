@@ -375,9 +375,9 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                         <tr key={l.id} className="border-t border-border">
                           <td className="p-2 truncate max-w-[200px]">{l.descripcion || (l.productos as any)?.nombre}</td>
                           <td className="text-right p-2">{l.cantidad}</td>
-                          <td className="text-right p-2">${Number(l.precio_unitario).toFixed(2)}</td>
+                          <td className="text-right p-2">${Number(l.precio_unitario).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                           <td className="text-right p-2">{l.iva_pct || 0}%</td>
-                          <td className="text-right p-2 font-medium">${Number(l.total || 0).toFixed(2)}</td>
+                          <td className="text-right p-2 font-medium">${Number(l.total || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         </tr>
                       ))}
                     </tbody>

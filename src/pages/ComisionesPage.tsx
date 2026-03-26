@@ -201,7 +201,7 @@ export default function ComisionesPage() {
                     {(pendingForPay ?? []).length} comisiones pendientes
                   </div>
                   <div className="text-lg font-bold text-odoo-teal font-mono">
-                    $ {totalPendiente.toFixed(2)}
+                    $ {totalPendiente.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </div>
                 </div>
               </div>
@@ -211,7 +211,7 @@ export default function ComisionesPage() {
                   disabled={payMut.isPending || !payVendedor || totalPendiente <= 0}
                   className="btn-odoo-primary"
                 >
-                  <Check className="h-4 w-4" /> Pagar $ {totalPendiente.toFixed(2)}
+                  <Check className="h-4 w-4" /> Pagar $ {totalPendiente.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </button>
                 <button onClick={() => setShowPayForm(false)} className="btn-odoo-secondary">
                   Cancelar

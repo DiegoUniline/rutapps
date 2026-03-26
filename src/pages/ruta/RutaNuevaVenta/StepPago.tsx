@@ -142,7 +142,7 @@ export function StepPago(props: Props) {
                   </button>
                 ))}
                 <button
-                  onClick={() => setMontoRecibido(totalACobrar > 0 ? totalACobrar.toFixed(2) : '')}
+                  onClick={() => setMontoRecibido(totalACobrar > 0 ? totalACobrar.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '')}
                   className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
                     parseFloat(montoRecibido) === totalACobrar && totalACobrar > 0
                       ? 'bg-primary text-primary-foreground shadow-sm'

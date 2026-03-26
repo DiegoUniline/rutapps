@@ -110,7 +110,7 @@ export default function ProductoDropdown({
             </span>
             {p.precio_principal != null && (
               <span className="text-muted-foreground shrink-0 font-mono text-[11px]">
-                ${Number(p.precio_principal).toFixed(2)}
+                ${Number(p.precio_principal).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
               </span>
             )}
           </div>

@@ -296,7 +296,7 @@ export default function DemandaPage() {
                   <TableCell className="text-center py-2">
                     <Badge variant="outline" className="text-[10px]">{pedido.condicion_pago}</Badge>
                   </TableCell>
-                  <TableCell className="text-right text-[12px] font-medium py-2">$ {pedido.total?.toFixed(2)}</TableCell>
+                  <TableCell className="text-right text-[12px] font-medium py-2">$ {pedido.total?.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
                   <TableCell className="py-2">
                     <div className="flex items-center gap-2 justify-center">
                       <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">

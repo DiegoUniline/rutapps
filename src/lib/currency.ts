@@ -46,7 +46,7 @@ export function getCurrencyConfig(code?: string | null): CurrencyConfig {
 export function formatCurrency(value: number | null | undefined, code?: string | null): string {
   if (value == null) value = 0;
   const cfg = getCurrencyConfig(code);
-  return cfg.symbol + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return cfg.symbol + Number(value).toLocaleString(cfg.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 /**

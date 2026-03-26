@@ -265,7 +265,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide cursor-pointer hover:text-foreground"
               onClick={() => navigate(`/productos/${productoId}/tarifas/${tarifaId}`)}>{nombre}</h4>
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-              <span>Costo: <strong className="text-foreground">${(form.costo ?? 0).toFixed(2)}</strong></span>
+              <span>Costo: <strong className="text-foreground">${(form.costo ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></span>
               {form.tiene_iva && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IVA {form.iva_pct ?? 16}%</span>}
               {form.tiene_ieps && <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium">IEPS {form.ieps_pct ?? 0}%</span>}
               {!form.tiene_iva && !form.tiene_ieps && <span>Sin impuestos</span>}
@@ -356,7 +356,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                             onBlur={handleBlur} onKeyDown={e => { if (e.key === 'Enter') handleBlur(); if (e.key === 'Escape') { setEditingId(null); setEditingCol(null); } }} />
                         ) : (
                           <span className="inline-edit-idle font-mono text-muted-foreground">
-                            {linea.tipo_calculo === 'precio_fijo' ? `$ ${(linea.precio ?? 0).toFixed(2)}` : linea.tipo_calculo === 'margen_costo' ? `${linea.margen_pct}%` : `${linea.descuento_pct}%`}
+                            {linea.tipo_calculo === 'precio_fijo' ? `$ ${(linea.precio ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : linea.tipo_calculo === 'margen_costo' ? `${linea.margen_pct}%` : `${linea.descuento_pct}%`}
                           </span>
                         )}
                       </td>
@@ -376,9 +376,9 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
                           </select>
                         ) : <span className={`inline-edit-idle text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary`}>{baseLabel}</span>}
                       </td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {precioSinImp.toFixed(2)}</td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {precioConImp.toFixed(2)}</td>
-                      <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {precioSinImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {precioConImp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                       <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganPct >= 0 ? 'text-green-600' : 'text-destructive'}`}>{ganPct.toFixed(1)}%</td>
                       <td className="py-1.5 px-3 text-right" onClick={cellClick('comision')}>
                         {isEditing && editingCol === 'comision' ? (

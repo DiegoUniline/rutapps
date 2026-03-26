@@ -60,7 +60,7 @@ export function ProveedoresTab({ productoId, isNew, proveedores, prodProveedores
             {prodProveedores.map((pp: any) => (
               <tr key={pp.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
                 <td className="py-1.5 px-3 font-medium">{pp.proveedores?.nombre ?? '—'}{pp.es_principal && <Crown className="inline h-3.5 w-3.5 ml-1.5 text-warning fill-warning" />}</td>
-                <td className="py-1.5 px-3 text-right font-mono">$ {(pp.precio_compra ?? 0).toFixed(2)}</td>
+                <td className="py-1.5 px-3 text-right font-mono">$ {(pp.precio_compra ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 <td className="py-1.5 px-3 text-right">{pp.tiempo_entrega_dias ?? 0}</td>
                 <td className="py-1.5 px-3 text-center">
                   {pp.es_principal ? <span className="text-[11px] text-primary font-medium">✓ Principal</span> : <button onClick={() => handleSetPrincipal(pp)} className="text-[11px] text-muted-foreground hover:text-primary transition-colors">Hacer principal</button>}

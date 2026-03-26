@@ -162,17 +162,17 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
                 <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toFixed(2)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {(p.precio_con_imp ?? p.precio_lista).toFixed(2)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {(p.precio_con_imp ?? p.precio_lista).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{p.regla ?? '—'}</td>
                   <td className="py-1.5 px-3 text-center">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
                       {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
                     </span>
                   </td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toFixed(2)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
                   <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
                 </tr>
@@ -671,7 +671,7 @@ export default function ClienteFormPage() {
                   {form.credito && (
                     <>
                       <OdooField label="Límite de Crédito" value={form.limite_credito} onChange={v => set('limite_credito', +v)} type="number"
-                        format={(v: number) => `$ ${(v ?? 0).toFixed(2)}`} />
+                        format={(v: number) => `$ ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
                       <OdooField label="Días de Crédito" value={form.dias_credito} onChange={v => set('dias_credito', +v)} type="number" />
                     </>
                   )}
@@ -719,7 +719,7 @@ export default function ClienteFormPage() {
                           className="w-full text-left px-2.5 py-1.5 rounded hover:bg-accent text-[12px] flex justify-between text-foreground"
                         >
                           <span className="truncate">{p.codigo} — {p.nombre}</span>
-                          <span className="text-muted-foreground shrink-0 ml-2">${(p.precio_principal ?? 0).toFixed(2)}</span>
+                          <span className="text-muted-foreground shrink-0 ml-2">${(p.precio_principal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                         </button>
                       ))}
                       {filteredPedidoProducts?.length === 0 && <p className="text-[11px] text-muted-foreground text-center py-2">Sin resultados</p>}
