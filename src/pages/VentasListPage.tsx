@@ -108,7 +108,7 @@ function useVendedoresForFilter() {
     enabled: !!empresa?.id,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data } = await supabase.from('vendedores' as any).select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      const { data } = await (supabase.from('vendedores') as any).select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
       return (data ?? []) as { id: string; nombre: string }[];
     },
   });
