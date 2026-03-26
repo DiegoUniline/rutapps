@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { locationService } from '@/lib/locationService';
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
