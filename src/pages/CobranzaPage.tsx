@@ -3,6 +3,7 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import ClienteEstadoCuenta from '@/components/ClienteEstadoCuenta';
 import { useQuery } from '@tanstack/react-query';
 import { Banknote, Search, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
