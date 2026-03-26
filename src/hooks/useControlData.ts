@@ -103,8 +103,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryKey: ['control-descargas', empresaId, from, to],
     enabled: !!empresaId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('descargas_ruta')
+      const { data } = await (supabase.from as any)('descargas_ruta')
         .select('id, fecha, status, vendedor_id, diferencia_efectivo, efectivo_esperado, efectivo_entregado, vendedores(nombre), descarga_ruta_lineas(producto_id, cantidad_esperada, cantidad_real, diferencia, productos(nombre))')
         .eq('empresa_id', empresaId!)
         .gte('fecha', from)
@@ -113,7 +112,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
         .limit(50);
 
       const alerts: any[] = [];
-      for (const d of data ?? []) {
+      for (const d of (data ?? []) as any[]) {
         const difEfectivo = d.diferencia_efectivo ?? 0;
         const lineasConDif = ((d.descarga_ruta_lineas ?? []) as any[]).filter((l: any) => (l.diferencia ?? 0) !== 0);
 
@@ -121,14 +120,14 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
           alerts.push({
             id: d.id,
             fecha: d.fecha,
-            vendedor: (d.vendedores as any)?.nombre ?? '—',
+            vendedor: d.vendedores?.nombre ?? '—',
             status: d.status,
             diferencia_efectivo: difEfectivo,
             efectivo_esperado: d.efectivo_esperado,
             efectivo_entregado: d.efectivo_entregado,
             productos_con_diferencia: lineasConDif.length,
             lineas: lineasConDif.map((l: any) => ({
-              producto: (l.productos as any)?.nombre ?? '—',
+              producto: l.productos?.nombre ?? '—',
               esperada: l.cantidad_esperada,
               real: l.cantidad_real,
               diferencia: l.diferencia,
