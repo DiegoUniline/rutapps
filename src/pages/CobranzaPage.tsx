@@ -202,11 +202,11 @@ export default function CobranzaPage() {
               </TableHeader>
               <TableBody>
                 {deudores?.map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
-                    <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
-                    <TableCell className="text-center">{d.ventas}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
+                  <TableRow key={d.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedCliente({ id: d.id, nombre: d.nombre })}>
+                     <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
+                     <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
+                     <TableCell className="text-center">{d.ventas}</TableCell>
+                     <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
                     <TableCell className="text-center">
                       <Button
                         size="sm"
