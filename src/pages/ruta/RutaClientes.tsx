@@ -164,9 +164,9 @@ export default function RutaClientes() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="sticky top-0 z-10 bg-background px-4 pt-2 pb-1 space-y-2">
+      <div className="sticky top-0 z-10 bg-card px-4 pt-2 pb-1 space-y-2">
 
-        <div className="flex gap-0.5 bg-muted rounded-lg p-0.5">
+        <div className="flex gap-0.5 bg-card border border-border rounded-lg p-0.5">
           <button
             onClick={() => setModo('visitas')}
             className={cn(
