@@ -877,7 +877,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .from('ventas')
         .select('id, folio, total, condicion_pago, status, clientes(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
+        .eq('vendedor_id', vendedorRealId)
         .neq('status', 'cancelado')
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin)
