@@ -197,6 +197,7 @@ export default function ClienteFormPage() {
   const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
+  const { empresa } = useAuth();
   const isNew = id === 'nuevo';
   const { data: existing } = useCliente(isNew ? undefined : id);
   const saveMutation = useSaveCliente();
