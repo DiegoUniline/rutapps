@@ -140,7 +140,7 @@ export default function TraspasoFormPage() {
     queryKey: ['productos-select', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).order('nombre');
       return data ?? [];
     },
   });
