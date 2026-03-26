@@ -118,7 +118,7 @@ export default function CobranzaPage() {
       const n = (c.clientes as any)?.nombre;
       if (n) names.add(n);
     }
-    return [{ value: 'todos', label: 'Todos' }, ...Array.from(names).sort().map(n => ({ value: n, label: n }))];
+    return Array.from(names).sort().map(n => ({ value: n, label: n }));
   }, [cobros]);
 
   const vendedorFilterOptions = useMemo(() => {
