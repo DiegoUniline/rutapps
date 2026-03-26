@@ -216,7 +216,8 @@ export default function ComprasPage() {
           placeholder="Buscar por folio o proveedor..."
           filterOptions={FILTER_OPTIONS}
           activeFilters={filters}
-          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
           onClearFilters={() => { clearFilters(); setPage(1); }}
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}

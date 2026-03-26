@@ -141,7 +141,8 @@ export default function CargasListPage() {
         placeholder="Buscar..."
         filterOptions={FILTER_OPTIONS}
         activeFilters={filters}
-        onFilterChange={setFilter}
+        onToggleFilter={toggleFilterValue}
+        onSetFilter={setFilter}
         onClearFilters={clearFilters}
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
