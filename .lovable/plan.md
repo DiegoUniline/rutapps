@@ -1,34 +1,34 @@
 
 
-## Problem
+## Plan: Pedir GPS una sola vez y cachear la ubicación
 
-The ticket PNG has two issues:
-1. **Header not centered** — using spaces to center text inside `white-space: pre` doesn't work reliably in HTML rendering because even "monospace" fonts have slight variations in browser rendering
-2. **Prices misaligned / jumping lines** — the entire ticket is in a single `<pre>`-style div, and `toLocaleString('es-MX')` produces multi-byte Unicode characters (non-breaking spaces, special comma chars) that break the 32-char column math
+### Problema
+Cada vez que se registra una venta en ruta, el sistema llama a `navigator.geolocation.getCurrentPosition()`, lo que dispara el diálogo del navegador pidiendo permiso de ubicación repetidamente.
 
-## Solution
+### Solución
+Crear un servicio singleton de ubicación que pida permiso GPS **una sola vez** al entrar al módulo de ruta, y luego mantenga la posición actualizada en segundo plano con `watchPosition`. Todas las funciones que necesiten GPS simplemente leen la última ubicación conocida sin volver a pedir permiso.
 
-Split the ticket HTML into two zones as the technical advisor suggested:
+### Cambios
 
-1. **Header** — Real HTML with `text-align: center` (no space padding)
-2. **Body** — `<pre>` block with monospace font for the product/totals grid
+**1. Nuevo archivo `src/lib/locationService.ts`**
+- Singleton que usa `navigator.geolocation.watchPosition` para mantener la ubicación actualizada continuamente.
+- Expone `getLastKnownLocation()` que retorna `{lat, lng}` o `null` sin prompts.
+- Expone `startWatching()` y `stopWatching()` para controlar el ciclo de vida.
+- Pide permiso solo al llamar `startWatching()` por primera vez.
 
-Also fix `fmt()` to use ASCII-only characters (replace locale separators with plain `,` and `.`).
+**2. Integrar en el layout de ruta (`src/components/MobileLayout.tsx` o similar)**
+- Llamar `startWatching()` al montar el layout de ruta (una sola vez al entrar al módulo).
+- Llamar `stopWatching()` al desmontar.
 
-## Changes
+**3. Actualizar `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`**
+- Reemplazar `captureGps()` (que llama a `getCurrentPosition`) por `getLastKnownLocation()` del servicio — retorna la ubicación cacheada inmediatamente, sin prompt.
 
-### File: `src/lib/ticketHtml.ts`
+**4. Actualizar `src/pages/ruta/RutaClientes.tsx`**
+- Misma lógica: usar `getLastKnownLocation()` en lugar de `getCurrentPosition` para capturar GPS de clientes.
 
-Rewrite `buildTicketHTML` to:
+**5. Actualizar `src/pages/ruta/RutaNuevoCliente.tsx`**
+- Usar `getLastKnownLocation()` como opción rápida, manteniendo el botón manual como fallback.
 
-- **Header section**: Use a `<div style="text-align:center">` with real HTML `<div>` elements for empresa name, RFC, address, phone, email — no space-padding
-- **Body section**: Use `<pre style="margin:0;white-space:pre;font:inherit">` containing the monospace-aligned grid for folio, date, client, products, totals
-- **ASCII-safe fmt()**: Replace `toLocaleString` with manual formatting: `n.toFixed(2)` + regex for comma thousands separator — guarantees single-byte chars so column math works
-- **Font size**: Bump to `font-size:20px` for readability on thermal prints
-- Keep the same `pad()`, `wrapText()` helpers but only use them inside the `<pre>` block
-- Container: `width:380px; background:#fff; color:#000; font-family:'Courier New',monospace; font-size:20px; line-height:1.2`
-
-### No other files changed
-
-The `handlePrintTicket` fallback flow and `getTicketData()` mapping are correct — `total` maps properly from `venta.total ?? 0`.
+### Resultado
+El navegador pide permiso GPS **una sola vez** al entrar al módulo de ruta. Todas las ventas, visitas y capturas de ubicación usan la posición más reciente sin interrumpir al usuario.
 
