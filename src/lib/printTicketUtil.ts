@@ -35,7 +35,37 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   }
 
   // ── 2) Fallback: PNG via share/download ──
-  const html = buildTicketHTML(td, { ticketAncho, forPrint: true });
+  // Convert logo to base64 to avoid CORS issues with toPng
+  const tdForImage = { ...td, empresa: { ...td.empresa } };
+  if (tdForImage.empresa.logo_url) {
+    try {
+      const resp = await fetch(tdForImage.empresa.logo_url, { mode: 'cors' });
+      const blob = await resp.blob();
+      const b64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      tdForImage.empresa.logo_url = b64;
+    } catch {
+      // If fetch fails, try via a proxy canvas
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = tdForImage.empresa.logo_url;
+        await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d')!.drawImage(img, 0, 0);
+        tdForImage.empresa.logo_url = canvas.toDataURL('image/png');
+      } catch {
+        tdForImage.empresa.logo_url = null;
+      }
+    }
+  }
+
+  const html = buildTicketHTML(tdForImage, { ticketAncho, forPrint: true });
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.left = '-9999px';
