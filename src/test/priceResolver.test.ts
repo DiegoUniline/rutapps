@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveProductPrice, calculatePrice } from '@/lib/priceResolver';
+import { resolveProductPrice, calculatePrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { productoBasico, productoConIeps } from './fixtures/productos';
 import { reglaPrecioFijo, reglaMargenCosto, reglaDescuento } from './fixtures/tarifas';
 
