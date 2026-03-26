@@ -19,7 +19,7 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
   const saveLinea = useSaveTarifaLinea();
   const deleteLineaMut = useDeleteTarifaLinea();
   const saveTarifaMut = useSaveTarifa();
-  const { data: allListas } = useAllListasPrecios();
+  const { data: allListas } = useAllListasPrecios(producto.empresa_id);
   const { data: clasificaciones } = useClasificaciones();
   const saveListaMut = useSaveListaPrecio();
   const qc = useQueryClient();

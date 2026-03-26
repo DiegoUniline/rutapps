@@ -225,7 +225,7 @@ export default function ClienteFormPage() {
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
   const [parsingCsf, setParsingCsf] = useState(false);
-  const { data: allListasPrecios } = useAllListasPrecios();
+  const { data: allListasPrecios } = useAllListasPrecios(empresa?.id);
 
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);

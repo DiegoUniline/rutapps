@@ -12,7 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function ListasPrecioListPage() {
   const navigate = useNavigate();
-  const { data: listas, isLoading } = useAllListasPrecios();
+  const { empresa } = useAuth();
+  const { data: listas, isLoading } = useAllListasPrecios(empresa?.id);
   const qc = useQueryClient();
   const saveMutation = useSaveListaPrecio();
   const deleteMutation = useDeleteListaPrecio();
