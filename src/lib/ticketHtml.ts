@@ -99,6 +99,9 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
 
   // ── Header (real HTML, text-align:center) ──
   const hLines: string[] = [];
+  if (empresa.logo_url) {
+    hLines.push(`<div style="margin-bottom:6px"><img src="${empresa.logo_url}" alt="${empresa.nombre}" style="max-width:160px;max-height:80px;margin:0 auto;display:block" crossorigin="anonymous" /></div>`);
+  }
   hLines.push(`<div style="font-weight:700;font-size:22px">${empresa.nombre.toUpperCase()}</div>`);
   if (empresa.razon_social) hLines.push(`<div style="font-size:14px">${empresa.razon_social}</div>`);
   if (empresa.rfc) hLines.push(`<div style="font-size:14px">RFC: ${empresa.rfc}</div>`);
