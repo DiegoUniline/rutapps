@@ -241,12 +241,13 @@ export default function CobranzaPage() {
 
       {/* Filter bar */}
       <OdooFilterBar
-        search={filters._search ?? ''}
-        onSearchChange={v => setFilter('_search', v)}
+        search={(filters._search as unknown as string) ?? ''}
+        onSearchChange={v => setFilter('_search', [v] as any)}
         placeholder="Buscar cobro..."
         filterOptions={filterDefs}
         activeFilters={filters}
-        onFilterChange={setFilter}
+        onToggleFilter={toggleFilterValue}
+        onSetFilter={setFilter}
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
