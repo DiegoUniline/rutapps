@@ -62,9 +62,9 @@ function ClientesTable() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('clientes');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('clientes');
 
-  const statusFilter = filters.status || 'todos';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, PAGE_SIZE);
 
   const clientes = clientesData?.rows ?? [];
