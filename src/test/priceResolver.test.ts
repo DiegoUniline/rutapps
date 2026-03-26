@@ -46,4 +46,21 @@ describe('calculatePrice – base_precio con_impuestos', () => {
     const price = calculatePrice(rule, productoBasico);
     expect(price).toBe(10); // 11.6 / 1.16
   });
+
+  it('returns null for precio_fijo = 0 placeholder rules', () => {
+    const rule = { ...reglaPrecioFijo, precio: 0, precio_minimo: null, aplica_a: 'categoria' as const, clasificacion_ids: ['cat-001'], producto_ids: [] };
+    const price = calculatePrice(rule, productoBasico);
+    expect(price).toBeNull();
+  });
+});
+
+describe('resolveProductPrice – placeholder rules fallback', () => {
+  it('falls back to precio_principal when precio_fijo = 0 category rule matches', () => {
+    const placeholderRule: TarifaLineaRule = {
+      ...reglaPrecioFijo, precio: 0, precio_minimo: null, aplica_a: 'categoria',
+      clasificacion_ids: ['cat-001'], producto_ids: [],
+    };
+    const price = resolveProductPrice([placeholderRule], productoBasico);
+    expect(price).toBe(10); // falls back to precio_principal
+  });
 });
