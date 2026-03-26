@@ -125,7 +125,7 @@ export default function CobranzaPage() {
     const ids = new Set<string>();
     for (const c of cobros ?? []) if (c.user_id) ids.add(c.user_id);
     const opts = Array.from(ids).map(id => ({ value: id, label: vendedorMap.get(id) || id.slice(0, 8) })).sort((a, b) => a.label.localeCompare(b.label));
-    return [{ value: 'todos', label: 'Todos' }, ...opts];
+    return opts;
   }, [cobros, vendedorMap]);
 
   const filterDefs: FilterOption[] = useMemo(() => [
