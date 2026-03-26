@@ -12,6 +12,7 @@ import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, 
 import { useTarifasForSelect, useProductosForSelect, useAllListasPrecios } from '@/hooks/useData';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 
