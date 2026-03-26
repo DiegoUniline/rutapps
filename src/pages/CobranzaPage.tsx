@@ -163,8 +163,8 @@ export default function CobranzaPage() {
         isMobile ? (
           <div className="space-y-2">
             {deudores?.map(d => (
+              <div key={d.id} onClick={() => setSelectedCliente({ id: d.id, nombre: d.nombre })} className="cursor-pointer">
               <MobileListCard
-                key={d.id}
                 title={d.nombre}
                 subtitle={d.codigo}
                 badge={
