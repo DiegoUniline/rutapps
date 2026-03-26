@@ -67,11 +67,9 @@ function buildCobroMessage(cobro: any) {
 const STATUS_COBRO_OPTIONS = [
   { value: 'activo', label: 'Activo' },
   { value: 'cancelado', label: 'Cancelado' },
-  { value: 'todos', label: 'Todos' },
 ];
 
 const METODO_OPTIONS = [
-  { value: 'todos', label: 'Todos' },
   { value: 'efectivo', label: 'Efectivo' },
   { value: 'transferencia', label: 'Transferencia' },
   { value: 'tarjeta', label: 'Tarjeta' },
