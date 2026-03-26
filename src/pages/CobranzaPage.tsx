@@ -164,24 +164,26 @@ export default function CobranzaPage() {
   const renderTable = (items: any[]) => (
     <Table className="bg-card">
       <TableHeader>
-        <TableRow>
+       <TableRow>
           <TableHead className="text-[11px]">Fecha</TableHead>
           <TableHead className="text-[11px]">Cliente</TableHead>
           <TableHead className="text-[11px]">Vendedor</TableHead>
           <TableHead className="text-[11px]">Método</TableHead>
           <TableHead className="text-[11px]">Referencia</TableHead>
+          <TableHead className="text-[11px]">Estado</TableHead>
           <TableHead className="text-[11px] text-right">Monto</TableHead>
           <TableHead className="text-[11px] text-center w-12"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.map(c => (
-          <TableRow key={c.id}>
+          <TableRow key={c.id} className={(c as any).status === 'cancelado' ? 'opacity-50' : ''}>
             <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
             <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
             <TableCell className="text-[12px] text-muted-foreground">{vendedorMap.get(c.user_id) || '—'}</TableCell>
             <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
             <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
+            <TableCell className="text-[12px]"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
             <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
             <TableCell className="text-center">
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
@@ -191,13 +193,13 @@ export default function CobranzaPage() {
           </TableRow>
         ))}
         {items.length === 0 && (
-          <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+          <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
         )}
       </TableBody>
       {items.length > 0 && (
         <tfoot>
           <TableRow className="bg-card border-t border-border font-semibold">
-            <TableCell colSpan={5} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
+            <TableCell colSpan={6} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
             <TableCell className="text-right text-[12px] text-success font-bold">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
             <TableCell />
           </TableRow>
