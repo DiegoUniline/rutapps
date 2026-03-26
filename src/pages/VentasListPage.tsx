@@ -151,8 +151,13 @@ export default function VentasListPage() {
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
-  const ventas = ventasData?.rows ?? [];
-  const total = ventasData?.total ?? 0;
+  const ventasRaw = ventasData?.rows ?? [];
+  const clienteFilter = filters.cliente;
+  const ventas = useMemo(() => {
+    if (!clienteFilter || clienteFilter.length === 0) return ventasRaw;
+    return ventasRaw.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
+  }, [ventasRaw, clienteFilter]);
+  const total = (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = ventas;
