@@ -211,6 +211,16 @@ export function OdooFilterBar({
           />
         ))}
 
+        {/* Date range filter */}
+        {onDateFromChange && onDateToChange && (
+          <DateRangeDropdown
+            dateFrom={dateFrom ?? ''}
+            dateTo={dateTo ?? ''}
+            onDateFromChange={onDateFromChange}
+            onDateToChange={onDateToChange}
+          />
+        )}
+
         {/* Group by dropdown */}
         {groupByOptions && groupByOptions.length > 0 && onGroupByChange && (
           <div ref={groupRef} className="relative">
