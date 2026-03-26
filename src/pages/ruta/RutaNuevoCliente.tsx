@@ -36,12 +36,12 @@ export default function RutaNuevoCliente() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const vendedorIdParam = searchParams.get('vendedorId');
-  const { profile } = useAuth();
+  const { profile, empresa } = useAuth();
   const saveMutation = useSaveCliente();
 
   const { data: zonas } = useZonas();
   const { data: cobradores } = useCobradores();
-  const { data: allListasPrecios } = useAllListasPrecios();
+  const { data: allListasPrecios } = useAllListasPrecios(empresa?.id);
 
   const [form, setForm] = useState<Partial<Cliente>>({
     codigo: '', nombre: '', contacto: '', telefono: '', email: '',

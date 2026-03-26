@@ -399,16 +399,17 @@ export interface ListaPrecioLinea {
   productos?: { codigo: string; nombre: string };
 }
 
-export function useAllListasPrecios() {
+export function useAllListasPrecios(empresaId?: string) {
   return useQuery({
-    queryKey: ['lista_precios_all'],
+    queryKey: ['lista_precios_all', empresaId],
     staleTime: CATALOG_STALE,
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase.from('lista_precios')
         .select('id, tarifa_id, empresa_id, nombre, es_principal, activa, created_at, share_token, share_activo')
+        .eq('empresa_id', empresaId!)
         .order('nombre');
       if (error) { console.error('Error fetching lista_precios:', error); throw error; }
-      console.log('[useAllListasPrecios] fetched', data?.length, 'listas');
       return data as ListaPrecio[];
     },
   });

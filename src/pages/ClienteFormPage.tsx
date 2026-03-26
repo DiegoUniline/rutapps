@@ -12,6 +12,7 @@ import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, 
 import { useTarifasForSelect, useProductosForSelect, useAllListasPrecios } from '@/hooks/useData';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 
@@ -197,6 +198,7 @@ export default function ClienteFormPage() {
   const vendedorIdParam = searchParams.get('vendedorId');
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
+  const { empresa } = useAuth();
   const isNew = id === 'nuevo';
   const { data: existing } = useCliente(isNew ? undefined : id);
   const saveMutation = useSaveCliente();
@@ -225,7 +227,7 @@ export default function ClienteFormPage() {
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
   const [parsingCsf, setParsingCsf] = useState(false);
-  const { data: allListasPrecios } = useAllListasPrecios();
+  const { data: allListasPrecios } = useAllListasPrecios(empresa?.id);
 
   // Pedido sugerido state
   const [pedidoItems, setPedidoItems] = useState<{ producto_id: string; nombre: string; codigo: string; cantidad: number }[]>([]);
