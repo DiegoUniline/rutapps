@@ -129,6 +129,7 @@ export default function CobranzaPage() {
   }, [cobros, vendedorMap]);
 
   const filterDefs: FilterOption[] = useMemo(() => [
+    { key: 'status', label: 'Estado', options: STATUS_COBRO_OPTIONS },
     { key: 'metodo', label: 'Método de pago', options: METODO_OPTIONS },
     { key: 'cliente', label: 'Cliente', options: clienteOptions },
     { key: 'vendedor', label: 'Vendedor', options: vendedorFilterOptions },
@@ -137,6 +138,8 @@ export default function CobranzaPage() {
   // Apply filters
   const filtered = useMemo(() => {
     let list = cobros ?? [];
+    const statusF = filters.status || 'activo';
+    if (statusF !== 'todos') list = list.filter(c => (c as any).status === statusF);
     const metodo = filters.metodo;
     if (metodo && metodo !== 'todos') list = list.filter(c => c.metodo_pago === metodo);
     const cliente = filters.cliente;
