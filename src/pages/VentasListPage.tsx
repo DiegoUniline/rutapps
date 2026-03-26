@@ -61,12 +61,11 @@ const STATUS_LABELS: Record<string, string> = {
   cancelado: 'Cancelado',
 };
 
-const FILTER_OPTIONS = [
+const STATIC_FILTER_OPTIONS = [
   {
     key: 'tipo',
     label: 'Tipo',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'pedido', label: 'Pedido' },
       { value: 'venta_directa', label: 'Venta directa' },
     ],
@@ -75,12 +74,20 @@ const FILTER_OPTIONS = [
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'borrador', label: 'Borrador' },
       { value: 'confirmado', label: 'Confirmado' },
       { value: 'entregado', label: 'Entregado' },
       { value: 'facturado', label: 'Facturado' },
       { value: 'cancelado', label: 'Cancelado' },
+    ],
+  },
+  {
+    key: 'condicion_pago',
+    label: 'Condición',
+    options: [
+      { value: 'contado', label: 'Contado' },
+      { value: 'credito', label: 'Crédito' },
+      { value: 'por_definir', label: 'Por definir' },
     ],
   },
 ];
@@ -93,6 +100,19 @@ const GROUP_BY_OPTIONS = [
   { value: 'cliente', label: 'Cliente' },
   { value: 'fecha', label: 'Fecha' },
 ];
+
+function useVendedoresForFilter() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['vendedores-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return data ?? [];
+    },
+  });
+}
 
 export default function VentasListPage() {
   const { profile, empresa } = useAuth();
