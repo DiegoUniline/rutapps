@@ -48,7 +48,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
       if (condicionFilter && condicionFilter !== 'todos') {
         const arr = condicionFilter.split(',');
         if (arr.length > 1) q = q.in('condicion_pago', arr as any);
-        else q = q.eq('condicion_pago', condicionFilter);
+        else q = q.eq('condicion_pago', condicionFilter as any);
       }
       if (vendedorFilter && vendedorFilter !== 'todos') {
         const arr = vendedorFilter.split(',');
