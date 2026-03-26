@@ -39,17 +39,24 @@ const COMPRAS_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
-const FILTER_OPTIONS = [
+const STATIC_FILTER_OPTIONS = [
   {
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'borrador', label: 'Borrador' },
       { value: 'confirmada', label: 'Confirmada' },
       { value: 'recibida', label: 'Recibida' },
       { value: 'pagada', label: 'Pagada' },
       { value: 'cancelada', label: 'Cancelada' },
+    ],
+  },
+  {
+    key: 'condicion_pago',
+    label: 'Condición',
+    options: [
+      { value: 'contado', label: 'Contado' },
+      { value: 'credito', label: 'Crédito' },
     ],
   },
 ];
@@ -94,6 +101,22 @@ export default function ComprasPage() {
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter);
+
+  // Build dynamic proveedor filter options from data
+  const proveedorOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const c of compras ?? []) {
+      const pid = (c as any).proveedor_id;
+      const pname = (c as any).proveedores?.nombre;
+      if (pid && pname) names.set(pid, pname);
+    }
+    return Array.from(names.entries()).map(([id, nombre]) => ({ value: id, label: nombre })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [compras]);
+
+  const FILTER_OPTIONS = useMemo(() => [
+    ...STATIC_FILTER_OPTIONS,
+    { key: 'proveedor', label: 'Proveedor', options: proveedorOptions },
+  ], [proveedorOptions]);
 
   const total = compras?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);

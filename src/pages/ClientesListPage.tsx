@@ -38,15 +38,22 @@ const CLIENTES_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
-const FILTER_OPTIONS = [
+const STATIC_FILTER_OPTIONS = [
   {
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'activo', label: 'Activo' },
       { value: 'inactivo', label: 'Inactivo' },
       { value: 'suspendido', label: 'Suspendido' },
+    ],
+  },
+  {
+    key: 'credito',
+    label: 'Crédito',
+    options: [
+      { value: 'si', label: 'Con crédito' },
+      { value: 'no', label: 'Sin crédito' },
     ],
   },
 ];
@@ -58,6 +65,29 @@ const GROUP_BY_OPTIONS = [
   { value: 'credito', label: 'Tipo crédito' },
 ];
 
+function useDynamicFilterOptions() {
+  const { empresa } = useAuth();
+  const { data: vendedores } = useQuery({
+    queryKey: ['vendedores-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from('vendedores') as any).select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+  });
+  const { data: zonas } = useQuery({
+    queryKey: ['zonas-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from('zonas') as any).select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+  });
+  return { vendedores, zonas };
+}
+
 function ClientesTable() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -66,11 +96,29 @@ function ClientesTable() {
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('clientes');
+  const { vendedores, zonas } = useDynamicFilterOptions();
+
+  const FILTER_OPTIONS = useMemo(() => [
+    ...STATIC_FILTER_OPTIONS,
+    { key: 'vendedor', label: 'Vendedor', options: (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre })) },
+    { key: 'zona', label: 'Zona', options: (zonas ?? []).map(z => ({ value: z.id, label: z.nombre })) },
+  ], [vendedores, zonas]);
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
-  const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, PAGE_SIZE);
+  const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
+  const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
+  const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, PAGE_SIZE, vendedorFilter, zonaFilter);
 
-  const clientes = clientesData?.rows ?? [];
+  // Client-side credit filter
+  const creditoFilter = filters.credito;
+  const clientesRaw = clientesData?.rows ?? [];
+  const clientes = useMemo(() => {
+    if (!creditoFilter || creditoFilter.length === 0) return clientesRaw;
+    return clientesRaw.filter(c => {
+      const hasCredit = !!c.credito;
+      return creditoFilter.includes(hasCredit ? 'si' : 'no');
+    });
+  }, [clientesRaw, creditoFilter]);
   const total = clientesData?.total ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
