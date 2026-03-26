@@ -10,6 +10,7 @@ import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import type { CartItem, DevolucionItem, CuentaPendiente, Step } from './types';
+import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
 
@@ -57,15 +58,9 @@ export function useRutaVenta() {
     } catch {}
   };
 
-  const captureGps = (): Promise<{ lat: number; lng: number } | null> =>
-    new Promise(resolve => {
-      if (!navigator.geolocation) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
-      );
-    });
+  const captureGps = (): { lat: number; lng: number } | null => {
+    return locationService.getLastKnownLocation();
+  };
 
   const saveVisita = async (tipo: string, opts?: { ventaId?: string; motivo?: string; notasVisita?: string }) => {
     if (!empresa || !user) return;

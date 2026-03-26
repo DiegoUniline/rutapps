@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 import { toast } from 'sonner';
+import { locationService } from '@/lib/locationService';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -78,29 +79,20 @@ export default function RutaClientes() {
   }, []);
 
   const captureGps = useCallback(async (cliente: any) => {
-    if (!navigator.geolocation) {
-      toast.error('Tu navegador no soporta GPS');
+    const loc = locationService.getLastKnownLocation();
+    if (!loc) {
+      toast.error('Aún no se tiene ubicación GPS. Espera unos segundos e intenta de nuevo.');
       return;
     }
     setCapturingGpsId(cliente.id);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        await offlineMutate('clientes', 'update', {
-          ...cliente,
-          gps_lat: latitude,
-          gps_lng: longitude,
-        });
-        refetch();
-        setCapturingGpsId(null);
-        toast.success(`GPS guardado para ${cliente.nombre}`);
-      },
-      (err) => {
-        setCapturingGpsId(null);
-        toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
+    await offlineMutate('clientes', 'update', {
+      ...cliente,
+      gps_lat: loc.lat,
+      gps_lng: loc.lng,
+    });
+    refetch();
+    setCapturingGpsId(null);
+    toast.success(`GPS guardado para ${cliente.nombre}`);
   }, [offlineMutate]);
 
   const { data: clientes, isLoading, refetch } = useOfflineQuery('clientes', {

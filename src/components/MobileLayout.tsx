@@ -8,6 +8,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
+import { locationService } from '@/lib/locationService';
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
@@ -34,6 +35,12 @@ export default function MobileLayout() {
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
+
+  // Start GPS watching once on mount, stop on unmount
+  useEffect(() => {
+    locationService.startWatching();
+    return () => locationService.stopWatching();
+  }, []);
 
   useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);
