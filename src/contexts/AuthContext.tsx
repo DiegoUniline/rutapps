@@ -120,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!id) {
       // Restore original empresa
       setEmpresa(realEmpresa);
+      setGlobalTimezone(realEmpresa?.zona_horaria);
       return;
     }
     try {
