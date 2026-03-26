@@ -252,7 +252,11 @@ export default function CobranzaPage() {
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
-        onClearFilters={clearFilters}
+        onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); }}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
       />
 
       {isMobile ? (
