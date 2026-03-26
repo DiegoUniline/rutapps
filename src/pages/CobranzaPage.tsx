@@ -67,11 +67,9 @@ function buildCobroMessage(cobro: any) {
 const STATUS_COBRO_OPTIONS = [
   { value: 'activo', label: 'Activo' },
   { value: 'cancelado', label: 'Cancelado' },
-  { value: 'todos', label: 'Todos' },
 ];
 
 const METODO_OPTIONS = [
-  { value: 'todos', label: 'Todos' },
   { value: 'efectivo', label: 'Efectivo' },
   { value: 'transferencia', label: 'Transferencia' },
   { value: 'tarjeta', label: 'Tarjeta' },
@@ -120,14 +118,14 @@ export default function CobranzaPage() {
       const n = (c.clientes as any)?.nombre;
       if (n) names.add(n);
     }
-    return [{ value: 'todos', label: 'Todos' }, ...Array.from(names).sort().map(n => ({ value: n, label: n }))];
+    return Array.from(names).sort().map(n => ({ value: n, label: n }));
   }, [cobros]);
 
   const vendedorFilterOptions = useMemo(() => {
     const ids = new Set<string>();
     for (const c of cobros ?? []) if (c.user_id) ids.add(c.user_id);
     const opts = Array.from(ids).map(id => ({ value: id, label: vendedorMap.get(id) || id.slice(0, 8) })).sort((a, b) => a.label.localeCompare(b.label));
-    return [{ value: 'todos', label: 'Todos' }, ...opts];
+    return opts;
   }, [cobros, vendedorMap]);
 
   const filterDefs: FilterOption[] = useMemo(() => [

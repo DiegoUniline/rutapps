@@ -39,17 +39,24 @@ const COMPRAS_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
-const FILTER_OPTIONS = [
+const STATIC_FILTER_OPTIONS = [
   {
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'borrador', label: 'Borrador' },
       { value: 'confirmada', label: 'Confirmada' },
       { value: 'recibida', label: 'Recibida' },
       { value: 'pagada', label: 'Pagada' },
       { value: 'cancelada', label: 'Cancelada' },
+    ],
+  },
+  {
+    key: 'condicion_pago',
+    label: 'Condición',
+    options: [
+      { value: 'contado', label: 'Contado' },
+      { value: 'credito', label: 'Crédito' },
     ],
   },
 ];
@@ -95,13 +102,39 @@ export default function ComprasPage() {
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter);
 
-  const total = compras?.length ?? 0;
+  // Build dynamic proveedor filter options from data
+  const proveedorOptions = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const c of compras ?? []) {
+      const pid = (c as any).proveedor_id;
+      const pname = (c as any).proveedores?.nombre;
+      if (pid && pname) names.set(pid, pname);
+    }
+    return Array.from(names.entries()).map(([id, nombre]) => ({ value: id, label: nombre })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [compras]);
+
+  const FILTER_OPTIONS = useMemo(() => [
+    ...STATIC_FILTER_OPTIONS,
+    { key: 'proveedor', label: 'Proveedor', options: proveedorOptions },
+  ], [proveedorOptions]);
+
+  // Apply client-side filters for condicion_pago and proveedor
+  const filteredCompras = useMemo(() => {
+    let list = compras ?? [];
+    const condF = filters.condicion_pago;
+    if (condF && condF.length > 0) list = list.filter((c: any) => condF.includes(c.condicion_pago));
+    const provF = filters.proveedor;
+    if (provF && provF.length > 0) list = list.filter((c: any) => provF.includes(c.proveedor_id));
+    return list;
+  }, [compras, filters]);
+
+  const total = filteredCompras.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
-  const pageData = compras?.slice(from - 1, to) ?? [];
+  const pageData = filteredCompras.slice(from - 1, to);
 
-  const totalCompras = compras?.reduce((s, c) => s + ((c as any).total ?? 0), 0) ?? 0;
-  const totalSaldo = compras?.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0) ?? 0;
+  const totalCompras = filteredCompras.reduce((s, c) => s + ((c as any).total ?? 0), 0);
+  const totalSaldo = filteredCompras.reduce((s, c) => s + ((c as any).saldo_pendiente ?? 0), 0);
 
   const exportData = (compras ?? []).map((c: any) => ({
     folio: c.folio ?? '',

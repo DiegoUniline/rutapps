@@ -38,10 +38,10 @@ export function useProductosRealtime() {
 }
 
 /** Paginated products for list views */
-export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80) {
+export function useProductosPaginated(search?: string, statusFilter?: string, page = 1, pageSize = 80, clasificacionFilter?: string, marcaFilter?: string) {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize],
+    queryKey: ['productos-page', empresa?.id, search, statusFilter, page, pageSize, clasificacionFilter, marcaFilter],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
@@ -55,6 +55,16 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
         const arr = statusFilter.split(',');
         if (arr.length > 1) q = q.in('status', arr as any);
         else q = q.eq('status', statusFilter as Producto['status']);
+      }
+      if (clasificacionFilter && clasificacionFilter !== 'todos') {
+        const arr = clasificacionFilter.split(',');
+        if (arr.length > 1) q = q.in('clasificacion_id', arr as any);
+        else q = q.eq('clasificacion_id', clasificacionFilter);
+      }
+      if (marcaFilter && marcaFilter !== 'todos') {
+        const arr = marcaFilter.split(',');
+        if (arr.length > 1) q = q.in('marca_id', arr as any);
+        else q = q.eq('marca_id', marcaFilter);
       }
       const { data, error, count } = await q;
       if (error) throw error;

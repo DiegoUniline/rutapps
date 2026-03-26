@@ -3,6 +3,9 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Upload } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -29,12 +32,11 @@ const PRODUCTOS_COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
-const FILTER_OPTIONS = [
+const STATIC_FILTER_OPTIONS = [
   {
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'activo', label: 'Activo' },
       { value: 'inactivo', label: 'Inactivo' },
       { value: 'borrador', label: 'Borrador' },
@@ -49,6 +51,29 @@ const GROUP_BY_OPTIONS = [
   { value: 'proveedor', label: 'Proveedor' },
 ];
 
+function useProductoFilterOptions() {
+  const { empresa } = useAuth();
+  const { data: clasificaciones } = useQuery({
+    queryKey: ['clasificaciones-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from('clasificaciones') as any).select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+  });
+  const { data: marcas } = useQuery({
+    queryKey: ['marcas-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from('marcas') as any).select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+  });
+  return { clasificaciones, marcas };
+}
+
 export default function ProductosListPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -58,9 +83,18 @@ export default function ProductosListPage() {
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('productos');
+  const { clasificaciones, marcas } = useProductoFilterOptions();
+
+  const FILTER_OPTIONS = useMemo(() => [
+    ...STATIC_FILTER_OPTIONS,
+    { key: 'clasificacion', label: 'Categoría', options: (clasificaciones ?? []).map(c => ({ value: c.id, label: c.nombre })) },
+    { key: 'marca', label: 'Marca', options: (marcas ?? []).map(m => ({ value: m.id, label: m.nombre })) },
+  ], [clasificaciones, marcas]);
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'activo';
-  const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE);
+  const clasificacionFilter = filters.clasificacion?.length ? filters.clasificacion.join(',') : 'todos';
+  const marcaFilter = filters.marca?.length ? filters.marca.join(',') : 'todos';
+  const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE, clasificacionFilter, marcaFilter);
 
   const productos = productosData?.rows ?? [];
   const total = productosData?.total ?? 0;

@@ -5,6 +5,8 @@ import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, ShoppingCart } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -59,12 +61,11 @@ const STATUS_LABELS: Record<string, string> = {
   cancelado: 'Cancelado',
 };
 
-const FILTER_OPTIONS = [
+const STATIC_FILTER_OPTIONS = [
   {
     key: 'tipo',
     label: 'Tipo',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'pedido', label: 'Pedido' },
       { value: 'venta_directa', label: 'Venta directa' },
     ],
@@ -73,12 +74,20 @@ const FILTER_OPTIONS = [
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'borrador', label: 'Borrador' },
       { value: 'confirmado', label: 'Confirmado' },
       { value: 'entregado', label: 'Entregado' },
       { value: 'facturado', label: 'Facturado' },
       { value: 'cancelado', label: 'Cancelado' },
+    ],
+  },
+  {
+    key: 'condicion_pago',
+    label: 'Condición',
+    options: [
+      { value: 'contado', label: 'Contado' },
+      { value: 'credito', label: 'Crédito' },
+      { value: 'por_definir', label: 'Por definir' },
     ],
   },
 ];
@@ -92,6 +101,19 @@ const GROUP_BY_OPTIONS = [
   { value: 'fecha', label: 'Fecha' },
 ];
 
+function useVendedoresForFilter() {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['vendedores-filter', empresa?.id],
+    enabled: !!empresa?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase.from('vendedores') as any).select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+  });
+}
+
 export default function VentasListPage() {
   const { profile, empresa } = useAuth();
   const navigate = useNavigate();
@@ -104,9 +126,22 @@ export default function VentasListPage() {
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
+  const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
+  const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE, condicionFilter, vendedorFilter);
   const { data: clientesList } = useClientes();
+  const { data: vendedoresList } = useVendedoresForFilter();
+
+  const FILTER_OPTIONS = useMemo(() => {
+    const vendedorOpts = (vendedoresList ?? []).map((v: any) => ({ value: v.id, label: v.nombre }));
+    const clienteOpts = (clientesList ?? []).map(c => ({ value: c.id, label: c.nombre }));
+    return [
+      ...STATIC_FILTER_OPTIONS,
+      { key: 'vendedor', label: 'Vendedor', options: vendedorOpts },
+      { key: 'cliente', label: 'Cliente', options: clienteOpts },
+    ];
+  }, [vendedoresList, clientesList]);
 
   // WhatsApp state
   const [waOpen, setWaOpen] = useState(false);
@@ -116,8 +151,13 @@ export default function VentasListPage() {
   const [waPdfName, setWaPdfName] = useState('');
   const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
 
-  const ventas = ventasData?.rows ?? [];
-  const total = ventasData?.total ?? 0;
+  const ventasRaw = ventasData?.rows ?? [];
+  const clienteFilter = filters.cliente;
+  const ventas = useMemo(() => {
+    if (!clienteFilter || clienteFilter.length === 0) return ventasRaw;
+    return ventasRaw.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
+  }, [ventasRaw, clienteFilter]);
+  const total = (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
   const to = Math.min(page * PAGE_SIZE, total);
   const pageData = ventas;

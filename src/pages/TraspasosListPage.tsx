@@ -27,10 +27,18 @@ const FILTER_OPTIONS = [
     key: 'status',
     label: 'Estado',
     options: [
-      { value: 'todos', label: 'Todos' },
       { value: 'borrador', label: 'Borrador' },
       { value: 'confirmado', label: 'Confirmado' },
       { value: 'cancelado', label: 'Cancelado' },
+    ],
+  },
+  {
+    key: 'tipo',
+    label: 'Tipo',
+    options: [
+      { value: 'almacen_almacen', label: 'Almacén → Almacén' },
+      { value: 'almacen_ruta', label: 'Almacén → Ruta' },
+      { value: 'ruta_almacen', label: 'Ruta → Almacén' },
     ],
   },
 ];
@@ -69,9 +77,11 @@ export default function TraspasosListPage() {
     let list = traspasos ?? [];
     const statusArr = filters.status;
     if (statusArr && statusArr.length > 0) list = list.filter((t: any) => statusArr.includes(t.status));
+    const tipoArr = filters.tipo;
+    if (tipoArr && tipoArr.length > 0) list = list.filter((t: any) => tipoArr.includes(t.tipo));
     if (search) list = list.filter((t: any) => t.folio?.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [traspasos, search, filters.status]);
+  }, [traspasos, search, filters.status, filters.tipo]);
 
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);

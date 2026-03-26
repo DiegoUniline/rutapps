@@ -7,7 +7,7 @@ import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist
 import type { Venta, VentaLinea } from '@/types';
 
 /** Paginated ventas for list views */
-export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80) {
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string) {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
@@ -24,7 +24,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   }, [qc]);
 
   return useQuery({
-    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all'],
+    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter],
     enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
@@ -44,6 +44,16 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         const arr = tipoFilter.split(',');
         if (arr.length > 1) q = q.in('tipo', arr as any);
         else q = q.eq('tipo', tipoFilter as Venta['tipo']);
+      }
+      if (condicionFilter && condicionFilter !== 'todos') {
+        const arr = condicionFilter.split(',');
+        if (arr.length > 1) q = q.in('condicion_pago', arr as any);
+        else q = q.eq('condicion_pago', condicionFilter as any);
+      }
+      if (vendedorFilter && vendedorFilter !== 'todos') {
+        const arr = vendedorFilter.split(',');
+        if (arr.length > 1) q = q.in('vendedor_id', arr as any);
+        else q = q.eq('vendedor_id', vendedorFilter);
       }
       const { data, error, count } = await q;
       if (error) throw error;
