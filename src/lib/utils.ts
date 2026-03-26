@@ -43,10 +43,18 @@ export function todayInTimezone(tz?: string | null): string {
   }
 }
 
+/** Module-level timezone set by AuthContext when empresa loads */
+let _empresaTimezone: string = 'America/Mexico_City';
+
+/** Called by AuthContext to keep todayLocal() in sync with the empresa's timezone */
+export function setGlobalTimezone(tz: string | null | undefined) {
+  _empresaTimezone = tz || 'America/Mexico_City';
+}
+
 /**
- * Shorthand: today's date (yyyy-mm-dd) in America/Mexico_City.
- * Use when you don't have access to the empresa's timezone.
+ * Today's date (yyyy-mm-dd) using the empresa's configured timezone.
+ * Falls back to America/Mexico_City if not yet set.
  */
 export function todayLocal(): string {
-  return todayInTimezone('America/Mexico_City');
+  return todayInTimezone(_empresaTimezone);
 }

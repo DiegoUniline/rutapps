@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { setGlobalTimezone } from '@/lib/utils';
 import { getOfflineTable } from '@/lib/offlineDb';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Empresa } from '@/types';
@@ -110,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setEmpresa(nextEmpresa);
     setRealEmpresa(nextEmpresa);
+    setGlobalTimezone(nextEmpresa?.zona_horaria);
   }, []);
 
   // Handle override empresa for super admin
@@ -118,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!id) {
       // Restore original empresa
       setEmpresa(realEmpresa);
+      setGlobalTimezone(realEmpresa?.zona_horaria);
       return;
     }
     try {
@@ -127,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       if (!error && data) {
         setEmpresa(data as Empresa);
+        setGlobalTimezone((data as Empresa).zona_horaria);
       }
     } catch { /* ignore */ }
   }, [realEmpresa]);
