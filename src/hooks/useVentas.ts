@@ -35,8 +35,16 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterOwn) q = q.eq('vendedor_id', profileId!);
       if (search) q = q.or(`folio.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
-      if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
+      if (statusFilter && statusFilter !== 'todos') {
+        const arr = statusFilter.split(',');
+        if (arr.length > 1) q = q.in('status', arr as any);
+        else q = q.eq('status', statusFilter as Venta['status']);
+      }
+      if (tipoFilter && tipoFilter !== 'todos') {
+        const arr = tipoFilter.split(',');
+        if (arr.length > 1) q = q.in('tipo', arr as any);
+        else q = q.eq('tipo', tipoFilter as Venta['tipo']);
+      }
       const { data, error, count } = await q;
       if (error) throw error;
       return { rows: (data ?? []) as Venta[], total: count ?? 0 };
