@@ -26,6 +26,11 @@ interface OdooFilterBarProps {
   activeGroupBy?: string;
   onGroupByChange?: (value: string) => void;
   onClearFilters?: () => void;
+  /** Date range filter */
+  dateFrom?: string;
+  dateTo?: string;
+  onDateFromChange?: (val: string) => void;
+  onDateToChange?: (val: string) => void;
 }
 
 function IndependentFilterDropdown({
