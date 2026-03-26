@@ -10,8 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { fmtDate, fmtCurrency , todayLocal } from '@/lib/utils';
-import { cn , todayLocal } from '@/lib/utils';
+import { fmtDate, fmtCurrency, cn, todayLocal } from '@/lib/utils';
 
 const statusColors: Record<string, { label: string; class: string }> = {
   borrador: { label: 'Sin asignar', class: 'bg-muted text-muted-foreground' },
