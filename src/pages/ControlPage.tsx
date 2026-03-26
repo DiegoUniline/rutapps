@@ -18,11 +18,12 @@ import { useNavigate } from 'react-router-dom';
 export default function ControlPage() {
   const { fmt } = useCurrency();
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState({
-    from: subDays(new Date(), 30),
-    to: new Date(),
+  const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const data = useControlData({
+    from: new Date(dateFrom + 'T00:00:00'),
+    to: new Date(dateTo + 'T23:59:59'),
   });
-  const data = useControlData(dateRange);
   const [expandedDescarga, setExpandedDescarga] = useState<string | null>(null);
 
   const alertCounts = {
