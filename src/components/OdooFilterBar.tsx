@@ -141,6 +141,81 @@ function IndependentFilterDropdown({
   );
 }
 
+function DateRangeDropdown({
+  dateFrom,
+  dateTo,
+  onDateFromChange,
+  onDateToChange,
+}: {
+  dateFrom: string;
+  dateTo: string;
+  onDateFromChange: (val: string) => void;
+  onDateToChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const hasValue = !!(dateFrom || dateTo);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const label = hasValue
+    ? `${dateFrom || '…'} → ${dateTo || '…'}`
+    : 'Fecha';
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "btn-odoo-secondary flex items-center gap-1",
+          hasValue && "border-primary text-primary"
+        )}
+      >
+        <CalendarDays className="h-3.5 w-3.5" />
+        {label}
+        <ChevronDown className="h-3 w-3" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-3 animate-in fade-in-0 zoom-in-95 duration-150 min-w-[260px] space-y-2">
+          <div>
+            <label className="text-[10px] text-muted-foreground font-medium uppercase">Desde</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={e => onDateFromChange(e.target.value)}
+              className="w-full mt-0.5 px-2 py-1.5 text-[12px] rounded-md border border-border bg-card focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground font-medium uppercase">Hasta</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={e => onDateToChange(e.target.value)}
+              className="w-full mt-0.5 px-2 py-1.5 text-[12px] rounded-md border border-border bg-card focus:outline-none focus:ring-1 focus:ring-primary/40"
+            />
+          </div>
+          {hasValue && (
+            <button
+              onClick={() => { onDateFromChange(''); onDateToChange(''); }}
+              className="text-[11px] text-destructive hover:underline flex items-center gap-1"
+            >
+              <X className="h-3 w-3" /> Limpiar fechas
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function OdooFilterBar({
   search, onSearchChange, placeholder = 'Buscar...', children,
   filterOptions, activeFilters, onToggleFilter, onSetFilter,
