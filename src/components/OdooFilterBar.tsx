@@ -189,8 +189,23 @@ export function OdooFilterBar({
 
   return (
     <div className="space-y-2">
+      {/* Row 1: Search bar – centered, full width */}
+      <div className="flex justify-center">
+        <div className="relative w-full max-w-xl">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+            placeholder={placeholder}
+            className="input-odoo pl-8 w-full"
+          />
+        </div>
+      </div>
+
+      {/* Row 2: Dates → Filters → Group by → Clear */}
       <div className="flex items-center gap-2 flex-wrap">
-        {/* 1. Date range – always first */}
+        {/* Dates first */}
         {onDateFromChange && onDateToChange && (
           <div className="flex items-center gap-1.5 shrink-0">
             <CalendarDays className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -210,19 +225,7 @@ export function OdooFilterBar({
           </div>
         )}
 
-        {/* 2. Search – centered, takes remaining space */}
-        <div className="relative flex-1 min-w-[160px] max-w-sm">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => onSearchChange(e.target.value)}
-            placeholder={placeholder}
-            className="input-odoo pl-8"
-          />
-        </div>
-
-        {/* 3. Filter dropdowns */}
+        {/* Filter dropdowns */}
         {filterOptions && filterOptions.length > 0 && onToggleFilter && filterOptions.map(fo => (
           <IndependentFilterDropdown
             key={fo.key}
@@ -233,7 +236,7 @@ export function OdooFilterBar({
           />
         ))}
 
-        {/* 4. Group by */}
+        {/* Group by */}
         {groupByOptions && groupByOptions.length > 0 && onGroupByChange && (
           <div ref={groupRef} className="relative">
             <button
@@ -277,7 +280,7 @@ export function OdooFilterBar({
           </div>
         )}
 
-        {/* 5. Clear all */}
+        {/* Clear all */}
         {activeCount > 0 && onClearFilters && (
           <button onClick={() => { onClearFilters(); onDateFromChange?.(''); onDateToChange?.(''); }} className="text-[11px] text-destructive hover:underline flex items-center gap-1">
             <X className="h-3 w-3" /> Limpiar
