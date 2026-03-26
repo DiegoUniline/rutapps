@@ -3,6 +3,7 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import ClienteEstadoCuenta from '@/components/ClienteEstadoCuenta';
 import { useQuery } from '@tanstack/react-query';
 import { Banknote, Search, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -96,6 +97,9 @@ export default function CobranzaPage() {
   const { data: cobros, isLoading } = useCobros(search);
   const { data: deudores } = useClientesConDeuda();
 
+  // Estado de cuenta drawer
+  const [selectedCliente, setSelectedCliente] = useState<{ id: string; nombre: string } | null>(null);
+
   // WhatsApp preview state
   const [waOpen, setWaOpen] = useState(false);
   const [waMessage, setWaMessage] = useState('');
@@ -159,8 +163,8 @@ export default function CobranzaPage() {
         isMobile ? (
           <div className="space-y-2">
             {deudores?.map(d => (
+              <div key={d.id} onClick={() => setSelectedCliente({ id: d.id, nombre: d.nombre })} className="cursor-pointer">
               <MobileListCard
-                key={d.id}
                 title={d.nombre}
                 subtitle={d.codigo}
                 badge={
@@ -179,6 +183,7 @@ export default function CobranzaPage() {
                   { label: 'Saldo', value: <span className="text-destructive font-bold">{fmtC(d.total)}</span> },
                 ]}
               />
+              </div>
             ))}
             {(!deudores || deudores.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">Sin deudores 🎉</div>
@@ -198,11 +203,11 @@ export default function CobranzaPage() {
               </TableHeader>
               <TableBody>
                 {deudores?.map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
-                    <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
-                    <TableCell className="text-center">{d.ventas}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
+                  <TableRow key={d.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedCliente({ id: d.id, nombre: d.nombre })}>
+                     <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
+                     <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
+                     <TableCell className="text-center">{d.ventas}</TableCell>
+                     <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
                     <TableCell className="text-center">
                       <Button
                         size="sm"
@@ -315,6 +320,13 @@ export default function CobranzaPage() {
         empresaId={empresa?.id ?? ''}
         tipo={waTipo}
         referencia_id={waRefId}
+      />
+
+      {/* Estado de cuenta drawer */}
+      <ClienteEstadoCuenta
+        clienteId={selectedCliente?.id ?? null}
+        clienteNombre={selectedCliente?.nombre ?? ''}
+        onClose={() => setSelectedCliente(null)}
       />
     </div>
   );
