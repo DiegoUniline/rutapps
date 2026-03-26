@@ -52,9 +52,9 @@ const GROUP_BY_OPTIONS = [
 export default function CargasListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('cargas');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cargas');
 
-  const statusFilter = filters.status || 'todos';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: cargas, isLoading } = useCargas(search, statusFilter);
 
   const groups = useMemo(() => groupData(cargas ?? [], groupBy, (item: any, key) => {
@@ -141,7 +141,8 @@ export default function CargasListPage() {
         placeholder="Buscar..."
         filterOptions={FILTER_OPTIONS}
         activeFilters={filters}
-        onFilterChange={setFilter}
+        onToggleFilter={toggleFilterValue}
+        onSetFilter={setFilter}
         onClearFilters={clearFilters}
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}

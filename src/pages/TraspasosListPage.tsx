@@ -47,9 +47,9 @@ export default function TraspasosListPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('traspasos');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('traspasos');
 
-  const statusFilter = filters.status || 'todos';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
 
   const { data: traspasos, isLoading } = useQuery({
     queryKey: ['traspasos', empresa?.id],
@@ -67,10 +67,11 @@ export default function TraspasosListPage() {
 
   const filtered = useMemo(() => {
     let list = traspasos ?? [];
-    if (statusFilter !== 'todos') list = list.filter((t: any) => t.status === statusFilter);
+    const statusArr = filters.status;
+    if (statusArr && statusArr.length > 0) list = list.filter((t: any) => statusArr.includes(t.status));
     if (search) list = list.filter((t: any) => t.folio?.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [traspasos, search, statusFilter]);
+  }, [traspasos, search, filters.status]);
 
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
@@ -164,7 +165,8 @@ export default function TraspasosListPage() {
           placeholder="Buscar por folio..."
           filterOptions={FILTER_OPTIONS}
           activeFilters={filters}
-          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
           onClearFilters={() => { clearFilters(); setPage(1); }}
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}

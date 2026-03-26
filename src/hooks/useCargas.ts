@@ -15,7 +15,11 @@ export function useCargas(search?: string, statusFilter?: string) {
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       if (search) q = q.ilike('vendedores.nombre', `%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
+      if (statusFilter && statusFilter !== 'todos') {
+        const arr = statusFilter.split(',');
+        if (arr.length > 1) q = q.in('status', arr as any);
+        else q = q.eq('status', statusFilter as any);
+      }
       const { data, error } = await q;
       if (error) throw error;
       return data;

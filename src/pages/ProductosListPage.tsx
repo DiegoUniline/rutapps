@@ -57,9 +57,9 @@ export default function ProductosListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('productos');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('productos');
 
-  const statusFilter = filters.status || 'activo';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'activo';
   const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE);
 
   const productos = productosData?.rows ?? [];
@@ -190,7 +190,8 @@ export default function ProductosListPage() {
           placeholder="Buscar por nombre o código..."
           filterOptions={FILTER_OPTIONS}
           activeFilters={filters}
-          onFilterChange={(key, val) => { setFilter(key, val); setPage(1); }}
+          onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
+          onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
           onClearFilters={() => { clearFilters(); setPage(1); }}
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}

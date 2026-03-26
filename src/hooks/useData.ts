@@ -51,7 +51,11 @@ export function useProductosPaginated(search?: string, statusFilter?: string, pa
         .order('nombre', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
+      if (statusFilter && statusFilter !== 'todos') {
+        const arr = statusFilter.split(',');
+        if (arr.length > 1) q = q.in('status', arr as any);
+        else q = q.eq('status', statusFilter as Producto['status']);
+      }
       const { data, error, count } = await q;
       if (error) throw error;
       return { rows: (data ?? []) as unknown as Producto[], total: count ?? 0 };
