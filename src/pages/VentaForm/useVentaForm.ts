@@ -244,8 +244,25 @@ export function useVentaForm() {
         const prevStatus = form.status;
         setForm(prev => ({ ...prev, status: newStatus }));
         await saveVenta.mutateAsync({ id: form.id!, status: newStatus } as any);
+        // Reverse associated cobros
+        const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', form.id!);
+        if (apps && apps.length > 0) {
+          await supabase.from('cobro_aplicaciones').delete().eq('venta_id', form.id!);
+          const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
+          for (const cid of cobroIds) {
+            const { data: remaining } = await supabase.from('cobro_aplicaciones').select('id').eq('cobro_id', cid);
+            if (!remaining || remaining.length === 0) {
+              await supabase.from('cobros').delete().eq('id', cid);
+            } else {
+              const { data: sumData } = await supabase.from('cobro_aplicaciones').select('monto_aplicado').eq('cobro_id', cid);
+              const newTotal = (sumData ?? []).reduce((s, r) => s + (r.monto_aplicado ?? 0), 0);
+              await supabase.from('cobros').update({ monto: newTotal }).eq('id', cid);
+            }
+          }
+        }
         await logHistorial(form.id!, 'cancelada', { status: { anterior: prevStatus, nuevo: 'cancelado' } });
         toast.success('Venta cancelada');
+        queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
       });
       return;
     }

@@ -411,6 +411,22 @@ export default function RutaVentaDetalle() {
       const prevStatus = venta.status;
       const { error } = await supabase.from('ventas').update({ status: 'cancelado' as const }).eq('id', venta.id);
       if (error) throw error;
+      // Reverse associated cobros
+      const { data: apps } = await supabase.from('cobro_aplicaciones').select('id, cobro_id, monto_aplicado').eq('venta_id', venta.id);
+      if (apps && apps.length > 0) {
+        await supabase.from('cobro_aplicaciones').delete().eq('venta_id', venta.id);
+        const cobroIds = [...new Set(apps.map(a => a.cobro_id))];
+        for (const cid of cobroIds) {
+          const { data: remaining } = await supabase.from('cobro_aplicaciones').select('id').eq('cobro_id', cid);
+          if (!remaining || remaining.length === 0) {
+            await supabase.from('cobros').delete().eq('id', cid);
+          } else {
+            const { data: sumData } = await supabase.from('cobro_aplicaciones').select('monto_aplicado').eq('cobro_id', cid);
+            const newTotal = (sumData ?? []).reduce((s, r) => s + (r.monto_aplicado ?? 0), 0);
+            await supabase.from('cobros').update({ monto: newTotal }).eq('id', cid);
+          }
+        }
+      }
       await supabase.from('venta_historial').insert({ venta_id: venta.id, empresa_id: empresa?.id ?? '', user_id: user?.id ?? '', user_nombre: (profile as any)?.nombre ?? 'Sistema', accion: 'cancelada', detalles: { status: { anterior: prevStatus, nuevo: 'cancelado' } } as any });
       toast.success('Venta cancelada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
