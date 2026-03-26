@@ -153,7 +153,7 @@ export default function CobranzaPage() {
   }), [filtered, groupBy, vendedorMap]);
 
   const renderTable = (items: any[]) => (
-    <Table>
+    <Table className="bg-card">
       <TableHeader>
         <TableRow>
           <TableHead className="text-[11px]">Fecha</TableHead>
