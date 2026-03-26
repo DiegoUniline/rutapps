@@ -7,7 +7,7 @@ import { pickColumns, VENTA_COLUMNS, VENTA_LINEA_COLUMNS } from '@/lib/allowlist
 import type { Venta, VentaLinea } from '@/types';
 
 /** Paginated ventas for list views */
-export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string) {
+export function useVentasPaginated(search?: string, statusFilter?: string, tipoFilter?: string, page = 1, pageSize = 80, condicionFilter?: string, vendedorFilter?: string, dateFrom?: string, dateTo?: string) {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const { seeAll, profileId } = useDataVisibility('ventas');
