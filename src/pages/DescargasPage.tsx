@@ -911,7 +911,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .from('gastos')
         .select('id, monto, concepto, fecha, notas')
         .eq('empresa_id', empresa!.id)
-        .eq('vendedor_id', vendedorId)
+        .eq('vendedor_id', vendedorRealId)
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin);
       return data ?? [];
