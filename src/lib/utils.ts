@@ -37,10 +37,16 @@ export function fmtNum(value: number | null | undefined): string {
 export function todayInTimezone(tz?: string | null): string {
   const zone = tz || 'America/Mexico_City';
   try {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    return parts; // en-CA gives yyyy-mm-dd
+    return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   } catch {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    return parts;
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   }
+}
+
+/**
+ * Shorthand: today's date (yyyy-mm-dd) in America/Mexico_City.
+ * Use when you don't have access to the empresa's timezone.
+ */
+export function todayLocal(): string {
+  return todayInTimezone('America/Mexico_City');
 }
