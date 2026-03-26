@@ -118,7 +118,7 @@ function MonitorContent() {
     queryKey: ['monitor-cobros-hoy', dateStr],
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', dateStr);
+      const { data } = await supabase.from('cobros').select('id, monto').eq('fecha', dateStr).neq('status', 'cancelado');
       return data ?? [];
     },
   });

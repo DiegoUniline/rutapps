@@ -59,6 +59,7 @@ export default function ReporteDiarioRuta() {
       const { data } = await (supabase as any).from('cobros')
         .select('id, monto, metodo_pago, referencia, clientes(nombre)')
         .eq('empresa_id', empresa!.id).eq('user_id', selectedUserId)
+        .neq('status', 'cancelado')
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
         .order('created_at');
       return data ?? [];

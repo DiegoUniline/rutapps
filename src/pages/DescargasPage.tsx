@@ -893,6 +893,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
         .select('id, monto, metodo_pago, fecha, clientes(nombre), referencia')
         .eq('empresa_id', empresa!.id)
         .eq('user_id', selectedUserId)
+        .neq('status', 'cancelado')
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin)
         .order('created_at', { ascending: true });
