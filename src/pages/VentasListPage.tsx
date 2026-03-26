@@ -5,6 +5,8 @@ import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
 import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, ShoppingCart } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
