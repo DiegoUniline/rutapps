@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Public read payment_links by token" ON public.payment_links;
