@@ -1,69 +1,54 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Banknote, Search, MessageCircle } from 'lucide-react';
+import { Banknote, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MobileListCard } from '@/components/MobileListCard';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { toast } from 'sonner';
+import { OdooFilterBar, type FilterOption, type GroupByOption } from '@/components/OdooFilterBar';
+import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
-function useCobros(search: string) {
+function useCobros() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['cobros-desktop', empresa?.id, search],
+    queryKey: ['cobros-desktop', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
+      const { data, error } = await supabase
         .from('cobros')
         .select('*, clientes(nombre, telefono)')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
-      if (search) q = q.or(`clientes.nombre.ilike.%${search}%,referencia.ilike.%${search}%`);
-      const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
   });
 }
 
-function useClientesConDeuda() {
+function useVendedores() {
   const { empresa } = useAuth();
   return useQuery({
-    queryKey: ['clientes-deuda', empresa?.id],
+    queryKey: ['vendedores-cobranza', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
-        .from('ventas')
-        .select('cliente_id, clientes(id, nombre, codigo, telefono), saldo_pendiente')
+        .from('profiles')
+        .select('user_id, nombre')
         .eq('empresa_id', empresa!.id)
-        .gt('saldo_pendiente', 0);
-      const map: Record<string, { nombre: string; codigo: string; id: string; total: number; ventas: number; telefono: string }> = {};
-      for (const v of (data ?? [])) {
-        const cid = v.cliente_id ?? '';
-        if (!map[cid]) map[cid] = {
-          id: cid,
-          nombre: (v.clientes as any)?.nombre ?? '—',
-          codigo: (v.clientes as any)?.codigo ?? '',
-          telefono: (v.clientes as any)?.telefono ?? '',
-          total: 0,
-          ventas: 0,
-        };
-        map[cid].total += v.saldo_pendiente ?? 0;
-        map[cid].ventas += 1;
-      }
-      return Object.values(map).sort((a, b) => b.total - a.total);
+        .eq('estado', 'activo');
+      return data ?? [];
     },
   });
 }
@@ -75,51 +60,137 @@ function buildCobroMessage(cobro: any) {
     `Fecha: ${fmtDate(cobro.fecha)}\n` +
     `Método: ${cobro.metodo_pago}\n` +
     (cobro.referencia ? `Referencia: ${cobro.referencia}\n` : '') +
-    `\n💰 *Monto: $${fmt(cobro.monto)}*\n\n` +
+    `\n💰 *Monto: $${fmtNum(cobro.monto)}*\n\n` +
     `Gracias por su pago.`;
 }
 
-function buildDeudaMessage(deudor: { nombre: string; total: number; ventas: number }) {
-  return `📋 *Estado de Cuenta*\n\n` +
-    `Cliente: ${deudor.nombre}\n` +
-    `Ventas pendientes: ${deudor.ventas}\n` +
-    `\n💳 *Saldo total: $${fmt(deudor.total)}*\n\n` +
-    `Le recordamos amablemente que tiene un saldo pendiente. Agradecemos su pronto pago.`;
-}
+const METODO_OPTIONS = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'efectivo', label: 'Efectivo' },
+  { value: 'transferencia', label: 'Transferencia' },
+  { value: 'tarjeta', label: 'Tarjeta' },
+  { value: 'otro', label: 'Otro' },
+];
+
+const GROUP_BY_OPTIONS: GroupByOption[] = [
+  { value: 'cliente', label: 'Cliente' },
+  { value: 'fecha', label: 'Fecha' },
+  { value: 'metodo', label: 'Método de pago' },
+  { value: 'vendedor', label: 'Vendedor' },
+];
 
 export default function CobranzaPage() {
   const { empresa } = useAuth();
   const isMobile = useIsMobile();
   const { fmt: fmtC } = useCurrency();
-  const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<'cobros' | 'deudores'>('deudores');
-  const { data: cobros, isLoading } = useCobros(search);
-  const { data: deudores } = useClientesConDeuda();
+  const { data: cobros, isLoading } = useCobros();
+  const { data: vendedores } = useVendedores();
+  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('cobranza');
+
+  const vendedorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const v of vendedores ?? []) m.set(v.user_id, v.nombre ?? '');
+    return m;
+  }, [vendedores]);
 
   // WhatsApp preview state
   const [waOpen, setWaOpen] = useState(false);
   const [waMessage, setWaMessage] = useState('');
   const [waPhone, setWaPhone] = useState('');
   const [waRefId, setWaRefId] = useState<string | undefined>();
-  const [waTipo, setWaTipo] = useState('recibo_cobro');
-
-  const totalCobrado = cobros?.reduce((s, c) => s + (c.monto ?? 0), 0) ?? 0;
-  const totalDeuda = deudores?.reduce((s, d) => s + d.total, 0) ?? 0;
 
   const openWaCobro = (cobro: any) => {
     setWaMessage(buildCobroMessage(cobro));
     setWaPhone((cobro.clientes as any)?.telefono ?? '');
     setWaRefId(cobro.id);
-    setWaTipo('recibo_cobro');
     setWaOpen(true);
   };
 
-  const openWaDeuda = (deudor: any) => {
-    setWaMessage(buildDeudaMessage(deudor));
-    setWaPhone(deudor.telefono ?? '');
-    setWaRefId(deudor.id);
-    setWaTipo('recordatorio_deuda');
-    setWaOpen(true);
+  // Build dynamic filter options
+  const clienteOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const c of cobros ?? []) {
+      const n = (c.clientes as any)?.nombre;
+      if (n) names.add(n);
+    }
+    return [{ value: 'todos', label: 'Todos' }, ...Array.from(names).sort().map(n => ({ value: n, label: n }))];
+  }, [cobros]);
+
+  const vendedorFilterOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const c of cobros ?? []) if (c.user_id) ids.add(c.user_id);
+    const opts = Array.from(ids).map(id => ({ value: id, label: vendedorMap.get(id) || id.slice(0, 8) })).sort((a, b) => a.label.localeCompare(b.label));
+    return [{ value: 'todos', label: 'Todos' }, ...opts];
+  }, [cobros, vendedorMap]);
+
+  const filterDefs: FilterOption[] = useMemo(() => [
+    { key: 'metodo', label: 'Método de pago', options: METODO_OPTIONS },
+    { key: 'cliente', label: 'Cliente', options: clienteOptions },
+    { key: 'vendedor', label: 'Vendedor', options: vendedorFilterOptions },
+  ], [clienteOptions, vendedorFilterOptions]);
+
+  // Apply filters
+  const filtered = useMemo(() => {
+    let list = cobros ?? [];
+    const metodo = filters.metodo;
+    if (metodo && metodo !== 'todos') list = list.filter(c => c.metodo_pago === metodo);
+    const cliente = filters.cliente;
+    if (cliente && cliente !== 'todos') list = list.filter(c => (c.clientes as any)?.nombre === cliente);
+    const vendedor = filters.vendedor;
+    if (vendedor && vendedor !== 'todos') list = list.filter(c => c.user_id === vendedor);
+    return list;
+  }, [cobros, filters]);
+
+  const totalCobrado = filtered.reduce((s, c) => s + (c.monto ?? 0), 0);
+
+  // Grouping
+  const groups = useMemo(() => groupData(filtered, groupBy, (item: any, key: string) => {
+    if (key === 'cliente') return (item.clientes as any)?.nombre ?? 'Sin cliente';
+    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key === 'metodo') return item.metodo_pago ?? 'Sin método';
+    if (key === 'vendedor') return vendedorMap.get(item.user_id) || 'Sin vendedor';
+    return '';
+  }), [filtered, groupBy, vendedorMap]);
+
+  const renderTable = (items: any[]) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="text-[11px]">Fecha</TableHead>
+          <TableHead className="text-[11px]">Cliente</TableHead>
+          <TableHead className="text-[11px]">Vendedor</TableHead>
+          <TableHead className="text-[11px]">Método</TableHead>
+          <TableHead className="text-[11px]">Referencia</TableHead>
+          <TableHead className="text-[11px] text-right">Monto</TableHead>
+          <TableHead className="text-[11px] text-center w-12"></TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map(c => (
+          <TableRow key={c.id}>
+            <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
+            <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
+            <TableCell className="text-[12px] text-muted-foreground">{vendedorMap.get(c.user_id) || '—'}</TableCell>
+            <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
+            <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
+            <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
+            <TableCell className="text-center">
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+        {items.length === 0 && (
+          <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+
+  const renderSummary = (items: any[]) => {
+    const total = items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+    return <span className="text-[11px] font-semibold text-success">{fmtC(total)}</span>;
   };
 
   return (
@@ -130,190 +201,71 @@ export default function CobranzaPage() {
       </h1>
 
       {/* Summary */}
-      <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-3")}>
+      <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-2")}>
         <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Total por cobrar</p>
-          <p className="text-2xl font-bold text-destructive">{fmtC(totalDeuda)}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Total cobrado</p>
+          <p className="text-2xl font-bold text-success">{fmtC(totalCobrado)}</p>
         </div>
         <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Clientes con deuda</p>
-          <p className="text-2xl font-bold text-warning">{deudores?.length ?? 0}</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <p className="text-[11px] text-muted-foreground uppercase">Cobros registrados</p>
-          <p className="text-2xl font-bold text-success">{cobros?.length ?? 0}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Cobros</p>
+          <p className="text-2xl font-bold text-foreground">{filtered.length}</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border overflow-x-auto">
-        {([['deudores', 'Clientes con deuda'], ['cobros', 'Historial de cobros']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={cn(
-            "px-4 py-2 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap",
-            tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-          )}>{label}</button>
-        ))}
-      </div>
+      {/* Filter bar */}
+      <OdooFilterBar
+        search={filters._search ?? ''}
+        onSearchChange={v => setFilter('_search', v)}
+        placeholder="Buscar cobro..."
+        filterOptions={filterDefs}
+        activeFilters={filters}
+        onFilterChange={setFilter}
+        groupByOptions={GROUP_BY_OPTIONS}
+        activeGroupBy={groupBy}
+        onGroupByChange={setGroupBy}
+        onClearFilters={clearFilters}
+      />
 
-      {tab === 'deudores' && (
-        isMobile ? (
-          <div className="space-y-2">
-            {deudores?.map(d => (
-              <MobileListCard
-                key={d.id}
-                title={d.nombre}
-                subtitle={d.codigo}
-                badge={
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0 text-[#25D366]"
-                    onClick={e => { e.stopPropagation(); openWaDeuda(d); }}
-                    title="Enviar recordatorio por WhatsApp"
-                  >
+      {isMobile ? (
+        <div className="space-y-2">
+          {filtered.map(c => (
+            <MobileListCard
+              key={c.id}
+              title={(c.clientes as any)?.nombre ?? '—'}
+              subtitle={fmtDate(c.fecha)}
+              badge={
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-[10px]">{c.metodo_pago}</Badge>
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366]" onClick={e => { e.stopPropagation(); openWaCobro(c); }}>
                     <MessageCircle className="h-4 w-4" />
                   </Button>
-                }
-                fields={[
-                  { label: 'Ventas pendientes', value: d.ventas },
-                  { label: 'Saldo', value: <span className="text-destructive font-bold">{fmtC(d.total)}</span> },
-                ]}
-              />
-            ))}
-            {(!deudores || deudores.length === 0) && (
-              <div className="text-center py-8 text-muted-foreground">Sin deudores 🎉</div>
-            )}
-          </div>
-        ) : (
-          <div className="bg-card border border-border rounded overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-[11px]">Código</TableHead>
-                  <TableHead className="text-[11px]">Cliente</TableHead>
-                  <TableHead className="text-[11px] text-center">Ventas pendientes</TableHead>
-                  <TableHead className="text-[11px] text-right">Saldo total</TableHead>
-                  <TableHead className="text-[11px] text-center w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {deudores?.map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-mono text-[11px] text-muted-foreground">{d.codigo}</TableCell>
-                    <TableCell className="font-medium text-[12px]">{d.nombre}</TableCell>
-                    <TableCell className="text-center">{d.ventas}</TableCell>
-                    <TableCell className="text-right font-bold text-destructive">{fmtC(d.total)}</TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80"
-                        onClick={() => openWaDeuda(d)}
-                        title="Enviar recordatorio por WhatsApp"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(!deudores || deudores.length === 0) && (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Sin deudores 🎉</TableCell></TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )
+                </div>
+              }
+              fields={[
+                ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
+                { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
+              ]}
+            />
+          ))}
+          {isLoading && <div className="text-center py-8 text-muted-foreground">Cargando...</div>}
+          {!isLoading && filtered.length === 0 && <div className="text-center py-8 text-muted-foreground">Sin cobros</div>}
+        </div>
+      ) : (
+        <GroupedTableWrapper
+          groupBy={groupBy}
+          groups={groups}
+          renderTable={renderTable}
+          renderSummary={renderSummary}
+        />
       )}
 
-      {tab === 'cobros' && (
-        <>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar cobro..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          {isMobile ? (
-            <div className="space-y-2">
-              {cobros?.map(c => (
-                <MobileListCard
-                  key={c.id}
-                  title={(c.clientes as any)?.nombre ?? '—'}
-                  subtitle={fmtDate(c.fecha)}
-                  badge={
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-[10px]">{c.metodo_pago}</Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-[#25D366]"
-                        onClick={e => { e.stopPropagation(); openWaCobro(c); }}
-                        title="Enviar recibo por WhatsApp"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  }
-                  fields={[
-                    ...(c.referencia ? [{ label: 'Ref', value: c.referencia }] : []),
-                    { label: 'Monto', value: <span className="text-success font-bold">{fmtC(c.monto)}</span> },
-                  ]}
-                />
-              ))}
-              {isLoading && <div className="text-center py-8 text-muted-foreground">Cargando...</div>}
-              {!isLoading && cobros?.length === 0 && <div className="text-center py-8 text-muted-foreground">Sin cobros</div>}
-            </div>
-          ) : (
-            <div className="bg-card border border-border rounded overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-[11px]">Fecha</TableHead>
-                    <TableHead className="text-[11px]">Cliente</TableHead>
-                    <TableHead className="text-[11px]">Método</TableHead>
-                    <TableHead className="text-[11px]">Referencia</TableHead>
-                    <TableHead className="text-[11px] text-right">Monto</TableHead>
-                    <TableHead className="text-[11px] text-center w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cobros?.map(c => (
-                    <TableRow key={c.id}>
-                      <TableCell className="text-[12px]">{fmtDate(c.fecha)}</TableCell>
-                      <TableCell className="font-medium text-[12px]">{(c.clientes as any)?.nombre ?? '—'}</TableCell>
-                      <TableCell className="text-[12px]"><Badge variant="outline">{c.metodo_pago}</Badge></TableCell>
-                      <TableCell className="text-[12px] text-muted-foreground">{c.referencia ?? '—'}</TableCell>
-                      <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
-                      <TableCell className="text-center">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80"
-                          onClick={() => openWaCobro(c)}
-                          title="Enviar recibo por WhatsApp"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {isLoading && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
-                  {!isLoading && cobros?.length === 0 && (
-                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* WhatsApp Preview Dialog */}
       <WhatsAppPreviewDialog
         open={waOpen}
         onClose={() => setWaOpen(false)}
         message={waMessage}
         phone={waPhone}
         empresaId={empresa?.id ?? ''}
-        tipo={waTipo}
+        tipo="recibo_cobro"
         referencia_id={waRefId}
       />
     </div>
