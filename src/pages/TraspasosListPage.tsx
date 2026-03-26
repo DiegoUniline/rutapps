@@ -67,10 +67,11 @@ export default function TraspasosListPage() {
 
   const filtered = useMemo(() => {
     let list = traspasos ?? [];
-    if (statusFilter !== 'todos') list = list.filter((t: any) => t.status === statusFilter);
+    const statusArr = filters.status;
+    if (statusArr && statusArr.length > 0) list = list.filter((t: any) => statusArr.includes(t.status));
     if (search) list = list.filter((t: any) => t.folio?.toLowerCase().includes(search.toLowerCase()));
     return list;
-  }, [traspasos, search, statusFilter]);
+  }, [traspasos, search, filters.status]);
 
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
