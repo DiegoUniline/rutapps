@@ -153,8 +153,10 @@ export default function CobranzaPage() {
       const q = search.toLowerCase();
       list = list.filter(c => (c.clientes as any)?.nombre?.toLowerCase().includes(q) || c.referencia?.toLowerCase().includes(q));
     }
+    if (dateFrom) list = list.filter(c => c.fecha >= dateFrom);
+    if (dateTo) list = list.filter(c => c.fecha <= dateTo);
     return list;
-  }, [cobros, filters, search]);
+  }, [cobros, filters, search, dateFrom, dateTo]);
 
   const totalCobrado = filtered.reduce((s, c) => s + (c.monto ?? 0), 0);
 
