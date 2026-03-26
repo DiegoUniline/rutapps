@@ -97,6 +97,9 @@ export default function CobranzaPage() {
   const { data: cobros, isLoading } = useCobros(search);
   const { data: deudores } = useClientesConDeuda();
 
+  // Estado de cuenta drawer
+  const [selectedCliente, setSelectedCliente] = useState<{ id: string; nombre: string } | null>(null);
+
   // WhatsApp preview state
   const [waOpen, setWaOpen] = useState(false);
   const [waMessage, setWaMessage] = useState('');
