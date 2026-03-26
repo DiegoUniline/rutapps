@@ -139,14 +139,21 @@ export default function CobranzaPage() {
   // Apply filters
   const filtered = useMemo(() => {
     let list = cobros ?? [];
-    const statusF = filters.status || 'activo';
-    if (statusF !== 'todos') list = list.filter(c => (c as any).status === statusF);
+    const statusF = filters.status;
+    if (statusF && statusF.length > 0) list = list.filter(c => statusF.includes((c as any).status ?? 'activo'));
+    else list = list.filter(c => (c as any).status !== 'cancelado'); // default: hide cancelled
     const metodo = filters.metodo;
-    if (metodo && metodo !== 'todos') list = list.filter(c => c.metodo_pago === metodo);
+    if (metodo && metodo.length > 0) list = list.filter(c => metodo.includes(c.metodo_pago));
     const cliente = filters.cliente;
-    if (cliente && cliente !== 'todos') list = list.filter(c => (c.clientes as any)?.nombre === cliente);
+    if (cliente && cliente.length > 0) list = list.filter(c => cliente.includes((c.clientes as any)?.nombre ?? ''));
     const vendedor = filters.vendedor;
-    if (vendedor && vendedor !== 'todos') list = list.filter(c => c.user_id === vendedor);
+    if (vendedor && vendedor.length > 0) list = list.filter(c => vendedor.includes(c.user_id));
+    // Text search
+    const searchTerm = filters._search;
+    if (searchTerm && searchTerm.length > 0) {
+      const q = (searchTerm as unknown as string).toLowerCase?.() ?? '';
+      if (q) list = list.filter(c => (c.clientes as any)?.nombre?.toLowerCase().includes(q) || c.referencia?.toLowerCase().includes(q));
+    }
     return list;
   }, [cobros, filters]);
 
