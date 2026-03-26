@@ -184,7 +184,7 @@ export default function CancelSubscriptionPage() {
         {step === 'detail' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-card border border-border flex items-center justify-center mx-auto">
                 {selectedReason && <selectedReason.icon className="h-7 w-7 text-foreground" />}
               </div>
               <h2 className="text-xl font-bold text-foreground">Cuéntanos más</h2>
@@ -361,7 +361,7 @@ export default function CancelSubscriptionPage() {
               </>
             ) : (
               <>
-                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto">
+                <div className="w-20 h-20 rounded-full bg-card border border-border flex items-center justify-center mx-auto">
                   <Frown className="h-10 w-10 text-muted-foreground" />
                 </div>
                 <h2 className="text-xl font-bold text-foreground">Suscripción cancelada</h2>

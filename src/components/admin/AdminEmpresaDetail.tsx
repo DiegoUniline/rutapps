@@ -664,7 +664,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                 </div>
 
                 {showTimbresSale && (
-                  <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-muted/10">
+                  <div className="border border-border/60 rounded-lg p-4 space-y-3 bg-card/80">
                     <p className="text-sm font-semibold flex items-center gap-1.5">
                       <ShoppingCart className="h-4 w-4 text-primary" /> Registrar venta de timbres
                     </p>

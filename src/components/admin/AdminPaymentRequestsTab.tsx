@@ -263,7 +263,7 @@ export default function AdminPaymentRequestsTab() {
               )}
 
               {selectedSol.status !== 'pendiente' && selectedSol.notas_admin && (
-                <div className="rounded-lg bg-muted p-3 text-sm">
+                <div className="rounded-lg bg-card border border-border p-3 text-sm">
                   <strong>Notas admin:</strong> {selectedSol.notas_admin}
                 </div>
               )}

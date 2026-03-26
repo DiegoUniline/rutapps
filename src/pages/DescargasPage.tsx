@@ -696,7 +696,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <td className="py-1.5 text-muted-foreground">{d.cliente}</td>
                       <td className="py-1.5 text-right font-semibold">{d.cantidad}</td>
                       <td className="py-1.5">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium">
                           {MOTIVO_LABELS[d.motivo] ?? d.motivo.replace(/_/g, ' ')}
                         </span>
                       </td>
@@ -1299,7 +1299,7 @@ export default function DescargasPage() {
                     </td>
                     <td className="py-2.5 px-4 font-medium">{(d as any).vendedores?.nombre ?? '—'}</td>
                     <td className="py-2.5 px-4">
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted font-medium">{tipoLabel}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border font-medium">{tipoLabel}</span>
                     </td>
                     <td className="py-2.5 px-4 text-right">${Number(d.efectivo_esperado).toFixed(2)}</td>
                     <td className="py-2.5 px-4 text-right font-semibold">${Number(d.efectivo_entregado).toFixed(2)}</td>

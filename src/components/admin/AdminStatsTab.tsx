@@ -228,7 +228,7 @@ export default function AdminStatsTab() {
                         <span className="font-medium text-foreground">{e.nombre}</span>
                         <span className="text-muted-foreground ml-2">{format(new Date(e.created_at), "dd MMM yyyy, HH:mm", { locale: es })}</span>
                       </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted font-medium">{statusLabel}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-card border border-border font-medium">{statusLabel}</span>
                     </div>
                   );
                 })}
@@ -318,7 +318,7 @@ function StatCard({ icon: Icon, label, value, accent }: {
     primary: 'text-primary bg-primary/10',
     success: 'text-success bg-success/10',
     destructive: 'text-destructive bg-destructive/10',
-    muted: 'text-muted-foreground bg-muted/10',
+    muted: 'text-muted-foreground bg-card/80',
   };
   const [iconColor, iconBg] = accentMap[accent].split(' ');
 

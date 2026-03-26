@@ -81,7 +81,7 @@ export function VentaDevolucionesTab({ ventaId }: Props) {
               </td>
               <td className="py-2 text-right font-semibold">{l.cantidad}</td>
               <td className="py-2">
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium capitalize">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium capitalize">
                   {MOTIVO_LABELS[l.motivo] ?? l.motivo.replace(/_/g, ' ')}
                 </span>
               </td>

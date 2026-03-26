@@ -158,7 +158,7 @@ export default function ConteosFisicosPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="w-16 h-1.5 bg-border rounded-full overflow-hidden">
                         <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
                       </div>
                       <span className="text-[11px] text-muted-foreground">{c.productos_contados}/{c.total_productos}</span>

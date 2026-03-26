@@ -642,7 +642,7 @@ export default function AdminAnunciosTab() {
                 <div className="h-px flex-1 bg-border" />
               </div>
 
-              <div className="border border-dashed border-border rounded-xl p-4 bg-muted/10">
+              <div className="border border-dashed border-border rounded-xl p-4 bg-card/80">
                 {form.type === 'banner' && <BannerPreview form={form} />}
                 {form.type === 'modal' && <ModalPreview form={form} />}
                 {form.type === 'bubble' && <BubblePreview form={form} />}

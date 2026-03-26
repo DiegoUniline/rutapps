@@ -95,7 +95,7 @@ export default function DevolucionesListPage() {
                   <td className="py-2 px-3 text-right font-semibold">{totalUds}</td>
                   <td className="py-2 px-3">
                     {motivos.map((m: string) => (
-                      <span key={m} className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-foreground font-medium capitalize mr-1">
+                      <span key={m} className="text-[9px] px-1.5 py-0.5 rounded-full bg-card border border-border text-foreground font-medium capitalize mr-1">
                         {MOTIVO_LABELS[m] ?? m.replace(/_/g, ' ')}
                       </span>
                     ))}

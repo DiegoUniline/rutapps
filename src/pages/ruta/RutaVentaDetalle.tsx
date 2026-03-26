@@ -1482,7 +1482,7 @@ export default function RutaVentaDetalle() {
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
           <button onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/ruta/ventas')}
-            className="flex-1 bg-muted border border-border text-foreground rounded-xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
+            className="flex-1 bg-card border border-border text-foreground rounded-xl py-3.5 text-[14px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">
             <ArrowLeft className="h-4 w-4" /> Volver
           </button>
           {realSaldo > 0 && venta.status !== 'cancelado' ? (

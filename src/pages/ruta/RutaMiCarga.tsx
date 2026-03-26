@@ -38,7 +38,7 @@ export default function RutaMiCarga() {
   if (!carga) {
     return (
       <div className="p-4 flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+        <div className="w-14 h-14 rounded-full bg-card border border-border flex items-center justify-center">
           <Truck className="h-7 w-7 text-muted-foreground" />
         </div>
         <p className="text-muted-foreground text-[13px] text-center">No tienes una carga activa asignada</p>

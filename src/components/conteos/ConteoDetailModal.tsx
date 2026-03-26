@@ -182,7 +182,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
 
               {/* Progress */}
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
                   <div className="h-full bg-primary rounded-full" style={{ width: `${conteo?.total_productos ? Math.round((cerradas.length / conteo.total_productos) * 100) : 0}%` }} />
                 </div>
                 <span className="text-sm text-muted-foreground">{cerradas.length}/{conteo?.total_productos ?? 0}</span>

@@ -301,7 +301,7 @@ export default function AuditoriaConteoPage() {
           </Badge>
         </div>
 
-        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
           <div
             className="h-full bg-primary rounded-full transition-all duration-300"
             style={{ width: `${(contadas / Math.max(totalLineas, 1)) * 100}%` }}
