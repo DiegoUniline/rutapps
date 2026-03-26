@@ -46,8 +46,7 @@ function useVendedores() {
       const { data } = await supabase
         .from('profiles')
         .select('user_id, nombre')
-        .eq('empresa_id', empresa!.id)
-        .eq('estado', 'activo');
+        .eq('empresa_id', empresa!.id);
       return data ?? [];
     },
   });
