@@ -119,5 +119,7 @@ export function resolveProductPrice(
 ): number {
   const rule = findMatchingRule(rules, producto, listaPrecioId);
   if (!rule) return producto.precio_principal;
-  return calculatePrice(rule, producto);
+  const price = calculatePrice(rule, producto);
+  // If calculatePrice returns null (e.g. placeholder rule), fall back to precio_principal
+  return price ?? producto.precio_principal;
 }
