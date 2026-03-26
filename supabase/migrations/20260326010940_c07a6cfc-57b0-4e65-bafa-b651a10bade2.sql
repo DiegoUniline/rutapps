@@ -1,0 +1,1 @@
+ALTER TABLE public.cobros ADD COLUMN status text NOT NULL DEFAULT 'activo';

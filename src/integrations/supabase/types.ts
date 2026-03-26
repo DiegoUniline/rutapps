@@ -1290,6 +1290,7 @@ export type Database = {
           monto: number
           notas: string | null
           referencia: string | null
+          status: string
           user_id: string
         }
         Insert: {
@@ -1302,6 +1303,7 @@ export type Database = {
           monto?: number
           notas?: string | null
           referencia?: string | null
+          status?: string
           user_id: string
         }
         Update: {
@@ -1314,6 +1316,7 @@ export type Database = {
           monto?: number
           notas?: string | null
           referencia?: string | null
+          status?: string
           user_id?: string
         }
         Relationships: [
