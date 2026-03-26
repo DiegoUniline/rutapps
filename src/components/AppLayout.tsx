@@ -526,9 +526,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           collapsed ? "justify-center px-2" : "px-4"
         )}>
           {collapsed ? (
-            <span className="text-[18px] font-black text-primary">R</span>
+            <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="R" className="h-7 w-7 rounded object-contain" />
           ) : (
-            <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
+            <div className="flex items-center gap-2">
+              <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-7 w-7 rounded object-contain" />
+              <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
+            </div>
           )}
         </div>
 
