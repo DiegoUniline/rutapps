@@ -57,9 +57,9 @@ export default function ProductosListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('productos');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('productos');
 
-  const statusFilter = filters.status || 'activo';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'activo';
   const { data: productosData, isLoading } = useProductosPaginated(search, statusFilter, page, PAGE_SIZE);
 
   const productos = productosData?.rows ?? [];
