@@ -130,6 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
       if (!error && data) {
         setEmpresa(data as Empresa);
+        setGlobalTimezone((data as Empresa).zona_horaria);
       }
     } catch { /* ignore */ }
   }, [realEmpresa]);
