@@ -174,6 +174,16 @@ export default function ComprasPage() {
             </tr>
           ))}
         </tbody>
+        {items.length > 0 && (
+          <tfoot>
+            <tr className="bg-muted/30 border-t border-border font-semibold text-[12px]">
+              <td colSpan={5} className="py-2 px-3 text-muted-foreground">{items.length} compras</td>
+              <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, c: any) => s + (c.total ?? 0), 0))}</td>
+              <td className="py-2 px-3 text-right hidden sm:table-cell tabular-nums text-destructive font-bold">{fmt(items.reduce((s: number, c: any) => s + (c.saldo_pendiente ?? 0), 0))}</td>
+              <td />
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );

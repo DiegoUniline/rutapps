@@ -185,6 +185,15 @@ export default function CobranzaPage() {
           <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Sin cobros</TableCell></TableRow>
         )}
       </TableBody>
+      {items.length > 0 && (
+        <tfoot>
+          <TableRow className="bg-muted/30 border-t border-border font-semibold">
+            <TableCell colSpan={5} className="text-[12px] text-muted-foreground">{items.length} cobros</TableCell>
+            <TableCell className="text-right text-[12px] text-success font-bold">{fmtC(items.reduce((s: number, c: any) => s + (c.monto ?? 0), 0))}</TableCell>
+            <TableCell />
+          </TableRow>
+        </tfoot>
+      )}
     </Table>
   );
 
