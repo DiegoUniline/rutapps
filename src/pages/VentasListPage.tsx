@@ -291,10 +291,14 @@ export default function VentasListPage() {
           activeFilters={filters}
           onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
           onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-          onClearFilters={() => { clearFilters(); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); setPage(1); }}
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onDateFromChange={v => { setDateFrom(v); setPage(1); }}
+          onDateToChange={v => { setDateTo(v); setPage(1); }}
         />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
