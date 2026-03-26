@@ -25,7 +25,10 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
         .order('codigo', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterByVendedor) q = q.eq('vendedor_id', profileId!);
-      if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
+      if (search) {
+        const s = search.replace(/'/g, "''");
+        q = q.or(`nombre.ilike.%${s}%,codigo.ilike.%${s}%,telefono.ilike.%${s}%,contacto.ilike.%${s}%,email.ilike.%${s}%,direccion.ilike.%${s}%,colonia.ilike.%${s}%`);
+      }
       if (statusFilter && statusFilter !== 'todos') {
         const arr = statusFilter.split(',');
         if (arr.length > 1) q = q.in('status', arr as any);
