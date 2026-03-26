@@ -6,6 +6,7 @@ import { useSaveCliente, useZonas, useCobradores } from '@/hooks/useClientes';
 import { useAllListasPrecios } from '@/hooks/useData';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { locationService } from '@/lib/locationService';
 import type { Cliente, FrecuenciaVisita } from '@/types';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
