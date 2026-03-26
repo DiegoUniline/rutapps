@@ -36,7 +36,12 @@ export default function MobileLayout() {
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
 
+  // Start GPS watching once on mount, stop on unmount
   useEffect(() => {
+    locationService.startWatching();
+    return () => locationService.stopWatching();
+  }, []);
+
     const handler = () => setSwUpdateAvailable(true);
     window.addEventListener('uniline:sw-update-available', handler);
     return () => window.removeEventListener('uniline:sw-update-available', handler);
