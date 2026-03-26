@@ -255,8 +255,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
   const isPendiente = descarga.status === 'pendiente';
   const dif = Number(descarga.diferencia_efectivo);
 
-  // Effective cash expected: contado sales + cobros efectivo - gastos
-  const efectivoSistema = totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
+  // Effective cash expected: cobros efectivo - gastos (NOT ventas contado — a cash sale may be paid via transfer)
+  const efectivoSistema = (cobrosPorMetodo['efectivo'] || 0) - totalGastos;
 
   const aprobarMutation = useMutation({
     mutationFn: async (accion: 'aprobada' | 'rechazada') => {
