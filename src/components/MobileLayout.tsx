@@ -42,6 +42,7 @@ export default function MobileLayout() {
     return () => locationService.stopWatching();
   }, []);
 
+  useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);
     window.addEventListener('uniline:sw-update-available', handler);
     return () => window.removeEventListener('uniline:sw-update-available', handler);
