@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
+import { setGlobalTimezone } from '@/lib/utils';
 import { getOfflineTable } from '@/lib/offlineDb';
 import type { User } from '@supabase/supabase-js';
 import type { Profile, Empresa } from '@/types';
