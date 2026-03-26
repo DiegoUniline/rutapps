@@ -113,15 +113,15 @@ export function useNetworkStatus() {
     }
   }, [empresa?.id]);
 
-  // Initial data download if cache is stale (respects data saver)
+  // Initial data download if cache is stale (respects autoSync & data saver)
   useEffect(() => {
-    if (isOnline && empresa?.id) {
+    if (isOnline && empresa?.id && autoSync) {
       const config = getSyncConfig();
       isCacheStale(config.cacheStaleMinutes).then(stale => {
         if (stale) syncNow();
       });
     }
-  }, [isOnline, empresa?.id]);
+  }, [isOnline, empresa?.id, autoSync]);
 
   return {
     isOnline, pendingCount, isSyncing, lastSync, syncNow,
