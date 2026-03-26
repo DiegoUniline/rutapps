@@ -91,6 +91,8 @@ export default function CobranzaPage() {
   const { data: vendedores } = useVendedores();
   const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
