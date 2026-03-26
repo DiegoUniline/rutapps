@@ -91,6 +91,8 @@ export default function CobranzaPage() {
   const { data: vendedores } = useVendedores();
   const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
@@ -151,8 +153,10 @@ export default function CobranzaPage() {
       const q = search.toLowerCase();
       list = list.filter(c => (c.clientes as any)?.nombre?.toLowerCase().includes(q) || c.referencia?.toLowerCase().includes(q));
     }
+    if (dateFrom) list = list.filter(c => c.fecha >= dateFrom);
+    if (dateTo) list = list.filter(c => c.fecha <= dateTo);
     return list;
-  }, [cobros, filters, search]);
+  }, [cobros, filters, search, dateFrom, dateTo]);
 
   const totalCobrado = filtered.reduce((s, c) => s + (c.monto ?? 0), 0);
 
@@ -248,7 +252,11 @@ export default function CobranzaPage() {
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
-        onClearFilters={clearFilters}
+        onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); }}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
       />
 
       {isMobile ? (

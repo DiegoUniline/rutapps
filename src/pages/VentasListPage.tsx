@@ -122,6 +122,8 @@ export default function VentasListPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('ventas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
@@ -129,7 +131,7 @@ export default function VentasListPage() {
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE, condicionFilter, vendedorFilter);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -289,10 +291,14 @@ export default function VentasListPage() {
           activeFilters={filters}
           onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
           onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
-          onClearFilters={() => { clearFilters(); setPage(1); }}
+          onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); setPage(1); }}
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onDateFromChange={v => { setDateFrom(v); setPage(1); }}
+          onDateToChange={v => { setDateTo(v); setPage(1); }}
         />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
