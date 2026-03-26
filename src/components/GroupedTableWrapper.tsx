@@ -13,7 +13,7 @@ export function GroupedTableWrapper({ groupBy, groups, renderTable, renderSummar
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   if (!groupBy || groups.length <= 1) {
-    return <>{renderTable(groups[0]?.items ?? [])}</>;
+    return <div className="bg-card border border-border rounded overflow-hidden">{renderTable(groups[0]?.items ?? [])}</div>;
   }
 
   const toggleGroup = (label: string) => {
