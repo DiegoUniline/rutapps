@@ -107,6 +107,11 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    label: 'Control',
+    icon: ShieldAlert,
+    path: '/control',
+  },
+  {
     label: 'Facturación',
     icon: FileText,
     path: '/facturacion-cfdi',
