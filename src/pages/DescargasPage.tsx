@@ -120,7 +120,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryKey: ['vendedor-profile', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('user_id').eq('id', descarga.vendedor_id).single();
+      const { data } = await supabase.from('profiles').select('user_id').eq('vendedor_id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
