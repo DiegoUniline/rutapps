@@ -62,7 +62,7 @@ export default function RutaPerfil() {
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <button
             onClick={() => setShowChangePass(!showChangePass)}
-            className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-muted/50 transition-colors"
+            className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-card transition-colors"
           >
             <KeyRound className="h-5 w-5 text-muted-foreground" />
             <span className="text-[14px] font-medium text-foreground flex-1 text-left">Cambiar contraseña</span>
@@ -118,7 +118,7 @@ export default function RutaPerfil() {
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-muted/50 transition-colors"
+            className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-card transition-colors"
           >
             {theme === 'dark' ? <Sun className="h-5 w-5 text-muted-foreground" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
             <span className="text-[14px] font-medium text-foreground flex-1 text-left">
@@ -135,7 +135,7 @@ export default function RutaPerfil() {
                 const accepted = await install();
                 if (accepted) toast.success('¡App instalada!');
               }}
-              className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-muted/50 transition-colors"
+              className="w-full px-4 py-3.5 flex items-center gap-3 active:bg-card transition-colors"
             >
               <Download className="h-5 w-5 text-primary" />
               <div className="flex-1 text-left">

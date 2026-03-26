@@ -255,7 +255,7 @@ export default function AdminStatsTab() {
                     <span className="text-xs font-medium text-foreground">{step.name}</span>
                     <span className="text-xs text-muted-foreground">{step.value} ({step.pct}%)</span>
                   </div>
-                  <div className="h-7 bg-muted/30 rounded-lg overflow-hidden relative">
+                  <div className="h-7 bg-card rounded-lg overflow-hidden relative">
                     <div
                       className="h-full rounded-lg transition-all duration-700 flex items-center justify-end pr-2"
                       style={{

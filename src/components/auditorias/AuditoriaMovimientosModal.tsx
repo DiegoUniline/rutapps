@@ -96,7 +96,7 @@ export default function AuditoriaMovimientosModal({
         </DialogHeader>
 
         {/* Period info */}
-        <div className="flex flex-wrap gap-4 text-sm bg-muted/50 rounded-lg p-3">
+        <div className="flex flex-wrap gap-4 text-sm bg-card rounded-lg p-3">
           <div>
             <span className="text-muted-foreground">Apertura:</span>{' '}
             <span className="font-medium">{fmtDt(apertura)}</span>

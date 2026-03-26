@@ -427,22 +427,22 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         {/* ═══ RESUMEN GENERAL ═══ */}
         <div className="px-5 py-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Ventas contado</div>
               <div className="text-lg font-bold text-foreground">${totalContado.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">{ventasContado.length} ventas</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Ventas crédito</div>
               <div className="text-lg font-bold text-foreground">${totalCredito.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">{ventasCredito.length} ventas</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Cobros recibidos</div>
               <div className="text-lg font-bold text-foreground">${totalCobros.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">{(cobros || []).length} cobros</div>
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Gastos</div>
               <div className="text-lg font-bold text-destructive">-${totalGastos.toFixed(2)}</div>
               <div className="text-[10px] text-muted-foreground">{(gastos || []).length} gastos</div>
@@ -454,7 +454,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 <div className="text-[10px] text-muted-foreground">{ventasCanceladas.length} ventas</div>
               </div>
             )}
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Devoluciones</div>
               <div className="text-lg font-bold text-foreground">{totalDevUnidades}</div>
               <div className="text-[10px] text-muted-foreground">{devLineas.length} líneas</div>
@@ -468,12 +468,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             {/* Vendor declared */}
             <div className="space-y-2">
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Declarado por vendedor</div>
-              <div className="bg-muted/50 rounded-md p-3">
+              <div className="bg-card rounded-md p-3">
                 <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
                 <div className="text-xl font-bold text-foreground">${Number(descarga.efectivo_entregado).toFixed(2)}</div>
               </div>
               {descarga.notas && (
-                <div className="bg-muted/30 rounded-md p-3">
+                <div className="bg-card rounded-md p-3">
                   <div className="text-[10px] text-muted-foreground uppercase mb-1">Observaciones</div>
                   <p className="text-[13px] text-foreground">{descarga.notas}</p>
                 </div>
@@ -482,7 +482,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             {/* System calculated */}
             <div className="space-y-2">
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Calculado por sistema</div>
-              <div className="bg-muted/50 rounded-md p-3 space-y-1.5 text-[12px]">
+              <div className="bg-card rounded-md p-3 space-y-1.5 text-[12px]">
                 <div className="flex justify-between"><span className="text-muted-foreground">Ventas contado</span><span className="font-semibold">${totalContado.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold">${(cobrosPorMetodo['efectivo'] || 0).toFixed(2)}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-${totalGastos.toFixed(2)}</span></div>
@@ -497,7 +497,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 return (
                   <div className={cn(
                     "rounded-md p-3 text-center",
-                    d > 0 ? "bg-green-50 border border-green-200" : d < 0 ? "bg-destructive/5 border border-destructive/20" : "bg-muted/50"
+                    d > 0 ? "bg-green-50 border border-green-200" : d < 0 ? "bg-destructive/5 border border-destructive/20" : "bg-card"
                   )}>
                     <div className="text-[10px] text-muted-foreground uppercase">Diferencia</div>
                     <div className={cn("text-lg font-bold", d > 0 ? "text-green-600" : d < 0 ? "text-destructive" : "text-foreground")}>
@@ -598,7 +598,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <>
               <div className="flex flex-wrap gap-2 mb-3">
                 {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
-                  <div key={metodo} className="bg-muted/50 rounded-md px-3 py-2 text-[12px]">
+                  <div key={metodo} className="bg-card rounded-md px-3 py-2 text-[12px]">
                     <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
                     <span className="font-bold">${total.toFixed(2)}</span>
                   </div>
@@ -759,7 +759,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 return (
                   <div key={l.id} className={cn(
                     "flex items-center justify-between rounded px-3 py-1.5 text-[12px]",
-                    d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-muted/30"
+                    d !== 0 ? "bg-amber-50 border border-amber-200" : "bg-card"
                   )}>
                     <span className="font-medium">{(l as any).productos?.nombre}</span>
                     <div className="flex items-center gap-3">
@@ -1024,15 +1024,15 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
             <DollarSign className="h-4 w-4" /> 2. Cuadre de efectivo
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
-            <div className="bg-muted/50 rounded-md p-3 text-center">
+            <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Ventas contado</div>
               <div className="font-bold text-foreground">${totalContado.toFixed(2)}</div>
             </div>
-            <div className="bg-muted/50 rounded-md p-3 text-center">
+            <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Cobros efectivo</div>
               <div className="font-bold text-foreground">${cobrosEfectivoTotal.toFixed(2)}</div>
             </div>
-            <div className="bg-muted/50 rounded-md p-3 text-center">
+            <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Gastos</div>
               <div className="font-bold text-destructive">-${totalGastos.toFixed(2)}</div>
             </div>
@@ -1275,7 +1275,7 @@ export default function DescargasPage() {
         <div className="bg-card border border-border rounded-lg overflow-hidden">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="bg-muted/50 text-[11px] text-muted-foreground uppercase border-b border-border">
+              <tr className="bg-card text-[11px] text-muted-foreground uppercase border-b border-border">
                 <th className="text-left py-2.5 px-4">Fecha / Periodo</th>
                 <th className="text-left py-2.5 px-4">Vendedor</th>
                 <th className="text-left py-2.5 px-4">Tipo</th>
@@ -1293,7 +1293,7 @@ export default function DescargasPage() {
                 const hasRange = d.fecha_inicio && d.fecha_fin && d.fecha_inicio !== d.fecha_fin;
                 const tipoLabel = d.carga_id ? 'Carga' : hasRange ? 'Periodo' : 'Efectivo';
                 return (
-                  <tr key={d.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                  <tr key={d.id} className="border-b border-border/50 hover:bg-card transition-colors">
                     <td className="py-2.5 px-4">
                       {hasRange ? `${fmtDate(d.fecha_inicio)} → ${fmtDate(d.fecha_fin)}` : fmtDate(d.fecha)}
                     </td>

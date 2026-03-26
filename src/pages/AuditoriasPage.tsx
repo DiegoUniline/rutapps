@@ -319,7 +319,7 @@ export default function AuditoriasPage() {
           <DialogHeader><DialogTitle>Nueva auditoría</DialogTitle></DialogHeader>
           <div className="space-y-4">
             {/* Info: fecha y usuario */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/50 rounded-md p-3">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground bg-card rounded-md p-3">
               <div className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5" />
                 <span>{format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</span>
@@ -388,7 +388,7 @@ export default function AuditoriasPage() {
                     {filteredChecklist.map(item => (
                       <label
                         key={item.id}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-card cursor-pointer text-sm"
                       >
                         <Checkbox
                           checked={selectedIds.has(item.id)}
@@ -403,7 +403,7 @@ export default function AuditoriasPage() {
             )}
 
             {almacenId && (
-              <div className="text-sm text-muted-foreground bg-muted/30 rounded-md p-2 text-center">
+              <div className="text-sm text-muted-foreground bg-card rounded-md p-2 text-center">
                 Se incluirán <span className="font-bold text-foreground">{previewCount ?? '...'}</span> productos
               </div>
             )}

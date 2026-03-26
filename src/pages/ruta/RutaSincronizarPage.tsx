@@ -254,15 +254,15 @@ export default function RutaSincronizarPage() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-muted/50 rounded-xl p-3 text-center">
+            <div className="bg-card rounded-xl p-3 text-center">
               <p className="text-lg font-bold text-foreground">{totalLocalRecords.toLocaleString()}</p>
               <p className="text-[10px] text-muted-foreground">Registros locales</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3 text-center">
+            <div className="bg-card rounded-xl p-3 text-center">
               <p className="text-lg font-bold text-foreground">{pendingCount}</p>
               <p className="text-[10px] text-muted-foreground">Por enviar</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3 text-center">
+            <div className="bg-card rounded-xl p-3 text-center">
               <p className="text-lg font-bold text-foreground">{formatTimeAgo(oldestSync)}</p>
               <p className="text-[10px] text-muted-foreground">Última descarga</p>
             </div>
@@ -414,7 +414,7 @@ export default function RutaSincronizarPage() {
             </div>
 
             {/* Auto-backup status */}
-            <div className="bg-muted/50 rounded-xl p-3 mb-3 text-[11px] text-muted-foreground space-y-1">
+            <div className="bg-card rounded-xl p-3 mb-3 text-[11px] text-muted-foreground space-y-1">
               <p className="flex items-center gap-1.5">
                 <Shield className="h-3 w-3 text-emerald-500" />
                 <span>Respaldo automático activo (cada 30s en segundo plano)</span>
@@ -486,7 +486,7 @@ export default function RutaSincronizarPage() {
         </div>
 
         {/* Tips */}
-        <div className="bg-muted/30 rounded-2xl p-4 space-y-2">
+        <div className="bg-card rounded-2xl p-4 space-y-2">
           <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
             <BarChart3 className="h-4 w-4 text-primary" />
             Recomendaciones

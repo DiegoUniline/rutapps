@@ -343,7 +343,7 @@ export default function AdminWhatsAppTab() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="pre_cobro">
-              <TabsList className="bg-muted/50 mb-6 flex-wrap h-auto">
+              <TabsList className="bg-card mb-6 flex-wrap h-auto">
                 {templates.map(t => {
                   const meta = TEMPLATE_META[t.tipo];
                   if (!meta) return null;
@@ -366,7 +366,7 @@ export default function AdminWhatsAppTab() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Left: Controls */}
                       <div className="space-y-5">
-                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/40 border border-border/40">
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-card border border-border/40">
                           <div className="flex items-center gap-2">
                             <span className="text-lg">{t.emoji}</span>
                             <span className="font-medium text-sm">Notificación activa</span>
@@ -389,7 +389,7 @@ export default function AdminWhatsAppTab() {
                           <p className="text-sm font-medium mb-2">Campos incluidos</p>
                           <div className="space-y-2">
                             {Object.entries(fields).map(([key, label]) => (
-                              <div key={key} className="flex items-center justify-between py-2 px-3 rounded-md border border-border/40 bg-background hover:bg-muted/30 transition-colors">
+                              <div key={key} className="flex items-center justify-between py-2 px-3 rounded-md border border-border/40 bg-background hover:bg-card transition-colors">
                                 <span className="text-sm">{label}</span>
                                 <Switch checked={!!t.campos[key]} onCheckedChange={() => toggleCampo(t.tipo, key)} />
                               </div>

@@ -80,7 +80,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
   );
 
   const renderSaldo = () => !isNew && form.status !== 'borrador' && (
-    <div className="bg-muted/40 border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
+    <div className="bg-card border border-border rounded-md p-2.5 space-y-0.5 text-[13px]">
       <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="font-medium">${(form.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
       <div className="flex justify-between"><span className="text-muted-foreground">Pagado</span><span className="font-medium">${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>
       <div className="flex justify-between border-t border-border pt-0.5"><span className="font-medium">Saldo</span><span className={cn("font-semibold", saldoPendiente > 0 ? "text-destructive" : "text-foreground")}>${saldoPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span></div>

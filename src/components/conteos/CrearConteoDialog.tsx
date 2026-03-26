@@ -200,7 +200,7 @@ export default function CrearConteoDialog({ open, onClose, onCreated }: Props) {
           </div>
 
           {almacenId && previewCount !== undefined && (
-            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-card rounded-lg">
               <Package className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium">{previewCount} productos</span>
               <span className="text-xs text-muted-foreground">entrarán al conteo</span>

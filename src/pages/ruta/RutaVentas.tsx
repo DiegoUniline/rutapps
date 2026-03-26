@@ -35,7 +35,7 @@ export default function RutaVentas() {
   }));
 
   const statusColors: Record<string, string> = {
-    borrador: 'bg-muted/20 text-muted-foreground',
+    borrador: 'bg-card/50 text-muted-foreground',
     confirmado: 'bg-primary/10 text-primary',
     entregado: 'bg-success/10 text-success',
     facturado: 'bg-success/10 text-success',

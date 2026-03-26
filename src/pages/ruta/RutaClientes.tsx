@@ -259,7 +259,7 @@ export default function RutaClientes() {
           const isVisited = visited.has(c.id);
           return (
             <div key={c.id} className={cn(
-              "bg-card border rounded-xl px-2.5 py-2 active:bg-muted/30 transition-colors",
+              "bg-card border rounded-xl px-2.5 py-2 active:bg-card transition-colors",
               isVisited ? "border-emerald-500/40 bg-emerald-500/5" : "border-border"
             )}>
               <div className="flex items-center gap-2">

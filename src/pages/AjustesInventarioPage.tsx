@@ -549,7 +549,7 @@ export default function AjustesInventarioPage() {
           </div>
 
           {/* Action bar */}
-          <div className="flex items-center justify-between flex-wrap gap-3 bg-muted/40 border border-border/40 rounded-lg px-4 py-2.5">
+          <div className="flex items-center justify-between flex-wrap gap-3 bg-card border border-border/40 rounded-lg px-4 py-2.5">
             <div className="flex items-center gap-4 text-sm">
               <span className="text-muted-foreground">{filteredRows.length} productos</span>
               {changedRows.length > 0 && (
@@ -666,7 +666,7 @@ export default function AjustesInventarioPage() {
               <div key={group.key} className="border border-border rounded-lg overflow-hidden">
                 {/* Group header */}
                 <button
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-card transition-colors"
                   onClick={() => setExpandedGroup(isOpen ? null : group.key)}
                 >
                   {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}

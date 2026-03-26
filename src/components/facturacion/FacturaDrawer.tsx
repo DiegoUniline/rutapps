@@ -137,7 +137,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
 
         <div className="mt-4 space-y-5">
           {/* Header info */}
-          <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-[13px]">
+          <div className="bg-card rounded-lg p-3 space-y-1 text-[13px]">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Cliente</span>
               <span className="font-medium">{cliente.facturama_razon_social || cliente.nombre}</span>
@@ -170,7 +170,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="bg-muted/50 border-b">
+                  <tr className="bg-card border-b">
                     <th className="py-2 px-2 w-8">
                       <Checkbox checked={selected.size === pendientes.length && pendientes.length > 0} onCheckedChange={toggleAll} />
                     </th>
@@ -184,7 +184,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
                   {pendientes.map(l => {
                     const prod = productosList?.find((p: any) => p.id === l.producto_id);
                     return (
-                      <tr key={l.id} className="border-b border-border/50 hover:bg-muted/20">
+                      <tr key={l.id} className="border-b border-border/50 hover:bg-card/50">
                         <td className="py-1.5 px-2">
                           <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleLine(l.id)} />
                         </td>
@@ -197,7 +197,7 @@ export function FacturaDrawer({ open, onClose, ventaId, cliente, lineas, product
                   })}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-muted/30">
+                  <tr className="bg-card">
                     <td colSpan={4} className="py-2 px-2 text-right font-semibold text-[12px]">Total seleccionado</td>
                     <td className="py-2 px-2 text-right font-bold">{fmt(totalSelected)}</td>
                   </tr>

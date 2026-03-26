@@ -405,7 +405,7 @@ export default function AdminAnunciosTab() {
     return (
       <>
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-5">
+          <div className="w-16 h-16 rounded-2xl bg-card flex items-center justify-center mb-5">
             <Megaphone className="h-8 w-8 text-muted-foreground/50" />
           </div>
           <h3 className="text-base font-semibold text-foreground mb-1">No hay anuncios configurados</h3>
@@ -680,7 +680,7 @@ export default function AdminAnunciosTab() {
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/30">
+              <tr className="bg-card">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Tipo</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Título</th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground">Estado</th>
@@ -693,7 +693,7 @@ export default function AdminAnunciosTab() {
               {notifications.map(n => {
                 const meta = TYPE_META[n.type];
                 return (
-                  <tr key={n.id} className="border-t border-border hover:bg-muted/20 transition-colors">
+                  <tr key={n.id} className="border-t border-border hover:bg-card/50 transition-colors">
                     <td className="px-4 py-3">
                       <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border', meta.badge)}>
                         <meta.icon className="h-3 w-3" />

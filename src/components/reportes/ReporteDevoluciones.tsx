@@ -41,7 +41,7 @@ export function ReporteDevoluciones({ data }: { data: any }) {
               const isOpen = expanded === d.id;
               return (
                 <>
-                  <tr key={d.id} className="border-b border-border/50 cursor-pointer hover:bg-muted/30" onClick={() => setExpanded(isOpen ? null : d.id)}>
+                  <tr key={d.id} className="border-b border-border/50 cursor-pointer hover:bg-card" onClick={() => setExpanded(isOpen ? null : d.id)}>
                     <td className="py-2 px-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</td>
                     <td className="py-2 px-3">{d.fecha}</td>
                     <td className="py-2 px-3"><span className={cn("px-2 py-0.5 rounded text-[11px] font-medium", d.tipo === 'almacen' ? 'bg-primary/20 text-primary' : 'bg-warning/20 text-warning')}>{d.tipo === 'almacen' ? 'Almacén' : 'Tienda'}</span></td>
@@ -52,7 +52,7 @@ export function ReporteDevoluciones({ data }: { data: any }) {
                   {isOpen && d.lineas.length > 0 && (
                     <tr key={`${d.id}-d`}>
                       <td colSpan={6} className="p-0">
-                        <div className="bg-muted/20 px-6 py-2">
+                        <div className="bg-card/50 px-6 py-2">
                           <table className="w-full text-[12px]">
                             <thead><tr className="text-muted-foreground"><th className="py-1 text-left">Código</th><th className="py-1 text-left">Producto</th><th className="py-1 text-right">Cantidad</th><th className="py-1 text-left">Motivo</th></tr></thead>
                             <tbody>

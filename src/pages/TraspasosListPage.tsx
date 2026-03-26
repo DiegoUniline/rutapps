@@ -178,7 +178,7 @@ export default function TraspasosListPage() {
       </div>
 
       {!isLoading && total > 0 && (
-        <div className="flex items-center gap-6 text-xs text-muted-foreground bg-muted/30 rounded px-3 py-2">
+        <div className="flex items-center gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
           <span><strong className="text-foreground">{total}</strong> traspasos</span>
         </div>
       )}

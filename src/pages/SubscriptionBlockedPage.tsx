@@ -7,7 +7,7 @@ export default function SubscriptionBlockedPage() {
   const { signOut } = useAuth();
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-6">
+    <div className="min-h-screen flex items-center justify-center bg-card p-6">
       <div className="max-w-md text-center space-y-6">
         <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
           <AlertTriangle className="h-8 w-8 text-destructive" />

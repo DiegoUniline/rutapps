@@ -88,7 +88,7 @@ export default function PromocionesPage() {
         <div className="border border-border rounded-xl overflow-hidden bg-card">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/50">
+              <tr className="border-b border-border bg-card">
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Nombre</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Tipo</th>
                 <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Valor</th>
@@ -102,7 +102,7 @@ export default function PromocionesPage() {
                 const tipoInfo = TIPO_LABELS[p.tipo];
                 const TipoIcon = tipoInfo?.icon || Tag;
                 return (
-                  <tr key={p.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                  <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card transition-colors">
                     <td className="px-4 py-3">
                       <div className="font-medium text-foreground">{p.nombre}</div>
                       {p.descripcion && <div className="text-xs text-muted-foreground truncate max-w-[200px]">{p.descripcion}</div>}

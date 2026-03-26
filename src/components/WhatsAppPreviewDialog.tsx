@@ -107,7 +107,7 @@ export default function WhatsAppPreviewDialog({
         <div className="space-y-3">
           {/* PDF indicator */}
           {hasPdf && (
-            <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 py-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 bg-card rounded-md px-3 py-2 text-sm text-muted-foreground">
               <FileText className="h-4 w-4 text-primary shrink-0" />
               <span className="truncate">{pdfFileName}</span>
               <span className="ml-auto text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">PDF adjunto</span>
@@ -130,7 +130,7 @@ export default function WhatsAppPreviewDialog({
               <Edit2 className="h-3 w-3" /> {hasPdf ? 'Mensaje / Caption (editable)' : 'Mensaje (editable)'}
             </label>
             <textarea
-              className="w-full rounded-lg border border-border bg-muted/30 p-3 text-sm font-mono whitespace-pre-wrap min-h-[160px] focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
+              className="w-full rounded-lg border border-border bg-card p-3 text-sm font-mono whitespace-pre-wrap min-h-[160px] focus:outline-none focus:ring-2 focus:ring-primary/30 resize-y"
               value={message}
               onChange={e => setMessage(e.target.value)}
             />

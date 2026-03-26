@@ -137,7 +137,7 @@ export default function SyncCloudButton() {
               state === 'offline' ? 'bg-destructive/10' :
               state === 'pending' ? 'bg-orange-500/10' :
               state === 'verified' ? 'bg-emerald-500/10' :
-              'bg-muted/50'
+              'bg-card'
             )}>
               <div className={cn("shrink-0", stateColors[state])}>
                 {cloudIcon()}

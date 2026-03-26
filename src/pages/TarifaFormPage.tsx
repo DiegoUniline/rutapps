@@ -338,7 +338,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
       <div className="overflow-x-auto border border-border rounded">
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="border-b border-border bg-muted/30">
+            <tr className="border-b border-border bg-card">
               <th className="th-odoo text-left">Código</th>
               <th className="th-odoo text-left">Producto</th>
               <th className="th-odoo text-right">Costo</th>
@@ -357,7 +357,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               const ganancia = p.precio_lista - p.costo;
               const margen = p.costo > 0 ? (ganancia / p.costo) * 100 : 0;
               return (
-                <tr key={p.id} className="border-b border-border/40 hover:bg-muted/20">
+                <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toFixed(2)}</td>

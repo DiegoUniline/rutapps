@@ -275,7 +275,7 @@ export default function UsuariosPage() {
     switch (estado) {
       case 'activo': return 'bg-success/10 text-success';
       case 'baja': return 'bg-destructive/10 text-destructive';
-      default: return 'bg-muted/20 text-muted-foreground';
+      default: return 'bg-card/50 text-muted-foreground';
     }
   };
 
@@ -539,7 +539,7 @@ export default function UsuariosPage() {
                         <span className="text-xs text-muted-foreground">{authUser?.email || '—'}</span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-muted/20 text-muted-foreground")}>
+                        <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", userRole ? "bg-primary/10 text-primary" : "bg-card/50 text-muted-foreground")}>
                           {userRole ? roles.find(r => r.id === userRole.role_id)?.nombre : 'Sin rol'}
                         </span>
                       </td>

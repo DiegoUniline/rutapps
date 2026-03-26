@@ -62,7 +62,7 @@ export default function ClienteHistorial({ clienteId, clienteNombre, onClose }: 
                 <div className="space-y-1.5">
                   {ventasData.slice(0, 10).map((v: any) => (
                     <button key={v.id} onClick={() => { onClose(); navigate(`/ruta/ventas/${v.id}`); }}
-                      className="w-full bg-card border border-border rounded-xl px-3 py-2.5 flex items-center justify-between active:bg-muted/30 transition-colors">
+                      className="w-full bg-card border border-border rounded-xl px-3 py-2.5 flex items-center justify-between active:bg-card transition-colors">
                       <div className="text-left min-w-0">
                         <p className="text-[13px] font-semibold text-foreground">{v.folio ?? '—'}</p>
                         <p className="text-[11px] text-muted-foreground">

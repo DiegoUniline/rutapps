@@ -501,7 +501,7 @@ export default function CfdiFormPage() {
           <div className="border rounded-lg overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="bg-muted/50 border-b">
+                <tr className="bg-card border-b">
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-8">#</th>
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground">Descripción</th>
                   <th className="py-2 px-2 text-left text-[11px] font-medium text-muted-foreground w-20">Clave SAT</th>
@@ -515,7 +515,7 @@ export default function CfdiFormPage() {
               </thead>
               <tbody>
                 {lineas.map((l, idx) => (
-                  <tr key={l.id || idx} className="border-b border-border/50 hover:bg-muted/20">
+                  <tr key={l.id || idx} className="border-b border-border/50 hover:bg-card/50">
                     <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                     <td className="py-1.5 px-2">
                       {readOnly ? (
@@ -607,7 +607,7 @@ export default function CfdiFormPage() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="bg-muted/30 border-t">
+                <tr className="bg-card border-t">
                   <td colSpan={readOnly ? 7 : 7} className="py-2 px-2 text-right text-[12px] font-semibold">Total</td>
                   <td className="py-2 px-2 text-right font-bold text-sm">{fmt(totals.total)}</td>
                   {!readOnly && <td />}

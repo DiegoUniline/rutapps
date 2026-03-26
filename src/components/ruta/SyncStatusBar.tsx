@@ -72,7 +72,7 @@ export default function SyncStatusBar() {
 
       {/* Expanded panel */}
       {expanded && (
-        <div className="px-3 py-3 bg-muted/50 space-y-3">
+        <div className="px-3 py-3 bg-card space-y-3">
           {/* Data saver toggle */}
           <div className="flex items-center justify-between">
             <div>

@@ -476,7 +476,7 @@ export default function EntregaListPage() {
             </div>
 
             {/* Summary */}
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
+            <div className="bg-card rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
               {selectedEntregas.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between text-[12px]">
                   <span className="font-mono font-bold">{e.folio}</span>
@@ -525,7 +525,7 @@ export default function EntregaListPage() {
                 placeholder="Seleccionar repartidor..."
               />
             </div>
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
+            <div className="bg-card rounded-lg p-3 space-y-1 max-h-32 overflow-y-auto">
               {selectedEntregas.map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between text-[12px]">
                   <span className="font-mono font-bold">{e.folio}</span>

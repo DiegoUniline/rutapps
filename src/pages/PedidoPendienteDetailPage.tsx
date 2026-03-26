@@ -172,7 +172,7 @@ export default function PedidoPendienteDetailPage() {
 
         {/* Lines with delivery progress */}
         <div className="bg-card border border-border rounded-md overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border bg-muted/30">
+          <div className="px-4 py-2.5 border-b border-border bg-card">
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Líneas del pedido</h3>
           </div>
           <table className="w-full text-[13px]">
@@ -242,7 +242,7 @@ export default function PedidoPendienteDetailPage() {
 
         {/* Entregas list */}
         <div className="bg-card border border-border rounded-md overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border bg-muted/30 flex items-center justify-between">
+          <div className="px-4 py-2.5 border-b border-border bg-card flex items-center justify-between">
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">
               Entregas creadas ({entregasActivas.length})
             </h3>

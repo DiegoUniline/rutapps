@@ -103,7 +103,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.canceladas.map((v: any) => (
-                        <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${v.id}`)}>
+                        <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{v.fecha}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
@@ -134,7 +134,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.descuentosAltos.map((v: any) => (
-                        <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${v.id}`)}>
+                        <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{v.fecha}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
@@ -169,7 +169,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.ventasBajoCosto.map((a: any, i: number) => (
-                        <TableRow key={i} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${a.venta_id}`)}>
+                        <TableRow key={i} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${a.venta_id}`)}>
                           <TableCell className="font-mono text-xs">{a.folio}</TableCell>
                           <TableCell className="text-xs max-w-[200px] truncate">{a.producto}</TableCell>
                           <TableCell className="text-xs">{a.vendedor}</TableCell>
@@ -273,7 +273,7 @@ export default function ControlPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {data.creditoVencido.map((v: any) => (
-                        <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ventas/${v.id}`)}>
+                        <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
                           <TableCell className="text-xs">{v.cliente}</TableCell>
                           <TableCell className="text-xs">{v.vendedor}</TableCell>

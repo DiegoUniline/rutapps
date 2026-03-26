@@ -205,7 +205,7 @@ export default function ReporteEntregasPage() {
 
       {/* Product summary */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-4 py-2 bg-muted/40 border-b border-border flex items-center gap-2">
+        <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
           <Package className="h-4 w-4 text-primary" />
           <span className="text-[13px] font-semibold text-foreground">Resumen por producto</span>
         </div>
@@ -240,13 +240,13 @@ export default function ReporteEntregasPage() {
 
       {/* By date */}
       <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-4 py-2 bg-muted/40 border-b border-border flex items-center gap-2">
+        <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
           <CalendarIcon className="h-4 w-4 text-primary" />
           <span className="text-[13px] font-semibold text-foreground">Detalle por fecha de entrega</span>
         </div>
         {byDate.map(group => (
           <div key={group.fecha}>
-            <div className="px-4 py-1.5 bg-muted/20 border-b border-border flex items-center justify-between">
+            <div className="px-4 py-1.5 bg-card/50 border-b border-border flex items-center justify-between">
               <span className="text-[12px] font-semibold text-foreground">{fmtDate(group.fecha)}</span>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] text-muted-foreground">{group.entregas.length} entregas</span>
@@ -288,7 +288,7 @@ export default function ReporteEntregasPage() {
       {/* By route */}
       {byRoute.length > 1 && (
         <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="px-4 py-2 bg-muted/40 border-b border-border flex items-center gap-2">
+          <div className="px-4 py-2 bg-card border-b border-border flex items-center gap-2">
             <Truck className="h-4 w-4 text-primary" />
             <span className="text-[13px] font-semibold text-foreground">Resumen por ruta</span>
           </div>
