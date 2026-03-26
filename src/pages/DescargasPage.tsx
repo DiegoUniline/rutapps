@@ -165,7 +165,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id && incluirStock,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('id', descarga.vendedor_id).maybeSingle();
+      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('vendedor_id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
