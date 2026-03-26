@@ -100,10 +100,10 @@ export default function VentasListPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('ventas');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('ventas');
 
-  const statusFilter = filters.status || 'todos';
-  const tipoFilter = filters.tipo || 'todos';
+  const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
+  const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
 
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE);
   const { data: clientesList } = useClientes();
