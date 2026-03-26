@@ -924,7 +924,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const totalCobros = (cobrosPreview || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const cobrosEfectivoTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastosPreview || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
-  const efectivoEsperado = totalContado + cobrosEfectivoTotal - totalGastos;
+  const efectivoEsperado = cobrosEfectivoTotal - totalGastos;
 
   // Aggregate products
   const productosSold: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
