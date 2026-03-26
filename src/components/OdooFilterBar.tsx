@@ -145,6 +145,7 @@ export function OdooFilterBar({
   search, onSearchChange, placeholder = 'Buscar...', children,
   filterOptions, activeFilters, onToggleFilter, onSetFilter,
   groupByOptions, activeGroupBy, onGroupByChange, onClearFilters,
+  dateFrom, dateTo, onDateFromChange, onDateToChange,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
