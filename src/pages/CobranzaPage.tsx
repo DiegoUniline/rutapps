@@ -91,7 +91,7 @@ export default function CobranzaPage() {
   const { fmt: fmtC } = useCurrency();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
-  const { filters, groupBy, setFilter, setGroupBy, clearFilters } = useListPreferences('cobranza');
+  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cobranza');
 
   const vendedorMap = useMemo(() => {
     const m = new Map<string, string>();
