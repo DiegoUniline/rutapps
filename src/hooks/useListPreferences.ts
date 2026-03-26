@@ -1,16 +1,11 @@
 import { useState, useCallback } from 'react';
 
-export interface ListFilter {
-  key: string;
-  value: string;
-}
-
 export interface ListPreferences {
-  filters: Record<string, string>;
+  filters: Record<string, string[]>;
   groupBy: string;
 }
 
-const STORAGE_PREFIX = 'list_prefs_';
+const STORAGE_PREFIX = 'list_prefs_v2_';
 
 function load(key: string): ListPreferences {
   try {
@@ -29,11 +24,23 @@ function save(key: string, prefs: ListPreferences) {
 export function useListPreferences(listKey: string) {
   const [prefs, setPrefs] = useState<ListPreferences>(() => load(listKey));
 
-  const setFilter = useCallback((filterKey: string, value: string) => {
+  const setFilter = useCallback((filterKey: string, values: string[]) => {
     setPrefs(prev => {
-      const next = { ...prev, filters: { ...prev.filters, [filterKey]: value } };
+      const next = { ...prev, filters: { ...prev.filters, [filterKey]: values } };
       save(listKey, next);
       return next;
+    });
+  }, [listKey]);
+
+  const toggleFilterValue = useCallback((filterKey: string, value: string) => {
+    setPrefs(prev => {
+      const current = prev.filters[filterKey] ?? [];
+      const next = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      const updated = { ...prev, filters: { ...prev.filters, [filterKey]: next } };
+      save(listKey, updated);
+      return updated;
     });
   }, [listKey]);
 
@@ -57,6 +64,7 @@ export function useListPreferences(listKey: string) {
     filters: prefs.filters,
     groupBy: prefs.groupBy,
     setFilter,
+    toggleFilterValue,
     setGroupBy,
     clearFilters,
   };
