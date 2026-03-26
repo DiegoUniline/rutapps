@@ -28,7 +28,7 @@ import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 
@@ -50,7 +50,7 @@ function emptyVenta(): Partial<Venta> {
     tipo: 'pedido',
     status: 'borrador',
     condicion_pago: 'por_definir',
-    fecha: new Date().toISOString().slice(0, 10),
+    fecha: todayLocal(),
     entrega_inmediata: false,
     subtotal: 0, descuento_total: 0, iva_total: 0, ieps_total: 0, total: 0,
   };
@@ -217,7 +217,7 @@ export default function VentaFormPage() {
       logoBase64: logo,
       pedido: {
         folio: form.folio ?? '',
-        fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+        fecha: form.fecha ?? todayLocal(),
         status: form.status ?? 'borrador',
         condicion_pago: form.condicion_pago ?? 'contado',
         subtotal: form.subtotal ?? 0,
@@ -497,7 +497,7 @@ export default function VentaFormPage() {
                 monto_venta: l.total!,
                 comision_pct: comPct,
                 comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100,
-                fecha_venta: form.fecha || new Date().toISOString().slice(0, 10),
+                fecha_venta: form.fecha || todayLocal(),
               };
             })
             .filter(Boolean);

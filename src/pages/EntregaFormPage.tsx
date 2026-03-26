@@ -20,7 +20,7 @@ import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { generarEntregaPdf } from '@/lib/entregaPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
@@ -209,7 +209,7 @@ export default function EntregaFormPage() {
       },
       entrega: {
         folio: form.folio ?? '',
-        fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+        fecha: form.fecha ?? todayLocal(),
         status: form.status ?? 'borrador',
         notas: form.notas,
         fecha_asignacion: form.fecha_asignacion,

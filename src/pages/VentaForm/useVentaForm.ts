@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +18,7 @@ const COL_COUNT = 4;
 export function emptyVenta(): Partial<Venta> {
   return {
     tipo: 'pedido', status: 'borrador', condicion_pago: 'por_definir',
-    fecha: new Date().toISOString().slice(0, 10), entrega_inmediata: false,
+    fecha: todayLocal(), entrega_inmediata: false,
     subtotal: 0, descuento_total: 0, iva_total: 0, ieps_total: 0, total: 0,
   };
 }
@@ -269,7 +270,7 @@ export function useVentaForm() {
             const match = tarifaLineas.find(tl => { if (tl.aplica_a === 'todos') return true; if (tl.aplica_a === 'producto' && tl.producto_ids?.includes(l.producto_id!)) return true; return false; });
             const comPct = match?.comision_pct ?? 0;
             if (comPct <= 0) return null;
-            return { empresa_id: empresa!.id, venta_id: form.id!, venta_linea_id: l.id!, vendedor_id: form.vendedor_id!, producto_id: l.producto_id!, monto_venta: l.total!, comision_pct: comPct, comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100, fecha_venta: form.fecha || new Date().toISOString().slice(0, 10) };
+            return { empresa_id: empresa!.id, venta_id: form.id!, venta_linea_id: l.id!, vendedor_id: form.vendedor_id!, producto_id: l.producto_id!, monto_venta: l.total!, comision_pct: comPct, comision_monto: Math.round((l.total! * comPct / 100) * 100) / 100, fecha_venta: form.fecha || todayLocal() };
           }).filter(Boolean);
           if (comisionRows.length > 0) await supabase.from('venta_comisiones').insert(comisionRows as any);
         }

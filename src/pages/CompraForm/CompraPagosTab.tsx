@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { Plus, Save, X, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
@@ -53,7 +54,7 @@ export function CompraPagosTab({ pagos, form, totals, totalPagado, saldoActual, 
         </table>
       </div>
       {!addingPago && form.status !== 'pagada' && form.status !== 'borrador' && saldoActual > 0 && (
-        <button onClick={() => { setNewPago(() => ({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: saldoActual })); setAddingPago(true); }} className="btn-odoo-secondary text-xs gap-1"><Plus className="h-3.5 w-3.5" /> Agregar pago</button>
+        <button onClick={() => { setNewPago(() => ({ fecha: todayLocal(), metodo_pago: 'transferencia', referencia: '', notas: '', monto: saldoActual })); setAddingPago(true); }} className="btn-odoo-secondary text-xs gap-1"><Plus className="h-3.5 w-3.5" /> Agregar pago</button>
       )}
     </div>
   );

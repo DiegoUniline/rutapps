@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { useValidarEntrega } from '@/hooks/useEntregas';
 import { toast } from 'sonner';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDate , todayLocal } from '@/lib/utils';
 
 export default function EntregaCamionPage() {
   const { vendedorId } = useParams();
@@ -19,7 +19,7 @@ export default function EntregaCamionPage() {
   const qc = useQueryClient();
   const validarMut = useValidarEntrega();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
 
   const { data, isLoading } = useQuery({
     queryKey: ['entregas-camion', vendedorId, today],

@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'ruta-date-filter';
@@ -9,7 +10,7 @@ interface StoredFilter {
 }
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayLocal();
 }
 
 function loadFilter(): { desde: string; hasta: string } {

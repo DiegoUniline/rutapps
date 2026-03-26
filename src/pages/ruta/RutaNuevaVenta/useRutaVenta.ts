@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { todayInTimezone } from '@/lib/utils';
+import { todayInTimezone , todayLocal } from '@/lib/utils';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
@@ -47,7 +47,7 @@ export function useRutaVenta() {
   const [motivoSinCompra, setMotivoSinCompra] = useState('');
   const [savingSinCompra, setSavingSinCompra] = useState(false);
 
-  const VISITED_KEY = `rutapp_visited_${new Date().toISOString().slice(0, 10)}`;
+  const VISITED_KEY = `rutapp_visited_${todayLocal()}`;
   const markVisited = (cId: string) => {
     try {
       const raw = localStorage.getItem(VISITED_KEY);

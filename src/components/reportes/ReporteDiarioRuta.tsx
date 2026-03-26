@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import SearchableSelect from '@/components/SearchableSelect';
-import { cn } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ReporteDiarioRuta() {
   const { empresa } = useAuth();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const [fechaInicio, setFechaInicio] = useState(today);
   const [fechaFin, setFechaFin] = useState(today);
   const [usuarioId, setUsuarioId] = useState<string>('');

@@ -10,8 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
-import { fmtDate, fmtCurrency } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { fmtDate, fmtCurrency , todayLocal } from '@/lib/utils';
+import { cn , todayLocal } from '@/lib/utils';
 
 const statusColors: Record<string, { label: string; class: string }> = {
   borrador: { label: 'Sin asignar', class: 'bg-muted text-muted-foreground' },
@@ -23,7 +23,7 @@ const statusColors: Record<string, { label: string; class: string }> = {
 
 export default function PedidosPendientesPage() {
   const navigate = useNavigate();
-  const [fecha] = useState(() => new Date().toISOString().slice(0, 10));
+  const [fecha] = useState(() => todayLocal());
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [selected, setSelected] = useState<Set<string>>(new Set());

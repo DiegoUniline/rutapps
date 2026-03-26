@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,12 +29,12 @@ export function useCompraForm() {
   const { data: productosList } = useProductosForSelect();
   const { data: almacenesList } = useAlmacenes();
 
-  const [form, setForm] = useState<Record<string, any>>({ status: 'borrador', condicion_pago: 'contado', fecha: new Date().toISOString().slice(0, 10), dias_credito: 0, subtotal: 0, iva_total: 0, total: 0, saldo_pendiente: 0 });
+  const [form, setForm] = useState<Record<string, any>>({ status: 'borrador', condicion_pago: 'contado', fecha: todayLocal(), dias_credito: 0, subtotal: 0, iva_total: 0, total: 0, saldo_pendiente: 0 });
   const [lineas, setLineas] = useState<Partial<CompraLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
   const [showPago, setShowPago] = useState(false);
   const [addingPago, setAddingPago] = useState(false);
-  const [newPago, setNewPago] = useState({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
+  const [newPago, setNewPago] = useState({ fecha: todayLocal(), metodo_pago: 'transferencia', referencia: '', notas: '', monto: 0 });
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; action: string; title: string; description: string } | null>(null);
   const { requestPin, PinDialog } = usePinAuth();
 
@@ -120,7 +121,7 @@ export function useCompraForm() {
       const { error } = await supabase.from('compras').update(updates).eq('id', form.id); if (error) throw error;
       if (newStatus === 'recibida') {
         const validLines = lineas.filter(l => l.producto_id);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = todayLocal();
         const almacenId = form.almacen_id;
         for (const l of validLines) {
           const factor = Number(l._factor_conversion) || 1;
@@ -154,7 +155,7 @@ export function useCompraForm() {
     if (!form.id) return;
     try {
       if (['recibida', 'pagada'].includes(form.status)) {
-        const validLines = lineas.filter(l => l.producto_id); const today = new Date().toISOString().slice(0, 10);
+        const validLines = lineas.filter(l => l.producto_id); const today = todayLocal();
         const prodResults = await Promise.all(validLines.map(l => supabase.from('productos').select('id, cantidad').eq('id', l.producto_id!).single()));
         const updates: Array<Promise<void>> = [];
         for (let i = 0; i < validLines.length; i++) { const l = validLines[i]; const factor = Number(l._factor_conversion) || 1; const piezas = (Number(l.cantidad) || 0) * factor; const currentQty = Number(prodResults[i].data?.cantidad ?? 0); updates.push((async () => { await supabase.from('productos').update({ cantidad: Math.max(0, currentQty - piezas) } as any).eq('id', l.producto_id!); })()); updates.push((async () => { await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id!, cantidad: piezas, almacen_origen_id: form.almacen_id, referencia_tipo: 'compra', referencia_id: form.id, user_id: user?.id, fecha: today, notas: `Cancelación compra ${form.folio ?? form.id.slice(0, 8)}` } as any); })()); }

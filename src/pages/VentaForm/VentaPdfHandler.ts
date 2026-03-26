@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import type { Empresa, VentaLinea } from '@/types';
@@ -28,7 +29,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
     },
     logoBase64: logo,
     pedido: {
-      folio: form.folio ?? '', fecha: form.fecha ?? new Date().toISOString().slice(0, 10),
+      folio: form.folio ?? '', fecha: form.fecha ?? todayLocal(),
       status: form.status ?? 'borrador', condicion_pago: form.condicion_pago ?? 'contado',
       subtotal: form.subtotal ?? 0, descuento_total: form.descuento_total ?? 0,
       iva_total: form.iva_total ?? 0, ieps_total: form.ieps_total ?? 0, total: form.total ?? 0, notas: form.notas,

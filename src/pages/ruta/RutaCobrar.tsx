@@ -1,3 +1,4 @@
+import { todayLocal } from '@/lib/utils';
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ChevronRight, CreditCard, Banknote, Building2, Wallet, AlertCircle, Info } from 'lucide-react';
@@ -150,7 +151,7 @@ export default function RutaCobrar() {
         referencia: referencia || null,
         notas: notas || null,
         user_id: user.id,
-        fecha: new Date().toISOString().slice(0, 10),
+        fecha: todayLocal(),
         created_at: new Date().toISOString(),
       });
 
