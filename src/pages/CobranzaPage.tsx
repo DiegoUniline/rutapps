@@ -320,6 +320,13 @@ export default function CobranzaPage() {
         tipo={waTipo}
         referencia_id={waRefId}
       />
+
+      {/* Estado de cuenta drawer */}
+      <ClienteEstadoCuenta
+        clienteId={selectedCliente?.id ?? null}
+        clienteNombre={selectedCliente?.nombre ?? ''}
+        onClose={() => setSelectedCliente(null)}
+      />
     </div>
   );
 }
