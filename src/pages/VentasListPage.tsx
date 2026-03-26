@@ -299,7 +299,6 @@ export default function VentasListPage() {
           dateTo={dateTo}
           onDateFromChange={v => { setDateFrom(v); setPage(1); }}
           onDateToChange={v => { setDateTo(v); setPage(1); }}
-          favoritesKey="ventas"
         />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
