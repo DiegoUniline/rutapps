@@ -87,6 +87,7 @@ export default function TraspasoFormPage() {
           codigo: prod?.codigo ?? '',
           nombre: prod?.nombre ?? '',
           cantidad: l.cantidad,
+          unidad: (prod as any)?.unidades_venta?.abreviatura || '',
         };
       }),
     });
