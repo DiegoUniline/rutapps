@@ -183,6 +183,7 @@ export default function CobranzaPage() {
                   { label: 'Saldo', value: <span className="text-destructive font-bold">{fmtC(d.total)}</span> },
                 ]}
               />
+              </div>
             ))}
             {(!deudores || deudores.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">Sin deudores 🎉</div>
