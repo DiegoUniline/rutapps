@@ -24,7 +24,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   }, [qc]);
 
   return useQuery({
-    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter],
+    queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
     enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase
