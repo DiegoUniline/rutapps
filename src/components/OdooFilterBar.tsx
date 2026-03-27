@@ -242,8 +242,8 @@ export function OdooFilterBar({
           />
         ))}
 
-        {/* Group by */}
-        {groupByOptions && groupByOptions.length > 0 && onGroupByChange && (
+        {/* Group by — multi-level */}
+        {groupByOptions && groupByOptions.length > 0 && (onGroupByChange || onGroupByLevelChange) && (
           <div ref={groupRef} className="relative">
             <button
               onClick={() => setGroupOpen(!groupOpen)}
@@ -253,34 +253,67 @@ export function OdooFilterBar({
               )}
             >
               <Layers className="h-3.5 w-3.5" />
-              {hasGroupBy
-                ? `Agrupado: ${groupByOptions.find(g => g.value === activeGroupBy)?.label ?? activeGroupBy}`
+              {levels.length > 0
+                ? `Agrupado (${levels.length})`
                 : 'Agrupar por'}
               <ChevronDown className="h-3 w-3" />
             </button>
             {groupOpen && (
-              <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg min-w-[180px] py-1 animate-in fade-in-0 zoom-in-95 duration-150">
-                <button
-                  onClick={() => { onGroupByChange(''); setGroupOpen(false); }}
-                  className={cn(
-                    "w-full text-left px-3 py-2 text-[12px] hover:bg-accent transition-colors",
-                    !activeGroupBy && "font-semibold text-primary"
-                  )}
-                >
-                  Sin agrupación
-                </button>
-                {groupByOptions.map(g => (
+              <div className="absolute top-full left-0 mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg min-w-[220px] py-2 animate-in fade-in-0 zoom-in-95 duration-150">
+                {[0, 1, 2].map(level => {
+                  const currentVal = levels[level] ?? '';
+                  const prevLevel = level > 0 ? levels[level - 1] : 'always';
+                  // Only show this level if previous level has a value (or it's level 0)
+                  if (level > 0 && !prevLevel) return null;
+                  // Exclude options already selected in other levels
+                  const usedInOtherLevels = levels.filter((_, i) => i !== level);
+                  const availableOptions = groupByOptions.filter(g => !usedInOtherLevels.includes(g.value));
+                  return (
+                    <div key={level} className={cn(level > 0 && "border-t border-border mt-1 pt-1")}>
+                      <div className="px-3 py-1 text-[10px] text-muted-foreground uppercase font-semibold">
+                        {level === 0 ? 'Agrupación 1' : level === 1 ? 'Agrupación 2' : 'Agrupación 3'}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (onGroupByLevelChange) onGroupByLevelChange(level, '');
+                          else if (level === 0 && onGroupByChange) onGroupByChange('');
+                          if (level === 0) setGroupOpen(false);
+                        }}
+                        className={cn(
+                          "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
+                          !currentVal && "font-semibold text-primary"
+                        )}
+                      >
+                        {level === 0 ? 'Sin agrupación' : 'Ninguna'}
+                      </button>
+                      {availableOptions.map(g => (
+                        <button
+                          key={g.value}
+                          onClick={() => {
+                            if (onGroupByLevelChange) onGroupByLevelChange(level, g.value);
+                            else if (level === 0 && onGroupByChange) onGroupByChange(g.value);
+                            // Don't close — user may want to set more levels
+                          }}
+                          className={cn(
+                            "w-full text-left px-3 py-1.5 text-[12px] hover:bg-accent transition-colors",
+                            currentVal === g.value && "font-semibold text-primary"
+                          )}
+                        >
+                          {currentVal === g.value && <Check className="h-3 w-3 inline mr-1" />}
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+                <div className="border-t border-border mt-1 pt-1 px-3">
                   <button
-                    key={g.value}
-                    onClick={() => { onGroupByChange(g.value); setGroupOpen(false); }}
-                    className={cn(
-                      "w-full text-left px-3 py-2 text-[12px] hover:bg-accent transition-colors",
-                      activeGroupBy === g.value && "font-semibold text-primary"
-                    )}
+                    onClick={() => setGroupOpen(false)}
+                    className="w-full text-center py-1.5 text-[11px] text-primary font-semibold hover:bg-accent rounded transition-colors"
                   >
-                    {g.label}
+                    Cerrar
                   </button>
-                ))}
+                </div>
               </div>
             )}
           </div>
