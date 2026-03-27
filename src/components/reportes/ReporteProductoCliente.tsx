@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 
@@ -69,12 +68,10 @@ export function ReporteProductoCliente({ data }: { data: any }) {
 
   let clientes = Object.values(clienteMap).sort((a, b) => b.totalGeneral - a.totalGeneral);
 
-  // Sort products within each client
   for (const c of clientes) {
     c.productos.sort((a, b) => b.total - a.total);
   }
 
-  // Search filter
   if (search) {
     const q = search.toLowerCase();
     clientes = clientes.filter(c =>
@@ -96,19 +93,19 @@ export function ReporteProductoCliente({ data }: { data: any }) {
   const grandQty = clientes.reduce((s, c) => s + c.cantidadTotal, 0);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-lg p-3">
-          <p className="text-[11px] text-muted-foreground uppercase">Clientes</p>
-          <p className="text-lg font-bold text-foreground">{clientes.length}</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Clientes</div>
+          <div className="text-lg font-bold text-foreground">{clientes.length}</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3">
-          <p className="text-[11px] text-muted-foreground uppercase">Unidades totales</p>
-          <p className="text-lg font-bold text-foreground">{grandQty.toLocaleString()}</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Unidades totales</div>
+          <div className="text-lg font-bold text-foreground">{grandQty.toLocaleString()}</div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3">
-          <p className="text-[11px] text-muted-foreground uppercase">Venta total</p>
-          <p className="text-lg font-bold text-primary">{fmt(grandTotal)}</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Venta total</div>
+          <div className="text-lg font-bold text-foreground">{fmt(grandTotal)}</div>
         </div>
       </div>
 
@@ -119,59 +116,59 @@ export function ReporteProductoCliente({ data }: { data: any }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar cliente o producto..."
-          className="input-odoo pl-8 text-[13px]"
+          className="input-odoo pl-8 text-[12px]"
         />
       </div>
 
       {clientes.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground text-[13px]">Sin datos</div>
+        <div className="text-center py-8 text-muted-foreground text-[12px]">Sin datos</div>
       )}
 
       <div className="space-y-2">
         {clientes.map(c => (
-          <div key={c.clienteId} className="bg-card border border-border rounded overflow-hidden">
+          <div key={c.clienteId} className="bg-card border border-border rounded-lg overflow-hidden">
             <button
               onClick={() => toggleClient(c.clienteId)}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/50 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-accent/30 transition-colors"
             >
               {collapsed.has(c.clienteId)
                 ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               }
-              <span className="text-[13px] font-semibold text-foreground">{c.clienteNombre}</span>
-              <span className="text-[11px] text-muted-foreground">({c.productos.length} productos)</span>
-              <span className="text-[11px] text-muted-foreground ml-1">• {c.vendedor}</span>
-              <span className="ml-auto text-[13px] font-bold text-primary">{fmt(c.totalGeneral)}</span>
+              <span className="text-[12px] font-semibold text-foreground">{c.clienteNombre}</span>
+              <span className="text-[10px] text-muted-foreground">({c.productos.length} productos)</span>
+              <span className="text-[10px] text-muted-foreground ml-1">• {c.vendedor}</span>
+              <span className="ml-auto text-[12px] font-bold text-foreground">{fmt(c.totalGeneral)}</span>
             </button>
 
             {!collapsed.has(c.clienteId) && (
               <div className="border-t border-border">
-                <table className="w-full text-[13px]">
+                <table className="w-full text-[11px]">
                   <thead>
-                    <tr className="border-b border-border/50 text-left">
-                      <th className="py-1.5 px-3 text-[10px] text-muted-foreground">Código</th>
-                      <th className="py-1.5 px-3 text-[10px] text-muted-foreground">Producto</th>
-                      <th className="py-1.5 px-3 text-[10px] text-muted-foreground text-right">Uds</th>
-                      <th className="py-1.5 px-3 text-[10px] text-muted-foreground text-right">Total</th>
-                      <th className="py-1.5 px-3 text-[10px] text-muted-foreground text-right w-16">%</th>
+                    <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
+                      <th className="py-1.5 px-3 text-left">Código</th>
+                      <th className="py-1.5 px-3 text-left">Producto</th>
+                      <th className="py-1.5 px-3 text-right">Uds</th>
+                      <th className="py-1.5 px-3 text-right">Total</th>
+                      <th className="py-1.5 px-3 text-right w-16">%</th>
                     </tr>
                   </thead>
                   <tbody>
                     {c.productos.map(p => (
                       <tr key={p.productoId} className="border-b border-border/30">
-                        <td className="py-1 px-3 text-muted-foreground">{p.codigo}</td>
+                        <td className="py-1 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                         <td className="py-1 px-3 font-medium">{p.nombre}</td>
                         <td className="py-1 px-3 text-right">{p.cantidad}</td>
-                        <td className="py-1 px-3 text-right font-bold">{fmt(p.total)}</td>
+                        <td className="py-1 px-3 text-right font-semibold">{fmt(p.total)}</td>
                         <td className="py-1 px-3 text-right text-muted-foreground">
                           {c.totalGeneral > 0 ? ((p.total / c.totalGeneral) * 100).toFixed(1) : 0}%
                         </td>
                       </tr>
                     ))}
-                    <tr className="bg-card">
-                      <td colSpan={2} className="py-1.5 px-3 font-semibold text-[12px]">Total</td>
+                    <tr className="border-t border-border">
+                      <td colSpan={2} className="py-1.5 px-3 font-bold text-[11px] text-muted-foreground">Total</td>
                       <td className="py-1.5 px-3 text-right font-bold">{c.cantidadTotal}</td>
-                      <td className="py-1.5 px-3 text-right font-bold text-primary">{fmt(c.totalGeneral)}</td>
+                      <td className="py-1.5 px-3 text-right font-bold">{fmt(c.totalGeneral)}</td>
                       <td></td>
                     </tr>
                   </tbody>
