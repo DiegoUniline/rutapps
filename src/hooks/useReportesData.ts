@@ -186,6 +186,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       return {
         totalVentas, totalCobros, totalGastos, totalPendiente,
+        totalContado, totalCredito, metodosPago,
         numVentas: ventas.length, numCobros: cobros.length,
         utilidad: totalVentas - totalGastos, dailyVentas,
         ventaLineas,
