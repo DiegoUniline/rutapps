@@ -300,6 +300,8 @@ export default function VentasListPage() {
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
           dateFrom={dateFrom}
           dateTo={dateTo}
           onDateFromChange={v => { setDateFrom(v); setPage(1); }}
