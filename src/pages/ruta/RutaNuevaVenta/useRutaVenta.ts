@@ -35,8 +35,8 @@ export function useRutaVenta() {
   const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
   const [notas, setNotas] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
-  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo');
-  const [montoRecibido, setMontoRecibido] = useState('');
+  const [pagos, setPagos] = useState<PagoLinea[]>([]);
+  const [referenciaPago, setReferenciaPago] = useState('');
   const [referenciaPago, setReferenciaPago] = useState('');
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [showDevSearch, setShowDevSearch] = useState(false);
