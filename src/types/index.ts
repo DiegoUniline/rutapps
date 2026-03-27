@@ -167,6 +167,7 @@ export interface Empresa {
   telefono?: string;
   email?: string;
   logo_url?: string;
+  ticket_campos?: Record<string, boolean>;
   notas_ticket?: string;
   moneda?: string;
   zona_horaria?: string;
