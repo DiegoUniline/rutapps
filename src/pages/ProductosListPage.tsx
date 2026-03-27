@@ -82,7 +82,7 @@ export default function ProductosListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [importOpen, setImportOpen] = useState(false);
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('productos');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('productos');
   const { clasificaciones, marcas } = useProductoFilterOptions();
 
   const FILTER_OPTIONS = useMemo(() => [
@@ -121,7 +121,7 @@ export default function ProductosListPage() {
     if (key === 'marca') return item.marcas?.nombre ?? 'Sin marca';
     if (key === 'proveedor') return item.proveedores?.nombre ?? 'Sin proveedor';
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
@@ -230,6 +230,8 @@ export default function ProductosListPage() {
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (

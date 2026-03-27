@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
@@ -65,7 +65,10 @@ const GROUP_BY_OPTIONS = [
   { value: 'status', label: 'Estado' },
   { value: 'proveedor', label: 'Proveedor' },
   { value: 'condicion_pago', label: 'Condición de pago' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
 ];
 
 function useCompras(search: string, statusFilter: string) {
@@ -97,7 +100,7 @@ export default function ComprasPage() {
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('compras');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter);
@@ -152,9 +155,9 @@ export default function ComprasPage() {
     if (key === 'status') return STATUS_MAP[item.status]?.label ?? item.status;
     if (key === 'proveedor') return item.proveedores?.nombre ?? 'Sin proveedor';
     if (key === 'condicion_pago') return item.condicion_pago === 'credito' ? 'Crédito' : 'Contado';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
@@ -255,6 +258,8 @@ export default function ComprasPage() {
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
           <ExportButton

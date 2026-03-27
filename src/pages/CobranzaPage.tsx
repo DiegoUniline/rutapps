@@ -13,7 +13,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar, type FilterOption, type GroupByOption } from '@/components/OdooFilterBar';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -78,7 +78,10 @@ const METODO_OPTIONS = [
 
 const GROUP_BY_OPTIONS: GroupByOption[] = [
   { value: 'cliente', label: 'Cliente' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
   { value: 'metodo', label: 'Método de pago' },
   { value: 'vendedor', label: 'Vendedor' },
 ];
@@ -89,7 +92,7 @@ export default function CobranzaPage() {
   const { fmt: fmtC } = useCurrency();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cobranza');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -163,11 +166,11 @@ export default function CobranzaPage() {
   // Grouping
   const groups = useMemo(() => groupData(filtered, groupBy, (item: any, key: string) => {
     if (key === 'cliente') return (item.clientes as any)?.nombre ?? 'Sin cliente';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     if (key === 'metodo') return item.metodo_pago ?? 'Sin método';
     if (key === 'vendedor') return vendedorMap.get(item.user_id) || 'Sin vendedor';
     return '';
-  }), [filtered, groupBy, vendedorMap]);
+  }, groupByLevels), [filtered, groupBy, groupByLevels, vendedorMap]);
 
   const renderTable = (items: any[]) => (
     <Table className="bg-card">
@@ -252,6 +255,8 @@ export default function CobranzaPage() {
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
+        activeGroupByLevels={groupByLevels}
+        onGroupByLevelChange={setGroupByLevel}
         onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); }}
         dateFrom={dateFrom}
         dateTo={dateTo}

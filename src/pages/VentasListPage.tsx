@@ -20,7 +20,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { useVentasPaginated } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { cn, fmtDate } from '@/lib/utils';
@@ -98,7 +98,10 @@ const GROUP_BY_OPTIONS = [
   { value: 'condicion_pago', label: 'Condición de pago' },
   { value: 'vendedor', label: 'Vendedor' },
   { value: 'cliente', label: 'Cliente' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
 ];
 
 function useVendedoresForFilter() {
@@ -124,7 +127,7 @@ export default function VentasListPage() {
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('ventas');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
@@ -180,15 +183,17 @@ export default function VentasListPage() {
   const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
-  const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
+  const groupLabelFn = (item: any, key: string) => {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo;
     if (key === 'condicion_pago') return CONDICION_LABELS[item.condicion_pago] ?? item.condicion_pago;
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
     if (key === 'cliente') return item.clientes?.nombre ?? 'Sin cliente';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [pageData, groupBy]);
+  };
+
+  const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTableRows = (items: any[]) => (
     <>
@@ -295,6 +300,8 @@ export default function VentasListPage() {
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
           dateFrom={dateFrom}
           dateTo={dateTo}
           onDateFromChange={v => { setDateFrom(v); setPage(1); }}

@@ -12,7 +12,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { fmtDate } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 
 const CARGAS_COLUMNS: ExportColumn[] = [
   { key: 'fecha', header: 'Fecha', format: 'date', width: 14 },
@@ -45,13 +45,16 @@ const FILTER_OPTIONS = [
 const GROUP_BY_OPTIONS = [
   { value: 'status', label: 'Estado' },
   { value: 'vendedor', label: 'Responsable' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
 ];
 
 export default function CargasListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cargas');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cargas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: cargas, isLoading } = useCargas(search, statusFilter);
@@ -59,9 +62,9 @@ export default function CargasListPage() {
   const groups = useMemo(() => groupData(cargas ?? [], groupBy, (item: any, key) => {
     if (key === 'status') return statusConfig[item.status]?.label ?? item.status;
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin responsable';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [cargas, groupBy]);
+  }, groupByLevels), [cargas, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <Table>
@@ -146,6 +149,8 @@ export default function CargasListPage() {
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
+        activeGroupByLevels={groupByLevels}
+        onGroupByLevelChange={setGroupByLevel}
       />
 
       {isLoading ? <TableSkeleton /> : (

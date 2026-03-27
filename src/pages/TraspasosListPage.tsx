@@ -12,7 +12,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { StatusChip } from '@/components/StatusChip';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate, cn } from '@/lib/utils';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
@@ -46,7 +46,10 @@ const FILTER_OPTIONS = [
 const GROUP_BY_OPTIONS = [
   { value: 'status', label: 'Estado' },
   { value: 'tipo', label: 'Tipo' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
 ];
 
 export default function TraspasosListPage() {
@@ -55,7 +58,7 @@ export default function TraspasosListPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('traspasos');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
 
@@ -105,9 +108,9 @@ export default function TraspasosListPage() {
   const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
     if (key === 'status') return (item.status ?? '').charAt(0).toUpperCase() + (item.status ?? '').slice(1);
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo ?? 'Sin tipo';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
@@ -181,6 +184,8 @@ export default function TraspasosListPage() {
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => navigate('/almacen/traspasos/nuevo')} className="btn-odoo-primary shrink-0">
