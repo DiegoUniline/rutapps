@@ -89,6 +89,30 @@ export function exportToExcel(options: ExportOptions) {
     }));
   }
 
+  // Resumen General sheet
+  if (resumenGeneral) {
+    rows.push([]);
+    rows.push([]);
+    rows.push(['RESUMEN GENERAL DE VENTAS']);
+    rows.push([]);
+    rows.push(['Total Ventas Generales', resumenGeneral.totalVentas]);
+    rows.push(['Total Ventas de Contado', resumenGeneral.totalContado]);
+    rows.push(['Total Ventas a Crédito', resumenGeneral.totalCredito]);
+    rows.push([]);
+    rows.push(['DESGLOSE POR VENDEDOR']);
+    rows.push(['Vendedor', 'Total', '% Participación']);
+    for (const v of resumenGeneral.vendedores) {
+      rows.push([v.nombre, v.total, `${v.pct.toFixed(1)}%`]);
+    }
+    rows.push([]);
+    rows.push(['DESGLOSE POR MÉTODO DE PAGO']);
+    rows.push(['Método', 'Total', '% Participación']);
+    const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
+    for (const m of resumenGeneral.metodosPago) {
+      rows.push([metodoPagoLabels[m.metodo] ?? m.metodo, m.total, `${m.pct.toFixed(1)}%`]);
+    }
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
   // Column widths
