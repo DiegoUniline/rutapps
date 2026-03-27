@@ -111,6 +111,15 @@ export default function RutasMapPage() {
     return null;
   }, [routeResult, withGps, hasSavedOrder]);
 
+  const handleRecenter = useCallback(() => {
+    if (mapRef.current && withGps.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      withGps.forEach((c: any) => bounds.extend({ lat: c.gps_lat, lng: c.gps_lng }));
+      if (originPoint) bounds.extend(originPoint);
+      mapRef.current.fitBounds(bounds, 50);
+    }
+  }, [withGps, originPoint]);
+
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (settingOrigin && e.latLng) {
       setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
