@@ -14,6 +14,14 @@ export interface ExportColumn {
   align?: 'left' | 'center' | 'right';
 }
 
+export interface ResumenGeneralExport {
+  totalVentas: number;
+  totalContado: number;
+  totalCredito: number;
+  vendedores: { nombre: string; total: number; pct: number }[];
+  metodosPago: { metodo: string; total: number; pct: number }[];
+}
+
 export interface ExportOptions {
   fileName: string;
   title: string;
@@ -23,6 +31,7 @@ export interface ExportOptions {
   empresa?: string;
   dateRange?: { from: string; to: string };
   totals?: Record<string, number>; // key → total value for footer row
+  resumenGeneral?: ResumenGeneralExport;
 }
 
 // ─── Format Helpers ─────────────────────────────────────────────
