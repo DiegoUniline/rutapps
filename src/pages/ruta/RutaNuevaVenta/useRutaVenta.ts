@@ -397,6 +397,12 @@ export function useRutaVenta() {
           }
         }
 
+        // Update saldo_pendiente for the current sale based on actual payments applied
+        const appliedToSale = (condicionPago === 'contado' ? totals.total : 0) - saleRemaining;
+        if (appliedToSale > 0) {
+          await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: Math.max(0, totals.total - appliedToSale) });
+        }
+
         // Update saldo_pendiente for cuentas
         for (const cuenta of cuentasPendientes) {
           if (cuenta.montoAplicar < cuenta.saldo_pendiente) {
@@ -404,6 +410,9 @@ export function useRutaVenta() {
             if (applied > 0) await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, cuenta.saldo_pendiente - applied) });
           }
         }
+      } else if (condicionPago === 'contado' && totals.total === 0) {
+        // Zero-total sale, mark as paid
+        await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: 0 });
       }
 
       await updateCargaVendidaOffline(cart);
