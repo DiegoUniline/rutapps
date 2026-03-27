@@ -183,15 +183,17 @@ export default function VentasListPage() {
   const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
-  const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
+  const groupLabelFn = (item: any, key: string) => {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo;
     if (key === 'condicion_pago') return CONDICION_LABELS[item.condicion_pago] ?? item.condicion_pago;
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
     if (key === 'cliente') return item.clientes?.nombre ?? 'Sin cliente';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [pageData, groupBy]);
+  };
+
+  const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTableRows = (items: any[]) => (
     <>
