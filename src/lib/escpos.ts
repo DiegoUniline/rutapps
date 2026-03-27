@@ -102,9 +102,99 @@ function center(s: string, w: number): string {
   return ' '.repeat(pad) + s;
 }
 
-export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean }): Uint8Array {
+/**
+ * Load an image URL and convert to ESC/POS GS v 0 raster bytes (monochrome).
+ * Returns empty array if image fails to load.
+ */
+async function logoToRasterBytes(url: string, maxWidth: number): Promise<number[]> {
+  try {
+    // Load image
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    // Try fetching as blob first to avoid CORS
+    let objectUrl: string | null = null;
+    try {
+      const resp = await fetch(url, { mode: 'cors' });
+      if (resp.ok) {
+        const blob = await resp.blob();
+        objectUrl = URL.createObjectURL(blob);
+        img.src = objectUrl;
+      } else {
+        img.src = url;
+      }
+    } catch {
+      img.src = url;
+    }
+
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error('img load failed'));
+    });
+
+    // Scale to fit printer width (maxWidth pixels)
+    const scale = Math.min(1, maxWidth / img.naturalWidth);
+    let w = Math.floor(img.naturalWidth * scale);
+    let h = Math.floor(img.naturalHeight * scale);
+    // Width must be multiple of 8 for raster
+    w = Math.floor(w / 8) * 8;
+    if (w < 8) w = 8;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+
+    const imageData = ctx.getImageData(0, 0, w, h);
+    const pixels = imageData.data;
+
+    // Convert to monochrome bitmap
+    const bytesPerRow = w / 8;
+    const rasterData: number[] = [];
+
+    for (let y = 0; y < h; y++) {
+      for (let byteIdx = 0; byteIdx < bytesPerRow; byteIdx++) {
+        let byte = 0;
+        for (let bit = 0; bit < 8; bit++) {
+          const x = byteIdx * 8 + bit;
+          const idx = (y * w + x) * 4;
+          const r = pixels[idx];
+          const g = pixels[idx + 1];
+          const b = pixels[idx + 2];
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          // Dark pixel = ink (1), light pixel = no ink (0)
+          if (gray < 128) {
+            byte |= (0x80 >> bit);
+          }
+        }
+        rasterData.push(byte);
+      }
+    }
+
+    // GS v 0 — print raster bit image
+    // Format: GS v 0 m xL xH yL yH data
+    // m=0 (normal), xL/xH = bytes per row, yL/yH = height in dots
+    const xL = bytesPerRow & 0xFF;
+    const xH = (bytesPerRow >> 8) & 0xFF;
+    const yL = h & 0xFF;
+    const yH = (h >> 8) & 0xFF;
+
+    return [GS, 0x76, 0x30, 0x00, xL, xH, yL, yH, ...rasterData];
+  } catch (e) {
+    console.warn('[ESC/POS] Logo raster failed:', e);
+    return [];
+  }
+}
+
+export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string; showTax?: boolean }): Promise<Uint8Array> {
   const is58 = (opts?.ticketAncho ?? '80') === '58';
   const W = is58 ? COLS_58 : COLS_80;
+  const maxPixelWidth = is58 ? 384 : 576;
 
   const showTax = opts?.showTax ?? (data.empresa.ticket_campos?.impuestos !== false);
   const sym = getCurrencyConfig(data.empresa.moneda).symbol;
@@ -115,6 +205,16 @@ export function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: string
   const ln = (s: string) => { const encoded = enc.encode(s + '\n'); for (const b of encoded) parts.push(b); };
 
   add(INIT);
+
+  // ── LOGO (raster image) ──
+  if (data.empresa.logo_url && data.empresa.ticket_campos?.logo !== false) {
+    add(ALIGN_CENTER);
+    const logoBytes = await logoToRasterBytes(data.empresa.logo_url, maxPixelWidth);
+    if (logoBytes.length > 0) {
+      add(logoBytes);
+      add(LF);
+    }
+  }
 
   // ── HEADER (centered via ESC/POS command) ──
   add(ALIGN_CENTER);
