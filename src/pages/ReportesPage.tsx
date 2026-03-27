@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown, Filter } from 'lucide-react';
@@ -15,6 +15,8 @@ import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
 import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
+import { ReportLayout } from '@/components/reportes/ReportLayout';
+import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 import {
@@ -416,20 +418,59 @@ export default function ReportesPage() {
 
       {isLoading && <div className="py-12 text-center text-muted-foreground">Cargando reportes...</div>}
 
-      {data && (
-        <>
-          {tab === 'resumen' && <ReporteResumen data={data} />}
-          {tab === 'ventas_producto' && <ReporteVentasProducto data={data} />}
-          {tab === 'ventas_cliente' && <ReporteVentasCliente data={data} />}
-          {tab === 'producto_cliente' && <ReporteProductoCliente data={data} />}
-          {tab === 'vendedores' && <ReporteVendedores data={data} />}
-          {tab === 'entregas' && <ReporteEntregas data={data} />}
-          {tab === 'cargas' && <ReporteCargas data={data} />}
-          {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
-          {tab === 'utilidad' && <ReporteUtilidad data={data} />}
-          {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
-        </>
-      )}
+      {data && (() => {
+        const tabTitles: Record<ReportTab, string> = {
+          resumen: 'Resumen General',
+          ventas_producto: 'Ventas por Producto',
+          ventas_cliente: 'Ventas por Cliente',
+          producto_cliente: 'Producto por Cliente',
+          vendedores: 'Reporte de Vendedores',
+          entregas: 'Reporte de Entregas',
+          cargas: 'Reporte de Cargas',
+          devoluciones: 'Reporte de Devoluciones',
+          utilidad: 'Reporte de Utilidad',
+          promociones: 'Reporte de Promociones',
+        };
+
+        const activeFilters: { label: string; value: string }[] = [];
+        if (vendedorNames.length > 0) activeFilters.push({ label: 'Vendedor', value: vendedorNames.join(', ') });
+        if (selectedStatuses.length > 0) activeFilters.push({ label: 'Estado', value: selectedStatuses.map(st => statusOptions.find(o => o.value === st)?.label ?? st).join(', ') });
+
+        const resumenFooter = (
+          <ResumenGeneralVentas
+            totalVentas={data.totalVentas}
+            totalContado={data.totalContado ?? 0}
+            totalCredito={data.totalCredito ?? 0}
+            vendedores={(data.topVendedores ?? []).map((v: any) => ({
+              nombre: v.nombre,
+              total: v.total,
+              pct: data.totalVentas > 0 ? (v.total / data.totalVentas) * 100 : 0,
+            }))}
+            metodosPago={data.metodosPago ?? []}
+          />
+        );
+
+        return (
+          <ReportLayout
+            title={tabTitles[tab]}
+            desde={desde}
+            hasta={hasta}
+            filters={activeFilters.length > 0 ? activeFilters : undefined}
+            footer={resumenFooter}
+          >
+            {tab === 'resumen' && <ReporteResumen data={data} />}
+            {tab === 'ventas_producto' && <ReporteVentasProducto data={data} />}
+            {tab === 'ventas_cliente' && <ReporteVentasCliente data={data} />}
+            {tab === 'producto_cliente' && <ReporteProductoCliente data={data} />}
+            {tab === 'vendedores' && <ReporteVendedores data={data} />}
+            {tab === 'entregas' && <ReporteEntregas data={data} />}
+            {tab === 'cargas' && <ReporteCargas data={data} />}
+            {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
+            {tab === 'utilidad' && <ReporteUtilidad data={data} />}
+            {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
+          </ReportLayout>
+        );
+      })()}
     </div>
   );
 }

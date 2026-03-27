@@ -57,6 +57,20 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       const totalGastos = gastos.reduce((s, g) => s + (g.monto ?? 0), 0);
       const totalPendiente = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
 
+      // === CONTADO vs CRÉDITO ===
+      const totalContado = ventas.filter(v => v.condicion_pago === 'contado').reduce((s, v) => s + (v.total ?? 0), 0);
+      const totalCredito = ventas.filter(v => v.condicion_pago === 'credito').reduce((s, v) => s + (v.total ?? 0), 0);
+
+      // === DESGLOSE POR MÉTODO DE PAGO (from cobros) ===
+      const metodoPagoMap: Record<string, number> = {};
+      for (const c of cobros) {
+        const m = c.metodo_pago ?? 'otro';
+        metodoPagoMap[m] = (metodoPagoMap[m] ?? 0) + (c.monto ?? 0);
+      }
+      const metodosPago = Object.entries(metodoPagoMap)
+        .map(([metodo, total]) => ({ metodo, total, pct: totalCobros > 0 ? (total / totalCobros) * 100 : 0 }))
+        .sort((a, b) => b.total - a.total);
+
       const dailyMap: Record<string, number> = {};
       for (const v of ventas) { dailyMap[v.fecha] = (dailyMap[v.fecha] ?? 0) + (v.total ?? 0); }
       const dailyVentas = Object.entries(dailyMap).sort().map(([fecha, total]) => ({ fecha, total }));
@@ -172,6 +186,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       return {
         totalVentas, totalCobros, totalGastos, totalPendiente,
+        totalContado, totalCredito, metodosPago,
         numVentas: ventas.length, numCobros: cobros.length,
         utilidad: totalVentas - totalGastos, dailyVentas,
         ventaLineas,
