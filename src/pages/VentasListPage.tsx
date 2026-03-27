@@ -98,7 +98,10 @@ const GROUP_BY_OPTIONS = [
   { value: 'condicion_pago', label: 'Condición de pago' },
   { value: 'vendedor', label: 'Vendedor' },
   { value: 'cliente', label: 'Cliente' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
 ];
 
 function useVendedoresForFilter() {
