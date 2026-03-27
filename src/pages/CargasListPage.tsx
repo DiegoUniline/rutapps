@@ -45,7 +45,10 @@ const FILTER_OPTIONS = [
 const GROUP_BY_OPTIONS = [
   { value: 'status', label: 'Estado' },
   { value: 'vendedor', label: 'Responsable' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
 ];
 
 export default function CargasListPage() {
