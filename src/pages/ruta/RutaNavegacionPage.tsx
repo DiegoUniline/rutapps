@@ -280,7 +280,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     return (
       <div className="flex flex-col h-screen bg-background">
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
-          <button onClick={() => navigate('/ruta')} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
+          <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
           <h1 className="text-base font-bold text-foreground">Navegación</h1>
         </header>
         <div className="flex-1 flex items-center justify-center">
