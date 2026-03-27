@@ -35,38 +35,53 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
     }
   }
 
-  // ── 2) Fallback: PNG via share/download ──
-  // Strip logo to avoid CORS issues with toPng
-  const tdForImage = { ...td, empresa: { ...td.empresa, logo_url: null } };
+  // ── 2) Fallback: browser print dialog ──
+  const tdForPrint = { ...td, empresa: { ...td.empresa, logo_url: null } };
+  const html = buildTicketHTML(tdForPrint, { ticketAncho, forPrint: true });
 
-  const html = buildTicketHTML(tdForImage, { ticketAncho, forPrint: true });
-  const container = document.createElement('div');
-  container.style.position = 'fixed';
-  container.style.left = '-9999px';
-  container.style.top = '0';
-  container.innerHTML = html;
-  document.body.appendChild(container);
-  try {
-    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
-    const el = container.firstElementChild as HTMLElement;
-    const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
-    const blob = await (await fetch(dataUrl)).blob();
-    const file = new File([blob], `${td.folio ?? 'ticket'}.png`, { type: 'image/png' });
+  // Use an iframe + window.print() — much more reliable than toPng on desktop
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '0';
+  iframe.style.width = '420px';
+  iframe.style.height = '800px';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
 
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: `Ticket ${td.folio}` });
-    } else {
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = file.name;
-      a.click();
-      toast.success('Imagen descargada');
-    }
-  } catch (err: any) {
-    if (err?.name !== 'AbortError') toast.error('Error al generar ticket');
-  } finally {
-    document.body.removeChild(container);
+  const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+  if (!doc) {
+    toast.error('No se pudo abrir ventana de impresión');
+    document.body.removeChild(iframe);
+    return;
   }
+
+  doc.open();
+  doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket ${td.folio}</title><style>@media print{@page{margin:0}body{margin:0}}</style></head><body>${html}</body></html>`);
+  doc.close();
+
+  // Wait for content to render, then print
+  await new Promise(r => setTimeout(r, 300));
+
+  try {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+  } catch {
+    // Some browsers block iframe print — fallback to new window
+    const win = window.open('', '_blank', 'width=420,height=600');
+    if (win) {
+      win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ticket ${td.folio}</title><style>@media print{@page{margin:0}body{margin:0}}</style></head><body>${html}</body></html>`);
+      win.document.close();
+      setTimeout(() => { win.focus(); win.print(); }, 300);
+    } else {
+      toast.error('No se pudo abrir ventana de impresión');
+    }
+  }
+
+  // Clean up iframe after a delay
+  setTimeout(() => {
+    try { document.body.removeChild(iframe); } catch {}
+  }, 2000);
 }
 
 /**
