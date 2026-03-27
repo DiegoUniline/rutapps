@@ -520,17 +520,25 @@ export default function RutaVentaDetalle() {
 
   /** Convert a remote image URL to a base64 data URI to avoid CORS issues with toPng */
   const logoToBase64 = async (td: TicketData): Promise<TicketData> => {
-    if (!td.empresa.logo_url || td.empresa.logo_url.startsWith('data:')) return td;
+    if (!td.empresa.logo_url || td.empresa.logo_url.startsWith('data:')) {
+      console.log('[TICKET-DEBUG] logoToBase64 skipped:', td.empresa.logo_url ? 'already base64' : 'no logo_url');
+      return td;
+    }
     const copy = { ...td, empresa: { ...td.empresa } };
+    console.log('[TICKET-DEBUG] logoToBase64 attempting fetch:', copy.empresa.logo_url);
     try {
       const resp = await fetch(copy.empresa.logo_url!, { mode: 'cors' });
+      console.log('[TICKET-DEBUG] fetch response:', resp.status, resp.ok);
       const blob = await resp.blob();
+      console.log('[TICKET-DEBUG] blob size:', blob.size, 'type:', blob.type);
       copy.empresa.logo_url = await new Promise<string>((res) => {
         const reader = new FileReader();
         reader.onloadend = () => res(reader.result as string);
         reader.readAsDataURL(blob);
       });
-    } catch {
+      console.log('[TICKET-DEBUG] base64 conversion success, length:', copy.empresa.logo_url?.length);
+    } catch (e1) {
+      console.warn('[TICKET-DEBUG] fetch failed:', e1);
       try {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -540,7 +548,11 @@ export default function RutaVentaDetalle() {
         c.width = img.naturalWidth; c.height = img.naturalHeight;
         c.getContext('2d')!.drawImage(img, 0, 0);
         copy.empresa.logo_url = c.toDataURL('image/png');
-      } catch { copy.empresa.logo_url = null; }
+        console.log('[TICKET-DEBUG] canvas fallback success');
+      } catch (e2) {
+        console.warn('[TICKET-DEBUG] canvas fallback also failed:', e2);
+        copy.empresa.logo_url = null;
+      }
     }
     return copy;
   };
