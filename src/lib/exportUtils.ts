@@ -52,7 +52,7 @@ const fmt = (value: any, format?: ExportColumn['format']): string => {
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
 export function exportToExcel(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
 
   const wb = XLSX.utils.book_new();
   const rows: any[][] = [];
