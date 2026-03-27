@@ -43,7 +43,7 @@ interface Stop {
   entregaRef?: any;
 }
 
-function NavegacionContent() {
+function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { empresa, profile } = useAuth();
