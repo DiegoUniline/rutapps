@@ -100,7 +100,7 @@ export default function ComprasPage() {
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('compras');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: compras, isLoading } = useCompras(search, statusFilter);
