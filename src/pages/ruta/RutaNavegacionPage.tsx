@@ -50,6 +50,7 @@ function NavegacionContent() {
   const { isLoaded } = useGoogleMaps();
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [arrivedIds, setArrivedIds] = useState<Set<string>>(new Set());
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
@@ -207,6 +208,19 @@ function NavegacionContent() {
     recenterMap();
   };
 
+  const handleArrived = (stop: Stop) => {
+    setArrivedIds(prev => new Set([...prev, stop.id]));
+    stopNavigation();
+    setActiveStopId(stop.id);
+    setPanelOpen(true);
+    toast.success(`¡Llegaste a ${stop.nombre}!`);
+    // Center map on the stop
+    if (mapRef.current) {
+      mapRef.current.setCenter({ lat: stop.gps_lat, lng: stop.gps_lng });
+      mapRef.current.setZoom(17);
+    }
+  };
+
   const handleVisited = async (stop: Stop) => {
     if (stop.tipo === 'entrega' && stop.entregaRef) {
       await offlineMutate('entregas', 'update', {
@@ -216,7 +230,7 @@ function NavegacionContent() {
     }
     setCompletedIds(prev => new Set([...prev, stop.id]));
     toast.success(stop.tipo === 'entrega' ? '¡Entregado!' : '¡Visitado!');
-    stopNavigation();
+    setActiveStopId(null);
 
     // Auto-navigate to next
     const currentStopIdx = stops.findIndex(s => s.id === stop.id);
@@ -448,13 +462,13 @@ function NavegacionContent() {
         )}
       </div>
 
-      {/* NAVIGATION ACTION BAR — when navigating, shown at bottom */}
+      {/* NAVIGATION ACTION BAR — "Llegué" button when navigating */}
       {navigatingStop && !completedIds.has(navigatingStop.id) && (
         <div className="absolute bottom-0 left-0 right-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="mx-3 bg-card/95 backdrop-blur-md border border-border rounded-2xl p-3 shadow-lg space-y-2.5">
             {/* Stop info */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
+              <div className="w-10 h-10 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center font-bold text-sm shrink-0">
                 {stops.findIndex(s => s.id === navigatingStop.id) + 1}
               </div>
               <div className="flex-1 min-w-0">
@@ -475,19 +489,54 @@ function NavegacionContent() {
               )}
             </div>
 
-            {/* Actions */}
+            {/* BIG "Llegué" button */}
+            <Button onClick={() => handleArrived(navigatingStop)} className="w-full rounded-xl gap-2 h-14 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+              <MapPin className="h-5 w-5" /> ¡Llegué!
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ARRIVED CARD — after pressing "Llegué", shows Vender / Sin compra / Llamar */}
+      {!navigatingTo && activeStop && arrivedIds.has(activeStop.id) && !completedIds.has(activeStop.id) && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="mx-3 bg-card/95 backdrop-blur-md border border-border rounded-2xl p-3 shadow-lg space-y-2.5">
+            {/* Stop info */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                <Check className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase">Estás aquí</p>
+                <p className="text-[15px] font-bold text-foreground truncate">{activeStop.nombre}</p>
+                {(activeStop.direccion || activeStop.colonia) && (
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    <MapPin className="h-3 w-3 inline mr-0.5" />
+                    {[activeStop.direccion, activeStop.colonia].filter(Boolean).join(', ')}
+                  </p>
+                )}
+              </div>
+              {activeStop.telefono && (
+                <a href={`tel:${activeStop.telefono}`}
+                  className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 active:scale-90 transition-transform shrink-0">
+                  <Phone className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+
+            {/* Action buttons */}
             <div className="flex items-center gap-2">
-              {navigatingStop.tipo === 'cliente' ? (
+              {activeStop.tipo === 'cliente' ? (
                 <>
-                  <Button onClick={() => handleSaleAndVisit(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
+                  <Button onClick={() => handleSaleAndVisit(activeStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
                     <ShoppingCart className="h-4 w-4" /> Vender
                   </Button>
-                  <Button variant="outline" onClick={() => handleVisited(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
-                    <Check className="h-4 w-4" /> Sin venta
+                  <Button variant="outline" onClick={() => handleVisited(activeStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
+                    <Check className="h-4 w-4" /> Sin compra
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => handleVisited(navigatingStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
+                <Button onClick={() => handleVisited(activeStop)} className="flex-1 rounded-xl gap-2 h-12 text-sm">
                   <Truck className="h-4 w-4" /> Marcar entregado
                 </Button>
               )}
@@ -496,8 +545,8 @@ function NavegacionContent() {
         </div>
       )}
 
-      {/* BOTTOM SHEET — stop list (when NOT navigating) */}
-      {!navigatingTo && (
+      {/* BOTTOM SHEET — stop list (when NOT navigating and no arrived card showing) */}
+      {!navigatingTo && !(activeStop && arrivedIds.has(activeStop.id) && !completedIds.has(activeStop.id)) && (
         <div className="absolute bottom-0 left-0 right-0 z-20 pb-[max(0rem,env(safe-area-inset-bottom))]">
           {/* Toggle handle */}
           <div className="flex justify-center">
