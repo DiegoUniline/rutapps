@@ -166,11 +166,11 @@ export default function CobranzaPage() {
   // Grouping
   const groups = useMemo(() => groupData(filtered, groupBy, (item: any, key: string) => {
     if (key === 'cliente') return (item.clientes as any)?.nombre ?? 'Sin cliente';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     if (key === 'metodo') return item.metodo_pago ?? 'Sin método';
     if (key === 'vendedor') return vendedorMap.get(item.user_id) || 'Sin vendedor';
     return '';
-  }), [filtered, groupBy, vendedorMap]);
+  }, groupByLevels), [filtered, groupBy, groupByLevels, vendedorMap]);
 
   const renderTable = (items: any[]) => (
     <Table className="bg-card">
