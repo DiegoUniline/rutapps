@@ -22,7 +22,7 @@ export default function RutaNuevaVenta() {
         subtotal={h.totals.subtotal} iva={h.totals.iva} ieps={h.totals.ieps} total={h.totals.total}
         descuentoDevolucion={h.totals.descuentoDevolucion ?? 0}
         devoluciones={h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo, accion: d.accion, monto: d.precio_unitario * d.cantidad }))}
-        condicionPago={h.condicionPago} metodoPago={h.metodoPago} montoRecibido={h.montoRecibidoNum} cambio={h.cambio}
+        condicionPago={h.condicionPago} pagos={h.pagos} montoRecibido={h.montoRecibidoNum} cambio={h.cambio}
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
         onClose={() => h.navigate('/ruta')}
