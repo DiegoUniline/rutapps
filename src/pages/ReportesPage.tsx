@@ -207,6 +207,7 @@ function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string
 }
 
 export default function ReportesPage() {
+  const { empresa } = useAuth();
   const now = new Date();
   const mesActual = now.toISOString().slice(0, 7);
   const [desde, setDesde] = useState(mesActual + '-01');
