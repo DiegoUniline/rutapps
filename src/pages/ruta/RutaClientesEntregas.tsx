@@ -46,7 +46,7 @@ export default function RutaClientesEntregas() {
             onClick={() => setTab('navegacion')}
             className={cn(
               "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
-              tab === 'navegacion' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+              false ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
             <Navigation className="h-3 w-3" />

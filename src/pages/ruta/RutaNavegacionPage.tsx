@@ -617,10 +617,10 @@ function NavegacionContent() {
   );
 }
 
-export default function RutaNavegacionPage({ embedded }: { embedded?: boolean }) {
+export default function RutaNavegacionPage({ embedded, onBack }: { embedded?: boolean; onBack?: () => void }) {
   return (
     <GoogleMapsProvider blocking>
-      <NavegacionContent />
+      <NavegacionContent onBack={onBack} />
     </GoogleMapsProvider>
   );
 }
