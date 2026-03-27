@@ -8,6 +8,15 @@ import RutaNavegacionPage from './RutaNavegacionPage';
 export default function RutaClientesEntregas() {
   const [tab, setTab] = useState<'clientes' | 'entregas' | 'navegacion'>('clientes');
 
+  // When navegacion tab is active, render full-screen without tabs
+  if (tab === 'navegacion') {
+    return (
+      <div className="fixed inset-0 z-50 bg-background">
+        <RutaNavegacionPage embedded onBack={() => setTab('clientes')} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Tabs */}
@@ -37,7 +46,7 @@ export default function RutaClientesEntregas() {
             onClick={() => setTab('navegacion')}
             className={cn(
               "flex-1 flex items-center justify-center gap-1 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
-              tab === 'navegacion' ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
+              false ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground"
             )}
           >
             <Navigation className="h-3 w-3" />
@@ -50,7 +59,6 @@ export default function RutaClientesEntregas() {
       <div className="flex-1 overflow-auto">
         {tab === 'clientes' && <RutaClientes />}
         {tab === 'entregas' && <RutaEntregas />}
-        {tab === 'navegacion' && <RutaNavegacionPage embedded />}
       </div>
     </div>
   );

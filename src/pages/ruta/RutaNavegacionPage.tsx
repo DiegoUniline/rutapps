@@ -43,7 +43,7 @@ interface Stop {
   entregaRef?: any;
 }
 
-function NavegacionContent() {
+function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { empresa, profile } = useAuth();
@@ -280,7 +280,7 @@ function NavegacionContent() {
     return (
       <div className="flex flex-col h-screen bg-background">
         <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
-          <button onClick={() => navigate('/ruta')} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
+          <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
           <h1 className="text-base font-bold text-foreground">Navegación</h1>
         </header>
         <div className="flex-1 flex items-center justify-center">
@@ -429,7 +429,7 @@ function NavegacionContent() {
         ) : (
           /* Default: overview bar */
           <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
-            <button onClick={() => navigate('/ruta')} className="p-1 -ml-0.5">
+            <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-0.5">
               <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
             <div className="flex-1 min-w-0">
@@ -617,10 +617,10 @@ function NavegacionContent() {
   );
 }
 
-export default function RutaNavegacionPage({ embedded }: { embedded?: boolean }) {
+export default function RutaNavegacionPage({ embedded, onBack }: { embedded?: boolean; onBack?: () => void }) {
   return (
     <GoogleMapsProvider blocking>
-      <NavegacionContent />
+      <NavegacionContent onBack={onBack} />
     </GoogleMapsProvider>
   );
 }
