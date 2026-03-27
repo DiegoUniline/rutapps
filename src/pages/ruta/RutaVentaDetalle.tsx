@@ -517,9 +517,37 @@ export default function RutaVentaDetalle() {
 
   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
 
+  /** Convert a remote image URL to a base64 data URI to avoid CORS issues with toPng */
+  const logoToBase64 = async (td: TicketData): Promise<TicketData> => {
+    if (!td.empresa.logo_url || td.empresa.logo_url.startsWith('data:')) return td;
+    const copy = { ...td, empresa: { ...td.empresa } };
+    try {
+      const resp = await fetch(copy.empresa.logo_url!, { mode: 'cors' });
+      const blob = await resp.blob();
+      copy.empresa.logo_url = await new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onloadend = () => res(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = copy.empresa.logo_url!;
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; });
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext('2d')!.drawImage(img, 0, 0);
+        copy.empresa.logo_url = c.toDataURL('image/png');
+      } catch { copy.empresa.logo_url = null; }
+    }
+    return copy;
+  };
+
   const handleDownloadPDF = async () => {
-    const td = getTicketData();
+    let td = getTicketData();
     if (!td) return;
+    td = await logoToBase64(td);
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
