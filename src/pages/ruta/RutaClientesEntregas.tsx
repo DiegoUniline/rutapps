@@ -11,9 +11,9 @@ export default function RutaClientesEntregas() {
   // When navegacion tab is active, render full-screen without tabs
   if (tab === 'navegacion') {
     return (
-      <div className="fixed inset-0 z-50 bg-background">
-        <RutaNavegacionPage embedded onBack={() => setTab('clientes')} />
-      </div>
+    <div className="fixed inset-0 z-[60] bg-background">
+      <RutaNavegacionPage embedded onBack={() => setTab('clientes')} />
+    </div>
     );
   }
 
