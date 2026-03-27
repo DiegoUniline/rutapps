@@ -88,6 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       nextProfile = await getCachedProfile(u.id);
     }
 
+    if (nextProfile && !nextProfile.vendedor_id) {
+      console.warn('[Auth] El perfil no tiene vendedor_id sincronizado. Esto puede causar errores en ventas y reportes.');
+    }
+
     setProfile(nextProfile);
 
     if (nextProfile?.empresa_id) {
