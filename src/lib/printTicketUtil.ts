@@ -59,6 +59,7 @@ interface PrintOptions {
  */
 export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   const ticketAncho = opts.ticketAncho ?? '58';
+  console.log('[PRINT-DEBUG] printTicket called, logo_url:', td.empresa.logo_url);
 
   // ── 1) Try Bluetooth ESC/POS ──
   if (isBluetoothAvailable()) {
@@ -84,10 +85,15 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   // Convert logo to base64 to avoid CORS issues with toPng
   const tdForImage = { ...td, empresa: { ...td.empresa } };
   if (tdForImage.empresa.logo_url && !tdForImage.empresa.logo_url.startsWith('data:')) {
+    console.log('[PRINT-DEBUG] Converting logo to base64:', tdForImage.empresa.logo_url);
     tdForImage.empresa.logo_url = await logoUrlToBase64(tdForImage.empresa.logo_url);
+    console.log('[PRINT-DEBUG] After base64 conversion:', tdForImage.empresa.logo_url ? `success (${tdForImage.empresa.logo_url.substring(0, 50)}...)` : 'FAILED - null');
+  } else {
+    console.log('[PRINT-DEBUG] Logo skip - no url or already base64');
   }
 
   const html = buildTicketHTML(tdForImage, { ticketAncho, forPrint: true });
+  console.log('[PRINT-DEBUG] HTML contains img?', html.includes('<img'));
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.left = '-9999px';
@@ -97,8 +103,9 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   try {
     // Wait for any images (base64 logo) to fully render
     const imgs = container.querySelectorAll('img');
+    console.log('[PRINT-DEBUG] Found', imgs.length, 'images in ticket HTML');
     await Promise.all(Array.from(imgs).map(img =>
-      img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); })
+      img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => { console.warn('[PRINT-DEBUG] img onerror'); res(); }; })
     ));
     await new Promise(r => requestAnimationFrame(() => setTimeout(r, 400)));
     const el = container.firstElementChild as HTMLElement;
