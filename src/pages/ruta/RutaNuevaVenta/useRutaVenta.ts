@@ -36,8 +36,6 @@ export function useRutaVenta() {
   const [notas, setNotas] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
   const [pagos, setPagos] = useState<PagoLinea[]>([]);
-  const [referenciaPago, setReferenciaPago] = useState('');
-  const [referenciaPago, setReferenciaPago] = useState('');
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [showDevSearch, setShowDevSearch] = useState(false);
   const [showReemplazoFor, setShowReemplazoFor] = useState<string | null>(null);
