@@ -15,7 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   borrador: { label: 'Borrador', variant: 'borrador' },
