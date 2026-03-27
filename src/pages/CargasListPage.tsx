@@ -54,7 +54,7 @@ const GROUP_BY_OPTIONS = [
 export default function CargasListPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cargas');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cargas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: cargas, isLoading } = useCargas(search, statusFilter);
