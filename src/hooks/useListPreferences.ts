@@ -113,42 +113,43 @@ export function dateGroupLabel(fecha: string | null | undefined, format: 'fecha'
 }
 
 /** Generic client-side grouping utility with optional sub-grouping */
+export interface GroupNode<T> {
+  label: string;
+  items: T[];
+  subGroups?: GroupNode<T>[];
+}
+
+function buildGroups<T>(
+  data: T[],
+  keys: string[],
+  labelFn: (item: T, key: string) => string,
+): GroupNode<T>[] {
+  if (keys.length === 0) return [{ label: '', items: data }];
+  const [currentKey, ...restKeys] = keys;
+  const buckets: Record<string, T[]> = {};
+  for (const item of data) {
+    const label = labelFn(item, currentKey);
+    if (!buckets[label]) buckets[label] = [];
+    buckets[label].push(item);
+  }
+  return Object.entries(buckets)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, items]) => {
+      const node: GroupNode<T> = { label: label || 'Sin asignar', items };
+      if (restKeys.length > 0) {
+        node.subGroups = buildGroups(items, restKeys, labelFn);
+      }
+      return node;
+    });
+}
+
 export function groupData<T>(
   data: T[],
   groupBy: string,
   labelFn: (item: T, key: string) => string,
   groupByLevels?: string[],
-): { label: string; items: T[]; subGroups?: { label: string; items: T[] }[] }[] {
-  const primaryKey = groupByLevels?.[0] ?? groupBy;
-  if (!primaryKey) return [{ label: '', items: data }];
-
-  const groups: Record<string, T[]> = {};
-  for (const item of data) {
-    const label = labelFn(item, primaryKey);
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(item);
-  }
-
-  const secondaryKey = groupByLevels?.[1];
-
-  return Object.entries(groups)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([label, items]) => {
-      const result: { label: string; items: T[]; subGroups?: { label: string; items: T[] }[] } = {
-        label: label || 'Sin asignar',
-        items,
-      };
-      if (secondaryKey) {
-        const subs: Record<string, T[]> = {};
-        for (const item of items) {
-          const subLabel = labelFn(item, secondaryKey);
-          if (!subs[subLabel]) subs[subLabel] = [];
-          subs[subLabel].push(item);
-        }
-        result.subGroups = Object.entries(subs)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([sl, si]) => ({ label: sl || 'Sin asignar', items: si }));
-      }
-      return result;
-    });
+): GroupNode<T>[] {
+  const keys = (groupByLevels && groupByLevels.length > 0) ? groupByLevels : (groupBy ? [groupBy] : []);
+  if (keys.length === 0) return [{ label: '', items: data }];
+  return buildGroups(data, keys, labelFn);
 }
