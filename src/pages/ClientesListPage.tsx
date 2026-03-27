@@ -141,7 +141,7 @@ function ClientesTable() {
     if (key === 'zona') return item.zonas?.nombre ?? 'Sin zona';
     if (key === 'credito') return item.credito ? 'Con crédito' : 'Sin crédito';
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
