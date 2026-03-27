@@ -299,7 +299,7 @@ export function useVentaDetalle() {
     if (isBluetoothAvailable()) {
       try {
         const conn = await connectPrinter();
-        const escposBytes = buildEscPosBytes(td, { ticketAncho });
+        const escposBytes = await buildEscPosBytes(td, { ticketAncho });
         await sendBytes(conn, escposBytes);
         toast.success('Ticket impreso');
         return;
