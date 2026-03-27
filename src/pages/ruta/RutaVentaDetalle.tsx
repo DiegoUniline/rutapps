@@ -458,7 +458,6 @@ export default function RutaVentaDetalle() {
   // ─── Build unified ticket data ───
   const getTicketData = (): TicketData | null => {
     if (!venta) return null;
-    console.log('[TICKET-DEBUG] empresa object:', JSON.stringify({ logo_url: empresa?.logo_url, nombre: empresa?.nombre, ticket_campos: (empresa as any)?.ticket_campos }));
     return {
       empresa: {
         nombre: empresa?.nombre ?? '',
@@ -471,7 +470,7 @@ export default function RutaVentaDetalle() {
         estado: (empresa as any)?.estado ?? null,
         cp: (empresa as any)?.cp ?? null,
         email: (empresa as any)?.email ?? null,
-        logo_url: empresa?.logo_url ?? null,
+        logo_url: null,
         moneda: (empresa as any)?.moneda ?? 'MXN',
         notas_ticket: (empresa as any)?.notas_ticket ?? null,
         ticket_campos: (empresa as any)?.ticket_campos ?? null,
