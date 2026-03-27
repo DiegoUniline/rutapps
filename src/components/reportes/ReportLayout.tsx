@@ -21,27 +21,29 @@ export function ReportLayout({ title, desde, hasta, filters, children, footer }:
   };
 
   return (
-    <div className="space-y-6">
-      {/* ─── Report Header ─── */}
-      <div className="bg-card border border-border rounded-lg p-5 print:border-0 print:p-0">
-        <h2 className="text-lg font-bold text-foreground tracking-tight">{title}</h2>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-2 text-[12px] text-muted-foreground">
-          {empresa?.nombre && (
-            <span className="flex items-center gap-1">
-              <Building2 className="h-3 w-3" /> {empresa.nombre}
-            </span>
-          )}
-          <span className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" /> {formatDate(desde)} — {formatDate(hasta)}
-          </span>
-          {filters && filters.length > 0 && (
-            <span className="flex items-center gap-1">
-              <FilterIcon className="h-3 w-3" />
-              {filters.map(f => `${f.label}: ${f.value}`).join(' · ')}
-            </span>
-          )}
+    <div className="space-y-4">
+      {/* ─── Report Header — matches ReporteDiario style ─── */}
+      <div className="bg-card border border-border rounded-lg p-4 print:border-0 print:p-0">
+        <div className="flex items-start justify-between">
+          <div>
+            {empresa?.nombre && (
+              <div className="text-[11px] text-muted-foreground font-medium">{empresa.nombre}</div>
+            )}
+          </div>
+          <div className="text-right">
+            <h2 className="text-base font-bold text-foreground">{title}</h2>
+            <div className="text-[11px] text-muted-foreground mt-0.5">
+              {formatDate(desde)} — {formatDate(hasta)}
+            </div>
+          </div>
         </div>
-        <p className="text-[10px] text-muted-foreground/60 mt-1">Generado: {generatedAt}</p>
+        {filters && filters.length > 0 && (
+          <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground">
+            <FilterIcon className="h-3 w-3" />
+            {filters.map(f => `${f.label}: ${f.value}`).join(' · ')}
+          </div>
+        )}
+        <p className="text-[9px] text-muted-foreground/50 mt-1">Generado: {generatedAt}</p>
       </div>
 
       {/* ─── Report Body ─── */}
