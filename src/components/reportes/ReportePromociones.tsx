@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Tag } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 
 export function ReportePromociones({ desde, hasta }: { desde: string; hasta: string }) {
@@ -53,39 +52,37 @@ export function ReportePromociones({ desde, hasta }: { desde: string; hasta: str
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground">Total descuentos otorgados</p>
-          <p className="text-2xl font-bold text-foreground">{fmt(totalDescuentos)}</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Total descuentos otorgados</div>
+          <div className="text-lg font-bold text-foreground">{fmt(totalDescuentos)}</div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground">Promociones activas usadas</p>
-          <p className="text-2xl font-bold text-foreground">{(promociones ?? []).length}</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Promociones activas usadas</div>
+          <div className="text-lg font-bold text-foreground">{(promociones ?? []).length}</div>
         </div>
-        <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs text-muted-foreground">Veces aplicadas</p>
-          <p className="text-2xl font-bold text-foreground">{(promociones ?? []).reduce((s, p) => s + p.veces, 0)}</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-center">
+          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Veces aplicadas</div>
+          <div className="text-lg font-bold text-foreground">{(promociones ?? []).reduce((s, p) => s + p.veces, 0)}</div>
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
+        <table className="w-full text-[11px]">
           <thead>
-            <tr className="border-b border-border bg-card">
-              <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Promoción</th>
-              <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Tipo</th>
-              <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Veces aplicada</th>
-              <th className="text-right px-4 py-3 font-semibold text-muted-foreground">Total descuento</th>
+            <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
+              <th className="text-left px-3 py-2 font-semibold">Promoción</th>
+              <th className="text-left px-3 py-2 font-semibold">Tipo</th>
+              <th className="text-right px-3 py-2 font-semibold">Veces aplicada</th>
+              <th className="text-right px-3 py-2 font-semibold">Total descuento</th>
             </tr>
           </thead>
           <tbody>
             {(promociones ?? []).map((p, i) => (
-              <tr key={i} className="border-b border-border last:border-0 hover:bg-card">
-                <td className="px-4 py-3 font-medium text-foreground flex items-center gap-2">
-                  <Tag className="h-3.5 w-3.5 text-primary shrink-0" /> {p.nombre}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground">{p.tipo}</td>
-                <td className="px-4 py-3 text-right text-foreground">{p.veces}</td>
-                <td className="px-4 py-3 text-right font-semibold text-foreground">{fmt(p.totalDescuento)}</td>
+              <tr key={i} className="border-b border-border/50">
+                <td className="px-3 py-2 font-medium">{p.nombre}</td>
+                <td className="px-3 py-2 text-muted-foreground">{p.tipo}</td>
+                <td className="px-3 py-2 text-right">{p.veces}</td>
+                <td className="px-3 py-2 text-right font-semibold">{fmt(p.totalDescuento)}</td>
               </tr>
             ))}
             {(promociones ?? []).length === 0 && (
