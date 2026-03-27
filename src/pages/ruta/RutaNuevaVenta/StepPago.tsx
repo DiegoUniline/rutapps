@@ -1,6 +1,6 @@
 import { useCurrency } from '@/hooks/useCurrency';
-import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText } from 'lucide-react';
-import type { CartItem, CuentaPendiente, DevolucionItem } from './types';
+import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2 } from 'lucide-react';
+import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea } from './types';
 import { ACCIONES } from './types';
 
 interface Props {
@@ -18,12 +18,8 @@ interface Props {
   liquidarTodas: () => void;
   updateCuentaMonto: (id: string, monto: number) => void;
   totalAplicarCuentas: number;
-  metodoPago: 'efectivo' | 'transferencia' | 'tarjeta';
-  setMetodoPago: (v: 'efectivo' | 'transferencia' | 'tarjeta') => void;
-  montoRecibido: string;
-  setMontoRecibido: (v: string) => void;
-  referenciaPago: string;
-  setReferenciaPago: (v: string) => void;
+  pagos: PagoLinea[];
+  setPagos: (fn: PagoLinea[] | ((prev: PagoLinea[]) => PagoLinea[])) => void;
   notas: string;
   setNotas: (v: string) => void;
   totals: { subtotal: number; total: number; iva?: number; ieps?: number; descuento?: number; descuentoDevolucion?: number };
@@ -39,14 +35,35 @@ interface Props {
   fmt: (n: number) => string;
 }
 
+const METODOS = [
+  { value: 'efectivo' as const, label: 'Efectivo', Icon: Wallet },
+  { value: 'transferencia' as const, label: 'Transfer.', Icon: Banknote },
+  { value: 'tarjeta' as const, label: 'Tarjeta', Icon: CreditCard },
+];
+
 const BILLETES = [50, 100, 200, 500];
 
 export function StepPago(props: Props) {
-  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, metodoPago, setMetodoPago, montoRecibido, setMontoRecibido, referenciaPago, setReferenciaPago, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt } = props;
+  const { tipoVenta, entregaInmediata, fechaEntrega, setFechaEntrega, condicionPago, setCondicionPago, clienteCredito, excedeCredito, creditoDisponible, saldoPendienteTotal, cuentasPendientes, liquidarTodas, updateCuentaMonto, totalAplicarCuentas, pagos, setPagos, notas, setNotas, totals, totalACobrar, cambio, saving, cart, devoluciones, sinImpuestos, setSinImpuestos, handleSave, navigate, fmt } = props;
   const { symbol: s } = useCurrency();
 
   const descDevolucion = totals.descuentoDevolucion ?? 0;
   const descPromos = (totals.descuento ?? 0) - descDevolucion;
+
+  const totalPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
+  const restante = Math.max(0, totalACobrar - totalPagos);
+
+  const addPagoLinea = (metodo: PagoLinea['metodo_pago']) => {
+    setPagos(prev => [...prev, { id: crypto.randomUUID(), metodo_pago: metodo, monto: restante, referencia: '' }]);
+  };
+
+  const updatePago = (id: string, field: keyof PagoLinea, value: any) => {
+    setPagos(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
+  const removePago = (id: string) => {
+    setPagos(prev => prev.filter(p => p.id !== id));
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -114,50 +131,103 @@ export function StepPago(props: Props) {
           </section>
         )}
 
+        {/* Payment lines section */}
         <section className="bg-card rounded-lg p-3">
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Recibir pago</p>
-          <div className="flex gap-1.5">
-            {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
-              <button key={val} onClick={() => setMetodoPago(val as any)} className={`flex-1 py-2.5 rounded-md text-[11px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 ${metodoPago === val ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}><Icon className="h-4 w-4" />{label}</button>
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pagos recibidos</p>
+
+          {pagos.length === 0 && totalACobrar > 0 && (
+            <p className="text-[11px] text-muted-foreground text-center py-2 mb-2">Agrega al menos un método de pago</p>
+          )}
+
+          {/* Existing payment lines */}
+          <div className="space-y-2 mb-2.5">
+            {pagos.map((pago, idx) => (
+              <div key={pago.id} className="rounded-md border border-border/60 p-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase">Pago {idx + 1}</span>
+                  <button onClick={() => removePago(pago.id)} className="text-destructive hover:text-destructive/80 active:scale-95">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {/* Method selector */}
+                <div className="flex gap-1.5">
+                  {METODOS.map(({ value, label, Icon }) => (
+                    <button key={value} onClick={() => updatePago(pago.id, 'metodo_pago', value)} className={`flex-1 py-2 rounded-md text-[11px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 ${pago.metodo_pago === value ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
+                      <Icon className="h-4 w-4" />{label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label className="text-[10px] text-muted-foreground font-medium">Monto</label>
+                  <div className="relative mt-0.5">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
+                    <input
+                      type="number" inputMode="decimal"
+                      className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      value={pago.monto || ''}
+                      placeholder="0.00"
+                      onChange={e => updatePago(pago.id, 'monto', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  {/* Quick bill buttons for efectivo */}
+                  {pago.metodo_pago === 'efectivo' && (
+                    <div className="flex gap-1.5 mt-1.5">
+                      {BILLETES.map(b => (
+                        <button key={b} onClick={() => updatePago(pago.id, 'monto', b)}
+                          className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${pago.monto === b ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
+                          {s}{b}
+                        </button>
+                      ))}
+                      <button onClick={() => updatePago(pago.id, 'monto', restante + pago.monto)}
+                        className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 bg-accent/60 text-foreground`}>
+                        Exacto
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reference for non-cash */}
+                {pago.metodo_pago !== 'efectivo' && (
+                  <div>
+                    <label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label>
+                    <input type="text" className="w-full mt-0.5 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={pago.referencia} placeholder="No. de referencia" onChange={e => updatePago(pago.id, 'referencia', e.target.value)} />
+                  </div>
+                )}
+              </div>
             ))}
           </div>
-          {metodoPago === 'efectivo' && (
-            <div className="mt-2.5 space-y-2">
-              <label className="text-[10px] text-muted-foreground font-medium">Monto recibido</label>
-              <div className="relative"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span><input type="number" inputMode="decimal" className="w-full bg-accent/40 rounded-lg pl-7 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-1.5 focus:ring-primary/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" value={montoRecibido} placeholder={fmt(totalACobrar)} onChange={e => setMontoRecibido(e.target.value)} /></div>
 
-              {/* Quick bill buttons */}
-              <div className="flex gap-1.5">
-                {BILLETES.map(b => (
-                  <button
-                    key={b}
-                    onClick={() => setMontoRecibido(b.toString())}
-                    className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${
-                      montoRecibido === b.toString()
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'bg-accent/60 text-foreground'
-                    }`}
-                  >
-                    {s}{b}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setMontoRecibido(totalACobrar > 0 ? totalACobrar.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '')}
-                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
-                    parseFloat(montoRecibido) === totalACobrar && totalACobrar > 0
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-accent/60 text-foreground'
-                  }`}
-                >
-                  Exacto
+          {/* Add payment button */}
+          {totalACobrar > 0 && (
+            <div className="flex gap-1.5">
+              {METODOS.map(({ value, label, Icon }) => (
+                <button key={value} onClick={() => addPagoLinea(value)}
+                  className="flex-1 py-2.5 rounded-md text-[10px] font-semibold transition-all active:scale-95 flex flex-col items-center gap-1 bg-accent/40 text-foreground border border-dashed border-border hover:bg-accent/70">
+                  <div className="flex items-center gap-0.5"><Plus className="h-3 w-3" /><Icon className="h-3.5 w-3.5" /></div>
+                  {label}
                 </button>
-              </div>
-
-              {cambio > 0 && <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2"><span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span><span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{s}{fmt(cambio)}</span></div>}
+              ))}
             </div>
           )}
-          {metodoPago !== 'efectivo' && (
-            <div className="mt-2.5"><label className="text-[10px] text-muted-foreground font-medium">Referencia (opcional)</label><input type="text" className="w-full mt-1 bg-accent/40 rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1.5 focus:ring-primary/40" value={referenciaPago} placeholder="No. de referencia o autorización" onChange={e => setReferenciaPago(e.target.value)} /></div>
+
+          {/* Change display */}
+          {cambio > 0 && (
+            <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-md px-2.5 py-2 mt-2">
+              <span className="text-[12px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
+              <span className="text-[14px] text-green-700 dark:text-green-400 font-bold">{s}{fmt(cambio)}</span>
+            </div>
+          )}
+
+          {/* Remaining to pay indicator */}
+          {restante > 0.01 && pagos.length > 0 && (
+            <div className="flex justify-between bg-amber-50 dark:bg-amber-950/30 rounded-md px-2.5 py-2 mt-2">
+              <span className="text-[12px] text-amber-700 dark:text-amber-400 font-medium">Falta por cubrir</span>
+              <span className="text-[14px] text-amber-700 dark:text-amber-400 font-bold">{s}{fmt(restante)}</span>
+            </div>
           )}
         </section>
 
@@ -173,7 +243,6 @@ export function StepPago(props: Props) {
             {descDevolucion > 0 && (
               <div className="flex justify-between text-[11px]"><span className="text-amber-600 dark:text-amber-400">🔄 Desc. devolución</span><span className="font-medium text-amber-600 dark:text-amber-400 tabular-nums">{s}{fmt(descDevolucion)}</span></div>
             )}
-            {/* Devolution detail summary */}
             {devoluciones.length > 0 && (
               <div className="mt-1 pt-1 border-t border-border/30 space-y-0.5">
                 <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Devoluciones ({devoluciones.reduce((s, d) => s + d.cantidad, 0)} uds)</p>
@@ -191,6 +260,19 @@ export function StepPago(props: Props) {
             {condicionPago === 'credito' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Se deja a crédito</span><span className="text-muted-foreground italic">{s}0.00 hoy</span></div>}
             {condicionPago === 'por_definir' && <div className="flex justify-between text-[11px]"><span className="text-muted-foreground italic">→ Pago por definir</span><span className="text-muted-foreground italic">{s}0.00 hoy</span></div>}
             {totalAplicarCuentas > 0 && <div className="flex justify-between text-[12px]"><span className="text-muted-foreground">Cuentas anteriores</span><span className="font-medium text-foreground tabular-nums">{s}{fmt(totalAplicarCuentas)}</span></div>}
+
+            {/* Payment lines summary */}
+            {pagos.length > 0 && (
+              <div className="mt-1 pt-1 border-t border-border/30 space-y-0.5">
+                <p className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Desglose de pagos</p>
+                {pagos.map((p, i) => (
+                  <div key={p.id} className="flex justify-between text-[11px]">
+                    <span className="text-muted-foreground capitalize">{p.metodo_pago}{p.referencia ? ` · ${p.referencia}` : ''}</span>
+                    <span className="font-medium text-foreground tabular-nums">{s}{fmt(p.monto)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           {totalACobrar > 0 && <div className="flex justify-between items-baseline mt-2 pt-2 border-t border-border/60"><span className="text-[13px] font-semibold text-foreground">Total a cobrar</span><span className="text-[20px] font-bold text-primary tabular-nums">{s}{fmt(totalACobrar)}</span></div>}
           {totalACobrar === 0 && (condicionPago === 'credito' || condicionPago === 'por_definir') && <div className="mt-2 pt-2 border-t border-border/60"><p className="text-[12px] text-muted-foreground text-center">{condicionPago === 'credito' ? 'No hay cobro por ahora — se registra a crédito' : 'No hay cobro por ahora — pago por definir'}</p></div>}
@@ -200,7 +282,7 @@ export function StepPago(props: Props) {
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <div className="flex gap-2">
           <button onClick={() => navigate(-1)} className="flex-1 bg-card border border-destructive/30 text-destructive rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5">Cancelar</button>
-          <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito} className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"><Save className="h-4 w-4" />{saving ? 'Guardando...' : 'Guardar'}</button>
+          <button onClick={handleSave} disabled={saving || cart.length === 0 || excedeCredito || (totalACobrar > 0 && totalPagos < totalACobrar - 0.01)} className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"><Save className="h-4 w-4" />{saving ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </div>
     </div>
