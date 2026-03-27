@@ -14,6 +14,14 @@ export interface ExportColumn {
   align?: 'left' | 'center' | 'right';
 }
 
+export interface ResumenGeneralExport {
+  totalVentas: number;
+  totalContado: number;
+  totalCredito: number;
+  vendedores: { nombre: string; total: number; pct: number }[];
+  metodosPago: { metodo: string; total: number; pct: number }[];
+}
+
 export interface ExportOptions {
   fileName: string;
   title: string;
@@ -23,6 +31,7 @@ export interface ExportOptions {
   empresa?: string;
   dateRange?: { from: string; to: string };
   totals?: Record<string, number>; // key → total value for footer row
+  resumenGeneral?: ResumenGeneralExport;
 }
 
 // ─── Format Helpers ─────────────────────────────────────────────
@@ -43,7 +52,7 @@ const fmt = (value: any, format?: ExportColumn['format']): string => {
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
 export function exportToExcel(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
 
   const wb = XLSX.utils.book_new();
   const rows: any[][] = [];
@@ -80,6 +89,30 @@ export function exportToExcel(options: ExportOptions) {
     }));
   }
 
+  // Resumen General sheet
+  if (resumenGeneral) {
+    rows.push([]);
+    rows.push([]);
+    rows.push(['RESUMEN GENERAL DE VENTAS']);
+    rows.push([]);
+    rows.push(['Total Ventas Generales', resumenGeneral.totalVentas]);
+    rows.push(['Total Ventas de Contado', resumenGeneral.totalContado]);
+    rows.push(['Total Ventas a Crédito', resumenGeneral.totalCredito]);
+    rows.push([]);
+    rows.push(['DESGLOSE POR VENDEDOR']);
+    rows.push(['Vendedor', 'Total', '% Participación']);
+    for (const v of resumenGeneral.vendedores) {
+      rows.push([v.nombre, v.total, `${v.pct.toFixed(1)}%`]);
+    }
+    rows.push([]);
+    rows.push(['DESGLOSE POR MÉTODO DE PAGO']);
+    rows.push(['Método', 'Total', '% Participación']);
+    const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
+    for (const m of resumenGeneral.metodosPago) {
+      rows.push([metodoPagoLabels[m.metodo] ?? m.metodo, m.total, `${m.pct.toFixed(1)}%`]);
+    }
+  }
+
   const ws = XLSX.utils.aoa_to_sheet(rows);
 
   // Column widths
@@ -97,7 +130,7 @@ export function exportToExcel(options: ExportOptions) {
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
 export function exportToPDF(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
 
   const doc = new jsPDF({
     orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait',
@@ -215,6 +248,97 @@ export function exportToPDF(options: ExportOptions) {
     },
     margin: { left: 14, right: 14 },
   });
+
+  // ─── RESUMEN GENERAL ───────────────────────────────────────────
+  if (resumenGeneral) {
+    const fmtCur = (n: number) => `$ ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
+
+    // Get current Y position after main table
+    let ry = (doc as any).lastAutoTable?.finalY ?? 180;
+    ry += 12;
+
+    // Check if we need a new page
+    if (ry > doc.internal.pageSize.getHeight() - 80) {
+      doc.addPage();
+      ry = 20;
+    }
+
+    // Section title
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 30, 50);
+    doc.text('Resumen General de Ventas', 14, ry);
+    ry += 8;
+
+    // Totals row
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(14, ry - 2, pageWidth - 14, ry - 2);
+
+    const totalsData = [
+      ['Total Ventas Generales', fmtCur(resumenGeneral.totalVentas)],
+      ['Total Ventas de Contado', fmtCur(resumenGeneral.totalContado)],
+      ['Total Ventas a Crédito', fmtCur(resumenGeneral.totalCredito)],
+    ];
+
+    autoTable(doc, {
+      startY: ry,
+      head: [['Concepto', 'Monto']],
+      body: totalsData,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [55, 65, 81], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      columnStyles: { 1: { halign: 'right' } },
+      margin: { left: 14, right: pageWidth / 2 + 10 },
+      theme: 'grid',
+    });
+
+    ry = (doc as any).lastAutoTable?.finalY ?? ry + 30;
+    ry += 8;
+
+    // Check page break
+    if (ry > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage();
+      ry = 20;
+    }
+
+    // Vendedor breakdown
+    if (resumenGeneral.vendedores.length > 0) {
+      autoTable(doc, {
+        startY: ry,
+        head: [['Vendedor', 'Total', '% Part.']],
+        body: resumenGeneral.vendedores.map(v => [v.nombre, fmtCur(v.total), `${v.pct.toFixed(1)}%`]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [55, 65, 81], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+        margin: { left: 14, right: pageWidth / 2 + 10 },
+        theme: 'grid',
+      });
+
+      ry = (doc as any).lastAutoTable?.finalY ?? ry + 30;
+      ry += 8;
+    }
+
+    // Check page break
+    if (ry > doc.internal.pageSize.getHeight() - 60) {
+      doc.addPage();
+      ry = 20;
+    }
+
+    // Payment method breakdown
+    if (resumenGeneral.metodosPago.length > 0) {
+      autoTable(doc, {
+        startY: ry,
+        head: [['Método de Pago', 'Total', '% Part.']],
+        body: resumenGeneral.metodosPago.map(m => [metodoPagoLabels[m.metodo] ?? m.metodo, fmtCur(m.total), `${m.pct.toFixed(1)}%`]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [55, 65, 81], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+        margin: { left: 14, right: pageWidth / 2 + 10 },
+        theme: 'grid',
+      });
+    }
+  }
 
   doc.save(`${fileName}.pdf`);
 }
