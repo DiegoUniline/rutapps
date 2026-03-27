@@ -415,8 +415,12 @@ export default function VentaFormPage() {
   const handleSave = async (autoConfirm = false) => {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
+    if (!profile?.vendedor_id) {
+      toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador para sincronizar tu cuenta.');
+      return;
+    }
     try {
-      const payload = { ...form, ...totals, vendedor_id: profile?.vendedor_id ?? profile?.id };
+      const payload = { ...form, ...totals, vendedor_id: profile.vendedor_id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       for (const l of lineas) {

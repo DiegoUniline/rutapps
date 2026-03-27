@@ -275,12 +275,16 @@ export default function PuntoVentaPage() {
       const today = todayInTimezone(empresa?.zona_horaria);
 
       // 1. Insert venta
+      if (!profile?.vendedor_id) {
+        toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador.');
+        return;
+      }
       const { data: ventaData, error: ventaErr } = await supabase.from('ventas').insert({
         id: ventaId,
         empresa_id: empresa.id,
         cliente_id: clienteId,
         tipo: 'venta_directa',
-        vendedor_id: profile?.vendedor_id || profile?.id || null,
+        vendedor_id: profile.vendedor_id,
         condicion_pago: condicion,
         entrega_inmediata: true,
         status: 'confirmado',
