@@ -20,7 +20,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { useVentasPaginated } from '@/hooks/useVentas';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { cn, fmtDate } from '@/lib/utils';
