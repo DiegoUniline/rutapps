@@ -4,51 +4,6 @@ import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
 import { isBluetoothAvailable, connectPrinter, sendBytes, getConnectedPrinterName } from '@/lib/bluetoothPrinter';
 
-/** Convert a remote image URL to a base64 data-URI, with multiple fallback strategies. */
-async function logoUrlToBase64(url: string): Promise<string | null> {
-  // Strategy 1: fetch + blob
-  try {
-    const resp = await fetch(url, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      return await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch { /* fall through */ }
-
-  // Strategy 2: Image element + canvas
-  try {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = url;
-    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext('2d')!.drawImage(img, 0, 0);
-    return canvas.toDataURL('image/png');
-  } catch { /* fall through */ }
-
-  // Strategy 3: cache-bust param
-  try {
-    const bustUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
-    const resp = await fetch(bustUrl, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      return await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch { /* fall through */ }
-
-  console.warn('[printTicket] Could not convert logo to base64:', url);
-  return null;
-}
 
 interface PrintOptions {
   ticketAncho?: string;
@@ -59,7 +14,6 @@ interface PrintOptions {
  */
 export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   const ticketAncho = opts.ticketAncho ?? '58';
-  console.log('[PRINT-DEBUG] printTicket called, logo_url:', td.empresa.logo_url);
 
   // ── 1) Try Bluetooth ESC/POS ──
   if (isBluetoothAvailable()) {
@@ -82,18 +36,10 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   }
 
   // ── 2) Fallback: PNG via share/download ──
-  // Convert logo to base64 to avoid CORS issues with toPng
-  const tdForImage = { ...td, empresa: { ...td.empresa } };
-  if (tdForImage.empresa.logo_url && !tdForImage.empresa.logo_url.startsWith('data:')) {
-    console.log('[PRINT-DEBUG] Converting logo to base64:', tdForImage.empresa.logo_url);
-    tdForImage.empresa.logo_url = await logoUrlToBase64(tdForImage.empresa.logo_url);
-    console.log('[PRINT-DEBUG] After base64 conversion:', tdForImage.empresa.logo_url ? `success (${tdForImage.empresa.logo_url.substring(0, 50)}...)` : 'FAILED - null');
-  } else {
-    console.log('[PRINT-DEBUG] Logo skip - no url or already base64');
-  }
+  // Strip logo to avoid CORS issues with toPng
+  const tdForImage = { ...td, empresa: { ...td.empresa, logo_url: null } };
 
   const html = buildTicketHTML(tdForImage, { ticketAncho, forPrint: true });
-  console.log('[PRINT-DEBUG] HTML contains img?', html.includes('<img'));
   const container = document.createElement('div');
   container.style.position = 'fixed';
   container.style.left = '-9999px';
@@ -101,13 +47,7 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   container.innerHTML = html;
   document.body.appendChild(container);
   try {
-    // Wait for any images (base64 logo) to fully render
-    const imgs = container.querySelectorAll('img');
-    console.log('[PRINT-DEBUG] Found', imgs.length, 'images in ticket HTML');
-    await Promise.all(Array.from(imgs).map(img =>
-      img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => { console.warn('[PRINT-DEBUG] img onerror'); res(); }; })
-    ));
-    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 400)));
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
     const el = container.firstElementChild as HTMLElement;
     const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
     const blob = await (await fetch(dataUrl)).blob();
