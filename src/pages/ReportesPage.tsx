@@ -254,6 +254,21 @@ export default function ReportesPage() {
     if (!data) return;
     const config = getExportConfig(tab, data, desde, hasta);
     if (!config) return;
+
+    // Attach resumen general to all exports
+    config.resumenGeneral = {
+      totalVentas: data.totalVentas ?? 0,
+      totalContado: data.totalContado ?? 0,
+      totalCredito: data.totalCredito ?? 0,
+      vendedores: (data.topVendedores ?? []).map((v: any) => ({
+        nombre: v.nombre,
+        total: v.total,
+        pct: data.totalVentas > 0 ? (v.total / data.totalVentas) * 100 : 0,
+      })),
+      metodosPago: data.metodosPago ?? [],
+    };
+    config.empresa = empresa?.nombre;
+
     if (format === 'excel') exportToExcel(config);
     else exportToPDF(config);
   };
