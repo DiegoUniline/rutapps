@@ -62,9 +62,9 @@ export default function CargasListPage() {
   const groups = useMemo(() => groupData(cargas ?? [], groupBy, (item: any, key) => {
     if (key === 'status') return statusConfig[item.status]?.label ?? item.status;
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin responsable';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [cargas, groupBy]);
+  }, groupByLevels), [cargas, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <Table>
