@@ -517,49 +517,9 @@ export default function RutaVentaDetalle() {
 
   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
 
-  /** Convert a remote image URL to a base64 data URI to avoid CORS issues with toPng */
-  const logoToBase64 = async (td: TicketData): Promise<TicketData> => {
-    if (!td.empresa.logo_url || td.empresa.logo_url.startsWith('data:')) {
-      console.log('[TICKET-DEBUG] logoToBase64 skipped:', td.empresa.logo_url ? 'already base64' : 'no logo_url');
-      return td;
-    }
-    const copy = { ...td, empresa: { ...td.empresa } };
-    console.log('[TICKET-DEBUG] logoToBase64 attempting fetch:', copy.empresa.logo_url);
-    try {
-      const resp = await fetch(copy.empresa.logo_url!, { mode: 'cors' });
-      console.log('[TICKET-DEBUG] fetch response:', resp.status, resp.ok);
-      const blob = await resp.blob();
-      console.log('[TICKET-DEBUG] blob size:', blob.size, 'type:', blob.type);
-      copy.empresa.logo_url = await new Promise<string>((res) => {
-        const reader = new FileReader();
-        reader.onloadend = () => res(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-      console.log('[TICKET-DEBUG] base64 conversion success, length:', copy.empresa.logo_url?.length);
-    } catch (e1) {
-      console.warn('[TICKET-DEBUG] fetch failed:', e1);
-      try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = copy.empresa.logo_url!;
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; });
-        const c = document.createElement('canvas');
-        c.width = img.naturalWidth; c.height = img.naturalHeight;
-        c.getContext('2d')!.drawImage(img, 0, 0);
-        copy.empresa.logo_url = c.toDataURL('image/png');
-        console.log('[TICKET-DEBUG] canvas fallback success');
-      } catch (e2) {
-        console.warn('[TICKET-DEBUG] canvas fallback also failed:', e2);
-        copy.empresa.logo_url = null;
-      }
-    }
-    return copy;
-  };
-
   const handleDownloadPDF = async () => {
     let td = getTicketData();
     if (!td) return;
-    td = await logoToBase64(td);
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
@@ -580,7 +540,6 @@ export default function RutaVentaDetalle() {
 
   const handlePrintTicket = async () => {
     let td = getTicketData(); if (!td) return;
-    console.log('[TICKET-DEBUG] handlePrintTicket logo_url:', td.empresa.logo_url);
 
     // ── 1) Try Bluetooth ESC/POS direct ──
     if (isBluetoothAvailable()) {
