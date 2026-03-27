@@ -23,7 +23,9 @@ export default function RutaMapaPage() {
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('orden', { ascending: true });
-      return (data ?? []).filter(c => c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng);
+      return (data ?? [])
+        .filter(c => c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng)
+        .sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
     },
   });
 

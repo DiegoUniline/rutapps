@@ -150,6 +150,13 @@ export default function DemandaPage() {
         const pendientes = pedido.venta_lineas.filter((l: any) => l.cantidad_pendiente > 0);
         if (pendientes.length === 0) continue;
 
+        // Fetch client's saved route order
+        let ordenEntrega = 0;
+        if (pedido.cliente_id) {
+          const { data: cli } = await supabase.from('clientes').select('orden').eq('id', pedido.cliente_id).single();
+          ordenEntrega = cli?.orden ?? 0;
+        }
+
         // Create entrega
         const { data: entrega, error } = await supabase.from('entregas').insert({
           empresa_id: empresa!.id,
@@ -159,6 +166,7 @@ export default function DemandaPage() {
           almacen_id: almacenId || null,
           vendedor_ruta_id: vendedorRutaId || null,
           status: 'borrador',
+          orden_entrega: ordenEntrega,
         } as any).select('id, folio').single();
         if (error) throw error;
 

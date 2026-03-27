@@ -76,6 +76,11 @@ export default function RutasMapPage() {
 
   const withGps = useMemo(() => filtered.filter((c: any) => c.gps_lat && c.gps_lng), [filtered]);
 
+  // Check if clients already have a saved order
+  const hasSavedOrder = useMemo(() => {
+    return withGps.some((c: any) => c.orden && c.orden > 0);
+  }, [withGps]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
   }, []);
@@ -89,6 +94,23 @@ export default function RutasMapPage() {
     }
   }, [withGps, originPoint]);
 
+  const polylinePoints = useMemo(() => {
+    if (!routeResult?.polyline) return null;
+    return decodePolyline(routeResult.polyline);
+  }, [routeResult]);
+
+  // Show optimized order from routeResult, OR fallback to saved orden from DB
+  const orderedClients = useMemo(() => {
+    if (routeResult) {
+      return routeResult.orderedIds.map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
+    }
+    // Fallback: show saved order if clients have orden > 0
+    if (hasSavedOrder) {
+      return [...withGps].sort((a: any, b: any) => (a.orden ?? 999) - (b.orden ?? 999));
+    }
+    return null;
+  }, [routeResult, withGps, hasSavedOrder]);
+
   const handleRecenter = useCallback(() => {
     if (mapRef.current && withGps.length > 0) {
       const bounds = new google.maps.LatLngBounds();
@@ -97,16 +119,6 @@ export default function RutasMapPage() {
       mapRef.current.fitBounds(bounds, 50);
     }
   }, [withGps, originPoint]);
-
-  const polylinePoints = useMemo(() => {
-    if (!routeResult?.polyline) return null;
-    return decodePolyline(routeResult.polyline);
-  }, [routeResult]);
-
-  const orderedClients = useMemo(() => {
-    if (!routeResult) return null;
-    return routeResult.orderedIds.map(id => withGps.find((c: any) => c.id === id)).filter(Boolean);
-  }, [routeResult, withGps]);
 
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (settingOrigin && e.latLng) {
