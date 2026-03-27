@@ -208,6 +208,19 @@ function NavegacionContent() {
     recenterMap();
   };
 
+  const handleArrived = (stop: Stop) => {
+    setArrivedIds(prev => new Set([...prev, stop.id]));
+    stopNavigation();
+    setActiveStopId(stop.id);
+    setPanelOpen(true);
+    toast.success(`¡Llegaste a ${stop.nombre}!`);
+    // Center map on the stop
+    if (mapRef.current) {
+      mapRef.current.setCenter({ lat: stop.gps_lat, lng: stop.gps_lng });
+      mapRef.current.setZoom(17);
+    }
+  };
+
   const handleVisited = async (stop: Stop) => {
     if (stop.tipo === 'entrega' && stop.entregaRef) {
       await offlineMutate('entregas', 'update', {
@@ -217,7 +230,7 @@ function NavegacionContent() {
     }
     setCompletedIds(prev => new Set([...prev, stop.id]));
     toast.success(stop.tipo === 'entrega' ? '¡Entregado!' : '¡Visitado!');
-    stopNavigation();
+    setActiveStopId(null);
 
     // Auto-navigate to next
     const currentStopIdx = stops.findIndex(s => s.id === stop.id);
