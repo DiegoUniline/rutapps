@@ -155,9 +155,9 @@ export default function ComprasPage() {
     if (key === 'status') return STATUS_MAP[item.status]?.label ?? item.status;
     if (key === 'proveedor') return item.proveedores?.nombre ?? 'Sin proveedor';
     if (key === 'condicion_pago') return item.condicion_pago === 'credito' ? 'Crédito' : 'Contado';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
