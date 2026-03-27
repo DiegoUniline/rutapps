@@ -249,6 +249,7 @@ export default function SignupPage() {
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
             <ArrowLeft className="h-4 w-4" /> Volver al inicio
           </Link>
+          <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
           <CardTitle className="text-2xl font-black">Crear cuenta</CardTitle>
           <p className="text-sm text-muted-foreground">7 días de prueba gratis · Sin tarjeta de crédito</p>
         </CardHeader>

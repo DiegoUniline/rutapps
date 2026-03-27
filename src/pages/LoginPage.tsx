@@ -105,6 +105,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm bg-card border border-border rounded p-6">
         <div className="text-center mb-6">
+          <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-14 w-14 mx-auto mb-2 rounded-xl object-contain" />
           <h1 className="text-xl font-bold text-primary">Rutapp</h1>
           <p className="text-xs text-muted-foreground mt-1">
             {isForgot ? 'Recuperar contraseña' : 'Iniciar sesión'}
