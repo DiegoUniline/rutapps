@@ -37,6 +37,13 @@ export interface CuentaPendiente {
   montoAplicar: number;
 }
 
+export interface PagoLinea {
+  id: string;
+  metodo_pago: 'efectivo' | 'transferencia' | 'tarjeta';
+  monto: number;
+  referencia: string;
+}
+
 export type Step = 'tipo' | 'cliente' | 'devoluciones' | 'productos' | 'resumen' | 'pago';
 
 export const STEP_LABELS: Record<Step, string> = {

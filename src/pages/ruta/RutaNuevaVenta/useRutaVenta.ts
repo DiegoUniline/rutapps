@@ -9,7 +9,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
-import type { CartItem, DevolucionItem, CuentaPendiente, Step } from './types';
+import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea } from './types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
@@ -35,9 +35,7 @@ export function useRutaVenta() {
   const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
   const [notas, setNotas] = useState('');
   const [fechaEntrega, setFechaEntrega] = useState('');
-  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'transferencia' | 'tarjeta'>('efectivo');
-  const [montoRecibido, setMontoRecibido] = useState('');
-  const [referenciaPago, setReferenciaPago] = useState('');
+  const [pagos, setPagos] = useState<PagoLinea[]>([]);
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [showDevSearch, setShowDevSearch] = useState(false);
   const [showReemplazoFor, setShowReemplazoFor] = useState<string | null>(null);
@@ -249,8 +247,9 @@ export function useRutaVenta() {
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
   const totalAplicarCuentas = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
   const totalACobrar = (condicionPago === 'contado' ? totals.total : 0) + totalAplicarCuentas;
-  const montoRecibidoNum = parseFloat(montoRecibido) || 0;
-  const cambio = montoRecibidoNum > totalACobrar ? montoRecibidoNum - totalACobrar : 0;
+  const totalPagosLineas = pagos.reduce((s, p) => s + p.monto, 0);
+  const montoRecibidoNum = totalPagosLineas;
+  const cambio = pagos.some(p => p.metodo_pago === 'efectivo') ? Math.max(0, totalPagosLineas - totalACobrar) : 0;
 
   const initCuentasPendientes = () => { if (ventasPendientes && ventasPendientes.length > 0) setCuentasPendientes(ventasPendientes.map(v => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, montoAplicar: 0 }))); else setCuentasPendientes([]); };
   const liquidarTodas = () => { setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: c.saldo_pendiente }))); };
@@ -366,13 +365,45 @@ export function useRutaVenta() {
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
-      if (applyPayment && clienteId) {
-        const cobroId = crypto.randomUUID();
-        await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-        const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
-        if (condicionPago === 'contado') aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: totals.total });
-        for (const cuenta of cuentasPendientes) { if (cuenta.montoAplicar > 0) { aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar }); await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar }); } }
-        for (const app of aplicaciones) await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), ...app, created_at: new Date().toISOString() });
+      if (applyPayment && clienteId && pagos.length > 0) {
+        // Track how much of the sale and cuentas have been applied
+        let saleRemaining = condicionPago === 'contado' ? totals.total : 0;
+        const cuentasToApply = cuentasPendientes.filter(c => c.montoAplicar > 0);
+        let cuentaIdx = 0;
+
+        for (const pago of pagos) {
+          if (pago.monto <= 0) continue;
+          const cobroId = crypto.randomUUID();
+          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: pago.monto, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+
+          let remaining = pago.monto;
+
+          // First apply to current sale
+          if (saleRemaining > 0 && remaining > 0) {
+            const apply = Math.min(remaining, saleRemaining);
+            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ventaId, monto_aplicado: apply, created_at: new Date().toISOString() });
+            saleRemaining -= apply;
+            remaining -= apply;
+          }
+
+          // Then apply to pending accounts
+          while (remaining > 0.01 && cuentaIdx < cuentasToApply.length) {
+            const cuenta = cuentasToApply[cuentaIdx];
+            const apply = Math.min(remaining, cuenta.montoAplicar);
+            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: apply, created_at: new Date().toISOString() });
+            cuenta.montoAplicar -= apply;
+            remaining -= apply;
+            if (cuenta.montoAplicar <= 0.01) cuentaIdx++;
+          }
+        }
+
+        // Update saldo_pendiente for cuentas
+        for (const cuenta of cuentasPendientes) {
+          if (cuenta.montoAplicar < cuenta.saldo_pendiente) {
+            const applied = cuenta.saldo_pendiente - cuenta.montoAplicar;
+            if (applied > 0) await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, cuenta.saldo_pendiente - applied) });
+          }
+        }
       }
 
       await updateCargaVendidaOffline(cart);
@@ -403,8 +434,8 @@ export function useRutaVenta() {
     searchCliente, setSearchCliente, searchProducto, setSearchProducto,
     searchDevProducto, setSearchDevProducto, saving, tipoVenta, setTipoVenta,
     condicionPago, setCondicionPago, notas, setNotas, fechaEntrega, setFechaEntrega,
-    metodoPago, setMetodoPago, montoRecibido, setMontoRecibido,
-    referenciaPago, setReferenciaPago, cuentasPendientes, showDevSearch, setShowDevSearch,
+    pagos, setPagos,
+    cuentasPendientes, showDevSearch, setShowDevSearch,
     showReemplazoFor, setShowReemplazoFor, searchReemplazo, setSearchReemplazo,
     ticketInfo, sinCompra, setSinCompra, motivoSinCompra, setMotivoSinCompra, savingSinCompra, setSavingSinCompra, sinImpuestos, setSinImpuestos,
     entregaInmediata, stockAbordo, usandoAlmacen: useFallbackStock, clientes, productos, filteredClientes,
