@@ -569,6 +569,7 @@ export default function RutaVentaDetalle() {
 
   const handlePrintTicket = async () => {
     let td = getTicketData(); if (!td) return;
+    console.log('[TICKET-DEBUG] handlePrintTicket logo_url:', td.empresa.logo_url);
 
     // ── 1) Try Bluetooth ESC/POS direct ──
     if (isBluetoothAvailable()) {
