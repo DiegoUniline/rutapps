@@ -78,7 +78,10 @@ const METODO_OPTIONS = [
 
 const GROUP_BY_OPTIONS: GroupByOption[] = [
   { value: 'cliente', label: 'Cliente' },
-  { value: 'fecha', label: 'Fecha' },
+  { value: 'fecha', label: 'Fecha (día)' },
+  { value: 'fecha_anio_mes', label: 'Año-Mes' },
+  { value: 'fecha_anio', label: 'Año' },
+  { value: 'fecha_mes', label: 'Mes' },
   { value: 'metodo', label: 'Método de pago' },
   { value: 'vendedor', label: 'Vendedor' },
 ];
