@@ -50,6 +50,7 @@ function NavegacionContent() {
   const { isLoaded } = useGoogleMaps();
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [arrivedIds, setArrivedIds] = useState<Set<string>>(new Set());
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
