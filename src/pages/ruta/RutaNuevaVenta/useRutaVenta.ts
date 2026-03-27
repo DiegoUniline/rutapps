@@ -366,12 +366,34 @@ export function useRutaVenta() {
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
       if (applyPayment && clienteId) {
-        const cobroId = crypto.randomUUID();
-        await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-        const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
-        if (condicionPago === 'contado') aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: totals.total });
-        for (const cuenta of cuentasPendientes) { if (cuenta.montoAplicar > 0) { aplicaciones.push({ cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar }); await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar }); } }
-        for (const app of aplicaciones) await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), ...app, created_at: new Date().toISOString() });
+        // Create one cobro per payment line
+        for (const pago of pagos) {
+          if (pago.monto <= 0) continue;
+          const cobroId = crypto.randomUUID();
+          await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: pago.monto, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+          // For contado, apply the first pago line to the current venta proportionally
+          const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
+          // Distribute: first pago covers the sale, remaining pagos cover cuentas pendientes
+          if (condicionPago === 'contado' && pago === pagos[0]) {
+            aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: Math.min(pago.monto, totals.total) });
+          }
+          for (const app of aplicaciones) await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), ...app, created_at: new Date().toISOString() });
+        }
+        // Apply pending account payments
+        if (pagos.length > 0) {
+          const mainCobroId = crypto.randomUUID();
+          let hasCuentasPayment = false;
+          for (const cuenta of cuentasPendientes) {
+            if (cuenta.montoAplicar > 0) {
+              if (!hasCuentasPayment) {
+                // Find or create a cobro for cuentas
+                hasCuentasPayment = true;
+              }
+              await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: pagos[0] ? crypto.randomUUID() : mainCobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar, created_at: new Date().toISOString() });
+              await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar });
+            }
+          }
+        }
       }
 
       await updateCargaVendidaOffline(cart);
