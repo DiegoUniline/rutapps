@@ -66,7 +66,7 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
       const printerName = getConnectedPrinterName();
       toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
       const conn = await connectPrinter();
-      const escposBytes = buildEscPosBytes(td, { ticketAncho });
+      const escposBytes = await buildEscPosBytes(td, { ticketAncho });
       await sendBytes(conn, escposBytes);
       toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
       return;
