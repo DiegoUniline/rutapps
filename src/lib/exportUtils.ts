@@ -130,7 +130,7 @@ export function exportToExcel(options: ExportOptions) {
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
 export function exportToPDF(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
 
   const doc = new jsPDF({
     orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait',
