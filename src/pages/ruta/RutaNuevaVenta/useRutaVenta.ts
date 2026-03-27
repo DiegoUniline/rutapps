@@ -247,8 +247,9 @@ export function useRutaVenta() {
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
   const totalAplicarCuentas = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
   const totalACobrar = (condicionPago === 'contado' ? totals.total : 0) + totalAplicarCuentas;
-  const montoRecibidoNum = parseFloat(montoRecibido) || 0;
-  const cambio = montoRecibidoNum > totalACobrar ? montoRecibidoNum - totalACobrar : 0;
+  const totalPagosLineas = pagos.reduce((s, p) => s + p.monto, 0);
+  const montoRecibidoNum = totalPagosLineas;
+  const cambio = pagos.some(p => p.metodo_pago === 'efectivo') ? Math.max(0, totalPagosLineas - totalACobrar) : 0;
 
   const initCuentasPendientes = () => { if (ventasPendientes && ventasPendientes.length > 0) setCuentasPendientes(ventasPendientes.map(v => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, montoAplicar: 0 }))); else setCuentasPendientes([]); };
   const liquidarTodas = () => { setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: c.saldo_pendiente }))); };
