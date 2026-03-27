@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown, Filter } from 'lucide-react';
@@ -15,6 +15,8 @@ import { ReporteDevoluciones } from '@/components/reportes/ReporteDevoluciones';
 import { ReporteUtilidad } from '@/components/reportes/ReporteUtilidad';
 import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
+import { ReportLayout } from '@/components/reportes/ReportLayout';
+import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 import {
