@@ -25,6 +25,9 @@ interface OdooFilterBarProps {
   groupByOptions?: GroupByOption[];
   activeGroupBy?: string;
   onGroupByChange?: (value: string) => void;
+  /** Multi-level groupBy */
+  activeGroupByLevels?: string[];
+  onGroupByLevelChange?: (level: number, value: string) => void;
   onClearFilters?: () => void;
   /** Date range filter */
   dateFrom?: string;
