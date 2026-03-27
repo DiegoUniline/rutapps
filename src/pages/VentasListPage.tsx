@@ -127,7 +127,7 @@ export default function VentasListPage() {
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('ventas');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
