@@ -324,6 +324,17 @@ export function useCrearEntrega() {
       almacenId?: string;
       lineas: { producto_id: string; unidad_id?: string; cantidad_pedida: number }[];
     }) => {
+      // Fetch client's saved route order to set orden_entrega
+      let ordenEntrega = 0;
+      if (clienteId) {
+        const { data: cliente } = await supabase
+          .from('clientes')
+          .select('orden')
+          .eq('id', clienteId)
+          .single();
+        ordenEntrega = cliente?.orden ?? 0;
+      }
+
       const { data: entrega, error } = await supabase
         .from('entregas')
         .insert({
@@ -333,6 +344,7 @@ export function useCrearEntrega() {
           cliente_id: clienteId ?? null,
           almacen_id: almacenId ?? null,
           status: 'borrador',
+          orden_entrega: ordenEntrega,
         } as any)
         .select('id, folio')
         .single();
