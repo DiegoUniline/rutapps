@@ -285,7 +285,7 @@ export default function LandingPage() {
                     'Reportes y dashboard',
                     'WhatsApp integrado',
                     'Soporte prioritario',
-                    'Usuarios ilimitados',
+                    'Agrega usuarios según necesites',
                   ].map(feat => (
                     <li key={feat} className="flex items-center gap-2 text-sm text-gray-600">
                       <Check className="h-4 w-4 shrink-0" style={{ color: 'hsl(152, 56%, 38%)' }} /> {feat}
