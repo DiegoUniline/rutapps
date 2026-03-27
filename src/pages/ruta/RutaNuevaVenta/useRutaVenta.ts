@@ -359,9 +359,9 @@ export function useRutaVenta() {
       }
 
       const applyPayment = totalACobrar > 0;
-      const saldoPendienteVenta = applyPayment && condicionPago === 'contado' ? 0 : totals.total;
+      // saldo_pendiente starts as full total; will be reduced after payments are applied
       const tarifaId = clienteTarifaId || selectedClienteData?.tarifa_id || null;
-      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.vendedor_id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, total: totals.total, saldo_pendiente: saldoPendienteVenta, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
+      await queueOperation('ventas', 'insert', { id: ventaId, empresa_id: empresa.id, cliente_id: clienteId, tipo: tipoVenta, vendedor_id: profile?.vendedor_id || profile?.id || null, condicion_pago: condicionPago, entrega_inmediata: entregaInmediata, fecha_entrega: tipoVenta === 'pedido' && fechaEntrega ? fechaEntrega : null, status: 'confirmado', notas: notas || null, folio: localFolio, tarifa_id: tarifaId, almacen_id: profile?.almacen_id || null, subtotal: totals.subtotal, iva_total: totals.iva, ieps_total: totals.ieps, descuento_total: totals.descuento, total: totals.total, saldo_pendiente: totals.total, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
@@ -397,6 +397,12 @@ export function useRutaVenta() {
           }
         }
 
+        // Update saldo_pendiente for the current sale based on actual payments applied
+        const appliedToSale = (condicionPago === 'contado' ? totals.total : 0) - saleRemaining;
+        if (appliedToSale > 0) {
+          await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: Math.max(0, totals.total - appliedToSale) });
+        }
+
         // Update saldo_pendiente for cuentas
         for (const cuenta of cuentasPendientes) {
           if (cuenta.montoAplicar < cuenta.saldo_pendiente) {
@@ -404,6 +410,9 @@ export function useRutaVenta() {
             if (applied > 0) await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, cuenta.saldo_pendiente - applied) });
           }
         }
+      } else if (condicionPago === 'contado' && totals.total === 0) {
+        // Zero-total sale, mark as paid
+        await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: 0 });
       }
 
       await updateCargaVendidaOffline(cart);
