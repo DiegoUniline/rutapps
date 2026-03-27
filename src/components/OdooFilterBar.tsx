@@ -148,11 +148,14 @@ function IndependentFilterDropdown({
 export function OdooFilterBar({
   search, onSearchChange, placeholder = 'Buscar...', children,
   filterOptions, activeFilters, onToggleFilter, onSetFilter,
-  groupByOptions, activeGroupBy, onGroupByChange, onClearFilters,
+  groupByOptions, activeGroupBy, onGroupByChange,
+  activeGroupByLevels, onGroupByLevelChange,
+  onClearFilters,
   dateFrom, dateTo, onDateFromChange, onDateToChange,
 }: OdooFilterBarProps) {
   const [groupOpen, setGroupOpen] = useState(false);
   const groupRef = useRef<HTMLDivElement>(null);
+  const levels = activeGroupByLevels ?? (activeGroupBy ? [activeGroupBy] : []);
 
   useEffect(() => {
     if (!groupOpen) return;
