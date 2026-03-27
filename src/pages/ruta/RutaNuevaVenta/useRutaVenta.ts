@@ -365,33 +365,43 @@ export function useRutaVenta() {
 
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
-      if (applyPayment && clienteId) {
-        // Create one cobro per payment line
+      if (applyPayment && clienteId && pagos.length > 0) {
+        // Track how much of the sale and cuentas have been applied
+        let saleRemaining = condicionPago === 'contado' ? totals.total : 0;
+        const cuentasToApply = cuentasPendientes.filter(c => c.montoAplicar > 0);
+        let cuentaIdx = 0;
+
         for (const pago of pagos) {
           if (pago.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
           await queueOperation('cobros', 'insert', { id: cobroId, empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: pago.monto, metodo_pago: pago.metodo_pago, referencia: pago.referencia || null, fecha: todayInTimezone(empresa.zona_horaria), created_at: new Date().toISOString() });
-          // For contado, apply the first pago line to the current venta proportionally
-          const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
-          // Distribute: first pago covers the sale, remaining pagos cover cuentas pendientes
-          if (condicionPago === 'contado' && pago === pagos[0]) {
-            aplicaciones.push({ cobro_id: cobroId, venta_id: ventaId, monto_aplicado: Math.min(pago.monto, totals.total) });
+
+          let remaining = pago.monto;
+
+          // First apply to current sale
+          if (saleRemaining > 0 && remaining > 0) {
+            const apply = Math.min(remaining, saleRemaining);
+            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: ventaId, monto_aplicado: apply, created_at: new Date().toISOString() });
+            saleRemaining -= apply;
+            remaining -= apply;
           }
-          for (const app of aplicaciones) await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), ...app, created_at: new Date().toISOString() });
+
+          // Then apply to pending accounts
+          while (remaining > 0.01 && cuentaIdx < cuentasToApply.length) {
+            const cuenta = cuentasToApply[cuentaIdx];
+            const apply = Math.min(remaining, cuenta.montoAplicar);
+            await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: apply, created_at: new Date().toISOString() });
+            cuenta.montoAplicar -= apply;
+            remaining -= apply;
+            if (cuenta.montoAplicar <= 0.01) cuentaIdx++;
+          }
         }
-        // Apply pending account payments
-        if (pagos.length > 0) {
-          const mainCobroId = crypto.randomUUID();
-          let hasCuentasPayment = false;
-          for (const cuenta of cuentasPendientes) {
-            if (cuenta.montoAplicar > 0) {
-              if (!hasCuentasPayment) {
-                // Find or create a cobro for cuentas
-                hasCuentasPayment = true;
-              }
-              await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: pagos[0] ? crypto.randomUUID() : mainCobroId, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar, created_at: new Date().toISOString() });
-              await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar });
-            }
+
+        // Update saldo_pendiente for cuentas
+        for (const cuenta of cuentasPendientes) {
+          if (cuenta.montoAplicar < cuenta.saldo_pendiente) {
+            const applied = cuenta.saldo_pendiente - cuenta.montoAplicar;
+            if (applied > 0) await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, cuenta.saldo_pendiente - applied) });
           }
         }
       }
