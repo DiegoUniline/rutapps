@@ -8,6 +8,91 @@ const corsHeaders = {
 
 const MONTHLY_LIMIT = 50;
 
+/** Haversine distance in meters */
+function haversine(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371000;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** Nearest-neighbor TSP heuristic starting from origin */
+function nearestNeighborOrder(
+  origin: { lat: number; lng: number },
+  waypoints: { id: string; lat: number; lng: number }[]
+): number[] {
+  const n = waypoints.length;
+  const visited = new Array(n).fill(false);
+  const order: number[] = [];
+  let current = origin;
+
+  for (let step = 0; step < n; step++) {
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (visited[i]) continue;
+      const d = haversine(current, waypoints[i]);
+      if (d < bestDist) {
+        bestDist = d;
+        bestIdx = i;
+      }
+    }
+    visited[bestIdx] = true;
+    order.push(bestIdx);
+    current = waypoints[bestIdx];
+  }
+  return order;
+}
+
+/** 2-opt local improvement */
+function twoOptImprove(
+  origin: { lat: number; lng: number },
+  waypoints: { lat: number; lng: number }[],
+  order: number[]
+): number[] {
+  const route = [...order];
+  const n = route.length;
+
+  const dist = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => haversine(a, b);
+  const pos = (i: number) => (i === -1 ? origin : waypoints[route[i]]);
+
+  let improved = true;
+  let iterations = 0;
+  const maxIterations = n * n; // prevent excessive looping for large sets
+
+  while (improved && iterations < maxIterations) {
+    improved = false;
+    iterations++;
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const prevI = pos(i - 1);
+        const curI = waypoints[route[i]];
+        const curJ = waypoints[route[j]];
+        const nextJ = j + 1 < n ? waypoints[route[j + 1]] : origin;
+
+        const currentDist = dist(prevI, curI) + dist(curJ, nextJ);
+        const newDist = dist(prevI, curJ) + dist(curI, nextJ);
+
+        if (newDist < currentDist - 1) {
+          // Reverse segment from i to j
+          let left = i, right = j;
+          while (left < right) {
+            [route[left], route[right]] = [route[right], route[left]];
+            left++;
+            right--;
+          }
+          improved = true;
+        }
+      }
+    }
+  }
+  return route;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,13 +110,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const googleApiKey = Deno.env.get("GOOGLE_ROUTES_API_KEY") || Deno.env.get("GOOGLE_MAPS_API_KEY");
-
-    if (!googleApiKey) {
-      return new Response(
-        JSON.stringify({ error: "GOOGLE_MAPS_API_KEY no configurada" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -81,18 +159,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check monthly limit (50 per empresa per month)
+    // Check monthly limit
     const now = new Date();
     const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const { count: monthlyCount, error: countError } = await supabase
+    const { count: monthlyCount } = await supabase
       .from("optimizacion_rutas_log")
       .select("id", { count: "exact", head: true })
       .eq("empresa_id", profile.empresa_id)
       .gte("created_at", firstOfMonth);
-
-    if (countError) {
-      console.error("Error checking monthly limit:", countError);
-    }
 
     if ((monthlyCount ?? 0) >= MONTHLY_LIMIT) {
       return new Response(
@@ -127,72 +201,89 @@ Deno.serve(async (req) => {
       clientes_count: waypoints.length,
     });
 
-    // Build Google Routes API request
-    const routeRequest: any = {
-      origin: {
-        location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
-      },
-      destination: {
-        location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
-      },
-      travelMode: "DRIVE",
-      optimizeWaypointOrder: true,
-      routeModifiers: { avoidTolls: false, avoidHighways: false },
-    };
+    // ---- Step 1: Local TSP optimization (nearest-neighbor + 2-opt) ----
+    const nnOrder = nearestNeighborOrder(origin, waypoints);
+    const optimizedLocalOrder = twoOptImprove(origin, waypoints, nnOrder);
+    const localOrderedWaypoints = optimizedLocalOrder.map(idx => waypoints[idx]);
 
-    if (waypoints.length > 0) {
-      routeRequest.intermediates = waypoints.map((wp: any) => ({
-        location: { latLng: { latitude: wp.lat, longitude: wp.lng } },
-      }));
-    }
+    console.log("Local TSP order:", optimizedLocalOrder);
 
-    const routeResponse = await fetch(
-      "https://routes.googleapis.com/directions/v2:computeRoutes",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": googleApiKey,
-          "X-Goog-FieldMask":
-            "routes.optimizedIntermediateWaypointIndex,routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
-        },
-        body: JSON.stringify(routeRequest),
+    // ---- Step 2: Try Google Routes API for polyline (with our order, no re-optimize) ----
+    let polyline: string | null = null;
+    let distanceMeters = 0;
+    let duration = "0s";
+
+    if (googleApiKey) {
+      try {
+        // Send waypoints in our optimized order WITHOUT asking Google to re-optimize
+        const routeRequest: any = {
+          origin: {
+            location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
+          },
+          destination: {
+            location: { latLng: { latitude: origin.lat, longitude: origin.lng } },
+          },
+          travelMode: "DRIVE",
+          optimizeWaypointOrder: false, // We already optimized locally
+          routeModifiers: { avoidTolls: false, avoidHighways: false },
+        };
+
+        if (localOrderedWaypoints.length > 0) {
+          routeRequest.intermediates = localOrderedWaypoints.map((wp: any) => ({
+            location: { latLng: { latitude: wp.lat, longitude: wp.lng } },
+          }));
+        }
+
+        const routeResponse = await fetch(
+          "https://routes.googleapis.com/directions/v2:computeRoutes",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Goog-Api-Key": googleApiKey,
+              "X-Goog-FieldMask":
+                "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+            },
+            body: JSON.stringify(routeRequest),
+          }
+        );
+
+        if (routeResponse.ok) {
+          const routeData = await routeResponse.json();
+          const route = routeData.routes?.[0];
+          if (route) {
+            polyline = route.polyline?.encodedPolyline ?? null;
+            distanceMeters = route.distanceMeters ?? 0;
+            duration = route.duration ?? "0s";
+          }
+        } else {
+          console.error("Google Routes API error:", await routeResponse.text());
+        }
+      } catch (e) {
+        console.error("Google Routes API fetch error:", e);
       }
-    );
-
-    if (!routeResponse.ok) {
-      const errorBody = await routeResponse.text();
-      console.error("Google Routes API error:", errorBody);
-      return new Response(
-        JSON.stringify({
-          error: `Error de Google Routes API (${routeResponse.status})`,
-          details: errorBody,
-        }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
-    const routeData = await routeResponse.json();
-    const route = routeData.routes?.[0];
-
-    if (!route) {
-      return new Response(
-        JSON.stringify({ error: "No se pudo calcular la ruta" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // If no Google polyline, estimate distance from local order
+    if (distanceMeters === 0) {
+      let totalDist = haversine(origin, localOrderedWaypoints[0]);
+      for (let i = 0; i < localOrderedWaypoints.length - 1; i++) {
+        totalDist += haversine(localOrderedWaypoints[i], localOrderedWaypoints[i + 1]);
+      }
+      totalDist += haversine(localOrderedWaypoints[localOrderedWaypoints.length - 1], origin);
+      distanceMeters = Math.round(totalDist * 1.3); // ~30% road factor
+      const avgSpeedMs = 8.33; // ~30 km/h urban
+      duration = `${Math.round(totalDist * 1.3 / avgSpeedMs)}s`;
     }
-
-    const optimizedIndexes: number[] = route.optimizedIntermediateWaypointIndex ?? [];
-    const optimizedWaypoints = optimizedIndexes.map((idx: number) => waypoints[idx]);
 
     const remaining = MONTHLY_LIMIT - (monthlyCount ?? 0) - 1;
 
     return new Response(
       JSON.stringify({
-        optimized_order: optimizedWaypoints.map((wp: any) => wp.id),
-        duration: route.duration,
-        distance_meters: route.distanceMeters,
-        polyline: route.polyline?.encodedPolyline ?? null,
+        optimized_order: localOrderedWaypoints.map((wp: any) => wp.id),
+        duration,
+        distance_meters: distanceMeters,
+        polyline,
         remaining_this_month: remaining,
       }),
       {
