@@ -12,7 +12,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { StatusChip } from '@/components/StatusChip';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate, cn } from '@/lib/utils';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 
 const TIPO_LABELS: Record<string, string> = {
   almacen_almacen: 'Almacén → Almacén',
