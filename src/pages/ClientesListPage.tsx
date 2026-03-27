@@ -215,6 +215,8 @@ function ClientesTable() {
           groupByOptions={GROUP_BY_OPTIONS}
           activeGroupBy={groupBy}
           onGroupByChange={setGroupBy}
+          activeGroupByLevels={groupByLevels}
+          onGroupByLevelChange={setGroupByLevel}
         />
         <div className="flex items-center gap-2 shrink-0">
           {!isMobile && (
