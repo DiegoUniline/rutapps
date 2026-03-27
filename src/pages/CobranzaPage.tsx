@@ -13,7 +13,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar, type FilterOption, type GroupByOption } from '@/components/OdooFilterBar';
-import { useListPreferences, groupData } from '@/hooks/useListPreferences';
+import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
