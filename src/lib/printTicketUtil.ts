@@ -110,7 +110,7 @@ export function buildTicketDataFromVenta(params: {
       estado: empresa?.estado ?? null,
       cp: empresa?.cp ?? null,
       email: empresa?.email ?? null,
-      logo_url: empresa?.logo_url ?? null,
+      logo_url: null,
       moneda: empresa?.moneda ?? 'MXN',
       notas_ticket: empresa?.notas_ticket ?? null,
       ticket_campos: empresa?.ticket_campos ?? null,
