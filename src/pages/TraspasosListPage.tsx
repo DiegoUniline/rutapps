@@ -108,9 +108,9 @@ export default function TraspasosListPage() {
   const groups = useMemo(() => groupData(pageData, groupBy, (item: any, key) => {
     if (key === 'status') return (item.status ?? '').charAt(0).toUpperCase() + (item.status ?? '').slice(1);
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo ?? 'Sin tipo';
-    if (key === 'fecha') return item.fecha ?? 'Sin fecha';
+    if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
