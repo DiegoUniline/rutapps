@@ -121,7 +121,7 @@ export default function ProductosListPage() {
     if (key === 'marca') return item.marcas?.nombre ?? 'Sin marca';
     if (key === 'proveedor') return item.proveedores?.nombre ?? 'Sin proveedor';
     return '';
-  }), [pageData, groupBy]);
+  }, groupByLevels), [pageData, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
