@@ -92,7 +92,7 @@ export default function CobranzaPage() {
   const { fmt: fmtC } = useCurrency();
   const { data: cobros, isLoading } = useCobros();
   const { data: vendedores } = useVendedores();
-  const { filters, groupBy, setFilter, toggleFilterValue, setGroupBy, clearFilters } = useListPreferences('cobranza');
+  const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cobranza');
   const [search, setSearch] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
