@@ -255,6 +255,8 @@ export default function CobranzaPage() {
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
+        activeGroupByLevels={groupByLevels}
+        onGroupByLevelChange={setGroupByLevel}
         onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); }}
         dateFrom={dateFrom}
         dateTo={dateTo}
