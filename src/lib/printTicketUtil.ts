@@ -4,51 +4,6 @@ import { buildTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { buildEscPosBytes } from '@/lib/escpos';
 import { isBluetoothAvailable, connectPrinter, sendBytes, getConnectedPrinterName } from '@/lib/bluetoothPrinter';
 
-/** Convert a remote image URL to a base64 data-URI, with multiple fallback strategies. */
-async function logoUrlToBase64(url: string): Promise<string | null> {
-  // Strategy 1: fetch + blob
-  try {
-    const resp = await fetch(url, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      return await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch { /* fall through */ }
-
-  // Strategy 2: Image element + canvas
-  try {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = url;
-    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    canvas.getContext('2d')!.drawImage(img, 0, 0);
-    return canvas.toDataURL('image/png');
-  } catch { /* fall through */ }
-
-  // Strategy 3: cache-bust param
-  try {
-    const bustUrl = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now();
-    const resp = await fetch(bustUrl, { mode: 'cors' });
-    if (resp.ok) {
-      const blob = await resp.blob();
-      return await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-    }
-  } catch { /* fall through */ }
-
-  console.warn('[printTicket] Could not convert logo to base64:', url);
-  return null;
-}
 
 interface PrintOptions {
   ticketAncho?: string;
