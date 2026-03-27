@@ -95,7 +95,12 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
   container.innerHTML = html;
   document.body.appendChild(container);
   try {
-    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 300)));
+    // Wait for any images (base64 logo) to fully render
+    const imgs = container.querySelectorAll('img');
+    await Promise.all(Array.from(imgs).map(img =>
+      img.complete ? Promise.resolve() : new Promise<void>((res) => { img.onload = () => res(); img.onerror = () => res(); })
+    ));
+    await new Promise(r => requestAnimationFrame(() => setTimeout(r, 400)));
     const el = container.firstElementChild as HTMLElement;
     const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: '#ffffff' });
     const blob = await (await fetch(dataUrl)).blob();
