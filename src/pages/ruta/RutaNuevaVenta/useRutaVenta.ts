@@ -9,7 +9,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
-import type { CartItem, DevolucionItem, CuentaPendiente, Step } from './types';
+import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea } from './types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
