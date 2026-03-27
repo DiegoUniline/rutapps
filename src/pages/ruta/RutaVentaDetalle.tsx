@@ -575,7 +575,7 @@ export default function RutaVentaDetalle() {
         const printerName = getConnectedPrinterName();
         toast.loading(printerName ? `Imprimiendo en ${printerName}…` : 'Conectando impresora…', { id: 'bt-print' });
         const conn = await connectPrinter();
-        const escposBytes = buildEscPosBytes(td, { ticketAncho, showTax });
+        const escposBytes = await buildEscPosBytes(td, { ticketAncho, showTax });
         await sendBytes(conn, escposBytes);
         toast.success(`Impreso en ${conn.device.name ?? 'impresora BLE'}`, { id: 'bt-print' });
         return;
