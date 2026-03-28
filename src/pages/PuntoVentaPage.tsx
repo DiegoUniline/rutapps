@@ -319,7 +319,7 @@ export default function PuntoVentaPage() {
         subtotal: totals.subtotal,
         iva_total: totals.iva,
         ieps_total: totals.ieps,
-        descuento_total: 0,
+        descuento_total: totals.descuento,
         total: totals.total,
         saldo_pendiente: condicion === 'credito' ? totals.total : 0,
         fecha: today,
