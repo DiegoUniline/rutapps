@@ -41,7 +41,7 @@ function useClientesConSaldo(search: string) {
         .from('ventas')
         .select('cliente_id, saldo_pendiente, total, clientes(id, nombre, codigo, telefono)')
         .eq('empresa_id', empresa!.id)
-        .gt('saldo_pendiente', 0)
+        .gt('saldo_pendiente', 0.009)
         .neq('status', 'cancelado');
       if (error) throw error;
 
@@ -62,7 +62,7 @@ function useClientesConSaldo(search: string) {
         }
       });
 
-      return Array.from(map.values()).sort((a, b) => b.saldo - a.saldo);
+      return Array.from(map.values()).filter(c => c.saldo >= 0.01).sort((a, b) => b.saldo - a.saldo);
     },
   });
 }
