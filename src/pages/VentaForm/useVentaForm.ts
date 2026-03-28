@@ -126,38 +126,30 @@ export function useVentaForm() {
   const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
   const saldoPendiente = (form.total ?? 0) - totalPagado;
 
-  // Load existing venta — only once per venta id, enrich when productosList arrives
-  const enrichedRef = useRef(false);
+  // Load existing venta — only once per venta id
   useEffect(() => {
     if (!existingVenta) {
       if (isNew) setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
       return;
     }
     const ventaId = (existingVenta as any).id;
-    const isFirstLoad = loadedVentaIdRef.current !== ventaId;
-    const needsEnrich = !enrichedRef.current && !!productosList?.length;
+    if (loadedVentaIdRef.current === ventaId) return;
+    loadedVentaIdRef.current = ventaId;
 
-    if (!isFirstLoad && !needsEnrich) return;
-
-    if (isFirstLoad) {
-      loadedVentaIdRef.current = ventaId;
-      enrichedRef.current = false;
-      setForm(existingVenta);
-    }
-
-    if (productosList?.length) enrichedRef.current = true;
-
+    setForm(existingVenta);
     const existingLines = ((existingVenta as any).venta_lineas ?? []).map((l: any) => {
-      const prod = productosList?.find((p: any) => p.id === l.producto_id);
-      const unidadData = prod ? (prod as any).unidades_venta : null;
+      const prod = (l as any).productos;
+      const unidadData = (l as any).unidades;
       const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
       const taxes: string[] = [];
       if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
       if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
       return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
     });
-    setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
-  }, [existingVenta, isNew, profile, productosList]);
+    const isReadOnly = existingVenta.status !== 'borrador';
+    setLineas(isReadOnly ? existingLines : [...existingLines, emptyLine()]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(existingVenta as any)?.id, isNew]);
 
   // Totals
   const totals = useMemo(() => {
@@ -303,7 +295,6 @@ export function useVentaForm() {
       // Invalidate venta query once after all saves complete
       queryClient.invalidateQueries({ queryKey: ['venta', ventaId] });
       loadedVentaIdRef.current = null; // allow reload
-      enrichedRef.current = false;
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
