@@ -450,6 +450,7 @@ export default function PuntoVentaPage() {
             iva_monto: lineIva,
             ieps_monto: lineIeps,
             total: lineSub + lineIeps + lineIva,
+            producto_id: item.producto_id,
           };
         }),
         subtotal: totals.subtotal,
