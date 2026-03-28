@@ -70,6 +70,8 @@ const COL_COUNT = 4;
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
+  const { hasPermiso } = usePermisos();
+  const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile, user, empresa } = useAuth();
