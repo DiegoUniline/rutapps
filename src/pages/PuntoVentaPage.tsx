@@ -80,11 +80,13 @@ export default function PuntoVentaPage() {
 
   // Clients
   const { data: clientes } = useQuery({
-    queryKey: ['pos-clientes'],
+    queryKey: ['pos-clientes', empresa?.id],
     staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
         .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id')
+        .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
       return data ?? [];
