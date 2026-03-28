@@ -3,7 +3,7 @@ import { todayInTimezone } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
-  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package
+  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,7 @@ import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
@@ -110,6 +111,26 @@ export default function PuntoVentaPage() {
     if (cart.length === 0 || !productos) return;
     setCart(prev => prev.map(item => { const prod = productos.find(p => p.id === item.producto_id); if (!prod) return item; return { ...item, precio_unitario: resolvePosPrice(prod) }; }));
   }, [effectiveTarifaLineas, clienteListaPrecioId]);
+
+  // ---- Promotions engine ----
+  const { data: promocionesActivas } = usePromocionesActivas();
+
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas?.length || cart.length === 0) return [] as PromoResult[];
+    const cartForPromo: CartItemForPromo[] = cart.map(item => {
+      const prod = productos?.find(p => p.id === item.producto_id);
+      return {
+        producto_id: item.producto_id,
+        clasificacion_id: prod?.clasificacion_id ?? undefined,
+        precio_unitario: item.precio_unitario,
+        cantidad: item.cantidad,
+      };
+    });
+    return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined);
+  }, [promocionesActivas, cart, productos, clienteId]);
+
+  const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+  const promoGratis = useMemo(() => promoResults.filter(r => r.tipo === 'producto_gratis'), [promoResults]);
 
   // Barcode scanner: listen for rapid key presses
   useEffect(() => {
@@ -238,8 +259,10 @@ export default function PuntoVentaPage() {
       if (item.tiene_iva) iva += (line + lineIeps) * (item.iva_pct / 100);
       items += item.cantidad;
     });
-    return { subtotal, iva, ieps, total: subtotal + iva + ieps, items };
-  }, [cart]);
+    const descuento = totalDescuentoPromo;
+    const totalFinal = Math.max(0, subtotal + iva + ieps - descuento);
+    return { subtotal, iva, ieps, descuento, total: totalFinal, items };
+  }, [cart, totalDescuentoPromo]);
 
   const totalPagado = useMemo(() => paySplits.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0), [paySplits]);
   const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
@@ -296,7 +319,7 @@ export default function PuntoVentaPage() {
         subtotal: totals.subtotal,
         iva_total: totals.iva,
         ieps_total: totals.ieps,
-        descuento_total: 0,
+        descuento_total: totals.descuento,
         total: totals.total,
         saldo_pendiente: condicion === 'credito' ? totals.total : 0,
         fecha: today,
@@ -407,6 +430,8 @@ export default function PuntoVentaPage() {
         subtotal: totals.subtotal,
         iva: totals.iva,
         ieps: totals.ieps,
+        descuento: totals.descuento,
+        promos: promoResults.map(r => r.descripcion),
         total: totals.total,
         condicionPago: condicion,
         metodoPago: paySplits.map(s => s.metodo).join(' + '),
@@ -624,6 +649,27 @@ export default function PuntoVentaPage() {
             })}
           </div>
 
+          {/* Promotions applied */}
+          {promoResults.length > 0 && (
+            <div className="border-t border-border px-4 py-2 space-y-1 bg-accent/20">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Tag className="h-3.5 w-3.5 text-primary" />
+                <span className="text-[11px] font-semibold text-primary">Promociones aplicadas</span>
+              </div>
+              {promoResults.map((pr, i) => (
+                <div key={i} className="flex items-center justify-between text-[11px]">
+                  <span className="text-foreground flex items-center gap-1">
+                    {pr.tipo === 'producto_gratis' ? <Gift className="h-3 w-3 text-primary" /> : <Tag className="h-3 w-3 text-primary" />}
+                    {pr.descripcion}
+                  </span>
+                  {pr.descuento > 0 && (
+                    <span className="font-bold text-primary tabular-nums">-{fmtM(pr.descuento)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Totals + Checkout */}
           <div className="border-t border-border px-4 py-3 space-y-2 bg-card">
             <div className="flex justify-between text-[12px]">
@@ -640,6 +686,12 @@ export default function PuntoVentaPage() {
               <div className="flex justify-between text-[12px]">
                 <span className="text-muted-foreground">IEPS</span>
                 <span className="font-medium text-foreground tabular-nums">{fmtM(totals.ieps)}</span>
+              </div>
+            )}
+            {totals.descuento > 0 && (
+              <div className="flex justify-between text-[12px]">
+                <span className="text-primary font-medium flex items-center gap-1"><Tag className="h-3 w-3" /> Descuento promo</span>
+                <span className="font-bold text-primary tabular-nums">-{fmtM(totals.descuento)}</span>
               </div>
             )}
             <div className="flex justify-between items-baseline pt-2 border-t border-border">
