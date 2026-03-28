@@ -89,6 +89,7 @@ const PagarPage = lazy(() => import("@/pages/PagarPage"));
 const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 const ControlPage = lazy(() => import("@/pages/ControlPage"));
+const AplicarPagosPage = lazy(() => import("@/pages/AplicarPagosPage"));
 
 
 // Logistica pages
@@ -380,6 +381,7 @@ function desktopRoutes() {
       <Route path="/almacen/auditorias/:id/resultados" element={<AuditoriaResultadosPage />} />
       <Route path="/almacen/conteos" element={<ConteosFisicosPage />} />
       <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
+      <Route path="/finanzas/aplicar-pagos" element={<AplicarPagosPage />} />
       <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
       <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
       <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
