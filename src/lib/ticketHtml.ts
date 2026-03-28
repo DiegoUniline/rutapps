@@ -33,6 +33,7 @@ export interface TicketLinea {
   ieps_monto?: number;
   descuento_pct?: number;
   esCambio?: boolean;
+  producto_id?: string;
 }
 
 export interface TicketPromo {
