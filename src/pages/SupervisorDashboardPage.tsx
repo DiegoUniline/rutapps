@@ -72,9 +72,12 @@ export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
   const { fmt: fmtMoney } = useCurrency();
   const today = todayInTimezone(empresa?.zona_horaria);
+  const [desde, setDesde] = useState(today);
+  const [hasta, setHasta] = useState(today);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
   const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
   const [soloHoy, setSoloHoy] = useState(true);
+  const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const diaHoyLabel = DIAS_SEMANA[new Date().getDay()];
