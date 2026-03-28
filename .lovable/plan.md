@@ -1,52 +1,60 @@
 
 
-## Plan: Mejorar modal de cobro en POS
+## Plan: Mostrar promo debajo de cada producto afectado
 
-### Problemas actuales
-1. No se ve el descuento por producto en el cart (las promos se muestran separadas del producto)
-2. Modal de pago es angosto y los métodos van verticales
-3. Falta botón "Monto exacto" en efectivo
-4. Falta botón rápido "Exacto" en transferencia/tarjeta para auto-llenar el restante
+### Cambio conceptual
+Actualmente las promociones se muestran en una sección separada al final. El cambio es moverlas **debajo de cada línea de producto afectada**, tanto en el ticket HTML (impresión/WhatsApp), el ticket visual (TicketVenta.tsx), y el PDF (pedidoPdf.ts).
 
-### Cambios en `src/pages/PuntoVentaPage.tsx`
-
-**1. Descuento visible por producto en el carrito**
-- En cada línea del cart, cruzar con `promoResults` por `producto_id`
-- Si hay promo aplicada, mostrar debajo del precio una etiqueta con el descuento: ej. "🏷️ 3x2 -$15.00" en texto primary/small
-- El total de línea se mantiene sin descuento (el descuento se aplica global), pero el usuario ve qué productos tienen promo
-
-**2. Modal más ancho + métodos horizontales**
-- Cambiar `max-w-lg` → `max-w-2xl` en el modal de pago
-- Poner los 3 métodos (Efectivo, Transferencia, Tarjeta) en un `grid grid-cols-3 gap-3` horizontal en lugar de apilados verticalmente
-- Cada método: icono + label + input de monto + referencia (si aplica) + botones rápidos
-
-**3. Botón "Exacto" en efectivo**
-- Agregar un botón "Exacto" a los `quickAmounts` del efectivo que pone el total exacto pendiente
-
-**4. Botón "Exacto" en transferencia y tarjeta**
-- Agregar un botón "Monto exacto" debajo del input de transferencia y tarjeta
-- Al hacer clic, calcula el restante (total - lo ya ingresado en otros métodos) y lo pone automáticamente
-
-### Detalle técnico
-
-```text
-┌──────────────────────────────────────────────────────┐
-│  Cobrar                                    X         │
-│  Público general · 3 artículos        $44.64         │
-│  ────────────────────────────────────────────         │
-│  [  Contado  ] [  Crédito  ]                         │
-│  ────────────────────────────────────────────         │
-│  ┌─ Efectivo ──┐ ┌─ Transfer. ─┐ ┌─ Tarjeta ──┐     │
-│  │ $ [44.64]   │ │ $ [0.00]    │ │ $ [0.00]   │     │
-│  │ $44 $50 $100│ │ [Exacto]    │ │ [Exacto]   │     │
-│  │ [Exacto]    │ │ Ref: ____   │ │ Ref: ____  │     │
-│  └─────────────┘ └─────────────┘ └────────────┘     │
-│  Cambio: $5.36                                       │
-│  ═══════════════════════════════════════════          │
-│  [        ✓ Confirmar $44.64              ]          │
-└──────────────────────────────────────────────────────┘
-```
+### Estructura de datos
+`TicketPromo` ya tiene `descripcion` y `descuento`, pero necesita `producto_id` para vincularla a la línea correcta. Se agregará `producto_id?: string` a `TicketPromo` y `TicketLinea` (para hacer match).
 
 ### Archivos a modificar
-- `src/pages/PuntoVentaPage.tsx` — único archivo
+
+**1. `src/lib/ticketHtml.ts`**
+- Agregar `producto_id` a `TicketLinea` y `TicketPromo`
+- En el loop de líneas, después de la línea de detalle (`c/u + IVA`), buscar promos que coincidan por `producto_id` y agregar una línea tipo `  *3x2 -$15.00`
+- Eliminar la sección separada "PROMOCIONES" al final
+- Mantener línea de "Ahorro total" después de los totales si hay promos
+
+**2. `src/components/ruta/TicketVenta.tsx`**
+- Agregar `producto_id` a la interfaz de `lineas` y `promociones`
+- Dentro del map de productos, filtrar `promociones` por `producto_id` y mostrar debajo del precio unitario: `🏷️ 3x2 -$15.00` en texto primary pequeño
+- Eliminar la sección separada de "Promociones"
+- Agregar línea de ahorro total en la zona de totales
+
+**3. `src/lib/pedidoPdf.ts`**
+- Agregar `producto_id` a las interfaces de líneas y promos
+- En la tabla de productos, después de cada fila que tenga promo, insertar una sub-fila con la descripción de la promo y el descuento (texto verde, sin código)
+- Eliminar la sección separada "Promociones aplicadas"
+- Mantener el ahorro total en el bloque de totales
+
+**4. `src/lib/printTicketUtil.ts`**
+- Pasar `producto_id` en el mapeo de `buildTicketDataFromVenta` tanto en líneas como en promociones
+
+**5. `src/pages/PuntoVentaPage.tsx`**
+- Asegurar que al construir `promoDetails` para el ticket se incluya `producto_id`
+
+**6. `src/pages/VentaForm/index.tsx` y `VentaPdfHandler.ts`**
+- Pasar `producto_id` en los datos de promociones al generar PDF y tickets
+
+### Ejemplo visual en ticket HTML (monospace)
+```text
+3x Coca Cola 600ml        $45.00
+  $15.00c/u
+  *3x2              -$15.00
+1x Pepsi 600ml            $12.00
+  $12.00c/u
+--------------------------------
+Subtotal                  $57.00
+Ahorro promos            -$15.00
+TOTAL                     $42.00
+```
+
+### Ejemplo visual en ticket React
+Debajo de cada producto con promo:
+```
+3x Coca Cola 600ml         $45.00
+  $15.00 c/u
+  🏷️ 3x2                  -$15.00
+```
 
