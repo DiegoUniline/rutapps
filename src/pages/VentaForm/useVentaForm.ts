@@ -295,7 +295,6 @@ export function useVentaForm() {
       // Invalidate venta query once after all saves complete
       queryClient.invalidateQueries({ queryKey: ['venta', ventaId] });
       loadedVentaIdRef.current = null; // allow reload
-      enrichedRef.current = false;
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
