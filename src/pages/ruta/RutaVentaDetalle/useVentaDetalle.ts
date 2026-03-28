@@ -405,6 +405,7 @@ export function useVentaDetalle() {
     showProductSearch, setShowProductSearch, searchProducto, setSearchProducto,
     editTotals, saldoPendienteOtras, creditoDisponible, excedeCredito,
     saldoActual, totalAplicarOtras, totalACobrar, montoRecibidoNum, cambio,
+    montoAplicarActual, updateMontoAplicarActual,
     filteredProductos, initEditar, addProductToEdit, updateEditQty, removeEditLine,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
