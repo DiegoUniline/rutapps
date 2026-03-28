@@ -18,6 +18,7 @@ interface VentaFormHeaderProps {
   requiereFactura?: boolean;
   readOnly: boolean;
   canCreateEntrega: boolean;
+  canDeleteCancelada?: boolean;
   hayEntregas: boolean;
   entregasExistentes: Entrega[];
   lineasPendientesFactura: number;
