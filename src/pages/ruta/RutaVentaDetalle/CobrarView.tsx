@@ -153,7 +153,7 @@ export function CobrarView(p: Props) {
       </div>
 
       {/* CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="sticky bottom-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
         <button onClick={p.handleCobrar} disabled={p.saving || p.totalACobrar <= 0 || (parseFloat(p.montoRecibido) || 0) < p.totalACobrar - 0.01}
           className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
           <Check className="h-4 w-4" />{p.saving ? 'Procesando...' : `Cobrar ${s}${p.fmt(p.totalACobrar)}`}
