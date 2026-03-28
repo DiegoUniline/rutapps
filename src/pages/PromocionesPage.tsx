@@ -85,8 +85,8 @@ export default function PromocionesPage() {
     queryKey: ['promo-clasificaciones', empresa?.id],
     enabled: !!empresa?.id && !!editing,
     queryFn: async () => {
-      const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
-      return data ?? [];
+      const { data } = await (supabase.from('clasificaciones').select('id, nombre') as any).eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
     },
   });
 
