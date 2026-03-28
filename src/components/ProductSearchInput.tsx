@@ -36,16 +36,18 @@ export default function ProductSearchInput({ products, value, displayText, onSel
       .slice(0, 8);
   }, [search, products]);
 
-  // Track if autoFocus was already true on mount to avoid opening dropdown on initial load
-  const initialAutoFocusRef = useRef(autoFocus);
+  // Skip auto-focus during initial page load; only focus on user-added rows
+  const mountedAtRef = useRef(Date.now());
   useEffect(() => {
-    // Only auto-focus when autoFocus transitions from false→true (user added a new line),
-    // not on initial mount when loading an existing sale
-    if (autoFocus && !initialAutoFocusRef.current && !readOnly && !value) {
-      setEditing(true);
-      setTimeout(() => inputRef.current?.focus(), 30);
+    if (autoFocus && !readOnly && !value) {
+      // If component mounted more than 500ms ago or was mounted recently by user action
+      // We use a small grace period: if the page just loaded, skip auto-focus
+      const timeSinceMount = Date.now() - mountedAtRef.current;
+      if (timeSinceMount > 100) {
+        setEditing(true);
+        setTimeout(() => inputRef.current?.focus(), 30);
+      }
     }
-    initialAutoFocusRef.current = autoFocus;
   }, [autoFocus, readOnly, value]);
 
   useEffect(() => {
