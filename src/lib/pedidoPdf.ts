@@ -13,6 +13,7 @@ import { getCurrencyConfig } from '@/lib/currency';
 interface PedidoPdfPromo {
   descripcion: string;
   descuento: number;
+  producto_id?: string;
 }
 
 interface PedidoPdfParams {
