@@ -80,7 +80,7 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
       )}
-      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} />
+      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} />
     </div>
   );
 }
