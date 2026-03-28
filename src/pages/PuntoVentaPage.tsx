@@ -53,6 +53,8 @@ export default function PuntoVentaPage() {
   const [refTransferencia, setRefTransferencia] = useState('');
   const [refTarjeta, setRefTarjeta] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showTicket, setShowTicket] = useState(false);
+  const [lastVentaData, setLastVentaData] = useState<any>(null);
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [scanBuffer, setScanBuffer] = useState('');
   const [lastScanTime, setLastScanTime] = useState(0);
@@ -276,6 +278,28 @@ export default function PuntoVentaPage() {
   const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
   const faltante = Math.max(0, totals.total - totalPagado);
 
+  // Keyboard shortcuts: ESC close, F2 cobrar
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showPago) { setShowPago(false); e.preventDefault(); return; }
+        if (showTicket) { setShowTicket(false); setLastVentaData(null); }
+        return;
+      }
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (!showPago && !showTicket && cart.length > 0) {
+          if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2));
+          setShowPago(true);
+        } else if (showPago && faltante <= 0) {
+          handleCobrar();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [showPago, showTicket, cart.length, condicion, totals.total, faltante]);
+
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtM = (n: number) => `${s}${fmt(n)}`;
 
@@ -295,9 +319,6 @@ export default function PuntoVentaPage() {
     setSearch('');
   };
 
-  // Ticket state
-  const [showTicket, setShowTicket] = useState(false);
-  const [lastVentaData, setLastVentaData] = useState<any>(null);
 
   // Auto-print ticket when sale completes
   useEffect(() => {
@@ -790,12 +811,13 @@ export default function PuntoVentaPage() {
             </div>
 
             <button
-              onClick={() => setShowPago(true)}
+              onClick={() => { if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2)); setShowPago(true); }}
               disabled={cart.length === 0}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-30 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
             >
               <CreditCard className="h-5 w-5" />
               Cobrar ${fmt(totals.total)}
+              <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
             </button>
           </div>
         </div>
@@ -1029,6 +1051,7 @@ export default function PuntoVentaPage() {
               >
                 <Check className="h-5 w-5" />
                 {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar ${fmtM(totals.total)}`}
+                <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
               </button>
             </div>
           </div>
