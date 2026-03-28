@@ -1,5 +1,6 @@
 import { Plus, Trash2, ReceiptText } from 'lucide-react';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import type { PromoResult } from '@/hooks/usePromociones';
 import { VentaTotals } from '@/components/venta/VentaTotals';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,8 @@ interface Props {
   lineas: Partial<VentaLinea>[];
   productosList: any[];
   readOnly: boolean;
-  totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number };
+  totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number };
+  promoResults?: PromoResult[];
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
@@ -28,7 +30,7 @@ interface Props {
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
-  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente } = props;
+  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults } = props;
 
   return (
     <div className="p-3 sm:p-4 space-y-3">
@@ -78,7 +80,7 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
       )}
-      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} />
+      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
+import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 
 const COL_COUNT = 4;
 
@@ -158,6 +159,38 @@ export function useVentaForm() {
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
   }, [lineas, sinImpuestos]);
 
+  // ---- Promotions engine ----
+  const { data: promocionesActivas } = usePromocionesActivas();
+
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas?.length || lineas.length === 0) return [] as PromoResult[];
+    const cartForPromo: CartItemForPromo[] = lineas
+      .filter(l => l.producto_id && Number(l.cantidad) > 0)
+      .map(l => {
+        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          producto_id: l.producto_id!,
+          clasificacion_id: prod?.clasificacion_id ?? undefined,
+          precio_unitario: Number(l.precio_unitario) || 0,
+          cantidad: Number(l.cantidad) || 0,
+        };
+      });
+    return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined);
+  }, [promocionesActivas, lineas, productosList, form.cliente_id]);
+
+  const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+
+  // Combine totals with promo discounts
+  const finalTotals = useMemo(() => {
+    const promoDesc = totalDescuentoPromo;
+    return {
+      ...totals,
+      descuento_total: totals.descuento_total + promoDesc,
+      descuento_promo: promoDesc,
+      total: Math.max(0, totals.total - promoDesc),
+    };
+  }, [totals, totalDescuentoPromo]);
+
   // Re-price existing lines when tarifa rules or lista_precio changes
   useEffect(() => {
     if (!tarifaRules?.length || !productosList || readOnly) return;
@@ -221,7 +254,7 @@ export function useVentaForm() {
       return;
     }
     try {
-      const payload = { ...form, ...totals, vendedor_id: profile.vendedor_id };
+      const payload = { ...form, ...finalTotals, vendedor_id: profile.vendedor_id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       for (const l of lineas) {
@@ -235,7 +268,7 @@ export function useVentaForm() {
         await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps } as any);
       }
       if (isNew && autoConfirm) {
-        const saldo = form.condicion_pago === 'contado' ? 0 : totals.total;
+        const saldo = form.condicion_pago === 'contado' ? 0 : finalTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
@@ -332,7 +365,7 @@ export function useVentaForm() {
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
-    pagosData, totalPagado, saldoPendiente, totals, tarifaRules,
+    pagosData, totalPagado, saldoPendiente, totals: finalTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
