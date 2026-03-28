@@ -100,7 +100,7 @@ export default function VentaFormPage() {
         isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}
         requiereFactura={(form as any).requiere_factura} readOnly={readOnly}
-        canCreateEntrega={canCreateEntrega} hayEntregas={hayEntregas}
+        canCreateEntrega={canCreateEntrega} canDeleteCancelada={canDeleteCancelada} hayEntregas={hayEntregas}
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
         isSaving={saveVenta.isPending} isCreatingEntrega={crearEntrega.isPending}
