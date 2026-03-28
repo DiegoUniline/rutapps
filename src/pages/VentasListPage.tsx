@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, ShoppingCart } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, ShoppingCart, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -17,7 +17,8 @@ import { MobileListCard } from '@/components/MobileListCard';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
-import { useVentasPaginated } from '@/hooks/useVentas';
+import { useVentasPaginated, useDeleteVenta } from '@/hooks/useVentas';
+import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
@@ -122,6 +123,9 @@ export default function VentasListPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
+  const { hasPermiso } = usePermisos();
+  const canDelete = hasPermiso('ventas', 'eliminar');
+  const deleteVenta = useDeleteVenta();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -234,6 +238,21 @@ export default function VentasListPage() {
           <td className="py-2 px-3 text-center">
             <StatusChip status={v.status} />
           </td>
+          <td className="py-2 px-2 text-center w-8">
+            {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
+              <button
+                className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive transition-colors"
+                title="Eliminar"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!confirm('¿Eliminar esta venta?')) return;
+                  deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </td>
         </tr>
       ))}
     </>
@@ -257,12 +276,13 @@ export default function VentasListPage() {
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+            <th className="py-2 px-2 w-8" />
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
+              <td colSpan={12} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
             </tr>
           )}
           {renderTableRows(items)}
@@ -273,6 +293,7 @@ export default function VentasListPage() {
               <td colSpan={8} className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>
               <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(items.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0))}</td>
+              <td />
               <td />
             </tr>
           </tfoot>
@@ -395,6 +416,18 @@ export default function VentasListPage() {
                           {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
                           {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
                         </DropdownMenuItem>
+                        {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!confirm('¿Eliminar esta venta?')) return;
+                              deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Eliminar
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
