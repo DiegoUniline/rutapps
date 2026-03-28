@@ -156,8 +156,13 @@ export function useVentaForm() {
       }
       subtotal += lineSubtotal; descuento_total += discountAmt;
     });
-    return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
-  }, [lineas, sinImpuestos]);
+    // Extra discount
+    const extraTipo = (form as any).descuento_extra_tipo || 'porcentaje';
+    const extraVal = Number((form as any).descuento_extra) || 0;
+    const preExtraTotal = subtotal - descuento_total + iva_total + ieps_total;
+    const extraAmt = extraTipo === 'porcentaje' ? preExtraTotal * (extraVal / 100) : extraVal;
+    return { subtotal, descuento_total: descuento_total + extraAmt, descuento_extra_amt: extraAmt, iva_total, ieps_total, total: Math.max(0, preExtraTotal - extraAmt) };
+  }, [lineas, sinImpuestos, (form as any).descuento_extra, (form as any).descuento_extra_tipo]);
 
   // ---- Promotions engine ----
   const { data: promocionesActivas } = usePromocionesActivas();
