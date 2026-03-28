@@ -36,29 +36,8 @@ export default function ProductSearchInput({ products, value, displayText, onSel
       .slice(0, 8);
   }, [search, products]);
 
-  // Auto-focus: only when autoFocus prop is true.
-  // Use a ref to track if autoFocus was already true on mount (initial page load).
-  // When a user adds a product to the last row, a NEW empty row is appended and
-  // this component remounts. The parent sets autoFocus=true via isLast && isEmpty.
-  // We distinguish initial load vs user action by checking if autoFocus was true
-  // at mount time AND there is no value — skip on mount, but react to prop changes.
-  const didMountRef = useRef(false);
-  useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      // On mount: only auto-focus if explicitly requested AND component was
-      // created after initial page load (tracked via parent's userAddedRef)
-      if (autoFocus && !readOnly && !value && (window as any).__ventaFormReady) {
-        setEditing(true);
-        setTimeout(() => inputRef.current?.focus(), 30);
-      }
-      return;
-    }
-    if (autoFocus && !readOnly && !value) {
-      setEditing(true);
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
-  }, [autoFocus, readOnly, value]);
+  // No auto-focus on mount — the parent uses focusCell() to explicitly
+  // focus the input when a user adds a new line or navigates via keyboard.
 
   useEffect(() => {
     setHighlightIdx(0);
