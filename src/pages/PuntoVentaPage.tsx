@@ -478,6 +478,8 @@ export default function PuntoVentaPage() {
         montoRecibido: totalPagado > 0 ? totalPagado : undefined,
         cambio: cambio > 0 ? cambio : undefined,
         saldoPendiente: condicion === 'credito' ? totals.total : 0,
+        saldoAnterior: saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined,
+        saldoNuevoCalc: condicion === 'credito' ? saldoAnteriorCliente + totals.total : (saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined),
       });
 
       toast.success('¡Venta registrada!');
