@@ -255,6 +255,7 @@ export function useVentaDetalle() {
         iva_monto: l.iva_monto ?? 0,
         ieps_monto: l.ieps_monto ?? 0,
         descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+        producto_id: l.producto_id,
       })),
       subtotal: venta.subtotal ?? 0,
       iva: venta.iva_total ?? 0,
@@ -262,6 +263,12 @@ export function useVentaDetalle() {
       total: venta.total ?? 0,
       condicionPago: venta.condicion_pago,
       metodoPago: (venta as any).metodo_pago ?? undefined,
+      saldoNuevo: (venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined,
+      promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
+        descripcion: p.descripcion ?? p.nombre ?? '',
+        descuento: p.descuento ?? 0,
+        producto_id: p.producto_id,
+      })),
     };
   };
 
