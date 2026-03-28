@@ -41,7 +41,7 @@ function useClientesConSaldo(search: string) {
         .from('ventas')
         .select('cliente_id, saldo_pendiente, total, clientes(id, nombre, codigo, telefono)')
         .eq('empresa_id', empresa!.id)
-        .gt('saldo_pendiente', 0)
+        .gt('saldo_pendiente', 0.009)
         .neq('status', 'cancelado');
       if (error) throw error;
 
