@@ -416,6 +416,18 @@ export default function VentasListPage() {
                           {generatingPdf === v.id ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5 mr-2" />}
                           {generatingPdf === v.id ? 'Generando PDF...' : 'WhatsApp'}
                         </DropdownMenuItem>
+                        {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!confirm('¿Eliminar esta venta?')) return;
+                              deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Eliminar
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
