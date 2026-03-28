@@ -76,9 +76,11 @@ export function useVentaDetalle() {
   const excedeCredito = editCondicion === 'credito' && editTotals.total > creditoDisponible;
   const saldoActual = venta?.saldo_pendiente ?? 0;
   const totalAplicarOtras = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
-  const totalACobrar = saldoActual + totalAplicarOtras;
+  const totalACobrar = montoAplicarActual + totalAplicarOtras;
   const montoRecibidoNum = parseFloat(montoRecibido) || 0;
   const cambio = montoRecibidoNum > totalACobrar ? montoRecibidoNum - totalACobrar : 0;
+
+  const updateMontoAplicarActual = (monto: number) => { setMontoAplicarActual(Math.min(Math.max(0, monto), saldoActual)); };
 
   const filteredProductos = productos?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
 
