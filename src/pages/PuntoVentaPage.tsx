@@ -268,17 +268,23 @@ export default function PuntoVentaPage() {
     return { subtotal, iva, ieps, descuento, total: totalFinal, items };
   }, [cart, totalDescuentoPromo]);
 
-  const totalPagado = useMemo(() => paySplits.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0), [paySplits]);
+  const paySplitsComputed = useMemo(() => {
+    const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
+    const ef = parseFloat(payEfectivo) || 0;
+    const tr = parseFloat(payTransferencia) || 0;
+    const ta = parseFloat(payTarjeta) || 0;
+    if (ef > 0) splits.push({ metodo: 'efectivo', monto: ef, referencia: '' });
+    if (tr > 0) splits.push({ metodo: 'transferencia', monto: tr, referencia: refTransferencia });
+    if (ta > 0) splits.push({ metodo: 'tarjeta', monto: ta, referencia: refTarjeta });
+    return splits;
+  }, [payEfectivo, payTransferencia, payTarjeta, refTransferencia, refTarjeta]);
+
+  const totalPagado = useMemo(() => paySplitsComputed.reduce((s, p) => s + p.monto, 0), [paySplitsComputed]);
   const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
   const faltante = Math.max(0, totals.total - totalPagado);
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtM = (n: number) => `${s}${fmt(n)}`;
-
-  const addSplit = () => setPaySplits(prev => [...prev, { id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
-  const removeSplit = (id: string) => setPaySplits(prev => prev.length > 1 ? prev.filter(p => p.id !== id) : prev);
-  const updateSplit = (id: string, field: keyof PaySplit, value: string) =>
-    setPaySplits(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
 
   const clearAll = () => {
     setCart([]);
@@ -288,7 +294,11 @@ export default function PuntoVentaPage() {
     setClienteListaPrecioId(null);
     setCondicion('contado');
     setShowPago(false);
-    setPaySplits([{ id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
+    setPayEfectivo('');
+    setPayTransferencia('');
+    setPayTarjeta('');
+    setRefTransferencia('');
+    setRefTarjeta('');
     setSearch('');
   };
 
