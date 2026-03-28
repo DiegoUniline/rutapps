@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertCircle,
   Banknote,
+  CalendarDays,
   CheckCircle2,
   Clock,
   Eye,
