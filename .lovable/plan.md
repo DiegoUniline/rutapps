@@ -1,63 +1,52 @@
 
 
-## Diagnóstico: Por qué no cuadran los números de liquidación
+## Plan: Mejorar modal de cobro en POS
 
-### Problema raíz: Confusión de IDs entre `profiles.id` y `vendedores.id`
+### Problemas actuales
+1. No se ve el descuento por producto en el cart (las promos se muestran separadas del producto)
+2. Modal de pago es angosto y los métodos van verticales
+3. Falta botón "Monto exacto" en efectivo
+4. Falta botón rápido "Exacto" en transferencia/tarjeta para auto-llenar el restante
 
-Hay **dos IDs distintos** en juego:
-- `profiles.id` — el ID del perfil del usuario
-- `vendedores.id` — el ID en la tabla espejo `vendedores` (sincronizada por trigger)
-- `profiles.vendedor_id` — apunta a `vendedores.id`
+### Cambios en `src/pages/PuntoVentaPage.tsx`
 
-**En `NuevaDescargaForm` (crear liquidación):**
-- El selector de usuario usa `profiles.id` como valor (`vendedorId`)
-- Las consultas de **ventas** y **gastos** filtran por `.eq('vendedor_id', vendedorId)` — pero `ventas.vendedor_id` referencia `vendedores.id`, NO `profiles.id`
-- Resultado: al crear la liquidación, puede traer ventas de otro vendedor o ventas de más, calculando un `efectivo_esperado` incorrecto ($30,175) que se guarda en la BD
+**1. Descuento visible por producto en el carrito**
+- En cada línea del cart, cruzar con `promoResults` por `producto_id`
+- Si hay promo aplicada, mostrar debajo del precio una etiqueta con el descuento: ej. "🏷️ 3x2 -$15.00" en texto primary/small
+- El total de línea se mantiene sin descuento (el descuento se aplica global), pero el usuario ve qué productos tienen promo
 
-**En `DescargaDetalle` (ver liquidación):**
-- Recalcula en vivo con los mismos queries, pero el `descarga.vendedor_id` guardado es `profiles.id` (incorrecto)
-- Los cobros sí se buscan correctamente vía `profiles.vendedor_id → user_id`
-- Stock del almacén busca con `.eq('id', descarga.vendedor_id)` en profiles — usa `profiles.id`, que sería correcto solo si el vendedor_id guardado fuera profiles.id
+**2. Modal más ancho + métodos horizontales**
+- Cambiar `max-w-lg` → `max-w-2xl` en el modal de pago
+- Poner los 3 métodos (Efectivo, Transferencia, Tarjeta) en un `grid grid-cols-3 gap-3` horizontal en lugar de apilados verticalmente
+- Cada método: icono + label + input de monto + referencia (si aplica) + botones rápidos
 
-Esto explica las discrepancias:
-- **Tabla**: Esperado $30,175 (valor guardado con query incorrecto)
-- **Modal**: Esperado $17,035 (recalculado, posiblemente también incorrecto pero con datos diferentes)
+**3. Botón "Exacto" en efectivo**
+- Agregar un botón "Exacto" a los `quickAmounts` del efectivo que pone el total exacto pendiente
 
-### Plan de corrección
+**4. Botón "Exacto" en transferencia y tarjeta**
+- Agregar un botón "Monto exacto" debajo del input de transferencia y tarjeta
+- Al hacer clic, calcula el restante (total - lo ya ingresado en otros métodos) y lo pone automáticamente
 
-**Archivo: `src/pages/DescargasPage.tsx`**
+### Detalle técnico
 
-**1. Corregir `NuevaDescargaForm` — consultar `vendedor_id` del profile**
-
-Cambiar la consulta de profiles para incluir `vendedor_id`:
-```typescript
-.select('id, user_id, nombre, vendedor_id')
+```text
+┌──────────────────────────────────────────────────────┐
+│  Cobrar                                    X         │
+│  Público general · 3 artículos        $44.64         │
+│  ────────────────────────────────────────────         │
+│  [  Contado  ] [  Crédito  ]                         │
+│  ────────────────────────────────────────────         │
+│  ┌─ Efectivo ──┐ ┌─ Transfer. ─┐ ┌─ Tarjeta ──┐     │
+│  │ $ [44.64]   │ │ $ [0.00]    │ │ $ [0.00]   │     │
+│  │ $44 $50 $100│ │ [Exacto]    │ │ [Exacto]   │     │
+│  │ [Exacto]    │ │ Ref: ____   │ │ Ref: ____  │     │
+│  └─────────────┘ └─────────────┘ └────────────┘     │
+│  Cambio: $5.36                                       │
+│  ═══════════════════════════════════════════          │
+│  [        ✓ Confirmar $44.64              ]          │
+└──────────────────────────────────────────────────────┘
 ```
 
-Crear variable para el ID correcto de vendedores:
-```typescript
-const vendedorRealId = selectedProfile?.vendedor_id ?? vendedorId;
-```
-
-Usar `vendedorRealId` en:
-- Query de ventas (`.eq('vendedor_id', vendedorRealId)`)
-- Query de gastos (`.eq('vendedor_id', vendedorRealId)`)
-- Query de overlap check (`.eq('vendedor_id', vendedorRealId)`)
-- Insert de descarga_ruta (`vendedor_id: vendedorRealId`)
-
-Mantener `selectedUserId` (profiles.user_id) para cobros — ya está correcto.
-
-**2. Corregir `DescargaDetalle` — consistencia en stock lookup**
-
-Línea 168: el query de stock busca almacén con `.eq('id', descarga.vendedor_id)` en profiles. Pero si ahora guardamos `vendedores.id`, necesita buscar por `.eq('vendedor_id', descarga.vendedor_id)` en profiles (igual que la query de cobros en línea 123).
-
-**3. Sin cambios en la tabla principal**
-
-La tabla (línea 1306) lee `d.efectivo_esperado` de la BD — una vez que se guarde correctamente, los números cuadrarán entre tabla y detalle.
-
-### Resultado esperado
-
-- Los números de "Efectivo esperado" coincidirán entre la tabla, el modal de detalle, el ticket y el PDF
-- Las ventas/cobros/gastos se consultarán con los IDs correctos
-- Las liquidaciones futuras se guardarán con valores correctos
+### Archivos a modificar
+- `src/pages/PuntoVentaPage.tsx` — único archivo
 
