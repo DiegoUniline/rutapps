@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Wallet, Banknote, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Wallet, Banknote, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useState } from 'react';
@@ -35,10 +35,10 @@ export function CobrarView(p: Props) {
   const sinDistribuir = (parseFloat(p.montoRecibido) || 0) - p.totalACobrar;
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] flex items-center gap-3">
-        <button onClick={p.onBack} className="p-1 -ml-1"><ArrowLeft className="h-5 w-5 text-foreground" /></button>
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center gap-3">
+        <button onClick={p.onBack} className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-[12px] font-semibold active:scale-95 transition-transform">Salir</button>
         <div className="flex-1 min-w-0">
           <h1 className="text-[16px] font-bold text-foreground">Cobrar</h1>
           <p className="text-[11px] text-muted-foreground">{p.clienteNombre} · {p.venta.folio ?? 'Sin folio'}</p>
@@ -153,7 +153,7 @@ export function CobrarView(p: Props) {
       </div>
 
       {/* CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="sticky bottom-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
         <button onClick={p.handleCobrar} disabled={p.saving || p.totalACobrar <= 0 || (parseFloat(p.montoRecibido) || 0) < p.totalACobrar - 0.01}
           className="w-full bg-green-600 text-white rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-green-600/20 flex items-center justify-center gap-1.5">
           <Check className="h-4 w-4" />{p.saving ? 'Procesando...' : `Cobrar ${s}${p.fmt(p.totalACobrar)}`}
