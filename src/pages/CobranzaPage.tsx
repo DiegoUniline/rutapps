@@ -18,6 +18,8 @@ import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { printTicket } from '@/lib/printTicketUtil';
+import { buildCobroTicketData } from '@/lib/cobroTicket';
 
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
