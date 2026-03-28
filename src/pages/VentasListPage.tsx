@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
-import { OdooPagination } from '@/components/OdooPagination';
+import { TablePagination } from '@/components/TablePagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
@@ -28,6 +28,7 @@ import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
+import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
 
 const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -41,8 +42,6 @@ const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'saldo_pendiente', header: 'Saldo', format: 'currency', width: 14 },
   { key: 'status', header: 'Estado', width: 12 },
 ];
-
-const PAGE_SIZE = 80;
 
 const CONDICION_LABELS: Record<string, string> = {
   contado: 'Contado',
@@ -119,6 +118,10 @@ function useVendedoresForFilter() {
   });
 }
 
+function getNumericPageSize(ps: PageSizeOption): number {
+  return ps === 'all' ? 10000 : ps;
+}
+
 export default function VentasListPage() {
   const { profile, empresa } = useAuth();
   const navigate = useNavigate();
@@ -130,17 +133,20 @@ export default function VentasListPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSizeOption>(readStoredPageSize);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
+
+  const numericPageSize = getNumericPageSize(pageSize);
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
   const condicionFilter = filters.condicion_pago?.length ? filters.condicion_pago.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
-  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, PAGE_SIZE, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
+  const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -169,10 +175,17 @@ export default function VentasListPage() {
     return ventasRaw.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
   }, [ventasRaw, clienteFilter]);
   const total = (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
-  const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
-  const to = Math.min(page * PAGE_SIZE, total);
+  const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
+  const to = Math.min(page * numericPageSize, total);
+  const totalPages = numericPageSize > 0 ? Math.max(1, Math.ceil(total / numericPageSize)) : 1;
   const pageData = ventas;
   const allSelected = pageData.length > 0 && pageData.every(v => selected.has(v.id));
+
+  const handlePageSizeChange = (size: PageSizeOption) => {
+    setPageSize(size);
+    setPage(1);
+    try { localStorage.setItem('table-page-size', String(size)); } catch {}
+  };
 
   const toggleAll = () => {
     if (allSelected) setSelected(new Set());
@@ -443,7 +456,12 @@ export default function VentasListPage() {
             );
           })}
           {total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <TablePagination
+              from={from} to={to} total={total} page={page} totalPages={totalPages}
+              pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
+            />
           )}
 
           <WhatsAppPreviewDialog open={waOpen} onClose={() => { setWaOpen(false); setWaPdfBlob(null); }} phone={waPhone} message={waMessage} empresaId={empresa?.id ?? ''} tipo="venta" pdfBlob={waPdfBlob} pdfFileName={waPdfName} />
@@ -462,7 +480,12 @@ export default function VentasListPage() {
             )}
           />
           {!groupBy && total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <TablePagination
+              from={from} to={to} total={total} page={page} totalPages={totalPages}
+              pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
+            />
           )}
         </>
       )}

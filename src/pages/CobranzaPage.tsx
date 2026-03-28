@@ -15,6 +15,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooFilterBar, type FilterOption, type GroupByOption } from '@/components/OdooFilterBar';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
+import { TablePagination } from '@/components/TablePagination';
+import { useTablePagination } from '@/hooks/useTablePagination';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -174,7 +176,7 @@ export default function CobranzaPage() {
     { key: 'vendedor', label: 'Vendedor', options: vendedorFilterOptions },
   ], [clienteOptions, vendedorFilterOptions]);
 
-  // Apply filters
+  // Apply filters — this is the FULL filtered list used for KPIs
   const filtered = useMemo(() => {
     let list = cobros ?? [];
     const statusF = filters.status;
@@ -195,16 +197,22 @@ export default function CobranzaPage() {
     return list;
   }, [cobros, filters, search, dateFrom, dateTo]);
 
+  // KPIs use full filtered data
   const totalCobrado = filtered.reduce((s, c) => s + (c.monto ?? 0), 0);
 
-  // Grouping
-  const groups = useMemo(() => groupData(filtered, groupBy, (item: any, key: string) => {
+  // Visual pagination — only affects table rendering
+  const pagination = useTablePagination(filtered);
+
+  // Reset page on filter change is handled by deps: filtered changes → useTablePagination clamps page
+
+  // Grouping uses paginated items for display
+  const groups = useMemo(() => groupData(pagination.paginatedItems, groupBy, (item: any, key: string) => {
     if (key === 'cliente') return (item.clientes as any)?.nombre ?? 'Sin cliente';
     if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     if (key === 'metodo') return item.metodo_pago ?? 'Sin método';
     if (key === 'vendedor') return vendedorMap.get(item.user_id) || 'Sin vendedor';
     return '';
-  }, groupByLevels), [filtered, groupBy, groupByLevels, vendedorMap]);
+  }, groupByLevels), [pagination.paginatedItems, groupBy, groupByLevels, vendedorMap]);
 
   const renderTable = (items: any[]) => (
     <Table className="bg-card">
@@ -270,7 +278,7 @@ export default function CobranzaPage() {
         <HelpButton title={HELP.cobranza.title} sections={HELP.cobranza.sections} />
       </h1>
 
-      {/* Summary */}
+      {/* Summary — uses full filtered data, NOT paginated */}
       <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-2")}>
         <div className="bg-card border border-border rounded-lg p-4">
           <p className="text-[11px] text-muted-foreground uppercase">Total cobrado</p>
@@ -285,27 +293,27 @@ export default function CobranzaPage() {
       {/* Filter bar */}
       <OdooFilterBar
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={v => { setSearch(v); pagination.resetPage(); }}
         placeholder="Buscar cobro..."
         filterOptions={filterDefs}
         activeFilters={filters}
-        onToggleFilter={toggleFilterValue}
-        onSetFilter={setFilter}
+        onToggleFilter={(k, v) => { toggleFilterValue(k, v); pagination.resetPage(); }}
+        onSetFilter={(k, v) => { setFilter(k, v); pagination.resetPage(); }}
         groupByOptions={GROUP_BY_OPTIONS}
         activeGroupBy={groupBy}
         onGroupByChange={setGroupBy}
         activeGroupByLevels={groupByLevels}
         onGroupByLevelChange={setGroupByLevel}
-        onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); }}
+        onClearFilters={() => { clearFilters(); setDateFrom(''); setDateTo(''); pagination.resetPage(); }}
         dateFrom={dateFrom}
         dateTo={dateTo}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
+        onDateFromChange={v => { setDateFrom(v); pagination.resetPage(); }}
+        onDateToChange={v => { setDateTo(v); pagination.resetPage(); }}
       />
 
       {isMobile ? (
         <div className="space-y-2">
-          {filtered.map(c => (
+          {pagination.paginatedItems.map(c => (
             <MobileListCard
               key={c.id}
               title={(c.clientes as any)?.nombre ?? '—'}
@@ -326,14 +334,34 @@ export default function CobranzaPage() {
           ))}
           {isLoading && <div className="text-center py-8 text-muted-foreground">Cargando...</div>}
           {!isLoading && filtered.length === 0 && <div className="text-center py-8 text-muted-foreground">Sin cobros</div>}
+          {pagination.total > 0 && (
+            <TablePagination
+              from={pagination.from} to={pagination.to} total={pagination.total}
+              page={pagination.page} totalPages={pagination.totalPages}
+              pageSize={pagination.pageSize} onPageSizeChange={pagination.setPageSize}
+              onFirst={pagination.goFirst} onPrev={pagination.goPrev}
+              onNext={pagination.goNext} onLast={pagination.goLast}
+            />
+          )}
         </div>
       ) : (
-        <GroupedTableWrapper
-          groupBy={groupBy}
-          groups={groups}
-          renderTable={renderTable}
-          renderSummary={renderSummary}
-        />
+        <>
+          <GroupedTableWrapper
+            groupBy={groupBy}
+            groups={groups}
+            renderTable={renderTable}
+            renderSummary={renderSummary}
+          />
+          {pagination.total > 0 && (
+            <TablePagination
+              from={pagination.from} to={pagination.to} total={pagination.total}
+              page={pagination.page} totalPages={pagination.totalPages}
+              pageSize={pagination.pageSize} onPageSizeChange={pagination.setPageSize}
+              onFirst={pagination.goFirst} onPrev={pagination.goPrev}
+              onNext={pagination.goNext} onLast={pagination.goLast}
+            />
+          )}
+        </>
       )}
 
       <WhatsAppPreviewDialog
