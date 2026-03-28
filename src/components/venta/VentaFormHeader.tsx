@@ -37,7 +37,7 @@ interface VentaFormHeaderProps {
 
 export function VentaFormHeader({
   isNew, folio, clienteNombre, status, entregaInmediata, tipo,
-  requiereFactura, readOnly, canCreateEntrega, hayEntregas,
+  requiereFactura, readOnly, canCreateEntrega, canDeleteCancelada, hayEntregas,
   entregasExistentes, lineasPendientesFactura, isSaving, isCreatingEntrega,
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
   onNavigateEntrega, onGenerarPdf, onPrintTicket, onFacturar,
