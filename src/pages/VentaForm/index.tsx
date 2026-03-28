@@ -22,6 +22,8 @@ import { fmtDate } from '@/lib/utils';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
+  const { hasPermiso } = usePermisos();
+  const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
