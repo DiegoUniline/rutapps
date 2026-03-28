@@ -96,6 +96,7 @@ export function buildTicketDataFromVenta(params: {
     iva_total?: number;
     ieps_total?: number;
     total?: number;
+    saldo_pendiente?: number;
     condicion_pago?: string;
     metodo_pago?: string;
   };
