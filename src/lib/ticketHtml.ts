@@ -154,6 +154,29 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
   add(pad('TOTAL', fmt(showTax ? total : subtotal)));
 
+  // ── Promociones aplicadas ──
+  if (promociones && promociones.length > 0) {
+    add(div);
+    add(centerText('PROMOCIONES'));
+    for (const p of promociones) {
+      const desc = fmt(p.descuento);
+      const lines = wrapText(`* ${p.descripcion}`, COLS - desc.length - 1);
+      if (lines.length === 1) {
+        add(pad(lines[0], `-${desc}`));
+      } else {
+        for (let i = 0; i < lines.length; i++) {
+          if (i === lines.length - 1) {
+            add(pad(lines[i], `-${desc}`));
+          } else {
+            add(lines[i]);
+          }
+        }
+      }
+    }
+    const totalPromo = promociones.reduce((s, p) => s + p.descuento, 0);
+    add(pad('Ahorro total', `-${fmt(totalPromo)}`));
+  }
+
   if (montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));
     if ((cambio ?? 0) > 0) add(pad('Cambio', fmt(cambio!)));
