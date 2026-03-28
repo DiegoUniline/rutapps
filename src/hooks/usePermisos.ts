@@ -31,6 +31,7 @@ export const MODULOS: ModuloDef[] = [
   // General
   { id: 'dashboard', label: 'Dashboard', group: 'General' },
   { id: 'supervisor', label: 'Supervisor', group: 'General' },
+  { id: 'solo_movil', label: 'Solo vista móvil (ruta)', group: 'General' },
 
   // Ventas
   { id: 'ventas', label: 'Todas las ventas', group: 'Ventas' },
