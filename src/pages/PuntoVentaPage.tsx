@@ -276,6 +276,28 @@ export default function PuntoVentaPage() {
   const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
   const faltante = Math.max(0, totals.total - totalPagado);
 
+  // Keyboard shortcuts: ESC close, F2 cobrar
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showPago) { setShowPago(false); e.preventDefault(); return; }
+        if (showTicket) { setShowTicket(false); setLastVentaData(null); }
+        return;
+      }
+      if (e.key === 'F2') {
+        e.preventDefault();
+        if (!showPago && !showTicket && cart.length > 0) {
+          if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2));
+          setShowPago(true);
+        } else if (showPago && faltante <= 0) {
+          handleCobrar();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [showPago, showTicket, cart.length, condicion, totals.total, faltante]);
+
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtM = (n: number) => `${s}${fmt(n)}`;
 
