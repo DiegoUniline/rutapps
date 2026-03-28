@@ -85,7 +85,7 @@ const ENTREGA_STATUS: Record<string, string> = {
 };
 
 export function generarPedidoPdf(params: PedidoPdfParams): Blob {
-  const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos } = params;
+  const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos, promociones } = params;
   const doc = createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
