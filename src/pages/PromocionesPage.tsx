@@ -103,8 +103,8 @@ export default function PromocionesPage() {
     queryKey: ['promo-zonas', empresa?.id],
     enabled: !!empresa?.id && !!editing,
     queryFn: async () => {
-      const { data } = await supabase.from('zonas').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
-      return data ?? [];
+      const { data } = await (supabase.from('zonas').select('id, nombre') as any).eq('empresa_id', empresa!.id).order('nombre');
+      return (data ?? []) as { id: string; nombre: string }[];
     },
   });
 
