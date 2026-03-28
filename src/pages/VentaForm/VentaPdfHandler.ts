@@ -63,5 +63,6 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       fecha: p.cobros?.fecha ?? '', metodo_pago: p.cobros?.metodo_pago ?? '',
       monto: Number(p.monto_aplicado) || 0, referencia: p.cobros?.referencia,
     })),
+    promociones: promociones?.filter(p => p.descuento > 0),
   });
 }
