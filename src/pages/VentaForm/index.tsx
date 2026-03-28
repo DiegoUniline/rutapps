@@ -109,7 +109,7 @@ export default function VentaFormPage() {
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
         isSaving={saveVenta.isPending} isCreatingEntrega={crearEntrega.isPending}
-        onBack={() => navigate('/ventas')} onSave={handleSave} onDelete={handleDelete} onStatusChange={handleStatusChange}
+        onBack={() => navigate('/ventas')} onSave={handleSave} onDelete={() => setShowDeleteConfirm(true)} onStatusChange={handleStatusChange}
         onCreateEntrega={async () => {
           const linesToUse = remaining?.length ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente }))
             : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad) }));
