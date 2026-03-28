@@ -132,6 +132,7 @@ export default function VentasListPage() {
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
