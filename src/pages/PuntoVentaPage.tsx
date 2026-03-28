@@ -53,6 +53,8 @@ export default function PuntoVentaPage() {
   const [refTransferencia, setRefTransferencia] = useState('');
   const [refTarjeta, setRefTarjeta] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showTicket, setShowTicket] = useState(false);
+  const [lastVentaData, setLastVentaData] = useState<any>(null);
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [scanBuffer, setScanBuffer] = useState('');
   const [lastScanTime, setLastScanTime] = useState(0);
