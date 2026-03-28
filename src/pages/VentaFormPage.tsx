@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermisos } from '@/hooks/usePermisos';
 import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink, FileText, Receipt } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
