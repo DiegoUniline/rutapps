@@ -20,6 +20,7 @@ export interface Promocion {
   zona_ids: string[];
   vigencia_inicio: string | null;
   vigencia_fin: string | null;
+  dias_semana: string[];
   prioridad: number;
   acumulable: boolean;
   created_at: string;
@@ -110,11 +111,13 @@ export interface PromoResult {
   nombre: string;
   tipo: Promocion['tipo'];
   producto_id?: string;
-  descuento: number; // total discount amount for this promo application
+  descuento: number;
   descripcion: string;
   producto_gratis_id?: string;
   cantidad_gratis?: number;
 }
+
+const DIAS_MAP = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 /**
  * Evaluate which promotions apply to a given cart for a specific client/zone.
@@ -127,22 +130,25 @@ export function evaluatePromociones(
 ): PromoResult[] {
   const results: PromoResult[] = [];
   const today = new Date().toISOString().split('T')[0];
+  const diaHoy = DIAS_MAP[new Date().getDay()];
 
   const activePromos = promociones
     .filter(p => p.activa)
     .filter(p => !p.vigencia_inicio || p.vigencia_inicio <= today)
     .filter(p => !p.vigencia_fin || p.vigencia_fin >= today)
+    .filter(p => {
+      const dias = p.dias_semana ?? [];
+      return dias.length === 0 || dias.includes(diaHoy);
+    })
     .sort((a, b) => b.prioridad - a.prioridad);
 
-  const appliedNonAcumulable = new Set<string>(); // producto_ids that already got a non-stackable promo
+  const appliedNonAcumulable = new Set<string>();
 
   for (const promo of activePromos) {
-    // Check scope
     const matchingItems = cartItems.filter(item => {
       if (item.es_cambio) return false;
       if (!promo.acumulable && appliedNonAcumulable.has(item.producto_id)) return false;
 
-      // Check aplica_a scope
       switch (promo.aplica_a) {
         case 'todos':
           return true;

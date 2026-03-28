@@ -1,0 +1,1 @@
+ALTER TABLE public.promociones ADD COLUMN IF NOT EXISTS dias_semana text[] DEFAULT '{}'::text[];

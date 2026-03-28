@@ -3427,6 +3427,7 @@ export type Database = {
           cliente_ids: string[] | null
           created_at: string
           descripcion: string | null
+          dias_semana: string[] | null
           empresa_id: string
           id: string
           nombre: string
@@ -3449,6 +3450,7 @@ export type Database = {
           cliente_ids?: string[] | null
           created_at?: string
           descripcion?: string | null
+          dias_semana?: string[] | null
           empresa_id: string
           id?: string
           nombre: string
@@ -3471,6 +3473,7 @@ export type Database = {
           cliente_ids?: string[] | null
           created_at?: string
           descripcion?: string | null
+          dias_semana?: string[] | null
           empresa_id?: string
           id?: string
           nombre?: string
