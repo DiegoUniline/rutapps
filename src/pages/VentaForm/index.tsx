@@ -86,6 +86,7 @@ export default function VentaFormPage() {
         ieps_monto: Number(l.ieps_monto ?? 0),
         descuento_pct: Number((l as any).descuento_porcentaje ?? (l as any).descuento_pct ?? 0),
       })),
+      promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento })),
     });
     const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
     printTicket(td, { ticketAncho });
