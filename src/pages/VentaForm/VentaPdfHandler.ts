@@ -14,6 +14,7 @@ interface PdfParams {
   productosList: any[];
   entregasExistentes: any[];
   pagosData: any[];
+  promociones?: { descripcion: string; descuento: number }[];
 }
 
 export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
