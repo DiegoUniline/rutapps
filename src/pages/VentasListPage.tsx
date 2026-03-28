@@ -294,6 +294,7 @@ export default function VentasListPage() {
               <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(items.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0))}</td>
               <td />
+              <td />
             </tr>
           </tfoot>
         )}
