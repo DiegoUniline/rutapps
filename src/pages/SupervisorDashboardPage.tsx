@@ -596,18 +596,45 @@ export default function SupervisorDashboardPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                En vivo
-              </Badge>
-              <Badge variant="secondary">{today}</Badge>
+              {!isRangeMode && (
+                <Badge variant="outline" className="gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  En vivo
+                </Badge>
+              )}
               {selectedSeller && <Badge variant="secondary">Filtro: {selectedSeller.nombre}</Badge>}
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-foreground">Centro de control supervisor</h1>
               <p className="text-sm text-muted-foreground">
-                Vista única tipo dashboard para ventas, cobros, rutas, clientes y operación del día.
+                Vista única tipo dashboard para ventas, cobros, rutas, clientes y operación.
               </p>
+            </div>
+            {/* ── Date range filter ── */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+              <input
+                type="date"
+                value={desde}
+                onChange={e => setDesde(e.target.value)}
+                className="bg-accent/60 rounded-lg px-2.5 py-1.5 text-[13px] text-foreground border border-border focus:outline-none focus:ring-1.5 focus:ring-primary/40 w-[140px]"
+              />
+              <span className="text-xs text-muted-foreground">al</span>
+              <input
+                type="date"
+                value={hasta}
+                onChange={e => setHasta(e.target.value)}
+                className="bg-accent/60 rounded-lg px-2.5 py-1.5 text-[13px] text-foreground border border-border focus:outline-none focus:ring-1.5 focus:ring-primary/40 w-[140px]"
+              />
+              {isRangeMode && (
+                <button
+                  type="button"
+                  onClick={() => { setDesde(today); setHasta(today); }}
+                  className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Hoy
+                </button>
+              )}
             </div>
           </div>
 
