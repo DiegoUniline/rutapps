@@ -1,4 +1,5 @@
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermisos } from '@/hooks/usePermisos';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
@@ -21,6 +22,8 @@ import { fmtDate } from '@/lib/utils';
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
+  const { hasPermiso } = usePermisos();
+  const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
@@ -99,7 +102,7 @@ export default function VentaFormPage() {
         isNew={isNew} folio={form.folio} clienteNombre={clienteNombre} status={form.status}
         entregaInmediata={form.entrega_inmediata} tipo={form.tipo}
         requiereFactura={(form as any).requiere_factura} readOnly={readOnly}
-        canCreateEntrega={canCreateEntrega} hayEntregas={hayEntregas}
+        canCreateEntrega={canCreateEntrega} canDeleteCancelada={canDeleteCancelada} hayEntregas={hayEntregas}
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
         isSaving={saveVenta.isPending} isCreatingEntrega={crearEntrega.isPending}

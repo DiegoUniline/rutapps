@@ -18,6 +18,7 @@ interface VentaFormHeaderProps {
   requiereFactura?: boolean;
   readOnly: boolean;
   canCreateEntrega: boolean;
+  canDeleteCancelada?: boolean;
   hayEntregas: boolean;
   entregasExistentes: Entrega[];
   lineasPendientesFactura: number;
@@ -36,7 +37,7 @@ interface VentaFormHeaderProps {
 
 export function VentaFormHeader({
   isNew, folio, clienteNombre, status, entregaInmediata, tipo,
-  requiereFactura, readOnly, canCreateEntrega, hayEntregas,
+  requiereFactura, readOnly, canCreateEntrega, canDeleteCancelada, hayEntregas,
   entregasExistentes, lineasPendientesFactura, isSaving, isCreatingEntrega,
   onBack, onSave, onDelete, onStatusChange, onCreateEntrega,
   onNavigateEntrega, onGenerarPdf, onPrintTicket, onFacturar,
@@ -118,8 +119,8 @@ export function VentaFormHeader({
         {!isNew && status !== 'cancelado' && (
           <button onClick={() => onStatusChange('cancelado')} className="btn-odoo-secondary text-destructive text-xs">Cancelar</button>
         )}
-        {!isNew && status === 'borrador' && (
-          <button onClick={onDelete} className="btn-odoo-secondary text-destructive !px-2">
+        {!isNew && (status === 'borrador' || (status === 'cancelado' && canDeleteCancelada)) && (
+          <button onClick={onDelete} className="btn-odoo-secondary text-destructive !px-2" title={status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador'}>
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}

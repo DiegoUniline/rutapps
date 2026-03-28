@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermisos } from '@/hooks/usePermisos';
 import { ArrowLeft, Save, Trash2, Plus, Banknote, Truck, Package, Check, ExternalLink, FileText, Receipt } from 'lucide-react';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { FacturaDrawer } from '@/components/facturacion/FacturaDrawer';
@@ -69,6 +70,8 @@ const COL_COUNT = 4;
 
 export default function VentaFormPage() {
   const isMobile = useIsMobile();
+  const { hasPermiso } = usePermisos();
+  const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
   const { id } = useParams();
   const navigate = useNavigate();
   const { profile, user, empresa } = useAuth();
@@ -569,6 +572,7 @@ export default function VentaFormPage() {
         requiereFactura={(form as any).requiere_factura}
         readOnly={readOnly}
         canCreateEntrega={canCreateEntrega}
+        canDeleteCancelada={canDeleteCancelada}
         hayEntregas={hayEntregas}
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
