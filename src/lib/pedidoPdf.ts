@@ -54,6 +54,7 @@ interface PedidoPdfParams {
     iva_pct: number;
     ieps_pct: number;
     total: number;
+    producto_id?: string;
   }[];
   entregas: {
     folio: string;
