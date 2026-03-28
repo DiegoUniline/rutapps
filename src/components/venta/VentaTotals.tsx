@@ -53,6 +53,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
             ))}
           </div>
         )}
+        {(descuento_extra_amt ?? 0) > 0 && (
+          <div className="flex justify-between text-destructive">
+            <span>Descuento extra</span>
+            <span>-{fmt(descuento_extra_amt!)}</span>
+          </div>
+        )}
         {ieps_total > 0 && (
           <div className="flex justify-between">
             <span className="text-muted-foreground">IEPS</span>
