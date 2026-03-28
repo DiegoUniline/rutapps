@@ -159,6 +159,27 @@ export function useVentaForm() {
     return { subtotal, descuento_total, iva_total, ieps_total, total: subtotal - descuento_total + iva_total + ieps_total };
   }, [lineas, sinImpuestos]);
 
+  // ---- Promotions engine ----
+  const { data: promocionesActivas } = usePromocionesActivas();
+
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas?.length || lineas.length === 0) return [] as PromoResult[];
+    const cartForPromo: CartItemForPromo[] = lineas
+      .filter(l => l.producto_id && Number(l.cantidad) > 0)
+      .map(l => {
+        const prod = productosList?.find((p: any) => p.id === l.producto_id);
+        return {
+          producto_id: l.producto_id!,
+          clasificacion_id: prod?.clasificacion_id ?? undefined,
+          precio_unitario: Number(l.precio_unitario) || 0,
+          cantidad: Number(l.cantidad) || 0,
+        };
+      });
+    return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined);
+  }, [promocionesActivas, lineas, productosList, form.cliente_id]);
+
+  const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+
   // Re-price existing lines when tarifa rules or lista_precio changes
   useEffect(() => {
     if (!tarifaRules?.length || !productosList || readOnly) return;
