@@ -572,6 +572,7 @@ export default function VentaFormPage() {
         requiereFactura={(form as any).requiere_factura}
         readOnly={readOnly}
         canCreateEntrega={canCreateEntrega}
+        canDeleteCancelada={canDeleteCancelada}
         hayEntregas={hayEntregas}
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
