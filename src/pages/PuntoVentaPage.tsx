@@ -666,6 +666,7 @@ export default function PuntoVentaPage() {
             )}
             {cart.map(item => {
               const lineTotal = item.precio_unitario * item.cantidad;
+              const itemPromos = promoResults.filter(r => r.producto_id === item.producto_id && r.descuento > 0);
               return (
                 <div key={item.producto_id} className="group rounded-lg px-3 py-2 bg-accent/30 hover:bg-accent/50 transition-colors">
                   <div className="flex items-start gap-2">
@@ -706,6 +707,15 @@ export default function PuntoVentaPage() {
                     />
                     <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
+                  {itemPromos.length > 0 && (
+                    <div className="mt-1">
+                      {itemPromos.map((pr, i) => (
+                        <p key={i} className="text-[10px] text-primary font-medium flex items-center gap-1">
+                          <Tag className="h-3 w-3" /> 🏷️ {pr.descripcion} <span className="font-bold">-{fmtM(pr.descuento)}</span>
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
