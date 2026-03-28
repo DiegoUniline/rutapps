@@ -410,7 +410,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   isSuperAdmin={isSuperAdmin}
                   setupComplete={setupComplete}
                 />
-                <div className="border-t border-sidebar-border/30 p-2.5 shrink-0 mt-auto">
+                <div className="border-t border-sidebar-border/30 p-2.5 shrink-0 mt-auto safe-area-bottom">
                   <div className="px-2 py-2 mb-1">
                     <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
                     <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
