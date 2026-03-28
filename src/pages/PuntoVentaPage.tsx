@@ -527,6 +527,42 @@ export default function PuntoVentaPage() {
             </div>
           </div>
 
+          {/* Active promotions banner */}
+          {promocionesActivas && promocionesActivas.length > 0 && (
+            <div className="px-4 pb-2">
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {promocionesActivas.map(p => {
+                  const isGratis = p.tipo === 'producto_gratis';
+                  const isPct = p.tipo === 'descuento_porcentaje' || p.tipo === 'volumen';
+                  const isMonto = p.tipo === 'descuento_monto';
+                  const isPrecio = p.tipo === 'precio_especial';
+                  return (
+                    <div
+                      key={p.id}
+                      className="shrink-0 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2 flex items-center gap-2 min-w-[180px] max-w-[260px]"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        {isGratis ? <Gift className="h-4 w-4 text-primary" /> : <Tag className="h-4 w-4 text-primary" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-foreground truncate leading-tight">{p.nombre}</p>
+                        <p className="text-[10px] text-primary font-medium truncate">
+                          {isGratis && `${p.cantidad_minima}×${(p.cantidad_minima || 1) - (p.cantidad_gratis || 1)} · Lleva ${p.cantidad_minima}, paga ${(p.cantidad_minima || 1) - (p.cantidad_gratis || 1)}`}
+                          {isPct && `${p.valor}% de descuento`}
+                          {isMonto && `$${p.valor} desc. por unidad`}
+                          {isPrecio && `Precio especial $${p.valor}`}
+                        </p>
+                        {p.dias_semana && p.dias_semana.length > 0 && (
+                          <p className="text-[9px] text-muted-foreground capitalize">{p.dias_semana.join(', ')}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Product grid */}
           <div className="flex-1 overflow-auto px-4 pb-4">
             <div className="grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
