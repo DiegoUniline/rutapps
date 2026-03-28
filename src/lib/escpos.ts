@@ -256,6 +256,11 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       const det = detParts.join(' ');
       ln(clean(det).slice(0, W));
     }
+    // Per-product promotions
+    const linePromos = (data.promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+    for (const lp of linePromos) {
+      ln(row(`  *${clean(lp.descripcion)}`, `-${fmt(lp.descuento)}`, W));
+    }
   }
   ln(divider(W));
 
@@ -269,6 +274,14 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   add(BOLD_ON);
   ln(row('TOTAL', fmt(showTax ? data.total : data.subtotal), W));
   add(BOLD_OFF);
+
+  // Ahorro total por promociones
+  if (data.promociones && data.promociones.length > 0) {
+    const totalPromo = data.promociones.reduce((s, p) => s + p.descuento, 0);
+    if (totalPromo > 0) {
+      ln(row('Ahorro promos', `-${fmt(totalPromo)}`, W));
+    }
+  }
 
   if (data.montoRecibido && data.montoRecibido > 0) {
     ln(row('Recibido', fmt(data.montoRecibido), W));
