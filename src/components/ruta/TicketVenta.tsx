@@ -50,7 +50,7 @@ export default function TicketVenta(props: TicketVentaProps) {
     empresa, folio, fecha, clienteNombre, lineas,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
-    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onPrintTicket, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], onPrintTicket, onClose,
   } = props;
 
   const { symbol: cs } = useCurrency();
