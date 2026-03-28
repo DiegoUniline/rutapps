@@ -8,9 +8,10 @@ interface VentaTotalsProps {
   ieps_total: number;
   total: number;
   isMobile: boolean;
+  saldoPendiente?: number;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente }: VentaTotalsProps) {
   const { fmt } = useCurrency();
 
   return (
@@ -42,6 +43,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
           <span>Total</span>
           <span>{fmt(total)}</span>
         </div>
+        {saldoPendiente != null && saldoPendiente > 0 && (
+          <div className="flex justify-between pt-1">
+            <span className="text-destructive font-medium text-[13px]">Saldo pendiente</span>
+            <span className="text-destructive font-semibold text-[13px]">{fmt(saldoPendiente)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

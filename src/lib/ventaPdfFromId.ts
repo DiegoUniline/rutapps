@@ -54,6 +54,7 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
       iva_total: venta.iva_total ?? 0,
       ieps_total: venta.ieps_total ?? 0,
       total: venta.total ?? 0,
+      saldo_pendiente: venta.saldo_pendiente ?? 0,
       notas: venta.notas,
     },
     cliente: {

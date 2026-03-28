@@ -96,6 +96,7 @@ export function buildTicketDataFromVenta(params: {
     iva_total?: number;
     ieps_total?: number;
     total?: number;
+    saldo_pendiente?: number;
     condicion_pago?: string;
     metodo_pago?: string;
   };
@@ -150,5 +151,8 @@ export function buildTicketDataFromVenta(params: {
     metodoPago: venta.metodo_pago,
     montoRecibido: params.montoRecibido,
     cambio: params.cambio,
+    saldoAnterior: undefined,
+    pagoAplicado: undefined,
+    saldoNuevo: (venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined,
   };
 }

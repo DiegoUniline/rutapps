@@ -8,11 +8,12 @@ interface Props {
   cuentasPendientes: { id: string; folio: string | null; montoAplicar: number }[];
   lineas: any[];
   ventaTotal: number;
+  saldoPendiente?: number;
   onDone: () => void;
   fmt: (n: number) => string;
 }
 
-export function TicketView({ ticketData, clienteNombre, cuentasPendientes, lineas, ventaTotal, onDone, fmt }: Props) {
+export function TicketView({ ticketData, clienteNombre, cuentasPendientes, lineas, ventaTotal, saldoPendiente, onDone, fmt }: Props) {
   const { symbol: s } = useCurrency();
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -56,6 +57,12 @@ export function TicketView({ ticketData, clienteNombre, cuentasPendientes, linea
                 <span className="text-foreground">Total venta</span>
                 <span className="text-foreground">{s}{fmt(ventaTotal)}</span>
               </div>
+              {(saldoPendiente ?? 0) > 0 && (
+                <div className="flex justify-between text-[12px] font-semibold mt-1">
+                  <span className="text-destructive">Saldo pendiente</span>
+                  <span className="text-destructive">{s}{fmt(saldoPendiente!)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

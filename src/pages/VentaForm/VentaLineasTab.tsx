@@ -23,11 +23,12 @@ interface Props {
   sinImpuestos?: boolean;
   setSinImpuestos?: (v: boolean) => void;
   readOnlyForm?: boolean;
+  saldoPendiente?: number;
 }
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
-  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm } = props;
+  const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente } = props;
 
   return (
     <div className="p-3 sm:p-4 space-y-3">
@@ -77,7 +78,7 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
       )}
-      <VentaTotals {...totals} isMobile={isMobile} />
+      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} />
     </div>
   );
 }
