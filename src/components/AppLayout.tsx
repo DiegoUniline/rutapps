@@ -398,7 +398,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Menu className="h-5 w-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border">
+              <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border flex flex-col h-full">
                 <div className="h-14 flex items-center px-4 border-b border-sidebar-border/30">
                   <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-7 w-7 rounded object-contain" />
                   <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
@@ -410,7 +410,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   isSuperAdmin={isSuperAdmin}
                   setupComplete={setupComplete}
                 />
-                <div className="border-t border-sidebar-border/30 p-2.5">
+                <div className="border-t border-sidebar-border/30 p-2.5 shrink-0 mt-auto">
                   <div className="px-2 py-2 mb-1">
                     <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
                     <div className="text-[11px] text-sidebar-foreground/50 truncate">{empresa?.nombre ?? 'Mi Empresa'}</div>
