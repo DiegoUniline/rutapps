@@ -54,7 +54,11 @@ export default function PuntoVentaPage() {
   const [showClientes, setShowClientes] = useState(false);
   const [clienteSearch, setClienteSearch] = useState('');
   const [showPago, setShowPago] = useState(false);
-  const [paySplits, setPaySplits] = useState<PaySplit[]>([{ id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
+  const [payEfectivo, setPayEfectivo] = useState('');
+  const [payTransferencia, setPayTransferencia] = useState('');
+  const [payTarjeta, setPayTarjeta] = useState('');
+  const [refTransferencia, setRefTransferencia] = useState('');
+  const [refTarjeta, setRefTarjeta] = useState('');
   const [saving, setSaving] = useState(false);
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [scanBuffer, setScanBuffer] = useState('');
