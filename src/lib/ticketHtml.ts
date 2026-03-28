@@ -35,6 +35,11 @@ export interface TicketLinea {
   esCambio?: boolean;
 }
 
+export interface TicketPromo {
+  descripcion: string;
+  descuento: number;
+}
+
 export interface TicketData {
   empresa: TicketEmpresa;
   folio: string;
@@ -52,6 +57,7 @@ export interface TicketData {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
+  promociones?: TicketPromo[];
 }
 
 const COLS = 32;
