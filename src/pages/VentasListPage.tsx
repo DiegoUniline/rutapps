@@ -297,6 +297,7 @@ export default function VentasListPage() {
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Descuento</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
