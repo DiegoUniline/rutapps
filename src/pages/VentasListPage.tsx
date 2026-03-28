@@ -308,7 +308,7 @@ export default function VentasListPage() {
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={12} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
+              <td colSpan={13} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
             </tr>
           )}
           {renderTableRows(items)}
