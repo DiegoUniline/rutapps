@@ -61,6 +61,7 @@ export function useVentaForm() {
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+  const loadedVentaIdRef = useRef<string | null>(null);
   const { requestPin, PinDialog } = usePinAuth();
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
