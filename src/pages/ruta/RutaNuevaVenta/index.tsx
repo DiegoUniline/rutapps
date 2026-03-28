@@ -25,6 +25,7 @@ export default function RutaNuevaVenta() {
         condicionPago={h.condicionPago} metodoPago={h.pagos.map(p => p.metodo_pago).join(', ')} montoRecibido={h.montoRecibidoNum} cambio={h.cambio}
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
+        promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
         onClose={() => h.navigate('/ruta')}
       />
     );
