@@ -155,6 +155,9 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   if (pedido.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(pedido.iva_total)}` });
   if (pedido.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `${s}${fmtCurrency(pedido.ieps_total)}` });
   totalRows.push({ label: 'Total:', value: `${s}${fmtCurrency(pedido.total)}`, bold: true });
+  if ((pedido.saldo_pendiente ?? 0) > 0) {
+    totalRows.push({ label: 'Saldo pendiente:', value: `${s}${fmtCurrency(pedido.saldo_pendiente!)}`, bold: true, red: true });
+  }
 
   y = drawTotalsBlock(doc, y, totalRows);
 

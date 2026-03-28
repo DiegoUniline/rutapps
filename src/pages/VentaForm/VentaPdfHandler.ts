@@ -32,7 +32,8 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       folio: form.folio ?? '', fecha: form.fecha ?? todayLocal(),
       status: form.status ?? 'borrador', condicion_pago: form.condicion_pago ?? 'contado',
       subtotal: form.subtotal ?? 0, descuento_total: form.descuento_total ?? 0,
-      iva_total: form.iva_total ?? 0, ieps_total: form.ieps_total ?? 0, total: form.total ?? 0, notas: form.notas,
+      iva_total: form.iva_total ?? 0, ieps_total: form.ieps_total ?? 0, total: form.total ?? 0,
+      saldo_pendiente: form.saldo_pendiente ?? 0, notas: form.notas,
     },
     cliente: {
       nombre: clienteData?.nombre ?? '—', codigo: clienteData?.codigo ?? undefined,

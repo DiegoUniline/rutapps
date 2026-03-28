@@ -151,5 +151,8 @@ export function buildTicketDataFromVenta(params: {
     metodoPago: venta.metodo_pago,
     montoRecibido: params.montoRecibido,
     cambio: params.cambio,
+    saldoAnterior: undefined,
+    pagoAplicado: undefined,
+    saldoNuevo: (venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined,
   };
 }

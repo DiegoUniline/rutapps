@@ -43,6 +43,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
           <span>Total</span>
           <span>{fmt(total)}</span>
         </div>
+        {saldoPendiente != null && saldoPendiente > 0 && (
+          <div className="flex justify-between pt-1">
+            <span className="text-destructive font-medium text-[13px]">Saldo pendiente</span>
+            <span className="text-destructive font-semibold text-[13px]">{fmt(saldoPendiente)}</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -65,6 +65,7 @@ export default function VentaFormPage() {
         iva_total: totals.iva_total,
         ieps_total: totals.ieps_total,
         total: totals.total,
+        saldo_pendiente: saldoPendiente,
         condicion_pago: form.condicion_pago,
       },
       clienteNombre: clienteData?.nombre ?? 'Sin cliente',

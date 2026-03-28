@@ -57,6 +57,12 @@ export function TicketView({ ticketData, clienteNombre, cuentasPendientes, linea
                 <span className="text-foreground">Total venta</span>
                 <span className="text-foreground">{s}{fmt(ventaTotal)}</span>
               </div>
+              {(saldoPendiente ?? 0) > 0 && (
+                <div className="flex justify-between text-[12px] font-semibold mt-1">
+                  <span className="text-destructive">Saldo pendiente</span>
+                  <span className="text-destructive">{s}{fmt(saldoPendiente!)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

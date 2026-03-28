@@ -23,6 +23,7 @@ interface Props {
   sinImpuestos?: boolean;
   setSinImpuestos?: (v: boolean) => void;
   readOnlyForm?: boolean;
+  saldoPendiente?: number;
 }
 
 export function VentaLineasTab(props: Props) {
