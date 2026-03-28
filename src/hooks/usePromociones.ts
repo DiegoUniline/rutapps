@@ -27,12 +27,16 @@ export interface Promocion {
 }
 
 export function usePromociones() {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['promociones'],
+    queryKey: ['promociones', empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('promociones')
         .select('*')
+        .eq('empresa_id', empresaId!)
         .order('prioridad', { ascending: false });
       if (error) throw error;
       return data as Promocion[];
@@ -41,13 +45,17 @@ export function usePromociones() {
 }
 
 export function usePromocionesActivas() {
+  const { empresa } = useAuth();
+  const empresaId = empresa?.id;
   return useQuery({
-    queryKey: ['promociones-activas'],
+    queryKey: ['promociones-activas', empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data, error } = await supabase
         .from('promociones')
         .select('*')
+        .eq('empresa_id', empresaId!)
         .eq('activa', true)
         .or(`vigencia_inicio.is.null,vigencia_inicio.lte.${today}`)
         .or(`vigencia_fin.is.null,vigencia_fin.gte.${today}`)
