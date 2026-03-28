@@ -1054,6 +1054,7 @@ export default function PuntoVentaPage() {
                 metodoPago={lastVentaData.metodoPago}
                 montoRecibido={lastVentaData.montoRecibido}
                 cambio={lastVentaData.cambio}
+                saldoNuevo={(lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined}
                 promociones={lastVentaData.promoDetails ?? []}
                 onPrintTicket={() => {
                   const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
