@@ -955,7 +955,8 @@ export default function PuntoVentaPage() {
             montoRecibido={lastVentaData.montoRecibido}
             cambio={lastVentaData.cambio}
             onPrintTicket={() => {
-              const td = buildTicketDataFromVenta({
+               const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+               const td = buildTicketDataFromVenta({
                 empresa,
                 venta: {
                   folio: lastVentaData.folio,
@@ -978,6 +979,7 @@ export default function PuntoVentaPage() {
                 })),
                 montoRecibido: lastVentaData.montoRecibido,
                 cambio: lastVentaData.cambio,
+                promociones: promoTicket,
               });
               const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
               printTicket(td, { ticketAncho });
