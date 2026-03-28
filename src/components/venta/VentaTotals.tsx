@@ -13,6 +13,7 @@ interface VentaTotalsProps {
   saldoPendiente?: number;
   promoResults?: PromoResult[];
   descuento_promo?: number;
+  descuento_extra_amt?: number;
 }
 
 export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo }: VentaTotalsProps) {
