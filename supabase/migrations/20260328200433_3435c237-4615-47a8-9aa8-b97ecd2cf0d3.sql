@@ -1,0 +1,2 @@
+ALTER TABLE public.ventas ADD COLUMN IF NOT EXISTS descuento_extra numeric NOT NULL DEFAULT 0;
+ALTER TABLE public.ventas ADD COLUMN IF NOT EXISTS descuento_extra_tipo text NOT NULL DEFAULT 'porcentaje';
