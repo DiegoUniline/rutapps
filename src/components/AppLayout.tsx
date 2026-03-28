@@ -506,12 +506,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Desktop layout with sidebar
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen overflow-hidden flex flex-col bg-background">
       <NotificationRuntime bannersOnly />
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-0">
       <aside
         className={cn(
-          "h-screen sticky top-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 shrink-0",
+          "h-full shrink-0 flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-200 overflow-hidden",
           collapsed ? "w-[52px]" : "w-56"
         )}
       >
@@ -583,10 +583,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         <SuperAdminEmpresaSelector />
         <Breadcrumb />
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1">
           {children}
         </main>
         <UnilineFooter />
