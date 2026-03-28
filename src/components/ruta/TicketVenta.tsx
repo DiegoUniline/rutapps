@@ -226,12 +226,20 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                       </span>
                     </div>
                     {!l.esCambio && (
-                      <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
-                        <span>{fmt(l.precio)} c/u</span>
-                        {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
-                        {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
-                        {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
-                      </div>
+                      <>
+                        <div className="flex gap-2 text-[8px] text-muted-foreground mt-px">
+                          <span>{fmt(l.precio)} c/u</span>
+                          {(l.descuento_pct ?? 0) > 0 && <span className="text-primary">-{l.descuento_pct}% dto</span>}
+                          {taxMode === 'ambos' && (l.iva_pct ?? 0) > 0 && <span>IVA {l.iva_pct}%{(l.iva_monto ?? 0) > 0 ? ` (${fmt(l.iva_monto!)})` : ''}</span>}
+                          {taxMode === 'ambos' && (l.ieps_pct ?? 0) > 0 && <span>IEPS {l.ieps_pct}%{(l.ieps_monto ?? 0) > 0 ? ` (${fmt(l.ieps_monto!)})` : ''}</span>}
+                        </div>
+                        {promociones.filter(p => p.producto_id && p.producto_id === l.producto_id).map((p, pi) => (
+                          <div key={pi} className="flex justify-between text-[8px] mt-px">
+                            <span className="text-primary flex items-center gap-0.5">🏷️ {p.descripcion}</span>
+                            <span className="text-primary font-bold tabular-nums">-{fmt(p.descuento)}</span>
+                          </div>
+                        ))}
+                      </>
                     )}
                   </div>
                 ))}
