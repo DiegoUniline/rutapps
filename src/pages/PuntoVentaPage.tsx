@@ -61,8 +61,10 @@ export default function PuntoVentaPage() {
   const [clienteTarifaId, setClienteTarifaId] = useState<string | null>(null);
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
 
+  const almacenId = profile?.almacen_id || null;
+
   // Products
-  const { data: productos } = useQuery({
+  const { data: productosRaw } = useQuery({
     queryKey: ['pos-productos', empresa?.id],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
@@ -77,6 +79,28 @@ export default function PuntoVentaPage() {
       return data ?? [];
     },
   });
+
+  // Stock by warehouse (user's assigned warehouse)
+  const { data: stockAlmacen } = useQuery({
+    queryKey: ['pos-stock-almacen', empresa?.id, almacenId],
+    staleTime: 30_000,
+    enabled: !!empresa?.id && !!almacenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('empresa_id', empresa!.id)
+        .eq('almacen_id', almacenId!);
+      return data ?? [];
+    },
+  });
+
+  // Merge: use warehouse stock when user has almacen_id, otherwise global
+  const productos = useMemo(() => {
+    if (!productosRaw) return undefined;
+    if (!almacenId) return productosRaw;
+    const stockMap = new Map((stockAlmacen ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0]));
+    return productosRaw.map(p => ({ ...p, cantidad: stockMap.get(p.id) ?? 0 }));
+  }, [productosRaw, stockAlmacen, almacenId]);
 
   // Clients
   const { data: clientes } = useQuery({
