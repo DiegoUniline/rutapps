@@ -62,7 +62,7 @@ function useClientesConSaldo(search: string) {
         }
       });
 
-      return Array.from(map.values()).sort((a, b) => b.saldo - a.saldo);
+      return Array.from(map.values()).filter(c => c.saldo >= 0.01).sort((a, b) => b.saldo - a.saldo);
     },
   });
 }
