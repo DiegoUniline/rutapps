@@ -8,6 +8,7 @@ interface VentaTotalsProps {
   ieps_total: number;
   total: number;
   isMobile: boolean;
+  saldoPendiente?: number;
 }
 
 export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile }: VentaTotalsProps) {
