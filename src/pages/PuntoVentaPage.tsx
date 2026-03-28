@@ -464,6 +464,7 @@ export default function PuntoVentaPage() {
         metodoPago: metodosUsados || 'efectivo',
         montoRecibido: totalPagado > 0 ? totalPagado : undefined,
         cambio: cambio > 0 ? cambio : undefined,
+        saldoPendiente: condicion === 'credito' ? totals.total : 0,
       });
 
       toast.success('¡Venta registrada!');
