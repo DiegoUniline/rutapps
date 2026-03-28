@@ -36,17 +36,18 @@ export default function ProductSearchInput({ products, value, displayText, onSel
       .slice(0, 8);
   }, [search, products]);
 
-  // Skip auto-focus during initial page load; only focus on user-added rows
-  const mountedAtRef = useRef(Date.now());
+  // Skip auto-focus on initial mount (page load); only focus when autoFocus
+  // transitions to true AFTER mount (user selected a product in the previous last row,
+  // causing a new empty row to appear and THIS row to become isLast && isEmpty)
+  const isFirstRenderRef = useRef(true);
   useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      return;
+    }
     if (autoFocus && !readOnly && !value) {
-      // If component mounted more than 500ms ago or was mounted recently by user action
-      // We use a small grace period: if the page just loaded, skip auto-focus
-      const timeSinceMount = Date.now() - mountedAtRef.current;
-      if (timeSinceMount > 100) {
-        setEditing(true);
-        setTimeout(() => inputRef.current?.focus(), 30);
-      }
+      setEditing(true);
+      setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [autoFocus, readOnly, value]);
 
