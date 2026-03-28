@@ -109,10 +109,11 @@ export function buildTicketDataFromVenta(params: {
     iva_monto?: number;
     ieps_monto?: number;
     descuento_pct?: number;
+    producto_id?: string;
   }>;
   montoRecibido?: number;
   cambio?: number;
-  promociones?: { descripcion: string; descuento: number }[];
+  promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
 }): TicketData {
   const { empresa, venta, clienteNombre, lineas } = params;
   return {
