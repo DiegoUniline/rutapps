@@ -20,7 +20,7 @@ interface Props {
   registerRef?: (el: HTMLElement | null) => void;
 }
 
-export default function ProductSearchInput({ products, value, displayText, onSelect, onNavigate, autoFocus, readOnly }: Props) {
+export default function ProductSearchInput({ products, value, displayText, onSelect, onNavigate, autoFocus, readOnly, registerRef }: Props) {
   const [editing, setEditing] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
