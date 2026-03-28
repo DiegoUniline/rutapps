@@ -268,7 +268,7 @@ export function useVentaForm() {
         await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps } as any);
       }
       if (isNew && autoConfirm) {
-        const saldo = form.condicion_pago === 'contado' ? 0 : totals.total;
+        const saldo = form.condicion_pago === 'contado' ? 0 : finalTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
