@@ -10,6 +10,11 @@ import {
 } from './pdfStyleOdoo';
 import { getCurrencyConfig } from '@/lib/currency';
 
+interface PedidoPdfPromo {
+  descripcion: string;
+  descuento: number;
+}
+
 interface PedidoPdfParams {
   empresa: EmpresaInfo;
   logoBase64?: string | null;
@@ -62,6 +67,7 @@ interface PedidoPdfParams {
     monto: number;
     referencia?: string;
   }[];
+  promociones?: PedidoPdfPromo[];
 }
 
 const STATUS_MAP: Record<string, { label: string; color: 'green' | 'red' | 'neutral' }> = {
