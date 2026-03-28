@@ -16,6 +16,8 @@ interface Props {
   onNavigate?: (dir: 'next' | 'prev') => void;
   autoFocus?: boolean;
   readOnly?: boolean;
+  /** Callback to register the focusable element for grid navigation (setCellRef) */
+  registerRef?: (el: HTMLElement | null) => void;
 }
 
 export default function ProductSearchInput({ products, value, displayText, onSelect, onNavigate, autoFocus, readOnly }: Props) {
