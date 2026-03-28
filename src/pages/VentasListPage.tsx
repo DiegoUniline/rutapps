@@ -123,6 +123,9 @@ export default function VentasListPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
+  const { hasPermiso } = usePermisos();
+  const canDelete = hasPermiso('ventas', 'eliminar');
+  const deleteVenta = useDeleteVenta();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
