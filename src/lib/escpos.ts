@@ -256,6 +256,11 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
       const det = detParts.join(' ');
       ln(clean(det).slice(0, W));
     }
+    // Per-product promotions
+    const linePromos = (data.promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+    for (const lp of linePromos) {
+      ln(row(`  *${clean(lp.descripcion)}`, `-${fmt(lp.descuento)}`, W));
+    }
   }
   ln(divider(W));
 
