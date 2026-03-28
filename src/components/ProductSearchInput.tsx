@@ -113,8 +113,11 @@ export default function ProductSearchInput({ products, value, displayText, onSel
   if (!editing && value) {
     return (
       <div
+        ref={el => registerRef?.(el)}
+        tabIndex={0}
         onClick={startEditing}
-        className="text-[12px] py-1 px-1 cursor-text min-h-[28px] flex items-center hover:bg-secondary/50 rounded transition-colors"
+        onFocus={startEditing}
+        className="text-[12px] py-1 px-1 cursor-text min-h-[28px] flex items-center hover:bg-secondary/50 rounded transition-colors outline-none"
       >
         {displayText || '—'}
       </div>
