@@ -29,6 +29,7 @@ interface TicketVentaProps {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
+  promociones?: { descripcion: string; descuento: number }[];
   onPrintTicket?: () => void;
   onClose: () => void;
 }
