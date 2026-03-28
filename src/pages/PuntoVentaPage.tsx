@@ -430,6 +430,8 @@ export default function PuntoVentaPage() {
         subtotal: totals.subtotal,
         iva: totals.iva,
         ieps: totals.ieps,
+        descuento: totals.descuento,
+        promos: promoResults.map(r => r.descripcion),
         total: totals.total,
         condicionPago: condicion,
         metodoPago: paySplits.map(s => s.metodo).join(' + '),
