@@ -306,10 +306,11 @@ export default function PuntoVentaPage() {
       const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
       const td = buildTicketDataFromVenta({
         empresa,
-        venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
+        venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, saldo_pendiente: lastVentaData.saldoPendiente, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
         clienteNombre: lastVentaData.clienteNombre,
         lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
         montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
+        saldoNuevo: (lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined,
       });
       printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
     }, 400);
