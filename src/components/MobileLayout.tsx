@@ -49,26 +49,19 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
-    // Signal that this reload is user-initiated
-    window.dispatchEvent(new Event('uniline:sw-apply-update'));
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg?.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          await new Promise(r => setTimeout(r, 300));
         } else if (reg) {
-          await reg.unregister();
+          await reg.update();
         }
       }
-      if ('caches' in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.map(name => caches.delete(name)));
-      }
+      setSwUpdateAvailable(false);
     } catch {
       // ignore errors
     }
-    window.location.reload();
   };
 
   return (

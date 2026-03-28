@@ -43,13 +43,7 @@ if ("serviceWorker" in navigator) {
       });
     });
 
-    // Only reload on controllerchange if user explicitly requested it
-    let userRequestedUpdate = false;
-    window.addEventListener('uniline:sw-apply-update', () => { userRequestedUpdate = true; });
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!userRequestedUpdate) return;
-      window.location.reload();
-    });
+    // Silent update: no visible reload on controller change
   });
 }
 
