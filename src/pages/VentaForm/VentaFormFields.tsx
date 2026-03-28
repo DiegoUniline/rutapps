@@ -137,6 +137,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
         </div>
         <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div></div>
         <div><label className="label-odoo">Almacén</label>{renderAlmacen()}</div>
+        {renderDescuentoExtra()}
         {renderSaldo()}
       </div>
     );
