@@ -118,6 +118,38 @@ export default function CobranzaPage() {
     setWaOpen(true);
   };
 
+  const handlePrintCobro = (cobro: any) => {
+    if (!empresa) return;
+    const ticketData = buildCobroTicketData({
+      empresa: {
+        nombre: empresa.nombre ?? '',
+        rfc: (empresa as any).rfc,
+        razon_social: (empresa as any).razon_social,
+        direccion: (empresa as any).direccion,
+        colonia: (empresa as any).colonia,
+        ciudad: (empresa as any).ciudad,
+        estado: (empresa as any).estado,
+        cp: (empresa as any).cp,
+        telefono: (empresa as any).telefono,
+        email: (empresa as any).email,
+        logo_url: (empresa as any).logo_url,
+        moneda: (empresa as any).moneda,
+        notas_ticket: (empresa as any).notas_ticket,
+        ticket_campos: (empresa as any).ticket_campos,
+      },
+      cobro: {
+        id: cobro.id,
+        fecha: cobro.fecha,
+        monto: cobro.monto,
+        metodo_pago: cobro.metodo_pago,
+        referencia: cobro.referencia,
+        notas: cobro.notas,
+      },
+      clienteNombre: (cobro.clientes as any)?.nombre ?? 'Sin cliente',
+    });
+    printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
+  };
+
   // Build dynamic filter options
   const clienteOptions = useMemo(() => {
     const names = new Set<string>();
