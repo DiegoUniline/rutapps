@@ -123,6 +123,7 @@ export function useVentaDetalle() {
   const initCobrar = () => {
     if (otrasPendientes?.length) { setCuentasPendientes(otrasPendientes.map(v => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, montoAplicar: 0 }))); } else { setCuentasPendientes([]); }
     setMetodoPago('efectivo');
+    setMontoAplicarActual(saldoActual);
     setMontoRecibido(saldoActual > 0 ? saldoActual.toString() : '');
     setReferenciaPago('');
     setView('cobrar');
