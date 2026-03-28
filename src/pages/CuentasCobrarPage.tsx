@@ -64,10 +64,15 @@ export default function CuentasCobrarPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-        <CreditCard className="h-5 w-5" /> Cuentas por cobrar
-        <HelpButton title={HELP.cuentasCobrar.title} sections={HELP.cuentasCobrar.sections} />
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <CreditCard className="h-5 w-5" /> Cuentas por cobrar
+          <HelpButton title={HELP.cuentasCobrar.title} sections={HELP.cuentasCobrar.sections} />
+        </h1>
+        <Button onClick={() => navigate('/finanzas/aplicar-pagos')} className="gap-2">
+          <Banknote className="h-4 w-4" /> Aplicar pagos
+        </Button>
+      </div>
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
