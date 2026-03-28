@@ -247,8 +247,7 @@ export default function VentasListPage() {
                 title="Eliminar"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!confirm('¿Eliminar esta venta?')) return;
-                  deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                  setDeleteTarget(v.id);
                 }}
               >
                 <Trash2 className="h-3.5 w-3.5" />
