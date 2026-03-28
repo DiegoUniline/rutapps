@@ -15,7 +15,7 @@ export default function RutaVentaDetalle() {
   const vendedorNombre = (h.venta as any).vendedores?.nombre ?? '—';
 
   if (h.view === 'ticket' && h.ticketData) {
-    return <TicketView ticketData={h.ticketData} clienteNombre={clienteNombre} cuentasPendientes={h.cuentasPendientes} lineas={lineas} ventaTotal={h.venta.total ?? 0} onDone={() => h.navigate('/ruta/ventas')} fmt={h.fmt} />;
+    return <TicketView ticketData={h.ticketData} clienteNombre={clienteNombre} cuentasPendientes={h.cuentasPendientes} lineas={lineas} ventaTotal={h.venta.total ?? 0} saldoPendiente={h.venta.saldo_pendiente ?? 0} onDone={() => h.navigate('/ruta/ventas')} fmt={h.fmt} />;
   }
 
   if (h.view === 'editar') {
