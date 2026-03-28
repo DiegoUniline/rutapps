@@ -13,6 +13,7 @@ import { getCurrencyConfig } from '@/lib/currency';
 interface PedidoPdfPromo {
   descripcion: string;
   descuento: number;
+  producto_id?: string;
 }
 
 interface PedidoPdfParams {
@@ -53,6 +54,7 @@ interface PedidoPdfParams {
     iva_pct: number;
     ieps_pct: number;
     total: number;
+    producto_id?: string;
   }[];
   entregas: {
     folio: string;
@@ -118,10 +120,10 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
 
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
 
-  // ── PRODUCTS TABLE ──
-  y = drawCleanTable(doc, y,
-    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
-    lineas.map(l => [
+  // ── PRODUCTS TABLE (with inline promo rows) ──
+  const tableRows: any[][] = [];
+  for (const l of lineas) {
+    tableRows.push([
       { content: l.codigo, styles: { textColor: C.sublabel, fontStyle: 'normal', fontSize: 7 } },
       l.nombre,
       { content: String(l.cantidad), styles: { halign: 'center' } },
@@ -133,7 +135,21 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
       { content: l.iva_pct > 0 ? `${l.iva_pct}%` : '—', styles: { halign: 'center', textColor: l.iva_pct > 0 ? C.text : C.sublabel } },
       { content: l.ieps_pct > 0 ? `${l.ieps_pct}%` : '—', styles: { halign: 'center', textColor: l.ieps_pct > 0 ? C.text : C.sublabel } },
       { content: `${s}${fmtCurrency(l.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
-    ]),
+    ]);
+    // Insert promo sub-rows for this product
+    const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+    for (const lp of linePromos) {
+      tableRows.push([
+        '',
+        { content: `🏷️ ${lp.descripcion}`, colSpan: 6, styles: { textColor: [30, 130, 76], fontStyle: 'italic', fontSize: 7 } },
+        '',
+        { content: `-${s}${fmtCurrency(lp.descuento)}`, styles: { halign: 'right', textColor: [30, 130, 76], fontStyle: 'bold', fontSize: 7 } },
+      ]);
+    }
+  }
+  y = drawCleanTable(doc, y,
+    ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
+    tableRows,
     {
       0: { cellWidth: 20 },
       2: { cellWidth: 14, halign: 'center' },
@@ -146,26 +162,18 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
     },
   );
 
-  // ── PROMOCIONES APLICADAS ──
+  // ── AHORRO TOTAL PROMOS (inline per product above) ──
   if (promociones && promociones.length > 0) {
-    y = checkPageBreak(doc, y);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text('Promociones aplicadas:', ML, y);
-    y += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    for (const p of promociones) {
-      doc.setTextColor(30, 130, 76);
-      doc.text(`🎁 ${p.descripcion}  —  Ahorro: ${s}${fmtCurrency(p.descuento)}`, ML, y);
-      y += 3.5;
-    }
     const totalAhorro = promociones.reduce((sum, p) => sum + p.descuento, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(`Ahorro total por promociones: ${s}${fmtCurrency(totalAhorro)}`, ML, y);
-    y += 6;
+    if (totalAhorro > 0) {
+      y = checkPageBreak(doc, y);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 130, 76);
+      doc.text(`Ahorro total por promociones: ${s}${fmtCurrency(totalAhorro)}`, ML, y);
+      y += 6;
+      doc.setTextColor(...C.text);
+    }
   }
 
   // ── TOTALS ──

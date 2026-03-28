@@ -33,11 +33,13 @@ export interface TicketLinea {
   ieps_monto?: number;
   descuento_pct?: number;
   esCambio?: boolean;
+  producto_id?: string;
 }
 
 export interface TicketPromo {
   descripcion: string;
   descuento: number;
+  producto_id?: string;
 }
 
 export interface TicketData {
@@ -142,6 +144,12 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     const detParts = [`  ${fmt(l.precio)}c/u`];
     if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
     add(detParts.join(' ').substring(0, COLS));
+    // Per-product promotions
+    const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+    for (const lp of linePromos) {
+      const desc = fmt(lp.descuento);
+      add(pad(`  *${lp.descripcion}`, `-${desc}`));
+    }
   }
   add(div);
 
@@ -154,27 +162,12 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   }
   add(pad('TOTAL', fmt(showTax ? total : subtotal)));
 
-  // ── Promociones aplicadas ──
+  // ── Ahorro total por promociones ──
   if (promociones && promociones.length > 0) {
-    add(div);
-    add(centerText('PROMOCIONES'));
-    for (const p of promociones) {
-      const desc = fmt(p.descuento);
-      const lines = wrapText(`* ${p.descripcion}`, COLS - desc.length - 1);
-      if (lines.length === 1) {
-        add(pad(lines[0], `-${desc}`));
-      } else {
-        for (let i = 0; i < lines.length; i++) {
-          if (i === lines.length - 1) {
-            add(pad(lines[i], `-${desc}`));
-          } else {
-            add(lines[i]);
-          }
-        }
-      }
-    }
     const totalPromo = promociones.reduce((s, p) => s + p.descuento, 0);
-    add(pad('Ahorro total', `-${fmt(totalPromo)}`));
+    if (totalPromo > 0) {
+      add(pad('Ahorro promos', `-${fmt(totalPromo)}`));
+    }
   }
 
   if (montoRecibido != null && montoRecibido > 0) {
