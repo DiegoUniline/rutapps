@@ -223,6 +223,38 @@ function AppRoutes() {
     );
   }
 
+  // Solo móvil — user can only access /ruta routes
+  if (isSoloMovil) {
+    return (
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/ruta" element={<MobileLayout />}>
+            <Route index element={<RutaClientesEntregas />} />
+            <Route path="dashboard" element={<RutaDashboard />} />
+            <Route path="ventas" element={<RutaVentasTab />} />
+            <Route path="carga" element={<RutaMiCarga />} />
+            <Route path="cobros" element={<RutaCobros />} />
+            <Route path="stock" element={<RutaStock />} />
+            <Route path="gastos" element={<RutaGastos />} />
+            <Route path="entregas" element={<RutaClientesEntregas />} />
+            <Route path="perfil" element={<RutaPerfil />} />
+          </Route>
+          <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
+          <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
+          <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
+          <Route path="/ruta/clientes/nuevo" element={<RutaNuevoCliente />} />
+          <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
+          <Route path="/ruta/descarga" element={<RutaDescarga />} />
+          <Route path="/ruta/mapa" element={<RutaMapaPage />} />
+          <Route path="/ruta/navegacion" element={<RutaNavegacionPage />} />
+          <Route path="/ruta/sincronizar" element={<RutaSincronizarPage />} />
+          <Route path="/conteo/:countId" element={<ConteoFisicoPage />} />
+          <Route path="*" element={<Navigate to="/ruta" replace />} />
+        </Routes>
+      </Suspense>
+    );
+  }
+
   return (
     <>
       <SubscriptionBanner />
