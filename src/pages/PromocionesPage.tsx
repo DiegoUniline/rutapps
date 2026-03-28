@@ -94,8 +94,8 @@ export default function PromocionesPage() {
     queryKey: ['promo-clientes', empresa?.id],
     enabled: !!empresa?.id && !!editing,
     queryFn: async () => {
-      const { data } = await supabase.from('clientes').select('id, nombre, codigo').eq('empresa_id', empresa!.id).order('nombre').limit(500);
-      return data ?? [];
+      const { data } = await (supabase.from('clientes').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).order('nombre').limit(500);
+      return (data ?? []) as { id: string; nombre: string; codigo: string | null }[];
     },
   });
 
