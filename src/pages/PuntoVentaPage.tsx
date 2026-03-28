@@ -1051,6 +1051,7 @@ export default function PuntoVentaPage() {
                 metodoPago={lastVentaData.metodoPago}
                 montoRecibido={lastVentaData.montoRecibido}
                 cambio={lastVentaData.cambio}
+                promociones={lastVentaData.promoDetails ?? []}
                 onPrintTicket={() => {
                   const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
                   const td = buildTicketDataFromVenta({
