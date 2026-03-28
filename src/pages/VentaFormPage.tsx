@@ -453,9 +453,9 @@ export default function VentaFormPage() {
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
   };
-
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const handleDelete = async () => {
-    if (!form.id || !confirm('¿Eliminar esta venta?')) return;
+    if (!form.id) return;
     await deleteVenta.mutateAsync(form.id);
     toast.success('Venta eliminada');
     navigate('/ventas');
