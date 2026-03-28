@@ -276,12 +276,13 @@ export default function VentasListPage() {
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
+            <th className="py-2 px-2 w-8" />
           </tr>
         </thead>
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={11} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
+              <td colSpan={12} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
             </tr>
           )}
           {renderTableRows(items)}
