@@ -259,8 +259,10 @@ export default function PuntoVentaPage() {
       if (item.tiene_iva) iva += (line + lineIeps) * (item.iva_pct / 100);
       items += item.cantidad;
     });
-    return { subtotal, iva, ieps, total: subtotal + iva + ieps, items };
-  }, [cart]);
+    const descuento = totalDescuentoPromo;
+    const totalFinal = Math.max(0, subtotal + iva + ieps - descuento);
+    return { subtotal, iva, ieps, descuento, total: totalFinal, items };
+  }, [cart, totalDescuentoPromo]);
 
   const totalPagado = useMemo(() => paySplits.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0), [paySplits]);
   const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
