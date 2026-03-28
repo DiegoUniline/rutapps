@@ -26,6 +26,7 @@ export default function VentaFormPage() {
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
