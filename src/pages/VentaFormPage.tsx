@@ -581,7 +581,7 @@ export default function VentaFormPage() {
         isCreatingEntrega={crearEntrega.isPending}
         onBack={() => navigate('/ventas')}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={() => setShowDeleteConfirm(true)}
         onStatusChange={handleStatusChange}
         onCreateEntrega={async () => {
           const linesToUse = remaining && remaining.length > 0
