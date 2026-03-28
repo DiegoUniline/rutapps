@@ -12,7 +12,7 @@ interface Props {
   lineas: Partial<VentaLinea>[];
   productosList: any[];
   readOnly: boolean;
-  totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number };
+  totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number; descuento_extra_amt?: number };
   promoResults?: PromoResult[];
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
