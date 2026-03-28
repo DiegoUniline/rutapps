@@ -1099,7 +1099,8 @@ export default function PuntoVentaPage() {
                     montoRecibido: lastVentaData.montoRecibido,
                     cambio: lastVentaData.cambio,
                     promociones: promoTicket,
-                    saldoNuevo: (lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined,
+                    saldoAnterior: lastVentaData.saldoAnterior,
+                    saldoNuevo: lastVentaData.saldoNuevoCalc,
                   });
                   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
                   printTicket(td, { ticketAncho });
