@@ -1,4 +1,5 @@
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePermisos } from '@/hooks/usePermisos';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
