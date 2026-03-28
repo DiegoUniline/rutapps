@@ -174,7 +174,7 @@ export default function PuntoVentaPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => { window.removeEventListener('keydown', handleKeyDown); clearTimeout(timer); };
-  }, [productos, cart]);
+  }, [productos, cart, showPago, showTicket, condicion, totals.total, faltante]);
 
   const handleScan = useCallback((code: string) => {
     if (!productos) return;
