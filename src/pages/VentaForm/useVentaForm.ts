@@ -180,6 +180,17 @@ export function useVentaForm() {
 
   const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
 
+  // Combine totals with promo discounts
+  const finalTotals = useMemo(() => {
+    const promoDesc = totalDescuentoPromo;
+    return {
+      ...totals,
+      descuento_total: totals.descuento_total + promoDesc,
+      descuento_promo: promoDesc,
+      total: Math.max(0, totals.total - promoDesc),
+    };
+  }, [totals, totalDescuentoPromo]);
+
   // Re-price existing lines when tarifa rules or lista_precio changes
   useEffect(() => {
     if (!tarifaRules?.length || !productosList || readOnly) return;
