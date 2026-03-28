@@ -88,7 +88,7 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, subtotal, iva_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
+        .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (search) q = q.or(`folio.ilike.%${search}%`);
