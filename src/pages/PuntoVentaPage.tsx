@@ -135,6 +135,24 @@ export default function PuntoVentaPage() {
     let timer: ReturnType<typeof setTimeout>;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Global shortcuts
+      if (e.key === 'Escape') {
+        if (showPago) { setShowPago(false); e.preventDefault(); return; }
+        if (showTicket) { setShowTicket(false); setLastVentaData(null); clearAll(); e.preventDefault(); return; }
+        return;
+      }
+      if (e.key === 'F2' && !showPago && !showTicket && cart.length > 0) {
+        e.preventDefault();
+        if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2));
+        setShowPago(true);
+        return;
+      }
+      if (e.key === 'F2' && showPago && faltante <= 0) {
+        e.preventDefault();
+        handleCobrar();
+        return;
+      }
+
       // Ignore if user is typing in an input (except the scan field)
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' && target !== scanRef.current && target.id !== 'pos-search') return;
