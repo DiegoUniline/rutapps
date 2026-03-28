@@ -71,37 +71,37 @@ export default function PromocionesPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const pageSize = 20;
 
-  // Load catalogs for selectors
+  // Load catalogs for selectors (always loaded so they're ready when dialog opens)
   const { data: productos } = useQuery({
     queryKey: ['promo-productos', empresa?.id],
-    enabled: !!empresa?.id && !!editing,
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('productos').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).eq('activo', true).order('nombre').limit(500);
+      const { data } = await (supabase.from('productos').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).order('nombre').limit(1000);
       return (data ?? []) as { id: string; nombre: string; codigo: string | null }[];
     },
   });
 
   const { data: clasificaciones } = useQuery({
     queryKey: ['promo-clasificaciones', empresa?.id],
-    enabled: !!empresa?.id && !!editing,
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('clasificaciones').select('id, nombre') as any).eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      const { data } = await (supabase.from('clasificaciones').select('id, nombre') as any).eq('empresa_id', empresa!.id).order('nombre');
       return (data ?? []) as { id: string; nombre: string }[];
     },
   });
 
   const { data: clientes } = useQuery({
     queryKey: ['promo-clientes', empresa?.id],
-    enabled: !!empresa?.id && !!editing,
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from('clientes').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).order('nombre').limit(500);
+      const { data } = await (supabase.from('clientes').select('id, nombre, codigo') as any).eq('empresa_id', empresa!.id).order('nombre').limit(1000);
       return (data ?? []) as { id: string; nombre: string; codigo: string | null }[];
     },
   });
 
   const { data: zonas } = useQuery({
     queryKey: ['promo-zonas', empresa?.id],
-    enabled: !!empresa?.id && !!editing,
+    enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await (supabase.from('zonas').select('id, nombre') as any).eq('empresa_id', empresa!.id).order('nombre');
       return (data ?? []) as { id: string; nombre: string }[];
@@ -323,11 +323,15 @@ export default function PromocionesPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>{editing.tipo === 'descuento_porcentaje' || editing.tipo === 'volumen' ? 'Porcentaje (%)' : 'Valor ($)'}</Label>
-                    <Input type="number" value={editing.valor || ''} onChange={e => setEditing({ ...editing, valor: parseFloat(e.target.value) || 0 })} />
+                    <Input type="number" value={editing.valor || ''} onChange={e => setEditing({ ...editing, valor: parseFloat(e.target.value) || 0 })} placeholder={editing.tipo === 'descuento_porcentaje' ? 'Ej: 10' : editing.tipo === 'precio_especial' ? 'Ej: 25.00' : 'Ej: 5'} />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {editing.tipo === 'descuento_porcentaje' ? 'Ej: 10 = 10% de descuento' : editing.tipo === 'volumen' ? 'Ej: 15 = 15% al comprar cantidad mínima' : editing.tipo === 'precio_especial' ? 'El precio final del producto' : 'Monto de descuento por unidad'}
+                    </p>
                   </div>
                   <div>
                     <Label>Cantidad mínima</Label>
-                    <Input type="number" value={editing.cantidad_minima || ''} onChange={e => setEditing({ ...editing, cantidad_minima: parseFloat(e.target.value) || 0 })} />
+                    <Input type="number" value={editing.cantidad_minima || ''} onChange={e => setEditing({ ...editing, cantidad_minima: parseFloat(e.target.value) || 0 })} placeholder="Ej: 5" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Mínimo de unidades para activar. 0 = sin mínimo</p>
                   </div>
                 </div>
               )}
@@ -338,7 +342,7 @@ export default function PromocionesPage() {
                     <div>
                       <Label>Compra mínima (cantidad)</Label>
                       <Input type="number" value={editing.cantidad_minima || ''} onChange={e => setEditing({ ...editing, cantidad_minima: parseFloat(e.target.value) || 0 })} placeholder="Ej: 3" />
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Cuántos debe comprar</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Cuántos debe comprar para activar</p>
                     </div>
                     <div>
                       <Label>Cantidad gratis</Label>
@@ -357,9 +361,12 @@ export default function PromocionesPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Si es el mismo producto que compra, déjalo en "El mismo"</p>
                   </div>
-                  <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                    <strong>Ejemplo 3×2:</strong> Compra mínima = 3, Cantidad gratis = 1. Al comprar 3 unidades, se agrega 1 gratis.
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
+                    <strong>💡 Ejemplo 3×2:</strong> Compra mínima = 3, Cantidad gratis = 1.<br/>
+                    El cliente compra 3 y se le agrega 1 gratis (paga 3, lleva 4).<br/>
+                    <strong>Ejemplo 2×1:</strong> Compra mínima = 2, Cantidad gratis = 1 (paga 2, lleva 3).
                   </div>
                 </div>
               )}
@@ -369,17 +376,19 @@ export default function PromocionesPage() {
                 <div>
                   <Label>Vigencia inicio</Label>
                   <Input type="date" value={editing.vigencia_inicio || ''} onChange={e => setEditing({ ...editing, vigencia_inicio: e.target.value || null })} />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Vacío = aplica desde hoy</p>
                 </div>
                 <div>
                   <Label>Vigencia fin</Label>
                   <Input type="date" value={editing.vigencia_fin || ''} onChange={e => setEditing({ ...editing, vigencia_fin: e.target.value || null })} />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Vacío = sin fecha límite</p>
                 </div>
               </div>
 
               {/* Días de la semana */}
               <div>
                 <Label>Días de la semana</Label>
-                <p className="text-[10px] text-muted-foreground mb-1.5">Deja vacío para que aplique todos los días</p>
+                <p className="text-[10px] text-muted-foreground mb-1.5">Selecciona días específicos o deja vacío para todos los días. Ej: solo jueves para "Jueves de verduras"</p>
                 <div className="flex flex-wrap gap-1.5">
                   {DIAS_SEMANA.map(d => {
                     const selected = (editing.dias_semana ?? []).includes(d.key);
@@ -406,15 +415,24 @@ export default function PromocionesPage() {
                 <div>
                   <Label>Prioridad</Label>
                   <Input type="number" value={editing.prioridad || 0} onChange={e => setEditing({ ...editing, prioridad: parseInt(e.target.value) || 0 })} />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Mayor número = se aplica primero. Ej: prioridad 10 gana sobre prioridad 5</p>
                 </div>
-                <div className="flex items-center gap-3 pt-6">
-                  <Switch checked={editing.acumulable ?? false} onCheckedChange={v => setEditing({ ...editing, acumulable: v })} />
-                  <Label>Acumulable</Label>
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center gap-3">
+                    <Switch checked={editing.acumulable ?? false} onCheckedChange={v => setEditing({ ...editing, acumulable: v })} />
+                    <div>
+                      <Label>Acumulable</Label>
+                      <p className="text-[10px] text-muted-foreground">Si se puede combinar con otras promociones en el mismo producto</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Switch checked={editing.activa ?? true} onCheckedChange={v => setEditing({ ...editing, activa: v })} />
-                <Label>Activa</Label>
+                <div>
+                  <Label>Activa</Label>
+                  <p className="text-[10px] text-muted-foreground">Desactívala para pausarla sin eliminarla</p>
+                </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
