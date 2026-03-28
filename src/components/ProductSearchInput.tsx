@@ -16,9 +16,11 @@ interface Props {
   onNavigate?: (dir: 'next' | 'prev') => void;
   autoFocus?: boolean;
   readOnly?: boolean;
+  /** Callback to register the focusable element for grid navigation (setCellRef) */
+  registerRef?: (el: HTMLElement | null) => void;
 }
 
-export default function ProductSearchInput({ products, value, displayText, onSelect, onNavigate, autoFocus, readOnly }: Props) {
+export default function ProductSearchInput({ products, value, displayText, onSelect, onNavigate, autoFocus, readOnly, registerRef }: Props) {
   const [editing, setEditing] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightIdx, setHighlightIdx] = useState(0);
@@ -36,17 +38,8 @@ export default function ProductSearchInput({ products, value, displayText, onSel
       .slice(0, 8);
   }, [search, products]);
 
-  // Track if autoFocus was already true on mount to avoid opening dropdown on initial load
-  const initialAutoFocusRef = useRef(autoFocus);
-  useEffect(() => {
-    // Only auto-focus when autoFocus transitions from false→true (user added a new line),
-    // not on initial mount when loading an existing sale
-    if (autoFocus && !initialAutoFocusRef.current && !readOnly && !value) {
-      setEditing(true);
-      setTimeout(() => inputRef.current?.focus(), 30);
-    }
-    initialAutoFocusRef.current = autoFocus;
-  }, [autoFocus, readOnly, value]);
+  // No auto-focus on mount — the parent uses focusCell() to explicitly
+  // focus the input when a user adds a new line or navigates via keyboard.
 
   useEffect(() => {
     setHighlightIdx(0);
@@ -120,8 +113,11 @@ export default function ProductSearchInput({ products, value, displayText, onSel
   if (!editing && value) {
     return (
       <div
+        ref={el => registerRef?.(el)}
+        tabIndex={0}
         onClick={startEditing}
-        className="text-[12px] py-1 px-1 cursor-text min-h-[28px] flex items-center hover:bg-secondary/50 rounded transition-colors"
+        onFocus={startEditing}
+        className="text-[12px] py-1 px-1 cursor-text min-h-[28px] flex items-center hover:bg-secondary/50 rounded transition-colors outline-none"
       >
         {displayText || '—'}
       </div>
@@ -131,7 +127,7 @@ export default function ProductSearchInput({ products, value, displayText, onSel
   return (
     <div>
       <input
-        ref={inputRef}
+        ref={el => { inputRef.current = el; registerRef?.(el); }}
         type="text"
         className="input-odoo text-[12px] !py-1 w-full"
         value={search}
