@@ -14,10 +14,11 @@ interface PdfParams {
   productosList: any[];
   entregasExistentes: any[];
   pagosData: any[];
+  promociones?: { descripcion: string; descuento: number }[];
 }
 
 export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
-  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData } = params;
+  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData, promociones } = params;
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
   const vendedorName = profile?.nombre || userEmail || '';
 
@@ -62,5 +63,6 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       fecha: p.cobros?.fecha ?? '', metodo_pago: p.cobros?.metodo_pago ?? '',
       monto: Number(p.monto_aplicado) || 0, referencia: p.cobros?.referencia,
     })),
+    promociones: promociones?.filter(p => p.descuento > 0),
   });
 }

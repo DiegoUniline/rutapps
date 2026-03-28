@@ -432,6 +432,7 @@ export default function PuntoVentaPage() {
         ieps: totals.ieps,
         descuento: totals.descuento,
         promos: promoResults.map(r => r.descripcion),
+        promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento })),
         total: totals.total,
         condicionPago: condicion,
         metodoPago: paySplits.map(s => s.metodo).join(' + '),
@@ -955,7 +956,8 @@ export default function PuntoVentaPage() {
             montoRecibido={lastVentaData.montoRecibido}
             cambio={lastVentaData.cambio}
             onPrintTicket={() => {
-              const td = buildTicketDataFromVenta({
+               const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+               const td = buildTicketDataFromVenta({
                 empresa,
                 venta: {
                   folio: lastVentaData.folio,
@@ -978,6 +980,7 @@ export default function PuntoVentaPage() {
                 })),
                 montoRecibido: lastVentaData.montoRecibido,
                 cambio: lastVentaData.cambio,
+                promociones: promoTicket,
               });
               const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
               printTicket(td, { ticketAncho });

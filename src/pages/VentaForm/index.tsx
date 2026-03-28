@@ -52,9 +52,11 @@ export default function VentaFormPage() {
   const handleGenerarPdf = async () => {
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
     const almacenName = almacenesList?.find((a: any) => a.id === form.almacen_id)?.nombre;
+    const promos = (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento }));
     const blob = await generarVentaPdf({
       form, empresa, profile, userEmail: user?.email, clienteData, almacenName,
       lineas, productosList: productosList ?? [], entregasExistentes: entregasExistentes ?? [], pagosData: pagosData ?? [],
+      promociones: promos,
     });
     setPdfBlob(blob);
     setShowPdfModal(true);
@@ -84,6 +86,7 @@ export default function VentaFormPage() {
         ieps_monto: Number(l.ieps_monto ?? 0),
         descuento_pct: Number((l as any).descuento_porcentaje ?? (l as any).descuento_pct ?? 0),
       })),
+      promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento })),
     });
     const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
     printTicket(td, { ticketAncho });

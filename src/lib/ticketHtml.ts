@@ -35,6 +35,11 @@ export interface TicketLinea {
   esCambio?: boolean;
 }
 
+export interface TicketPromo {
+  descripcion: string;
+  descuento: number;
+}
+
 export interface TicketData {
   empresa: TicketEmpresa;
   folio: string;
@@ -52,6 +57,7 @@ export interface TicketData {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
+  promociones?: TicketPromo[];
 }
 
 const COLS = 32;
@@ -86,7 +92,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo } = data;
+  const { empresa, folio, fecha, clienteNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -147,6 +153,29 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     add(div);
   }
   add(pad('TOTAL', fmt(showTax ? total : subtotal)));
+
+  // ── Promociones aplicadas ──
+  if (promociones && promociones.length > 0) {
+    add(div);
+    add(centerText('PROMOCIONES'));
+    for (const p of promociones) {
+      const desc = fmt(p.descuento);
+      const lines = wrapText(`* ${p.descripcion}`, COLS - desc.length - 1);
+      if (lines.length === 1) {
+        add(pad(lines[0], `-${desc}`));
+      } else {
+        for (let i = 0; i < lines.length; i++) {
+          if (i === lines.length - 1) {
+            add(pad(lines[i], `-${desc}`));
+          } else {
+            add(lines[i]);
+          }
+        }
+      }
+    }
+    const totalPromo = promociones.reduce((s, p) => s + p.descuento, 0);
+    add(pad('Ahorro total', `-${fmt(totalPromo)}`));
+  }
 
   if (montoRecibido != null && montoRecibido > 0) {
     add(pad('Recibido', fmt(montoRecibido)));
