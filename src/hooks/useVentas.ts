@@ -62,7 +62,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
       if (dateTo) q = q.lte('fecha', dateTo);
       const { data, error, count } = await q;
       if (error) throw error;
-      return { rows: (data ?? []) as Venta[], total: count ?? 0 };
+      return { rows: (data ?? []) as unknown as Venta[], total: count ?? 0 };
     },
   });
 }
