@@ -817,6 +817,7 @@ export default function PuntoVentaPage() {
             >
               <CreditCard className="h-5 w-5" />
               Cobrar ${fmt(totals.total)}
+              <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
             </button>
           </div>
         </div>
