@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, ShoppingCart, Trash2 } from 'lucide-react';
+import { Plus, MoreVertical, MessageCircle, FileText, Banknote, Loader2, ShoppingCart, Trash2, Gift } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -37,6 +37,7 @@ const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'tipo', header: 'Tipo', width: 14 },
   { key: 'condicion_pago', header: 'Condición', width: 12 },
   { key: 'subtotal', header: 'Subtotal', format: 'currency', width: 14 },
+  { key: 'descuento_total', header: 'Descuento', format: 'currency', width: 14 },
   { key: 'iva_total', header: 'IVA', format: 'currency', width: 12 },
   { key: 'total', header: 'Total', format: 'currency', width: 14 },
   { key: 'saldo_pendiente', header: 'Saldo', format: 'currency', width: 14 },
@@ -242,6 +243,16 @@ export default function VentasListPage() {
           <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
           <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
           <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
+          <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+            {(v.descuento_total ?? 0) > 0 ? (
+              <span className="flex items-center justify-end gap-1">
+                <Gift className="h-3 w-3 text-primary shrink-0" />
+                <span className="text-destructive">-{fmt(v.descuento_total)}</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </td>
           <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(v.total)}</td>
           <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
             {(v.saldo_pendiente ?? 0) > 0 ? (
@@ -287,6 +298,7 @@ export default function VentasListPage() {
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
+            <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Descuento</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Saldo</th>
             <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-center">Estado</th>
@@ -296,7 +308,7 @@ export default function VentasListPage() {
         <tbody>
           {items.length === 0 && (
             <tr>
-              <td colSpan={12} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
+              <td colSpan={13} className="text-center py-12 text-muted-foreground">No hay ventas. Crea la primera.</td>
             </tr>
           )}
           {renderTableRows(items)}
@@ -304,7 +316,7 @@ export default function VentasListPage() {
         {items.length > 0 && (
           <tfoot>
             <tr className="bg-card border-t border-border font-semibold text-[12px]">
-              <td colSpan={8} className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>
+              <td colSpan={9} className="py-2 px-3 text-muted-foreground">{items.length} ventas</td>
               <td className="py-2 px-3 text-right font-bold tabular-nums">{fmt(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}</td>
               <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums text-warning font-bold">{fmt(items.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0))}</td>
               <td />

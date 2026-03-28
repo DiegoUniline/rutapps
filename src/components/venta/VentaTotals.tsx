@@ -13,11 +13,12 @@ interface VentaTotalsProps {
   saldoPendiente?: number;
   promoResults?: PromoResult[];
   descuento_promo?: number;
+  descuento_extra_amt?: number;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente, promoResults, descuento_promo, descuento_extra_amt }: VentaTotalsProps) {
   const { fmt } = useCurrency();
-  const lineDescuento = descuento_total - (descuento_promo ?? 0);
+  const lineDescuento = descuento_total - (descuento_promo ?? 0) - (descuento_extra_amt ?? 0);
 
   return (
     <div className="flex justify-end pt-2 sticky bottom-0 bg-card pb-2">
@@ -50,6 +51,12 @@ export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, 
                 )}
               </div>
             ))}
+          </div>
+        )}
+        {(descuento_extra_amt ?? 0) > 0 && (
+          <div className="flex justify-between text-destructive">
+            <span>Descuento extra</span>
+            <span>-{fmt(descuento_extra_amt!)}</span>
           </div>
         )}
         {ieps_total > 0 && (

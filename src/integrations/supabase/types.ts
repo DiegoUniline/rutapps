@@ -4763,6 +4763,8 @@ export type Database = {
           cliente_id: string | null
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
           created_at: string
+          descuento_extra: number
+          descuento_extra_tipo: string
           descuento_total: number | null
           empresa_id: string
           entrega_inmediata: boolean | null
@@ -4788,6 +4790,8 @@ export type Database = {
           cliente_id?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
+          descuento_extra?: number
+          descuento_extra_tipo?: string
           descuento_total?: number | null
           empresa_id: string
           entrega_inmediata?: boolean | null
@@ -4813,6 +4817,8 @@ export type Database = {
           cliente_id?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
+          descuento_extra?: number
+          descuento_extra_tipo?: string
           descuento_total?: number | null
           empresa_id?: string
           entrega_inmediata?: boolean | null

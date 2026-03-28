@@ -12,7 +12,7 @@ interface Props {
   lineas: Partial<VentaLinea>[];
   productosList: any[];
   readOnly: boolean;
-  totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number };
+  totals: { subtotal: number; descuento_total: number; iva_total: number; ieps_total: number; total: number; descuento_promo?: number; descuento_extra_amt?: number };
   promoResults?: PromoResult[];
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
@@ -80,7 +80,7 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
       )}
-      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} />
+      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={saldoPendiente} promoResults={promoResults} descuento_promo={totals.descuento_promo} descuento_extra_amt={totals.descuento_extra_amt} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import SearchableSelect from '@/components/SearchableSelect';
 import { cn } from '@/lib/utils';
+import { Percent, DollarSign } from 'lucide-react';
 
 interface Props {
   form: Record<string, any>;
@@ -87,6 +88,43 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     </div>
   );
 
+  const extraTipo = form.descuento_extra_tipo || 'porcentaje';
+  const renderDescuentoExtra = () => (
+    <div>
+      <label className="label-odoo">Descuento extra</label>
+      {readOnly ? (
+        <div className="text-[13px] py-1.5 px-1 text-foreground">
+          {(form.descuento_extra ?? 0) > 0
+            ? `${form.descuento_extra} ${extraTipo === 'porcentaje' ? '%' : '$'}`
+            : '—'}
+        </div>
+      ) : (
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.descuento_extra ?? 0}
+            onChange={e => set('descuento_extra', Number(e.target.value) || 0)}
+            className="flex-1 input-odoo text-[13px] py-1.5 w-20"
+            placeholder="0"
+          />
+          <button
+            type="button"
+            onClick={() => set('descuento_extra_tipo', extraTipo === 'porcentaje' ? 'monto' : 'porcentaje')}
+            className={cn(
+              "shrink-0 flex items-center justify-center w-8 h-8 rounded border transition-colors",
+              "bg-card text-foreground border-input hover:bg-secondary"
+            )}
+            title={extraTipo === 'porcentaje' ? 'Cambiar a monto fijo' : 'Cambiar a porcentaje'}
+          >
+            {extraTipo === 'porcentaje' ? <Percent className="h-3.5 w-3.5" /> : <DollarSign className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   if (isMobile) {
     return (
       <div className="space-y-3">
@@ -99,6 +137,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
         </div>
         <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div></div>
         <div><label className="label-odoo">Almacén</label>{renderAlmacen()}</div>
+        {renderDescuentoExtra()}
         {renderSaldo()}
       </div>
     );
@@ -118,6 +157,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
       </div>
       <div className="space-y-3">
         <div><label className="label-odoo">Almacén</label>{renderAlmacen()}</div>
+        {renderDescuentoExtra()}
         {renderSaldo()}
       </div>
     </div>
