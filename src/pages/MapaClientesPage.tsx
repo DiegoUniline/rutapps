@@ -113,10 +113,11 @@ export default function MapaClientesPage() {
         .from('user_roles')
         .select('role_id, roles(nombre, es_sistema)')
         .eq('user_id', user!.id);
-      return data?.some((ur: any) => {
+      if (!data || data.length === 0) return true;
+      return data.some((ur: any) => {
         const roleName = ur.roles?.nombre?.toLowerCase?.() ?? '';
         return ur.roles?.es_sistema === true || roleName.includes('admin');
-      }) ?? false;
+      });
     },
     enabled: !!user?.id,
   });
