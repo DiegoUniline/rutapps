@@ -310,7 +310,8 @@ export default function PuntoVentaPage() {
         clienteNombre: lastVentaData.clienteNombre,
         lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
         montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
-        saldoNuevo: (lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined,
+        saldoAnterior: lastVentaData.saldoAnterior,
+        saldoNuevo: lastVentaData.saldoNuevoCalc,
       });
       printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
     }, 400);
@@ -326,6 +327,18 @@ export default function PuntoVentaPage() {
       const ventaId = crypto.randomUUID();
       const almacenId = profile?.almacen_id || null;
       const today = todayInTimezone(empresa?.zona_horaria);
+
+      // Fetch client's previous balance (sum of saldo_pendiente on all their ventas)
+      let saldoAnteriorCliente = 0;
+      if (clienteId) {
+        const { data: saldoRows } = await supabase
+          .from('ventas')
+          .select('saldo_pendiente')
+          .eq('empresa_id', empresa.id)
+          .eq('cliente_id', clienteId)
+          .gt('saldo_pendiente', 0);
+        saldoAnteriorCliente = (saldoRows ?? []).reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
+      }
 
       // 1. Insert venta
       if (!profile?.vendedor_id) {
@@ -466,6 +479,8 @@ export default function PuntoVentaPage() {
         montoRecibido: totalPagado > 0 ? totalPagado : undefined,
         cambio: cambio > 0 ? cambio : undefined,
         saldoPendiente: condicion === 'credito' ? totals.total : 0,
+        saldoAnterior: saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined,
+        saldoNuevoCalc: condicion === 'credito' ? saldoAnteriorCliente + totals.total : (saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined),
       });
 
       toast.success('¡Venta registrada!');
@@ -1054,7 +1069,8 @@ export default function PuntoVentaPage() {
                 metodoPago={lastVentaData.metodoPago}
                 montoRecibido={lastVentaData.montoRecibido}
                 cambio={lastVentaData.cambio}
-                saldoNuevo={(lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined}
+                saldoAnterior={lastVentaData.saldoAnterior}
+                saldoNuevo={lastVentaData.saldoNuevoCalc}
                 promociones={lastVentaData.promoDetails ?? []}
                 onPrintTicket={() => {
                   const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
@@ -1083,7 +1099,8 @@ export default function PuntoVentaPage() {
                     montoRecibido: lastVentaData.montoRecibido,
                     cambio: lastVentaData.cambio,
                     promociones: promoTicket,
-                    saldoNuevo: (lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined,
+                    saldoAnterior: lastVentaData.saldoAnterior,
+                    saldoNuevo: lastVentaData.saldoNuevoCalc,
                   });
                   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
                   printTicket(td, { ticketAncho });
@@ -1105,7 +1122,8 @@ export default function PuntoVentaPage() {
                     clienteNombre: lastVentaData.clienteNombre,
                     lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
                     montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
-                    saldoNuevo: (lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined,
+                    saldoAnterior: lastVentaData.saldoAnterior,
+                    saldoNuevo: lastVentaData.saldoNuevoCalc,
                   });
                   printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
                 }}
