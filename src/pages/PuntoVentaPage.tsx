@@ -303,12 +303,12 @@ export default function PuntoVentaPage() {
   useEffect(() => {
     if (!showTicket || !lastVentaData) return;
     const timer = setTimeout(() => {
-      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
       const td = buildTicketDataFromVenta({
         empresa,
         venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
         clienteNombre: lastVentaData.clienteNombre,
-        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto })),
+        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
         montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
       });
       printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
