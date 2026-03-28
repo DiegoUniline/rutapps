@@ -11,7 +11,7 @@ interface VentaTotalsProps {
   saldoPendiente?: number;
 }
 
-export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile }: VentaTotalsProps) {
+export function VentaTotals({ subtotal, descuento_total, iva_total, ieps_total, total, isMobile, saldoPendiente }: VentaTotalsProps) {
   const { fmt } = useCurrency();
 
   return (
