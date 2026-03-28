@@ -29,6 +29,7 @@ interface TicketVentaProps {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
+  promociones?: { descripcion: string; descuento: number }[];
   onPrintTicket?: () => void;
   onClose: () => void;
 }
@@ -49,7 +50,7 @@ export default function TicketVenta(props: TicketVentaProps) {
     empresa, folio, fecha, clienteNombre, lineas,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
-    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, onPrintTicket, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], onPrintTicket, onClose,
   } = props;
 
   const { symbol: cs } = useCurrency();
@@ -253,6 +254,28 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                         <span className="text-[8px] text-muted-foreground italic">{MOTIVO_LABELS[d.motivo] || d.motivo}{d.monto > 0 ? ` · ${fmt(d.monto)}` : ''}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Promociones */}
+            {promociones.length > 0 && (
+              <>
+                <div className="tk-dash mx-5 border-t border-dashed border-border" />
+                <div className="px-5 py-2">
+                  <p className="tk-section text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Promociones</p>
+                  <div className="space-y-0.5">
+                    {promociones.map((p, i) => (
+                      <div key={i} className="flex justify-between text-[10px]">
+                        <span className="text-foreground flex items-center gap-1 truncate flex-1 mr-2">🏷️ {p.descripcion}</span>
+                        <span className="text-primary font-bold tabular-nums shrink-0">-{fmt(p.descuento)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between text-[10px] pt-0.5 border-t border-dashed border-border mt-1">
+                      <span className="text-primary font-semibold">Ahorro total</span>
+                      <span className="text-primary font-bold tabular-nums">-{fmt(promociones.reduce((s, p) => s + p.descuento, 0))}</span>
+                    </div>
                   </div>
                 </div>
               </>
