@@ -112,6 +112,26 @@ export default function PuntoVentaPage() {
     setCart(prev => prev.map(item => { const prod = productos.find(p => p.id === item.producto_id); if (!prod) return item; return { ...item, precio_unitario: resolvePosPrice(prod) }; }));
   }, [effectiveTarifaLineas, clienteListaPrecioId]);
 
+  // ---- Promotions engine ----
+  const { data: promocionesActivas } = usePromocionesActivas();
+
+  const promoResults = useMemo(() => {
+    if (!promocionesActivas?.length || cart.length === 0) return [] as PromoResult[];
+    const cartForPromo: CartItemForPromo[] = cart.map(item => {
+      const prod = productos?.find(p => p.id === item.producto_id);
+      return {
+        producto_id: item.producto_id,
+        clasificacion_id: prod?.clasificacion_id ?? undefined,
+        precio_unitario: item.precio_unitario,
+        cantidad: item.cantidad,
+      };
+    });
+    return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined);
+  }, [promocionesActivas, cart, productos, clienteId]);
+
+  const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+  const promoGratis = useMemo(() => promoResults.filter(r => r.tipo === 'producto_gratis'), [promoResults]);
+
   // Barcode scanner: listen for rapid key presses
   useEffect(() => {
     let buffer = '';
