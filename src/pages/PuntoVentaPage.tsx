@@ -33,13 +33,6 @@ interface PosItem {
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
 
-interface PaySplit {
-  id: string;
-  metodo: PayMethod;
-  monto: string;
-  referencia: string;
-}
-
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
   const { empresa, user, profile } = useAuth();
@@ -54,7 +47,11 @@ export default function PuntoVentaPage() {
   const [showClientes, setShowClientes] = useState(false);
   const [clienteSearch, setClienteSearch] = useState('');
   const [showPago, setShowPago] = useState(false);
-  const [paySplits, setPaySplits] = useState<PaySplit[]>([{ id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
+  const [payEfectivo, setPayEfectivo] = useState('');
+  const [payTransferencia, setPayTransferencia] = useState('');
+  const [payTarjeta, setPayTarjeta] = useState('');
+  const [refTransferencia, setRefTransferencia] = useState('');
+  const [refTarjeta, setRefTarjeta] = useState('');
   const [saving, setSaving] = useState(false);
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
   const [scanBuffer, setScanBuffer] = useState('');
@@ -264,17 +261,23 @@ export default function PuntoVentaPage() {
     return { subtotal, iva, ieps, descuento, total: totalFinal, items };
   }, [cart, totalDescuentoPromo]);
 
-  const totalPagado = useMemo(() => paySplits.reduce((s, p) => s + (parseFloat(p.monto) || 0), 0), [paySplits]);
+  const paySplitsComputed = useMemo(() => {
+    const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
+    const ef = parseFloat(payEfectivo) || 0;
+    const tr = parseFloat(payTransferencia) || 0;
+    const ta = parseFloat(payTarjeta) || 0;
+    if (ef > 0) splits.push({ metodo: 'efectivo', monto: ef, referencia: '' });
+    if (tr > 0) splits.push({ metodo: 'transferencia', monto: tr, referencia: refTransferencia });
+    if (ta > 0) splits.push({ metodo: 'tarjeta', monto: ta, referencia: refTarjeta });
+    return splits;
+  }, [payEfectivo, payTransferencia, payTarjeta, refTransferencia, refTarjeta]);
+
+  const totalPagado = useMemo(() => paySplitsComputed.reduce((s, p) => s + p.monto, 0), [paySplitsComputed]);
   const cambio = totalPagado > totals.total ? totalPagado - totals.total : 0;
   const faltante = Math.max(0, totals.total - totalPagado);
 
   const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtM = (n: number) => `${s}${fmt(n)}`;
-
-  const addSplit = () => setPaySplits(prev => [...prev, { id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
-  const removeSplit = (id: string) => setPaySplits(prev => prev.length > 1 ? prev.filter(p => p.id !== id) : prev);
-  const updateSplit = (id: string, field: keyof PaySplit, value: string) =>
-    setPaySplits(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
 
   const clearAll = () => {
     setCart([]);
@@ -284,13 +287,35 @@ export default function PuntoVentaPage() {
     setClienteListaPrecioId(null);
     setCondicion('contado');
     setShowPago(false);
-    setPaySplits([{ id: crypto.randomUUID(), metodo: 'efectivo', monto: '', referencia: '' }]);
+    setPayEfectivo('');
+    setPayTransferencia('');
+    setPayTarjeta('');
+    setRefTransferencia('');
+    setRefTarjeta('');
     setSearch('');
   };
 
   // Ticket state
   const [showTicket, setShowTicket] = useState(false);
   const [lastVentaData, setLastVentaData] = useState<any>(null);
+
+  // Auto-print ticket when sale completes
+  useEffect(() => {
+    if (!showTicket || !lastVentaData) return;
+    const timer = setTimeout(() => {
+      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+      const td = buildTicketDataFromVenta({
+        empresa,
+        venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
+        clienteNombre: lastVentaData.clienteNombre,
+        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto })),
+        montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
+      });
+      printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
+    }, 400);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTicket]);
 
   // Save sale
   const handleCobrar = async () => {
@@ -382,18 +407,17 @@ export default function PuntoVentaPage() {
         } as any);
       }
 
-      // 4. Insert cobros if contado (one per split)
+      // 4. Insert cobros if contado (one per method with amount)
       if (condicion === 'contado' && totals.total > 0) {
-        for (const split of paySplits) {
-          const splitMonto = parseFloat(split.monto) || 0;
-          if (splitMonto <= 0) continue;
+        for (const split of paySplitsComputed) {
+          if (split.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
           const { error: cobErr } = await supabase.from('cobros').insert({
             id: cobroId,
             empresa_id: empresa.id,
             cliente_id: clienteId ?? empresa.id,
             user_id: user.id,
-            monto: Math.min(splitMonto, totals.total),
+            monto: Math.min(split.monto, totals.total),
             metodo_pago: split.metodo,
             referencia: split.referencia || null,
             fecha: today,
@@ -402,13 +426,14 @@ export default function PuntoVentaPage() {
             await supabase.from('cobro_aplicaciones').insert({
               cobro_id: cobroId,
               venta_id: ventaId,
-              monto_aplicado: Math.min(splitMonto, totals.total),
+              monto_aplicado: Math.min(split.monto, totals.total),
             });
           }
         }
       }
 
       // Save ticket data for display
+      const metodosUsados = paySplitsComputed.map(s => s.metodo).join(' + ');
       setLastVentaData({
         folio: ventaData?.folio ?? ventaId.slice(0, 8),
         fecha: today,
@@ -435,7 +460,7 @@ export default function PuntoVentaPage() {
         promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento })),
         total: totals.total,
         condicionPago: condicion,
-        metodoPago: paySplits.map(s => s.metodo).join(' + '),
+        metodoPago: metodosUsados || 'efectivo',
         montoRecibido: totalPagado > 0 ? totalPagado : undefined,
         cambio: cambio > 0 ? cambio : undefined,
       });
@@ -821,92 +846,120 @@ export default function PuntoVentaPage() {
 
               {condicion === 'contado' && (
                 <>
-                  {/* Payment splits */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Métodos de pago</label>
-                      <button onClick={addSplit} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-1">
-                        <Plus className="h-3 w-3" /> Agregar método
-                      </button>
+                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Ingresa el monto por método</label>
+
+                  {/* Efectivo */}
+                  <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Wallet className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-[12px] font-semibold text-foreground">Efectivo</span>
                     </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={payEfectivo}
+                        placeholder={fmt(totals.total)}
+                        onChange={e => setPayEfectivo(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="flex gap-1.5">
+                      {quickAmounts.map(a => (
+                        <button key={a} onClick={() => setPayEfectivo(a.toString())}
+                          className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-all ${parseFloat(payEfectivo) === a ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border hover:bg-accent'}`}>
+                          ${fmt(a)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                    {paySplits.map((split, idx) => (
-                      <div key={split.id} className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-semibold text-muted-foreground">Pago {idx + 1}</span>
-                          {paySplits.length > 1 && (
-                            <button onClick={() => removeSplit(split.id)} className="text-destructive hover:underline text-[10px] font-medium">Quitar</button>
-                          )}
-                        </div>
-                        {/* Method selector */}
-                        <div className="flex gap-1.5">
-                          {([['efectivo', 'Efectivo', Wallet], ['transferencia', 'Transfer.', Banknote], ['tarjeta', 'Tarjeta', CreditCard]] as const).map(([val, label, Icon]) => (
-                            <button key={val} onClick={() => updateSplit(split.id, 'metodo', val)}
-                              className={`flex-1 py-2 rounded-lg text-[10px] font-semibold transition-all flex flex-col items-center gap-0.5 ${split.metodo === val ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border'}`}>
-                              <Icon className="h-3.5 w-3.5" />{label}
-                            </button>
-                          ))}
-                        </div>
-                        {/* Amount */}
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
-                          <input
-                            type="number"
-                            inputMode="decimal"
-                            className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={split.monto}
-                            placeholder={paySplits.length === 1 ? fmt(totals.total) : '0.00'}
-                            onChange={e => updateSplit(split.id, 'monto', e.target.value)}
-                            autoFocus={idx === 0}
-                          />
-                        </div>
-                        {/* Quick amounts only for first split if single */}
-                        {paySplits.length === 1 && split.metodo === 'efectivo' && (
-                          <div className="flex gap-1.5">
-                            {quickAmounts.map(a => (
-                              <button key={a} onClick={() => updateSplit(split.id, 'monto', a.toString())}
-                                className={`flex-1 py-1.5 rounded-md text-[10px] font-semibold transition-all ${parseFloat(split.monto) === a ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border hover:bg-accent'}`}>
-                                ${fmt(a)}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {/* Reference for non-cash */}
-                        {split.metodo !== 'efectivo' && (
-                          <input
-                            type="text"
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                            value={split.referencia}
-                            placeholder="Referencia (opcional)"
-                            onChange={e => updateSplit(split.id, 'referencia', e.target.value)}
-                          />
-                        )}
+                  {/* Transferencia */}
+                  <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Banknote className="h-4 w-4 text-primary" />
                       </div>
-                    ))}
-
-                    {/* Summary */}
-                    {paySplits.length > 1 && (
-                      <div className="rounded-lg bg-accent/40 px-3 py-2 space-y-1">
-                        <div className="flex justify-between text-[11px]">
-                          <span className="text-muted-foreground">Total pagado</span>
-                          <span className="font-bold text-foreground tabular-nums">{fmtM(totalPagado)}</span>
-                        </div>
-                        {faltante > 0 && (
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-destructive font-medium">Faltante</span>
-                            <span className="font-bold text-destructive tabular-nums">{fmtM(faltante)}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {cambio > 0 && (
-                      <div className="flex justify-between bg-green-50 dark:bg-green-950/30 rounded-lg px-3 py-2.5">
-                        <span className="text-[13px] text-green-700 dark:text-green-400 font-medium">Cambio</span>
-                        <span className="text-[18px] text-green-700 dark:text-green-400 font-bold tabular-nums">{fmtM(cambio)}</span>
-                      </div>
+                      <span className="text-[12px] font-semibold text-foreground">Transferencia</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={payTransferencia}
+                        placeholder="0.00"
+                        onChange={e => setPayTransferencia(e.target.value)}
+                      />
+                    </div>
+                    {(parseFloat(payTransferencia) || 0) > 0 && (
+                      <input
+                        type="text"
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        value={refTransferencia}
+                        placeholder="Referencia (opcional)"
+                        onChange={e => setRefTransferencia(e.target.value)}
+                      />
                     )}
                   </div>
+
+                  {/* Tarjeta */}
+                  <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-[12px] font-semibold text-foreground">Tarjeta</span>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-muted-foreground font-medium">{s}</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        value={payTarjeta}
+                        placeholder="0.00"
+                        onChange={e => setPayTarjeta(e.target.value)}
+                      />
+                    </div>
+                    {(parseFloat(payTarjeta) || 0) > 0 && (
+                      <input
+                        type="text"
+                        className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[12px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        value={refTarjeta}
+                        placeholder="Referencia (opcional)"
+                        onChange={e => setRefTarjeta(e.target.value)}
+                      />
+                    )}
+                  </div>
+
+                  {/* Summary */}
+                  {paySplitsComputed.length > 1 && (
+                    <div className="rounded-lg bg-accent/40 px-3 py-2 space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-muted-foreground">Total pagado</span>
+                        <span className="font-bold text-foreground tabular-nums">{fmtM(totalPagado)}</span>
+                      </div>
+                      {faltante > 0 && (
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-destructive font-medium">Faltante</span>
+                          <span className="font-bold text-destructive tabular-nums">{fmtM(faltante)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {cambio > 0 && (
+                    <div className="flex justify-between bg-accent/50 rounded-lg px-3 py-2.5">
+                      <span className="text-[13px] text-primary font-medium">Cambio</span>
+                      <span className="text-[18px] text-primary font-bold tabular-nums">{fmtM(cambio)}</span>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -921,7 +974,7 @@ export default function PuntoVentaPage() {
               <button
                 onClick={handleCobrar}
                 disabled={saving || cart.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-4 text-[16px] font-bold disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-4 text-[16px] font-bold disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Check className="h-5 w-5" />
                 {saving ? 'Guardando...' : condicion === 'credito' ? 'Confirmar venta a crédito' : `Confirmar ${fmtM(totals.total)}`}
@@ -931,66 +984,102 @@ export default function PuntoVentaPage() {
         </div>
       )}
 
-      {/* ─── Ticket after sale ─── */}
+      {/* ─── Ticket modal after sale (auto-print) ─── */}
       {showTicket && lastVentaData && (
-        <div className="fixed inset-0 z-50 bg-background">
-          <TicketVenta
-            empresa={{
-              nombre: empresa?.nombre ?? '',
-              telefono: empresa?.telefono,
-              direccion: empresa?.direccion,
-              logo_url: empresa?.logo_url,
-              rfc: empresa?.rfc,
-              moneda: empresa?.moneda,
-            }}
-            folio={lastVentaData.folio}
-            fecha={lastVentaData.fecha}
-            clienteNombre={lastVentaData.clienteNombre}
-            lineas={lastVentaData.lineas}
-            subtotal={lastVentaData.subtotal}
-            iva={lastVentaData.iva}
-            ieps={lastVentaData.ieps}
-            total={lastVentaData.total}
-            condicionPago={lastVentaData.condicionPago}
-            metodoPago={lastVentaData.metodoPago}
-            montoRecibido={lastVentaData.montoRecibido}
-            cambio={lastVentaData.cambio}
-            onPrintTicket={() => {
-               const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
-               const td = buildTicketDataFromVenta({
-                empresa,
-                venta: {
-                  folio: lastVentaData.folio,
-                  fecha: lastVentaData.fecha,
-                  subtotal: lastVentaData.subtotal,
-                  iva_total: lastVentaData.iva,
-                  ieps_total: lastVentaData.ieps,
-                  total: lastVentaData.total,
-                  condicion_pago: lastVentaData.condicionPago,
-                  metodo_pago: lastVentaData.metodoPago,
-                },
-                clienteNombre: lastVentaData.clienteNombre,
-                lineas: lastVentaData.lineas.map((l: any) => ({
-                  nombre: l.nombre,
-                  cantidad: l.cantidad,
-                  precio_unitario: l.precio,
-                  total: l.total,
-                  iva_monto: l.iva_monto,
-                  ieps_monto: l.ieps_monto,
-                })),
-                montoRecibido: lastVentaData.montoRecibido,
-                cambio: lastVentaData.cambio,
-                promociones: promoTicket,
-              });
-              const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
-              printTicket(td, { ticketAncho });
-            }}
-            onClose={() => {
-              setShowTicket(false);
-              setLastVentaData(null);
-              clearAll();
-            }}
-          />
+        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center" onClick={() => { setShowTicket(false); setLastVentaData(null); clearAll(); }}>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="px-5 pt-4 pb-2 border-b border-border flex items-center justify-between">
+              <h3 className="text-[14px] font-bold text-foreground flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-primary" /> Venta registrada
+              </h3>
+              <button onClick={() => { setShowTicket(false); setLastVentaData(null); clearAll(); }} className="p-1 rounded-md hover:bg-accent">
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <TicketVenta
+                empresa={{
+                  nombre: empresa?.nombre ?? '',
+                  telefono: empresa?.telefono,
+                  direccion: empresa?.direccion,
+                  logo_url: empresa?.logo_url,
+                  rfc: empresa?.rfc,
+                  moneda: empresa?.moneda,
+                }}
+                folio={lastVentaData.folio}
+                fecha={lastVentaData.fecha}
+                clienteNombre={lastVentaData.clienteNombre}
+                lineas={lastVentaData.lineas}
+                subtotal={lastVentaData.subtotal}
+                iva={lastVentaData.iva}
+                ieps={lastVentaData.ieps}
+                total={lastVentaData.total}
+                condicionPago={lastVentaData.condicionPago}
+                metodoPago={lastVentaData.metodoPago}
+                montoRecibido={lastVentaData.montoRecibido}
+                cambio={lastVentaData.cambio}
+                onPrintTicket={() => {
+                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+                  const td = buildTicketDataFromVenta({
+                    empresa,
+                    venta: {
+                      folio: lastVentaData.folio,
+                      fecha: lastVentaData.fecha,
+                      subtotal: lastVentaData.subtotal,
+                      iva_total: lastVentaData.iva,
+                      ieps_total: lastVentaData.ieps,
+                      total: lastVentaData.total,
+                      condicion_pago: lastVentaData.condicionPago,
+                      metodo_pago: lastVentaData.metodoPago,
+                    },
+                    clienteNombre: lastVentaData.clienteNombre,
+                    lineas: lastVentaData.lineas.map((l: any) => ({
+                      nombre: l.nombre,
+                      cantidad: l.cantidad,
+                      precio_unitario: l.precio,
+                      total: l.total,
+                      iva_monto: l.iva_monto,
+                      ieps_monto: l.ieps_monto,
+                    })),
+                    montoRecibido: lastVentaData.montoRecibido,
+                    cambio: lastVentaData.cambio,
+                    promociones: promoTicket,
+                  });
+                  const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
+                  printTicket(td, { ticketAncho });
+                }}
+                onClose={() => {
+                  setShowTicket(false);
+                  setLastVentaData(null);
+                  clearAll();
+                }}
+              />
+            </div>
+            <div className="px-5 pb-4 pt-2 border-t border-border flex gap-2">
+              <button
+                onClick={() => {
+                  const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+                  const td = buildTicketDataFromVenta({
+                    empresa,
+                    venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
+                    clienteNombre: lastVentaData.clienteNombre,
+                    lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto })),
+                    montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
+                  });
+                  printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
+                }}
+                className="flex-1 bg-accent text-foreground rounded-xl py-3 text-[13px] font-semibold flex items-center justify-center gap-1.5 hover:bg-accent/80 transition-colors"
+              >
+                <Receipt className="h-4 w-4" /> Reimprimir
+              </button>
+              <button
+                onClick={() => { setShowTicket(false); setLastVentaData(null); clearAll(); }}
+                className="flex-1 bg-primary text-primary-foreground rounded-xl py-3 text-[13px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform"
+              >
+                <Check className="h-4 w-4" /> Listo
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
