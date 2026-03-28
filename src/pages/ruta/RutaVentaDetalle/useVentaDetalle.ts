@@ -320,49 +320,9 @@ export function useVentaDetalle() {
   };
 
   const handlePrintTicket = async () => {
-    let td = getTicketData();
+    const td = getTicketData();
     if (!td) return;
-
-    // 1) Try direct BLE ESC/POS
-    console.log('BLE disponible:', isBluetoothAvailable());
-    if (isBluetoothAvailable()) {
-      try {
-        const conn = await connectPrinter();
-        const escposBytes = await buildEscPosBytes(td, { ticketAncho });
-        await sendBytes(conn, escposBytes);
-        toast.success('Ticket impreso');
-        return;
-      } catch (e) {
-        console.warn('BLE falló, usando imagen:', e);
-      }
-    }
-
-    // 2) Fallback: PNG share / download — convert logo to base64
-    td = await logoToBase64(td);
-    const html = buildUnifiedTicketHTML(td, { ticketAncho, forPrint: true });
-    const container = document.createElement('div');
-    container.style.cssText = 'position:fixed;left:-9999px;top:0';
-    container.innerHTML = html;
-    document.body.appendChild(container);
-    const el = container.firstElementChild as HTMLElement;
-    try {
-      await new Promise(r => requestAnimationFrame(() => setTimeout(r, 200)));
-      const dataUrl = await toPng(el, { pixelRatio: 2, backgroundColor: '#ffffff' });
-      const blob = await (await fetch(dataUrl)).blob();
-      const file = new File([blob], `${td.folio}.png`, { type: 'image/png' });
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: `Ticket ${td.folio}` });
-      } else {
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = file.name;
-        a.click();
-      }
-    } catch {
-      toast.error('Error generando imagen');
-    } finally {
-      document.body.removeChild(container);
-    }
+    await printTicket(td, { ticketAncho });
   };
 
   const handleShareTicket = async () => {

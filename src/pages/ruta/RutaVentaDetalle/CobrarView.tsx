@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Wallet, Banknote, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Wallet, Banknote, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useState } from 'react';
