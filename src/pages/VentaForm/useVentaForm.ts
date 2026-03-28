@@ -254,7 +254,7 @@ export function useVentaForm() {
       return;
     }
     try {
-      const payload = { ...form, ...totals, vendedor_id: profile.vendedor_id };
+      const payload = { ...form, ...finalTotals, vendedor_id: profile.vendedor_id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       for (const l of lineas) {
