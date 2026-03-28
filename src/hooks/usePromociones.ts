@@ -188,21 +188,27 @@ export function evaluatePromociones(
           descuento = item.precio_unitario * item.cantidad * (promo.valor / 100);
           descripcion = `${promo.valor}% vol. (${promo.cantidad_minima}+) — ${promo.nombre}`;
           break;
-        case 'producto_gratis':
-          descuento = 0;
-          descripcion = `${promo.cantidad_gratis}x gratis — ${promo.nombre}`;
+        case 'producto_gratis': {
+          const cantGratis = promo.cantidad_gratis || 1;
+          // Calculate how many sets of "buy X" fit in the cart quantity
+          const sets = Math.floor(item.cantidad / (promo.cantidad_minima || 1));
+          const totalGratis = sets * cantGratis;
+          // The discount is the value of the free items at the item's unit price
+          descuento = totalGratis * item.precio_unitario;
+          descripcion = `${cantGratis}x gratis (${promo.cantidad_minima || 1}×${(promo.cantidad_minima || 1) - cantGratis}) — ${promo.nombre}`;
           results.push({
             promocion_id: promo.id,
             nombre: promo.nombre,
             tipo: promo.tipo,
             producto_id: item.producto_id,
-            descuento: 0,
+            descuento: Math.round(descuento * 100) / 100,
             descripcion,
             producto_gratis_id: promo.producto_gratis_id || item.producto_id,
-            cantidad_gratis: promo.cantidad_gratis || 1,
+            cantidad_gratis: totalGratis,
           });
           if (!promo.acumulable) appliedNonAcumulable.add(item.producto_id);
           continue;
+        }
       }
 
       if (descuento > 0) {
