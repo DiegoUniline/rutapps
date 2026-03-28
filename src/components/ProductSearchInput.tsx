@@ -127,7 +127,7 @@ export default function ProductSearchInput({ products, value, displayText, onSel
   return (
     <div>
       <input
-        ref={inputRef}
+        ref={el => { inputRef.current = el; registerRef?.(el); }}
         type="text"
         className="input-odoo text-[12px] !py-1 w-full"
         value={search}
