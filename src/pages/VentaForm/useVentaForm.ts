@@ -126,23 +126,37 @@ export function useVentaForm() {
   const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
   const saldoPendiente = (form.total ?? 0) - totalPagado;
 
-  // Load existing
+  // Load existing venta — only once per venta id, enrich when productosList arrives
+  const enrichedRef = useRef(false);
   useEffect(() => {
-    if (existingVenta) {
-      setForm(existingVenta);
-      const existingLines = (existingVenta.venta_lineas ?? []).map((l: any) => {
-        const prod = productosList?.find((p: any) => p.id === l.producto_id);
-        const unidadData = prod ? (prod as any).unidades_venta : null;
-        const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
-        const taxes: string[] = [];
-        if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
-        if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
-        return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
-      });
-      setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
-    } else if (isNew) {
-      setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
+    if (!existingVenta) {
+      if (isNew) setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
+      return;
     }
+    const ventaId = (existingVenta as any).id;
+    const isFirstLoad = loadedVentaIdRef.current !== ventaId;
+    const needsEnrich = !enrichedRef.current && !!productosList?.length;
+
+    if (!isFirstLoad && !needsEnrich) return;
+
+    if (isFirstLoad) {
+      loadedVentaIdRef.current = ventaId;
+      enrichedRef.current = false;
+      setForm(existingVenta);
+    }
+
+    if (productosList?.length) enrichedRef.current = true;
+
+    const existingLines = ((existingVenta as any).venta_lineas ?? []).map((l: any) => {
+      const prod = productosList?.find((p: any) => p.id === l.producto_id);
+      const unidadData = prod ? (prod as any).unidades_venta : null;
+      const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
+      const taxes: string[] = [];
+      if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
+      if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
+      return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
+    });
+    setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
   }, [existingVenta, isNew, profile, productosList]);
 
   // Totals
