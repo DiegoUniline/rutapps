@@ -143,6 +143,9 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   if (venta.iva_total > 0) totalRows.push({ label: 'IVA 16%:', value: `${s}${fmtCurrency(venta.iva_total)}` });
   if (venta.ieps_total > 0) totalRows.push({ label: 'IEPS:', value: `${s}${fmtCurrency(venta.ieps_total)}` });
   totalRows.push({ label: 'Total:', value: `${s}${fmtCurrency(venta.total)}`, bold: true });
+  if ((venta.saldo_pendiente ?? 0) > 0) {
+    totalRows.push({ label: 'Saldo pendiente:', value: `${s}${fmtCurrency(venta.saldo_pendiente)}`, bold: true, red: true });
+  }
 
   y = drawTotalsBlock(doc, y, totalRows);
 
