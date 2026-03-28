@@ -157,6 +157,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
       </div>
       <div className="space-y-3">
         <div><label className="label-odoo">Almacén</label>{renderAlmacen()}</div>
+        {renderDescuentoExtra()}
         {renderSaldo()}
       </div>
     </div>
