@@ -277,6 +277,7 @@ export function useVentaForm() {
       const payload = { ...form, ...finalTotals, vendedor_id: profile.vendedor_id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
+      const linePromises: Promise<any>[] = [];
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
@@ -285,13 +286,24 @@ export function useVentaForm() {
         const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-        await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps } as any);
+        const linePayload = { ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
+        const clean = { ...linePayload } as any;
+        delete clean.unidad_label;
+        delete clean.impuestos_label;
+        delete clean.productos;
+        delete clean.unidades;
+        linePromises.push(saveLinea.mutateAsync(clean));
       }
+      await Promise.all(linePromises);
       if (isNew && autoConfirm) {
         const saldo = form.condicion_pago === 'contado' ? 0 : finalTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
+      // Invalidate venta query once after all saves complete
+      queryClient.invalidateQueries({ queryKey: ['venta', ventaId] });
+      loadedVentaIdRef.current = null; // allow reload
+      enrichedRef.current = false;
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
