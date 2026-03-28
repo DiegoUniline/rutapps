@@ -18,13 +18,14 @@ export default function RutaNuevaVenta() {
       <TicketVenta
         empresa={{ nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc }}
         folio={h.ticketInfo.folio} fecha={h.ticketInfo.fecha} clienteNombre={h.clienteNombre}
-        lineas={h.cart.map(item => { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, subtotal: lineSub, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, esCambio: item.es_cambio }; })}
+        lineas={h.cart.map(item => { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, subtotal: lineSub, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, esCambio: item.es_cambio, producto_id: item.producto_id }; })}
         subtotal={h.totals.subtotal} iva={h.totals.iva} ieps={h.totals.ieps} total={h.totals.total}
         descuentoDevolucion={h.totals.descuentoDevolucion ?? 0}
         devoluciones={h.devoluciones.map(d => ({ nombre: d.nombre, cantidad: d.cantidad, motivo: d.motivo, accion: d.accion, monto: d.precio_unitario * d.cantidad }))}
         condicionPago={h.condicionPago} metodoPago={h.pagos.map(p => p.metodo_pago).join(', ')} montoRecibido={h.montoRecibidoNum} cambio={h.cambio}
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
+        promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
         onClose={() => h.navigate('/ruta')}
       />
     );

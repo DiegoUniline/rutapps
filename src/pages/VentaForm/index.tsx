@@ -85,8 +85,10 @@ export default function VentaFormPage() {
         iva_monto: Number(l.iva_monto ?? 0),
         ieps_monto: Number(l.ieps_monto ?? 0),
         descuento_pct: Number((l as any).descuento_porcentaje ?? (l as any).descuento_pct ?? 0),
+        producto_id: l.producto_id,
       })),
-      promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento })),
+      promociones: (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+      saldoNuevo: saldoPendiente > 0 ? saldoPendiente : undefined,
     });
     const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
     printTicket(td, { ticketAncho });
