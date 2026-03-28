@@ -147,11 +147,15 @@ function AppRoutes() {
   const { user, profile, loading } = useAuth();
   const subscription = useSubscription();
   
+  const { hasPermiso, loading: permisosLoading } = usePermisos();
+  
   // Global unhandled rejection → error modal
   useGlobalErrorHandler();
   
   // Pre-warm React Query cache with base catalogs on login
   useBootstrapPrefetch();
+
+  const isSoloMovil = user && !permisosLoading && hasPermiso('solo_movil', 'ver');
 
   if (loading || subscription.loading) {
     return (
