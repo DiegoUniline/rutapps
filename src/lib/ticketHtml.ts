@@ -144,6 +144,12 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     const detParts = [`  ${fmt(l.precio)}c/u`];
     if (showTax && (l.iva_monto ?? 0) > 0) detParts.push(`IVA${fmt(l.iva_monto!)}`);
     add(detParts.join(' ').substring(0, COLS));
+    // Per-product promotions
+    const linePromos = (promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
+    for (const lp of linePromos) {
+      const desc = fmt(lp.descuento);
+      add(pad(`  *${lp.descripcion}`, `-${desc}`));
+    }
   }
   add(div);
 
