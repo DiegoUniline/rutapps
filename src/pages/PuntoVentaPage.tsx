@@ -327,6 +327,18 @@ export default function PuntoVentaPage() {
       const almacenId = profile?.almacen_id || null;
       const today = todayInTimezone(empresa?.zona_horaria);
 
+      // Fetch client's previous balance (sum of saldo_pendiente on all their ventas)
+      let saldoAnteriorCliente = 0;
+      if (clienteId) {
+        const { data: saldoRows } = await supabase
+          .from('ventas')
+          .select('saldo_pendiente')
+          .eq('empresa_id', empresa.id)
+          .eq('cliente_id', clienteId)
+          .gt('saldo_pendiente', 0);
+        saldoAnteriorCliente = (saldoRows ?? []).reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
+      }
+
       // 1. Insert venta
       if (!profile?.vendedor_id) {
         toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador.');
