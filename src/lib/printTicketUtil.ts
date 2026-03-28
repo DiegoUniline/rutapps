@@ -112,6 +112,7 @@ export function buildTicketDataFromVenta(params: {
   }>;
   montoRecibido?: number;
   cambio?: number;
+  promociones?: { descripcion: string; descuento: number }[];
 }): TicketData {
   const { empresa, venta, clienteNombre, lineas } = params;
   return {
@@ -154,5 +155,6 @@ export function buildTicketDataFromVenta(params: {
     saldoAnterior: undefined,
     pagoAplicado: undefined,
     saldoNuevo: (venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined,
+    promociones: params.promociones,
   };
 }
