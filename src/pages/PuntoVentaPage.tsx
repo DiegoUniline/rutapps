@@ -396,18 +396,17 @@ export default function PuntoVentaPage() {
         } as any);
       }
 
-      // 4. Insert cobros if contado (one per split)
+      // 4. Insert cobros if contado (one per method with amount)
       if (condicion === 'contado' && totals.total > 0) {
-        for (const split of paySplits) {
-          const splitMonto = parseFloat(split.monto) || 0;
-          if (splitMonto <= 0) continue;
+        for (const split of paySplitsComputed) {
+          if (split.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
           const { error: cobErr } = await supabase.from('cobros').insert({
             id: cobroId,
             empresa_id: empresa.id,
             cliente_id: clienteId ?? empresa.id,
             user_id: user.id,
-            monto: Math.min(splitMonto, totals.total),
+            monto: Math.min(split.monto, totals.total),
             metodo_pago: split.metodo,
             referencia: split.referencia || null,
             fecha: today,
@@ -416,13 +415,14 @@ export default function PuntoVentaPage() {
             await supabase.from('cobro_aplicaciones').insert({
               cobro_id: cobroId,
               venta_id: ventaId,
-              monto_aplicado: Math.min(splitMonto, totals.total),
+              monto_aplicado: Math.min(split.monto, totals.total),
             });
           }
         }
       }
 
       // Save ticket data for display
+      const metodosUsados = paySplitsComputed.map(s => s.metodo).join(' + ');
       setLastVentaData({
         folio: ventaData?.folio ?? ventaId.slice(0, 8),
         fecha: today,
@@ -449,7 +449,7 @@ export default function PuntoVentaPage() {
         promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento })),
         total: totals.total,
         condicionPago: condicion,
-        metodoPago: paySplits.map(s => s.metodo).join(' + '),
+        metodoPago: metodosUsados || 'efectivo',
         montoRecibido: totalPagado > 0 ? totalPagado : undefined,
         cambio: cambio > 0 ? cambio : undefined,
       });
