@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { fmtDate } from '@/lib/utils';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
-import { buildEscPosBytes } from '@/lib/escpos';
+import { printTicket } from '@/lib/printTicketUtil';
 import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetoothPrinter';
 import { generarEstadoCuentaPdf } from '@/lib/estadoCuentaPdf';
 import { toPng } from 'html-to-image';
