@@ -144,6 +144,7 @@ export function buildTicketDataFromVenta(params: {
       iva_monto: l.iva_monto ?? 0,
       ieps_monto: l.ieps_monto ?? 0,
       descuento_pct: l.descuento_pct ?? 0,
+      producto_id: l.producto_id,
     })),
     subtotal: venta.subtotal ?? 0,
     iva: venta.iva_total ?? 0,

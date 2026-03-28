@@ -162,26 +162,18 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
     },
   );
 
-  // ── PROMOCIONES APLICADAS ──
+  // ── AHORRO TOTAL PROMOS (inline per product above) ──
   if (promociones && promociones.length > 0) {
-    y = checkPageBreak(doc, y);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text('Promociones aplicadas:', ML, y);
-    y += 4;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    for (const p of promociones) {
-      doc.setTextColor(30, 130, 76);
-      doc.text(`🎁 ${p.descripcion}  —  Ahorro: ${s}${fmtCurrency(p.descuento)}`, ML, y);
-      y += 3.5;
-    }
     const totalAhorro = promociones.reduce((sum, p) => sum + p.descuento, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(`Ahorro total por promociones: ${s}${fmtCurrency(totalAhorro)}`, ML, y);
-    y += 6;
+    if (totalAhorro > 0) {
+      y = checkPageBreak(doc, y);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 130, 76);
+      doc.text(`Ahorro total por promociones: ${s}${fmtCurrency(totalAhorro)}`, ML, y);
+      y += 6;
+      doc.setTextColor(...C.text);
+    }
   }
 
   // ── TOTALS ──

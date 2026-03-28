@@ -267,26 +267,14 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               </>
             )}
 
-            {/* Promociones */}
-            {promociones.length > 0 && (
-              <>
-                <div className="tk-dash mx-5 border-t border-dashed border-border" />
-                <div className="px-5 py-2">
-                  <p className="tk-section text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">Promociones</p>
-                  <div className="space-y-0.5">
-                    {promociones.map((p, i) => (
-                      <div key={i} className="flex justify-between text-[10px]">
-                        <span className="text-foreground flex items-center gap-1 truncate flex-1 mr-2">🏷️ {p.descripcion}</span>
-                        <span className="text-primary font-bold tabular-nums shrink-0">-{fmt(p.descuento)}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between text-[10px] pt-0.5 border-t border-dashed border-border mt-1">
-                      <span className="text-primary font-semibold">Ahorro total</span>
-                      <span className="text-primary font-bold tabular-nums">-{fmt(promociones.reduce((s, p) => s + p.descuento, 0))}</span>
-                    </div>
-                  </div>
+            {/* Ahorro total promos — inline per product above */}
+            {promociones.length > 0 && promociones.reduce((s, p) => s + p.descuento, 0) > 0 && (
+              <div className="px-5 py-0.5">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-primary font-semibold">🏷️ Ahorro promos</span>
+                  <span className="text-primary font-bold tabular-nums">-{fmt(promociones.reduce((s, p) => s + p.descuento, 0))}</span>
                 </div>
-              </>
+              </div>
             )}
 
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
