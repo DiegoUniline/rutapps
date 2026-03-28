@@ -242,6 +242,16 @@ export default function VentasListPage() {
           <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
           <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
           <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
+          <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
+            {(v.descuento_total ?? 0) > 0 ? (
+              <span className="flex items-center justify-end gap-1">
+                <Gift className="h-3 w-3 text-primary shrink-0" />
+                <span className="text-destructive">-{fmt(v.descuento_total)}</span>
+              </span>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </td>
           <td className="py-2 px-3 text-right font-medium tabular-nums">{fmt(v.total)}</td>
           <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
             {(v.saldo_pendiente ?? 0) > 0 ? (
