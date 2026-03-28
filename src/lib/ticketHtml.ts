@@ -39,6 +39,7 @@ export interface TicketLinea {
 export interface TicketPromo {
   descripcion: string;
   descuento: number;
+  producto_id?: string;
 }
 
 export interface TicketData {
