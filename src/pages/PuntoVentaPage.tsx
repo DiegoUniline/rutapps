@@ -1122,7 +1122,8 @@ export default function PuntoVentaPage() {
                     clienteNombre: lastVentaData.clienteNombre,
                     lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
                     montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
-                    saldoNuevo: (lastVentaData.saldoPendiente ?? 0) > 0 ? lastVentaData.saldoPendiente : undefined,
+                    saldoAnterior: lastVentaData.saldoAnterior,
+                    saldoNuevo: lastVentaData.saldoNuevoCalc,
                   });
                   printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
                 }}
