@@ -77,7 +77,7 @@ export function VentaLineasTab(props: Props) {
           )}
         </div>
       )}
-      <VentaTotals {...totals} isMobile={isMobile} />
+      <VentaTotals {...totals} isMobile={isMobile} saldoPendiente={(props as any).saldoPendiente} />
     </div>
   );
 }
