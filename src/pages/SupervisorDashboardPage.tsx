@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertCircle,
   Banknote,
+  CalendarDays,
   CheckCircle2,
   Clock,
   Eye,
@@ -71,9 +72,12 @@ export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
   const { fmt: fmtMoney } = useCurrency();
   const today = todayInTimezone(empresa?.zona_horaria);
+  const [desde, setDesde] = useState(today);
+  const [hasta, setHasta] = useState(today);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
   const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
   const [soloHoy, setSoloHoy] = useState(true);
+  const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const diaHoyLabel = DIAS_SEMANA[new Date().getDay()];
@@ -158,14 +162,15 @@ export default function SupervisorDashboardPage() {
   );
 
   const { data: ventasHoy } = useQuery({
-    queryKey: ['supervisor-ventas-hoy', today, empresa?.id],
+    queryKey: ['supervisor-ventas-hoy', desde, hasta, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
         .select('id, vendedor_id, total, subtotal, status, tipo, condicion_pago, created_at, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
         .neq('status', 'cancelado')
         .order('created_at', { ascending: false });
       return (data ?? []) as any[];
@@ -174,14 +179,15 @@ export default function SupervisorDashboardPage() {
   });
 
   const { data: cobrosHoy } = useQuery({
-    queryKey: ['supervisor-cobros-hoy', today, empresa?.id],
+    queryKey: ['supervisor-cobros-hoy', desde, hasta, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('cobros')
         .select('id, user_id, monto, metodo_pago, created_at, cliente_id, clientes(nombre)')
         .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
         .neq('status', 'cancelado')
         .order('created_at', { ascending: false });
       return (data ?? []) as any[];
@@ -190,14 +196,15 @@ export default function SupervisorDashboardPage() {
   });
 
   const { data: gastosHoy } = useQuery({
-    queryKey: ['supervisor-gastos-hoy', today, empresa?.id],
+    queryKey: ['supervisor-gastos-hoy', desde, hasta, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('gastos')
         .select('id, vendedor_id, monto, concepto, created_at')
         .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
         .order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
@@ -205,28 +212,30 @@ export default function SupervisorDashboardPage() {
   });
 
   const { data: entregasHoy } = useQuery({
-    queryKey: ['supervisor-entregas-hoy', today, empresa?.id],
+    queryKey: ['supervisor-entregas-hoy', desde, hasta, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
         .select('id, vendedor_id, vendedor_ruta_id, status, cliente_id, clientes(nombre), folio')
         .eq('empresa_id', empresa!.id)
-        .eq('fecha', today);
+        .gte('fecha', desde)
+        .lte('fecha', hasta);
       return (data ?? []) as any[];
     },
     refetchInterval: 30000,
   });
 
   const { data: visitasHoy } = useQuery({
-    queryKey: ['supervisor-visitas-hoy', today, empresa?.id],
+    queryKey: ['supervisor-visitas-hoy', desde, hasta, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
         .from('visitas')
         .select('id, user_id, cliente_id, tipo, motivo, gps_lat, gps_lng, created_at, clientes(nombre, gps_lat, gps_lng)')
         .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
         .order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
@@ -236,14 +245,15 @@ export default function SupervisorDashboardPage() {
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
   const { data: devolucionesHoy } = useQuery({
-    queryKey: ['supervisor-devoluciones-hoy', today, empresa?.id],
+    queryKey: ['supervisor-devoluciones-hoy', desde, hasta, empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('devoluciones')
         .select('id, vendedor_id, tipo, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
         .eq('empresa_id', empresa!.id)
-        .eq('fecha', today)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
         .order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
@@ -586,18 +596,45 @@ export default function SupervisorDashboardPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className="gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                En vivo
-              </Badge>
-              <Badge variant="secondary">{today}</Badge>
+              {!isRangeMode && (
+                <Badge variant="outline" className="gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  En vivo
+                </Badge>
+              )}
               {selectedSeller && <Badge variant="secondary">Filtro: {selectedSeller.nombre}</Badge>}
             </div>
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-foreground">Centro de control supervisor</h1>
               <p className="text-sm text-muted-foreground">
-                Vista única tipo dashboard para ventas, cobros, rutas, clientes y operación del día.
+                Vista única tipo dashboard para ventas, cobros, rutas, clientes y operación.
               </p>
+            </div>
+            {/* ── Date range filter ── */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+              <input
+                type="date"
+                value={desde}
+                onChange={e => setDesde(e.target.value)}
+                className="bg-accent/60 rounded-lg px-2.5 py-1.5 text-[13px] text-foreground border border-border focus:outline-none focus:ring-1.5 focus:ring-primary/40 w-[140px]"
+              />
+              <span className="text-xs text-muted-foreground">al</span>
+              <input
+                type="date"
+                value={hasta}
+                onChange={e => setHasta(e.target.value)}
+                className="bg-accent/60 rounded-lg px-2.5 py-1.5 text-[13px] text-foreground border border-border focus:outline-none focus:ring-1.5 focus:ring-primary/40 w-[140px]"
+              />
+              {isRangeMode && (
+                <button
+                  type="button"
+                  onClick={() => { setDesde(today); setHasta(today); }}
+                  className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Hoy
+                </button>
+              )}
             </div>
           </div>
 
