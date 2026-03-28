@@ -23,6 +23,7 @@ interface PedidoPdfParams {
     iva_total: number;
     ieps_total: number;
     total: number;
+    saldo_pendiente?: number;
     notas?: string | null;
   };
   cliente: {
