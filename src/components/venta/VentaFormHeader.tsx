@@ -118,8 +118,8 @@ export function VentaFormHeader({
         {!isNew && status !== 'cancelado' && (
           <button onClick={() => onStatusChange('cancelado')} className="btn-odoo-secondary text-destructive text-xs">Cancelar</button>
         )}
-        {!isNew && status === 'borrador' && (
-          <button onClick={onDelete} className="btn-odoo-secondary text-destructive !px-2">
+        {!isNew && (status === 'borrador' || (status === 'cancelado' && canDeleteCancelada)) && (
+          <button onClick={onDelete} className="btn-odoo-secondary text-destructive !px-2" title={status === 'cancelado' ? 'Eliminar venta cancelada' : 'Eliminar borrador'}>
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
