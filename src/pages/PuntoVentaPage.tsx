@@ -317,9 +317,6 @@ export default function PuntoVentaPage() {
     setSearch('');
   };
 
-  // Ticket state
-  const [showTicket, setShowTicket] = useState(false);
-  const [lastVentaData, setLastVentaData] = useState<any>(null);
 
   // Auto-print ticket when sale completes
   useEffect(() => {
