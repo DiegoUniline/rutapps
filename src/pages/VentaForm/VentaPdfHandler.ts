@@ -18,7 +18,7 @@ interface PdfParams {
 }
 
 export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
-  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData } = params;
+  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData, promociones } = params;
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
   const vendedorName = profile?.nombre || userEmail || '';
 
