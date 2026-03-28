@@ -37,6 +37,7 @@ const VENTAS_COLUMNS: ExportColumn[] = [
   { key: 'tipo', header: 'Tipo', width: 14 },
   { key: 'condicion_pago', header: 'Condición', width: 12 },
   { key: 'subtotal', header: 'Subtotal', format: 'currency', width: 14 },
+  { key: 'descuento_total', header: 'Descuento', format: 'currency', width: 14 },
   { key: 'iva_total', header: 'IVA', format: 'currency', width: 12 },
   { key: 'total', header: 'Total', format: 'currency', width: 14 },
   { key: 'saldo_pendiente', header: 'Saldo', format: 'currency', width: 14 },
