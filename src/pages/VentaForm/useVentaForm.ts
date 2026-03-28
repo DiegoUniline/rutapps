@@ -365,7 +365,7 @@ export function useVentaForm() {
     profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
-    pagosData, totalPagado, saldoPendiente, totals, tarifaRules,
+    pagosData, totalPagado, saldoPendiente, totals: finalTotals, promoResults, tarifaRules,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog, requestPin,
