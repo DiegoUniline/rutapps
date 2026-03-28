@@ -244,7 +244,7 @@ export function useVentaForm() {
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const handleDelete = async () => { if (!form.id || !confirm('¿Eliminar esta venta?')) return; await deleteVenta.mutateAsync(form.id); toast.success('Venta eliminada'); navigate('/ventas'); };
+  const handleDelete = async () => { if (!form.id) return; await deleteVenta.mutateAsync(form.id); toast.success('Venta eliminada'); navigate('/ventas'); };
 
   const logHistorial = async (ventaId: string, accion: string, detalles: any = {}) => {
     try {

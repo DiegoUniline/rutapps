@@ -16,6 +16,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { MobileListCard } from '@/components/MobileListCard';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { useVentasPaginated, useDeleteVenta } from '@/hooks/useVentas';
 import { usePermisos } from '@/hooks/usePermisos';
@@ -131,6 +132,7 @@ export default function VentasListPage() {
   const [page, setPage] = useState(1);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
@@ -245,8 +247,7 @@ export default function VentasListPage() {
                 title="Eliminar"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!confirm('¿Eliminar esta venta?')) return;
-                  deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                  setDeleteTarget(v.id);
                 }}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -421,8 +422,7 @@ export default function VentasListPage() {
                             className="text-destructive focus:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (!confirm('¿Eliminar esta venta?')) return;
-                              deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                              setDeleteTarget(v.id);
                             }}
                           >
                             <Trash2 className="h-3.5 w-3.5 mr-2" /> Eliminar
@@ -467,6 +467,30 @@ export default function VentasListPage() {
         </>
       )}
       </>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta venta?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La venta y todas sus líneas serán eliminadas permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteVenta.mutateAsync(deleteTarget).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                setDeleteTarget(null);
+              }}
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -453,9 +454,9 @@ export default function VentaFormPage() {
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
   };
-
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const handleDelete = async () => {
-    if (!form.id || !confirm('¿Eliminar esta venta?')) return;
+    if (!form.id) return;
     await deleteVenta.mutateAsync(form.id);
     toast.success('Venta eliminada');
     navigate('/ventas');
@@ -580,7 +581,7 @@ export default function VentaFormPage() {
         isCreatingEntrega={crearEntrega.isPending}
         onBack={() => navigate('/ventas')}
         onSave={handleSave}
-        onDelete={handleDelete}
+        onDelete={() => setShowDeleteConfirm(true)}
         onStatusChange={handleStatusChange}
         onCreateEntrega={async () => {
           const linesToUse = remaining && remaining.length > 0
@@ -1276,6 +1277,19 @@ export default function VentaFormPage() {
        )}
 
       <PinDialog />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta venta?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer. La venta y todas sus líneas serán eliminadas permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

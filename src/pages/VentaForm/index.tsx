@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermisos } from '@/hooks/usePermisos';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
 import { OdooTabs } from '@/components/OdooTabs';
 import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
@@ -24,6 +26,7 @@ export default function VentaFormPage() {
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
@@ -106,7 +109,7 @@ export default function VentaFormPage() {
         entregasExistentes={(entregasExistentes ?? []).map(e => ({ id: e.id, folio: e.folio, status: e.status }))}
         lineasPendientesFactura={lineas.filter(l => l.producto_id && !l.facturado).length}
         isSaving={saveVenta.isPending} isCreatingEntrega={crearEntrega.isPending}
-        onBack={() => navigate('/ventas')} onSave={handleSave} onDelete={handleDelete} onStatusChange={handleStatusChange}
+        onBack={() => navigate('/ventas')} onSave={handleSave} onDelete={() => setShowDeleteConfirm(true)} onStatusChange={handleStatusChange}
         onCreateEntrega={async () => {
           const linesToUse = remaining?.length ? remaining.map(r => ({ producto_id: r.producto_id, unidad_id: lineas.find(l => l.producto_id === r.producto_id)?.unidad_id, cantidad_pedida: r.cantidad_pendiente }))
             : (lineas ?? []).filter(l => l.producto_id && Number(l.cantidad) > 0).map(l => ({ producto_id: l.producto_id!, unidad_id: l.unidad_id, cantidad_pedida: Number(l.cantidad) }));
@@ -139,6 +142,19 @@ export default function VentaFormPage() {
       <DocumentPreviewModal open={showPdfModal} onClose={() => { setShowPdfModal(false); setPdfBlob(null); }} pdfBlob={pdfBlob} fileName={`${form.folio ?? 'pedido'}.pdf`} empresaId={empresa?.id ?? ''} defaultPhone={clientesList?.find(c => c.id === form.cliente_id)?.telefono ?? ''} caption={`Documento ${form.folio}`} tipo="pedido" referencia_id={form.id} />
       {showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
       <PinDialog />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar esta venta?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer. La venta y todas sus líneas serán eliminadas permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleDelete}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
