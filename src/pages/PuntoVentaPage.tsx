@@ -457,7 +457,7 @@ export default function PuntoVentaPage() {
         ieps: totals.ieps,
         descuento: totals.descuento,
         promos: promoResults.map(r => r.descripcion),
-        promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento })),
+        promoDetails: promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
         total: totals.total,
         condicionPago: condicion,
         metodoPago: metodosUsados || 'efectivo',
