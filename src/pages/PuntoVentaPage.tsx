@@ -3,7 +3,7 @@ import { todayInTimezone } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
-  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package
+  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,7 @@ import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 
