@@ -1,5 +1,6 @@
 import { Plus, Trash2, ReceiptText } from 'lucide-react';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import type { PromoResult } from '@/hooks/usePromociones';
 import { VentaTotals } from '@/components/venta/VentaTotals';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
