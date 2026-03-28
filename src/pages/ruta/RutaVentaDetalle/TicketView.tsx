@@ -13,7 +13,7 @@ interface Props {
   fmt: (n: number) => string;
 }
 
-export function TicketView({ ticketData, clienteNombre, cuentasPendientes, lineas, ventaTotal, onDone, fmt }: Props) {
+export function TicketView({ ticketData, clienteNombre, cuentasPendientes, lineas, ventaTotal, saldoPendiente, onDone, fmt }: Props) {
   const { symbol: s } = useCurrency();
   return (
     <div className="min-h-screen bg-background flex flex-col">
