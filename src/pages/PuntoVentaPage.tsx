@@ -306,6 +306,24 @@ export default function PuntoVentaPage() {
   const [showTicket, setShowTicket] = useState(false);
   const [lastVentaData, setLastVentaData] = useState<any>(null);
 
+  // Auto-print ticket when sale completes
+  useEffect(() => {
+    if (!showTicket || !lastVentaData) return;
+    const timer = setTimeout(() => {
+      const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number }[];
+      const td = buildTicketDataFromVenta({
+        empresa,
+        venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
+        clienteNombre: lastVentaData.clienteNombre,
+        lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto })),
+        montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
+      });
+      printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
+    }, 400);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTicket]);
+
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
