@@ -398,18 +398,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Menu className="h-5 w-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border flex flex-col h-full">
-                <div className="h-14 flex items-center px-4 border-b border-sidebar-border/30">
+              <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border flex flex-col h-full gap-0">
+                <div className="h-14 flex items-center px-4 border-b border-sidebar-border/30 shrink-0">
                   <img src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png" alt="Rutapp" className="h-7 w-7 rounded object-contain" />
                   <span className="text-[18px] font-black text-primary tracking-tight">Rutapp</span>
                 </div>
-                <SidebarNav
-                  collapsed={false}
-                  onNavigate={closeMobile}
-                  visibleNavItems={visibleNavItems}
-                  isSuperAdmin={isSuperAdmin}
-                  setupComplete={setupComplete}
-                />
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <SidebarNav
+                    collapsed={false}
+                    onNavigate={closeMobile}
+                    visibleNavItems={visibleNavItems}
+                    isSuperAdmin={isSuperAdmin}
+                    setupComplete={setupComplete}
+                  />
+                </div>
                 <div className="border-t border-sidebar-border/30 p-2.5 shrink-0 mt-auto safe-area-bottom">
                   <div className="px-2 py-2 mb-1">
                     <div className="text-[12px] font-semibold text-sidebar-foreground truncate">{profile?.nombre ?? 'Usuario'}</div>
