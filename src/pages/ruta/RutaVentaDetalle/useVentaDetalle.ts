@@ -27,7 +27,8 @@ export function useVentaDetalle() {
   const [referenciaPago, setReferenciaPago] = useState('');
   const [cuentasPendientes, setCuentasPendientes] = useState<CuentaPendiente[]>([]);
   const [saving, setSaving] = useState(false);
-  const [ticketData, setTicketData] = useState<{ monto: number; cambio: number; metodo: string; folio: string; fecha: string } | null>(null);
+  const [montoAplicarActual, setMontoAplicarActual] = useState(0);
+  const [ticketData, setTicketData] = useState<{ monto: number; cambio: number; metodo: string; folio: string; fecha: string; aplicaciones: { folio: string; monto: number; saldoRestante: number }[] } | null>(null);
   const [sendingWA, setSendingWA] = useState(false);
   const [showWADialog, setShowWADialog] = useState(false);
   const [waPhone, setWaPhone] = useState('');
@@ -75,9 +76,11 @@ export function useVentaDetalle() {
   const excedeCredito = editCondicion === 'credito' && editTotals.total > creditoDisponible;
   const saldoActual = venta?.saldo_pendiente ?? 0;
   const totalAplicarOtras = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
-  const totalACobrar = saldoActual + totalAplicarOtras;
+  const totalACobrar = montoAplicarActual + totalAplicarOtras;
   const montoRecibidoNum = parseFloat(montoRecibido) || 0;
   const cambio = montoRecibidoNum > totalACobrar ? montoRecibidoNum - totalACobrar : 0;
+
+  const updateMontoAplicarActual = (monto: number) => { setMontoAplicarActual(Math.min(Math.max(0, monto), saldoActual)); };
 
   const filteredProductos = productos?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
 
@@ -120,6 +123,7 @@ export function useVentaDetalle() {
   const initCobrar = () => {
     if (otrasPendientes?.length) { setCuentasPendientes(otrasPendientes.map(v => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, montoAplicar: 0 }))); } else { setCuentasPendientes([]); }
     setMetodoPago('efectivo');
+    setMontoAplicarActual(saldoActual);
     setMontoRecibido(saldoActual > 0 ? saldoActual.toString() : '');
     setReferenciaPago('');
     setView('cobrar');
@@ -136,10 +140,28 @@ export function useVentaDetalle() {
       const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null }).select('id').single();
       if (cobroErr) throw cobroErr;
       const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
-      if (saldoActual > 0) { aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: saldoActual }); await supabase.from('ventas').update({ saldo_pendiente: 0, status: venta.status === 'borrador' ? 'confirmado' as const : venta.status }).eq('id', venta.id); }
-      for (const cuenta of cuentasPendientes) { if (cuenta.montoAplicar > 0) { aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar }); await supabase.from('ventas').update({ saldo_pendiente: cuenta.saldo_pendiente - cuenta.montoAplicar }).eq('id', cuenta.id); } }
+      const ticketApps: { folio: string; monto: number; saldoRestante: number }[] = [];
+
+      // Apply to current sale
+      if (montoAplicarActual > 0) {
+        aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: montoAplicarActual });
+        const newSaldo = saldoActual - montoAplicarActual;
+        await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo), status: newSaldo <= 0.01 && venta.status === 'borrador' ? 'confirmado' as const : venta.status }).eq('id', venta.id);
+        ticketApps.push({ folio: venta.folio ?? 'Sin folio', monto: montoAplicarActual, saldoRestante: Math.max(0, newSaldo) });
+      }
+
+      // Apply to other pending sales
+      for (const cuenta of cuentasPendientes) {
+        if (cuenta.montoAplicar > 0) {
+          aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar });
+          const newSaldo = cuenta.saldo_pendiente - cuenta.montoAplicar;
+          await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo) }).eq('id', cuenta.id);
+          ticketApps.push({ folio: cuenta.folio ?? '—', monto: cuenta.montoAplicar, saldoRestante: Math.max(0, newSaldo) });
+        }
+      }
+
       if (aplicaciones.length > 0) { const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones); if (appErr) throw appErr; }
-      setTicketData({ monto: totalACobrar, cambio, metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX') });
+      setTicketData({ monto: totalACobrar, cambio, metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');
       toast.success('¡Cobro registrado!');
       ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
@@ -383,6 +405,7 @@ export function useVentaDetalle() {
     showProductSearch, setShowProductSearch, searchProducto, setSearchProducto,
     editTotals, saldoPendienteOtras, creditoDisponible, excedeCredito,
     saldoActual, totalAplicarOtras, totalACobrar, montoRecibidoNum, cambio,
+    montoAplicarActual, updateMontoAplicarActual,
     filteredProductos, initEditar, addProductToEdit, updateEditQty, removeEditLine,
     handleSaveEdits, initCobrar, updateCuentaMonto, liquidarTodas, handleCobrar,
     handleCancelar, handleVolverBorrador, handleWhatsAppSend, handleDownloadPDF, handlePrintTicket, handleShareTicket, handleEstadoCuenta,
