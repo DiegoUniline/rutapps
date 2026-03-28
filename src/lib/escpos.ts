@@ -275,6 +275,14 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   ln(row('TOTAL', fmt(showTax ? data.total : data.subtotal), W));
   add(BOLD_OFF);
 
+  // Ahorro total por promociones
+  if (data.promociones && data.promociones.length > 0) {
+    const totalPromo = data.promociones.reduce((s, p) => s + p.descuento, 0);
+    if (totalPromo > 0) {
+      ln(row('Ahorro promos', `-${fmt(totalPromo)}`, W));
+    }
+  }
+
   if (data.montoRecibido && data.montoRecibido > 0) {
     ln(row('Recibido', fmt(data.montoRecibido), W));
     if ((data.cambio ?? 0) > 0) ln(row('Cambio', fmt(data.cambio!), W));
