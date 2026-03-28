@@ -4,6 +4,10 @@ const STORAGE_KEY = 'table-page-size';
 
 export type PageSizeOption = 50 | 100 | 200 | 'all';
 
+export function readStoredPageSize(): PageSizeOption {
+  return readStoredSize();
+}
+
 function readStoredSize(): PageSizeOption {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

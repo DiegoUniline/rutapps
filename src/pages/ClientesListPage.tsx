@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
-import { OdooPagination } from '@/components/OdooPagination';
+import { TablePagination } from '@/components/TablePagination';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { ExportButton } from '@/components/ExportButton';
@@ -22,6 +22,7 @@ import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
+import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
 
 const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'codigo', header: 'Código', width: 10 },
@@ -35,8 +36,6 @@ const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'limite_credito', header: 'Límite crédito', format: 'currency', width: 14 },
   { key: 'status', header: 'Estado', width: 10 },
 ];
-
-const PAGE_SIZE = 80;
 
 const STATIC_FILTER_OPTIONS = [
   {
@@ -64,6 +63,10 @@ const GROUP_BY_OPTIONS = [
   { value: 'zona', label: 'Zona' },
   { value: 'credito', label: 'Tipo crédito' },
 ];
+
+function getNumericPageSize(ps: PageSizeOption): number {
+  return ps === 'all' ? 10000 : ps;
+}
 
 function useDynamicFilterOptions() {
   const { empresa } = useAuth();
@@ -94,9 +97,18 @@ function ClientesTable() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSizeState] = useState<PageSizeOption>(readStoredPageSize);
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
   const { vendedores, zonas } = useDynamicFilterOptions();
+
+  const numericPageSize = getNumericPageSize(pageSize);
+
+  const handlePageSizeChange = (size: PageSizeOption) => {
+    setPageSizeState(size);
+    setPage(1);
+    try { localStorage.setItem('table-page-size', String(size)); } catch {}
+  };
 
   const FILTER_OPTIONS = useMemo(() => [
     ...STATIC_FILTER_OPTIONS,
@@ -107,7 +119,7 @@ function ClientesTable() {
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
   const zonaFilter = filters.zona?.length ? filters.zona.join(',') : 'todos';
-  const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, PAGE_SIZE, vendedorFilter, zonaFilter);
+  const { data: clientesData, isLoading } = useClientesPaginated(search, statusFilter, page, numericPageSize, vendedorFilter, zonaFilter);
 
   // Client-side credit filter
   const creditoFilter = filters.credito;
@@ -120,8 +132,9 @@ function ClientesTable() {
     });
   }, [clientesRaw, creditoFilter]);
   const total = clientesData?.total ?? 0;
-  const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
-  const to = Math.min(page * PAGE_SIZE, total);
+  const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
+  const to = Math.min(page * numericPageSize, total);
+  const totalPages = numericPageSize > 0 ? Math.max(1, Math.ceil(total / numericPageSize)) : 1;
   const pageData = clientes;
   const allSelected = pageData.length > 0 && pageData.every(c => selected.has(c.id));
 
@@ -268,14 +281,24 @@ function ClientesTable() {
             />
           ))}
           {total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <TablePagination
+              from={from} to={to} total={total} page={page} totalPages={totalPages}
+              pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
+            />
           )}
         </div>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} />
           {!groupBy && total > 0 && (
-            <OdooPagination from={from} to={to} total={total} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => p + 1)} />
+            <TablePagination
+              from={from} to={to} total={total} page={page} totalPages={totalPages}
+              pageSize={pageSize} onPageSizeChange={handlePageSizeChange}
+              onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)}
+            />
           )}
         </>
       )}
