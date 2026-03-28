@@ -4,7 +4,7 @@ import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { Banknote, MessageCircle } from 'lucide-react';
+import { Banknote, MessageCircle, Printer } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,6 +18,8 @@ import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { fmtDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { printTicket } from '@/lib/printTicketUtil';
+import { buildCobroTicketData } from '@/lib/cobroTicket';
 
 const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
@@ -116,6 +118,38 @@ export default function CobranzaPage() {
     setWaOpen(true);
   };
 
+  const handlePrintCobro = (cobro: any) => {
+    if (!empresa) return;
+    const ticketData = buildCobroTicketData({
+      empresa: {
+        nombre: empresa.nombre ?? '',
+        rfc: (empresa as any).rfc,
+        razon_social: (empresa as any).razon_social,
+        direccion: (empresa as any).direccion,
+        colonia: (empresa as any).colonia,
+        ciudad: (empresa as any).ciudad,
+        estado: (empresa as any).estado,
+        cp: (empresa as any).cp,
+        telefono: (empresa as any).telefono,
+        email: (empresa as any).email,
+        logo_url: (empresa as any).logo_url,
+        moneda: (empresa as any).moneda,
+        notas_ticket: (empresa as any).notas_ticket,
+        ticket_campos: (empresa as any).ticket_campos,
+      },
+      cobro: {
+        id: cobro.id,
+        fecha: cobro.fecha,
+        monto: cobro.monto,
+        metodo_pago: cobro.metodo_pago,
+        referencia: cobro.referencia,
+        notas: cobro.notas,
+      },
+      clienteNombre: (cobro.clientes as any)?.nombre ?? 'Sin cliente',
+    });
+    printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
+  };
+
   // Build dynamic filter options
   const clienteOptions = useMemo(() => {
     const names = new Set<string>();
@@ -197,9 +231,14 @@ export default function CobranzaPage() {
             <TableCell className="text-[12px]"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
             <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
             <TableCell className="text-center">
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
-                <MessageCircle className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center justify-center gap-0.5">
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => handlePrintCobro(c)} title="Imprimir ticket">
+                  <Printer className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}

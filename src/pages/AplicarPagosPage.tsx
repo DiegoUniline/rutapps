@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
+import { printTicket } from '@/lib/printTicketUtil';
+import { buildCobroTicketData } from '@/lib/cobroTicket';
 
 /* ──────────── types ──────────── */
 interface PendingSale {
@@ -189,6 +191,45 @@ export default function AplicarPagosPage() {
       queryClient.invalidateQueries({ queryKey: ['clientes-con-saldo'] });
       queryClient.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
       queryClient.invalidateQueries({ queryKey: ['cobros'] });
+
+      // Print ticket
+      if (empresa) {
+        const ticketData = buildCobroTicketData({
+          empresa: {
+            nombre: empresa.nombre ?? '',
+            rfc: (empresa as any).rfc,
+            razon_social: (empresa as any).razon_social,
+            direccion: (empresa as any).direccion,
+            colonia: (empresa as any).colonia,
+            ciudad: (empresa as any).ciudad,
+            estado: (empresa as any).estado,
+            cp: (empresa as any).cp,
+            telefono: (empresa as any).telefono,
+            email: (empresa as any).email,
+            logo_url: (empresa as any).logo_url,
+            moneda: (empresa as any).moneda,
+            notas_ticket: (empresa as any).notas_ticket,
+            ticket_campos: (empresa as any).ticket_campos,
+          },
+          cobro: {
+            id: cobro.id,
+            fecha: new Date().toISOString().slice(0, 10),
+            monto: totalDistribuido,
+            metodo_pago: metodoPago,
+            referencia,
+            notas,
+          },
+          clienteNombre: selectedCliente.nombre,
+          aplicaciones: aplicaciones.map(v => ({
+            folio: v.folio,
+            monto: v.montoAplicar,
+            saldoAnterior: v.saldo_pendiente,
+            saldoNuevo: Math.max(0, v.saldo_pendiente - v.montoAplicar),
+          })),
+        });
+        printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
+      }
+
       handleBack();
     } catch (e: any) {
       toast.error(e.message || 'Error al aplicar pago');
