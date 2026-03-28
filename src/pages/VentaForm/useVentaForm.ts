@@ -61,6 +61,7 @@ export function useVentaForm() {
   const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
+  const loadedVentaIdRef = useRef<string | null>(null);
   const { requestPin, PinDialog } = usePinAuth();
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -125,23 +126,37 @@ export function useVentaForm() {
   const totalPagado = useMemo(() => (pagosData ?? []).reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0), [pagosData]);
   const saldoPendiente = (form.total ?? 0) - totalPagado;
 
-  // Load existing
+  // Load existing venta — only once per venta id, enrich when productosList arrives
+  const enrichedRef = useRef(false);
   useEffect(() => {
-    if (existingVenta) {
-      setForm(existingVenta);
-      const existingLines = (existingVenta.venta_lineas ?? []).map((l: any) => {
-        const prod = productosList?.find((p: any) => p.id === l.producto_id);
-        const unidadData = prod ? (prod as any).unidades_venta : null;
-        const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
-        const taxes: string[] = [];
-        if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
-        if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
-        return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
-      });
-      setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
-    } else if (isNew) {
-      setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
+    if (!existingVenta) {
+      if (isNew) setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
+      return;
     }
+    const ventaId = (existingVenta as any).id;
+    const isFirstLoad = loadedVentaIdRef.current !== ventaId;
+    const needsEnrich = !enrichedRef.current && !!productosList?.length;
+
+    if (!isFirstLoad && !needsEnrich) return;
+
+    if (isFirstLoad) {
+      loadedVentaIdRef.current = ventaId;
+      enrichedRef.current = false;
+      setForm(existingVenta);
+    }
+
+    if (productosList?.length) enrichedRef.current = true;
+
+    const existingLines = ((existingVenta as any).venta_lineas ?? []).map((l: any) => {
+      const prod = productosList?.find((p: any) => p.id === l.producto_id);
+      const unidadData = prod ? (prod as any).unidades_venta : null;
+      const unidadLabel = unidadData?.abreviatura || unidadData?.nombre || '';
+      const taxes: string[] = [];
+      if (l.iva_pct > 0) taxes.push(`IVA ${l.iva_pct}%`);
+      if (l.ieps_pct > 0) taxes.push(`IEPS ${l.ieps_pct}%`);
+      return { ...l, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') };
+    });
+    setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
   }, [existingVenta, isNew, profile, productosList]);
 
   // Totals
@@ -262,6 +277,7 @@ export function useVentaForm() {
       const payload = { ...form, ...finalTotals, vendedor_id: profile.vendedor_id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
+      const linePromises: Promise<any>[] = [];
       for (const l of lineas) {
         if (!l.producto_id) continue;
         const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
@@ -270,13 +286,24 @@ export function useVentaForm() {
         const iva = sinImpuestos ? 0 : (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
         const savedIvaPct = sinImpuestos ? 0 : (Number(l.iva_pct) || 0);
         const savedIepsPct = sinImpuestos ? 0 : (Number(l.ieps_pct) || 0);
-        await saveLinea.mutateAsync({ ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps } as any);
+        const linePayload = { ...l, venta_id: ventaId, subtotal: base, iva_pct: savedIvaPct, iva_monto: iva, ieps_pct: savedIepsPct, ieps_monto: ieps, total: base + iva + ieps };
+        const clean = { ...linePayload } as any;
+        delete clean.unidad_label;
+        delete clean.impuestos_label;
+        delete clean.productos;
+        delete clean.unidades;
+        linePromises.push(saveLinea.mutateAsync(clean));
       }
+      await Promise.all(linePromises);
       if (isNew && autoConfirm) {
         const saldo = form.condicion_pago === 'contado' ? 0 : finalTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
+      // Invalidate venta query once after all saves complete
+      queryClient.invalidateQueries({ queryKey: ['venta', ventaId] });
+      loadedVentaIdRef.current = null; // allow reload
+      enrichedRef.current = false;
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
     } catch (e: any) { toast.error(e.message); }
