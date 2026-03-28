@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
+import { printTicket } from '@/lib/printTicketUtil';
+import { buildCobroTicketData } from '@/lib/cobroTicket';
 
 /* ──────────── types ──────────── */
 interface PendingSale {
