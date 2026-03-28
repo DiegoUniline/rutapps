@@ -231,9 +231,14 @@ export default function CobranzaPage() {
             <TableCell className="text-[12px]"><StatusChip status={(c as any).status === 'cancelado' ? 'cancelado' : 'activo'} /></TableCell>
             <TableCell className="text-right font-bold text-success">{fmtC(c.monto)}</TableCell>
             <TableCell className="text-center">
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
-                <MessageCircle className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center justify-center gap-0.5">
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => handlePrintCobro(c)} title="Imprimir ticket">
+                  <Printer className="h-4 w-4" />
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-[#25D366] hover:text-[#25D366]/80" onClick={() => openWaCobro(c)} title="Enviar recibo por WhatsApp">
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}
