@@ -238,6 +238,21 @@ export default function VentasListPage() {
           <td className="py-2 px-3 text-center">
             <StatusChip status={v.status} />
           </td>
+          <td className="py-2 px-2 text-center w-8">
+            {(v.status === 'borrador' || (v.status === 'cancelado' && canDelete)) && (
+              <button
+                className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive transition-colors"
+                title="Eliminar"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!confirm('¿Eliminar esta venta?')) return;
+                  deleteVenta.mutateAsync(v.id).then(() => toast.success('Venta eliminada')).catch((err: any) => toast.error(err.message));
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </td>
         </tr>
       ))}
     </>
