@@ -8,6 +8,7 @@ interface Props {
   cuentasPendientes: { id: string; folio: string | null; montoAplicar: number }[];
   lineas: any[];
   ventaTotal: number;
+  saldoPendiente?: number;
   onDone: () => void;
   fmt: (n: number) => string;
 }
