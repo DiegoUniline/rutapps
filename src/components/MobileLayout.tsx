@@ -55,22 +55,22 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
+    setIsUpdating(true);
     try {
       if ('serviceWorker' in navigator) {
-        // Unregister all service workers
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map(r => r.unregister()));
       }
-      // Clear all caches
       if ('caches' in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
       }
       setSwUpdateAvailable(false);
-      // Force full reload from network
+      // Small delay so user sees the animation
+      await new Promise(r => setTimeout(r, 1200));
       window.location.reload();
     } catch {
-      // Fallback: just reload
+      await new Promise(r => setTimeout(r, 800));
       window.location.reload();
     }
   };
