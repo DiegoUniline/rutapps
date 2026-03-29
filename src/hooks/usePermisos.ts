@@ -14,6 +14,7 @@ interface UsePermisosReturn {
   loading: boolean;
   hasPermiso: (modulo: string, accion: string) => boolean;
   hasModulo: (modulo: string) => boolean;
+  isOwner: boolean;
   reload: () => void;
 }
 
