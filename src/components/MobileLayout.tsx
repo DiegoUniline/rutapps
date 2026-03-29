@@ -77,6 +77,16 @@ export default function MobileLayout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Updating overlay */}
+      {isUpdating && (
+        <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-fade-in">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <div className="text-center">
+            <p className="text-base font-bold text-foreground">Actualizando versión…</p>
+            <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+          </div>
+        </div>
+      )}
       {/* Top bar */}
       <header className="flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-card border-b border-border">
         <div className="flex items-center gap-2">
