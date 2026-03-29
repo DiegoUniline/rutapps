@@ -171,6 +171,7 @@ export interface Empresa {
   notas_ticket?: string;
   moneda?: string;
   zona_horaria?: string;
+  owner_user_id?: string;
 }
 
 export interface Gasto {
