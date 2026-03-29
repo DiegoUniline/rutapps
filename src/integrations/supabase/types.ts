@@ -1936,6 +1936,7 @@ export type Database = {
           moneda: string
           nombre: string
           notas_ticket: string | null
+          owner_user_id: string | null
           razon_social: string | null
           regimen_fiscal: string | null
           rfc: string | null
@@ -1958,6 +1959,7 @@ export type Database = {
           moneda?: string
           nombre: string
           notas_ticket?: string | null
+          owner_user_id?: string | null
           razon_social?: string | null
           regimen_fiscal?: string | null
           rfc?: string | null
@@ -1980,6 +1982,7 @@ export type Database = {
           moneda?: string
           nombre?: string
           notas_ticket?: string | null
+          owner_user_id?: string | null
           razon_social?: string | null
           regimen_fiscal?: string | null
           rfc?: string | null

@@ -459,12 +459,22 @@ export default function UsuariosPage() {
                   </div>
                   <div>
                     <label className="label-odoo">Rol</label>
-                    <select className="input-odoo w-full" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
-                      <option value="">Sin rol</option>
-                      {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}{r.acceso_ruta_movil ? ' 📱' : ''}</option>)}
-                    </select>
-                    {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && (
-                      <p className="text-[11px] text-success mt-1">📱 Este rol tiene acceso a la vista móvil de ruta</p>
+                    {empresa?.owner_user_id === editingUser.user_id ? (
+                      <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed flex items-center gap-2">
+                        <Shield className="h-3.5 w-3.5 text-primary" />
+                        {roles.find(r => r.id === editForm.role_id)?.nombre || 'Administrador'}
+                        <span className="text-[10px] text-primary ml-auto">Dueño — no modificable</span>
+                      </div>
+                    ) : (
+                      <>
+                        <select className="input-odoo w-full" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
+                          <option value="">Sin rol</option>
+                          {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}{r.acceso_ruta_movil ? ' 📱' : ''}</option>)}
+                        </select>
+                        {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && (
+                          <p className="text-[11px] text-success mt-1">📱 Este rol tiene acceso a la vista móvil de ruta</p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div>
@@ -476,12 +486,20 @@ export default function UsuariosPage() {
                   </div>
                   <div>
                     <label className="label-odoo">Estado</label>
-                    <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
-                      <option value="activo">✅ Activo</option>
-                      <option value="baja">🚫 Baja (no puede acceder)</option>
-                    </select>
-                    {editForm.estado === 'baja' && (
-                      <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
+                    {empresa?.owner_user_id === editingUser.user_id ? (
+                      <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed">
+                        ✅ Activo <span className="text-[10px] text-primary ml-2">Dueño — siempre activo</span>
+                      </div>
+                    ) : (
+                      <>
+                        <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
+                          <option value="activo">✅ Activo</option>
+                          <option value="baja">🚫 Baja (no puede acceder)</option>
+                        </select>
+                        {editForm.estado === 'baja' && (
+                          <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div>
@@ -529,10 +547,12 @@ export default function UsuariosPage() {
                 {profiles.map(p => {
                   const userRole = userRoles.find(ur => ur.user_id === p.user_id);
                   const authUser = authUsers.find(au => au.id === p.user_id);
+                  const isOwnerUser = empresa?.owner_user_id === p.user_id;
                   return (
                     <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer" onClick={() => startEdit(p)}>
                       <td className="px-4 py-2.5">
                         <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
+                        {isOwnerUser && <span className="ml-1.5 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">Dueño</span>}
                         {p.telefono && <span className="block text-[11px] text-muted-foreground">{p.telefono}</span>}
                       </td>
                       <td className="px-4 py-2.5">
@@ -553,19 +573,21 @@ export default function UsuariosPage() {
                         <div className="flex items-center gap-1">
                           <button onClick={() => startEdit(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
                           <button onClick={() => { setPasswordModal({ userId: p.user_id, nombre: p.nombre || authUser?.email || '' }); setNewPassword(''); }} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
-                          <button
-                            onClick={async () => {
-                              const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
-                              if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
-                              await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
-                              toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
-                              load();
-                            }}
-                            className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
-                            title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
-                          >
-                            {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
-                          </button>
+                          {!isOwnerUser && (
+                            <button
+                              onClick={async () => {
+                                const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
+                                if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
+                                await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
+                                toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
+                                load();
+                              }}
+                              className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
+                              title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
+                            >
+                              {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
