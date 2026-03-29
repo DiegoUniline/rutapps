@@ -6,6 +6,7 @@ import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 import { locationService } from '@/lib/locationService';
@@ -30,9 +31,13 @@ export default function MobileLayout() {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
+  const { hasPermiso } = usePermisos();
+  const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
 
@@ -91,13 +96,21 @@ export default function MobileLayout() {
           >
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-            title="Ir a escritorio"
-          >
-            <Monitor className="h-5 w-5" />
-          </button>
+          {!isSoloMovil && (
+            <button
+              onClick={() => {
+                if (isStandalone) {
+                  window.open('/dashboard', '_blank');
+                } else {
+                  navigate('/');
+                }
+              }}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              title="Ir a escritorio"
+            >
+              <Monitor className="h-5 w-5" />
+            </button>
+          )}
           <SyncCloudButton />
         </div>
       </header>
