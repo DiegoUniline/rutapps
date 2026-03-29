@@ -233,7 +233,7 @@ export function useRutaVenta() {
       return { producto_id: c.producto_id, clasificacion_id: prod?.clasificacion_id ?? undefined, precio_unitario: c.precio_unitario, cantidad: c.cantidad };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined);
-  }, [promocionesActivas, cart, clienteId, selectedCliente]);
+  }, [promocionesActivas, cart, clienteId, selectedCliente, productos]);
   const totalDescuentoPromos = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
 
   const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
