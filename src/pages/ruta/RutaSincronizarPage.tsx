@@ -485,6 +485,51 @@ export default function RutaSincronizarPage() {
           </div>
         </div>
 
+        {/* ── STEP 5: UPDATE APP ── */}
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          <div className="p-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                <RefreshCw className="h-5 w-5 text-violet-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[15px] font-bold text-foreground">5. Actualizar app</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Recarga la interfaz visual, rutas y estilos a la última versión
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                try {
+                  // Unregister all service workers
+                  const registrations = await navigator.serviceWorker?.getRegistrations();
+                  if (registrations) {
+                    for (const reg of registrations) {
+                      if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                      }
+                      await reg.unregister();
+                    }
+                  }
+                  // Clear caches
+                  const cacheNames = await caches.keys();
+                  await Promise.all(cacheNames.map(name => caches.delete(name)));
+                  toast.success('Aplicación actualizada, recargando...');
+                  setTimeout(() => window.location.reload(), 600);
+                } catch (err: any) {
+                  // Fallback: just reload
+                  window.location.reload();
+                }
+              }}
+              className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold bg-violet-600 text-white transition-all active:scale-[0.98]"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar app
+            </button>
+          </div>
+        </div>
+
         {/* Tips */}
         <div className="bg-card rounded-2xl p-4 space-y-2">
           <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -498,6 +543,7 @@ export default function RutaSincronizarPage() {
             <li>🔒 Los datos persisten aunque cierres la app o reinicies el celular</li>
             <li>💾 <strong>Respaldo:</strong> Exporta un respaldo antes de borrar datos del navegador</li>
             <li>⚡ Activa "Ahorro de datos" para gastar menos internet</li>
+            <li>🔄 <strong>Actualizar app:</strong> Usa "Sincronizar app" para cargar la versión más reciente</li>
           </ul>
         </div>
       </div>
