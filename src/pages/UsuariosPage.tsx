@@ -459,12 +459,22 @@ export default function UsuariosPage() {
                   </div>
                   <div>
                     <label className="label-odoo">Rol</label>
-                    <select className="input-odoo w-full" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
-                      <option value="">Sin rol</option>
-                      {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}{r.acceso_ruta_movil ? ' 📱' : ''}</option>)}
-                    </select>
-                    {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && (
-                      <p className="text-[11px] text-success mt-1">📱 Este rol tiene acceso a la vista móvil de ruta</p>
+                    {empresa?.owner_user_id === editingUser.user_id ? (
+                      <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed flex items-center gap-2">
+                        <Shield className="h-3.5 w-3.5 text-primary" />
+                        {roles.find(r => r.id === editForm.role_id)?.nombre || 'Administrador'}
+                        <span className="text-[10px] text-primary ml-auto">Dueño — no modificable</span>
+                      </div>
+                    ) : (
+                      <>
+                        <select className="input-odoo w-full" value={editForm.role_id} onChange={e => setEditForm({ ...editForm, role_id: e.target.value })}>
+                          <option value="">Sin rol</option>
+                          {activeRoles.map(r => <option key={r.id} value={r.id}>{r.nombre}{r.acceso_ruta_movil ? ' 📱' : ''}</option>)}
+                        </select>
+                        {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && (
+                          <p className="text-[11px] text-success mt-1">📱 Este rol tiene acceso a la vista móvil de ruta</p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div>
@@ -476,12 +486,20 @@ export default function UsuariosPage() {
                   </div>
                   <div>
                     <label className="label-odoo">Estado</label>
-                    <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
-                      <option value="activo">✅ Activo</option>
-                      <option value="baja">🚫 Baja (no puede acceder)</option>
-                    </select>
-                    {editForm.estado === 'baja' && (
-                      <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
+                    {empresa?.owner_user_id === editingUser.user_id ? (
+                      <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed">
+                        ✅ Activo <span className="text-[10px] text-primary ml-2">Dueño — siempre activo</span>
+                      </div>
+                    ) : (
+                      <>
+                        <select className="input-odoo w-full" value={editForm.estado} onChange={e => setEditForm({ ...editForm, estado: e.target.value })}>
+                          <option value="activo">✅ Activo</option>
+                          <option value="baja">🚫 Baja (no puede acceder)</option>
+                        </select>
+                        {editForm.estado === 'baja' && (
+                          <p className="text-[11px] text-destructive mt-1">Este usuario no podrá iniciar sesión y no generará costo en tu plan.</p>
+                        )}
+                      </>
                     )}
                   </div>
                   <div>
