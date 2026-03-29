@@ -529,10 +529,12 @@ export default function UsuariosPage() {
                 {profiles.map(p => {
                   const userRole = userRoles.find(ur => ur.user_id === p.user_id);
                   const authUser = authUsers.find(au => au.id === p.user_id);
+                  const isOwnerUser = empresa?.owner_user_id === p.user_id;
                   return (
                     <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer" onClick={() => startEdit(p)}>
                       <td className="px-4 py-2.5">
                         <span className="font-medium text-foreground">{p.nombre || 'Sin nombre'}</span>
+                        {isOwnerUser && <span className="ml-1.5 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-semibold">Dueño</span>}
                         {p.telefono && <span className="block text-[11px] text-muted-foreground">{p.telefono}</span>}
                       </td>
                       <td className="px-4 py-2.5">
@@ -553,19 +555,21 @@ export default function UsuariosPage() {
                         <div className="flex items-center gap-1">
                           <button onClick={() => startEdit(p)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
                           <button onClick={() => { setPasswordModal({ userId: p.user_id, nombre: p.nombre || authUser?.email || '' }); setNewPassword(''); }} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Cambiar contraseña"><KeyRound className="h-3.5 w-3.5" /></button>
-                          <button
-                            onClick={async () => {
-                              const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
-                              if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
-                              await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
-                              toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
-                              load();
-                            }}
-                            className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
-                            title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
-                          >
-                            {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
-                          </button>
+                          {!isOwnerUser && (
+                            <button
+                              onClick={async () => {
+                                const newEstado = p.estado === 'activo' ? 'baja' : 'activo';
+                                if (newEstado === 'baja' && !confirm(`¿Dar de baja a ${p.nombre || authUser?.email}? No podrá acceder al sistema y no generará costo.`)) return;
+                                await supabase.from('profiles').update({ estado: newEstado }).eq('id', p.id);
+                                toast.success(newEstado === 'baja' ? 'Usuario dado de baja' : 'Usuario reactivado');
+                                load();
+                              }}
+                              className={cn("p-1 rounded hover:bg-accent", p.estado === 'activo' ? "text-muted-foreground hover:text-destructive" : "text-success hover:text-success")}
+                              title={p.estado === 'activo' ? 'Dar de baja' : 'Reactivar'}
+                            >
+                              {p.estado === 'activo' ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
