@@ -191,6 +191,13 @@ export function usePermisos(): UsePermisosReturn {
   const permisos = data?.permisos ?? [];
 
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
+    // 'solo_movil' is a restrictive flag — only true when explicitly granted
+    if (modulo === 'solo_movil') {
+      if (hasRole === false) return false; // no role = owner = NOT restricted
+      if (hasRole === null) return false; // loading
+      const perm = permisos.find(p => p.modulo === 'solo_movil' && p.accion === accion);
+      return perm?.permitido ?? false;
+    }
     if (hasRole === false) return true; // no role = owner = full access
     if (hasRole === null) return false; // loading
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
