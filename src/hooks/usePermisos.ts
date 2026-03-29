@@ -178,13 +178,15 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
 }
 
 export function usePermisos(): UsePermisosReturn {
-  const { user } = useAuth();
+  const { user, empresa } = useAuth();
+
+  const isOwner = !!(user && empresa?.owner_user_id && empresa.owner_user_id === user.id);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['user-permisos', user?.id],
     queryFn: () => fetchPermisos(user!.id),
     enabled: !!user?.id,
-    staleTime: 2 * 60_000, // 2 min
+    staleTime: 2 * 60_000,
     gcTime: 5 * 60_000,
   });
 
@@ -192,14 +194,18 @@ export function usePermisos(): UsePermisosReturn {
   const permisos = data?.permisos ?? [];
 
   const hasPermiso = useCallback((modulo: string, accion: string): boolean => {
+    // Owner always has full access and is never restricted
+    if (isOwner) {
+      return modulo === 'solo_movil' ? false : true;
+    }
     // 'solo_movil' is a restrictive flag — only true when explicitly granted
     if (modulo === 'solo_movil') {
-      if (hasRole === false) return false; // no role = owner = NOT restricted
-      if (hasRole === null) return false; // loading
+      if (hasRole === false) return false;
+      if (hasRole === null) return false;
       const perm = permisos.find(p => p.modulo === 'solo_movil' && p.accion === accion);
       return perm?.permitido ?? false;
     }
-    if (hasRole === false) return true; // no role = owner = full access
+    if (hasRole === false) return true; // no role = full access
     if (hasRole === null) return false; // loading
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
     if (perm) return perm.permitido;
@@ -209,7 +215,7 @@ export function usePermisos(): UsePermisosReturn {
       if (parentPerm) return parentPerm.permitido;
     }
     return false;
-  }, [permisos, hasRole]);
+  }, [permisos, hasRole, isOwner]);
 
   const hasModulo = useCallback((modulo: string): boolean => {
     if (!modulo) return true;
@@ -218,9 +224,8 @@ export function usePermisos(): UsePermisosReturn {
 
   const reload = useCallback(() => {
     refetch();
-    // Keep backward compat with event-based reload
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   }, [refetch]);
 
-  return { permisos, loading: isLoading, hasPermiso, hasModulo, reload };
+  return { permisos, loading: isLoading, hasPermiso, hasModulo, isOwner, reload };
 }
