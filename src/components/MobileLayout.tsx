@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2 } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -36,6 +36,7 @@ export default function MobileLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
@@ -54,28 +55,38 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
+    setIsUpdating(true);
     try {
       if ('serviceWorker' in navigator) {
-        // Unregister all service workers
         const regs = await navigator.serviceWorker.getRegistrations();
         await Promise.all(regs.map(r => r.unregister()));
       }
-      // Clear all caches
       if ('caches' in window) {
         const keys = await caches.keys();
         await Promise.all(keys.map(k => caches.delete(k)));
       }
       setSwUpdateAvailable(false);
-      // Force full reload from network
+      // Small delay so user sees the animation
+      await new Promise(r => setTimeout(r, 1200));
       window.location.reload();
     } catch {
-      // Fallback: just reload
+      await new Promise(r => setTimeout(r, 800));
       window.location.reload();
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Updating overlay */}
+      {isUpdating && (
+        <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-fade-in">
+          <Loader2 className="h-10 w-10 text-primary animate-spin" />
+          <div className="text-center">
+            <p className="text-base font-bold text-foreground">Actualizando versión…</p>
+            <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+          </div>
+        </div>
+      )}
       {/* Top bar */}
       <header className="flex items-center justify-between px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] bg-card border-b border-border">
         <div className="flex items-center gap-2">
