@@ -26,8 +26,12 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, '');
 }
 
-const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function getDiaFromDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return DIAS[d.getDay()];
+}
 
 interface Stop {
   id: string;
