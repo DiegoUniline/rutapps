@@ -79,7 +79,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
 
   // Fetch clients for today
   const { data: clientesData } = useQuery({
-    queryKey: ['nav-clientes', empresa?.id],
+    queryKey: ['nav-clientes', empresa?.id, filterDia],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
@@ -89,7 +89,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         .eq('status', 'activo')
         .order('orden', { ascending: true });
       return (data ?? []).filter(c =>
-        c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng
+        c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng
       );
     },
   });
