@@ -434,35 +434,48 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
           </div>
         ) : (
           /* Default: overview bar */
-          <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
-            <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-0.5">
-              <ArrowLeft className="h-5 w-5 text-foreground" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-bold text-foreground">
-                Mi ruta
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {completedCount}/{totalCount} completadas
-              </p>
+          <div className="mx-3 space-y-2">
+            <div className="bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
+              <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-0.5">
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-foreground">
+                  Mi ruta
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {completedCount}/{totalCount} completadas
+                </p>
+              </div>
+              <div className="flex gap-0.5">
+                {stops.slice(0, 12).map((s) => (
+                  <div
+                    key={s.id}
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      completedIds.has(s.id)
+                        ? "bg-emerald-500"
+                        : navigatingTo === s.id
+                          ? "bg-destructive"
+                          : "bg-muted-foreground/30"
+                    )}
+                  />
+                ))}
+                {stops.length > 12 && (
+                  <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
+                )}
+              </div>
             </div>
-            <div className="flex gap-0.5">
-              {stops.slice(0, 12).map((s) => (
-                <div
-                  key={s.id}
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    completedIds.has(s.id)
-                      ? "bg-emerald-500"
-                      : navigatingTo === s.id
-                        ? "bg-destructive"
-                        : "bg-muted-foreground/30"
-                  )}
-                />
-              ))}
-              {stops.length > 12 && (
-                <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
-              )}
+            {/* Date filter */}
+            <div className="bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
+              <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
+              <input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                className="bg-transparent text-[12px] text-foreground border-0 focus:outline-none flex-1"
+              />
+              <span className="text-[11px] text-muted-foreground capitalize">{filterDia}</span>
             </div>
           </div>
         )}
