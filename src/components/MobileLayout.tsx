@@ -100,9 +100,10 @@ export default function MobileLayout() {
             <button
               onClick={() => {
                 if (isStandalone) {
-                  window.open('/dashboard', '_blank');
+                  // Force navigation out of mobile layout within standalone PWA
+                  window.location.href = '/dashboard';
                 } else {
-                  navigate('/');
+                  navigate('/dashboard');
                 }
               }}
               className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
