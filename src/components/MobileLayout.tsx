@@ -96,13 +96,21 @@ export default function MobileLayout() {
           >
             {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-            title="Ir a escritorio"
-          >
-            <Monitor className="h-5 w-5" />
-          </button>
+          {!isSoloMovil && (
+            <button
+              onClick={() => {
+                if (isStandalone) {
+                  window.open('/dashboard', '_blank');
+                } else {
+                  navigate('/');
+                }
+              }}
+              className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+              title="Ir a escritorio"
+            >
+              <Monitor className="h-5 w-5" />
+            </button>
+          )}
           <SyncCloudButton />
         </div>
       </header>
