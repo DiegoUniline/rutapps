@@ -228,7 +228,10 @@ export function useRutaVenta() {
   const selectedCliente = clientes?.find(c => c.id === clienteId);
   const promoResults = useMemo(() => {
     if (!promocionesActivas || cart.length === 0) return [] as PromoResult[];
-    const cartForPromo: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => ({ producto_id: c.producto_id, precio_unitario: c.precio_unitario, cantidad: c.cantidad }));
+    const cartForPromo: CartItemForPromo[] = cart.filter(c => !c.es_cambio).map(c => {
+      const prod = productos?.find((p: any) => p.id === c.producto_id);
+      return { producto_id: c.producto_id, clasificacion_id: prod?.clasificacion_id ?? undefined, precio_unitario: c.precio_unitario, cantidad: c.cantidad };
+    });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined);
   }, [promocionesActivas, cart, clienteId, selectedCliente]);
   const totalDescuentoPromos = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
