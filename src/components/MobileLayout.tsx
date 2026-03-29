@@ -56,16 +56,21 @@ export default function MobileLayout() {
   const forceUpdate = async () => {
     try {
       if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg?.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        } else if (reg) {
-          await reg.update();
-        }
+        // Unregister all service workers
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      // Clear all caches
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
       }
       setSwUpdateAvailable(false);
+      // Force full reload from network
+      window.location.reload();
     } catch {
-      // ignore errors
+      // Fallback: just reload
+      window.location.reload();
     }
   };
 
