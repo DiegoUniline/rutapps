@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw } from 'lucide-react';
+import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, DirectionsRenderer, MarkerF } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, todayLocal } from '@/lib/utils';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
 
@@ -26,8 +26,12 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, '');
 }
 
-const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+const DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function getDiaFromDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return DIAS[d.getDay()];
+}
 
 interface Stop {
   id: string;
@@ -48,6 +52,8 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const [searchParams] = useSearchParams();
   const { empresa, profile } = useAuth();
   const { isLoaded } = useGoogleMaps();
+  const [filterDate, setFilterDate] = useState(todayLocal());
+  const filterDia = getDiaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [arrivedIds, setArrivedIds] = useState<Set<string>>(new Set());
@@ -73,7 +79,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
 
   // Fetch clients for today
   const { data: clientesData } = useQuery({
-    queryKey: ['nav-clientes', empresa?.id],
+    queryKey: ['nav-clientes', empresa?.id, filterDia],
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase
@@ -83,7 +89,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         .eq('status', 'activo')
         .order('orden', { ascending: true });
       return (data ?? []).filter(c =>
-        c.dia_visita?.some((d: string) => d.toLowerCase() === DIA_HOY.toLowerCase()) && c.gps_lat && c.gps_lng
+        c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng
       );
     },
   });
@@ -428,35 +434,48 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
           </div>
         ) : (
           /* Default: overview bar */
-          <div className="mx-3 bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
-            <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-0.5">
-              <ArrowLeft className="h-5 w-5 text-foreground" />
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-bold text-foreground">
-                Mi ruta
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {completedCount}/{totalCount} completadas
-              </p>
+          <div className="mx-3 space-y-2">
+            <div className="bg-card/90 backdrop-blur-md border border-border rounded-2xl px-3 py-2.5 flex items-center gap-3 shadow-lg">
+              <button onClick={() => onBack ? onBack() : navigate('/ruta')} className="p-1 -ml-0.5">
+                <ArrowLeft className="h-5 w-5 text-foreground" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-foreground">
+                  Mi ruta
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {completedCount}/{totalCount} completadas
+                </p>
+              </div>
+              <div className="flex gap-0.5">
+                {stops.slice(0, 12).map((s) => (
+                  <div
+                    key={s.id}
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      completedIds.has(s.id)
+                        ? "bg-emerald-500"
+                        : navigatingTo === s.id
+                          ? "bg-destructive"
+                          : "bg-muted-foreground/30"
+                    )}
+                  />
+                ))}
+                {stops.length > 12 && (
+                  <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
+                )}
+              </div>
             </div>
-            <div className="flex gap-0.5">
-              {stops.slice(0, 12).map((s) => (
-                <div
-                  key={s.id}
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    completedIds.has(s.id)
-                      ? "bg-emerald-500"
-                      : navigatingTo === s.id
-                        ? "bg-destructive"
-                        : "bg-muted-foreground/30"
-                  )}
-                />
-              ))}
-              {stops.length > 12 && (
-                <span className="text-[9px] text-muted-foreground ml-0.5">+{stops.length - 12}</span>
-              )}
+            {/* Date filter */}
+            <div className="bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
+              <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
+              <input
+                type="date"
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+                className="bg-transparent text-[12px] text-foreground border-0 focus:outline-none flex-1"
+              />
+              <span className="text-[11px] text-muted-foreground capitalize">{filterDia}</span>
             </div>
           </div>
         )}
