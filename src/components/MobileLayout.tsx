@@ -31,9 +31,13 @@ export default function MobileLayout() {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { profile } = useAuth();
+  const { hasPermiso } = usePermisos();
+  const isSoloMovil = hasPermiso('solo_movil', 'ver');
   const [menuOpen, setMenuOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
 
