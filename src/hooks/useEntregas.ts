@@ -165,9 +165,9 @@ export function useSurtirTodo() {
       for (const l of pendientes) {
         const almId = l.almacen_origen_id || almacenDefaultId;
         if (!almId) throw new Error('Falta almacén origen para el producto');
-        const { data: prod } = await supabase.from('productos').select('cantidad, nombre').eq('id', l.producto_id).single();
+        const { data: prod } = await supabase.from('productos').select('cantidad, nombre, vender_sin_stock').eq('id', l.producto_id).single();
         const stock = prod?.cantidad ?? 0;
-        if (l.cantidad_pedida > stock) {
+        if (!prod?.vender_sin_stock && l.cantidad_pedida > stock) {
           throw new Error(`Stock insuficiente para "${prod?.nombre}". Disponible: ${stock}, Pedido: ${l.cantidad_pedida}`);
         }
       }

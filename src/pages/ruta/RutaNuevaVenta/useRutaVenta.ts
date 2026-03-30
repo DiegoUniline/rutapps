@@ -170,11 +170,12 @@ export function useRutaVenta() {
 
   const getMaxQty = (productoId: string) => {
     if (tipoVenta === 'pedido') return Infinity;
+    const prod = productos?.find(p => p.id === productoId);
+    if (prod?.vender_sin_stock) return Infinity;
     if (useFallbackStock && almacenId) {
       return stockAbordo.get(productoId) ?? 0;
     }
     if (useFallbackStock) {
-      const prod = productos?.find(p => p.id === productoId);
       return prod?.cantidad ?? 0;
     }
     return stockAbordo.get(productoId) ?? 0;
