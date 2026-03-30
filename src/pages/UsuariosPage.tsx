@@ -873,7 +873,7 @@ function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onToggleP
         <td className="px-4 py-2 font-bold text-foreground text-[13px]">{group}</td>
         {ACCIONES.map(a => <td key={a} className="text-center px-2 py-2"></td>)}
         <td className="text-center px-2 py-2">
-          <input type="checkbox" checked={allGroupChecked} onChange={() => onToggleGroup(group)} className="rounded border-border cursor-pointer" title={`Todos los permisos de ${group}`} />
+          <input type="checkbox" checked={allGroupChecked} disabled={disabled} onChange={() => onToggleGroup(group)} className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait" title={`Todos los permisos de ${group}`} />
         </td>
       </tr>
       {/* Sub-module rows */}
