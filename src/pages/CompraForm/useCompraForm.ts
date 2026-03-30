@@ -40,7 +40,7 @@ export function useCompraForm() {
 
   useEffect(() => {
     if (existingCompra && productosList) {
-      const { compra_lineas, proveedores, almacenes, ...rest } = existingCompra as any;
+      const { compra_lineas, ...rest } = existingCompra as any;
       setForm(rest);
       if (compra_lineas?.length) {
         const enrichedLines = compra_lineas.map((cl: any) => {
