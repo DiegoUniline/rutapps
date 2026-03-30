@@ -779,8 +779,7 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
   const [open, setOpen] = useState(false);
   const groups = getModuloGroups();
   const isInactive = role.activo === false;
-  const isSoloMovil = permisos.some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
-  // Filter out 'solo_movil' from MODULOS for display
+  const isSoloMovil = role.solo_movil || permisos.some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
   const displayModulos = MODULOS.filter(m => m.id !== 'solo_movil');
 
   return (
