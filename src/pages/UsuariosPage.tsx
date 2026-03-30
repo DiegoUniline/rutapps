@@ -188,81 +188,62 @@ export default function UsuariosPage() {
     notifyPermisosChanged();
   };
 
-  const toggleAllGroup = async (roleId: string, group: string) => {
-    const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
-    const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
-    const allChecked = groupMods.every(mod => {
-      const modActions = getModuloAcciones(mod.id);
-      return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
-    });
-    const newVal = !allChecked;
+  const [savingPermisos, setSavingPermisos] = useState(false);
 
-    // Optimistic update
-    setPermisos(prev => {
-      let updated = [...prev];
+  const toggleAllGroup = async (roleId: string, group: string) => {
+    setSavingPermisos(true);
+    try {
+      const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
+      const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
+      const allChecked = groupMods.every(mod => {
+        const modActions = getModuloAcciones(mod.id);
+        return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+      });
+      const newVal = !allChecked;
+
+      const ops = [];
       for (const mod of groupMods) {
         const modActions = getModuloAcciones(mod.id);
         for (const accion of modActions) {
-          const existing = updated.find(p => p.role_id === roleId && p.modulo === mod.id && p.accion === accion);
+          const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
           if (existing) {
-            updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
+            ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
           } else {
-            updated.push({ id: `temp-${Date.now()}-${mod.id}-${accion}`, role_id: roleId, modulo: mod.id, accion, permitido: newVal });
+            ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
           }
         }
       }
-      return updated;
-    });
-
-    // Batch persist
-    const ops = [];
-    for (const mod of groupMods) {
-      const modActions = getModuloAcciones(mod.id);
-      for (const accion of modActions) {
-        const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
-        if (existing) {
-          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
-        } else {
-          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
-        }
-      }
+      await Promise.all(ops);
+      await load(false);
+      notifyPermisosChanged();
+    } finally {
+      setSavingPermisos(false);
     }
-    await Promise.all(ops);
-    load(false);
-    notifyPermisosChanged();
   };
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
-    const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
-    const modActions = getModuloAcciones(modulo);
-    const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
-    const newVal = !allEnabled;
+    setSavingPermisos(true);
+    try {
+      const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
+      const modActions = getModuloAcciones(modulo);
+      const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
+      const newVal = !allEnabled;
 
-    setPermisos(prev => {
-      let updated = [...prev];
+      const ops = [];
       for (const accion of modActions) {
-        const existing = updated.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
+        const existing = modulePerms.find(p => p.accion === accion);
         if (existing) {
-          updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
+          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
         } else {
-          updated.push({ id: `temp-${Date.now()}-${accion}`, role_id: roleId, modulo, accion, permitido: newVal });
+          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal }).select());
         }
       }
-      return updated;
-    });
-
-    const ops2 = [];
-    for (const accion of modActions) {
-      const existing = modulePerms.find(p => p.accion === accion);
-      if (existing) {
-        ops2.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
-      } else {
-        ops2.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal }).select());
-      }
+      await Promise.all(ops);
+      await load(false);
+      notifyPermisosChanged();
+    } finally {
+      setSavingPermisos(false);
     }
-    await Promise.all(ops2);
-    load(false);
-    notifyPermisosChanged();
   };
 
   // ── User edit ──
@@ -757,6 +738,7 @@ export default function UsuariosPage() {
           )}
           {displayRoles.map(role => (
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
+              disabled={savingPermisos}
               onEdit={() => {
                 setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil);
                 const isSoloMovil = role.solo_movil || permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
@@ -793,8 +775,8 @@ export default function UsuariosPage() {
   );
 }
 
-function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
-  role: Role; permisos: RolePermiso[]; onEdit: () => void; onToggleActivo: () => void;
+function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
+  role: Role; permisos: RolePermiso[]; disabled?: boolean; onEdit: () => void; onToggleActivo: () => void;
   onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
 }) {
@@ -859,6 +841,7 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
                     mods={groupMods}
                     permisos={permisos}
                     allGroupChecked={allGroupChecked}
+                    disabled={disabled}
                     onTogglePermiso={onTogglePermiso}
                     onToggleAll={onToggleAll}
                     onToggleGroup={onToggleGroup}
@@ -873,11 +856,12 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
   );
 }
 
-function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, onToggleAll, onToggleGroup }: {
+function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onTogglePermiso, onToggleAll, onToggleGroup }: {
   group: string;
   mods: { id: string; label: string; group: string }[];
   permisos: RolePermiso[];
   allGroupChecked: boolean;
+  disabled?: boolean;
   onTogglePermiso: (mod: string, acc: string) => void;
   onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
@@ -889,7 +873,7 @@ function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, on
         <td className="px-4 py-2 font-bold text-foreground text-[13px]">{group}</td>
         {ACCIONES.map(a => <td key={a} className="text-center px-2 py-2"></td>)}
         <td className="text-center px-2 py-2">
-          <input type="checkbox" checked={allGroupChecked} onChange={() => onToggleGroup(group)} className="rounded border-border cursor-pointer" title={`Todos los permisos de ${group}`} />
+          <input type="checkbox" checked={allGroupChecked} disabled={disabled} onChange={() => onToggleGroup(group)} className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait" title={`Todos los permisos de ${group}`} />
         </td>
       </tr>
       {/* Sub-module rows */}
@@ -908,12 +892,12 @@ function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, on
               const perm = modPerms.find(p => p.accion === acc);
               return (
                 <td key={acc} className="text-center px-2 py-1.5">
-                  <input type="checkbox" checked={perm?.permitido ?? false} onChange={() => onTogglePermiso(mod.id, acc)} className="rounded border-border cursor-pointer" />
+                  <input type="checkbox" checked={perm?.permitido ?? false} disabled={disabled} onChange={() => onTogglePermiso(mod.id, acc)} className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait" />
                 </td>
               );
             })}
             <td className="text-center px-2 py-1.5">
-              <input type="checkbox" checked={allChecked} onChange={() => onToggleAll(mod.id)} className="rounded border-border cursor-pointer" />
+              <input type="checkbox" checked={allChecked} disabled={disabled} onChange={() => onToggleAll(mod.id)} className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait" />
             </td>
           </tr>
         );
