@@ -57,7 +57,7 @@ function usePagosProveedores() {
 
 export default function PagosProveedoresPage() {
   const { data: pagos, isLoading } = usePagosProveedores();
-  const fmt = useCurrency();
+  const { fmt } = useCurrency();
 
   const [search, setSearch] = useState('');
   const [filtroMetodo, setFiltroMetodo] = useState('todos');
