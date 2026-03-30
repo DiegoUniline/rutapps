@@ -272,7 +272,7 @@ function Breadcrumb() {
     'mi-suscripcion': 'Mi suscripción', 'monitor-rutas': 'Monitor de rutas',
   };
 
-  if (segments.length <= 1) return null;
+  if (segments.length === 0) return null;
 
   return (
     <div className="h-9 flex items-center justify-between px-5 bg-card border-b border-border text-xs text-muted-foreground">
