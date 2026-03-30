@@ -236,6 +236,9 @@ export default function ClienteFormPage() {
   const [pedidoSearch, setPedidoSearch] = useState('');
   const [showPedidoSearch, setShowPedidoSearch] = useState(false);
   const [pedidoDirty, setPedidoDirty] = useState(false);
+  const [showNewZona, setShowNewZona] = useState(false);
+  const [newZonaNombre, setNewZonaNombre] = useState('');
+  const [savingZona, setSavingZona] = useState(false);
 
   // Auto-assign default lista de precios for new clients
   useEffect(() => {
@@ -566,29 +569,11 @@ export default function ClienteFormPage() {
                     )}
                   </div>
                 </div>
-                <div className="odoo-field-row">
-                  <span className="odoo-field-label">Zona</span>
-                  <div className="flex-1 flex gap-1.5 items-center">
-                    <select className="odoo-select flex-1" value={form.zona_id ?? ''} onChange={e => set('zona_id', e.target.value || null)}>
-                      <option value="">Sin zona</option>
-                      {zonas?.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-                    </select>
-                    <button type="button" className="p-1.5 rounded border border-border text-primary hover:bg-accent transition-colors" title="Crear zona"
-                      onClick={async () => {
-                        const nombre = prompt('Nombre de la nueva zona:');
-                        if (!nombre?.trim()) return;
-                        try {
-                          const { data, error } = await supabase.from('zonas').insert({ nombre: nombre.trim(), empresa_id: empresa!.id }).select('id').single();
-                          if (error) throw error;
-                          qc.invalidateQueries({ queryKey: ['zonas'] });
-                          set('zona_id', data.id);
-                          toast.success('Zona creada');
-                        } catch (err: any) { toast.error(err.message); }
-                      }}>
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
+                <OdooField label="Zona" value={form.zona_id} onChange={v => {
+                  if (v === '__new__') { setShowNewZona(true); return; }
+                  set('zona_id', v || null);
+                }} type="select"
+                  options={[{ value: '', label: 'Sin zona' }, ...(zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? []), { value: '__new__', label: '＋ Crear nueva zona' }]} />
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Fecha de alta</span>
@@ -819,6 +804,51 @@ export default function ClienteFormPage() {
         },
       ]} />
       </div>
+
+      {/* Modal crear zona */}
+      {showNewZona && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setShowNewZona(false); setNewZonaNombre(''); }}>
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm mx-4 p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-foreground">Crear nueva zona</h3>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Nombre de la zona</label>
+              <input
+                autoFocus
+                type="text"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                placeholder="Ej: Zona Norte"
+                value={newZonaNombre}
+                onChange={e => setNewZonaNombre(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') document.getElementById('btn-save-zona')?.click(); }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-accent transition-colors"
+                onClick={() => { setShowNewZona(false); setNewZonaNombre(''); }}>
+                Cancelar
+              </button>
+              <button id="btn-save-zona" type="button" disabled={!newZonaNombre.trim() || savingZona}
+                className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                onClick={async () => {
+                  if (!newZonaNombre.trim()) return;
+                  setSavingZona(true);
+                  try {
+                    const { data, error } = await supabase.from('zonas').insert({ nombre: newZonaNombre.trim(), empresa_id: empresa!.id }).select('id').single();
+                    if (error) throw error;
+                    qc.invalidateQueries({ queryKey: ['zonas'] });
+                    set('zona_id', data.id);
+                    toast.success('Zona creada');
+                    setShowNewZona(false);
+                    setNewZonaNombre('');
+                  } catch (err: any) { toast.error(err.message); }
+                  finally { setSavingZona(false); }
+                }}>
+                {savingZona ? 'Guardando...' : 'Crear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
