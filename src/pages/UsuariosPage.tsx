@@ -897,7 +897,7 @@ function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onToggleP
               );
             })}
             <td className="text-center px-2 py-1.5">
-              <input type="checkbox" checked={allChecked} onChange={() => onToggleAll(mod.id)} className="rounded border-border cursor-pointer" />
+              <input type="checkbox" checked={allChecked} disabled={disabled} onChange={() => onToggleAll(mod.id)} className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait" />
             </td>
           </tr>
         );
