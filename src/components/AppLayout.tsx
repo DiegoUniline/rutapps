@@ -256,12 +256,20 @@ function Breadcrumb() {
     rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
     almacenes: 'Almacenes', gastos: 'Gastos',
     'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
+    'aplicar-pagos': 'Aplicar pagos', 'aplicar-pagos-proveedor': 'Aplicar pagos proveedor',
+    'saldos-cliente': 'Saldos por cliente', 'saldos-proveedor': 'Saldos por proveedor',
     configuracion: 'Configuración', 'configuracion-inicial': 'Configuración inicial', descargas: 'Liquidar Ruta',
     usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
     'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
     logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
     asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
     'facturacion-cfdi': 'Facturación', devoluciones: 'Devoluciones',
+    comisiones: 'Comisiones', control: 'Control', proveedores: 'Proveedores',
+    catalogos: 'Catálogos', clasificaciones: 'Clasificaciones', zonas: 'Zonas', cobradores: 'Cobradores',
+    'reporte-diario': 'Reporte diario', promociones: 'Promociones', pos: 'Punto de venta',
+    conteos: 'Conteos físicos', auditorias: 'Auditorías', traspasos: 'Traspasos',
+    'ajustes-inventario': 'Ajustes de inventario', supervisor: 'Supervisor',
+    'mi-suscripcion': 'Mi suscripción', 'monitor-rutas': 'Monitor de rutas',
   };
 
   if (segments.length <= 1) return null;
