@@ -566,8 +566,29 @@ export default function ClienteFormPage() {
                     )}
                   </div>
                 </div>
-                <OdooField label="Zona" value={form.zona_id} onChange={v => set('zona_id', v || null)} type="select"
-                  options={[{ value: '', label: 'Sin zona' }, ...(zonas?.map(z => ({ value: z.id, label: z.nombre })) ?? [])]} />
+                <div className="odoo-field-row">
+                  <span className="odoo-field-label">Zona</span>
+                  <div className="flex-1 flex gap-1.5 items-center">
+                    <select className="odoo-select flex-1" value={form.zona_id ?? ''} onChange={e => set('zona_id', e.target.value || null)}>
+                      <option value="">Sin zona</option>
+                      {zonas?.map(z => <option key={z.id} value={z.id}>{z.nombre}</option>)}
+                    </select>
+                    <button type="button" className="p-1.5 rounded border border-border text-primary hover:bg-accent transition-colors" title="Crear zona"
+                      onClick={async () => {
+                        const nombre = prompt('Nombre de la nueva zona:');
+                        if (!nombre?.trim()) return;
+                        try {
+                          const { data, error } = await supabase.from('zonas').insert({ nombre: nombre.trim(), empresa_id: empresa!.id }).select('id').single();
+                          if (error) throw error;
+                          qc.invalidateQueries({ queryKey: ['zonas'] });
+                          set('zona_id', data.id);
+                          toast.success('Zona creada');
+                        } catch (err: any) { toast.error(err.message); }
+                      }}>
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
                 <OdooField label="Orden" value={form.orden} onChange={v => set('orden', +v)} type="number" />
                 <div className="odoo-field-row">
                   <span className="odoo-field-label">Fecha de alta</span>

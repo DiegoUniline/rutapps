@@ -69,6 +69,7 @@ const navItems: NavItem[] = [
       { label: 'Marcas', path: '/catalogos/marcas' },
       { label: 'Proveedores', path: '/proveedores' },
       { label: 'Unidades', path: '/catalogos/unidades' },
+      { label: 'Zonas', path: '/catalogos/zonas' },
     ],
   },
   {

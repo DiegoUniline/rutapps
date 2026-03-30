@@ -6,6 +6,7 @@ const CATALOGS: Record<string, { title: string; tableName: string; queryKey: str
   clasificaciones: { title: 'Categorías', tableName: 'clasificaciones', queryKey: 'clasificaciones', columns: [{ key: 'nombre', label: 'Nombre' }] },
   proveedores: { title: 'Proveedores', tableName: 'proveedores', queryKey: 'proveedores', columns: [{ key: 'nombre', label: 'Nombre' }] },
   unidades: { title: 'Unidades', tableName: 'unidades', queryKey: 'unidades', columns: [{ key: 'nombre', label: 'Nombre' }, { key: 'abreviatura', label: 'Abreviatura' }] },
+  zonas: { title: 'Zonas', tableName: 'zonas', queryKey: 'zonas', columns: [{ key: 'nombre', label: 'Nombre' }] },
   listas: { title: 'Listas de precios', tableName: 'listas', queryKey: 'listas', columns: [{ key: 'nombre', label: 'Nombre' }] },
   almacenes: { title: 'Almacenes', tableName: 'almacenes', queryKey: 'almacenes', columns: [{ key: 'nombre', label: 'Nombre' }] },
 };
