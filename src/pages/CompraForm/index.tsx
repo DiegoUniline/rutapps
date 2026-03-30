@@ -12,6 +12,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 export default function CompraFormPage() {
   const h = useCompraForm();
   const { fmt } = useCurrency();
+  const [activeTab, setActiveTab] = useState('lineas');
   if (!h.isNew && h.isLoading) return <div className="p-6"><TableSkeleton rows={6} cols={4} /></div>;
 
   return (
