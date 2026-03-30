@@ -1,4 +1,4 @@
-import { todayLocal } from '@/lib/utils';
+import { todayLocal, fmtDate } from '@/lib/utils';
 import { Plus, Save, X, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
