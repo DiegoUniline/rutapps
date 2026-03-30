@@ -110,7 +110,7 @@ export default function SaldosProveedorPage() {
             <p className="text-sm text-muted-foreground">{selected.nombre}</p>
           </div>
           {comprasPendientes.length > 0 && (
-            <Button onClick={() => navigate(`/almacen/compras/${comprasPendientes[0].id}`)} className="gap-2">
+            <Button onClick={() => navigate('/finanzas/aplicar-pagos-proveedor')} className="gap-2">
               <Banknote className="h-4 w-4" /> Registrar pago
             </Button>
           )}
