@@ -93,7 +93,9 @@ const navItems: NavItem[] = [
     path: '/finanzas',
     children: [
       { label: 'Cuentas por cobrar', path: '/finanzas/por-cobrar' },
+      { label: 'Aplicar pagos clientes', path: '/finanzas/aplicar-pagos' },
       { label: 'Cuentas por pagar', path: '/finanzas/por-pagar' },
+      { label: 'Aplicar pagos proveedores', path: '/finanzas/aplicar-pagos-proveedor' },
       { label: 'Saldos por cliente', path: '/finanzas/saldos-cliente' },
       { label: 'Saldos por proveedor', path: '/finanzas/saldos-proveedor' },
       { label: 'Gastos', path: '/finanzas/gastos' },
