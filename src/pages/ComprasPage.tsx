@@ -100,12 +100,13 @@ function useCompras(search: string, statusFilter: string, empresaId?: string) {
 export default function ComprasPage() {
   const navigate = useNavigate();
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
-  const { data: compras, isLoading } = useCompras(search, statusFilter);
+  const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);
 
   // Build dynamic proveedor filter options from data
   const proveedorOptions = useMemo(() => {
