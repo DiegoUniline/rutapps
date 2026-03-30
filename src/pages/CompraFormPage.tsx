@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { cn , todayLocal } from '@/lib/utils';
+import { cn , todayLocal, fmtDate } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -921,7 +921,7 @@ export default function CompraFormPage() {
                     <tbody>
                       {(pagos ?? []).map(p => (
                         <tr key={p.id} className="border-b border-table-border">
-                          <td className="py-1.5 px-3 text-xs">{p.fecha}</td>
+                          <td className="py-1.5 px-3 text-xs">{fmtDate(p.fecha)}</td>
                           <td className="py-1.5 px-3 text-xs capitalize">{p.metodo_pago}</td>
                           <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.referencia ?? '—'}</td>
                           <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.notas ?? '—'}</td>

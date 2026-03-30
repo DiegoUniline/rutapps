@@ -7,6 +7,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
 import { useNavigate } from 'react-router-dom';
 import { useCurrency } from '@/hooks/useCurrency';
+import { fmtDate } from '@/lib/utils';
 const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 const ACCION_LABELS: Record<string, string> = { reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero' };
 
@@ -83,7 +84,7 @@ export default function DevolucionesListPage() {
 
               return (
                 <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
-                  <td className="py-2 px-3 font-mono text-muted-foreground">{d.fecha}</td>
+                  <td className="py-2 px-3 font-mono text-muted-foreground">{fmtDate(d.fecha)}</td>
                   <td className="py-2 px-3 font-medium">{d.clientes?.nombre ?? '—'}</td>
                   <td className="py-2 px-3 text-muted-foreground">{d.vendedores?.nombre ?? '—'}</td>
                   <td className="py-2 px-3">

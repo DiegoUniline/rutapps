@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Loader2, Search, FileCheck, ShoppingCart } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
+import { fmtDate } from '@/lib/utils';
 
 interface Props {
   open: boolean;
@@ -297,7 +298,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {(v.clientes as any)?.nombre || 'Sin cliente'} · {v.fecha}
+                        {(v.clientes as any)?.nombre || 'Sin cliente'} · {fmtDate(v.fecha)}
                       </p>
                     </button>
                   ))

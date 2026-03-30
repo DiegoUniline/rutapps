@@ -1,4 +1,5 @@
 import { useCurrency } from '@/hooks/useCurrency';
+import { fmtDate } from '@/lib/utils';
 
 function KPI({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -26,9 +27,9 @@ export function ReporteResumen({ data }: { data: any }) {
         <h3 className="text-xs font-bold text-muted-foreground uppercase mb-4 border-b border-border pb-1">Ventas diarias</h3>
         <div className="flex items-end gap-1 h-32">
           {data.dailyVentas.map((d: any) => (
-            <div key={d.fecha} className="flex-1 flex flex-col items-center gap-1" title={`${d.fecha}: ${fmt(d.total)}`}>
+            <div key={d.fecha} className="flex-1 flex flex-col items-center gap-1" title={`${fmtDate(d.fecha)}: ${fmt(d.total)}`}>
               <div className="w-full bg-foreground/20 rounded-t-sm min-h-[2px] transition-all hover:bg-foreground/40" style={{ height: `${(d.total / maxDaily) * 100}%` }} />
-              <span className="text-[8px] text-muted-foreground rotate-45 origin-left">{d.fecha.slice(5)}</span>
+              <span className="text-[8px] text-muted-foreground rotate-45 origin-left">{fmtDate(d.fecha).slice(0, 5)}</span>
             </div>
           ))}
         </div>

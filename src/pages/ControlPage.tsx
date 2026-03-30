@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useControlData } from '@/hooks/useControlData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { subDays, format } from 'date-fns';
+import { fmtDate } from '@/lib/utils';
 import { es } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -105,7 +106,7 @@ export default function ControlPage() {
                       {data.canceladas.map((v: any) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
-                          <TableCell className="text-xs">{v.fecha}</TableCell>
+                          <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-xs">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-right text-xs font-medium">{fmt(v.total)}</TableCell>
@@ -136,7 +137,7 @@ export default function ControlPage() {
                       {data.descuentosAltos.map((v: any) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
-                          <TableCell className="text-xs">{v.fecha}</TableCell>
+                          <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-xs">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-right text-xs">
@@ -201,7 +202,7 @@ export default function ControlPage() {
                           <div className="flex items-center gap-3">
                             <div>
                               <p className="text-sm font-medium">{d.vendedor}</p>
-                              <p className="text-xs text-muted-foreground">{d.fecha}</p>
+                              <p className="text-xs text-muted-foreground">{fmtDate(d.fecha)}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">

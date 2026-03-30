@@ -1,4 +1,4 @@
-import { todayLocal } from '@/lib/utils';
+import { todayLocal, fmtDate } from '@/lib/utils';
 import { Plus, Save, X, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
@@ -32,7 +32,7 @@ export function CompraPagosTab({ pagos, form, totals, totalPagado, saldoActual, 
           <tbody>
             {pagos.map(p => (
               <tr key={p.id} className="border-b border-table-border">
-                <td className="py-1.5 px-3 text-xs">{p.fecha}</td><td className="py-1.5 px-3 text-xs capitalize">{p.metodo_pago}</td>
+                <td className="py-1.5 px-3 text-xs">{fmtDate(p.fecha)}</td><td className="py-1.5 px-3 text-xs capitalize">{p.metodo_pago}</td>
                 <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.referencia ?? '—'}</td><td className="py-1.5 px-3 text-xs text-muted-foreground">{p.notas ?? '—'}</td>
                 <td className="py-1.5 px-3 text-right font-medium text-xs text-success">{fmt(p.monto)}</td>
                 <td className="py-1.5 px-3">{form.status !== 'pagada' && <button onClick={async () => { if (!confirm('¿Eliminar este pago?')) return; await supabase.from('pago_compras').delete().eq('id', p.id); const nuevoSaldo = Math.max(0, totals.total - (totalPagado - p.monto)); await supabase.from('compras').update({ saldo_pendiente: nuevoSaldo } as any).eq('id', form.id); qc.invalidateQueries({ queryKey: ['pagos-compra', form.id] }); toast.success('Pago eliminado'); }} className="text-destructive hover:text-destructive/80"><Trash2 className="h-3.5 w-3.5" /></button>}</td>

@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { toast } from 'sonner';
 
 type PageState = 'loading' | 'not_found' | 'closed' | 'name_entry' | 'counting';
@@ -307,7 +307,7 @@ export default function AuditoriaMobilePage() {
         <h1 className="text-xl font-semibold text-foreground">Auditoría Cerrada</h1>
         <p className="text-sm text-muted-foreground">
           {(auditoria as any)?.cerrada_por && <>Cerrada por <strong>{(auditoria as any).cerrada_por}</strong></>}
-          {(auditoria as any)?.cerrada_at && <> el {new Date((auditoria as any).cerrada_at).toLocaleDateString('es-MX')}</>}
+          {(auditoria as any)?.cerrada_at && <> el {fmtDate((auditoria as any).cerrada_at)}</>}
         </p>
         <p className="text-xs text-muted-foreground">Ya no es posible registrar conteos.</p>
       </div>

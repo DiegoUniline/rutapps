@@ -676,7 +676,7 @@ export default function VentaFormPage() {
                 <div>
                   <label className="label-odoo">Fecha</label>
                   {readOnly ? (
-                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha}</div>
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div>
                   ) : (
                     <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />
                   )}
@@ -779,7 +779,7 @@ export default function VentaFormPage() {
                 <div>
                   <label className="label-odoo">Fecha</label>
                   {readOnly ? (
-                    <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha}</div>
+                    <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div>
                   ) : (
                     <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />
                   )}
