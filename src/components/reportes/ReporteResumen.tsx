@@ -1,4 +1,5 @@
 import { useCurrency } from '@/hooks/useCurrency';
+import { fmtDate } from '@/lib/utils';
 
 function KPI({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
