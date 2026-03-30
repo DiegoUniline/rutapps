@@ -173,19 +173,27 @@ export default function UsuariosPage() {
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   };
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
-    const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
-    if (existing) {
-      setPermisos(prev => prev.map(p => p.id === existing.id ? { ...p, permitido: !p.permitido } : p));
-      await supabase.from('role_permisos').update({ permitido: !existing.permitido }).eq('id', existing.id);
-    } else {
-      const tempId = `temp-${Date.now()}`;
-      setPermisos(prev => [...prev, { id: tempId, role_id: roleId, modulo, accion, permitido: true }]);
-      const { data } = await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: true }).select().single();
-      if (data) {
-        setPermisos(prev => prev.map(p => p.id === tempId ? data : p));
+    if (savingPermisos) return;
+    setSavingPermisos(true);
+    try {
+      const { data: existing } = await supabase
+        .from('role_permisos')
+        .select('id, permitido')
+        .eq('role_id', roleId)
+        .eq('modulo', modulo)
+        .eq('accion', accion)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from('role_permisos').update({ permitido: !existing.permitido }).eq('id', existing.id);
+      } else {
+        await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: true });
       }
+      await load(false);
+      notifyPermisosChanged();
+    } finally {
+      setSavingPermisos(false);
     }
-    notifyPermisosChanged();
   };
 
   const [savingPermisos, setSavingPermisos] = useState(false);
