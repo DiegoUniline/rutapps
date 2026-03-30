@@ -63,9 +63,10 @@ export default function AuditoriasPage() {
   });
 
   const { data: marcas } = useQuery({
-    queryKey: ['marcas-audit'],
+    queryKey: ['marcas-audit', empresa?.id],
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('marcas').select('id, nombre').eq('activo', true).order('nombre');
+      const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
       return data ?? [];
     },
   });

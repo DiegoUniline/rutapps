@@ -106,10 +106,13 @@ export function useVentaDetalle() {
     if (editLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
     setSaving(true);
     try {
-      await supabase.from('venta_lineas').delete().eq('venta_id', id!);
       const newLineas = editLineas.map(item => ({ venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)) }));
+      // Insert first, then delete old — if insert fails, old lines remain intact
       const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas);
       if (linErr) throw linErr;
+      // Delete old lines (those not just inserted)
+      const newIds = newLineas.map(l => l.producto_id);
+      await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${(await supabase.from('venta_lineas').select('id').eq('venta_id', id!).order('created_at', { ascending: false }).limit(newLineas.length)).data?.map(r => r.id).join(',') ?? ''})`);
       const { error: ventaErr } = await supabase.from('ventas').update({ condicion_pago: editCondicion as any, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, total: editTotals.total, saldo_pendiente: editTotals.total }).eq('id', id!);
       if (ventaErr) throw ventaErr;
       toast.success('Venta actualizada');
