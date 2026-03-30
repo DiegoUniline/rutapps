@@ -254,6 +254,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   compras: 'Compras', lotes: 'Lotes', almacenes: 'Almacenes', gastos: 'Gastos',
   'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
   'aplicar-pagos': 'Aplicar pagos', 'aplicar-pagos-proveedor': 'Aplicar pagos proveedor',
+  'pagos-proveedores': 'Pagos proveedores',
   'saldos-cliente': 'Saldos por cliente', 'saldos-proveedor': 'Saldos por proveedor',
   configuracion: 'Configuración', 'configuracion-inicial': 'Config. inicial',
   descargas: 'Liquidar Ruta', usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
