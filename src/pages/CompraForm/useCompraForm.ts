@@ -122,29 +122,22 @@ export function useCompraForm() {
       const { error } = await supabase.from('compras').update(updates).eq('id', form.id); if (error) throw error;
       if (newStatus === 'recibida') {
         const validLines = lineas.filter(l => l.producto_id);
-        const today = todayLocal();
         const almacenId = form.almacen_id;
         for (const l of validLines) {
           const factor = Number(l._factor_conversion) || 1;
           const piezas = (Number(l.cantidad) || 0) * factor;
 
-          // Update global producto stock
-          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id!).single();
-          const currentQty = Number(prod?.cantidad ?? 0);
-          await supabase.from('productos').update({ cantidad: currentQty + piezas } as any).eq('id', l.producto_id!);
-
-          // Update stock_almacen (upsert)
-          if (almacenId) {
-            const { data: sa } = await supabase.from('stock_almacen').select('id, cantidad').eq('almacen_id', almacenId).eq('producto_id', l.producto_id!).maybeSingle();
-            if (sa) {
-              await supabase.from('stock_almacen').update({ cantidad: (Number(sa.cantidad) || 0) + piezas, updated_at: new Date().toISOString() } as any).eq('id', sa.id);
-            } else {
-              await supabase.from('stock_almacen').insert({ empresa_id: empresa!.id, almacen_id: almacenId, producto_id: l.producto_id!, cantidad: piezas } as any);
-            }
-          }
-
-          // Kardex movement
-          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id!, cantidad: piezas, almacen_destino_id: almacenId, referencia_tipo: 'compra', referencia_id: form.id, user_id: user?.id, fecha: today, notas: `Compra ${form.folio ?? form.id.slice(0, 8)} recibida` } as any);
+          // Atomic stock addition via DB function (prevents race conditions)
+          const { error: rpcErr } = await supabase.rpc('recibir_linea_compra', {
+            p_producto_id: l.producto_id!,
+            p_piezas: piezas,
+            p_almacen_id: almacenId || null,
+            p_empresa_id: empresa!.id,
+            p_compra_id: form.id,
+            p_folio: form.folio ?? form.id.slice(0, 8),
+            p_user_id: user?.id,
+          });
+          if (rpcErr) throw new Error(rpcErr.message);
         }
         qc.invalidateQueries({ queryKey: ['inventario'] }); qc.invalidateQueries({ queryKey: ['productos'] }); qc.invalidateQueries({ queryKey: ['stock-almacen'] });
       }
