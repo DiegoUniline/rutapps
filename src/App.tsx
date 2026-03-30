@@ -92,6 +92,7 @@ const AuditoriaMobilePage = lazy(() => import("@/pages/AuditoriaMobilePage"));
 const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 const ControlPage = lazy(() => import("@/pages/ControlPage"));
 const AplicarPagosPage = lazy(() => import("@/pages/AplicarPagosPage"));
+const AplicarPagosProveedorPage = lazy(() => import("@/pages/AplicarPagosProveedorPage"));
 
 
 // Logistica pages
