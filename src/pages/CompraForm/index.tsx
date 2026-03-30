@@ -40,8 +40,17 @@ export default function CompraFormPage() {
         ...(!h.isNew ? [{ key: 'pagos', label: `Pagos (${h.pagos?.length ?? 0})`, content: <CompraPagosTab pagos={h.pagos ?? []} form={h.form} totals={h.totals} totalPagado={h.totalPagado} saldoActual={h.saldoActual} addingPago={h.addingPago} setAddingPago={h.setAddingPago} newPago={h.newPago} setNewPago={h.setNewPago} handleSavePago={h.handleSavePago} /> }] : []),
       ]} />
 
-      <div className="flex justify-end">
-        <div className="bg-card border border-border rounded-lg p-4 w-72 space-y-2">
+      <div className="flex items-end justify-between gap-4">
+        {/* Pay button - visible when there's saldo */}
+        {!h.isNew && h.saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(h.form.status) && (
+          <button
+            onClick={() => { h.setNewPago(() => ({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); }}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 transition-all shadow-md"
+          >
+            <DollarSign className="h-5 w-5" /> Registrar pago · {fmt(h.saldoActual)}
+          </button>
+        )}
+        <div className="ml-auto bg-card border border-border rounded-lg p-4 w-72 space-y-2">
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-medium">{fmt(h.totals.subtotal)}</span></div>
           <div className="flex justify-between text-sm"><span className="text-muted-foreground">Impuestos</span><span className="font-medium">{fmt(h.totals.iva_total)}</span></div>
           <div className="border-t border-border pt-2 flex justify-between text-base"><span className="font-semibold">Total</span><span className="font-bold">{fmt(h.totals.total)}</span></div>
