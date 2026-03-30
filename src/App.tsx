@@ -93,6 +93,7 @@ const DevolucionesListPage = lazy(() => import("@/pages/DevolucionesListPage"));
 const ControlPage = lazy(() => import("@/pages/ControlPage"));
 const AplicarPagosPage = lazy(() => import("@/pages/AplicarPagosPage"));
 const AplicarPagosProveedorPage = lazy(() => import("@/pages/AplicarPagosProveedorPage"));
+const PagosProveedoresPage = lazy(() => import("@/pages/PagosProveedoresPage"));
 
 
 // Logistica pages
@@ -389,6 +390,7 @@ function desktopRoutes() {
       <Route path="/finanzas/saldos-cliente" element={<EstadoCuentaClientePage />} />
       <Route path="/finanzas/saldos-proveedor" element={<SaldosProveedorPage />} />
       <Route path="/finanzas/aplicar-pagos-proveedor" element={<AplicarPagosProveedorPage />} />
+      <Route path="/finanzas/pagos-proveedores" element={<PagosProveedoresPage />} />
       <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
       <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
       <Route path="/reportes" element={<ReportesPage />} />
