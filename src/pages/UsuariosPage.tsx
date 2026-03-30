@@ -5,7 +5,7 @@ import { HELP } from '@/lib/helpContent';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { MODULOS, ACCIONES, getModuloGroups } from '@/hooks/usePermisos';
+import { MODULOS, ACCIONES, getModuloGroups, getModuloAcciones } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,7 @@ export default function UsuariosPage() {
   const [roleName, setRoleName] = useState('');
   const [roleDesc, setRoleDesc] = useState('');
   const [roleMovil, setRoleMovil] = useState(false);
+  const [roleSoloMovil, setRoleSoloMovil] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
 
   // User edit
@@ -101,8 +102,40 @@ export default function UsuariosPage() {
         await supabase.from('roles').insert({ empresa_id: empresa.id, nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil });
       }
       toast.success('Rol guardado');
-      setShowRoleForm(false); setEditingRole(null); setRoleName(''); setRoleDesc(''); setRoleMovil(false);
+      setShowRoleForm(false); setEditingRole(null); setRoleName(''); setRoleDesc(''); setRoleMovil(false); setRoleSoloMovil(false);
       load();
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const saveRoleWithSoloMovil = async () => {
+    if (!roleName.trim() || !empresa?.id) return;
+    try {
+      let roleId = editingRole?.id;
+      if (editingRole) {
+        await supabase.from('roles').update({ nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil }).eq('id', editingRole.id);
+      } else {
+        const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil }).select('id').single();
+        roleId = data?.id;
+      }
+      // If solo_movil, set the solo_movil permission
+      if (roleId && roleSoloMovil) {
+        const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
+        if (existing) {
+          await supabase.from('role_permisos').update({ permitido: true }).eq('id', existing.id);
+        } else {
+          await supabase.from('role_permisos').insert({ role_id: roleId, modulo: 'solo_movil', accion: 'ver', permitido: true });
+        }
+      } else if (roleId && !roleSoloMovil) {
+        // Remove solo_movil permission if switching to general
+        const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
+        if (existing) {
+          await supabase.from('role_permisos').update({ permitido: false }).eq('id', existing.id);
+        }
+      }
+      toast.success('Rol guardado');
+      setShowRoleForm(false); setEditingRole(null); setRoleName(''); setRoleDesc(''); setRoleMovil(false); setRoleSoloMovil(false);
+      load();
+      notifyPermisosChanged();
     } catch (e: any) { toast.error(e.message); }
   };
 
@@ -135,16 +168,19 @@ export default function UsuariosPage() {
   };
 
   const toggleAllGroup = async (roleId: string, group: string) => {
-    const groupMods = MODULOS.filter(m => m.group === group);
+    const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
     const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
-    const allChecked = groupMods.every(mod => ACCIONES.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido));
+    const allChecked = groupMods.every(mod => {
+      const modActions = getModuloAcciones(mod.id);
+      return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+    });
     const newVal = !allChecked;
 
-    // Optimistic
     setPermisos(prev => {
       let updated = [...prev];
       for (const mod of groupMods) {
-        for (const accion of ACCIONES) {
+        const modActions = getModuloAcciones(mod.id);
+        for (const accion of modActions) {
           const existing = updated.find(p => p.role_id === roleId && p.modulo === mod.id && p.accion === accion);
           if (existing) {
             updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
@@ -156,9 +192,9 @@ export default function UsuariosPage() {
       return updated;
     });
 
-    // Persist
     for (const mod of groupMods) {
-      for (const accion of ACCIONES) {
+      const modActions = getModuloAcciones(mod.id);
+      for (const accion of modActions) {
         const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
         if (existing) {
           await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
@@ -173,12 +209,13 @@ export default function UsuariosPage() {
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
     const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
-    const allEnabled = ACCIONES.every(a => modulePerms.find(p => p.accion === a)?.permitido);
+    const modActions = getModuloAcciones(modulo);
+    const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
     const newVal = !allEnabled;
 
     setPermisos(prev => {
       let updated = [...prev];
-      for (const accion of ACCIONES) {
+      for (const accion of modActions) {
         const existing = updated.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
         if (existing) {
           updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
@@ -189,7 +226,7 @@ export default function UsuariosPage() {
       return updated;
     });
 
-    for (const accion of ACCIONES) {
+    for (const accion of modActions) {
       const existing = modulePerms.find(p => p.accion === accion);
       if (existing) {
         await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
@@ -624,24 +661,81 @@ export default function UsuariosPage() {
             </button>
           </div>
           {showRoleForm && (
-            <div className="bg-card border border-border rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-foreground">{editingRole ? 'Editar rol' : 'Nuevo rol'}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div><label className="label-odoo">Nombre</label><input className="input-odoo" value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Ej: Supervisor" /></div>
-                <div><label className="label-odoo">Descripción</label><input className="input-odoo" value={roleDesc} onChange={e => setRoleDesc(e.target.value)} placeholder="Opcional" /></div>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
-                <input type="checkbox" checked={roleMovil} onChange={e => setRoleMovil(e.target.checked)} className="rounded border-border" /> Acceso a ruta móvil
-              </label>
-              <div className="flex gap-2">
-                <button onClick={saveRole} className="btn-odoo-primary text-xs">Guardar</button>
-                <button onClick={() => { setShowRoleForm(false); setEditingRole(null); }} className="btn-odoo text-xs">Cancelar</button>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+              <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md">
+                <div className="flex items-center justify-between p-5 border-b border-border">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-primary" /> {editingRole ? 'Editar rol' : 'Nuevo rol'}
+                  </h3>
+                  <button onClick={() => { setShowRoleForm(false); setEditingRole(null); }} className="p-1.5 rounded-md hover:bg-muted"><X className="h-4 w-4 text-muted-foreground" /></button>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="label-odoo">Nombre del rol</label>
+                    <input className="input-odoo w-full" value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Ej: Vendedor, Supervisor..." autoFocus />
+                  </div>
+                  <div>
+                    <label className="label-odoo">Descripción (opcional)</label>
+                    <input className="input-odoo w-full" value={roleDesc} onChange={e => setRoleDesc(e.target.value)} placeholder="Breve descripción del rol" />
+                  </div>
+
+                  {/* Tipo de acceso */}
+                  <div>
+                    <label className="label-odoo mb-2">Tipo de acceso</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => { setRoleMovil(false); setRoleSoloMovil(false); }}
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                          !roleSoloMovil
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <Shield className={cn("h-6 w-6", !roleSoloMovil ? "text-primary" : "text-muted-foreground")} />
+                        <span className={cn("text-sm font-semibold", !roleSoloMovil ? "text-primary" : "text-foreground")}>Acceso general</span>
+                        <span className="text-[11px] text-muted-foreground leading-tight">Escritorio + móvil. Configura permisos detallados.</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setRoleSoloMovil(true); setRoleMovil(true); }}
+                        className={cn(
+                          "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center",
+                          roleSoloMovil
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                            : "border-border hover:border-muted-foreground/30"
+                        )}
+                      >
+                        <span className={cn("text-2xl", roleSoloMovil ? "" : "grayscale opacity-60")}>📱</span>
+                        <span className={cn("text-sm font-semibold", roleSoloMovil ? "text-primary" : "text-foreground")}>Solo vista móvil</span>
+                        <span className="text-[11px] text-muted-foreground leading-tight">Solo accede a la app de ruta. Sin permisos de escritorio.</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {!roleSoloMovil && (
+                    <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer bg-accent/30 rounded-lg px-3 py-2.5">
+                      <input type="checkbox" checked={roleMovil} onChange={e => setRoleMovil(e.target.checked)} className="rounded border-border" />
+                      <span>También tiene acceso a ruta móvil</span>
+                    </label>
+                  )}
+                </div>
+                <div className="p-5 border-t border-border flex gap-2 justify-end">
+                  <button onClick={() => { setShowRoleForm(false); setEditingRole(null); }} className="btn-odoo text-sm">Cancelar</button>
+                  <button onClick={saveRoleWithSoloMovil} className="btn-odoo-primary text-sm">Guardar</button>
+                </div>
               </div>
             </div>
           )}
           {displayRoles.map(role => (
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
-              onEdit={() => { setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil); setShowRoleForm(true); }}
+              onEdit={() => {
+                setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil);
+                const isSoloMovil = permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+                setRoleSoloMovil(isSoloMovil);
+                setShowRoleForm(true);
+              }}
               onToggleActivo={() => toggleRoleActivo(role.id, role.activo !== false)}
               onTogglePermiso={(mod, acc) => togglePermiso(role.id, mod, acc)}
               onToggleAll={(mod) => toggleAllModule(role.id, mod)}
@@ -680,17 +774,21 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
   const [open, setOpen] = useState(false);
   const groups = getModuloGroups();
   const isInactive = role.activo === false;
+  const isSoloMovil = permisos.some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+  // Filter out 'solo_movil' from MODULOS for display
+  const displayModulos = MODULOS.filter(m => m.id !== 'solo_movil');
 
   return (
     <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isInactive && "opacity-60")}>
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => !isSoloMovil && setOpen(!open)}>
         <div className="flex items-center gap-3">
-          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          {!isSoloMovil && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
           <Shield className="h-4 w-4 text-primary" />
           <div>
             <span className="text-sm font-semibold text-foreground">{role.nombre}</span>
             {role.descripcion && <span className="text-xs text-muted-foreground ml-2">{role.descripcion}</span>}
-            {role.acceso_ruta_movil && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Ruta móvil</span>}
+            {isSoloMovil && <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">📱 Solo vista móvil</span>}
+            {!isSoloMovil && role.acceso_ruta_movil && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Ruta móvil</span>}
             {isInactive && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">Inactivo</span>}
           </div>
         </div>
@@ -701,19 +799,28 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
           </button>
         </div>
       </div>
-      {open && (
-        <div className="border-t border-border">
+      {isSoloMovil && (
+        <div className="border-t border-border px-4 py-3 bg-accent/20">
+          <p className="text-xs text-muted-foreground">Este rol solo tiene acceso a la aplicación móvil de ruta. No requiere configuración de permisos de escritorio.</p>
+        </div>
+      )}
+      {open && !isSoloMovil && (
+        <div className="border-t border-border overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="bg-accent/30">
               <th className="text-left px-4 py-2 font-semibold text-foreground w-48">Módulo</th>
-              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a}</th>)}
+              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a === 'ver_todos' ? 'Ver todos' : a}</th>)}
               <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todos</th>
             </tr></thead>
             <tbody>
               {groups.map(group => {
-                const groupMods = MODULOS.filter(m => m.group === group);
+                const groupMods = displayModulos.filter(m => m.group === group);
+                if (groupMods.length === 0) return null;
                 const groupPerms = permisos.filter(p => groupMods.some(m => m.id === p.modulo));
-                const allGroupChecked = groupMods.every(mod => ACCIONES.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido));
+                const allGroupChecked = groupMods.every(mod => {
+                  const modActions = getModuloAcciones(mod.id);
+                  return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+                });
 
                 return (
                   <GroupRows
@@ -758,11 +865,16 @@ function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, on
       {/* Sub-module rows */}
       {mods.map(mod => {
         const modPerms = permisos.filter(p => p.modulo === mod.id);
-        const allChecked = ACCIONES.every(a => modPerms.find(p => p.accion === a)?.permitido);
+        const applicableActions = getModuloAcciones(mod.id);
+        const allChecked = applicableActions.every(a => modPerms.find(p => p.accion === a)?.permitido);
         return (
           <tr key={mod.id} className="border-t border-border/30 hover:bg-accent/20">
             <td className="px-4 py-1.5 pl-8 text-muted-foreground">{mod.label}</td>
             {ACCIONES.map(acc => {
+              const isApplicable = applicableActions.includes(acc);
+              if (!isApplicable) {
+                return <td key={acc} className="text-center px-2 py-1.5"><span className="text-muted-foreground/30">—</span></td>;
+              }
               const perm = modPerms.find(p => p.accion === acc);
               return (
                 <td key={acc} className="text-center px-2 py-1.5">

@@ -95,6 +95,32 @@ export const MODULOS: ModuloDef[] = [
 
 export const ACCIONES = ['ver', 'crear', 'editar', 'eliminar', 'ver_todos'];
 
+/**
+ * Maps module IDs to the actions that actually apply.
+ * Modules not listed here default to all ACCIONES.
+ */
+export const ACCIONES_POR_MODULO: Record<string, string[]> = {
+  dashboard: ['ver'],
+  supervisor: ['ver'],
+  solo_movil: ['ver'],
+  pos: ['ver'],
+  'logistica.dashboard': ['ver'],
+  'logistica.monitor': ['ver'],
+  'logistica.mapa_clientes': ['ver'],
+  'logistica.mapa_ventas': ['ver'],
+  'reportes.generales': ['ver'],
+  'reportes.entregas': ['ver'],
+  'configuracion.general': ['ver', 'editar'],
+  'configuracion.suscripcion': ['ver'],
+  'configuracion.whatsapp': ['ver', 'editar'],
+  'facturacion.catalogos': ['ver'],
+};
+
+/** Get the applicable actions for a given module */
+export function getModuloAcciones(moduloId: string): string[] {
+  return ACCIONES_POR_MODULO[moduloId] ?? ACCIONES;
+}
+
 /** Get unique groups in order */
 export function getModuloGroups(): string[] {
   const seen = new Set<string>();
