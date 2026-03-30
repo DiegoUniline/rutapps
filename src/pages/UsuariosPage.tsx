@@ -856,11 +856,12 @@ function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePe
   );
 }
 
-function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, onToggleAll, onToggleGroup }: {
+function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onTogglePermiso, onToggleAll, onToggleGroup }: {
   group: string;
   mods: { id: string; label: string; group: string }[];
   permisos: RolePermiso[];
   allGroupChecked: boolean;
+  disabled?: boolean;
   onTogglePermiso: (mod: string, acc: string) => void;
   onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
