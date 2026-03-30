@@ -211,9 +211,14 @@ export default function SaldosProveedorPage() {
   // ── List view ──
   return (
     <div className="p-4 space-y-4 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
-        <Truck className="h-5 w-5" /> Saldos por proveedor
-      </h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <Truck className="h-5 w-5" /> Saldos por proveedor
+        </h1>
+        <Button onClick={() => navigate('/finanzas/aplicar-pagos-proveedor')} className="gap-2">
+          <Banknote className="h-4 w-4" /> Aplicar pagos
+        </Button>
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <div className="bg-card border border-border rounded-lg p-4">
