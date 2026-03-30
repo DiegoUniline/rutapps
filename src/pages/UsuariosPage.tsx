@@ -10,6 +10,22 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const ACCION_LABELS: Record<string, string> = {
+  ver: 'Ver',
+  crear: 'Crear',
+  editar: 'Editar',
+  eliminar: 'Eliminar',
+  ver_todos: 'Global',
+};
+
+const ACCION_TOOLTIPS: Record<string, string> = {
+  ver: 'Puede acceder y ver este módulo',
+  crear: 'Puede crear nuevos registros',
+  editar: 'Puede modificar registros existentes',
+  eliminar: 'Puede eliminar o cancelar registros',
+  ver_todos: 'Ve registros de todos los vendedores, no solo los suyos. Ej: un vendedor sin este permiso solo ve sus propias ventas y clientes.',
+};
+
 interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; solo_movil: boolean; }
 interface RolePermiso { id: string; role_id: string; modulo: string; accion: string; permitido: boolean; }
 interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
