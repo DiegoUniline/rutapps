@@ -105,9 +105,9 @@ export function useSurtirLinea() {
       empresaId: string;
     }) => {
       // 1. Check stock at origin
-      const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', productoId).single();
+      const { data: prod } = await supabase.from('productos').select('cantidad, vender_sin_stock').eq('id', productoId).single();
       const stockDisponible = prod?.cantidad ?? 0;
-      if (cantidadSurtida > stockDisponible) {
+      if (!prod?.vender_sin_stock && cantidadSurtida > stockDisponible) {
         throw new Error(`Stock insuficiente. Disponible: ${stockDisponible}`);
       }
 
