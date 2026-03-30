@@ -17,6 +17,27 @@ export function fmtDate(dateStr: string | null | undefined): string {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+/** Format a date string to dd/MM/yyyy HH:mm */
+export function fmtDateTime(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}/${mm}/${yyyy} ${hh}:${mi}`;
+}
+
+/** Format a date string to dd/MM/yyyy in short form: dd MMM yyyy */
+export function fmtDateShort(dateStr: string | null | undefined): string {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr + (dateStr.length === 10 ? 'T12:00:00' : ''));
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 /** Format number as currency using empresa's currency (defaults to MXN) */
 export function fmtCurrency(value: number | null | undefined, currencyCode?: string | null): string {
   return formatCurrency(value, currencyCode);
