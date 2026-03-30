@@ -389,65 +389,89 @@ export default function InventarioPage() {
       )}
 
       {/* Almacen view */}
-      {view === 'almacen' && data && (
+      {view === 'almacen' && data && (() => {
+        // Build combined locations: almacenes + rutas
+        const ubicaciones = [
+          ...(data.almacenes ?? []).map(a => ({
+            id: a.id,
+            nombre: a.nombre,
+            tipo: 'almacen' as const,
+            icon: Warehouse,
+            getStock: (prodId: string) => data.stockAlmacenMap[a.id]?.[prodId] ?? 0,
+          })),
+          ...(data.rutas ?? []).map(r => ({
+            id: r.id,
+            nombre: r.vendedor,
+            tipo: 'ruta' as const,
+            icon: Truck,
+            getStock: (prodId: string) => r.stockByProduct[prodId] ?? 0,
+          })),
+        ];
+
+        return (
         <div className="bg-card border border-border rounded overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="text-[11px] sticky left-0 bg-card z-10">Código</TableHead>
                 <TableHead className="text-[11px] sticky left-[70px] bg-card z-10">Producto</TableHead>
-                {(data.almacenes ?? []).map(a => (
-                  <TableHead key={a.id} className="text-[11px] text-center whitespace-nowrap">
-                    <Warehouse className="h-3 w-3 inline mr-0.5" />{a.nombre}
+                {ubicaciones.map(u => (
+                  <TableHead key={u.id} className="text-[11px] text-center whitespace-nowrap">
+                    <u.icon className={cn("h-3 w-3 inline mr-0.5", u.tipo === 'ruta' ? "text-warning" : "text-primary")} />
+                    {u.nombre}
+                    <span className={cn("ml-1 text-[9px] px-1 py-0.5 rounded", u.tipo === 'ruta' ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary")}>
+                      {u.tipo === 'ruta' ? 'Ruta' : 'Almacén'}
+                    </span>
                   </TableHead>
                 ))}
-                <TableHead className="text-[11px] text-center font-bold">Total almacén</TableHead>
+                <TableHead className="text-[11px] text-center font-bold">Total</TableHead>
                 <TableHead className="text-[11px] text-right">Costo unit.</TableHead>
                 <TableHead className="text-[11px] text-right">Valor total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts?.map(p => {
-                const totalAlm = (data.almacenes ?? []).reduce((s, a) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
+                const totalUbic = ubicaciones.reduce((s, u) => s + u.getStock(p.id), 0);
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-mono text-[11px] text-muted-foreground sticky left-0 bg-card">{p.codigo}</TableCell>
                     <TableCell className="text-[12px] font-medium sticky left-[70px] bg-card">{p.nombre}</TableCell>
-                    {(data.almacenes ?? []).map(a => {
-                      const qty = data.stockAlmacenMap[a.id]?.[p.id] ?? 0;
+                    {ubicaciones.map(u => {
+                      const qty = u.getStock(p.id);
                       return (
-                        <TableCell key={a.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : "")}>
+                        <TableCell key={u.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
                           {qty ? fmtNum(qty) : '—'}
                         </TableCell>
                       );
                     })}
-                    <TableCell className={cn("text-center font-bold", totalAlm <= 0 ? "text-destructive" : "")}>
-                      {fmtNum(totalAlm)}
+                    <TableCell className={cn("text-center font-bold", totalUbic <= 0 ? "text-destructive" : "")}>
+                      {fmtNum(totalUbic)}
                     </TableCell>
                     <TableCell className="text-right text-[12px]">$ {fmt(p.costo ?? 0)}</TableCell>
-                    <TableCell className="text-right text-[12px]">$ {fmt(totalAlm * (p.costo ?? 0))}</TableCell>
+                    <TableCell className="text-right text-[12px]">$ {fmt(totalUbic * (p.costo ?? 0))}</TableCell>
                   </TableRow>
                 );
               })}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-card font-bold">
                   <TableCell colSpan={2} className="sticky left-0 bg-card">Totales</TableCell>
-                  {(data.almacenes ?? []).map(a => {
-                    const total = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
-                    return <TableCell key={a.id} className="text-center">{fmtNum(total)}</TableCell>;
+                  {ubicaciones.map(u => {
+                    const total = filteredProducts.reduce((s, p) => s + u.getStock(p.id), 0);
+                    return <TableCell key={u.id} className={cn("text-center", u.tipo === 'ruta' ? "text-warning" : "")}>{fmtNum(total)}</TableCell>;
                   })}
-                  <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0), 0))}</TableCell>
+                  <TableCell className="text-center">{fmtNum(filteredProducts.reduce((s, p) => s + ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0), 0))}</TableCell>
                   <TableCell className="text-right">—</TableCell>
                   <TableCell className="text-right">$ {fmt(filteredProducts.reduce((s, p) => {
-                    const totalAlm = (data.almacenes ?? []).reduce((ss, a) => ss + (data.stockAlmacenMap[a.id]?.[p.id] ?? 0), 0);
-                    return s + totalAlm * (p.costo ?? 0);
+                    const totalUbic = ubicaciones.reduce((ss, u) => ss + u.getStock(p.id), 0);
+                    return s + totalUbic * (p.costo ?? 0);
                   }, 0))}</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
-      )}
+        );
+      })()}
 
       {/* Rutas view */}
       {view === 'rutas' && data && !selectedRuta && (
