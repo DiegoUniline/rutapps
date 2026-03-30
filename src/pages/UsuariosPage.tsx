@@ -199,15 +199,15 @@ export default function UsuariosPage() {
     });
 
     // Batch persist
-    const ops: Promise<any>[] = [];
+    const ops = [];
     for (const mod of groupMods) {
       const modActions = getModuloAcciones(mod.id);
       for (const accion of modActions) {
         const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
         if (existing) {
-          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).then());
+          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
         } else {
-          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).then());
+          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
         }
       }
     }
