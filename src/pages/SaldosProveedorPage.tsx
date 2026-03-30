@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft } from 'lucide-react';
+import { Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft, Banknote } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
