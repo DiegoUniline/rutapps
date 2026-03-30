@@ -1,7 +1,7 @@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import SearchableSelect from '@/components/SearchableSelect';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { Percent, DollarSign } from 'lucide-react';
 
 interface Props {
