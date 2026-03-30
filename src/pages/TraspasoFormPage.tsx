@@ -400,9 +400,9 @@ export default function TraspasoFormPage() {
             .eq('producto_id', l.producto_id)
             .single();
           const stockOrigen = sa?.cantidad ?? 0;
-          if (l.cantidad > stockOrigen) {
-            const { data: p } = await supabase.from('productos').select('nombre').eq('id', l.producto_id).single();
-            throw new Error(`Stock insuficiente en origen para "${p?.nombre}". Disponible: ${stockOrigen}`);
+          const { data: prodInfo } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id).single();
+          if (!prodInfo?.vender_sin_stock && l.cantidad > stockOrigen) {
+            throw new Error(`Stock insuficiente en origen para "${prodInfo?.nombre}". Disponible: ${stockOrigen}`);
           }
           if (sa) {
             await supabase.from('stock_almacen').update({ cantidad: Math.max(0, stockOrigen - Number(l.cantidad)), updated_at: new Date().toISOString() } as any).eq('id', sa.id);
