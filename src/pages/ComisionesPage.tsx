@@ -239,7 +239,7 @@ export default function ComisionesPage() {
                 <tbody>
                   {paged.map((c: any) => (
                     <tr key={c.id} className="border-b border-table-border last:border-0 hover:bg-table-hover">
-                      <td className="py-1.5 px-3 text-xs">{c.fecha_venta}</td>
+                      <td className="py-1.5 px-3 text-xs">{fmtDate(c.fecha_venta)}</td>
                       <td className="py-1.5 px-3 text-xs font-mono">{c.ventas?.folio ?? '—'}</td>
                       <td className="py-1.5 px-3 text-xs">{c.vendedores?.nombre ?? '—'}</td>
                       <td className="py-1.5 px-3 text-xs">{c.productos?.nombre ?? '—'}</td>

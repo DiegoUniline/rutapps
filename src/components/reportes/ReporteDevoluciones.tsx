@@ -43,7 +43,7 @@ export function ReporteDevoluciones({ data }: { data: any }) {
                 <>
                   <tr key={d.id} className="border-b border-border/50 cursor-pointer hover:bg-accent/30" onClick={() => setExpanded(isOpen ? null : d.id)}>
                     <td className="py-2 px-3">{isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}</td>
-                    <td className="py-2 px-3">{d.fecha}</td>
+                    <td className="py-2 px-3">{fmtDate(d.fecha)}</td>
                     <td className="py-2 px-3">
                       <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold bg-accent text-foreground">
                         {d.tipo === 'almacen' ? 'Almacén' : 'Tienda'}

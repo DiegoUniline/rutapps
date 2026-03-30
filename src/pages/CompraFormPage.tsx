@@ -921,7 +921,7 @@ export default function CompraFormPage() {
                     <tbody>
                       {(pagos ?? []).map(p => (
                         <tr key={p.id} className="border-b border-table-border">
-                          <td className="py-1.5 px-3 text-xs">{p.fecha}</td>
+                          <td className="py-1.5 px-3 text-xs">{fmtDate(p.fecha)}</td>
                           <td className="py-1.5 px-3 text-xs capitalize">{p.metodo_pago}</td>
                           <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.referencia ?? '—'}</td>
                           <td className="py-1.5 px-3 text-xs text-muted-foreground">{p.notas ?? '—'}</td>

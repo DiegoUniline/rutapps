@@ -586,7 +586,7 @@ export default function MapaVentasPage() {
                   <div className="text-xs text-gray-600 mb-0.5">{selectedVenta.clientes?.nombre}</div>
                   <div className="text-xs text-gray-500 mb-1">{selectedVenta.clientes?.direccion ?? ''}</div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-500">{new Date(selectedVenta.fecha).toLocaleDateString('es-MX')}</span>
+                    <span className="text-xs text-gray-500">{fmtDate(selectedVenta.fecha)}</span>
                     <span className="text-sm font-bold text-green-600">{fmt(selectedVenta.total ?? 0)}</span>
                   </div>
                   {selectedVenta.vendedores?.nombre && <div className="text-[10px] text-gray-400">Vendedor: {selectedVenta.vendedores.nombre}</div>}

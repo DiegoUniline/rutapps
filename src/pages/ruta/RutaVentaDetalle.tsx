@@ -601,7 +601,7 @@ export default function RutaVentaDetalle() {
       td.empresa.direccion ?? '',
       td.empresa.telefono ? `Tel: ${td.empresa.telefono}` : '',
       '─'.repeat(30),
-      `Folio: ${td.folio}`, `Fecha: ${td.fecha}`, `Cliente: ${td.clienteNombre}`,
+      `Folio: ${td.folio}`, `Fecha: ${fmtDate(td.fecha)}`, `Cliente: ${td.clienteNombre}`,
       `Pago: ${td.condicionPago === 'credito' ? 'Crédito' : td.condicionPago === 'contado' ? 'Contado' : 'Por definir'}`,
       td.metodoPago ? `Método: ${td.metodoPago}` : '',
       '─'.repeat(30),

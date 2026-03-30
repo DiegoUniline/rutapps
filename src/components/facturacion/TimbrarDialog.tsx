@@ -297,7 +297,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {(v.clientes as any)?.nombre || 'Sin cliente'} · {v.fecha}
+                        {(v.clientes as any)?.nombre || 'Sin cliente'} · {fmtDate(v.fecha)}
                       </p>
                     </button>
                   ))
