@@ -96,7 +96,8 @@ export function useCompraForm() {
     if (!empresa?.id) return;
     if (!form.almacen_id) { toast.error('Selecciona un almacén destino'); return; }
     try {
-      const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: form.condicion_pago === 'credito' ? totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0) : 0, notas: form.notas || null, notas_pago: form.notas_pago || null };
+      const totalPagado = pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0;
+      const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: Math.max(0, totals.total - totalPagado), notas: form.notas || null, notas_pago: form.notas_pago || null };
       let compraId = form.id;
       if (isNew) { const { data, error } = await supabase.from('compras').insert(compraData as any).select().single(); if (error) throw error; compraId = (data as any).id; } else { const { empresa_id, ...updateData } = compraData; const { error } = await supabase.from('compras').update(updateData as any).eq('id', compraId); if (error) throw error; await supabase.from('compra_lineas').delete().eq('compra_id', compraId); }
       const validLines = lineas.filter(l => l.producto_id);
@@ -118,7 +119,7 @@ export function useCompraForm() {
     if (newIdx <= curIdx || newIdx > curIdx + 1) return;
     try {
       const updates: any = { status: newStatus };
-      if (newStatus === 'confirmada' && form.condicion_pago === 'credito') updates.saldo_pendiente = totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0);
+      if (newStatus === 'confirmada') updates.saldo_pendiente = Math.max(0, totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0));
       const { error } = await supabase.from('compras').update(updates).eq('id', form.id); if (error) throw error;
       if (newStatus === 'recibida') {
         const validLines = lineas.filter(l => l.producto_id);
