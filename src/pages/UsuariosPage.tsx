@@ -892,7 +892,7 @@ function GroupRows({ group, mods, permisos, allGroupChecked, disabled, onToggleP
               const perm = modPerms.find(p => p.accion === acc);
               return (
                 <td key={acc} className="text-center px-2 py-1.5">
-                  <input type="checkbox" checked={perm?.permitido ?? false} onChange={() => onTogglePermiso(mod.id, acc)} className="rounded border-border cursor-pointer" />
+                  <input type="checkbox" checked={perm?.permitido ?? false} disabled={disabled} onChange={() => onTogglePermiso(mod.id, acc)} className="rounded border-border cursor-pointer disabled:opacity-50 disabled:cursor-wait" />
                 </td>
               );
             })}
