@@ -1,42 +1,52 @@
 
 
-## Plan: Agregar promociones al ticket impreso (ESC/POS + verificar HTML)
+# Plan: Respetar "Vender sin stock" en todos los flujos de venta
 
-### Problema raíz
-El archivo `src/lib/escpos.ts` (usado para impresión Bluetooth y potencialmente desktop) **no tiene ningún código para mostrar promociones**. El loop de productos (líneas 247-259) solo imprime nombre, precio y detalle c/u, pero nunca busca las promos asociadas ni muestra "Ahorro promos" en totales.
+## Problema
 
-El path HTML (`ticketHtml.ts`) sí tiene el código en línea 148, pero la ruta ESC/POS lo omite completamente.
+El campo `vender_sin_stock` del producto solo se respeta en el **Punto de Venta (POS)**. En la **venta móvil de ruta** se ignora completamente: productos con esta bandera activada no aparecen en el catálogo si no tienen stock, y no se pueden agregar más allá del stock disponible.
 
-### Archivos a modificar
+## Lugares a corregir
 
-**1. `src/lib/escpos.ts`** — Cambio principal
-- En el loop de productos (línea 247-259), después de la línea de detalle `c/u`, filtrar `data.promociones` por `producto_id` y agregar sub-líneas con el descuento:
-  ```
-  *3x2              -$15.00
-  ```
-- Después del TOTAL (línea 271), agregar línea "Ahorro promos" con el total de descuentos si hay promociones
+### 1. Venta móvil — `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`
 
-**2. `src/lib/ticketHtml.ts`** — Solo verificación
-- El código ya existe en línea 148, solo confirmar que funciona correctamente (ya está implementado)
+**3 cambios:**
 
-### Detalle técnico ESC/POS
+- **`productosDisponibles` (línea ~156):** Actualmente filtra productos sin stock. Agregar excepción: si `p.vender_sin_stock === true`, incluirlo siempre aunque tenga stock 0.
 
-Después de la línea de detalle de cada producto:
-```typescript
-// Per-product promotions
-const linePromos = (data.promociones ?? []).filter(p => p.producto_id && p.producto_id === l.producto_id);
-for (const lp of linePromos) {
-  ln(row(`  *${clean(lp.descripcion)}`, `-${fmt(lp.descuento)}`, W));
-}
+- **`getMaxQty` (línea ~173):** Actualmente retorna el stock real. Si el producto tiene `vender_sin_stock`, retornar `Infinity`.
+
+- **`addToCart` (línea ~185):** El mensaje "Sin stock a bordo" se muestra cuando `maxQty < 1`. Con el cambio en `getMaxQty`, esto se resuelve automáticamente.
+
+### 2. Entregas — `src/hooks/useEntregas.ts` y `src/pages/EntregaListPage.tsx`
+
+- Al surtir entregas, la validación de stock debe omitirse para productos con `vender_sin_stock`. Se necesita consultar el campo del producto antes de bloquear.
+
+### 3. Traspasos — `src/pages/TraspasoFormPage.tsx`
+
+- La validación de stock en origen debe respetar `vender_sin_stock` (si el producto lo permite, no bloquear el traspaso).
+
+## Detalle técnico
+
+El campo `vender_sin_stock` ya se incluye en la query de productos offline (`offlineSync.ts`), así que los datos ya están disponibles en el flujo móvil sin cambios adicionales.
+
+Cambio principal en `useRutaVenta.ts`:
+```text
+productosDisponibles:
+  - Agregar: || p.vender_sin_stock al filtro de cada rama
+
+getMaxQty:
+  - Agregar al inicio: 
+    const prod = productos?.find(p => p.id === productoId);
+    if (prod?.vender_sin_stock) return Infinity;
 ```
 
-Después del TOTAL:
-```typescript
-if (data.promociones && data.promociones.length > 0) {
-  const totalPromo = data.promociones.reduce((s, p) => s + p.descuento, 0);
-  if (totalPromo > 0) {
-    ln(row('Ahorro promos', `-${fmt(totalPromo)}`, W));
-  }
-}
-```
+## Archivos a modificar
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` | Respetar `vender_sin_stock` en filtro de disponibles, `getMaxQty`, y mensajes de error |
+| `src/hooks/useEntregas.ts` | Omitir validación de stock si producto tiene `vender_sin_stock` |
+| `src/pages/EntregaListPage.tsx` | Ídem |
+| `src/pages/TraspasoFormPage.tsx` | Ídem en validación de stock origen |
 
