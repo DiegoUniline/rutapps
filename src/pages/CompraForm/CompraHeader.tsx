@@ -45,7 +45,9 @@ export function CompraHeader(p: Props) {
   );
 }
 
-function StatusBar({ form, setConfirmDialog, saldoActual }: Props) {
+function StatusBar(p: Props) {
+  const { fmt } = useCurrency();
+  const { form, setConfirmDialog, saldoActual } = p;
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide",
