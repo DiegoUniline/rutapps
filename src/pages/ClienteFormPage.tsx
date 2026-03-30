@@ -804,6 +804,51 @@ export default function ClienteFormPage() {
         },
       ]} />
       </div>
+
+      {/* Modal crear zona */}
+      {showNewZona && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setShowNewZona(false); setNewZonaNombre(''); }}>
+          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-sm mx-4 p-5 space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-foreground">Crear nueva zona</h3>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Nombre de la zona</label>
+              <input
+                autoFocus
+                type="text"
+                className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                placeholder="Ej: Zona Norte"
+                value={newZonaNombre}
+                onChange={e => setNewZonaNombre(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') document.getElementById('btn-save-zona')?.click(); }}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-accent transition-colors"
+                onClick={() => { setShowNewZona(false); setNewZonaNombre(''); }}>
+                Cancelar
+              </button>
+              <button id="btn-save-zona" type="button" disabled={!newZonaNombre.trim() || savingZona}
+                className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                onClick={async () => {
+                  if (!newZonaNombre.trim()) return;
+                  setSavingZona(true);
+                  try {
+                    const { data, error } = await supabase.from('zonas').insert({ nombre: newZonaNombre.trim(), empresa_id: empresa!.id }).select('id').single();
+                    if (error) throw error;
+                    qc.invalidateQueries({ queryKey: ['zonas'] });
+                    set('zona_id', data.id);
+                    toast.success('Zona creada');
+                    setShowNewZona(false);
+                    setNewZonaNombre('');
+                  } catch (err: any) { toast.error(err.message); }
+                  finally { setSavingZona(false); }
+                }}>
+                {savingZona ? 'Guardando...' : 'Crear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
