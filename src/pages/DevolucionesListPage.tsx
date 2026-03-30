@@ -84,7 +84,7 @@ export default function DevolucionesListPage() {
 
               return (
                 <tr key={d.id} className="border-b border-border/50 hover:bg-card/50 cursor-pointer" onClick={() => d.venta_id && navigate(`/ventas/${d.venta_id}`)}>
-                  <td className="py-2 px-3 font-mono text-muted-foreground">{d.fecha}</td>
+                  <td className="py-2 px-3 font-mono text-muted-foreground">{fmtDate(d.fecha)}</td>
                   <td className="py-2 px-3 font-medium">{d.clientes?.nombre ?? '—'}</td>
                   <td className="py-2 px-3 text-muted-foreground">{d.vendedores?.nombre ?? '—'}</td>
                   <td className="py-2 px-3">

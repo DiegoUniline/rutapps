@@ -202,7 +202,7 @@ export default function ControlPage() {
                           <div className="flex items-center gap-3">
                             <div>
                               <p className="text-sm font-medium">{d.vendedor}</p>
-                              <p className="text-xs text-muted-foreground">{d.fecha}</p>
+                              <p className="text-xs text-muted-foreground">{fmtDate(d.fecha)}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
