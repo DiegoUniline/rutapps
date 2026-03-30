@@ -515,13 +515,13 @@ export default function InventarioPage() {
             </div>
           ))}
 
-          {data.cargas.length > 0 && (
+          {data.cargas.filter(c => c.origen !== 'almacen').length > 0 && (
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm font-semibold text-foreground">Total en rutas</p>
                 <div className="text-right">
-                  <p className="text-sm font-bold">Costo: $ {fmt(data.cargas.reduce((s, c) => s + c.valorCosto, 0))}</p>
-                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.reduce((s, c) => s + c.valorVenta, 0))}</p>
+                  <p className="text-sm font-bold">Costo: $ {fmt(data.cargas.filter(c => c.origen !== 'almacen').reduce((s, c) => s + c.valorCosto, 0))}</p>
+                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.filter(c => c.origen !== 'almacen').reduce((s, c) => s + c.valorVenta, 0))}</p>
                 </div>
               </div>
             </div>
