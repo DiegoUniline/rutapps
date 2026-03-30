@@ -216,7 +216,13 @@ export default function PagosProveedoresPage() {
             <PagosTable rows={paged ?? []} fmt={fmt} />
           </div>
           {totalPages > 1 && (
-            <OdooPagination page={page} totalPages={totalPages} setPage={setPage} totalItems={filtered.length} pageSize={PAGE_SIZE} />
+            <OdooPagination
+              from={page * PAGE_SIZE + 1}
+              to={Math.min((page + 1) * PAGE_SIZE, filtered.length)}
+              total={filtered.length}
+              onPrev={() => setPage(p => Math.max(0, p - 1))}
+              onNext={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+            />
           )}
         </>
       )}
