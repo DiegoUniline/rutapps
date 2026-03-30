@@ -19,6 +19,7 @@ interface Props {
   handleCancel: () => void;
   requestPin: (title: string, desc: string, cb: () => void) => void;
   onBack: () => void;
+  onRegistrarPago?: () => void;
 }
 
 export function CompraHeader(p: Props) {
