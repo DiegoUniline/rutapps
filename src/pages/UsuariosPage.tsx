@@ -737,7 +737,7 @@ export default function UsuariosPage() {
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
               onEdit={() => {
                 setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil);
-                const isSoloMovil = permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+                const isSoloMovil = role.solo_movil || permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
                 setRoleSoloMovil(isSoloMovil);
                 setShowRoleForm(true);
               }}
