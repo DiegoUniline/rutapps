@@ -10,7 +10,7 @@ import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useCliente, useSaveCliente, useDeleteCliente, useZonas, useVendedores, useCobradores, usePedidoSugerido, useSavePedidoSugerido } from '@/hooks/useClientes';
 import { useTarifasForSelect, useProductosForSelect, useAllListasPrecios } from '@/hooks/useData';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
