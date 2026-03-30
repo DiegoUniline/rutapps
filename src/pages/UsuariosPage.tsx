@@ -5,7 +5,7 @@ import { HELP } from '@/lib/helpContent';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { MODULOS, ACCIONES, getModuloGroups } from '@/hooks/usePermisos';
+import { MODULOS, ACCIONES, getModuloGroups, getModuloAcciones } from '@/hooks/usePermisos';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
