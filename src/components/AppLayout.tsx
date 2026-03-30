@@ -243,43 +243,48 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
   );
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const BREADCRUMB_LABELS: Record<string, string> = {
+  productos: 'Productos', tarifas: 'Listas de Precios', 'listas-precio': 'Listas de Precios',
+  clientes: 'Clientes', dashboard: 'Dashboard', ventas: 'Ventas', almacen: 'Almacén',
+  finanzas: 'Finanzas', reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
+  demanda: 'Demanda', entregas: 'Entregas', 'reporte-entregas': 'Reporte entregas',
+  inventario: 'Inventario', cobranza: 'Cobranza', rutas: 'Rutas', cargas: 'Cargas',
+  compras: 'Compras', lotes: 'Lotes', almacenes: 'Almacenes', gastos: 'Gastos',
+  'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
+  'aplicar-pagos': 'Aplicar pagos', 'aplicar-pagos-proveedor': 'Aplicar pagos proveedor',
+  'saldos-cliente': 'Saldos por cliente', 'saldos-proveedor': 'Saldos por proveedor',
+  configuracion: 'Configuración', 'configuracion-inicial': 'Config. inicial',
+  descargas: 'Liquidar Ruta', usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
+  'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
+  logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
+  asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
+  'facturacion-cfdi': 'Facturación', devoluciones: 'Devoluciones',
+  comisiones: 'Comisiones', control: 'Control', proveedores: 'Proveedores',
+  catalogos: 'Catálogos', clasificaciones: 'Clasificaciones', zonas: 'Zonas',
+  cobradores: 'Cobradores', 'reporte-diario': 'Reporte diario',
+  promociones: 'Promociones', pos: 'Punto de venta',
+  conteos: 'Conteos físicos', auditorias: 'Auditorías', traspasos: 'Traspasos',
+  'ajustes-inventario': 'Ajustes de inventario', supervisor: 'Supervisor',
+  'mi-suscripcion': 'Mi suscripción', 'monitor-rutas': 'Monitor de rutas',
+  'estado-cuenta': 'Estado de cuenta', 'catalogo-publico': 'Catálogo público',
+  'conteo-fisico': 'Conteo físico',
+};
+
 function Breadcrumb() {
   const location = useLocation();
   const segments = location.pathname.split('/').filter(Boolean);
 
-  const labels: Record<string, string> = {
-    productos: 'Productos', tarifas: 'Listas de Precios', 'listas-precio': 'Listas de Precios', clientes: 'Clientes', dashboard: 'Dashboard',
-    ventas: 'Ventas', almacen: 'Almacén', finanzas: 'Finanzas',
-    reportes: 'Reportes', nuevo: 'Nuevo', nueva: 'Nueva',
-    demanda: 'Demanda', entregas: 'Entregas', 'reporte-entregas': 'Reporte entregas',
-    inventario: 'Inventario', cobranza: 'Cobranza',
-    rutas: 'Rutas', cargas: 'Cargas', compras: 'Compras', lotes: 'Lotes',
-    almacenes: 'Almacenes', gastos: 'Gastos',
-    'por-cobrar': 'Cuentas por cobrar', 'por-pagar': 'Cuentas por pagar',
-    'aplicar-pagos': 'Aplicar pagos', 'aplicar-pagos-proveedor': 'Aplicar pagos proveedor',
-    'saldos-cliente': 'Saldos por cliente', 'saldos-proveedor': 'Saldos por proveedor',
-    configuracion: 'Configuración', 'configuracion-inicial': 'Configuración inicial', descargas: 'Liquidar Ruta',
-    usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
-    'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
-    logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
-    asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
-    'facturacion-cfdi': 'Facturación', devoluciones: 'Devoluciones',
-    comisiones: 'Comisiones', control: 'Control', proveedores: 'Proveedores',
-    catalogos: 'Catálogos', clasificaciones: 'Clasificaciones', zonas: 'Zonas', cobradores: 'Cobradores',
-    'reporte-diario': 'Reporte diario', promociones: 'Promociones', pos: 'Punto de venta',
-    conteos: 'Conteos físicos', auditorias: 'Auditorías', traspasos: 'Traspasos',
-    'ajustes-inventario': 'Ajustes de inventario', supervisor: 'Supervisor',
-    'mi-suscripcion': 'Mi suscripción', 'monitor-rutas': 'Monitor de rutas',
-  };
-
   if (segments.length === 0) return null;
 
   return (
-    <div className="h-9 flex items-center justify-between px-5 bg-card border-b border-border text-xs text-muted-foreground">
-      <div className="flex items-center gap-1.5">
+    <div className="h-9 flex items-center px-5 bg-card border-b border-border text-xs text-muted-foreground overflow-x-auto">
+      <div className="flex items-center gap-1.5 whitespace-nowrap">
         {segments.map((seg, i) => {
           const isLast = i === segments.length - 1;
-          const label = labels[seg] || seg;
+          const isUuid = UUID_RE.test(seg);
+          const label = isUuid ? 'Detalle' : (BREADCRUMB_LABELS[seg] || seg.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()));
           const path = '/' + segments.slice(0, i + 1).join('/');
           return (
             <span key={i} className="flex items-center gap-1.5">
