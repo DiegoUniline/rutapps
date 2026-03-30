@@ -119,7 +119,7 @@ export function useCompraForm() {
     if (newIdx <= curIdx || newIdx > curIdx + 1) return;
     try {
       const updates: any = { status: newStatus };
-      if (newStatus === 'confirmada' && form.condicion_pago === 'credito') updates.saldo_pendiente = totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0);
+      if (newStatus === 'confirmada') updates.saldo_pendiente = Math.max(0, totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0));
       const { error } = await supabase.from('compras').update(updates).eq('id', form.id); if (error) throw error;
       if (newStatus === 'recibida') {
         const validLines = lineas.filter(l => l.producto_id);
