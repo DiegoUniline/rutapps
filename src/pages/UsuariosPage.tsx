@@ -209,12 +209,13 @@ export default function UsuariosPage() {
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
     const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
-    const allEnabled = ACCIONES.every(a => modulePerms.find(p => p.accion === a)?.permitido);
+    const modActions = getModuloAcciones(modulo);
+    const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
     const newVal = !allEnabled;
 
     setPermisos(prev => {
       let updated = [...prev];
-      for (const accion of ACCIONES) {
+      for (const accion of modActions) {
         const existing = updated.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
         if (existing) {
           updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
@@ -225,7 +226,7 @@ export default function UsuariosPage() {
       return updated;
     });
 
-    for (const accion of ACCIONES) {
+    for (const accion of modActions) {
       const existing = modulePerms.find(p => p.accion === accion);
       if (existing) {
         await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
