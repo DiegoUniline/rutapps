@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { fmtDate } from '@/lib/utils';
 
 const motivoLabels: Record<string, string> = { no_vendido: 'No vendido', vencido: 'Vencido', danado: 'Dañado', cambio: 'Cambio', otro: 'Otro' };
 
