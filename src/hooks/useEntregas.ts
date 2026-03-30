@@ -104,39 +104,17 @@ export function useSurtirLinea() {
       entregaId: string;
       empresaId: string;
     }) => {
-      // 1. Check stock at origin
-      const { data: prod } = await supabase.from('productos').select('cantidad, vender_sin_stock').eq('id', productoId).single();
-      const stockDisponible = prod?.cantidad ?? 0;
-      if (!prod?.vender_sin_stock && cantidadSurtida > stockDisponible) {
-        throw new Error(`Stock insuficiente. Disponible: ${stockDisponible}`);
-      }
-
-      // 2. Deduct stock from origin
-      await supabase.from('productos').update({
-        cantidad: Math.max(0, stockDisponible - cantidadSurtida),
-      } as any).eq('id', productoId);
-
-      // 3. Mark line as fulfilled
-      await supabase.from('entrega_lineas').update({
-        cantidad_entregada: cantidadSurtida,
-        almacen_origen_id: almacenOrigenId,
-        hecho: true,
-      } as any).eq('id', lineaId);
-
-      // 4. Log movimiento (salida de almacén)
-      const today = todayLocal();
-      await supabase.from('movimientos_inventario').insert({
-        empresa_id: empresaId,
-        tipo: 'salida',
-        producto_id: productoId,
-        cantidad: cantidadSurtida,
-        almacen_origen_id: almacenOrigenId,
-        referencia_tipo: 'entrega',
-        referencia_id: entregaId,
-        user_id: user?.id,
-        fecha: today,
-        notas: 'Surtido de entrega',
-      } as any);
+      // Atomic stock deduction via DB function (prevents race conditions)
+      const { error } = await supabase.rpc('surtir_linea_entrega', {
+        p_linea_id: lineaId,
+        p_producto_id: productoId,
+        p_almacen_origen_id: almacenOrigenId,
+        p_cantidad_surtida: cantidadSurtida,
+        p_entrega_id: entregaId,
+        p_empresa_id: empresaId,
+        p_user_id: user?.id,
+      });
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entrega'] });
