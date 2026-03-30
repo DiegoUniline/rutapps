@@ -88,16 +88,22 @@ export default function UsuariosPage() {
   const load = useCallback(async (showLoader = true) => {
     if (!empresa?.id) return;
     if (showLoader) setLoading(true);
-    const [r, p, pr, ur, a, v] = await Promise.all([
+    const [r, pr, ur, a, v] = await Promise.all([
       supabase.from('roles').select('*').eq('empresa_id', empresa.id).order('nombre'),
-      supabase.from('role_permisos').select('*'),
       supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
       supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa.id),
     ]);
+    const roleIds = (r.data ?? []).map(role => role.id);
+    // Fetch permisos only for this empresa's roles — avoids the 1000-row default limit
+    let allPermisos: RolePermiso[] = [];
+    if (roleIds.length > 0) {
+      const { data: p } = await supabase.from('role_permisos').select('*').in('role_id', roleIds);
+      allPermisos = p ?? [];
+    }
     setRoles(r.data ?? []);
-    setPermisos(p.data ?? []);
+    setPermisos(allPermisos);
     setProfiles(pr.data ?? []);
     setUserRoles(ur.data ?? []);
     setAlmacenes(a.data ?? []);
