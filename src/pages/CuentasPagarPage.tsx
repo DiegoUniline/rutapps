@@ -54,10 +54,11 @@ function useCuentasPagar(search: string, empresaId?: string) {
 
 export default function CuentasPagarPage() {
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const { data: cuentas, isLoading } = useCuentasPagar(search);
+  const { data: cuentas, isLoading } = useCuentasPagar(search, empresa?.id);
 
   const total = cuentas?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
