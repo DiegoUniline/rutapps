@@ -819,8 +819,12 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
           <table className="w-full text-xs">
             <thead><tr className="bg-accent/30">
               <th className="text-left px-4 py-2 font-semibold text-foreground w-48">Módulo</th>
-              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a === 'ver_todos' ? 'Ver todos' : a}</th>)}
-              <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todos</th>
+              {ACCIONES.map(a => (
+                <th key={a} className="text-center px-2 py-2 font-semibold text-foreground w-16" title={ACCION_TOOLTIPS[a] || ''}>
+                  <span className="capitalize">{ACCION_LABELS[a] || a}</span>
+                </th>
+              ))}
+              <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todo</th>
             </tr></thead>
             <tbody>
               {groups.map(group => {
