@@ -400,9 +400,9 @@ export default function TraspasoFormPage() {
             .eq('producto_id', l.producto_id)
             .single();
           const stockOrigen = sa?.cantidad ?? 0;
-          if (l.cantidad > stockOrigen) {
-            const { data: p } = await supabase.from('productos').select('nombre').eq('id', l.producto_id).single();
-            throw new Error(`Stock insuficiente en origen para "${p?.nombre}". Disponible: ${stockOrigen}`);
+          const { data: prodInfo } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id).single();
+          if (!prodInfo?.vender_sin_stock && l.cantidad > stockOrigen) {
+            throw new Error(`Stock insuficiente en origen para "${prodInfo?.nombre}". Disponible: ${stockOrigen}`);
           }
           if (sa) {
             await supabase.from('stock_almacen').update({ cantidad: Math.max(0, stockOrigen - Number(l.cantidad)), updated_at: new Date().toISOString() } as any).eq('id', sa.id);
@@ -428,9 +428,9 @@ export default function TraspasoFormPage() {
             .limit(1)
             .single();
           if (sc) {
-            if (l.cantidad > sc.cantidad_actual) {
-              const { data: p } = await supabase.from('productos').select('nombre').eq('id', l.producto_id).single();
-              throw new Error(`Stock insuficiente en ruta para "${p?.nombre}". Disponible: ${sc.cantidad_actual}`);
+            const { data: prodRuta } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id).single();
+            if (!prodRuta?.vender_sin_stock && l.cantidad > sc.cantidad_actual) {
+              throw new Error(`Stock insuficiente en ruta para "${prodRuta?.nombre}". Disponible: ${sc.cantidad_actual}`);
             }
             await supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - l.cantidad) } as any).eq('id', sc.id);
           }
