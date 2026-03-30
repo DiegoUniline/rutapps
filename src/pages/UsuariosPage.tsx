@@ -841,6 +841,7 @@ function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePe
                     mods={groupMods}
                     permisos={permisos}
                     allGroupChecked={allGroupChecked}
+                    disabled={disabled}
                     onTogglePermiso={onTogglePermiso}
                     onToggleAll={onToggleAll}
                     onToggleGroup={onToggleGroup}
