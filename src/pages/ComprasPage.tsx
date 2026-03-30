@@ -71,13 +71,15 @@ const GROUP_BY_OPTIONS = [
   { value: 'fecha_mes', label: 'Mes' },
 ];
 
-function useCompras(search: string, statusFilter: string) {
+function useCompras(search: string, statusFilter: string, empresaId?: string) {
   return useQuery({
-    queryKey: ['compras', search, statusFilter],
+    queryKey: ['compras', search, statusFilter, empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       let q = supabase
         .from('compras')
         .select('*, proveedores(nombre), almacenes(nombre)')
+        .eq('empresa_id', empresaId!)
         .order('fecha', { ascending: false });
       if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
       const { data, error } = await q;
@@ -98,12 +100,13 @@ function useCompras(search: string, statusFilter: string) {
 export default function ComprasPage() {
   const navigate = useNavigate();
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('compras');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
-  const { data: compras, isLoading } = useCompras(search, statusFilter);
+  const { data: compras, isLoading } = useCompras(search, statusFilter, empresa?.id);
 
   // Build dynamic proveedor filter options from data
   const proveedorOptions = useMemo(() => {

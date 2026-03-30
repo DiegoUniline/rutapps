@@ -12,6 +12,7 @@ import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate, cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
 
 const COLUMNS: ExportColumn[] = [
   { key: 'folio', header: 'Folio', width: 12 },
@@ -25,13 +26,15 @@ const COLUMNS: ExportColumn[] = [
 
 const PAGE_SIZE = 80;
 
-function useCuentasPagar(search: string) {
+function useCuentasPagar(search: string, empresaId?: string) {
   return useQuery({
-    queryKey: ['cuentas-pagar', search],
+    queryKey: ['cuentas-pagar', search, empresaId],
+    enabled: !!empresaId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('compras')
         .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, dias_credito, proveedores(nombre)')
+        .eq('empresa_id', empresaId!)
         .eq('condicion_pago', 'credito' as any)
         .in('status', ['confirmada', 'recibida', 'pagada'] as any)
         .order('fecha', { ascending: true });
@@ -51,10 +54,11 @@ function useCuentasPagar(search: string) {
 
 export default function CuentasPagarPage() {
   const { fmt } = useCurrency();
+  const { empresa } = useAuth();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const { data: cuentas, isLoading } = useCuentasPagar(search);
+  const { data: cuentas, isLoading } = useCuentasPagar(search, empresa?.id);
 
   const total = cuentas?.length ?? 0;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
