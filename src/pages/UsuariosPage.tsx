@@ -37,6 +37,7 @@ export default function UsuariosPage() {
   const [roleName, setRoleName] = useState('');
   const [roleDesc, setRoleDesc] = useState('');
   const [roleMovil, setRoleMovil] = useState(false);
+  const [roleSoloMovil, setRoleSoloMovil] = useState(false);
   const [showRoleForm, setShowRoleForm] = useState(false);
 
   // User edit
