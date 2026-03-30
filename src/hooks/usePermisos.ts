@@ -111,6 +111,8 @@ export const ACCIONES_POR_MODULO: Record<string, string[]> = {
   supervisor: ['ver'],
   solo_movil: ['ver'],
   pos: ['ver'],
+  control: ['ver'],
+  'ventas.reporte_diario': ['ver'],
   'logistica.dashboard': ['ver'],
   'logistica.monitor': ['ver'],
   'logistica.mapa_clientes': ['ver'],
