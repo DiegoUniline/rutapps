@@ -68,12 +68,10 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         cobrosQ, gastosQ, clientesQ, productosQ, cargasQ, devolucionesQ, entregasQ,
       ]);
 
-      const ventas = ventasRes.data ?? [];
       const cobros = cobrosRes.data ?? [];
       const gastos = gastosRes.data ?? [];
       const clientes = clientesRes.data ?? [];
       const productos = productosRes.data ?? [];
-      const ventaLineas = ventaLineasRes.data ?? [];
       const cargas = cargasRes.data ?? [];
       const devoluciones = devolucionesRes.data ?? [];
       const entregas = entregasRes.data ?? [];
