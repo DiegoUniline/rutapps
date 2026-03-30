@@ -191,21 +191,25 @@ export default function UsuariosPage() {
   const [savingPermisos, setSavingPermisos] = useState(false);
 
   const toggleAllGroup = async (roleId: string, group: string) => {
+    if (savingPermisos) return;
     setSavingPermisos(true);
     try {
+      // Fetch fresh permisos from DB to avoid stale/temp IDs
+      const { data: freshPermisos } = await supabase.from('role_permisos').select('*').eq('role_id', roleId);
+      const fresh = freshPermisos ?? [];
+
       const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
-      const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
       const allChecked = groupMods.every(mod => {
         const modActions = getModuloAcciones(mod.id);
-        return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+        return modActions.every(a => fresh.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
       });
       const newVal = !allChecked;
 
-      const ops = [];
+      const ops: PromiseLike<any>[] = [];
       for (const mod of groupMods) {
         const modActions = getModuloAcciones(mod.id);
         for (const accion of modActions) {
-          const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
+          const existing = fresh.find(p => p.modulo === mod.id && p.accion === accion);
           if (existing) {
             ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
           } else {
@@ -222,16 +226,20 @@ export default function UsuariosPage() {
   };
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
+    if (savingPermisos) return;
     setSavingPermisos(true);
     try {
-      const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
+      // Fetch fresh permisos from DB to avoid stale/temp IDs
+      const { data: freshPermisos } = await supabase.from('role_permisos').select('*').eq('role_id', roleId).eq('modulo', modulo);
+      const fresh = freshPermisos ?? [];
+
       const modActions = getModuloAcciones(modulo);
-      const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
+      const allEnabled = modActions.every(a => fresh.find(p => p.accion === a)?.permitido);
       const newVal = !allEnabled;
 
-      const ops = [];
+      const ops: PromiseLike<any>[] = [];
       for (const accion of modActions) {
-        const existing = modulePerms.find(p => p.accion === accion);
+        const existing = fresh.find(p => p.accion === accion);
         if (existing) {
           ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
         } else {
