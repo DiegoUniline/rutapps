@@ -1,4 +1,4 @@
-import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -19,6 +19,7 @@ interface Props {
   handleCancel: () => void;
   requestPin: (title: string, desc: string, cb: () => void) => void;
   onBack: () => void;
+  onRegistrarPago?: () => void;
 }
 
 export function CompraHeader(p: Props) {
@@ -44,7 +45,9 @@ export function CompraHeader(p: Props) {
   );
 }
 
-function StatusBar({ form, setConfirmDialog, saldoActual }: Props) {
+function StatusBar(p: Props) {
+  const { fmt } = useCurrency();
+  const { form, setConfirmDialog, saldoActual } = p;
   return (
     <div className="flex items-center gap-3 flex-wrap">
       <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide",
@@ -56,6 +59,7 @@ function StatusBar({ form, setConfirmDialog, saldoActual }: Props) {
       {form.status === 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'confirmada', title: 'Confirmar compra', description: '¿Confirmar esta compra?' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 active:scale-95"><CheckCircle2 className="h-4 w-4" />Confirmar</button>}
       {form.status === 'confirmada' && <button onClick={() => setConfirmDialog({ open: true, action: 'recibida', title: 'Marcar como recibida', description: '¿Marcar como recibida? Se sumará stock.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95"><PackageCheck className="h-4 w-4" />Marcar recibida</button>}
       {form.status !== 'cancelada' && form.status !== 'borrador' && <button onClick={() => setConfirmDialog({ open: true, action: 'cancelar', title: 'Cancelar compra', description: '¿Cancelar? Se revertirá stock.' })} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 active:scale-95"><Ban className="h-4 w-4" />Cancelar compra</button>}
+      {saldoActual > 0 && !['borrador', 'pagada', 'cancelada'].includes(form.status) && p.onRegistrarPago && <button onClick={p.onRegistrarPago} className="inline-flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-bold bg-success text-white hover:bg-success/90 active:scale-95 shadow-md"><DollarSign className="h-4 w-4" />Registrar pago · {fmt(saldoActual)}</button>}
       {form.status === 'recibida' && saldoActual > 0 && <span className="text-xs text-muted-foreground italic flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Se marca pagada cuando saldo sea $0</span>}
     </div>
   );
