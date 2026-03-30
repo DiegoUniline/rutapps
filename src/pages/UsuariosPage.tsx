@@ -211,9 +211,9 @@ export default function UsuariosPage() {
         for (const accion of modActions) {
           const existing = fresh.find(p => p.modulo === mod.id && p.accion === accion);
           if (existing) {
-            ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id));
+            ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
           } else {
-            ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }));
+            ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
           }
         }
       }
