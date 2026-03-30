@@ -3637,6 +3637,7 @@ export type Database = {
           es_sistema: boolean
           id: string
           nombre: string
+          solo_movil: boolean
         }
         Insert: {
           acceso_ruta_movil?: boolean
@@ -3647,6 +3648,7 @@ export type Database = {
           es_sistema?: boolean
           id?: string
           nombre: string
+          solo_movil?: boolean
         }
         Update: {
           acceso_ruta_movil?: boolean
@@ -3657,6 +3659,7 @@ export type Database = {
           es_sistema?: boolean
           id?: string
           nombre?: string
+          solo_movil?: boolean
         }
         Relationships: [
           {
