@@ -16,7 +16,7 @@ export default function CompraFormPage() {
 
   return (
     <><div className="p-4 space-y-4 min-h-full">
-      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} />
+      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); }} />
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
