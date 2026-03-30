@@ -1,4 +1,3 @@
-import { DollarSign } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
