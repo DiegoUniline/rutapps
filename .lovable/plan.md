@@ -1,52 +1,37 @@
 
 
-# Plan: Respetar "Vender sin stock" en todos los flujos de venta
+## Problem Analysis
 
-## Problema
+When toggling "Todos" (select all) at group or module level, checkboxes deactivate instead of toggling correctly. The root cause is a **race condition between optimistic state updates and server reload**:
 
-El campo `vender_sin_stock` del producto solo se respeta en el **Punto de Venta (POS)**. En la **venta móvil de ruta** se ignora completamente: productos con esta bandera activada no aparecen en el catálogo si no tienen stock, y no se pueden agregar más allá del stock disponible.
+1. **Optimistic update** sets new state with temp IDs
+2. `load(false)` immediately fetches from server, but the batch `Promise.all` writes may not all be committed yet
+3. `setPermisos(p.data)` in `load()` **overwrites** the optimistic state with potentially stale server data
+4. Additionally, `groupPerms`/`modulePerms` are captured from state **before** the optimistic update, so the batch persist logic may try to insert records that already exist as temp entries
 
-## Lugares a corregir
+## Fix Plan
 
-### 1. Venta móvil — `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`
+### File: `src/pages/UsuariosPage.tsx`
 
-**3 cambios:**
+**1. Remove `load(false)` from both `toggleAllGroup` and `toggleAllModule`**
+- The optimistic update already handles the UI state correctly
+- Instead, after `Promise.all(ops)`, just call `load(false)` but **without** setting permisos optimistically beforehand — OR — keep optimistic but skip reload
 
-- **`productosDisponibles` (línea ~156):** Actualmente filtra productos sin stock. Agregar excepción: si `p.vender_sin_stock === true`, incluirlo siempre aunque tenga stock 0.
+**2. Better approach: Remove optimistic updates, use loading state + full reload**
+- Set a `saving` flag to disable checkboxes during save
+- Run all batch operations via `Promise.all`
+- Call `load(false)` only after ALL operations complete
+- This eliminates the race condition entirely
 
-- **`getMaxQty` (línea ~173):** Actualmente retorna el stock real. Si el producto tiene `vender_sin_stock`, retornar `Infinity`.
-
-- **`addToCart` (línea ~185):** El mensaje "Sin stock a bordo" se muestra cuando `maxQty < 1`. Con el cambio en `getMaxQty`, esto se resuelve automáticamente.
-
-### 2. Entregas — `src/hooks/useEntregas.ts` y `src/pages/EntregaListPage.tsx`
-
-- Al surtir entregas, la validación de stock debe omitirse para productos con `vender_sin_stock`. Se necesita consultar el campo del producto antes de bloquear.
-
-### 3. Traspasos — `src/pages/TraspasoFormPage.tsx`
-
-- La validación de stock en origen debe respetar `vender_sin_stock` (si el producto lo permite, no bloquear el traspaso).
-
-## Detalle técnico
-
-El campo `vender_sin_stock` ya se incluye en la query de productos offline (`offlineSync.ts`), así que los datos ya están disponibles en el flujo móvil sin cambios adicionales.
-
-Cambio principal en `useRutaVenta.ts`:
-```text
-productosDisponibles:
-  - Agregar: || p.vender_sin_stock al filtro de cada rama
-
-getMaxQty:
-  - Agregar al inicio: 
-    const prod = productos?.find(p => p.id === productoId);
-    if (prod?.vender_sin_stock) return Infinity;
-```
-
-## Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` | Respetar `vender_sin_stock` en filtro de disponibles, `getMaxQty`, y mensajes de error |
-| `src/hooks/useEntregas.ts` | Omitir validación de stock si producto tiene `vender_sin_stock` |
-| `src/pages/EntregaListPage.tsx` | Ídem |
-| `src/pages/TraspasoFormPage.tsx` | Ídem en validación de stock origen |
+**3. Concrete changes:**
+- Add a `savingPermisos` state boolean
+- In `toggleAllGroup` and `toggleAllModule`:
+  - Set `savingPermisos = true`
+  - Remove the optimistic `setPermisos` call
+  - `await Promise.all(ops)`
+  - `await load(false)` 
+  - Set `savingPermisos = false`
+  - Call `notifyPermisosChanged()`
+- Disable all checkboxes when `savingPermisos` is true
+- This is simpler and more reliable than trying to sync optimistic + server state
 
