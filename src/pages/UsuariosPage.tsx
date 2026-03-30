@@ -188,81 +188,62 @@ export default function UsuariosPage() {
     notifyPermisosChanged();
   };
 
-  const toggleAllGroup = async (roleId: string, group: string) => {
-    const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
-    const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
-    const allChecked = groupMods.every(mod => {
-      const modActions = getModuloAcciones(mod.id);
-      return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
-    });
-    const newVal = !allChecked;
+  const [savingPermisos, setSavingPermisos] = useState(false);
 
-    // Optimistic update
-    setPermisos(prev => {
-      let updated = [...prev];
+  const toggleAllGroup = async (roleId: string, group: string) => {
+    setSavingPermisos(true);
+    try {
+      const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
+      const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
+      const allChecked = groupMods.every(mod => {
+        const modActions = getModuloAcciones(mod.id);
+        return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+      });
+      const newVal = !allChecked;
+
+      const ops = [];
       for (const mod of groupMods) {
         const modActions = getModuloAcciones(mod.id);
         for (const accion of modActions) {
-          const existing = updated.find(p => p.role_id === roleId && p.modulo === mod.id && p.accion === accion);
+          const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
           if (existing) {
-            updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
+            ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
           } else {
-            updated.push({ id: `temp-${Date.now()}-${mod.id}-${accion}`, role_id: roleId, modulo: mod.id, accion, permitido: newVal });
+            ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
           }
         }
       }
-      return updated;
-    });
-
-    // Batch persist
-    const ops = [];
-    for (const mod of groupMods) {
-      const modActions = getModuloAcciones(mod.id);
-      for (const accion of modActions) {
-        const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
-        if (existing) {
-          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
-        } else {
-          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
-        }
-      }
+      await Promise.all(ops);
+      await load(false);
+      notifyPermisosChanged();
+    } finally {
+      setSavingPermisos(false);
     }
-    await Promise.all(ops);
-    load(false);
-    notifyPermisosChanged();
   };
 
   const toggleAllModule = async (roleId: string, modulo: string) => {
-    const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
-    const modActions = getModuloAcciones(modulo);
-    const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
-    const newVal = !allEnabled;
+    setSavingPermisos(true);
+    try {
+      const modulePerms = permisos.filter(p => p.role_id === roleId && p.modulo === modulo);
+      const modActions = getModuloAcciones(modulo);
+      const allEnabled = modActions.every(a => modulePerms.find(p => p.accion === a)?.permitido);
+      const newVal = !allEnabled;
 
-    setPermisos(prev => {
-      let updated = [...prev];
+      const ops = [];
       for (const accion of modActions) {
-        const existing = updated.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
+        const existing = modulePerms.find(p => p.accion === accion);
         if (existing) {
-          updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
+          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
         } else {
-          updated.push({ id: `temp-${Date.now()}-${accion}`, role_id: roleId, modulo, accion, permitido: newVal });
+          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal }).select());
         }
       }
-      return updated;
-    });
-
-    const ops2 = [];
-    for (const accion of modActions) {
-      const existing = modulePerms.find(p => p.accion === accion);
-      if (existing) {
-        ops2.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
-      } else {
-        ops2.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal }).select());
-      }
+      await Promise.all(ops);
+      await load(false);
+      notifyPermisosChanged();
+    } finally {
+      setSavingPermisos(false);
     }
-    await Promise.all(ops2);
-    load(false);
-    notifyPermisosChanged();
   };
 
   // ── User edit ──
