@@ -770,17 +770,21 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
   const [open, setOpen] = useState(false);
   const groups = getModuloGroups();
   const isInactive = role.activo === false;
+  const isSoloMovil = permisos.some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+  // Filter out 'solo_movil' from MODULOS for display
+  const displayModulos = MODULOS.filter(m => m.id !== 'solo_movil');
 
   return (
     <div className={cn("bg-card border border-border rounded-lg overflow-hidden", isInactive && "opacity-60")}>
-      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => setOpen(!open)}>
+      <div className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-accent/30" onClick={() => !isSoloMovil && setOpen(!open)}>
         <div className="flex items-center gap-3">
-          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          {!isSoloMovil && (open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />)}
           <Shield className="h-4 w-4 text-primary" />
           <div>
             <span className="text-sm font-semibold text-foreground">{role.nombre}</span>
             {role.descripcion && <span className="text-xs text-muted-foreground ml-2">{role.descripcion}</span>}
-            {role.acceso_ruta_movil && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Ruta móvil</span>}
+            {isSoloMovil && <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold">📱 Solo vista móvil</span>}
+            {!isSoloMovil && role.acceso_ruta_movil && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-success/10 text-success font-medium">Ruta móvil</span>}
             {isInactive && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium">Inactivo</span>}
           </div>
         </div>
@@ -791,19 +795,28 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
           </button>
         </div>
       </div>
-      {open && (
-        <div className="border-t border-border">
+      {isSoloMovil && (
+        <div className="border-t border-border px-4 py-3 bg-accent/20">
+          <p className="text-xs text-muted-foreground">Este rol solo tiene acceso a la aplicación móvil de ruta. No requiere configuración de permisos de escritorio.</p>
+        </div>
+      )}
+      {open && !isSoloMovil && (
+        <div className="border-t border-border overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="bg-accent/30">
               <th className="text-left px-4 py-2 font-semibold text-foreground w-48">Módulo</th>
-              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a}</th>)}
+              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a === 'ver_todos' ? 'Ver todos' : a}</th>)}
               <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todos</th>
             </tr></thead>
             <tbody>
               {groups.map(group => {
-                const groupMods = MODULOS.filter(m => m.group === group);
+                const groupMods = displayModulos.filter(m => m.group === group);
+                if (groupMods.length === 0) return null;
                 const groupPerms = permisos.filter(p => groupMods.some(m => m.id === p.modulo));
-                const allGroupChecked = groupMods.every(mod => ACCIONES.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido));
+                const allGroupChecked = groupMods.every(mod => {
+                  const modActions = getModuloAcciones(mod.id);
+                  return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+                });
 
                 return (
                   <GroupRows
@@ -848,11 +861,16 @@ function GroupRows({ group, mods, permisos, allGroupChecked, onTogglePermiso, on
       {/* Sub-module rows */}
       {mods.map(mod => {
         const modPerms = permisos.filter(p => p.modulo === mod.id);
-        const allChecked = ACCIONES.every(a => modPerms.find(p => p.accion === a)?.permitido);
+        const applicableActions = getModuloAcciones(mod.id);
+        const allChecked = applicableActions.every(a => modPerms.find(p => p.accion === a)?.permitido);
         return (
           <tr key={mod.id} className="border-t border-border/30 hover:bg-accent/20">
             <td className="px-4 py-1.5 pl-8 text-muted-foreground">{mod.label}</td>
             {ACCIONES.map(acc => {
+              const isApplicable = applicableActions.includes(acc);
+              if (!isApplicable) {
+                return <td key={acc} className="text-center px-2 py-1.5"><span className="text-muted-foreground/30">—</span></td>;
+              }
               const perm = modPerms.find(p => p.accion === acc);
               return (
                 <td key={acc} className="text-center px-2 py-1.5">
