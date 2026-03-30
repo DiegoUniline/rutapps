@@ -11,6 +11,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
 import { OdooPagination } from '@/components/OdooPagination';
 import DateFilterBar from '@/components/ruta/DateFilterBar';
+import { useTablePagination } from '@/hooks/useTablePagination';
 
 const METODO_ICONS: Record<string, typeof Banknote> = {
   efectivo: Banknote,
