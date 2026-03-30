@@ -173,26 +173,28 @@ export default function UsuariosPage() {
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   };
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
-    const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
-    const newVal = existing ? !existing.permitido : true;
+    if (savingPermisos) return;
+    const current = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion)?.permitido ?? false;
+    const permitido = !current;
 
-    // Optimistic UI update
-    if (existing) {
-      setPermisos(prev => prev.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p));
-    } else {
-      setPermisos(prev => [...prev, { id: `opt-${modulo}-${accion}`, role_id: roleId, modulo, accion, permitido: newVal }]);
-    }
+    // Optimistic update with deterministic key (not random temp ID)
+    setPermisos(prev => {
+      const i = prev.findIndex(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
+      if (i >= 0) return prev.map((p, idx) => idx === i ? { ...p, permitido } : p);
+      return [...prev, { id: `${roleId}:${modulo}:${accion}`, role_id: roleId, modulo, accion, permitido }];
+    });
 
-    // Persist in background
-    if (existing && !existing.id.startsWith('opt-')) {
-      await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
-    } else {
-      const { data } = await supabase.from('role_permisos')
-        .upsert({ role_id: roleId, modulo, accion, permitido: newVal }, { onConflict: 'role_id,modulo,accion', ignoreDuplicates: false })
-        .select().single();
-      if (data) {
-        setPermisos(prev => prev.map(p => (p.modulo === modulo && p.accion === accion && p.role_id === roleId) ? data : p));
-      }
+    // Upsert using the DB unique constraint, then patch state with real record
+    const { data, error } = await supabase
+      .from('role_permisos')
+      .upsert({ role_id: roleId, modulo, accion, permitido }, { onConflict: 'role_id,modulo,accion' })
+      .select('id, role_id, modulo, accion, permitido')
+      .single();
+
+    if (!error && data) {
+      setPermisos(prev => prev.map(p =>
+        (p.role_id === roleId && p.modulo === modulo && p.accion === accion) ? data : p
+      ));
     }
     notifyPermisosChanged();
   };
