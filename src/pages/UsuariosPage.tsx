@@ -111,13 +111,19 @@ export default function UsuariosPage() {
     if (!roleName.trim() || !empresa?.id) return;
     try {
       let roleId = editingRole?.id;
+      const roleData = {
+        nombre: roleName,
+        descripcion: roleDesc || null,
+        acceso_ruta_movil: roleMovil || roleSoloMovil,
+        solo_movil: roleSoloMovil,
+      };
       if (editingRole) {
-        await supabase.from('roles').update({ nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil }).eq('id', editingRole.id);
+        await supabase.from('roles').update(roleData).eq('id', editingRole.id);
       } else {
-        const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil }).select('id').single();
+        const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, ...roleData }).select('id').single();
         roleId = data?.id;
       }
-      // If solo_movil, set the solo_movil permission
+      // Also set the solo_movil permission for the permission system
       if (roleId && roleSoloMovil) {
         const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
         if (existing) {
@@ -126,7 +132,6 @@ export default function UsuariosPage() {
           await supabase.from('role_permisos').insert({ role_id: roleId, modulo: 'solo_movil', accion: 'ver', permitido: true });
         }
       } else if (roleId && !roleSoloMovil) {
-        // Remove solo_movil permission if switching to general
         const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
         if (existing) {
           await supabase.from('role_permisos').update({ permitido: false }).eq('id', existing.id);
