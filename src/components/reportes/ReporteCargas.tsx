@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { fmtDate } from '@/lib/utils';
 
 const statusLabels: Record<string, string> = { pendiente: 'Pendiente', en_ruta: 'En ruta', completada: 'Completada', cancelada: 'Cancelada' };
 
