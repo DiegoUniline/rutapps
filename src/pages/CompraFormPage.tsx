@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { cn , todayLocal } from '@/lib/utils';
+import { cn , todayLocal, fmtDate } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { useCurrency } from '@/hooks/useCurrency';
