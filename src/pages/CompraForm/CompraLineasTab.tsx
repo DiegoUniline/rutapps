@@ -20,11 +20,11 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
       <div className="bg-card border border-border rounded overflow-x-auto">
         <table className="w-full text-sm">
           <thead><tr className="border-b border-table-border">
-            <th className="th-odoo text-left w-8">#</th><th className="th-odoo text-left" style={{ width: '45%' }}>Producto</th>
-            <th className="th-odoo text-center w-14">Ud.</th><th className="th-odoo text-right w-14">Cant.</th>
-            <th className="th-odoo text-center w-14">Factor</th><th className="th-odoo text-right w-14">Piezas</th>
-            <th className="th-odoo text-right w-20">Costo</th><th className="th-odoo text-center w-14">IVA</th>
-            <th className="th-odoo text-center w-14">IEPS</th><th className="th-odoo text-right w-20">Total</th>
+            <th className="th-odoo text-left w-8">#</th><th className="th-odoo text-left" style={{ width: '40%' }}>Producto</th>
+            <th className="th-odoo text-center w-14">Ud.</th><th className="th-odoo text-right w-24">Cant.</th>
+            <th className="th-odoo text-center w-20">Factor</th><th className="th-odoo text-right w-20">Piezas</th>
+            <th className="th-odoo text-right w-28">Costo</th><th className="th-odoo text-center w-14">IVA</th>
+            <th className="th-odoo text-center w-14">IEPS</th><th className="th-odoo text-right w-24">Total</th>
             {isEditable && <th className="th-odoo w-8"></th>}
           </tr></thead>
           <tbody>
