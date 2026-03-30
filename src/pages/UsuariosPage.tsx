@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; }
+interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; solo_movil: boolean; }
 interface RolePermiso { id: string; role_id: string; modulo: string; accion: string; permitido: boolean; }
 interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
@@ -111,13 +111,19 @@ export default function UsuariosPage() {
     if (!roleName.trim() || !empresa?.id) return;
     try {
       let roleId = editingRole?.id;
+      const roleData = {
+        nombre: roleName,
+        descripcion: roleDesc || null,
+        acceso_ruta_movil: roleMovil || roleSoloMovil,
+        solo_movil: roleSoloMovil,
+      };
       if (editingRole) {
-        await supabase.from('roles').update({ nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil }).eq('id', editingRole.id);
+        await supabase.from('roles').update(roleData).eq('id', editingRole.id);
       } else {
-        const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, nombre: roleName, descripcion: roleDesc || null, acceso_ruta_movil: roleMovil }).select('id').single();
+        const { data } = await supabase.from('roles').insert({ empresa_id: empresa.id, ...roleData }).select('id').single();
         roleId = data?.id;
       }
-      // If solo_movil, set the solo_movil permission
+      // Also set the solo_movil permission for the permission system
       if (roleId && roleSoloMovil) {
         const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
         if (existing) {
@@ -126,7 +132,6 @@ export default function UsuariosPage() {
           await supabase.from('role_permisos').insert({ role_id: roleId, modulo: 'solo_movil', accion: 'ver', permitido: true });
         }
       } else if (roleId && !roleSoloMovil) {
-        // Remove solo_movil permission if switching to general
         const existing = permisos.find(p => p.role_id === roleId && p.modulo === 'solo_movil' && p.accion === 'ver');
         if (existing) {
           await supabase.from('role_permisos').update({ permitido: false }).eq('id', existing.id);
@@ -732,7 +737,7 @@ export default function UsuariosPage() {
             <RoleCard key={role.id} role={role} permisos={permisos.filter(p => p.role_id === role.id)}
               onEdit={() => {
                 setEditingRole(role); setRoleName(role.nombre); setRoleDesc(role.descripcion || ''); setRoleMovil(role.acceso_ruta_movil);
-                const isSoloMovil = permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
+                const isSoloMovil = role.solo_movil || permisos.filter(p => p.role_id === role.id).some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
                 setRoleSoloMovil(isSoloMovil);
                 setShowRoleForm(true);
               }}
@@ -774,8 +779,7 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
   const [open, setOpen] = useState(false);
   const groups = getModuloGroups();
   const isInactive = role.activo === false;
-  const isSoloMovil = permisos.some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
-  // Filter out 'solo_movil' from MODULOS for display
+  const isSoloMovil = role.solo_movil || permisos.some(p => p.modulo === 'solo_movil' && p.accion === 'ver' && p.permitido);
   const displayModulos = MODULOS.filter(m => m.id !== 'solo_movil');
 
   return (

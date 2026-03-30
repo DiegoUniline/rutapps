@@ -1,0 +1,1 @@
+ALTER TABLE public.roles ADD COLUMN IF NOT EXISTS solo_movil boolean NOT NULL DEFAULT false;
