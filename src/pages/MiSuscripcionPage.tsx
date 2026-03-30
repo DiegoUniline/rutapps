@@ -427,6 +427,31 @@ export default function MiSuscripcionPage() {
               </div>
             </div>
           </div>
+
+          {/* Payment dates */}
+          {subData && (subData.current_period_start || subData.current_period_end) && (
+            <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
+              {subData.current_period_start && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">Último pago:</span>
+                  <span className="font-medium text-foreground">
+                    {format(new Date(subData.current_period_start), "d 'de' MMMM yyyy", { locale: es })}
+                  </span>
+                </div>
+              )}
+              {subData.current_period_end && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-muted-foreground">Próximo vencimiento:</span>
+                  <span className="font-medium text-foreground">
+                    {format(new Date(subData.current_period_end), "d 'de' MMMM yyyy", { locale: es })}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          </div>
         </CardContent>
       </Card>
 
