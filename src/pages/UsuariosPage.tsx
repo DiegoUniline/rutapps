@@ -178,31 +178,28 @@ export default function UsuariosPage() {
     qc.invalidateQueries({ queryKey: ['user-permisos'] });
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   };
-  const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
+  const togglePermiso = (roleId: string, modulo: string, accion: string) => {
     if (savingPermisos) return;
-    const current = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion)?.permitido ?? false;
+    const key = (p: RolePermiso) => p.role_id === roleId && p.modulo === modulo && p.accion === accion;
+    const current = permisos.find(key)?.permitido ?? false;
     const permitido = !current;
 
-    // Optimistic update with deterministic key (not random temp ID)
+    // Instant optimistic update — no await, no blocking
     setPermisos(prev => {
-      const i = prev.findIndex(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
+      const i = prev.findIndex(key);
       if (i >= 0) return prev.map((p, idx) => idx === i ? { ...p, permitido } : p);
       return [...prev, { id: `${roleId}:${modulo}:${accion}`, role_id: roleId, modulo, accion, permitido }];
     });
 
-    // Upsert using the DB unique constraint, then patch state with real record
-    const { data, error } = await supabase
+    // Fire-and-forget: persist in background, patch real ID when done
+    void supabase
       .from('role_permisos')
       .upsert({ role_id: roleId, modulo, accion, permitido }, { onConflict: 'role_id,modulo,accion' })
       .select('id, role_id, modulo, accion, permitido')
-      .single();
-
-    if (!error && data) {
-      setPermisos(prev => prev.map(p =>
-        (p.role_id === roleId && p.modulo === modulo && p.accion === accion) ? data : p
-      ));
-    }
-    notifyPermisosChanged();
+      .single()
+      .then(({ data }) => {
+        if (data) setPermisos(prev => prev.map(p => key(p) ? data : p));
+      });
   };
 
   const [savingPermisos, setSavingPermisos] = useState(false);
