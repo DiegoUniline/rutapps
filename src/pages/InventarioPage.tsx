@@ -278,7 +278,7 @@ export default function InventarioPage() {
   );
 
   const tabs: { key: ViewMode; label: string; icon: React.ElementType }[] = [
-    { key: 'resumen', label: 'Almacén General', icon: Package },
+    { key: 'resumen', label: 'Stock Total', icon: Package },
     { key: 'almacen', label: 'Ubicaciones', icon: Warehouse },
     { key: 'rutas', label: 'Rutas activas', icon: Truck },
   ];
