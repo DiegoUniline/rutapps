@@ -205,9 +205,9 @@ export default function UsuariosPage() {
       for (const accion of modActions) {
         const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
         if (existing) {
-          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id));
+          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).then());
         } else {
-          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }));
+          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).then());
         }
       }
     }
@@ -235,14 +235,16 @@ export default function UsuariosPage() {
       return updated;
     });
 
+    const ops2: Promise<any>[] = [];
     for (const accion of modActions) {
       const existing = modulePerms.find(p => p.accion === accion);
       if (existing) {
-        await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
+        ops2.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).then());
       } else {
-        await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal });
+        ops2.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal }).then());
       }
     }
+    await Promise.all(ops2);
     load(false);
     notifyPermisosChanged();
   };
