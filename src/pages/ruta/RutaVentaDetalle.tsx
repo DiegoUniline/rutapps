@@ -277,9 +277,6 @@ export default function RutaVentaDetalle() {
     if (editLineas.length === 0) { toast.error('Agrega al menos un producto'); return; }
     setSaving(true);
     try {
-      // Delete old lines and insert new
-      await supabase.from('venta_lineas').delete().eq('venta_id', id!);
-
       const newLineas = editLineas.map(item => ({
         venta_id: id!,
         producto_id: item.producto_id,
@@ -294,8 +291,16 @@ export default function RutaVentaDetalle() {
         descuento_pct: 0,
         total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)),
       }));
+      // Insert new lines first — if this fails, old lines remain intact (rollback-safe)
       const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas);
       if (linErr) throw linErr;
+      // Now safely delete old lines (exclude the ones we just inserted)
+      const { data: allLines } = await supabase.from('venta_lineas').select('id, created_at').eq('venta_id', id!).order('created_at', { ascending: false });
+      const keepIds = (allLines ?? []).slice(0, newLineas.length).map(l => l.id);
+      const deleteIds = (allLines ?? []).slice(newLineas.length).map(l => l.id);
+      if (deleteIds.length > 0) {
+        await supabase.from('venta_lineas').delete().in('id', deleteIds);
+      }
 
       // Update venta totals + condicion — subtract already-paid amounts
       const totalPagado = (pagosVenta ?? []).reduce((sum: number, pa: any) => sum + (pa.monto_aplicado ?? 0), 0);
