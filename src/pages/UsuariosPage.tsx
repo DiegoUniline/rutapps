@@ -10,6 +10,22 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Shield, ChevronDown, ChevronRight, Users, X, KeyRound, UserPlus, AlertTriangle, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const ACCION_LABELS: Record<string, string> = {
+  ver: 'Ver',
+  crear: 'Crear',
+  editar: 'Editar',
+  eliminar: 'Eliminar',
+  ver_todos: 'Global',
+};
+
+const ACCION_TOOLTIPS: Record<string, string> = {
+  ver: 'Puede acceder y ver este módulo',
+  crear: 'Puede crear nuevos registros',
+  editar: 'Puede modificar registros existentes',
+  eliminar: 'Puede eliminar o cancelar registros',
+  ver_todos: 'Ve registros de todos los vendedores, no solo los suyos. Ej: un vendedor sin este permiso solo ve sus propias ventas y clientes.',
+};
+
 interface Role { id: string; nombre: string; descripcion: string | null; es_sistema: boolean; acceso_ruta_movil: boolean; activo: boolean; solo_movil: boolean; }
 interface RolePermiso { id: string; role_id: string; modulo: string; accion: string; permitido: boolean; }
 interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
@@ -181,6 +197,7 @@ export default function UsuariosPage() {
     });
     const newVal = !allChecked;
 
+    // Optimistic update
     setPermisos(prev => {
       let updated = [...prev];
       for (const mod of groupMods) {
@@ -197,17 +214,20 @@ export default function UsuariosPage() {
       return updated;
     });
 
+    // Batch persist
+    const ops = [];
     for (const mod of groupMods) {
       const modActions = getModuloAcciones(mod.id);
       for (const accion of modActions) {
         const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
         if (existing) {
-          await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
+          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
         } else {
-          await supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal });
+          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }).select());
         }
       }
     }
+    await Promise.all(ops);
     load(false);
     notifyPermisosChanged();
   };
@@ -231,14 +251,16 @@ export default function UsuariosPage() {
       return updated;
     });
 
+    const ops2 = [];
     for (const accion of modActions) {
       const existing = modulePerms.find(p => p.accion === accion);
       if (existing) {
-        await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
+        ops2.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id).select());
       } else {
-        await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal });
+        ops2.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: newVal }).select());
       }
     }
+    await Promise.all(ops2);
     load(false);
     notifyPermisosChanged();
   };
@@ -813,8 +835,12 @@ function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onT
           <table className="w-full text-xs">
             <thead><tr className="bg-accent/30">
               <th className="text-left px-4 py-2 font-semibold text-foreground w-48">Módulo</th>
-              {ACCIONES.map(a => <th key={a} className="text-center px-2 py-2 font-semibold text-foreground capitalize w-16">{a === 'ver_todos' ? 'Ver todos' : a}</th>)}
-              <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todos</th>
+              {ACCIONES.map(a => (
+                <th key={a} className="text-center px-2 py-2 font-semibold text-foreground w-16" title={ACCION_TOOLTIPS[a] || ''}>
+                  <span className="capitalize">{ACCION_LABELS[a] || a}</span>
+                </th>
+              ))}
+              <th className="text-center px-2 py-2 font-semibold text-foreground w-16">Todo</th>
             </tr></thead>
             <tbody>
               {groups.map(group => {
