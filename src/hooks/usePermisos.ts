@@ -71,9 +71,13 @@ export const MODULOS: ModuloDef[] = [
   { id: 'almacen.traspasos', label: 'Traspasos', group: 'Almacén' },
   { id: 'almacen.ajustes', label: 'Ajustes', group: 'Almacén' },
   { id: 'almacen.auditorias', label: 'Auditorías', group: 'Almacén' },
+  { id: 'almacen.conteos', label: 'Conteos físicos', group: 'Almacén' },
   { id: 'almacen.compras', label: 'Compras', group: 'Almacén' },
   { id: 'almacen.lotes', label: 'Lotes', group: 'Almacén' },
   { id: 'almacen.almacenes', label: 'Almacenes', group: 'Almacén' },
+
+  // Control
+  { id: 'control', label: 'Control', group: 'Control' },
 
   // Finanzas
   { id: 'finanzas.por_cobrar', label: 'Cuentas por cobrar', group: 'Finanzas' },
