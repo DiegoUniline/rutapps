@@ -1,4 +1,4 @@
-import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Ban, CheckCircle2, PackageCheck, AlertTriangle, DollarSign } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
