@@ -51,6 +51,8 @@ const CompraFormPage = lazy(() => import("@/pages/CompraForm"));
 const LotesPage = lazy(() => import("@/pages/LotesPage"));
 const CuentasCobrarPage = lazy(() => import("@/pages/CuentasCobrarPage"));
 const CuentasPagarPage = lazy(() => import("@/pages/CuentasPagarPage"));
+const EstadoCuentaClientePage = lazy(() => import("@/pages/EstadoCuentaClientePage"));
+const SaldosProveedorPage = lazy(() => import("@/pages/SaldosProveedorPage"));
 const GastosDesktopPage = lazy(() => import("@/pages/GastosDesktopPage"));
 const ReportesPage = lazy(() => import("@/pages/ReportesPage"));
 const ConfiguracionPage = lazy(() => import("@/pages/ConfiguracionPage"));
