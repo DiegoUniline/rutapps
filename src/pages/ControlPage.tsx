@@ -137,7 +137,7 @@ export default function ControlPage() {
                       {data.descuentosAltos.map((v: any) => (
                         <TableRow key={v.id} className="cursor-pointer hover:bg-card" onClick={() => navigate(`/ventas/${v.id}`)}>
                           <TableCell className="font-mono text-xs">{v.folio}</TableCell>
-                          <TableCell className="text-xs">{v.fecha}</TableCell>
+                          <TableCell className="text-xs">{fmtDate(v.fecha)}</TableCell>
                           <TableCell className="text-xs">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-xs">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                           <TableCell className="text-right text-xs">
