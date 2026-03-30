@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
@@ -11,11 +12,12 @@ import { useCurrency } from '@/hooks/useCurrency';
 export default function CompraFormPage() {
   const h = useCompraForm();
   const { fmt } = useCurrency();
+  const [activeTab, setActiveTab] = useState('lineas');
   if (!h.isNew && h.isLoading) return <div className="p-6"><TableSkeleton rows={6} cols={4} /></div>;
 
   return (
     <><div className="p-4 space-y-4 min-h-full">
-      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); }} />
+      <CompraHeader form={h.form} isNew={h.isNew} isEditable={h.isEditable} dirty={h.dirty} totalPagado={h.totalPagado} totals={h.totals} saldoActual={h.saldoActual} confirmDialog={h.confirmDialog} setConfirmDialog={h.setConfirmDialog} handleSave={h.handleSave} handleDelete={h.handleDelete} handleStatusChange={h.handleStatusChange} handleCancel={h.handleCancel} requestPin={h.requestPin} onBack={() => h.navigate('/almacen/compras')} onRegistrarPago={() => { h.setNewPago(() => ({ fecha: new Date().toISOString().slice(0, 10), metodo_pago: 'transferencia', referencia: '', notas: '', monto: h.saldoActual })); h.setAddingPago(true); setActiveTab('pagos'); }} />
 
       <div className="bg-card border border-border rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -29,7 +31,7 @@ export default function CompraFormPage() {
         )}
       </div>
 
-      <OdooTabs tabs={[
+      <OdooTabs activeTab={activeTab} tabs={[
         { key: 'lineas', label: 'Líneas de compra', content: <CompraLineasTab lineas={h.lineas} productosList={h.productosList} isEditable={h.isEditable} updateLinea={h.updateLinea} addLine={h.addLine} removeLine={h.removeLine} /> },
         { key: 'notas', label: 'Notas', content: (
           <div className="space-y-3">
