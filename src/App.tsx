@@ -385,6 +385,8 @@ function desktopRoutes() {
       <Route path="/finanzas/por-cobrar" element={<CuentasCobrarPage />} />
       <Route path="/finanzas/aplicar-pagos" element={<AplicarPagosPage />} />
       <Route path="/finanzas/por-pagar" element={<CuentasPagarPage />} />
+      <Route path="/finanzas/saldos-cliente" element={<EstadoCuentaClientePage />} />
+      <Route path="/finanzas/saldos-proveedor" element={<SaldosProveedorPage />} />
       <Route path="/finanzas/gastos" element={<GastosDesktopPage />} />
       <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
       <Route path="/reportes" element={<ReportesPage />} />
