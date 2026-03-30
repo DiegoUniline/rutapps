@@ -205,7 +205,7 @@ export default function UsuariosPage() {
       });
       const newVal = !allChecked;
 
-      const ops: Promise<any>[] = [];
+      const ops: PromiseLike<any>[] = [];
       for (const mod of groupMods) {
         const modActions = getModuloAcciones(mod.id);
         for (const accion of modActions) {
