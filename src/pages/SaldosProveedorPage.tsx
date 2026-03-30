@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
 import { fmtDate, cn } from '@/lib/utils';
-import { Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft } from 'lucide-react';
+import { Search, Truck, ChevronRight, CreditCard, FileText, ArrowLeft, Banknote } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -109,6 +109,11 @@ export default function SaldosProveedorPage() {
             <h1 className="text-xl font-semibold text-foreground">Estado de cuenta proveedor</h1>
             <p className="text-sm text-muted-foreground">{selected.nombre}</p>
           </div>
+          {comprasPendientes.length > 0 && (
+            <Button onClick={() => navigate(`/almacen/compras/${comprasPendientes[0].id}`)} className="gap-2">
+              <Banknote className="h-4 w-4" /> Registrar pago
+            </Button>
+          )}
         </div>
 
         {/* Summary card */}
