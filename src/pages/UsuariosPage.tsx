@@ -168,16 +168,19 @@ export default function UsuariosPage() {
   };
 
   const toggleAllGroup = async (roleId: string, group: string) => {
-    const groupMods = MODULOS.filter(m => m.group === group);
+    const groupMods = MODULOS.filter(m => m.group === group && m.id !== 'solo_movil');
     const groupPerms = permisos.filter(p => p.role_id === roleId && groupMods.some(m => m.id === p.modulo));
-    const allChecked = groupMods.every(mod => ACCIONES.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido));
+    const allChecked = groupMods.every(mod => {
+      const modActions = getModuloAcciones(mod.id);
+      return modActions.every(a => groupPerms.find(p => p.modulo === mod.id && p.accion === a)?.permitido);
+    });
     const newVal = !allChecked;
 
-    // Optimistic
     setPermisos(prev => {
       let updated = [...prev];
       for (const mod of groupMods) {
-        for (const accion of ACCIONES) {
+        const modActions = getModuloAcciones(mod.id);
+        for (const accion of modActions) {
           const existing = updated.find(p => p.role_id === roleId && p.modulo === mod.id && p.accion === accion);
           if (existing) {
             updated = updated.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p);
@@ -189,9 +192,9 @@ export default function UsuariosPage() {
       return updated;
     });
 
-    // Persist
     for (const mod of groupMods) {
-      for (const accion of ACCIONES) {
+      const modActions = getModuloAcciones(mod.id);
+      for (const accion of modActions) {
         const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
         if (existing) {
           await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
