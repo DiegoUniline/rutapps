@@ -36,6 +36,8 @@ export const MODULOS: ModuloDef[] = [
 
   // Ventas
   { id: 'ventas', label: 'Todas las ventas', group: 'Ventas' },
+  { id: 'ventas.reporte_diario', label: 'Reporte diario', group: 'Ventas' },
+  { id: 'ventas.devoluciones', label: 'Devoluciones', group: 'Ventas' },
   { id: 'ventas.cobranza', label: 'Cobranza', group: 'Ventas' },
   { id: 'ventas.promociones', label: 'Promociones', group: 'Ventas' },
   { id: 'pos', label: 'Punto de venta', group: 'Ventas' },
@@ -55,11 +57,12 @@ export const MODULOS: ModuloDef[] = [
 
   // Catálogo
   { id: 'catalogo.productos', label: 'Productos', group: 'Catálogo' },
-  { id: 'catalogo.tarifas', label: 'Tarifas', group: 'Catálogo' },
+  { id: 'catalogo.listas_precio', label: 'Listas de Precios', group: 'Catálogo' },
   { id: 'catalogo.clasificaciones', label: 'Categorías', group: 'Catálogo' },
   { id: 'catalogo.marcas', label: 'Marcas', group: 'Catálogo' },
   { id: 'catalogo.proveedores', label: 'Proveedores', group: 'Catálogo' },
   { id: 'catalogo.unidades', label: 'Unidades', group: 'Catálogo' },
+  { id: 'catalogo.zonas', label: 'Zonas', group: 'Catálogo' },
   { id: 'catalogo.tasas_iva', label: 'Tasas IVA', group: 'Catálogo' },
   { id: 'catalogo.tasas_ieps', label: 'Tasas IEPS', group: 'Catálogo' },
 
