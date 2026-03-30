@@ -157,14 +157,12 @@ export function useRutaVenta() {
     if (!productos) return [];
     if (tipoVenta === 'pedido') return productos;
     if (useFallbackStock && almacenId) {
-      // No carga but has assigned warehouse: use warehouse stock
-      return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
+      return productos.filter(p => p.vender_sin_stock || (stockAbordo.get(p.id) ?? 0) > 0);
     }
     if (useFallbackStock) {
-      // No carga, no warehouse: use global stock as last resort
-      return productos.filter(p => (p.cantidad ?? 0) > 0);
+      return productos.filter(p => p.vender_sin_stock || (p.cantidad ?? 0) > 0);
     }
-    return productos.filter(p => (stockAbordo.get(p.id) ?? 0) > 0);
+    return productos.filter(p => p.vender_sin_stock || (stockAbordo.get(p.id) ?? 0) > 0);
   }, [productos, tipoVenta, stockAbordo, useFallbackStock, almacenId]);
   const filteredProductos = productosDisponibles?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
   const filteredDevProductos = productos?.filter(p => !searchDevProducto || p.nombre.toLowerCase().includes(searchDevProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchDevProducto.toLowerCase()));
