@@ -236,6 +236,9 @@ export default function ClienteFormPage() {
   const [pedidoSearch, setPedidoSearch] = useState('');
   const [showPedidoSearch, setShowPedidoSearch] = useState(false);
   const [pedidoDirty, setPedidoDirty] = useState(false);
+  const [showNewZona, setShowNewZona] = useState(false);
+  const [newZonaNombre, setNewZonaNombre] = useState('');
+  const [savingZona, setSavingZona] = useState(false);
 
   // Auto-assign default lista de precios for new clients
   useEffect(() => {
