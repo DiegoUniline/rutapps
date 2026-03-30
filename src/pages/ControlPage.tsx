@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useControlData } from '@/hooks/useControlData';
 import { useCurrency } from '@/hooks/useCurrency';
 import { subDays, format } from 'date-fns';
+import { fmtDate } from '@/lib/utils';
 import { es } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
