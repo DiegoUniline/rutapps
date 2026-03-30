@@ -451,7 +451,6 @@ export default function MiSuscripcionPage() {
               )}
             </div>
           )}
-          </div>
         </CardContent>
       </Card>
 
