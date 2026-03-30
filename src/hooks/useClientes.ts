@@ -120,6 +120,7 @@ export function useSaveCliente() {
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['clientes-page'] });
       qc.invalidateQueries({ queryKey: ['cliente'] });
     },
   });
