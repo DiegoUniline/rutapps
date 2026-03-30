@@ -94,6 +94,7 @@ export function useCompraForm() {
 
   const handleSave = async () => {
     if (!empresa?.id) return;
+    if (!form.almacen_id) { toast.error('Selecciona un almacén destino'); return; }
     try {
       const compraData = { empresa_id: empresa.id, proveedor_id: form.proveedor_id || null, almacen_id: form.almacen_id || null, fecha: form.fecha, condicion_pago: form.condicion_pago, dias_credito: form.condicion_pago === 'credito' ? (form.dias_credito ?? 0) : 0, status: form.status, subtotal: totals.subtotal, iva_total: totals.iva_total, total: totals.total, saldo_pendiente: form.condicion_pago === 'credito' ? totals.total - (pagos?.reduce((s, p) => s + (p.monto ?? 0), 0) ?? 0) : 0, notas: form.notas || null, notas_pago: form.notas_pago || null };
       let compraId = form.id;
