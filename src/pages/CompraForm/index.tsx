@@ -31,7 +31,7 @@ export default function CompraFormPage() {
         )}
       </div>
 
-      <OdooTabs tabs={[
+      <OdooTabs activeTab={activeTab} tabs={[
         { key: 'lineas', label: 'Líneas de compra', content: <CompraLineasTab lineas={h.lineas} productosList={h.productosList} isEditable={h.isEditable} updateLinea={h.updateLinea} addLine={h.addLine} removeLine={h.removeLine} /> },
         { key: 'notas', label: 'Notas', content: (
           <div className="space-y-3">
