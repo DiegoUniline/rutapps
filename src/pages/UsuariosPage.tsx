@@ -181,6 +181,7 @@ export default function UsuariosPage() {
     });
     const newVal = !allChecked;
 
+    // Optimistic update
     setPermisos(prev => {
       let updated = [...prev];
       for (const mod of groupMods) {
@@ -197,17 +198,20 @@ export default function UsuariosPage() {
       return updated;
     });
 
+    // Batch persist
+    const ops: Promise<any>[] = [];
     for (const mod of groupMods) {
       const modActions = getModuloAcciones(mod.id);
       for (const accion of modActions) {
         const existing = groupPerms.find(p => p.modulo === mod.id && p.accion === accion);
         if (existing) {
-          await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
+          ops.push(supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id));
         } else {
-          await supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal });
+          ops.push(supabase.from('role_permisos').insert({ role_id: roleId, modulo: mod.id, accion, permitido: newVal }));
         }
       }
     }
+    await Promise.all(ops);
     load(false);
     notifyPermisosChanged();
   };
