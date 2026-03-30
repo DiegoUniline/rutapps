@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useVendedores } from '@/hooks/useClientes';
 import { Link } from 'react-router-dom';
 import { Filter, ShoppingCart, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, Info, Save } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
