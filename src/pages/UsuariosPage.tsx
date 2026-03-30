@@ -775,8 +775,8 @@ export default function UsuariosPage() {
   );
 }
 
-function RoleCard({ role, permisos, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
-  role: Role; permisos: RolePermiso[]; onEdit: () => void; onToggleActivo: () => void;
+function RoleCard({ role, permisos, disabled, onEdit, onToggleActivo, onTogglePermiso, onToggleAll, onToggleGroup }: {
+  role: Role; permisos: RolePermiso[]; disabled?: boolean; onEdit: () => void; onToggleActivo: () => void;
   onTogglePermiso: (mod: string, acc: string) => void; onToggleAll: (mod: string) => void;
   onToggleGroup: (group: string) => void;
 }) {
