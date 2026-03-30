@@ -173,27 +173,28 @@ export default function UsuariosPage() {
     window.dispatchEvent(new Event('uniline:permisos-changed'));
   };
   const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
-    if (savingPermisos) return;
-    setSavingPermisos(true);
-    try {
-      const { data: existing } = await supabase
-        .from('role_permisos')
-        .select('id, permitido')
-        .eq('role_id', roleId)
-        .eq('modulo', modulo)
-        .eq('accion', accion)
-        .maybeSingle();
+    const existing = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
+    const newVal = existing ? !existing.permitido : true;
 
-      if (existing) {
-        await supabase.from('role_permisos').update({ permitido: !existing.permitido }).eq('id', existing.id);
-      } else {
-        await supabase.from('role_permisos').insert({ role_id: roleId, modulo, accion, permitido: true });
-      }
-      await load(false);
-      notifyPermisosChanged();
-    } finally {
-      setSavingPermisos(false);
+    // Optimistic UI update
+    if (existing) {
+      setPermisos(prev => prev.map(p => p.id === existing.id ? { ...p, permitido: newVal } : p));
+    } else {
+      setPermisos(prev => [...prev, { id: `opt-${modulo}-${accion}`, role_id: roleId, modulo, accion, permitido: newVal }]);
     }
+
+    // Persist in background
+    if (existing && !existing.id.startsWith('opt-')) {
+      await supabase.from('role_permisos').update({ permitido: newVal }).eq('id', existing.id);
+    } else {
+      const { data } = await supabase.from('role_permisos')
+        .upsert({ role_id: roleId, modulo, accion, permitido: newVal }, { onConflict: 'role_id,modulo,accion', ignoreDuplicates: false })
+        .select().single();
+      if (data) {
+        setPermisos(prev => prev.map(p => (p.modulo === modulo && p.accion === accion && p.role_id === roleId) ? data : p));
+      }
+    }
+    notifyPermisosChanged();
   };
 
   const [savingPermisos, setSavingPermisos] = useState(false);
