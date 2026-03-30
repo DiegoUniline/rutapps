@@ -237,7 +237,7 @@ export default function UsuariosPage() {
       const allEnabled = modActions.every(a => fresh.find(p => p.accion === a)?.permitido);
       const newVal = !allEnabled;
 
-      const ops: Promise<any>[] = [];
+      const ops: PromiseLike<any>[] = [];
       for (const accion of modActions) {
         const existing = fresh.find(p => p.accion === accion);
         if (existing) {
