@@ -293,7 +293,7 @@ export default function InventarioPage() {
       {/* Summary cards */}
       {data && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <SummaryCard icon={Warehouse} label="En almacén" value={`${fmtNum(data.totales.stockAlmacen)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoAlmacen)}`} color="text-primary" />
+          <SummaryCard icon={Warehouse} label="En almacenes" value={`${fmtNum(data.totales.stockAlmacen)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoAlmacen)}`} color="text-primary" />
           <SummaryCard icon={Truck} label="En ruta" value={`${fmtNum(data.totales.stockRuta)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoTotal - data.totales.valorCostoAlmacen)}`} color="text-warning" />
           <SummaryCard icon={DollarSign} label="Valor total (costo)" value={`$ ${fmt(data.totales.valorCostoTotal)}`} sub={`${fmtNum(data.totales.stockTotal)} unidades totales`} color="text-success" />
           <SummaryCard icon={TrendingUp} label="Proyección ventas" value={`$ ${fmt(data.totales.valorVentaTotal)}`} sub={`Margen: $ ${fmt(data.totales.valorVentaTotal - data.totales.valorCostoTotal)}`} color="text-accent-foreground" />
