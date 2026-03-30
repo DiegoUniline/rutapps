@@ -1,4 +1,5 @@
 import { useCurrency } from '@/hooks/useCurrency';
+import { fmtDate } from '@/lib/utils';
 import { ShoppingCart, Package, CalendarDays, Wallet, Banknote, CreditCard, Save, ReceiptText, Plus, Trash2 } from 'lucide-react';
 import type { CartItem, CuentaPendiente, DevolucionItem, PagoLinea } from './types';
 import { ACCIONES } from './types';

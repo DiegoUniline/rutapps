@@ -9,7 +9,7 @@ import { OdooPagination } from '@/components/OdooPagination';
 import SearchableSelect from '@/components/SearchableSelect';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
-import { cn , todayLocal } from '@/lib/utils';
+import { cn , todayLocal, fmtDate } from '@/lib/utils';
 import { Check, DollarSign } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ComisionesReglasTab from '@/components/comisiones/ComisionesReglasTab';
