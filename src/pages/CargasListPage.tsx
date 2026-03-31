@@ -155,10 +155,6 @@ export default function CargasListPage() {
         onGroupByChange={setGroupBy}
         activeGroupByLevels={groupByLevels}
         onGroupByLevelChange={setGroupByLevel}
-        desde={desde}
-        hasta={hasta}
-        onDesdeChange={setDesde}
-        onHastaChange={setHasta}
         dateFrom={desde}
         dateTo={hasta}
         onDateFromChange={setDesde}
