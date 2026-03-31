@@ -73,7 +73,6 @@ export const MODULOS: ModuloDef[] = [
   { id: 'almacen.auditorias', label: 'Auditorías', group: 'Almacén' },
   { id: 'almacen.conteos', label: 'Conteos físicos', group: 'Almacén' },
   { id: 'almacen.compras', label: 'Compras', group: 'Almacén' },
-  { id: 'almacen.lotes', label: 'Lotes', group: 'Almacén' },
   { id: 'almacen.almacenes', label: 'Almacenes', group: 'Almacén' },
 
   // Control
@@ -175,7 +174,6 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/almacen/auditorias': 'almacen.auditorias',
   '/almacen/conteos': 'almacen.conteos',
   '/almacen/compras': 'almacen.compras',
-  '/almacen/lotes': 'almacen.lotes',
   '/almacen/almacenes': 'almacen.almacenes',
   '/control': 'control',
   '/finanzas/por-cobrar': 'finanzas.por_cobrar',
@@ -184,6 +182,7 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/finanzas/por-pagar': 'finanzas.por_pagar',
   '/finanzas/pagos-proveedores': 'finanzas.por_pagar',
   '/finanzas/saldos-proveedor': 'finanzas.por_pagar',
+  '/finanzas/aplicar-pagos-proveedor': 'finanzas.por_pagar',
   '/finanzas/gastos': 'finanzas.gastos',
   '/finanzas/comisiones': 'finanzas.comisiones',
   '/reportes': 'reportes.generales',

@@ -50,7 +50,7 @@ const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
 const AlmacenesPage = lazy(() => import("@/pages/AlmacenesPage"));
 const ComprasPage = lazy(() => import("@/pages/ComprasPage"));
 const CompraFormPage = lazy(() => import("@/pages/CompraForm"));
-const LotesPage = lazy(() => import("@/pages/LotesPage"));
+
 const CuentasCobrarPage = lazy(() => import("@/pages/CuentasCobrarPage"));
 const CuentasPagarPage = lazy(() => import("@/pages/CuentasPagarPage"));
 const EstadoCuentaClientePage = lazy(() => import("@/pages/EstadoCuentaClientePage"));
@@ -395,7 +395,7 @@ function desktopRoutes() {
       <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
       <Route path="/almacen/compras" element={<ComprasPage />} />
       <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
-      <Route path="/almacen/lotes" element={<LotesPage />} />
+      {/* Lotes removed — no longer used */}
       <Route path="/almacen/descargas" element={<DescargasPage />} />
       <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
       <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
