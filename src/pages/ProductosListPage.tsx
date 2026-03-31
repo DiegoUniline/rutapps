@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
+import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Upload } from 'lucide-react';
@@ -215,7 +216,7 @@ export default function ProductosListPage() {
 
   return (
     <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /></h1>
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Productos <HelpButton title={HELP.productos.title} sections={HELP.productos.sections} /> <VideoHelpButton module="productos" /></h1>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar

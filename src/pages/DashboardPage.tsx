@@ -10,6 +10,7 @@ import {
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import HelpButton from '@/components/HelpButton';
+import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useVendedores } from '@/hooks/useClientes';
 import {
@@ -197,6 +198,7 @@ export default function DashboardPage() {
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-primary" /> Dashboard
             <HelpButton title={HELP.dashboard.title} sections={HELP.dashboard.sections} />
+            <VideoHelpButton module="dashboard" />
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
             {format(dateRange.from, "d MMM", { locale: es })} — {format(dateRange.to, "d MMM yyyy", { locale: es })}
