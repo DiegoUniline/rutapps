@@ -449,6 +449,7 @@ export default function ReportesPage() {
           devoluciones: 'Reporte de Devoluciones',
           utilidad: 'Reporte de Utilidad',
           promociones: 'Reporte de Promociones',
+          no_visitados: 'Clientes No Visitados',
         };
 
         const activeFilters: { label: string; value: string }[] = [];
