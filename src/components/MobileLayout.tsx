@@ -95,13 +95,16 @@ export default function MobileLayout() {
         <div className="flex items-center gap-1">
           <button
             onClick={forceUpdate}
+            disabled={!navigator.onLine}
             className={cn(
               "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
-              swUpdateAvailable
-                ? "text-primary animate-pulse hover:text-primary/80"
-                : "text-muted-foreground hover:text-foreground"
+              !navigator.onLine
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : swUpdateAvailable
+                  ? "text-primary animate-pulse hover:text-primary/80"
+                  : "text-muted-foreground hover:text-foreground"
             )}
-            title="Actualizar app"
+            title={navigator.onLine ? "Actualizar app" : "Sin conexión"}
           >
             <RefreshCw className="h-5 w-5" />
           </button>
