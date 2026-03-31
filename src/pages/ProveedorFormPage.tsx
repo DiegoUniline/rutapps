@@ -169,18 +169,20 @@ export default function ProveedorFormPage() {
           {isNew ? 'Nuevo proveedor' : form.nombre || 'Proveedor'}
         </h1>
         <div className="flex items-center gap-2">
-          {!isNew && (
+          {!isNew && canDeletePerm && (
             <button onClick={handleDelete} className="btn-odoo-secondary text-destructive flex items-center gap-1.5">
               <Trash2 className="h-4 w-4" /> Eliminar
             </button>
           )}
-          <button
-            onClick={handleSave}
-            disabled={!isDirty || saveMutation.isPending}
-            className="btn-odoo-primary flex items-center gap-1.5 disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" /> Guardar
-          </button>
+          {!formReadOnly && (
+            <button
+              onClick={handleSave}
+              disabled={!isDirty || saveMutation.isPending}
+              className="btn-odoo-primary flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" /> Guardar
+            </button>
+          )}
         </div>
       </div>
 
