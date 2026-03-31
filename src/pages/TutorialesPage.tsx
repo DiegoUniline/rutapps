@@ -126,6 +126,26 @@ export default function TutorialesPage() {
     onError: () => toast.error('Error al agregar video'),
   });
 
+  const updateMut = useMutation({
+    mutationFn: async () => {
+      if (!editingVideo) return;
+      const { error } = await supabase.from('tutorial_videos' as any).update({
+        url: form.url.trim(),
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        module: form.module || null,
+      } as any).eq('id', editingVideo.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tutorial_videos'] });
+      setEditingVideo(null);
+      setForm({ url: '', title: '', description: '', module: '' });
+      toast.success('Video actualizado');
+    },
+    onError: () => toast.error('Error al actualizar video'),
+  });
+
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('tutorial_videos' as any).delete().eq('id', id);
@@ -137,6 +157,17 @@ export default function TutorialesPage() {
     },
     onError: () => toast.error('Error al eliminar'),
   });
+
+  const openEdit = (video: VideoRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingVideo(video);
+    setForm({
+      url: video.url,
+      title: video.title,
+      description: video.description || '',
+      module: video.module || '',
+    });
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
