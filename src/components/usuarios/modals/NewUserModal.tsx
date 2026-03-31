@@ -82,6 +82,11 @@ export default function NewUserModal({
                 📱 Este rol tiene acceso a la vista móvil de ruta
               </p>
             )}
+            {newUser.role_id && activeRoles.find(r => r.id === newUser.role_id)?.acceso_ruta_movil && !newUser.almacen_id && (
+              <p className="text-[11px] text-warning mt-1 flex items-center gap-1">
+                ⚠️ Se recomienda asignar un almacén para que este usuario pueda operar en ruta
+              </p>
+            )}
           </div>
 
           {/* Almacén with quick-create */}

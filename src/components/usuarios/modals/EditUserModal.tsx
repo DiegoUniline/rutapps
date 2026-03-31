@@ -62,6 +62,9 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
                 {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && (
                   <p className="text-[11px] text-success mt-1">📱 Este rol tiene acceso a la vista móvil de ruta</p>
                 )}
+                {editForm.role_id && activeRoles.find(r => r.id === editForm.role_id)?.acceso_ruta_movil && !editForm.almacen_id && (
+                  <p className="text-[11px] text-warning mt-1">⚠️ Se recomienda asignar un almacén para que este usuario pueda operar en ruta</p>
+                )}
               </>
             )}
           </div>
