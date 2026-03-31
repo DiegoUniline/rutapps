@@ -188,6 +188,10 @@ export default function TraspasosListPage() {
           onGroupByChange={setGroupBy}
           activeGroupByLevels={groupByLevels}
           onGroupByLevelChange={setGroupByLevel}
+          dateFrom={desde}
+          dateTo={hasta}
+          onDateFromChange={setDesde}
+          onDateToChange={setHasta}
         />
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => navigate('/almacen/traspasos/nuevo')} className="btn-odoo-primary shrink-0">

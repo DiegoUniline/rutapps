@@ -159,6 +159,10 @@ export default function CargasListPage() {
         hasta={hasta}
         onDesdeChange={setDesde}
         onHastaChange={setHasta}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
       />
 
       {isLoading ? <TableSkeleton /> : (
