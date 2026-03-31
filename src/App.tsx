@@ -12,6 +12,8 @@ import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import { ErrorModalProvider } from "@/components/ErrorModal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
