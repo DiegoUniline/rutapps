@@ -174,7 +174,6 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/almacen/auditorias': 'almacen.auditorias',
   '/almacen/conteos': 'almacen.conteos',
   '/almacen/compras': 'almacen.compras',
-  '/almacen/lotes': 'almacen.lotes',
   '/almacen/almacenes': 'almacen.almacenes',
   '/control': 'control',
   '/finanzas/por-cobrar': 'finanzas.por_cobrar',
