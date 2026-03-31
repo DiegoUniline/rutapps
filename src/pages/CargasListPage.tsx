@@ -68,7 +68,7 @@ export default function CargasListPage() {
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin responsable';
     if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }, groupByLevels), [cargas, groupBy, groupByLevels]);
+  }, groupByLevels), [filtered, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <Table>
