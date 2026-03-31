@@ -184,8 +184,8 @@ export default function TutorialesPage() {
                   <PlayCircle className="h-12 w-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" />
                 </div>
                 {video.module && (
-                  <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-0.5 rounded capitalize">
-                    {video.module}
+                  <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-0.5 rounded">
+                    {MODULES.find(m => m.value === video.module)?.label ?? video.module}
                   </span>
                 )}
               </div>
