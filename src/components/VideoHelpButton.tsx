@@ -3,7 +3,7 @@ import { PlayCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { getVideosForModule, youtubeEmbedUrl, type TutorialVideo } from '@/lib/tutorialVideos';
+import { getVideosForModule, youtubeEmbedUrl, extractVideoId, type TutorialVideo } from '@/lib/tutorialVideos';
 
 interface VideoHelpButtonProps {
   module: string;
