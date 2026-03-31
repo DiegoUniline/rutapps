@@ -238,11 +238,15 @@ function useInventarioData() {
         const stockAlmacen = getTotalStockEnUbicaciones(p.id);
         const stockRuta = rutaStock[p.id] ?? 0;
         const stockTotal = stockAlmacen + stockRuta;
+        const stockTipoAlmacen = hasWarehouseStock ? getStockByTipo(p.id, 'almacen') : stockAlmacen;
+        const stockTipoRuta = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
         return {
           ...p,
           stockAlmacen,
           stockRuta,
           stockTotal,
+          stockTipoAlmacen,
+          stockTipoRuta,
           valorCostoAlmacen: stockAlmacen * (p.costo ?? 0),
           valorVentaAlmacen: stockAlmacen * (p.precio_principal ?? 0),
           valorCostoTotal: stockTotal * (p.costo ?? 0),
@@ -255,11 +259,17 @@ function useInventarioData() {
         stockAlmacen: acc.stockAlmacen + p.stockAlmacen,
         stockRuta: acc.stockRuta + p.stockRuta,
         stockTotal: acc.stockTotal + p.stockTotal,
+        stockTipoAlmacen: acc.stockTipoAlmacen + p.stockTipoAlmacen,
+        stockTipoRuta: acc.stockTipoRuta + p.stockTipoRuta,
         valorCostoAlmacen: acc.valorCostoAlmacen + p.valorCostoAlmacen,
         valorVentaAlmacen: acc.valorVentaAlmacen + p.valorVentaAlmacen,
         valorCostoTotal: acc.valorCostoTotal + p.valorCostoTotal,
         valorVentaTotal: acc.valorVentaTotal + p.valorVentaTotal,
-      }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0 });
+        valorCostoTipoAlmacen: acc.valorCostoTipoAlmacen + p.stockTipoAlmacen * (p.costo ?? 0),
+        valorCostoTipoRuta: acc.valorCostoTipoRuta + p.stockTipoRuta * (p.costo ?? 0),
+        valorVentaTipoAlmacen: acc.valorVentaTipoAlmacen + p.stockTipoAlmacen * (p.precio_principal ?? 0),
+        valorVentaTipoRuta: acc.valorVentaTipoRuta + p.stockTipoRuta * (p.precio_principal ?? 0),
+      }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, stockTipoAlmacen: 0, stockTipoRuta: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0, valorCostoTipoAlmacen: 0, valorCostoTipoRuta: 0, valorVentaTipoAlmacen: 0, valorVentaTipoRuta: 0 });
 
       return {
         productos: productosEnriquecidos,
