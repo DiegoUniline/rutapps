@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Star, Pencil, Trash2, Check, X, Link2, Copy } from 'lucide-react';
+import VideoHelpButton from '@/components/VideoHelpButton';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
