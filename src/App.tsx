@@ -215,16 +215,34 @@ function AppRoutes() {
     );
   }
 
-  // Blocked users — only billing access
+  // Blocked users — only billing access + sign-out header
   if (subscription.isBlocked) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/facturacion" element={<FacturacionPage />} />
-          <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
-          <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
-        </Routes>
-      </Suspense>
+      <div className="min-h-screen flex flex-col bg-background">
+        <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-lg text-foreground">RutApp</span>
+            <Badge variant="destructive" className="text-xs">Suspendida</Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/mi-suscripcion">Mi Suscripción</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => signOut()}>
+              Cerrar sesión
+            </Button>
+          </div>
+        </header>
+        <div className="flex-1">
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/facturacion" element={<FacturacionPage />} />
+              <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
+              <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </div>
     );
   }
 
