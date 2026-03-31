@@ -14,13 +14,14 @@ interface Props {
 }
 
 export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine }: Props) {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const base = qty * price * (1 - desc / 100);
-  const ieps = base * ((Number(l.ieps_pct) || 0) / 100);
-  const iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
-  const lineTotal = base + ieps + iva;
+  const base = r2(qty * price * (1 - desc / 100));
+  const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
+  const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
+  const lineTotal = r2(base + ieps + iva);
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;

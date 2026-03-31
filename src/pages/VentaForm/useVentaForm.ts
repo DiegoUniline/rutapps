@@ -158,11 +158,12 @@ export function useVentaForm() {
   // Totals
   const totals = useMemo(() => {
     let subtotal = 0, descuento_total = 0, iva_total = 0, ieps_total = 0;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
     lineas.forEach(l => {
       const qty = Number(l.cantidad) || 0, price = Number(l.precio_unitario) || 0, desc = Number(l.descuento_pct) || 0;
-      const lineSubtotal = qty * price, discountAmt = lineSubtotal * (desc / 100), base = lineSubtotal - discountAmt;
+      const lineSubtotal = r2(qty * price), discountAmt = r2(lineSubtotal * (desc / 100)), base = r2(lineSubtotal - discountAmt);
       if (!sinImpuestos) {
-        const ieps = base * ((Number(l.ieps_pct) || 0) / 100), iva = (base + ieps) * ((Number(l.iva_pct) || 0) / 100);
+        const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100)), iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
         iva_total += iva; ieps_total += ieps;
       }
       subtotal += lineSubtotal; descuento_total += discountAmt;
@@ -170,9 +171,9 @@ export function useVentaForm() {
     // Extra discount
     const extraTipo = (form as any).descuento_extra_tipo || 'porcentaje';
     const extraVal = Number((form as any).descuento_extra) || 0;
-    const preExtraTotal = subtotal - descuento_total + iva_total + ieps_total;
-    const extraAmt = extraTipo === 'porcentaje' ? preExtraTotal * (extraVal / 100) : extraVal;
-    return { subtotal, descuento_total: descuento_total + extraAmt, descuento_extra_amt: extraAmt, iva_total, ieps_total, total: Math.max(0, preExtraTotal - extraAmt) };
+    const preExtraTotal = r2(subtotal - descuento_total + iva_total + ieps_total);
+    const extraAmt = r2(extraTipo === 'porcentaje' ? preExtraTotal * (extraVal / 100) : extraVal);
+    return { subtotal: r2(subtotal), descuento_total: r2(descuento_total + extraAmt), descuento_extra_amt: r2(extraAmt), iva_total: r2(iva_total), ieps_total: r2(ieps_total), total: r2(Math.max(0, preExtraTotal - extraAmt)) };
   }, [lineas, sinImpuestos, (form as any).descuento_extra, (form as any).descuento_extra_tipo]);
 
   // ---- Promotions engine ----

@@ -22,18 +22,19 @@ export function emptyLine(): Partial<CompraLinea> {
 }
 
 export function calcLineTotals(line: Partial<CompraLinea>) {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   const cant = Number(line.cantidad) || 0;
   const precio = Number(line.precio_unitario) || 0;
-  const base = cant * precio;
+  const base = r2(cant * precio);
   let iepsAmount = 0;
   if (line._tiene_ieps) {
-    iepsAmount = line._ieps_tipo === 'cuota' ? cant * (Number(line._ieps_pct) || 0) : base * ((Number(line._ieps_pct) || 0) / 100);
+    iepsAmount = r2(line._ieps_tipo === 'cuota' ? cant * (Number(line._ieps_pct) || 0) : base * ((Number(line._ieps_pct) || 0) / 100));
   }
-  const baseConIeps = base + iepsAmount;
-  const ivaAmount = line._tiene_iva ? baseConIeps * ((Number(line._iva_pct) || 0) / 100) : 0;
+  const baseConIeps = r2(base + iepsAmount);
+  const ivaAmount = line._tiene_iva ? r2(baseConIeps * ((Number(line._iva_pct) || 0) / 100)) : 0;
   line.subtotal = base;
-  line.total = base + iepsAmount + ivaAmount;
-  line._piezas_total = cant * (Number(line._factor_conversion) || 1);
+  line.total = r2(base + iepsAmount + ivaAmount);
+  line._piezas_total = r2(cant * (Number(line._factor_conversion) || 1));
   return line;
 }
 
