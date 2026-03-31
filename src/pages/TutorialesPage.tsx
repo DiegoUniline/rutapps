@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlayCircle, ExternalLink, X, Plus, Trash2 } from 'lucide-react';
+import { PlayCircle, ExternalLink, X, Plus, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -87,6 +87,7 @@ export default function TutorialesPage() {
 
   const [selected, setSelected] = useState<VideoRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<VideoRow | null>(null);
   const [form, setForm] = useState({ url: '', title: '', description: '', module: '' });
 
   const { data: videos = [], isLoading } = useQuery({
@@ -125,6 +126,26 @@ export default function TutorialesPage() {
     onError: () => toast.error('Error al agregar video'),
   });
 
+  const updateMut = useMutation({
+    mutationFn: async () => {
+      if (!editingVideo) return;
+      const { error } = await supabase.from('tutorial_videos' as any).update({
+        url: form.url.trim(),
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        module: form.module || null,
+      } as any).eq('id', editingVideo.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tutorial_videos'] });
+      setEditingVideo(null);
+      setForm({ url: '', title: '', description: '', module: '' });
+      toast.success('Video actualizado');
+    },
+    onError: () => toast.error('Error al actualizar video'),
+  });
+
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('tutorial_videos' as any).delete().eq('id', id);
@@ -136,6 +157,17 @@ export default function TutorialesPage() {
     },
     onError: () => toast.error('Error al eliminar'),
   });
+
+  const openEdit = (video: VideoRow, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingVideo(video);
+    setForm({
+      url: video.url,
+      title: video.title,
+      description: video.description || '',
+      module: video.module || '',
+    });
+  };
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -196,14 +228,24 @@ export default function TutorialesPage() {
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{video.description}</p>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={(e) => { e.stopPropagation(); deleteMut.mutate(video.id); }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-0.5 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                    onClick={(e) => openEdit(video, e)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); deleteMut.mutate(video.id); }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -286,6 +328,62 @@ export default function TutorialesPage() {
               onClick={() => addMut.mutate()}
             >
               {addMut.isPending ? 'Guardando...' : 'Agregar video'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit video dialog */}
+      <Dialog open={!!editingVideo} onOpenChange={(open) => { if (!open) { setEditingVideo(null); setForm({ url: '', title: '', description: '', module: '' }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Video Tutorial</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>URL de YouTube *</Label>
+              <Input
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={form.url}
+                onChange={(e) => setForm({ ...form, url: e.target.value })}
+              />
+              {form.url && extractVideoId(form.url).length === 11 && (
+                <img src={thumbUrl(form.url)} alt="Preview" className="rounded mt-2 w-full max-w-[200px]" />
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Título *</Label>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Descripción (opcional)</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Módulo (opcional)</Label>
+              <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona módulo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODULES.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!form.url.trim() || !form.title.trim() || updateMut.isPending}
+              onClick={() => updateMut.mutate()}
+            >
+              {updateMut.isPending ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </div>
         </DialogContent>
