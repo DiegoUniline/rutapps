@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Warehouse, Truck, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Warehouse, Truck, Plus, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
 import { InlineEditCell } from '@/components/InlineEditCell';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { Badge } from '@/components/ui/badge';
@@ -9,12 +9,21 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
+interface ReasignState {
+  almacenId: string;
+  almacenName: string;
+  vendedores: { user_id: string; nombre: string }[];
+  targetAlmacenId: string;
+}
+
 export default function AlmacenesPage() {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const [newNombre, setNewNombre] = useState('');
   const [newTipo, setNewTipo] = useState<'almacen' | 'ruta'>('almacen');
   const [showInactive, setShowInactive] = useState(false);
+  const [reasign, setReasign] = useState<ReasignState | null>(null);
+  const [reasigning, setReasigning] = useState(false);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ['almacenes', empresa?.id, showInactive],
@@ -48,6 +57,34 @@ export default function AlmacenesPage() {
   };
 
   const handleToggleActivo = async (id: string, currentActivo: boolean) => {
+    // If deactivating, check for assigned vendedores
+    if (currentActivo) {
+      try {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, nombre')
+          .eq('empresa_id', empresa!.id)
+          .eq('almacen_id', id)
+          .neq('estado', 'baja');
+
+        if (profiles && profiles.length > 0) {
+          const almacen = items?.find(i => i.id === id);
+          setReasign({
+            almacenId: id,
+            almacenName: almacen?.nombre ?? 'Almacén',
+            vendedores: profiles.map(p => ({ user_id: p.user_id, nombre: p.nombre ?? 'Sin nombre' })),
+            targetAlmacenId: '',
+          });
+          return; // Don't deactivate yet
+        }
+      } catch { /* proceed */ }
+    }
+
+    // No vendedores assigned or reactivating — proceed directly
+    await doToggleActivo(id, currentActivo);
+  };
+
+  const doToggleActivo = async (id: string, currentActivo: boolean) => {
     const newVal = !currentActivo;
     qc.setQueriesData<any[]>({ queryKey: ['almacenes'] }, (old) =>
       old?.map(item => item.id === id ? { ...item, activo: newVal } : item)
@@ -60,6 +97,29 @@ export default function AlmacenesPage() {
     } catch (err: any) {
       qc.invalidateQueries({ queryKey: ['almacenes'] });
       toast.error(err.message);
+    }
+  };
+
+  const handleReasignAndDeactivate = async () => {
+    if (!reasign) return;
+    if (!reasign.targetAlmacenId) {
+      toast.error('Selecciona un almacén de destino');
+      return;
+    }
+    setReasigning(true);
+    try {
+      // Move all vendedores to the target almacén
+      for (const v of reasign.vendedores) {
+        await supabase.from('profiles').update({ almacen_id: reasign.targetAlmacenId }).eq('user_id', v.user_id);
+      }
+      // Now deactivate
+      await doToggleActivo(reasign.almacenId, true);
+      toast.success(`${reasign.vendedores.length} usuario(s) reasignados`);
+      setReasign(null);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setReasigning(false);
     }
   };
 
@@ -91,6 +151,9 @@ export default function AlmacenesPage() {
       toast.error(err.message);
     }
   };
+
+  // Available almacenes for reasignment (exclude the one being deactivated)
+  const reasignOptions = activeItems.filter(a => a.id !== reasign?.almacenId);
 
   return (
     <div className="p-4 space-y-4 min-h-full">
@@ -194,6 +257,59 @@ export default function AlmacenesPage() {
           </table>
         )}
       </div>
+
+      {/* Reasign Modal */}
+      {reasign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-5 border-b border-border">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" /> Reasignar usuarios
+              </h3>
+              <p className="text-[12px] text-muted-foreground mt-1">
+                El almacén <strong>{reasign.almacenName}</strong> tiene {reasign.vendedores.length} usuario(s) asignado(s). Selecciona a dónde moverlos antes de desactivar.
+              </p>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground font-semibold uppercase">Usuarios afectados:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {reasign.vendedores.map(v => (
+                    <span key={v.user_id} className="inline-flex items-center px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[11px] font-medium">
+                      {v.nombre}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="label-odoo">Mover a:</label>
+                <select
+                  className="input-odoo w-full"
+                  value={reasign.targetAlmacenId}
+                  onChange={e => setReasign({ ...reasign, targetAlmacenId: e.target.value })}
+                >
+                  <option value="">Seleccionar almacén destino...</option>
+                  {reasignOptions.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre} {(a as any).tipo === 'ruta' ? '🚛' : '🏢'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="p-5 border-t border-border flex gap-2 justify-end">
+              <button onClick={() => setReasign(null)} className="btn-odoo text-sm">Cancelar</button>
+              <button
+                onClick={handleReasignAndDeactivate}
+                disabled={reasigning || !reasign.targetAlmacenId}
+                className="btn-odoo-primary text-sm"
+              >
+                {reasigning ? 'Reasignando...' : 'Reasignar y desactivar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
