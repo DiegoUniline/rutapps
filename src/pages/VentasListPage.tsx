@@ -50,6 +50,7 @@ export default function VentasListPage() {
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
   const { hasPermiso } = usePermisos();
+  const canCreate = hasPermiso('ventas', 'crear');
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
   const [search, setSearch] = useState('');
@@ -148,9 +149,11 @@ export default function VentasListPage() {
           <button onClick={() => navigate('/finanzas/aplicar-pagos')} className="btn-odoo-secondary shrink-0">
             <Banknote className="h-3.5 w-3.5" /> Aplicar pagos
           </button>
-          <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
-            <Plus className="h-3.5 w-3.5" /> Nueva venta
-          </button>
+          {canCreate && (
+            <button onClick={() => navigate('/ventas/nuevo')} className="btn-odoo-primary shrink-0">
+              <Plus className="h-3.5 w-3.5" /> Nueva venta
+            </button>
+          )}
         </div>
       </div>
 

@@ -13,6 +13,7 @@ import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { usePermisos } from '@/hooks/usePermisos';
 
 const COL_COUNT = 4;
 
@@ -67,7 +68,10 @@ export function useVentaForm() {
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
   const [sinImpuestos, setSinImpuestos] = useState(false);
-  const readOnly = !isNew && form.status !== 'borrador';
+  const { hasPermiso } = usePermisos();
+  const canEditVenta = hasPermiso('ventas', 'editar');
+  const canCreateVenta = hasPermiso('ventas', 'crear');
+  const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {

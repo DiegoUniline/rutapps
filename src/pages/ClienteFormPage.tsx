@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { usePermisos } from '@/hooks/usePermisos';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import GpsMapPicker from '@/components/GpsMapPicker';
@@ -205,6 +206,12 @@ export default function ClienteFormPage() {
   const { data: existing } = useCliente(isNew ? undefined : id);
   const saveMutation = useSaveCliente();
   const deleteMutation = useDeleteCliente();
+
+  const { hasPermiso } = usePermisos();
+  const canEdit = hasPermiso('clientes', 'editar');
+  const canCreate = hasPermiso('clientes', 'crear');
+  const canDelete = hasPermiso('clientes', 'eliminar');
+  const readOnly = isNew ? !canCreate : !canEdit;
 
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
@@ -452,10 +459,12 @@ export default function ClienteFormPage() {
 
       {/* Action buttons + statusbar */}
       <div className="flex items-center gap-2 mb-3">
-        <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
-          <Save className="h-3.5 w-3.5" /> Guardar
-        </button>
-        {!isNew && (
+        {!readOnly && (
+          <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
+            <Save className="h-3.5 w-3.5" /> Guardar
+          </button>
+        )}
+        {!isNew && canDelete && (
           <button onClick={handleDelete} className="btn-odoo-secondary text-destructive">
             <Trash2 className="h-3.5 w-3.5" /> Eliminar
           </button>

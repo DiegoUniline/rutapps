@@ -252,14 +252,9 @@ export function usePermisos(): UsePermisosReturn {
     }
     if (hasRole === false) return true; // no role = full access
     if (hasRole === null) return false; // loading
+    // Each module requires its own explicit permission — no parent fallback
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
-    if (perm) return perm.permitido;
-    if (modulo.includes('.')) {
-      const parent = modulo.split('.')[0];
-      const parentPerm = permisos.find(p => p.modulo === parent && p.accion === accion);
-      if (parentPerm) return parentPerm.permitido;
-    }
-    return false;
+    return perm?.permitido ?? false;
   }, [permisos, hasRole, isOwner]);
 
   const hasModulo = useCallback((modulo: string): boolean => {
