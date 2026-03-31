@@ -307,6 +307,7 @@ export default function InventarioPage() {
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Warehouse className="h-5 w-5" /> Inventario
         <HelpButton title={HELP.inventario.title} sections={HELP.inventario.sections} />
+        <VideoHelpButton module="inventario" />
       </h1>
 
       {/* Summary cards */}

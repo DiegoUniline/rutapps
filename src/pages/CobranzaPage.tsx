@@ -277,6 +277,7 @@ export default function CobranzaPage() {
       <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
         <Banknote className="h-5 w-5" /> Cobranza
         <HelpButton title={HELP.cobranza.title} sections={HELP.cobranza.sections} />
+        <VideoHelpButton module="cobranza" />
       </h1>
 
       {/* Summary — uses full filtered data, NOT paginated */}
