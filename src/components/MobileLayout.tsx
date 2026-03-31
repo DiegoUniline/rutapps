@@ -55,6 +55,7 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
+    if (!navigator.onLine) return;
     setIsUpdating(true);
     try {
       if ('serviceWorker' in navigator) {
@@ -66,7 +67,6 @@ export default function MobileLayout() {
         await Promise.all(keys.map(k => caches.delete(k)));
       }
       setSwUpdateAvailable(false);
-      // Small delay so user sees the animation
       await new Promise(r => setTimeout(r, 1200));
       window.location.reload();
     } catch {
@@ -95,13 +95,16 @@ export default function MobileLayout() {
         <div className="flex items-center gap-1">
           <button
             onClick={forceUpdate}
+            disabled={!navigator.onLine}
             className={cn(
               "flex items-center justify-center w-10 h-10 rounded-full transition-colors",
-              swUpdateAvailable
-                ? "text-primary animate-pulse hover:text-primary/80"
-                : "text-muted-foreground hover:text-foreground"
+              !navigator.onLine
+                ? "text-muted-foreground/40 cursor-not-allowed"
+                : swUpdateAvailable
+                  ? "text-primary animate-pulse hover:text-primary/80"
+                  : "text-muted-foreground hover:text-foreground"
             )}
-            title="Actualizar app"
+            title={navigator.onLine ? "Actualizar app" : "Sin conexión"}
           >
             <RefreshCw className="h-5 w-5" />
           </button>
@@ -196,10 +199,14 @@ export default function MobileLayout() {
             <div className="border-t border-border mt-1 pt-1">
               <button
                 onClick={() => { forceUpdate(); setMoreOpen(false); }}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-primary hover:bg-accent transition-colors"
+                disabled={!navigator.onLine}
+                className={cn(
+                  "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
+                  navigator.onLine ? "text-primary hover:bg-accent" : "text-muted-foreground/40 cursor-not-allowed"
+                )}
               >
                 <Download className="h-4 w-4" />
-                Actualizar app
+                {navigator.onLine ? 'Actualizar app' : 'Sin conexión'}
               </button>
               <div className="px-4 py-2 text-[10px] text-muted-foreground">
                 v{APP_VERSION} · {APP_BUILD_DATE}
