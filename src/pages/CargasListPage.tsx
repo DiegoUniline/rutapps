@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Truck, Package, ChevronRight } from 'lucide-react';
-import { Plus, Truck, Package, ChevronRight } from 'lucide-react';
 import { useCargas } from '@/hooks/useCargas';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
