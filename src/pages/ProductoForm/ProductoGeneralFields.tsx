@@ -40,6 +40,25 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <OdooField label="Unid. venta" value={form.unidad_venta_id} type="select" options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []} onChange={v => set('unidad_venta_id', v || null)} format={() => findUnit(unidades, form.unidad_venta_id ?? undefined)} onCreateNew={createUnidad} />
         <OdooField label="Unid. compra" value={form.unidad_compra_id} type="select" options={unidades?.map(u => ({ value: u.id, label: `${u.nombre}${u.abreviatura ? ` (${u.abreviatura})` : ''}` })) ?? []} onChange={v => set('unidad_compra_id', v || null)} format={() => findUnit(unidades, form.unidad_compra_id ?? undefined)} onCreateNew={createUnidad} />
         <OdooField label="Factor conversión" value={form.factor_conversion} type="number" onChange={v => set('factor_conversion', Number(v) || 1)} format={() => String(form.factor_conversion ?? 1)} />
+        <div className="odoo-field-row">
+          <span className="odoo-field-label">Producto a granel</span>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => set('es_granel', !form.es_granel)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${form.es_granel ? 'bg-primary' : 'bg-border'}`}>
+              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${form.es_granel ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+            {form.es_granel && (
+              <select value={form.unidad_granel ?? 'kg'} onChange={e => set('unidad_granel', e.target.value)}
+                className="text-[12px] border border-border rounded px-2 py-0.5 bg-card text-foreground">
+                <option value="kg">Kilogramo (kg)</option>
+                <option value="g">Gramo (g)</option>
+                <option value="litro">Litro (L)</option>
+                <option value="ml">Mililitro (ml)</option>
+                <option value="pieza">Pieza (fraccionada)</option>
+              </select>
+            )}
+          </div>
+        </div>
       </div>
       <div>
         <div className="odoo-field-row">
