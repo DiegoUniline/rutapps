@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDateFilter } from '@/hooks/useDateFilter';
 import { Plus, Truck, Package, ChevronRight } from 'lucide-react';
 import { useCargas } from '@/hooks/useCargas';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -56,15 +57,18 @@ export default function CargasListPage() {
   const [search, setSearch] = useState('');
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cargas');
 
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: cargas, isLoading } = useCargas(search, statusFilter);
 
-  const groups = useMemo(() => groupData(cargas ?? [], groupBy, (item: any, key) => {
+  const filtered = useMemo(() => filterByDate(cargas ?? [], 'fecha'), [cargas, filterByDate]);
+
+  const groups = useMemo(() => groupData(filtered, groupBy, (item: any, key) => {
     if (key === 'status') return statusConfig[item.status]?.label ?? item.status;
     if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin responsable';
     if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
-  }, groupByLevels), [cargas, groupBy, groupByLevels]);
+  }, groupByLevels), [filtered, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <Table>
@@ -151,6 +155,10 @@ export default function CargasListPage() {
         onGroupByChange={setGroupBy}
         activeGroupByLevels={groupByLevels}
         onGroupByLevelChange={setGroupByLevel}
+        dateFrom={desde}
+        dateTo={hasta}
+        onDateFromChange={setDesde}
+        onDateToChange={setHasta}
       />
 
       {isLoading ? <TableSkeleton /> : (

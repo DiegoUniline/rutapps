@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useDateFilter } from '@/hooks/useDateFilter';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
@@ -59,6 +60,7 @@ export default function TraspasosListPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
 
@@ -83,8 +85,9 @@ export default function TraspasosListPage() {
     const tipoArr = filters.tipo;
     if (tipoArr && tipoArr.length > 0) list = list.filter((t: any) => tipoArr.includes(t.tipo));
     if (search) list = list.filter((t: any) => t.folio?.toLowerCase().includes(search.toLowerCase()));
+    list = filterByDate(list, 'fecha');
     return list;
-  }, [traspasos, search, filters.status, filters.tipo]);
+  }, [traspasos, search, filters.status, filters.tipo, filterByDate]);
 
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
@@ -186,6 +189,10 @@ export default function TraspasosListPage() {
           onGroupByChange={setGroupBy}
           activeGroupByLevels={groupByLevels}
           onGroupByLevelChange={setGroupByLevel}
+          dateFrom={desde}
+          dateTo={hasta}
+          onDateFromChange={setDesde}
+          onDateToChange={setHasta}
         />
         <div className="flex items-center gap-2 shrink-0">
           <button onClick={() => navigate('/almacen/traspasos/nuevo')} className="btn-odoo-primary shrink-0">
