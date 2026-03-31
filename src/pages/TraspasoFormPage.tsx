@@ -251,82 +251,54 @@ export default function TraspasoFormPage() {
         producto_id: l.producto_id,
         cantidad: l.cantidad,
       }));
-      setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
+      setLineas(existingLines);
+      // Build cantidades map from existing lines
+      const map: CantidadesMap = {};
+      existingLines.forEach((l: LineaForm) => { if (l.producto_id) map[l.producto_id] = l.cantidad; });
+      setCantidades(map);
     }
   }, [existing]);
 
-  // Cell refs for keyboard navigation
-  const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
-    const key = `${row}-${col}`;
-    if (el) cellRefs.current.set(key, el);
-    else cellRefs.current.delete(key);
-  }, []);
-  const focusCell = useCallback((row: number, col: number) => {
-    const el = cellRefs.current.get(`${row}-${col}`);
-    if (el) { el.focus(); if (el instanceof HTMLInputElement) el.select(); }
-  }, []);
-
-  const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
-    if (dir === 'next') {
-      if (colIdx < 1) focusCell(rowIdx, colIdx + 1);
-      else if (rowIdx >= lineas.length - 1) {
-        setLineas(prev => [...prev, emptyLine()]);
-        setDirty(true);
-        setTimeout(() => focusCell(rowIdx + 1, 0), 50);
-      } else focusCell(rowIdx + 1, 0);
-    } else {
-      if (colIdx > 0) focusCell(rowIdx, colIdx - 1);
-      else if (rowIdx > 0) focusCell(rowIdx - 1, 1);
-    }
-  }, [lineas.length, focusCell]);
-
-  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
-    if (e.key === 'Tab' || e.key === 'Enter') {
-      e.preventDefault();
-      navigateCell(rowIdx, colIdx, e.shiftKey ? 'prev' : 'next');
-    }
-  };
-
-  const handleProductSelect = (idx: number, productoId: string) => {
+  // Update cantidad for a product in the bulk grid
+  const updateCantidad = useCallback((productoId: string, val: number) => {
     if (readOnly) return;
-    setLineas(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], producto_id: productoId };
+    const maxStock = maxStockMap.get(productoId) ?? 0;
+    const capped = Math.min(Math.max(0, val), maxStock);
+    setCantidades(prev => {
+      const next = { ...prev };
+      if (capped > 0) next[productoId] = capped;
+      else delete next[productoId];
       return next;
     });
     setDirty(true);
-  };
+  }, [readOnly, maxStockMap]);
 
-  const updateLine = (idx: number, field: string, val: any) => {
-    if (readOnly) return;
-    setLineas(prev => {
-      const next = [...prev];
-      const line = { ...next[idx], [field]: val };
-      // Cap quantity at max stock
-      if (field === 'cantidad' && line.producto_id) {
-        const maxStock = maxStockMap.get(line.producto_id) ?? 0;
-        if (val > maxStock) line.cantidad = maxStock;
-      }
-      next[idx] = line;
-      return next;
-    });
-    setDirty(true);
-  };
+  // Derive lineas from cantidades for save
+  const lineasFromCantidades = useMemo(() => {
+    return Object.entries(cantidades)
+      .filter(([, qty]) => qty > 0)
+      .map(([producto_id, cantidad]) => ({ producto_id, cantidad }));
+  }, [cantidades]);
 
-  const removeLine = (idx: number) => {
-    if (readOnly) return;
-    const next = lineas.filter((_, i) => i !== idx);
-    setLineas(next.length === 0 ? [emptyLine()] : next);
-    setDirty(true);
-  };
+  // Filtered products for the bulk grid
+  const filteredGridProducts = useMemo(() => {
+    let list = productosList ?? [];
+    if (gridSearch) {
+      const q = gridSearch.toLowerCase();
+      list = list.filter(p => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q));
+    }
+    if (filtroClasificacion) {
+      list = list.filter(p => (p as any).clasificacion_id === filtroClasificacion);
+    }
+    if (filtroMarca) {
+      list = list.filter(p => (p as any).marca_id === filtroMarca);
+    }
+    return list;
+  }, [productosList, gridSearch, filtroClasificacion, filtroMarca]);
 
-  const addLine = () => {
-    if (readOnly) return;
-    setLineas(prev => [...prev, emptyLine()]);
-    setDirty(true);
-    setTimeout(() => focusCell(lineas.length, 0), 50);
-  };
+  // Count how many products have quantities assigned
+  const totalProductosSeleccionados = Object.keys(cantidades).length;
+  const totalUnidades = Object.values(cantidades).reduce((sum, q) => sum + q, 0);
 
   // Save mutation
   const saveMut = useMutation({
