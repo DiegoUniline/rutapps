@@ -83,21 +83,7 @@ export default function RutaNuevoCliente() {
       setForm(prev => ({ ...prev, gps_lat: loc.lat, gps_lng: loc.lng }));
       toast.success('Ubicación GPS capturada');
     } else {
-      // Fallback: try direct request if service hasn't cached yet
-      if (!navigator.geolocation) { toast.error('Tu navegador no soporta GPS'); return; }
-      setCapturingGps(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setForm(prev => ({ ...prev, gps_lat: pos.coords.latitude, gps_lng: pos.coords.longitude }));
-          setCapturingGps(false);
-          toast.success('Ubicación GPS capturada');
-        },
-        (err) => {
-          setCapturingGps(false);
-          toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
-        },
-        { enableHighAccuracy: true, timeout: 15000 }
-      );
+      toast.error('Aún no se tiene ubicación GPS. Espera unos segundos e intenta de nuevo.');
     }
   };
 

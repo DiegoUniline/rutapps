@@ -360,24 +360,13 @@ export default function ClienteFormPage() {
   };
 
   const captureGps = () => {
-    if (!navigator.geolocation) {
-      toast.error('Tu navegador no soporta GPS');
-      return;
+    const loc = locationService.getLastKnownLocation();
+    if (loc) {
+      setForm(prev => ({ ...prev, gps_lat: loc.lat, gps_lng: loc.lng }));
+      toast.success('Ubicación GPS capturada');
+    } else {
+      toast.error('Aún no se tiene ubicación GPS. Espera unos segundos e intenta de nuevo.');
     }
-    setCapturingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setForm(prev => ({ ...prev, gps_lat: latitude, gps_lng: longitude }));
-        setCapturingGps(false);
-        toast.success('Ubicación GPS capturada');
-      },
-      (err) => {
-        setCapturingGps(false);
-        toast.error(err.code === 1 ? 'Permiso de GPS denegado' : 'No se pudo obtener ubicación');
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
   };
 
   const toggleDia = (dia: string) => {
