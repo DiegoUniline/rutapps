@@ -684,7 +684,7 @@ export default function PuntoVentaPage() {
                     <p className="text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
                     <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[14px] font-bold text-primary">{fmtM(p.precio_principal ?? 0)}</span>
+                      <span className="text-[14px] font-bold text-primary">{fmtM(p.precio_principal ?? 0)}<span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
                       <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                         {fmtNum(stock)} disp.
                       </span>
