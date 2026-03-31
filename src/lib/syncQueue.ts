@@ -55,8 +55,10 @@ export async function queueOperation(
     });
   }
 
-  // 3. Try to sync immediately if online AND data saver is off
-  if (navigator.onLine && !isDataSaverEnabled()) {
+  // 3. Try to sync immediately if online AND auto-sync is enabled AND data saver is off
+  const autoSync = localStorage.getItem('uniline_auto_sync');
+  const autoSyncEnabled = autoSync === null ? true : autoSync === 'true';
+  if (navigator.onLine && autoSyncEnabled && !isDataSaverEnabled()) {
     processSyncQueue().catch(console.warn);
   }
 }
