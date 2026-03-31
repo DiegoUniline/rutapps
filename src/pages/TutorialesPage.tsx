@@ -332,6 +332,62 @@ export default function TutorialesPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Edit video dialog */}
+      <Dialog open={!!editingVideo} onOpenChange={(open) => { if (!open) { setEditingVideo(null); setForm({ url: '', title: '', description: '', module: '' }); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Video Tutorial</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>URL de YouTube *</Label>
+              <Input
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={form.url}
+                onChange={(e) => setForm({ ...form, url: e.target.value })}
+              />
+              {form.url && extractVideoId(form.url).length === 11 && (
+                <img src={thumbUrl(form.url)} alt="Preview" className="rounded mt-2 w-full max-w-[200px]" />
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Título *</Label>
+              <Input
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Descripción (opcional)</Label>
+              <Input
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Módulo (opcional)</Label>
+              <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona módulo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {MODULES.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!form.url.trim() || !form.title.trim() || updateMut.isPending}
+              onClick={() => updateMut.mutate()}
+            >
+              {updateMut.isPending ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
