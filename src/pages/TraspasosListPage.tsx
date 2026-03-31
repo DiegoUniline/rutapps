@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useDateFilter } from '@/hooks/useDateFilter';
+import HelpButton from '@/components/HelpButton';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
