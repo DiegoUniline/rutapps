@@ -12,6 +12,8 @@ const PAGE_SIZE = 50;
 
 export default function ProveedoresListPage() {
   const navigate = useNavigate();
+  const { hasPermiso } = usePermisos();
+  const canCreate = hasPermiso('catalogo.proveedores', 'crear');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
