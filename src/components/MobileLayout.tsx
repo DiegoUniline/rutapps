@@ -199,10 +199,14 @@ export default function MobileLayout() {
             <div className="border-t border-border mt-1 pt-1">
               <button
                 onClick={() => { forceUpdate(); setMoreOpen(false); }}
-                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-primary hover:bg-accent transition-colors"
+                disabled={!navigator.onLine}
+                className={cn(
+                  "flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors",
+                  navigator.onLine ? "text-primary hover:bg-accent" : "text-muted-foreground/40 cursor-not-allowed"
+                )}
               >
                 <Download className="h-4 w-4" />
-                Actualizar app
+                {navigator.onLine ? 'Actualizar app' : 'Sin conexión'}
               </button>
               <div className="px-4 py-2 text-[10px] text-muted-foreground">
                 v{APP_VERSION} · {APP_BUILD_DATE}
