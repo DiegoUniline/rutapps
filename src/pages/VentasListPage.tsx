@@ -50,6 +50,7 @@ export default function VentasListPage() {
   const isMobile = useIsMobile();
   const { fmt: fmtCurrency } = useCurrency();
   const { hasPermiso } = usePermisos();
+  const canCreate = hasPermiso('ventas', 'crear');
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
   const [search, setSearch] = useState('');
