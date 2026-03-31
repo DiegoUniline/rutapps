@@ -41,7 +41,7 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
         <div className="flex gap-1">
           {videos.map((v) => (
             <Button
-              key={v.videoId}
+              key={v.url}
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-primary gap-1 text-xs"
