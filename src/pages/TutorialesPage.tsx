@@ -87,6 +87,7 @@ export default function TutorialesPage() {
 
   const [selected, setSelected] = useState<VideoRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<VideoRow | null>(null);
   const [form, setForm] = useState({ url: '', title: '', description: '', module: '' });
 
   const { data: videos = [], isLoading } = useQuery({
