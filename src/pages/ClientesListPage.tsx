@@ -94,6 +94,8 @@ function useDynamicFilterOptions() {
 function ClientesTable() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { hasPermiso } = usePermisos();
+  const canCreate = hasPermiso('clientes', 'crear');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
