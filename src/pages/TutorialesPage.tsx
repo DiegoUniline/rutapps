@@ -275,7 +275,7 @@ export default function TutorialesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {MODULES.map((m) => (
-                    <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
