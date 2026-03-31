@@ -54,7 +54,11 @@ export default function TraspasoFormPage() {
   const [notas, setNotas] = useState('');
   const [status, setStatus] = useState('borrador');
   const [folio, setFolio] = useState('');
-  const [lineas, setLineas] = useState<LineaForm[]>([emptyLine()]);
+  const [lineas, setLineas] = useState<LineaForm[]>([]);
+  const [cantidades, setCantidades] = useState<CantidadesMap>({});
+  const [gridSearch, setGridSearch] = useState('');
+  const [filtroClasificacion, setFiltroClasificacion] = useState('');
+  const [filtroMarca, setFiltroMarca] = useState('');
   const [dirty, setDirty] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
