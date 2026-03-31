@@ -67,7 +67,7 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
           {current && (
             <AspectRatio ratio={16 / 9}>
               <iframe
-                src={youtubeEmbedUrl(current.videoId)}
+                src={youtubeEmbedUrl(current.url)}
                 title={current.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
