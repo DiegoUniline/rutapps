@@ -179,7 +179,11 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/almacen/almacenes': 'almacen.almacenes',
   '/control': 'control',
   '/finanzas/por-cobrar': 'finanzas.por_cobrar',
+  '/finanzas/aplicar-pagos': 'finanzas.por_cobrar',
+  '/finanzas/saldos-cliente': 'finanzas.por_cobrar',
   '/finanzas/por-pagar': 'finanzas.por_pagar',
+  '/finanzas/pagos-proveedores': 'finanzas.por_pagar',
+  '/finanzas/saldos-proveedor': 'finanzas.por_pagar',
   '/finanzas/gastos': 'finanzas.gastos',
   '/finanzas/comisiones': 'finanzas.comisiones',
   '/reportes': 'reportes.generales',
@@ -190,6 +194,7 @@ export const PATH_MODULE_MAP: Record<string, string> = {
   '/configuracion/usuarios': 'configuracion.usuarios',
   '/configuracion/whatsapp': 'configuracion.whatsapp',
   '/facturacion': 'configuracion.suscripcion',
+  '/mi-suscripcion': 'configuracion.suscripcion',
   '/configuracion-inicial': '', // always accessible
 };
 
