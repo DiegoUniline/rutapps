@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Star, Pencil, Trash2, Check, X, Link2, Copy } from 'lucide-react';
+import VideoHelpButton from '@/components/VideoHelpButton';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { OdooPagination } from '@/components/OdooPagination';
@@ -74,7 +75,7 @@ export default function ListasPrecioListPage() {
   return (
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-foreground">Listas de Precios</h1>
+        <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Listas de Precios <VideoHelpButton module="tarifas" /></h1>
         <button onClick={() => setShowNew(true)} className="btn-odoo-primary shrink-0">
           <Plus className="h-3.5 w-3.5" /> Nuevo
         </button>
