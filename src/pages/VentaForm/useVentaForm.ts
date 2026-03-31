@@ -13,6 +13,7 @@ import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
 import { usePinAuth } from '@/hooks/usePinAuth';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { usePermisos } from '@/hooks/usePermisos';
 
 const COL_COUNT = 4;
 
