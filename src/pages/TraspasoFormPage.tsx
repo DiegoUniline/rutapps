@@ -7,7 +7,7 @@ import { ArrowLeft, Save, Trash2, Plus, Check, FileText, Ban, Search } from 'luc
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
-import ProductSearchInput from '@/components/ProductSearchInput';
+
 import { generarTraspasoPdf } from '@/lib/traspasoPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
