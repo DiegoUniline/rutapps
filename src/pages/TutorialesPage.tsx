@@ -14,12 +14,43 @@ import { toast } from 'sonner';
 
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@RutAppMx';
 
-const MODULES = [
-  'dashboard', 'productos', 'clientes', 'ventas', 'cargas', 'inventario',
-  'ajustes', 'traspasos', 'auditorias', 'cobranza', 'cuentasCobrar',
-  'cuentasPagar', 'gastos', 'comisiones', 'reportes', 'compras', 'tarifas',
-  'configuracion', 'usuarios', 'entregas', 'descargas', 'facturacion',
-  'catalogos', 'whatsapp', 'promociones', 'mapa', 'pos', 'logistica', 'conteos',
+const MODULES: { value: string; label: string }[] = [
+  { value: 'dashboard', label: 'Dashboard' },
+  { value: 'productos', label: 'Productos' },
+  { value: 'clientes', label: 'Clientes' },
+  { value: 'ventas', label: 'Ventas' },
+  { value: 'cargas', label: 'Cargas' },
+  { value: 'inventario', label: 'Inventario' },
+  { value: 'ajustes', label: 'Ajustes de Inventario' },
+  { value: 'traspasos', label: 'Traspasos' },
+  { value: 'auditorias', label: 'Auditorías' },
+  { value: 'conteos', label: 'Conteos Físicos' },
+  { value: 'cobranza', label: 'Cobranza' },
+  { value: 'cuentasCobrar', label: 'Cuentas por Cobrar' },
+  { value: 'cuentasPagar', label: 'Cuentas por Pagar' },
+  { value: 'gastos', label: 'Gastos' },
+  { value: 'comisiones', label: 'Comisiones' },
+  { value: 'reportes', label: 'Reportes' },
+  { value: 'compras', label: 'Compras' },
+  { value: 'tarifas', label: 'Tarifas / Listas de Precio' },
+  { value: 'configuracion', label: 'Configuración' },
+  { value: 'usuarios', label: 'Usuarios' },
+  { value: 'entregas', label: 'Entregas' },
+  { value: 'descargas', label: 'Descargas' },
+  { value: 'facturacion', label: 'Facturación' },
+  { value: 'catalogos', label: 'Catálogos' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'promociones', label: 'Promociones' },
+  { value: 'mapa', label: 'Mapa de Clientes' },
+  { value: 'pos', label: 'Punto de Venta' },
+  { value: 'logistica', label: 'Logística' },
+  { value: 'lotes', label: 'Lotes' },
+  { value: 'almacenes', label: 'Almacenes' },
+  { value: 'proveedores', label: 'Proveedores' },
+  { value: 'demanda', label: 'Demanda' },
+  { value: 'monitor', label: 'Monitor de Rutas' },
+  { value: 'rutaApp', label: 'App de Ruta (Vendedor)' },
+  { value: 'suscripcion', label: 'Mi Suscripción' },
 ];
 
 function extractVideoId(url: string): string {
@@ -153,8 +184,8 @@ export default function TutorialesPage() {
                   <PlayCircle className="h-12 w-12 text-white opacity-80 group-hover:opacity-100 transition-opacity" />
                 </div>
                 {video.module && (
-                  <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-0.5 rounded capitalize">
-                    {video.module}
+                  <span className="absolute top-2 left-2 bg-primary/90 text-primary-foreground text-xs px-2 py-0.5 rounded">
+                    {MODULES.find(m => m.value === video.module)?.label ?? video.module}
                   </span>
                 )}
               </div>
@@ -244,7 +275,7 @@ export default function TutorialesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {MODULES.map((m) => (
-                    <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
