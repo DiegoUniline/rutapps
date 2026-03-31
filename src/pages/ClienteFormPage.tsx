@@ -458,10 +458,12 @@ export default function ClienteFormPage() {
 
       {/* Action buttons + statusbar */}
       <div className="flex items-center gap-2 mb-3">
-        <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
-          <Save className="h-3.5 w-3.5" /> Guardar
-        </button>
-        {!isNew && (
+        {!readOnly && (
+          <button onClick={handleSave} disabled={saveMutation.isPending || (!isDirty && !pedidoDirty)} className={(isDirty || pedidoDirty) ? "btn-odoo-primary" : "btn-odoo-secondary opacity-60 cursor-not-allowed"}>
+            <Save className="h-3.5 w-3.5" /> Guardar
+          </button>
+        )}
+        {!isNew && canDelete && (
           <button onClick={handleDelete} className="btn-odoo-secondary text-destructive">
             <Trash2 className="h-3.5 w-3.5" /> Eliminar
           </button>
