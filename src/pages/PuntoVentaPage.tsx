@@ -751,11 +751,14 @@ export default function PuntoVentaPage() {
                       </button>
                       <input
                         type="number"
-                        className="w-10 text-center text-[12px] font-bold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                        inputMode={(item as any)._es_granel ? "decimal" : "numeric"}
+                        className="w-12 text-center text-[12px] font-bold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                         value={item.cantidad}
-                        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) updateQty(item.producto_id, v); }}
+                        step={(item as any)._es_granel ? "0.001" : "1"}
+                        onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0) updateQty(item.producto_id, v); }}
                         onFocus={e => e.target.select()}
                       />
+                      {(item as any)._es_granel && <span className="text-[9px] text-muted-foreground px-1">{item.unidad}</span>}
                       <button onClick={() => updateQty(item.producto_id, item.cantidad + 1)}
                         className="px-2 py-1 hover:bg-accent rounded-r-md transition-colors">
                         <Plus className="h-3 w-3 text-foreground" />
