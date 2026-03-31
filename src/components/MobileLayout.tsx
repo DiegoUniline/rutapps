@@ -55,6 +55,7 @@ export default function MobileLayout() {
   }, []);
 
   const forceUpdate = async () => {
+    if (!navigator.onLine) return;
     setIsUpdating(true);
     try {
       if ('serviceWorker' in navigator) {
@@ -66,7 +67,6 @@ export default function MobileLayout() {
         await Promise.all(keys.map(k => caches.delete(k)));
       }
       setSwUpdateAvailable(false);
-      // Small delay so user sees the animation
       await new Promise(r => setTimeout(r, 1200));
       window.location.reload();
     } catch {
