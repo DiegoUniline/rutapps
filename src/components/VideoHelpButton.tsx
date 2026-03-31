@@ -58,9 +58,8 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
     <>
       {videos.length === 1 ? (
         <Button
-          variant="outline"
           size="sm"
-          className="gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5"
+          className="gap-1.5 text-xs font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm"
           onClick={() => handleOpen(videos[0])}
         >
           <PlayCircle className="h-4 w-4" />
@@ -71,9 +70,8 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
           {videos.map((v) => (
             <Button
               key={v.id}
-              variant="outline"
               size="sm"
-              className="gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5"
+              className="gap-1.5 text-xs font-semibold bg-[#FF0000] hover:bg-[#CC0000] text-white border-0 shadow-sm"
               onClick={() => handleOpen(v)}
             >
               <PlayCircle className="h-4 w-4" />
