@@ -5142,12 +5142,20 @@ export type Database = {
         Args: { p_linea_id: string }
         Returns: number
       }
+      cancelar_traspaso: {
+        Args: { p_traspaso_id: string; p_user_id: string }
+        Returns: undefined
+      }
       close_audit_line: {
         Args: { p_cerrada: boolean; p_linea_id: string }
         Returns: undefined
       }
       close_full_audit: {
         Args: { p_auditoria_id: string; p_cerrada_por: string }
+        Returns: undefined
+      }
+      confirmar_traspaso: {
+        Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
       }
       deduct_timbre: {
