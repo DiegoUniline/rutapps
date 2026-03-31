@@ -805,87 +805,132 @@ export default function TraspasoFormPage() {
           <OdooTabs tabs={[
             {
               key: 'lineas',
-              label: 'Productos',
+              label: `Productos${totalProductosSeleccionados > 0 ? ` (${totalProductosSeleccionados})` : ''}`,
               content: (
                 <div className="p-4 space-y-3">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-table-border text-left">
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Cantidad</th>
-                        <th className="py-2 px-2 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lineas.map((l, idx) => {
-                        const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
-                        const maxStock = l.producto_id ? (maxStockMap.get(l.producto_id) ?? 0) : 0;
-                        const isEmpty = !l.producto_id;
-                        const isLast = idx === lineas.length - 1;
-                        const overMax = !isEmpty && l.cantidad > maxStock;
-                        return (
-                          <tr key={idx} className={cn(
-                            "border-b border-table-border transition-colors group",
-                            isEmpty ? "bg-transparent" : "hover:bg-table-hover",
-                            overMax && "bg-destructive/5"
-                          )}>
-                            <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
-                            <td className="py-1 px-2">
-                              {readOnly ? (
-                                <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</span>
-                              ) : (
-                                <ProductSearchInput
-                                  products={(productosList ?? []).filter(p => {
-                                    const usedIds = lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean);
-                                    return !usedIds.includes(p.id);
-                                  }).map(p => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: 0 }))}
-                                  value={l.producto_id}
-                                  displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
-                                  onSelect={pid => handleProductSelect(idx, pid)}
-                                  onNavigate={dir => navigateCell(idx, 0, dir)}
-                                  autoFocus={isLast && isEmpty}
-                                  readOnly={readOnly}
-                                />
-                              )}
-                            </td>
-                            <td className={cn("py-1 px-2 text-right tabular-nums", overMax ? "text-destructive font-semibold" : "text-muted-foreground")}>
-                              {!isEmpty ? maxStock : ''}
-                            </td>
-                            <td className="py-1 px-2 text-right">
-                              {readOnly ? (
-                                <span className="tabular-nums">{l.cantidad}</span>
-                              ) : (
-                                <input
-                                  ref={el => setCellRef(idx, 1, el)}
-                                  type="number"
-                                  min={1}
-                                  max={maxStock || undefined}
-                                  value={l.cantidad || ''}
-                                  onChange={e => updateLine(idx, 'cantidad', Number(e.target.value))}
-                                  onKeyDown={e => handleCellKeyDown(e, idx, 1)}
-                                  className={cn(
-                                    "w-full text-right bg-transparent border-0 border-b border-transparent focus:border-primary outline-none py-1 text-[13px] tabular-nums",
-                                    overMax && "text-destructive"
-                                  )}
-                                />
-                              )}
-                            </td>
-                            <td className="py-1 px-2">
-                              {!readOnly && !isEmpty && (
-                                <button onClick={() => removeLine(idx)} className="opacity-0 group-hover:opacity-100 text-destructive text-xs">×</button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {/* Filters bar */}
                   {!readOnly && (
-                    <button onClick={addLine} className="btn-odoo-secondary text-xs">
-                      <Plus className="h-3 w-3" /> Agregar línea
-                    </button>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Buscar por código o nombre..."
+                          value={gridSearch}
+                          onChange={e => setGridSearch(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-transparent border border-input rounded focus:border-primary outline-none"
+                        />
+                      </div>
+                      {(clasificaciones ?? []).length > 0 && (
+                        <select
+                          value={filtroClasificacion}
+                          onChange={e => setFiltroClasificacion(e.target.value)}
+                          className="text-[12px] border border-input rounded px-2 py-1.5 bg-transparent outline-none focus:border-primary min-w-[140px]"
+                        >
+                          <option value="">Todas las categorías</option>
+                          {(clasificaciones ?? []).map(c => (
+                            <option key={c.id} value={c.id}>{c.nombre}</option>
+                          ))}
+                        </select>
+                      )}
+                      {(marcas ?? []).length > 0 && (
+                        <select
+                          value={filtroMarca}
+                          onChange={e => setFiltroMarca(e.target.value)}
+                          className="text-[12px] border border-input rounded px-2 py-1.5 bg-transparent outline-none focus:border-primary min-w-[140px]"
+                        >
+                          <option value="">Todas las marcas</option>
+                          {(marcas ?? []).map(m => (
+                            <option key={m.id} value={m.id}>{m.nombre}</option>
+                          ))}
+                        </select>
+                      )}
+                      {totalProductosSeleccionados > 0 && (
+                        <span className="text-[11px] text-muted-foreground bg-primary/10 px-2 py-1 rounded">
+                          {totalProductosSeleccionados} productos · {totalUnidades} uds
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No origin selected warning */}
+                  {!readOnly && !almacenOrigenId && !vendedorOrigenId && (
+                    <div className="text-center py-8 text-muted-foreground text-[13px]">
+                      Selecciona un origen para ver los productos disponibles
+                    </div>
+                  )}
+
+                  {/* Bulk product grid */}
+                  {(readOnly || almacenOrigenId || vendedorOrigenId) && (
+                    <div className="max-h-[500px] overflow-auto border border-border rounded">
+                      <table className="w-full text-[13px]">
+                        <thead className="sticky top-0 bg-card z-[1]">
+                          <tr className="border-b border-table-border text-left">
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20">Código</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">A traspasar</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {readOnly ? (
+                            // Read-only: show only products that were transferred
+                            lineas.map((l, idx) => {
+                              const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
+                              return (
+                                <tr key={l.producto_id} className="border-b border-table-border hover:bg-table-hover">
+                                  <td className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{prod?.codigo ?? ''}</td>
+                                  <td className="py-1.5 px-2 text-[12px]">{prod?.nombre ?? '—'}</td>
+                                  <td className="py-1.5 px-2 text-right text-muted-foreground tabular-nums">—</td>
+                                  <td className="py-1.5 px-2 text-right tabular-nums font-medium">{l.cantidad}</td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            // Edit mode: show all products with stock
+                            filteredGridProducts.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="text-center py-6 text-muted-foreground text-[12px]">
+                                  {gridSearch || filtroClasificacion || filtroMarca
+                                    ? 'Sin resultados con los filtros actuales'
+                                    : 'Sin productos con stock en el origen seleccionado'}
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredGridProducts.map(p => {
+                                const maxStock = maxStockMap.get(p.id) ?? 0;
+                                const qty = cantidades[p.id] ?? 0;
+                                const hasQty = qty > 0;
+                                return (
+                                  <tr key={p.id} className={cn(
+                                    "border-b border-table-border transition-colors",
+                                    hasQty ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-table-hover"
+                                  )}>
+                                    <td className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{p.codigo}</td>
+                                    <td className="py-1.5 px-2 text-[12px]">{p.nombre}</td>
+                                    <td className="py-1.5 px-2 text-right text-muted-foreground tabular-nums">{maxStock}</td>
+                                    <td className="py-1 px-2 text-right">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={maxStock}
+                                        value={qty || ''}
+                                        placeholder="0"
+                                        onChange={e => updateCantidad(p.id, Number(e.target.value))}
+                                        className={cn(
+                                          "w-full text-right bg-transparent border-0 border-b border-transparent focus:border-primary outline-none py-1 text-[13px] tabular-nums",
+                                          hasQty && "font-semibold text-primary"
+                                        )}
+                                      />
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               ),
