@@ -53,6 +53,8 @@ export interface Producto {
   calculo_costo: CalculoCosto;
   codigo_sat?: string;
   udem_sat_id?: string;
+  es_granel: boolean;
+  unidad_granel: string;
   contador: number;
   contador_tarifas: number;
   created_at: string;

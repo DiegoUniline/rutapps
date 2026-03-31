@@ -74,15 +74,15 @@ export function StepProductos(props: Props) {
                     <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span><span className="text-[10px] text-muted-foreground">·</span>
                     <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
                   </div>
-                  <p className="text-[13px] font-bold text-foreground mt-px">{s}{(p.precio_principal ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">/{(p.unidades as any)?.abreviatura || 'pz'}</span></p>
+                  <p className="text-[13px] font-bold text-foreground mt-px">{s}{(p.precio_principal ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">/{p.es_granel ? p.unidad_granel : ((p.unidades as any)?.abreviatura || 'pz')}</span></p>
                 </div>
                 {inCart ? (
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button onClick={() => inCart.cantidad === 1 ? removeFromCart(p.id) : updateQty(p.id, -1)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
                       {inCart.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                     </button>
-                    <input type="number" inputMode="numeric" className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
-                      value={inCart.cantidad} onChange={e => { const val = parseInt(e.target.value); if (!isNaN(val) && val > 0) { const capped = tipoVenta === 'venta_directa' ? Math.min(val, maxQty) : val; setCart((prev: CartItem[]) => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: capped } : c)); } }} onFocus={e => e.target.select()} />
+                    <input type="number" inputMode={p.es_granel ? "decimal" : "numeric"} className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                      value={inCart.cantidad} step={p.es_granel ? "0.001" : "1"} onChange={e => { const val = parseFloat(e.target.value); if (!isNaN(val) && val > 0) { const capped = tipoVenta === 'venta_directa' && !p.es_granel ? Math.min(val, maxQty) : val; setCart((prev: CartItem[]) => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: capped } : c)); } }} onFocus={e => e.target.select()} />
                     <button onClick={() => addToCart(p)} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
                   </div>
                 ) : (

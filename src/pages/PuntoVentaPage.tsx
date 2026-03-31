@@ -70,7 +70,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, vender_sin_stock')
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, vender_sin_stock, es_granel, unidad_granel')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -240,13 +240,14 @@ export default function PuntoVentaPage() {
         codigo: p.codigo,
         nombre: p.nombre,
         precio_unitario: resolvePosPrice(p),
-        cantidad: 1,
+        cantidad: p.es_granel ? 0 : 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
-        unidad: 'pz',
+        unidad: p.es_granel ? (p.unidad_granel ?? 'kg') : 'pz',
         _max_stock: canSellWithout ? Infinity : stock,
+        _es_granel: p.es_granel ?? false,
       }];
     });
   };
@@ -683,7 +684,7 @@ export default function PuntoVentaPage() {
                     <p className="text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
                     <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[14px] font-bold text-primary">{fmtM(p.precio_principal ?? 0)}</span>
+                      <span className="text-[14px] font-bold text-primary">{fmtM(p.precio_principal ?? 0)}<span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
                       <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                         {fmtNum(stock)} disp.
                       </span>
@@ -750,11 +751,14 @@ export default function PuntoVentaPage() {
                       </button>
                       <input
                         type="number"
-                        className="w-10 text-center text-[12px] font-bold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
+                        inputMode={(item as any)._es_granel ? "decimal" : "numeric"}
+                        className="w-12 text-center text-[12px] font-bold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
                         value={item.cantidad}
-                        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v) && v > 0) updateQty(item.producto_id, v); }}
+                        step={(item as any)._es_granel ? "0.001" : "1"}
+                        onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v > 0) updateQty(item.producto_id, v); }}
                         onFocus={e => e.target.select()}
                       />
+                      {(item as any)._es_granel && <span className="text-[9px] text-muted-foreground px-1">{item.unidad}</span>}
                       <button onClick={() => updateQty(item.producto_id, item.cantidad + 1)}
                         className="px-2 py-1 hover:bg-accent rounded-r-md transition-colors">
                         <Plus className="h-3 w-3 text-foreground" />

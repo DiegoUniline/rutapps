@@ -81,10 +81,11 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         )}
       </td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">{l.cantidad}<span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span></span> : (
+        {readOnly ? <span className="text-[12px] block text-right">{l.cantidad}{prod?.es_granel && <span className="text-muted-foreground ml-0.5 text-[10px]">{prod.unidad_granel}</span>}<span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span></span> : (
           <div className="flex items-center gap-1 justify-end">
-            <input ref={el => setCellRef(idx, 1, el)} type="number" inputMode="numeric" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.cantidad ?? ''} onChange={e => onUpdateLine(idx, 'cantidad', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 1)} onFocus={e => e.target.select()} min="0" step="1" />
-            {unidadLabel && <span className="text-[10px] text-muted-foreground shrink-0 md:hidden">{unidadLabel}</span>}
+            <input ref={el => setCellRef(idx, 1, el)} type="number" inputMode={prod?.es_granel ? "decimal" : "numeric"} className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.cantidad ?? ''} onChange={e => onUpdateLine(idx, 'cantidad', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 1)} onFocus={e => e.target.select()} min="0" step={prod?.es_granel ? "0.001" : "1"} />
+            {prod?.es_granel && <span className="text-[10px] text-muted-foreground shrink-0">{prod.unidad_granel}</span>}
+            {unidadLabel && !prod?.es_granel && <span className="text-[10px] text-muted-foreground shrink-0 md:hidden">{unidadLabel}</span>}
           </div>
         )}
       </td>
