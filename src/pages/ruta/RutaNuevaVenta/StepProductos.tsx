@@ -74,7 +74,7 @@ export function StepProductos(props: Props) {
                     <span className="text-[10px] text-muted-foreground font-mono">{p.codigo}</span><span className="text-[10px] text-muted-foreground">·</span>
                     <span className={`text-[10px] font-medium ${stockOk ? 'text-green-600' : 'text-destructive'}`}>{stockLabel}</span>
                   </div>
-                  <p className="text-[13px] font-bold text-foreground mt-px">{s}{(p.precio_principal ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">/{(p.unidades as any)?.abreviatura || 'pz'}</span></p>
+                  <p className="text-[13px] font-bold text-foreground mt-px">{s}{(p.precio_principal ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}<span className="text-[10px] font-normal text-muted-foreground ml-0.5">/{p.es_granel ? p.unidad_granel : ((p.unidades as any)?.abreviatura || 'pz')}</span></p>
                 </div>
                 {inCart ? (
                   <div className="flex items-center gap-0.5 shrink-0">
