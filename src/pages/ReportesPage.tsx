@@ -18,6 +18,7 @@ import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
 import { ReportLayout } from '@/components/reportes/ReportLayout';
 import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
+import { ReporteClientesNoVisitados } from '@/components/reportes/ReporteClientesNoVisitados';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 import {
