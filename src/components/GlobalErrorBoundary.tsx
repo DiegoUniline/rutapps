@@ -1,5 +1,5 @@
 import { Component, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, WifiOff, RefreshCw } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -8,6 +8,18 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+}
+
+function isChunkLoadError(error: Error | null): boolean {
+  if (!error) return false;
+  const msg = error.message?.toLowerCase() || '';
+  return (
+    msg.includes('importing a module script failed') ||
+    msg.includes('failed to fetch dynamically imported module') ||
+    msg.includes('loading chunk') ||
+    msg.includes('loading css chunk') ||
+    msg.includes('dynamically imported module')
+  );
 }
 
 export class GlobalErrorBoundary extends Component<Props, State> {
@@ -28,8 +40,60 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
+  handleGoBack = () => {
+    this.setState({ hasError: false, error: null });
+    try {
+      window.history.back();
+    } catch {
+      window.location.href = '/';
+    }
+  };
+
   render() {
     if (this.state.hasError) {
+      const isOfflineChunk = isChunkLoadError(this.state.error) || !navigator.onLine;
+
+      if (isOfflineChunk) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+              <div className="pt-8 pb-4 flex justify-center">
+                <div className="rounded-full p-4 bg-amber-50 text-amber-500">
+                  <WifiOff className="h-8 w-8" />
+                </div>
+              </div>
+              <div className="px-6 pb-2 text-center">
+                <h2 className="text-lg font-bold text-slate-900 mb-2">Sin conexión a internet</h2>
+                <p className="text-sm text-slate-600 leading-relaxed mb-3">
+                  No se pudo cargar esta sección porque no hay conexión. Las funciones que ya estaban abiertas siguen disponibles.
+                </p>
+                <div className="bg-amber-50 rounded-xl px-4 py-3 mb-4">
+                  <p className="text-xs text-amber-700 font-medium flex items-start gap-2">
+                    <span className="text-base leading-none mt-px">💡</span>
+                    <span>Regresa a la pantalla anterior para seguir trabajando sin conexión, o espera a tener señal y recarga.</span>
+                  </p>
+                </div>
+              </div>
+              <div className="px-6 pb-6 flex gap-2">
+                <button
+                  onClick={this.handleGoBack}
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-xl py-3 text-sm transition-colors"
+                >
+                  ← Regresar
+                </button>
+                <button
+                  onClick={this.handleReload}
+                  className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reintentar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
