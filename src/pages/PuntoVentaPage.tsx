@@ -240,13 +240,14 @@ export default function PuntoVentaPage() {
         codigo: p.codigo,
         nombre: p.nombre,
         precio_unitario: resolvePosPrice(p),
-        cantidad: 1,
+        cantidad: p.es_granel ? 0 : 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
-        unidad: 'pz',
+        unidad: p.es_granel ? (p.unidad_granel ?? 'kg') : 'pz',
         _max_stock: canSellWithout ? Infinity : stock,
+        _es_granel: p.es_granel ?? false,
       }];
     });
   };
