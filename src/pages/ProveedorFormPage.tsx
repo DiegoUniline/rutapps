@@ -55,6 +55,11 @@ export default function ProveedorFormPage() {
   const qc = useQueryClient();
   const { empresa } = useAuth();
   const isNew = id === 'nuevo';
+  const { hasPermiso } = usePermisos();
+  const canEdit = hasPermiso('catalogo.proveedores', 'editar');
+  const canCreate = hasPermiso('catalogo.proveedores', 'crear');
+  const canDeletePerm = hasPermiso('catalogo.proveedores', 'eliminar');
+  const formReadOnly = isNew ? !canCreate : !canEdit;
 
   const { data: existing } = useQuery({
     queryKey: ['proveedor', id],
