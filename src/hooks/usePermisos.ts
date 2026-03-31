@@ -80,7 +80,11 @@ export const MODULOS: ModuloDef[] = [
 
   // Finanzas
   { id: 'finanzas.por_cobrar', label: 'Cuentas por cobrar', group: 'Finanzas' },
+  { id: 'finanzas.aplicar_pagos', label: 'Aplicar pagos clientes', group: 'Finanzas' },
+  { id: 'finanzas.saldos_cliente', label: 'Saldos por cliente', group: 'Finanzas' },
   { id: 'finanzas.por_pagar', label: 'Cuentas por pagar', group: 'Finanzas' },
+  { id: 'finanzas.pagos_proveedores', label: 'Pagos proveedores', group: 'Finanzas' },
+  { id: 'finanzas.saldos_proveedor', label: 'Saldos por proveedor', group: 'Finanzas' },
   { id: 'finanzas.gastos', label: 'Gastos', group: 'Finanzas' },
   { id: 'finanzas.comisiones', label: 'Comisiones', group: 'Finanzas' },
 
