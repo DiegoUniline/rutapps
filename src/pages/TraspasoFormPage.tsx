@@ -36,9 +36,8 @@ interface LineaForm {
   cantidad: number;
 }
 
-function emptyLine(): LineaForm {
-  return { producto_id: '', cantidad: 1 };
-}
+// For the bulk grid: map producto_id → cantidad to transfer
+type CantidadesMap = Record<string, number>;
 
 export default function TraspasoFormPage() {
   const { id } = useParams();
