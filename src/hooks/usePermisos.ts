@@ -73,7 +73,6 @@ export const MODULOS: ModuloDef[] = [
   { id: 'almacen.auditorias', label: 'Auditorías', group: 'Almacén' },
   { id: 'almacen.conteos', label: 'Conteos físicos', group: 'Almacén' },
   { id: 'almacen.compras', label: 'Compras', group: 'Almacén' },
-  { id: 'almacen.lotes', label: 'Lotes', group: 'Almacén' },
   { id: 'almacen.almacenes', label: 'Almacenes', group: 'Almacén' },
 
   // Control
