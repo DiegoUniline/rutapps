@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
-import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown, Filter } from 'lucide-react';
+import { BarChart3, ShoppingCart, Package, Users, TrendingUp, Truck, BoxIcon, RotateCcw, DollarSign, Printer, X, ChevronDown, Filter, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReportesData } from '@/hooks/useReportesData';
 import { useVendedores } from '@/hooks/useClientes';
@@ -18,13 +18,14 @@ import { ReportePromociones } from '@/components/reportes/ReportePromociones';
 import { ReporteProductoCliente } from '@/components/reportes/ReporteProductoCliente';
 import { ReportLayout } from '@/components/reportes/ReportLayout';
 import { ResumenGeneralVentas } from '@/components/reportes/ResumenGeneralVentas';
+import { ReporteClientesNoVisitados } from '@/components/reportes/ReporteClientesNoVisitados';
 import { ExportButton } from '@/components/ExportButton';
 import { exportToExcel, exportToPDF, type ExportColumn, type ExportOptions } from '@/lib/exportUtils';
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover';
 
-type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones';
+type ReportTab = 'resumen' | 'ventas_producto' | 'ventas_cliente' | 'producto_cliente' | 'vendedores' | 'entregas' | 'cargas' | 'devoluciones' | 'utilidad' | 'promociones' | 'no_visitados';
 
 function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string): ExportOptions | null {
   const dateRange = { from: desde, to: hasta };
@@ -238,6 +239,7 @@ export default function ReportesPage() {
     { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw },
     { key: 'utilidad', label: 'Utilidad', icon: DollarSign },
     { key: 'promociones', label: 'Promociones', icon: TrendingUp },
+    { key: 'no_visitados', label: 'No visitados', icon: UserX },
   ];
 
   const toggleVendedor = (id: string) => {
@@ -447,6 +449,7 @@ export default function ReportesPage() {
           devoluciones: 'Reporte de Devoluciones',
           utilidad: 'Reporte de Utilidad',
           promociones: 'Reporte de Promociones',
+          no_visitados: 'Clientes No Visitados',
         };
 
         const activeFilters: { label: string; value: string }[] = [];
@@ -485,6 +488,7 @@ export default function ReportesPage() {
             {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
             {tab === 'utilidad' && <ReporteUtilidad data={data} />}
             {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
+            {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
           </ReportLayout>
         );
       })()}
