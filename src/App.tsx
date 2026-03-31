@@ -395,7 +395,7 @@ function desktopRoutes() {
       <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
       <Route path="/almacen/compras" element={<ComprasPage />} />
       <Route path="/almacen/compras/:id" element={<CompraFormPage />} />
-      <Route path="/almacen/lotes" element={<LotesPage />} />
+      {/* Lotes removed — no longer used */}
       <Route path="/almacen/descargas" element={<DescargasPage />} />
       <Route path="/almacen/traspasos" element={<TraspasosListPage />} />
       <Route path="/almacen/traspasos/:id" element={<TraspasoFormPage />} />
