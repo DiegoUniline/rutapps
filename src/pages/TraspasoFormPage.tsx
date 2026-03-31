@@ -84,7 +84,7 @@ export default function TraspasoFormPage() {
       origen: origenLabel || '—',
       destino: destinoLabel || '—',
       responsable: profile?.nombre,
-      lineas: lineas.filter(l => l.producto_id).map(l => {
+      lineas: lineasFromCantidades.map(l => {
         const prod = allProductos?.find(p => p.id === l.producto_id);
         return {
           codigo: prod?.codigo ?? '',
