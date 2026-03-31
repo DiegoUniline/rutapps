@@ -413,10 +413,11 @@ export default function PuntoVentaPage() {
       if (ventaErr) throw ventaErr;
 
       // 2. Insert lines
+      const r2 = (n: number) => Math.round(n * 100) / 100;
       const lineas = cart.map(item => {
-        const lineSub = item.precio_unitario * item.cantidad;
-        const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
-        const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
+        const lineSub = r2(item.precio_unitario * item.cantidad);
+        const lineIeps = item.tiene_ieps ? r2(lineSub * (item.ieps_pct / 100)) : 0;
+        const lineIva = item.tiene_iva ? r2((lineSub + lineIeps) * (item.iva_pct / 100)) : 0;
         return {
           venta_id: ventaId,
           producto_id: item.producto_id,
@@ -429,7 +430,7 @@ export default function PuntoVentaPage() {
           ieps_pct: item.ieps_pct,
           ieps_monto: lineIeps,
           descuento_pct: 0,
-          total: lineSub + lineIeps + lineIva,
+          total: r2(lineSub + lineIeps + lineIva),
         };
       });
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
