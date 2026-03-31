@@ -103,26 +103,26 @@ const LogisticaDashboardPage = lazy(() => import("@/pages/logistica/LogisticaDas
 // PedidosPendientesPage removed — consolidated into DemandaPage under /logistica/pedidos
 const OrdenCargaPage = lazy(() => import("@/pages/logistica/OrdenCargaPage"));
 
-// Mobile ruta pages
-const RutaDashboard = lazy(() => import("@/pages/ruta/RutaDashboard"));
-const RutaVentas = lazy(() => import("@/pages/ruta/RutaVentas"));
-const RutaVentasTab = lazy(() => import("@/pages/ruta/RutaVentasTab"));
-const RutaClientesEntregas = lazy(() => import("@/pages/ruta/RutaClientesEntregas"));
-const RutaStock = lazy(() => import("@/pages/ruta/RutaStock"));
-const RutaGastos = lazy(() => import("@/pages/ruta/RutaGastos"));
-const RutaNuevaVenta = lazy(() => import("@/pages/ruta/RutaNuevaVenta/index"));
-const RutaCobros = lazy(() => import("@/pages/ruta/RutaCobros"));
-const RutaCobrar = lazy(() => import("@/pages/ruta/RutaCobrar"));
-const RutaVentaDetalle = lazy(() => import("@/pages/ruta/RutaVentaDetalle"));
-const RutaMiCarga = lazy(() => import("@/pages/ruta/RutaMiCarga"));
-const RutaDevolucion = lazy(() => import("@/pages/ruta/RutaDevolucion"));
-const RutaEntregas = lazy(() => import("@/pages/ruta/RutaEntregas"));
-const RutaDescarga = lazy(() => import("@/pages/ruta/RutaDescarga"));
-const RutaMapaPage = lazy(() => import("@/pages/ruta/RutaMapaPage"));
-const RutaNavegacionPage = lazy(() => import("@/pages/ruta/RutaNavegacionPage"));
-const RutaPerfil = lazy(() => import("@/pages/ruta/RutaPerfil"));
-const RutaSincronizarPage = lazy(() => import("@/pages/ruta/RutaSincronizarPage"));
-const RutaNuevoCliente = lazy(() => import("@/pages/ruta/RutaNuevoCliente"));
+// Mobile ruta pages — eagerly loaded so they work fully offline
+import RutaDashboard from "@/pages/ruta/RutaDashboard";
+import RutaVentas from "@/pages/ruta/RutaVentas";
+import RutaVentasTab from "@/pages/ruta/RutaVentasTab";
+import RutaClientesEntregas from "@/pages/ruta/RutaClientesEntregas";
+import RutaStock from "@/pages/ruta/RutaStock";
+import RutaGastos from "@/pages/ruta/RutaGastos";
+import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta/index";
+import RutaCobros from "@/pages/ruta/RutaCobros";
+import RutaCobrar from "@/pages/ruta/RutaCobrar";
+import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
+import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
+import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
+import RutaEntregas from "@/pages/ruta/RutaEntregas";
+import RutaDescarga from "@/pages/ruta/RutaDescarga";
+import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
+import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
+import RutaPerfil from "@/pages/ruta/RutaPerfil";
+import RutaSincronizarPage from "@/pages/ruta/RutaSincronizarPage";
+import RutaNuevoCliente from "@/pages/ruta/RutaNuevoCliente";
 
 const queryClient = new QueryClient({
   defaultOptions: {
