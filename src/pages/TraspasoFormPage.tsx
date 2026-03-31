@@ -375,124 +375,25 @@ export default function TraspasoFormPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Confirm mutation (applies stock changes)
+  // Confirm mutation — single RPC call instead of ~50 sequential HTTP requests
   const confirmarMut = useMutation({
     mutationFn: async () => {
-      const traspasoId = id!;
-      const { data: traspaso } = await supabase.from('traspasos').select('*').eq('id', traspasoId).single();
-      if (!traspaso) throw new Error('Traspaso no encontrado');
-
-      const { data: tLineas } = await supabase.from('traspaso_lineas').select('*').eq('traspaso_id', traspasoId);
-      const today = todayLocal();
-
-      for (const l of tLineas ?? []) {
-        // --- Deduct from origin ---
-        if (traspaso.almacen_origen_id) {
-          // Deduct from stock_almacen
-          const { data: sa } = await supabase.from('stock_almacen')
-            .select('id, cantidad')
-            .eq('almacen_id', traspaso.almacen_origen_id)
-            .eq('producto_id', l.producto_id)
-            .single();
-          const stockOrigen = sa?.cantidad ?? 0;
-          const { data: prodInfo } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id).single();
-          if (!prodInfo?.vender_sin_stock && l.cantidad > stockOrigen) {
-            throw new Error(`Stock insuficiente en origen para "${prodInfo?.nombre}". Disponible: ${stockOrigen}`);
-          }
-          if (sa) {
-            await supabase.from('stock_almacen').update({ cantidad: Math.max(0, stockOrigen - Number(l.cantidad)), updated_at: new Date().toISOString() } as any).eq('id', sa.id);
-          }
-          // Also update global stock
-          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-          await supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
-            cantidad: l.cantidad, almacen_origen_id: traspaso.almacen_origen_id,
-            referencia_tipo: 'traspaso', referencia_id: traspasoId,
-            user_id: user?.id, fecha: today, notas: `Traspaso ${traspaso.folio}`,
-          } as any);
-        }
-
-        if (traspaso.vendedor_origen_id) {
-          const { data: sc } = await supabase.from('stock_camion')
-            .select('id, cantidad_actual')
-            .eq('vendedor_id', traspaso.vendedor_origen_id)
-            .eq('producto_id', l.producto_id)
-            .gt('cantidad_actual', 0)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single();
-          if (sc) {
-            const { data: prodRuta } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id).single();
-            if (!prodRuta?.vender_sin_stock && l.cantidad > sc.cantidad_actual) {
-              throw new Error(`Stock insuficiente en ruta para "${prodRuta?.nombre}". Disponible: ${sc.cantidad_actual}`);
-            }
-            await supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - l.cantidad) } as any).eq('id', sc.id);
-          }
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
-            cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_origen_id,
-            referencia_tipo: 'traspaso', referencia_id: traspasoId,
-            user_id: user?.id, fecha: today, notas: `Traspaso ${traspaso.folio} (salida ruta)`,
-          } as any);
-        }
-
-        // --- Add to destination ---
-        if (traspaso.almacen_destino_id) {
-          // Upsert stock_almacen for destination
-          const { data: saD } = await supabase.from('stock_almacen')
-            .select('id, cantidad')
-            .eq('almacen_id', traspaso.almacen_destino_id)
-            .eq('producto_id', l.producto_id)
-            .maybeSingle();
-          if (saD) {
-            await supabase.from('stock_almacen').update({ cantidad: (saD.cantidad ?? 0) + Number(l.cantidad), updated_at: new Date().toISOString() } as any).eq('id', saD.id);
-          } else {
-            await supabase.from('stock_almacen').insert({
-              empresa_id: empresa!.id, almacen_id: traspaso.almacen_destino_id,
-              producto_id: l.producto_id, cantidad: Number(l.cantidad),
-            } as any);
-          }
-          // Also update global stock
-          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-          await supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
-            cantidad: l.cantidad, almacen_destino_id: traspaso.almacen_destino_id,
-            referencia_tipo: 'traspaso', referencia_id: traspasoId,
-            user_id: user?.id, fecha: today, notas: `Traspaso ${traspaso.folio}`,
-          } as any);
-        }
-
-        if (traspaso.vendedor_destino_id) {
-          await supabase.from('stock_camion').insert({
-            empresa_id: empresa!.id, vendedor_id: traspaso.vendedor_destino_id,
-            producto_id: l.producto_id, cantidad_inicial: l.cantidad,
-            cantidad_actual: l.cantidad, fecha: today,
-          } as any);
-          await supabase.from('movimientos_inventario').insert({
-            empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
-            cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_destino_id,
-            referencia_tipo: 'traspaso', referencia_id: traspasoId,
-            user_id: user?.id, fecha: today, notas: `Traspaso ${traspaso.folio} (entrada ruta)`,
-          } as any);
-        }
-      }
-
-      await supabase.from('traspasos').update({ status: 'confirmado' } as any).eq('id', traspasoId);
+      const { error } = await supabase.rpc('confirmar_traspaso', {
+        p_traspaso_id: id!,
+        p_user_id: user!.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Traspaso confirmado — stock actualizado');
       setStatus('confirmado');
-      Promise.all([
-        qc.refetchQueries({ queryKey: ['traspasos'] }),
-        qc.refetchQueries({ queryKey: ['traspaso', id] }),
-        qc.refetchQueries({ queryKey: ['productos'] }),
-        qc.refetchQueries({ queryKey: ['productos-select'] }),
-        qc.refetchQueries({ queryKey: ['stock-camion'] }),
-        qc.refetchQueries({ queryKey: ['stock-almacen-origen'] }),
-        qc.refetchQueries({ queryKey: ['inventario-dashboard'] }),
-      ]);
+      qc.invalidateQueries({ queryKey: ['traspasos'] });
+      qc.invalidateQueries({ queryKey: ['traspaso', id] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
+      qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
     },
     onError: (err: any) => toast.error(err.message),
   });
