@@ -316,7 +316,7 @@ function ClientesTable() {
 export default function ClientesListPage() {
   return (
     <div className="p-4 space-y-3 min-h-full">
-      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /></h1>
+      <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">Clientes <HelpButton title={HELP.clientes.title} sections={HELP.clientes.sections} /> <VideoHelpButton module="clientes" /></h1>
       <OdooTabs
         tabs={[
           { key: 'clientes', label: 'Clientes', content: <ClientesTable /> },
