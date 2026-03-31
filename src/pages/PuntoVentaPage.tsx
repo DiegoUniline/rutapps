@@ -274,18 +274,19 @@ export default function PuntoVentaPage() {
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.producto_id !== id));
 
   const totals = useMemo(() => {
+    const r2 = (n: number) => Math.round(n * 100) / 100;
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
     cart.forEach(item => {
-      const line = item.precio_unitario * item.cantidad;
+      const line = r2(item.precio_unitario * item.cantidad);
       subtotal += line;
-      const lineIeps = item.tiene_ieps ? line * (item.ieps_pct / 100) : 0;
+      const lineIeps = item.tiene_ieps ? r2(line * (item.ieps_pct / 100)) : 0;
       ieps += lineIeps;
-      if (item.tiene_iva) iva += (line + lineIeps) * (item.iva_pct / 100);
+      if (item.tiene_iva) iva += r2((line + lineIeps) * (item.iva_pct / 100));
       items += item.cantidad;
     });
-    const descuento = totalDescuentoPromo;
-    const totalFinal = Math.max(0, subtotal + iva + ieps - descuento);
-    return { subtotal, iva, ieps, descuento, total: totalFinal, items };
+    const descuento = r2(totalDescuentoPromo);
+    const totalFinal = r2(Math.max(0, subtotal + iva + ieps - descuento));
+    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), descuento, total: totalFinal, items };
   }, [cart, totalDescuentoPromo]);
 
   const paySplitsComputed = useMemo(() => {
