@@ -32,7 +32,7 @@ function useInventarioData() {
       // Almacenes
       const { data: almacenes } = await supabase
         .from('almacenes')
-        .select('id, nombre')
+        .select('id, nombre, tipo')
         .eq('empresa_id', eid)
         .eq('activo', true)
         .order('nombre');
