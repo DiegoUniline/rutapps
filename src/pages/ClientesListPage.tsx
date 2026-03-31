@@ -22,6 +22,7 @@ import { useListPreferences, groupData } from '@/hooks/useListPreferences';
 import CatalogCRUD from '@/components/CatalogCRUD';
 import { cn } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
+import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
 
