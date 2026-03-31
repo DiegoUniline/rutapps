@@ -138,12 +138,32 @@ export default function TraspasoFormPage() {
     },
   });
 
-  // Fetch ALL products (for display on existing traspasos)
+  // Fetch ALL products with clasificacion/marca info
   const { data: allProductos } = useQuery({
     queryKey: ['productos-select', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre');
+      return data ?? [];
+    },
+  });
+
+  // Fetch clasificaciones for filter
+  const { data: clasificaciones } = useQuery({
+    queryKey: ['clasificaciones', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return data ?? [];
+    },
+  });
+
+  // Fetch marcas for filter
+  const { data: marcas } = useQuery({
+    queryKey: ['marcas', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
       return data ?? [];
     },
   });
