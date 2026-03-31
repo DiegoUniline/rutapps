@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Trash2, Plus, Check, FileText, Ban } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Plus, Check, FileText, Ban, Search } from 'lucide-react';
 import { OdooTabs } from '@/components/OdooTabs';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import SearchableSelect from '@/components/SearchableSelect';
-import ProductSearchInput from '@/components/ProductSearchInput';
+
 import { generarTraspasoPdf } from '@/lib/traspasoPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
 import {
@@ -36,9 +36,8 @@ interface LineaForm {
   cantidad: number;
 }
 
-function emptyLine(): LineaForm {
-  return { producto_id: '', cantidad: 1 };
-}
+// For the bulk grid: map producto_id → cantidad to transfer
+type CantidadesMap = Record<string, number>;
 
 export default function TraspasoFormPage() {
   const { id } = useParams();
@@ -55,7 +54,11 @@ export default function TraspasoFormPage() {
   const [notas, setNotas] = useState('');
   const [status, setStatus] = useState('borrador');
   const [folio, setFolio] = useState('');
-  const [lineas, setLineas] = useState<LineaForm[]>([emptyLine()]);
+  const [lineas, setLineas] = useState<LineaForm[]>([]);
+  const [cantidades, setCantidades] = useState<CantidadesMap>({});
+  const [gridSearch, setGridSearch] = useState('');
+  const [filtroClasificacion, setFiltroClasificacion] = useState('');
+  const [filtroMarca, setFiltroMarca] = useState('');
   const [dirty, setDirty] = useState(false);
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -81,7 +84,7 @@ export default function TraspasoFormPage() {
       origen: origenLabel || '—',
       destino: destinoLabel || '—',
       responsable: profile?.nombre,
-      lineas: lineas.filter(l => l.producto_id).map(l => {
+      lineas: lineasFromCantidades.map(l => {
         const prod = allProductos?.find(p => p.id === l.producto_id);
         return {
           codigo: prod?.codigo ?? '',
@@ -135,12 +138,32 @@ export default function TraspasoFormPage() {
     },
   });
 
-  // Fetch ALL products (for display on existing traspasos)
+  // Fetch ALL products with clasificacion/marca info
   const { data: allProductos } = useQuery({
     queryKey: ['productos-select', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('productos').select('id, codigo, nombre, cantidad, clasificacion_id, marca_id, unidades_venta:unidades!productos_unidad_venta_id_fkey(nombre, abreviatura)').eq('empresa_id', empresa!.id).eq('status', 'activo').order('nombre');
+      return data ?? [];
+    },
+  });
+
+  // Fetch clasificaciones for filter
+  const { data: clasificaciones } = useQuery({
+    queryKey: ['clasificaciones', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
+      return data ?? [];
+    },
+  });
+
+  // Fetch marcas for filter
+  const { data: marcas } = useQuery({
+    queryKey: ['marcas', empresa?.id],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre');
       return data ?? [];
     },
   });
@@ -228,87 +251,59 @@ export default function TraspasoFormPage() {
         producto_id: l.producto_id,
         cantidad: l.cantidad,
       }));
-      setLineas(readOnly ? existingLines : [...existingLines, emptyLine()]);
+      setLineas(existingLines);
+      // Build cantidades map from existing lines
+      const map: CantidadesMap = {};
+      existingLines.forEach((l: LineaForm) => { if (l.producto_id) map[l.producto_id] = l.cantidad; });
+      setCantidades(map);
     }
   }, [existing]);
 
-  // Cell refs for keyboard navigation
-  const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
-  const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
-    const key = `${row}-${col}`;
-    if (el) cellRefs.current.set(key, el);
-    else cellRefs.current.delete(key);
-  }, []);
-  const focusCell = useCallback((row: number, col: number) => {
-    const el = cellRefs.current.get(`${row}-${col}`);
-    if (el) { el.focus(); if (el instanceof HTMLInputElement) el.select(); }
-  }, []);
-
-  const navigateCell = useCallback((rowIdx: number, colIdx: number, dir: 'next' | 'prev') => {
-    if (dir === 'next') {
-      if (colIdx < 1) focusCell(rowIdx, colIdx + 1);
-      else if (rowIdx >= lineas.length - 1) {
-        setLineas(prev => [...prev, emptyLine()]);
-        setDirty(true);
-        setTimeout(() => focusCell(rowIdx + 1, 0), 50);
-      } else focusCell(rowIdx + 1, 0);
-    } else {
-      if (colIdx > 0) focusCell(rowIdx, colIdx - 1);
-      else if (rowIdx > 0) focusCell(rowIdx - 1, 1);
-    }
-  }, [lineas.length, focusCell]);
-
-  const handleCellKeyDown = (e: React.KeyboardEvent, rowIdx: number, colIdx: number) => {
-    if (e.key === 'Tab' || e.key === 'Enter') {
-      e.preventDefault();
-      navigateCell(rowIdx, colIdx, e.shiftKey ? 'prev' : 'next');
-    }
-  };
-
-  const handleProductSelect = (idx: number, productoId: string) => {
+  // Update cantidad for a product in the bulk grid
+  const updateCantidad = useCallback((productoId: string, val: number) => {
     if (readOnly) return;
-    setLineas(prev => {
-      const next = [...prev];
-      next[idx] = { ...next[idx], producto_id: productoId };
+    const maxStock = maxStockMap.get(productoId) ?? 0;
+    const capped = Math.min(Math.max(0, val), maxStock);
+    setCantidades(prev => {
+      const next = { ...prev };
+      if (capped > 0) next[productoId] = capped;
+      else delete next[productoId];
       return next;
     });
     setDirty(true);
-  };
+  }, [readOnly, maxStockMap]);
 
-  const updateLine = (idx: number, field: string, val: any) => {
-    if (readOnly) return;
-    setLineas(prev => {
-      const next = [...prev];
-      const line = { ...next[idx], [field]: val };
-      // Cap quantity at max stock
-      if (field === 'cantidad' && line.producto_id) {
-        const maxStock = maxStockMap.get(line.producto_id) ?? 0;
-        if (val > maxStock) line.cantidad = maxStock;
-      }
-      next[idx] = line;
-      return next;
-    });
-    setDirty(true);
-  };
+  // Derive lineas from cantidades for save
+  const lineasFromCantidades = useMemo(() => {
+    return Object.entries(cantidades)
+      .filter(([, qty]) => qty > 0)
+      .map(([producto_id, cantidad]) => ({ producto_id, cantidad }));
+  }, [cantidades]);
 
-  const removeLine = (idx: number) => {
-    if (readOnly) return;
-    const next = lineas.filter((_, i) => i !== idx);
-    setLineas(next.length === 0 ? [emptyLine()] : next);
-    setDirty(true);
-  };
+  // Filtered products for the bulk grid
+  const filteredGridProducts = useMemo(() => {
+    let list = productosList ?? [];
+    if (gridSearch) {
+      const q = gridSearch.toLowerCase();
+      list = list.filter(p => p.nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q));
+    }
+    if (filtroClasificacion) {
+      list = list.filter(p => (p as any).clasificacion_id === filtroClasificacion);
+    }
+    if (filtroMarca) {
+      list = list.filter(p => (p as any).marca_id === filtroMarca);
+    }
+    return list;
+  }, [productosList, gridSearch, filtroClasificacion, filtroMarca]);
 
-  const addLine = () => {
-    if (readOnly) return;
-    setLineas(prev => [...prev, emptyLine()]);
-    setDirty(true);
-    setTimeout(() => focusCell(lineas.length, 0), 50);
-  };
+  // Count how many products have quantities assigned
+  const totalProductosSeleccionados = Object.keys(cantidades).length;
+  const totalUnidades = Object.values(cantidades).reduce((sum, q) => sum + q, 0);
 
   // Save mutation
   const saveMut = useMutation({
     mutationFn: async () => {
-      const validLines = lineas.filter(l => l.producto_id && l.cantidad > 0);
+      const validLines = lineasFromCantidades;
       if (validLines.length === 0) throw new Error('Agrega al menos un producto');
 
       // Validate stock before saving
@@ -810,87 +805,132 @@ export default function TraspasoFormPage() {
           <OdooTabs tabs={[
             {
               key: 'lineas',
-              label: 'Productos',
+              label: `Productos${totalProductosSeleccionados > 0 ? ` (${totalProductosSeleccionados})` : ''}`,
               content: (
                 <div className="p-4 space-y-3">
-                  <table className="w-full text-[13px]">
-                    <thead>
-                      <tr className="border-b border-table-border text-left">
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-8">#</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] min-w-[240px]">Producto</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
-                        <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Cantidad</th>
-                        <th className="py-2 px-2 w-8"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {lineas.map((l, idx) => {
-                        const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
-                        const maxStock = l.producto_id ? (maxStockMap.get(l.producto_id) ?? 0) : 0;
-                        const isEmpty = !l.producto_id;
-                        const isLast = idx === lineas.length - 1;
-                        const overMax = !isEmpty && l.cantidad > maxStock;
-                        return (
-                          <tr key={idx} className={cn(
-                            "border-b border-table-border transition-colors group",
-                            isEmpty ? "bg-transparent" : "hover:bg-table-hover",
-                            overMax && "bg-destructive/5"
-                          )}>
-                            <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
-                            <td className="py-1 px-2">
-                              {readOnly ? (
-                                <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</span>
-                              ) : (
-                                <ProductSearchInput
-                                  products={(productosList ?? []).filter(p => {
-                                    const usedIds = lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean);
-                                    return !usedIds.includes(p.id);
-                                  }).map(p => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: 0 }))}
-                                  value={l.producto_id}
-                                  displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
-                                  onSelect={pid => handleProductSelect(idx, pid)}
-                                  onNavigate={dir => navigateCell(idx, 0, dir)}
-                                  autoFocus={isLast && isEmpty}
-                                  readOnly={readOnly}
-                                />
-                              )}
-                            </td>
-                            <td className={cn("py-1 px-2 text-right tabular-nums", overMax ? "text-destructive font-semibold" : "text-muted-foreground")}>
-                              {!isEmpty ? maxStock : ''}
-                            </td>
-                            <td className="py-1 px-2 text-right">
-                              {readOnly ? (
-                                <span className="tabular-nums">{l.cantidad}</span>
-                              ) : (
-                                <input
-                                  ref={el => setCellRef(idx, 1, el)}
-                                  type="number"
-                                  min={1}
-                                  max={maxStock || undefined}
-                                  value={l.cantidad || ''}
-                                  onChange={e => updateLine(idx, 'cantidad', Number(e.target.value))}
-                                  onKeyDown={e => handleCellKeyDown(e, idx, 1)}
-                                  className={cn(
-                                    "w-full text-right bg-transparent border-0 border-b border-transparent focus:border-primary outline-none py-1 text-[13px] tabular-nums",
-                                    overMax && "text-destructive"
-                                  )}
-                                />
-                              )}
-                            </td>
-                            <td className="py-1 px-2">
-                              {!readOnly && !isEmpty && (
-                                <button onClick={() => removeLine(idx)} className="opacity-0 group-hover:opacity-100 text-destructive text-xs">×</button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {/* Filters bar */}
                   {!readOnly && (
-                    <button onClick={addLine} className="btn-odoo-secondary text-xs">
-                      <Plus className="h-3 w-3" /> Agregar línea
-                    </button>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="Buscar por código o nombre..."
+                          value={gridSearch}
+                          onChange={e => setGridSearch(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 text-[12px] bg-transparent border border-input rounded focus:border-primary outline-none"
+                        />
+                      </div>
+                      {(clasificaciones ?? []).length > 0 && (
+                        <select
+                          value={filtroClasificacion}
+                          onChange={e => setFiltroClasificacion(e.target.value)}
+                          className="text-[12px] border border-input rounded px-2 py-1.5 bg-transparent outline-none focus:border-primary min-w-[140px]"
+                        >
+                          <option value="">Todas las categorías</option>
+                          {(clasificaciones ?? []).map(c => (
+                            <option key={c.id} value={c.id}>{c.nombre}</option>
+                          ))}
+                        </select>
+                      )}
+                      {(marcas ?? []).length > 0 && (
+                        <select
+                          value={filtroMarca}
+                          onChange={e => setFiltroMarca(e.target.value)}
+                          className="text-[12px] border border-input rounded px-2 py-1.5 bg-transparent outline-none focus:border-primary min-w-[140px]"
+                        >
+                          <option value="">Todas las marcas</option>
+                          {(marcas ?? []).map(m => (
+                            <option key={m.id} value={m.id}>{m.nombre}</option>
+                          ))}
+                        </select>
+                      )}
+                      {totalProductosSeleccionados > 0 && (
+                        <span className="text-[11px] text-muted-foreground bg-primary/10 px-2 py-1 rounded">
+                          {totalProductosSeleccionados} productos · {totalUnidades} uds
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No origin selected warning */}
+                  {!readOnly && !almacenOrigenId && !vendedorOrigenId && (
+                    <div className="text-center py-8 text-muted-foreground text-[13px]">
+                      Selecciona un origen para ver los productos disponibles
+                    </div>
+                  )}
+
+                  {/* Bulk product grid */}
+                  {(readOnly || almacenOrigenId || vendedorOrigenId) && (
+                    <div className="max-h-[500px] overflow-auto border border-border rounded">
+                      <table className="w-full text-[13px]">
+                        <thead className="sticky top-0 bg-card z-[1]">
+                          <tr className="border-b border-table-border text-left">
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-20">Código</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px]">Producto</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-24 text-right">Disponible</th>
+                            <th className="py-2 px-2 text-muted-foreground font-medium text-[11px] w-28 text-right">A traspasar</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {readOnly ? (
+                            // Read-only: show only products that were transferred
+                            lineas.map((l, idx) => {
+                              const prod = (allProductos ?? []).find(p => p.id === l.producto_id);
+                              return (
+                                <tr key={l.producto_id} className="border-b border-table-border hover:bg-table-hover">
+                                  <td className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{prod?.codigo ?? ''}</td>
+                                  <td className="py-1.5 px-2 text-[12px]">{prod?.nombre ?? '—'}</td>
+                                  <td className="py-1.5 px-2 text-right text-muted-foreground tabular-nums">—</td>
+                                  <td className="py-1.5 px-2 text-right tabular-nums font-medium">{l.cantidad}</td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            // Edit mode: show all products with stock
+                            filteredGridProducts.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="text-center py-6 text-muted-foreground text-[12px]">
+                                  {gridSearch || filtroClasificacion || filtroMarca
+                                    ? 'Sin resultados con los filtros actuales'
+                                    : 'Sin productos con stock en el origen seleccionado'}
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredGridProducts.map(p => {
+                                const maxStock = maxStockMap.get(p.id) ?? 0;
+                                const qty = cantidades[p.id] ?? 0;
+                                const hasQty = qty > 0;
+                                return (
+                                  <tr key={p.id} className={cn(
+                                    "border-b border-table-border transition-colors",
+                                    hasQty ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-table-hover"
+                                  )}>
+                                    <td className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{p.codigo}</td>
+                                    <td className="py-1.5 px-2 text-[12px]">{p.nombre}</td>
+                                    <td className="py-1.5 px-2 text-right text-muted-foreground tabular-nums">{maxStock}</td>
+                                    <td className="py-1 px-2 text-right">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={maxStock}
+                                        value={qty || ''}
+                                        placeholder="0"
+                                        onChange={e => updateCantidad(p.id, Number(e.target.value))}
+                                        className={cn(
+                                          "w-full text-right bg-transparent border-0 border-b border-transparent focus:border-primary outline-none py-1 text-[13px] tabular-nums",
+                                          hasQty && "font-semibold text-primary"
+                                        )}
+                                      />
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               ),
