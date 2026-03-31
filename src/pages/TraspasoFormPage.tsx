@@ -303,7 +303,7 @@ export default function TraspasoFormPage() {
   // Save mutation
   const saveMut = useMutation({
     mutationFn: async () => {
-      const validLines = lineas.filter(l => l.producto_id && l.cantidad > 0);
+      const validLines = lineasFromCantidades;
       if (validLines.length === 0) throw new Error('Agrega al menos un producto');
 
       // Validate stock before saving
