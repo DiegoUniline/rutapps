@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PlayCircle, ExternalLink, X, Plus, Trash2 } from 'lucide-react';
+import { PlayCircle, ExternalLink, X, Plus, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
