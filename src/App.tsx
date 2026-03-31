@@ -414,6 +414,7 @@ function desktopRoutes() {
       <Route path="/finanzas/comisiones" element={<ComisionesPage />} />
       <Route path="/reportes" element={<ReportesPage />} />
       <Route path="/control" element={<ControlPage />} />
+      <Route path="/tutoriales" element={<TutorialesPage />} />
       <Route path="/configuracion" element={<ConfiguracionPage />} />
       <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />

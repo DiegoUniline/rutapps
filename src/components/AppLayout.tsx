@@ -125,6 +125,7 @@ const navItems: NavItem[] = [
       { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
     ],
   },
+  { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
   {
     label: 'Configuración',
     icon: Settings,
