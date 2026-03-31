@@ -238,11 +238,12 @@ export function useRutaVenta() {
   const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
 
   const totals = useMemo(() => {
+    const r2 = (n: number) => Math.round(n * 100) / 100;
     let subtotal = 0, iva = 0, ieps = 0, items = 0;
-    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = item.precio_unitario * item.cantidad; subtotal += lineaSub; if (!sinImpuestos) { const lineIeps = item.tiene_ieps ? lineaSub * (item.ieps_pct / 100) : 0; ieps += lineIeps; if (item.tiene_iva) iva += (lineaSub + lineIeps) * (item.iva_pct / 100); } items += item.cantidad; });
-    const totalDescuentos = totalDescuentoPromos + descuentoDevolucion;
-    const total = Math.max(0, subtotal + ieps + iva - totalDescuentos);
-    return { subtotal, iva, ieps, total, items, descuento: totalDescuentos, descuentoDevolucion };
+    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = r2(item.precio_unitario * item.cantidad); subtotal += lineaSub; if (!sinImpuestos) { const lineIeps = item.tiene_ieps ? r2(lineaSub * (item.ieps_pct / 100)) : 0; ieps += lineIeps; if (item.tiene_iva) iva += r2((lineaSub + lineIeps) * (item.iva_pct / 100)); } items += item.cantidad; });
+    const totalDescuentos = r2(totalDescuentoPromos + descuentoDevolucion);
+    const total = r2(Math.max(0, subtotal + ieps + iva - totalDescuentos));
+    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion) };
   }, [cart, totalDescuentoPromos, descuentoDevolucion, sinImpuestos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
