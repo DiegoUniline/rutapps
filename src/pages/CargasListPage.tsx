@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDateFilter } from '@/hooks/useDateFilter';
 import { Plus, Truck, Package, ChevronRight } from 'lucide-react';
 import { useCargas } from '@/hooks/useCargas';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -57,11 +56,17 @@ export default function CargasListPage() {
   const [search, setSearch] = useState('');
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('cargas');
 
-  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const { data: cargas, isLoading } = useCargas(search, statusFilter);
 
-  const filtered = useMemo(() => filterByDate(cargas ?? [], 'fecha'), [cargas, filterByDate]);
+  const filtered = useMemo(() => {
+    let list = cargas ?? [];
+    if (desde) list = list.filter((c: any) => (c.fecha ?? '') >= desde);
+    if (hasta) list = list.filter((c: any) => (c.fecha ?? '') <= hasta);
+    return list;
+  }, [cargas, desde, hasta]);
 
   const groups = useMemo(() => groupData(filtered, groupBy, (item: any, key) => {
     if (key === 'status') return statusConfig[item.status]?.label ?? item.status;
