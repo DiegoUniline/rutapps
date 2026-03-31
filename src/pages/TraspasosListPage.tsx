@@ -59,7 +59,8 @@ export default function TraspasosListPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
-  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
 
@@ -84,9 +85,10 @@ export default function TraspasosListPage() {
     const tipoArr = filters.tipo;
     if (tipoArr && tipoArr.length > 0) list = list.filter((t: any) => tipoArr.includes(t.tipo));
     if (search) list = list.filter((t: any) => t.folio?.toLowerCase().includes(search.toLowerCase()));
-    list = filterByDate(list, 'fecha');
+    if (desde) list = list.filter((t: any) => (t.fecha ?? '') >= desde);
+    if (hasta) list = list.filter((t: any) => (t.fecha ?? '') <= hasta);
     return list;
-  }, [traspasos, search, filters.status, filters.tipo, filterByDate]);
+  }, [traspasos, search, filters.status, filters.tipo, desde, hasta]);
 
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
