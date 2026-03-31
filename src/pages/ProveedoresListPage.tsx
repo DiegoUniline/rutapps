@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
+import { usePermisos } from '@/hooks/usePermisos';
 import { OdooPagination } from '@/components/OdooPagination';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { StatusChip } from '@/components/StatusChip';
