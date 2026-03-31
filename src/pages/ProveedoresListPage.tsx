@@ -40,9 +40,11 @@ export default function ProveedoresListPage() {
     <div className="p-4 space-y-3 min-h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-foreground">Proveedores</h1>
-        <button onClick={() => navigate('/proveedores/nuevo')} className="btn-odoo-primary flex items-center gap-1.5">
-          <Plus className="h-4 w-4" /> Nuevo
-        </button>
+        {canCreate && (
+          <button onClick={() => navigate('/proveedores/nuevo')} className="btn-odoo-primary flex items-center gap-1.5">
+            <Plus className="h-4 w-4" /> Nuevo
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
