@@ -4421,6 +4421,47 @@ export type Database = {
           },
         ]
       }
+      tutorial_videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          empresa_id: string
+          id: string
+          module: string | null
+          sort_order: number
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          empresa_id: string
+          id?: string
+          module?: string | null
+          sort_order?: number
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          empresa_id?: string
+          id?: string
+          module?: string | null
+          sort_order?: number
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_videos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       unidades: {
         Row: {
           abreviatura: string | null
