@@ -206,6 +206,12 @@ export default function ClienteFormPage() {
   const saveMutation = useSaveCliente();
   const deleteMutation = useDeleteCliente();
 
+  const { hasPermiso } = usePermisos();
+  const canEdit = hasPermiso('clientes', 'editar');
+  const canCreate = hasPermiso('clientes', 'crear');
+  const canDelete = hasPermiso('clientes', 'eliminar');
+  const readOnly = isNew ? !canCreate : !canEdit;
+
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
   const { data: cobradores } = useCobradores();
