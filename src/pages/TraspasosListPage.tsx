@@ -60,6 +60,7 @@ export default function TraspasosListPage() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('traspasos');
+  const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
 
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
 
