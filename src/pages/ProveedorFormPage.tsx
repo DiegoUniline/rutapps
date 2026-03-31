@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Save, Trash2 } from 'lucide-react';
+import { usePermisos } from '@/hooks/usePermisos';
 import { OdooTabs } from '@/components/OdooTabs';
 import { OdooField, OdooSection } from '@/components/OdooFormField';
 import { supabase } from '@/lib/supabase';
