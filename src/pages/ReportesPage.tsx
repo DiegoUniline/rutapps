@@ -488,6 +488,7 @@ export default function ReportesPage() {
             {tab === 'devoluciones' && <ReporteDevoluciones data={data} />}
             {tab === 'utilidad' && <ReporteUtilidad data={data} />}
             {tab === 'promociones' && <ReportePromociones desde={desde} hasta={hasta} />}
+            {tab === 'no_visitados' && <ReporteClientesNoVisitados desde={desde} hasta={hasta} vendedorIds={selectedVendedores.length > 0 ? selectedVendedores : undefined} />}
           </ReportLayout>
         );
       })()}
