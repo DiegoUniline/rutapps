@@ -32,6 +32,10 @@ export function useProductosRealtime() {
         qc.invalidateQueries({ queryKey: ['ventas'] });
         qc.invalidateQueries({ queryKey: ['ventas-list'] });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'almacenes' }, () => {
+        qc.invalidateQueries({ queryKey: ['almacenes'] });
+        qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [qc]);
