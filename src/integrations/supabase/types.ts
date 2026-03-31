@@ -3098,6 +3098,7 @@ export type Database = {
           created_at: string
           empresa_id: string
           es_combo: boolean | null
+          es_granel: boolean
           factor_conversion: number | null
           id: string
           ieps_pct: number
@@ -3128,6 +3129,7 @@ export type Database = {
           tipo_comision: Database["public"]["Enums"]["tipo_comision"] | null
           udem_sat_id: string | null
           unidad_compra_id: string | null
+          unidad_granel: string
           unidad_venta_id: string | null
           usa_listas_precio: boolean
           vender_sin_stock: boolean | null
@@ -3147,6 +3149,7 @@ export type Database = {
           created_at?: string
           empresa_id: string
           es_combo?: boolean | null
+          es_granel?: boolean
           factor_conversion?: number | null
           id?: string
           ieps_pct?: number
@@ -3177,6 +3180,7 @@ export type Database = {
           tipo_comision?: Database["public"]["Enums"]["tipo_comision"] | null
           udem_sat_id?: string | null
           unidad_compra_id?: string | null
+          unidad_granel?: string
           unidad_venta_id?: string | null
           usa_listas_precio?: boolean
           vender_sin_stock?: boolean | null
@@ -3196,6 +3200,7 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           es_combo?: boolean | null
+          es_granel?: boolean
           factor_conversion?: number | null
           id?: string
           ieps_pct?: number
@@ -3226,6 +3231,7 @@ export type Database = {
           tipo_comision?: Database["public"]["Enums"]["tipo_comision"] | null
           udem_sat_id?: string | null
           unidad_compra_id?: string | null
+          unidad_granel?: string
           unidad_venta_id?: string | null
           usa_listas_precio?: boolean
           vender_sin_stock?: boolean | null
