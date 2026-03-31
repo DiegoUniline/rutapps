@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation, Link } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,8 @@ import AppLayout from "@/components/AppLayout";
 import MobileLayout from "@/components/MobileLayout";
 import SubscriptionBanner from "@/components/SubscriptionBanner";
 import { ErrorModalProvider } from "@/components/ErrorModal";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useGlobalErrorHandler } from "@/hooks/useGlobalErrorHandler";
 import { useBootstrapPrefetch } from "@/hooks/useBootstrapPrefetch";
@@ -149,7 +151,7 @@ function PageLoader() {
 const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPage"));
 
 function AppRoutes() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const subscription = useSubscription();
   
   const { hasPermiso, loading: permisosLoading } = usePermisos();
@@ -215,16 +217,34 @@ function AppRoutes() {
     );
   }
 
-  // Blocked users — only billing access
+  // Blocked users — only billing access + sign-out header
   if (subscription.isBlocked) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/facturacion" element={<FacturacionPage />} />
-          <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
-          <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
-        </Routes>
-      </Suspense>
+      <div className="min-h-screen flex flex-col bg-background">
+        <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-lg text-foreground">RutApp</span>
+            <Badge variant="destructive" className="text-xs">Suspendida</Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/mi-suscripcion">Mi Suscripción</Link>
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => signOut()}>
+              Cerrar sesión
+            </Button>
+          </div>
+        </header>
+        <div className="flex-1">
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/facturacion" element={<FacturacionPage />} />
+              <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
+              <Route path="*" element={<Navigate to="/mi-suscripcion" replace />} />
+            </Routes>
+          </Suspense>
+        </div>
+      </div>
     );
   }
 
