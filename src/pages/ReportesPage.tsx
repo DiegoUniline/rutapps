@@ -239,6 +239,7 @@ export default function ReportesPage() {
     { key: 'devoluciones', label: 'Devoluciones', icon: RotateCcw },
     { key: 'utilidad', label: 'Utilidad', icon: DollarSign },
     { key: 'promociones', label: 'Promociones', icon: TrendingUp },
+    { key: 'no_visitados', label: 'No visitados', icon: UserX },
   ];
 
   const toggleVendedor = (id: string) => {
