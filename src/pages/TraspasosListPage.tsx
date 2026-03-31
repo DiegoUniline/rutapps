@@ -85,8 +85,9 @@ export default function TraspasosListPage() {
     const tipoArr = filters.tipo;
     if (tipoArr && tipoArr.length > 0) list = list.filter((t: any) => tipoArr.includes(t.tipo));
     if (search) list = list.filter((t: any) => t.folio?.toLowerCase().includes(search.toLowerCase()));
+    list = filterByDate(list, 'fecha');
     return list;
-  }, [traspasos, search, filters.status, filters.tipo]);
+  }, [traspasos, search, filters.status, filters.tipo, filterByDate]);
 
   const total = filtered.length;
   const from = Math.min((page - 1) * PAGE_SIZE + 1, total);
