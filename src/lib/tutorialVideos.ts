@@ -1,54 +1,57 @@
 /**
- * Videos tutoriales del canal @RutAppMx de YouTube.
- * Cada entrada tiene un videoId de YouTube y el módulo al que pertenece.
- * Para agregar un video nuevo basta con añadir una entrada aquí.
+ * ═══════════════════════════════════════════════════════════════
+ *  VIDEOS TUTORIALES — Solo agrega tus videos aquí abajo
+ * ═══════════════════════════════════════════════════════════════
+ *
+ *  Copia una entrada y llénala con tu URL de YouTube:
+ *
+ *  { url: 'https://www.youtube.com/watch?v=XXXXXXXXX', title: 'Mi video', module: 'ventas' },
+ *
+ *  Módulos válidos:
+ *    dashboard, productos, clientes, ventas, cargas, inventario,
+ *    ajustesInventario, traspasos, auditorias, cobranza, cuentasCobrar,
+ *    cuentasPagar, gastos, comisiones, reportes, compras, tarifas,
+ *    configuracion, usuarios, lotes, entregas, descargas, facturacion,
+ *    catalogos, whatsapp, promociones, mapa, pos, logistica, conteos
+ *
+ * ═══════════════════════════════════════════════════════════════
  */
 
 export interface TutorialVideo {
-  /** YouTube video ID (la parte después de v=) */
-  videoId: string;
+  /** URL completa de YouTube (se extrae el ID automáticamente) */
+  url: string;
   title: string;
   description?: string;
-  /** Módulo del sistema al que se vincula (para mostrar botón contextual) */
+  /** Módulo del sistema (ver lista arriba) */
   module?: string;
-  /** Duración aproximada legible */
-  duration?: string;
 }
 
+// ─────────────────────────────────────────────────
+//  👇  AGREGA TUS VIDEOS AQUÍ  👇
+// ─────────────────────────────────────────────────
+export const TUTORIAL_VIDEOS: TutorialVideo[] = [
+  // Ejemplo:
+  // { url: 'https://www.youtube.com/watch?v=rUAByOAG-2E', title: 'Introducción a RutApp', module: 'dashboard' },
+  // { url: 'https://youtu.be/PLzEs7dy9I4', title: 'Cómo gestionar Productos', module: 'productos' },
+];
+// ─────────────────────────────────────────────────
+
 /** ID del canal de YouTube */
-export const YOUTUBE_CHANNEL_ID = 'RutAppMx';
 export const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@RutAppMx';
 
-/**
- * Lista de videos. Agrega tus videos aquí con su videoId de YouTube.
- * El videoId es lo que aparece en la URL: youtube.com/watch?v=VIDEO_ID
- */
-export const TUTORIAL_VIDEOS: TutorialVideo[] = [
-  {
-    videoId: 'rUAByOAG-2E',
-    title: 'Introducción a RutApp',
-    description: 'Conoce las funciones principales del sistema.',
-    module: 'dashboard',
-    duration: '5:00',
-  },
-  {
-    videoId: 'PLzEs7dy9I4',
-    title: 'Cómo gestionar Productos',
-    description: 'Crear, editar e importar productos al catálogo.',
-    module: 'productos',
-    duration: '4:30',
-  },
-  // ──────────────────────────────────────────────
-  // Agrega más videos aquí. Ejemplo:
-  // {
-  //   videoId: 'XXXXXXXXXXX',
-  //   title: 'Cómo crear ventas',
-  //   description: 'Flujo completo de venta.',
-  //   module: 'ventas',
-  //   duration: '6:00',
-  // },
-  // ──────────────────────────────────────────────
-];
+/** Extrae el videoId de una URL de YouTube */
+export function extractVideoId(url: string): string {
+  // youtube.com/watch?v=ID
+  const match1 = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+  if (match1) return match1[1];
+  // youtu.be/ID
+  const match2 = url.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+  if (match2) return match2[1];
+  // youtube.com/embed/ID
+  const match3 = url.match(/embed\/([a-zA-Z0-9_-]{11})/);
+  if (match3) return match3[1];
+  return url; // fallback: asumir que ya es un ID
+}
 
 /** Devuelve los videos que coinciden con un módulo */
 export function getVideosForModule(module: string): TutorialVideo[] {
@@ -56,11 +59,11 @@ export function getVideosForModule(module: string): TutorialVideo[] {
 }
 
 /** Genera la URL de embed de YouTube */
-export function youtubeEmbedUrl(videoId: string): string {
-  return `https://www.youtube.com/embed/${videoId}?rel=0`;
+export function youtubeEmbedUrl(url: string): string {
+  return `https://www.youtube.com/embed/${extractVideoId(url)}?rel=0`;
 }
 
 /** Genera la URL de thumbnail de YouTube */
-export function youtubeThumbnailUrl(videoId: string): string {
-  return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+export function youtubeThumbnailUrl(url: string): string {
+  return `https://img.youtube.com/vi/${extractVideoId(url)}/mqdefault.jpg`;
 }

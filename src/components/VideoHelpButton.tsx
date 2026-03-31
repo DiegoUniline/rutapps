@@ -3,7 +3,7 @@ import { PlayCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { getVideosForModule, youtubeEmbedUrl, type TutorialVideo } from '@/lib/tutorialVideos';
+import { getVideosForModule, youtubeEmbedUrl, extractVideoId, type TutorialVideo } from '@/lib/tutorialVideos';
 
 interface VideoHelpButtonProps {
   module: string;
@@ -41,7 +41,7 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
         <div className="flex gap-1">
           {videos.map((v) => (
             <Button
-              key={v.videoId}
+              key={v.url}
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-primary gap-1 text-xs"
@@ -67,7 +67,7 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
           {current && (
             <AspectRatio ratio={16 / 9}>
               <iframe
-                src={youtubeEmbedUrl(current.videoId)}
+                src={youtubeEmbedUrl(current.url)}
                 title={current.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
