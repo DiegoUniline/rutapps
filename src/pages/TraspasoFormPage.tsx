@@ -398,118 +398,25 @@ export default function TraspasoFormPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  // Cancel mutation (reverses stock)
+  // Cancel mutation — single RPC call
   const cancelarMut = useMutation({
     mutationFn: async () => {
-      const traspasoId = id!;
-      const { data: traspaso } = await supabase.from('traspasos').select('*').eq('id', traspasoId).single();
-      if (!traspaso) throw new Error('Traspaso no encontrado');
-
-      // Only reverse stock if it was confirmed (stock was already moved)
-      if (traspaso.status === 'confirmado') {
-        const { data: tLineas } = await supabase.from('traspaso_lineas').select('*').eq('traspaso_id', traspasoId);
-        const today = todayLocal();
-
-        for (const l of tLineas ?? []) {
-          // Reverse: add back to origin
-          if (traspaso.almacen_origen_id) {
-            // Restore stock_almacen at origin
-            const { data: saO } = await supabase.from('stock_almacen')
-              .select('id, cantidad')
-              .eq('almacen_id', traspaso.almacen_origen_id)
-              .eq('producto_id', l.producto_id)
-              .maybeSingle();
-            if (saO) {
-              await supabase.from('stock_almacen').update({ cantidad: (saO.cantidad ?? 0) + Number(l.cantidad), updated_at: new Date().toISOString() } as any).eq('id', saO.id);
-            } else {
-              await supabase.from('stock_almacen').insert({
-                empresa_id: empresa!.id, almacen_id: traspaso.almacen_origen_id,
-                producto_id: l.producto_id, cantidad: Number(l.cantidad),
-              } as any);
-            }
-            // Restore global stock
-            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-            await supabase.from('productos').update({ cantidad: (prod?.cantidad ?? 0) + Number(l.cantidad) } as any).eq('id', l.producto_id);
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
-              cantidad: l.cantidad, almacen_destino_id: traspaso.almacen_origen_id,
-              referencia_tipo: 'traspaso', referencia_id: traspasoId,
-              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
-            } as any);
-          }
-
-          if (traspaso.vendedor_origen_id) {
-            await supabase.from('stock_camion').insert({
-              empresa_id: empresa!.id, vendedor_id: traspaso.vendedor_origen_id,
-              producto_id: l.producto_id, cantidad_inicial: l.cantidad,
-              cantidad_actual: l.cantidad, fecha: today,
-            } as any);
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id,
-              cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_origen_id,
-              referencia_tipo: 'traspaso', referencia_id: traspasoId,
-              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (devuelto a ruta)`,
-            } as any);
-          }
-
-          // Reverse: subtract from destination
-          if (traspaso.almacen_destino_id) {
-            // Deduct stock_almacen at destination
-            const { data: saD } = await supabase.from('stock_almacen')
-              .select('id, cantidad')
-              .eq('almacen_id', traspaso.almacen_destino_id)
-              .eq('producto_id', l.producto_id)
-              .maybeSingle();
-            if (saD) {
-              await supabase.from('stock_almacen').update({ cantidad: Math.max(0, (saD.cantidad ?? 0) - Number(l.cantidad)), updated_at: new Date().toISOString() } as any).eq('id', saD.id);
-            }
-            // Deduct global stock
-            const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', l.producto_id).single();
-            await supabase.from('productos').update({ cantidad: Math.max(0, (prod?.cantidad ?? 0) - Number(l.cantidad)) } as any).eq('id', l.producto_id);
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
-              cantidad: l.cantidad, almacen_origen_id: traspaso.almacen_destino_id,
-              referencia_tipo: 'traspaso', referencia_id: traspasoId,
-              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio}`,
-            } as any);
-          }
-
-          if (traspaso.vendedor_destino_id) {
-            const { data: sc } = await supabase.from('stock_camion')
-              .select('id, cantidad_actual')
-              .eq('vendedor_id', traspaso.vendedor_destino_id)
-              .eq('producto_id', l.producto_id)
-              .gt('cantidad_actual', 0)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-            if (sc) {
-              await supabase.from('stock_camion').update({ cantidad_actual: Math.max(0, sc.cantidad_actual - Number(l.cantidad)) } as any).eq('id', sc.id);
-            }
-            await supabase.from('movimientos_inventario').insert({
-              empresa_id: empresa!.id, tipo: 'salida', producto_id: l.producto_id,
-              cantidad: l.cantidad, vendedor_destino_id: traspaso.vendedor_destino_id,
-              referencia_tipo: 'traspaso', referencia_id: traspasoId,
-              user_id: user?.id, fecha: today, notas: `Cancelación traspaso ${traspaso.folio} (retirado de ruta)`,
-            } as any);
-          }
-        }
-      }
-
-      await supabase.from('traspasos').update({ status: 'cancelado' } as any).eq('id', traspasoId);
+      const { error } = await supabase.rpc('cancelar_traspaso', {
+        p_traspaso_id: id!,
+        p_user_id: user!.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success('Traspaso cancelado — stock revertido');
       setStatus('cancelado');
-      Promise.all([
-        qc.refetchQueries({ queryKey: ['traspasos'] }),
-        qc.refetchQueries({ queryKey: ['traspaso', id] }),
-        qc.refetchQueries({ queryKey: ['productos'] }),
-        qc.refetchQueries({ queryKey: ['productos-select'] }),
-        qc.refetchQueries({ queryKey: ['stock-camion'] }),
-        qc.refetchQueries({ queryKey: ['stock-almacen-origen'] }),
-        qc.refetchQueries({ queryKey: ['inventario-dashboard'] }),
-      ]);
+      qc.invalidateQueries({ queryKey: ['traspasos'] });
+      qc.invalidateQueries({ queryKey: ['traspaso', id] });
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen-origen'] });
+      qc.invalidateQueries({ queryKey: ['inventario-dashboard'] });
     },
     onError: (err: any) => toast.error(err.message),
   });
