@@ -1,0 +1,1 @@
+ALTER TABLE public.almacenes ADD COLUMN tipo text NOT NULL DEFAULT 'almacen';

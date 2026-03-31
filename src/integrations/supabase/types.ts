@@ -88,6 +88,7 @@ export type Database = {
           empresa_id: string
           id: string
           nombre: string
+          tipo: string
         }
         Insert: {
           activo?: boolean
@@ -95,6 +96,7 @@ export type Database = {
           empresa_id: string
           id?: string
           nombre: string
+          tipo?: string
         }
         Update: {
           activo?: boolean
@@ -102,6 +104,7 @@ export type Database = {
           empresa_id?: string
           id?: string
           nombre?: string
+          tipo?: string
         }
         Relationships: [
           {

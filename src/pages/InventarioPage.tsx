@@ -32,7 +32,7 @@ function useInventarioData() {
       // Almacenes
       const { data: almacenes } = await supabase
         .from('almacenes')
-        .select('id, nombre')
+        .select('id, nombre, tipo')
         .eq('empresa_id', eid)
         .eq('activo', true)
         .order('nombre');
@@ -172,6 +172,14 @@ function useInventarioData() {
         stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
       }
       const hasWarehouseStock = (stockAlmacenData?.length ?? 0) > 0;
+      // Separate almacen IDs by tipo
+      const almacenTipoMap: Record<string, string> = {};
+      for (const alm of (almacenes ?? [])) almacenTipoMap[alm.id] = (alm as any).tipo ?? 'almacen';
+      const getStockByTipo = (productoId: string, tipo: 'almacen' | 'ruta') => {
+        return (almacenes ?? [])
+          .filter(a => ((a as any).tipo ?? 'almacen') === tipo)
+          .reduce((sum, alm) => sum + (stockAlmacenMap[alm.id]?.[productoId] ?? 0), 0);
+      };
       const getTotalStockEnUbicaciones = (productoId: string) => {
         if (!hasWarehouseStock) {
           return (productos ?? []).find(p => p.id === productoId)?.cantidad ?? 0;
@@ -230,11 +238,15 @@ function useInventarioData() {
         const stockAlmacen = getTotalStockEnUbicaciones(p.id);
         const stockRuta = rutaStock[p.id] ?? 0;
         const stockTotal = stockAlmacen + stockRuta;
+        const stockTipoAlmacen = hasWarehouseStock ? getStockByTipo(p.id, 'almacen') : stockAlmacen;
+        const stockTipoRuta = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
         return {
           ...p,
           stockAlmacen,
           stockRuta,
           stockTotal,
+          stockTipoAlmacen,
+          stockTipoRuta,
           valorCostoAlmacen: stockAlmacen * (p.costo ?? 0),
           valorVentaAlmacen: stockAlmacen * (p.precio_principal ?? 0),
           valorCostoTotal: stockTotal * (p.costo ?? 0),
@@ -247,11 +259,17 @@ function useInventarioData() {
         stockAlmacen: acc.stockAlmacen + p.stockAlmacen,
         stockRuta: acc.stockRuta + p.stockRuta,
         stockTotal: acc.stockTotal + p.stockTotal,
+        stockTipoAlmacen: acc.stockTipoAlmacen + p.stockTipoAlmacen,
+        stockTipoRuta: acc.stockTipoRuta + p.stockTipoRuta,
         valorCostoAlmacen: acc.valorCostoAlmacen + p.valorCostoAlmacen,
         valorVentaAlmacen: acc.valorVentaAlmacen + p.valorVentaAlmacen,
         valorCostoTotal: acc.valorCostoTotal + p.valorCostoTotal,
         valorVentaTotal: acc.valorVentaTotal + p.valorVentaTotal,
-      }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0 });
+        valorCostoTipoAlmacen: acc.valorCostoTipoAlmacen + p.stockTipoAlmacen * (p.costo ?? 0),
+        valorCostoTipoRuta: acc.valorCostoTipoRuta + p.stockTipoRuta * (p.costo ?? 0),
+        valorVentaTipoAlmacen: acc.valorVentaTipoAlmacen + p.stockTipoAlmacen * (p.precio_principal ?? 0),
+        valorVentaTipoRuta: acc.valorVentaTipoRuta + p.stockTipoRuta * (p.precio_principal ?? 0),
+      }), { stockAlmacen: 0, stockRuta: 0, stockTotal: 0, stockTipoAlmacen: 0, stockTipoRuta: 0, valorCostoAlmacen: 0, valorVentaAlmacen: 0, valorCostoTotal: 0, valorVentaTotal: 0, valorCostoTipoAlmacen: 0, valorCostoTipoRuta: 0, valorVentaTipoAlmacen: 0, valorVentaTipoRuta: 0 });
 
       return {
         productos: productosEnriquecidos,
@@ -293,8 +311,8 @@ export default function InventarioPage() {
       {/* Summary cards */}
       {data && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <SummaryCard icon={Warehouse} label="En almacenes" value={`${fmtNum(data.totales.stockAlmacen)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoAlmacen)}`} color="text-primary" />
-          <SummaryCard icon={Truck} label="En ruta" value={`${fmtNum(data.totales.stockRuta)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoTotal - data.totales.valorCostoAlmacen)}`} color="text-warning" />
+          <SummaryCard icon={Warehouse} label="Almacenes" value={`${fmtNum(data.totales.stockTipoAlmacen)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoTipoAlmacen)}`} color="text-primary" />
+          <SummaryCard icon={Truck} label="Rutas" value={`${fmtNum(data.totales.stockTipoRuta)} uds`} sub={`Costo: $ ${fmt(data.totales.valorCostoTipoRuta)}`} color="text-warning" />
           <SummaryCard icon={DollarSign} label="Valor total (costo)" value={`$ ${fmt(data.totales.valorCostoTotal)}`} sub={`${fmtNum(data.totales.stockTotal)} unidades totales`} color="text-success" />
           <SummaryCard icon={TrendingUp} label="Proyección ventas" value={`$ ${fmt(data.totales.valorVentaTotal)}`} sub={`Margen: $ ${fmt(data.totales.valorVentaTotal - data.totales.valorCostoTotal)}`} color="text-accent-foreground" />
         </div>
