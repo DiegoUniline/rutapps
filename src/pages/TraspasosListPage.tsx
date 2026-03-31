@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import HelpButton from '@/components/HelpButton';
-import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
