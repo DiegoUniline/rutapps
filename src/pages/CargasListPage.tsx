@@ -11,6 +11,7 @@ import { OdooFilterBar } from '@/components/OdooFilterBar';
 import { exportToExcel, exportToPDF, type ExportColumn } from '@/lib/exportUtils';
 import { fmtDate } from '@/lib/utils';
 import HelpButton from '@/components/HelpButton';
+import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useListPreferences, groupData, dateGroupLabel } from '@/hooks/useListPreferences';
 
