@@ -349,6 +349,11 @@ Deno.serve(async (req) => {
           "cobro_fallido", undefined, charge.amount || 0
         );
 
+        // Notify admin
+        await notifyAdmin(supabase,
+          `🔴 *COBRO FALLIDO*\n\n🏢 *Empresa:* ${empresaNombre || "N/A"}\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n📋 *Código:* ${errorCode}`
+        );
+
         log("Charge failed → WhatsApp sent", { empresaId, errorCode });
         break;
       }
