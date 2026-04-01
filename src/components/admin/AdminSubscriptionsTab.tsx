@@ -299,10 +299,17 @@ export default function AdminSubscriptionsTab() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Máx. usuarios</Label>
-              <Input type="number" min={1} value={editForm.max_usuarios}
-                onChange={e => setEditForm(f => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} className="h-9" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Máx. usuarios</Label>
+                <Input type="number" min={1} value={editForm.max_usuarios}
+                  onChange={e => setEditForm(f => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Descuento %</Label>
+                <Input type="number" min={0} max={100} value={editForm.descuento_porcentaje}
+                  onChange={e => setEditForm(f => ({ ...f, descuento_porcentaje: parseFloat(e.target.value) || 0 }))} className="h-9" />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
