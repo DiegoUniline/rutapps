@@ -603,7 +603,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <p className="text-sm text-muted-foreground">Próximo cobro</p>
                     <p className="font-medium mt-1">
                       {subscription.current_period_end
-                        ? format(new Date(subscription.current_period_end), "dd MMM yyyy", { locale: es })
+                        ? (() => {
+                            const d = new Date(subscription.current_period_end);
+                            const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
+                            return format(normalized, "dd MMM yyyy", { locale: es });
+                          })()
                         : '—'}
                     </p>
                   </div>
