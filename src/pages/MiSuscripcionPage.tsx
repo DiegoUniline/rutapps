@@ -164,47 +164,62 @@ export default function MiSuscripcionPage() {
   const isUserChange = extraUsers !== 0;
   const hasChanges = isFreqChange || isUserChange;
 
-  // Calculate proration
-  function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean } {
-    if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false };
+  // Calculate what to charge for the update
+  function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean; totalPeriodo: number } {
+    if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false, totalPeriodo: 0 };
 
-    const newTotalMes = targetPlan.precio_por_usuario * totalNewUsers;
-    const currentTotalMes = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios : 0;
+    // Full period cost for new config
+    const newTotalPeriodo = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
+    // What the user already paid this period (from last paid factura or current plan)
+    const currentTotalPeriodo = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses : 0;
 
-    // Determine months remaining in current period
-    const periodEnd = subData?.current_period_end;
-    let monthsRemaining = 1;
-    if (periodEnd) {
-      const now = new Date();
-      const end = new Date(periodEnd);
-      const diffMs = end.getTime() - now.getTime();
-      monthsRemaining = Math.max(1, Math.ceil(diffMs / (30.44 * 24 * 60 * 60 * 1000)));
-    }
+    const diff = newTotalPeriodo - currentTotalPeriodo;
+    const isDowngrade = diff < 0;
 
-    const diffMes = newTotalMes - currentTotalMes;
-    const isDowngrade = diffMes < 0;
+    const parts: string[] = [];
+    if (isFreqChange) parts.push(`${PERIODO_LABEL[targetPlan.periodo]}`);
+    if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
+    if (isUserChange && extraUsers < 0) parts.push(`${extraUsers} usuario${extraUsers < -1 ? 's' : ''}`);
+
+    const periodoLabel = PERIODO_LABEL[targetPlan.periodo] || targetPlan.periodo;
 
     if (isDowngrade) {
-      // No refund — applies next period
       return {
         amount: 0,
         label: 'Reducción de plan',
-        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalMes.toLocaleString()}/mes`,
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString()} MXN/${periodoLabel.toLowerCase()}`,
         isDowngrade: true,
+        totalPeriodo: newTotalPeriodo,
       };
     }
 
-    // Charge the difference for remaining months
-    const chargeTotal = diffMes * monthsRemaining;
-    const parts: string[] = [];
-    if (isFreqChange) parts.push(`frecuencia a ${PERIODO_LABEL[targetPlan.periodo]}`);
-    if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
-    
+    // If user has a pending invoice, we'll cancel it and charge the full new amount
+    const hasPendingInvoice = pendingFacturas.length > 0;
+    const pendingTotal = pendingFacturas.reduce((s, f) => s + f.total, 0);
+
+    let chargeAmount: number;
+    let chargeDetail: string;
+
+    if (hasPendingInvoice) {
+      // Cancel pending invoice, charge new full period
+      chargeAmount = newTotalPeriodo;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN\nSe cancela factura pendiente de $${pendingTotal.toLocaleString()} y se genera la nueva.`;
+    } else if (currentPlan && diff > 0) {
+      // Proportional difference
+      chargeAmount = diff;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN\nDiferencia vs plan actual: $${chargeAmount.toLocaleString()} MXN`;
+    } else {
+      // First time / no current plan
+      chargeAmount = newTotalPeriodo;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN`;
+    }
+
     return {
-      amount: Math.round(chargeTotal * 100),
+      amount: Math.round(chargeAmount * 100),
       label: `Actualizar plan${parts.length ? ': ' + parts.join(', ') : ''}`,
-      detail: `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes = $${newTotalMes.toLocaleString()}/mes${monthsRemaining > 1 ? ` · Cobro prorrateo: $${chargeTotal.toLocaleString()} (${monthsRemaining} meses restantes)` : ''}`,
+      detail: chargeDetail,
       isDowngrade: false,
+      totalPeriodo: newTotalPeriodo,
     };
   }
 
