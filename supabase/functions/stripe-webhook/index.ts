@@ -187,8 +187,8 @@ Deno.serve(async (req) => {
           max_usuarios: qty,
           updated_at: new Date().toISOString(),
         };
-        if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
-        if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+        if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
+        if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
         await supabase.from("subscriptions").update(updateData).eq("empresa_id", empresaId);
 
@@ -198,10 +198,11 @@ Deno.serve(async (req) => {
           .eq("empresa_id", empresaId)
           .in("estado", ["pendiente", "procesando"]);
 
-        // WhatsApp
+        // WhatsApp — always show 1st of next month
         const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
+        const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
         await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${new Date(stripeSub.current_period_end * 1000).toLocaleDateString("es-MX")}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
         );
 
         log("Subscription activated", { empresaId, subscriptionId });
