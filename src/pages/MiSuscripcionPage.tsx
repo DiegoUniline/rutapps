@@ -633,11 +633,16 @@ export default function MiSuscripcionPage() {
                   </div>
                   <Separator orientation="vertical" className="h-8 hidden sm:block" />
                   <div className="text-sm text-foreground">
-                    <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/usuario/mes
+                    <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
                   </div>
                   <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                  <div className="text-lg font-black text-foreground">
-                    ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                  <div>
+                    <div className="text-lg font-black text-foreground">
+                      ${(currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                    </div>
                   </div>
                 </div>
               </CardContent>
