@@ -111,6 +111,7 @@ export default function AdminSubscriptionsTab() {
       plan_id: editForm.plan_id || null,
       max_usuarios: editForm.max_usuarios,
       status: editForm.status,
+      descuento_porcentaje: editForm.descuento_porcentaje || 0,
       updated_at: new Date().toISOString(),
     };
     if (editForm.current_period_start) payload.current_period_start = editForm.current_period_start;
