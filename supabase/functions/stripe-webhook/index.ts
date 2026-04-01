@@ -338,7 +338,8 @@ Deno.serve(async (req) => {
         const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, sub.id);
         if (empresaId) {
           await sendWhatsApp(supabase, empresaId,
-            `¡Hola! ⚠️\nLa suscripción de *${empresaNombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`
+            `¡Hola! ⚠️\nLa suscripción de *${empresaNombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`,
+            "suspension"
           );
         }
 
