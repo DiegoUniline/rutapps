@@ -182,7 +182,7 @@ export default function RutaEntregaDetalle() {
 
   const handlePrintTicket = async () => {
     const td = getTicketData();
-    if (!td) { toast.error('No hay pedido asociado'); return; }
+    if (!td) { toast.error('No hay datos para imprimir'); return; }
     await printTicket(td, { ticketAncho });
   };
 
