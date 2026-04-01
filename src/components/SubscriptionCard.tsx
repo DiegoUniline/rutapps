@@ -400,7 +400,7 @@ export default function SubscriptionCard() {
             </Button>
           </div>
           <div className="text-center">
-            <span className="text-lg font-bold text-foreground">${(timbresPacks * 100).toLocaleString()} MXN</span>
+            <span className="text-lg font-bold text-foreground">${(timbresPacks * 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
             <p className="text-xs text-muted-foreground mt-1">Saldo actual: {timbresBalance ?? 0} timbres</p>
           </div>
           <DialogFooter>
@@ -489,8 +489,8 @@ export default function SubscriptionCard() {
                 <span className="text-xs text-muted-foreground">Monto a transferir: </span>
                 <span className="font-bold text-foreground">
                   {payContext === 'timbres'
-                    ? `$${(timbresPacks * 100).toLocaleString()} MXN`
-                    : `$${((PLANS.find(p => p.priceId === selectedPlan)?.price || 0) * newQty).toLocaleString()} MXN`
+                    ? `$${(timbresPacks * 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`
+                    : `$${((PLANS.find(p => p.priceId === selectedPlan)?.price || 0) * newQty).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`
                   }
                 </span>
               </div>

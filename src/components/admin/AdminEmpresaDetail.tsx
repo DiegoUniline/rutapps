@@ -625,7 +625,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
                           <div>
                             <p className="text-muted-foreground text-xs">Precio base</p>
-                            <p className="font-medium">${precioBase.toLocaleString()}/usr</p>
+                            <p className="font-medium">${precioBase.toLocaleString("es-MX", { maximumFractionDigits: 2 })}/usr</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground text-xs">Descuento</p>
@@ -633,7 +633,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                           </div>
                           <div>
                             <p className="text-muted-foreground text-xs">Precio final</p>
-                            <p className="font-medium text-primary">${Math.round(precioFinal).toLocaleString()}/usr</p>
+                            <p className="font-medium text-primary">${Math.round(precioFinal).toLocaleString("es-MX", { maximumFractionDigits: 2 })}/usr</p>
                           </div>
                           <div>
                             <p className="text-muted-foreground text-xs">Usuarios</p>
@@ -642,11 +642,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                         </div>
                         <div className="border-t pt-2 flex justify-between items-center">
                           <span className="text-sm text-muted-foreground">Total mensual</span>
-                          <span className="text-lg font-bold text-primary">${Math.round(totalMes).toLocaleString()} MXN</span>
+                          <span className="text-lg font-bold text-primary">${Math.round(totalMes).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         {desc > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Sin descuento sería ${(precioBase * usuarios).toLocaleString()} MXN — ahorro: ${Math.round(precioBase * usuarios - totalMes).toLocaleString()} MXN
+                            Sin descuento sería ${(precioBase * usuarios).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN — ahorro: ${Math.round(precioBase * usuarios - totalMes).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                           </p>
                         )}
                       </div>
