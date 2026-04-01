@@ -157,38 +157,74 @@ export default function MiSuscripcionPage() {
   const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || 3;
   const newSelectedPlan = subPlans.find(p => p.periodo === selectedFreq) || null;
 
-  // ─── Cart helpers ───
-  function addFreqChangeToCart() {
-    if (!newSelectedPlan || newSelectedPlan.id === currentPlan?.id) return;
-    const filtered = cart.filter(c => c.type !== 'plan');
-    const totalMes = newSelectedPlan.precio_por_usuario * currentUsuarios;
-    filtered.push({
-      type: 'plan',
-      label: `Cambiar a plan ${PERIODO_LABEL[newSelectedPlan.periodo] || newSelectedPlan.nombre}`,
-      detail: `${currentUsuarios} usuarios × $${newSelectedPlan.precio_por_usuario}/usuario/mes`,
-      amount: totalMes * 100,
-    });
-    setCart(filtered);
-    toast.success(`Cambio a plan ${PERIODO_LABEL[newSelectedPlan.periodo]} agregado al pedido`);
+  // ─── Derived update state ───
+  const targetPlan = newSelectedPlan || currentPlan;
+  const totalNewUsers = currentUsuarios + extraUsers;
+  const isFreqChange = selectedFreq && currentPlan && selectedFreq !== currentPlan.periodo;
+  const isUserChange = extraUsers !== 0;
+  const hasChanges = isFreqChange || isUserChange;
+
+  // Calculate proration
+  function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean } {
+    if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false };
+
+    const newTotalMes = targetPlan.precio_por_usuario * totalNewUsers;
+    const currentTotalMes = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios : 0;
+
+    // Determine months remaining in current period
+    const periodEnd = subData?.current_period_end;
+    let monthsRemaining = 1;
+    if (periodEnd) {
+      const now = new Date();
+      const end = new Date(periodEnd);
+      const diffMs = end.getTime() - now.getTime();
+      monthsRemaining = Math.max(1, Math.ceil(diffMs / (30.44 * 24 * 60 * 60 * 1000)));
+    }
+
+    const diffMes = newTotalMes - currentTotalMes;
+    const isDowngrade = diffMes < 0;
+
+    if (isDowngrade) {
+      // No refund — applies next period
+      return {
+        amount: 0,
+        label: 'Reducción de plan',
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalMes.toLocaleString()}/mes`,
+        isDowngrade: true,
+      };
+    }
+
+    // Charge the difference for remaining months
+    const chargeTotal = diffMes * monthsRemaining;
+    const parts: string[] = [];
+    if (isFreqChange) parts.push(`frecuencia a ${PERIODO_LABEL[targetPlan.periodo]}`);
+    if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
+    
+    return {
+      amount: Math.round(chargeTotal * 100),
+      label: `Actualizar plan${parts.length ? ': ' + parts.join(', ') : ''}`,
+      detail: `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes = $${newTotalMes.toLocaleString()}/mes${monthsRemaining > 1 ? ` · Cobro prorrateo: $${chargeTotal.toLocaleString()} (${monthsRemaining} meses restantes)` : ''}`,
+      isDowngrade: false,
+    };
   }
 
-  function addUsersToCart() {
-    if (extraUsers <= 0) return;
-    const plan = currentPlan || newSelectedPlan;
-    if (!plan) {
-      toast.error('Primero elige una frecuencia de cobro');
+  // ─── Cart helpers ───
+  function addUpdateToCart() {
+    if (!targetPlan || !hasChanges) return;
+    if (totalNewUsers < 3) {
+      toast.error('Mínimo 3 usuarios');
       return;
     }
-    const filtered = cart.filter(c => c.type !== 'usuarios');
-    const totalMes = plan.precio_por_usuario * extraUsers;
+    const charge = calcUpdateCharge();
+    const filtered = cart.filter(c => c.type !== 'actualizacion');
     filtered.push({
-      type: 'usuarios',
-      label: `Agregar ${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`,
-      detail: `$${plan.precio_por_usuario}/usuario/mes — plan ${PERIODO_LABEL[plan.periodo] || plan.nombre}`,
-      amount: totalMes * 100,
+      type: 'actualizacion',
+      label: charge.label,
+      detail: charge.detail,
+      amount: charge.amount,
     });
     setCart(filtered);
-    toast.success(`${extraUsers} usuario(s) agregado(s) al pedido`);
+    toast.success(charge.isDowngrade ? 'Cambio programado para el siguiente periodo' : 'Actualización agregada al pedido');
   }
 
   function addTimbresToCart() {
