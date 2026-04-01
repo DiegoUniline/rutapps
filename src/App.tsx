@@ -118,6 +118,7 @@ import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
 import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
 import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
 import RutaEntregas from "@/pages/ruta/RutaEntregas";
+import RutaEntregaDetalle from "@/pages/ruta/RutaEntregaDetalle";
 import RutaDescarga from "@/pages/ruta/RutaDescarga";
 import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
 import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
@@ -269,6 +270,7 @@ function AppRoutes() {
         </Route>
         <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
         <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
+        <Route path="/ruta/entregas/:id" element={<RutaEntregaDetalle />} />
         <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
         <Route path="/ruta/clientes/nuevo" element={<RutaNuevoCliente />} />
         <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
@@ -312,6 +314,7 @@ function renderAuthenticatedRoutes() {
       </Route>
       <Route path="/ruta/ventas/nueva" element={<RutaNuevaVenta />} />
       <Route path="/ruta/ventas/:id" element={<RutaVentaDetalle />} />
+      <Route path="/ruta/entregas/:id" element={<RutaEntregaDetalle />} />
       <Route path="/ruta/cobros/nuevo" element={<RutaCobrar />} />
       <Route path="/ruta/clientes/nuevo" element={<RutaNuevoCliente />} />
       <Route path="/ruta/devolucion" element={<RutaDevolucion />} />
