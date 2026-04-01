@@ -24,7 +24,7 @@ export default function RutaEntregas() {
 
   const entregas = (allEntregas ?? [])
     .filter((e: any) =>
-      (e.status === 'cargado' || e.status === 'en_ruta') &&
+      (e.status === 'cargado' || e.status === 'en_ruta' || e.status === 'hecho') &&
       (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
     )
     .map((e: any) => {
@@ -37,7 +37,16 @@ export default function RutaEntregas() {
         }));
       const totalPiezas = lineas.reduce((acc: number, l: any) => acc + (l.cantidad_entregada || l.cantidad_pedida || 0), 0);
       return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas };
+    })
+    .sort((a: any, b: any) => {
+      // Pendientes primero, entregados al final
+      if (a.status === 'hecho' && b.status !== 'hecho') return 1;
+      if (a.status !== 'hecho' && b.status === 'hecho') return -1;
+      return 0;
     });
+
+  const pendientes = entregas.filter((e: any) => e.status !== 'hecho');
+  const entregados = entregas.filter((e: any) => e.status === 'hecho');
 
   return (
     <div className="p-4 space-y-4">
