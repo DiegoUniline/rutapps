@@ -119,34 +119,62 @@ export default function RutaEntregaDetalle() {
   };
 
   const getTicketData = (): TicketData | null => {
-    if (!venta) return null;
     const e = empresa as any;
+    if (!e) return null;
+    const empresaData = {
+      nombre: e?.nombre ?? '', rfc: e?.rfc ?? null, razon_social: e?.razon_social ?? null,
+      telefono: e?.telefono ?? null, direccion: e?.direccion ?? null, colonia: e?.colonia ?? null,
+      ciudad: e?.ciudad ?? null, estado: e?.estado ?? null, cp: e?.cp ?? null,
+      email: e?.email ?? null, logo_url: e?.logo_url ?? null, moneda: e?.moneda ?? 'MXN',
+      notas_ticket: e?.notas_ticket ?? null, ticket_campos: e?.ticket_campos ?? null,
+    };
+
+    if (venta) {
+      return {
+        empresa: empresaData,
+        folio: venta.folio ?? 'Sin folio',
+        fecha: fmtDate(venta.fecha),
+        clienteNombre,
+        lineas: ventaLineas.map((l: any) => ({
+          nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+          cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0,
+          iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0,
+          descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+          producto_id: l.producto_id,
+        })),
+        subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0,
+        ieps: (venta as any).ieps_total ?? 0, total: ventaTotal,
+        condicionPago: venta.condicion_pago,
+        metodoPago: (venta as any).metodo_pago ?? undefined,
+        saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
+        promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
+          descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id,
+        })),
+      };
+    }
+
+    // Fallback: build ticket from entrega lines
+    const entregaTotal = lineas.reduce((acc: number, l: any) => {
+      const precio = l.productos?.precio_principal ?? 0;
+      return acc + (precio * (l.cantidad_entregada || l.cantidad_pedida || 0));
+    }, 0);
+
     return {
-      empresa: {
-        nombre: e?.nombre ?? '', rfc: e?.rfc ?? null, razon_social: e?.razon_social ?? null,
-        telefono: e?.telefono ?? null, direccion: e?.direccion ?? null, colonia: e?.colonia ?? null,
-        ciudad: e?.ciudad ?? null, estado: e?.estado ?? null, cp: e?.cp ?? null,
-        email: e?.email ?? null, logo_url: e?.logo_url ?? null, moneda: e?.moneda ?? 'MXN',
-        notas_ticket: e?.notas_ticket ?? null, ticket_campos: e?.ticket_campos ?? null,
-      },
-      folio: venta.folio ?? 'Sin folio',
-      fecha: fmtDate(venta.fecha),
+      empresa: empresaData,
+      folio: entrega.folio ?? 'Sin folio',
+      fecha: fmtDate(entrega.fecha),
       clienteNombre,
-      lineas: ventaLineas.map((l: any) => ({
-        nombre: l.productos?.nombre ?? l.descripcion ?? '—',
-        cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0,
-        iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0,
-        descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
-        producto_id: l.producto_id,
-      })),
-      subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0,
-      ieps: (venta as any).ieps_total ?? 0, total: ventaTotal,
-      condicionPago: venta.condicion_pago,
-      metodoPago: (venta as any).metodo_pago ?? undefined,
-      saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
-      promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
-        descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id,
-      })),
+      lineas: lineas.map((l: any) => {
+        const precio = l.productos?.precio_principal ?? 0;
+        const cant = l.cantidad_entregada || l.cantidad_pedida || 0;
+        return {
+          nombre: l.productos?.nombre ?? '—',
+          cantidad: cant, precio, total: precio * cant,
+          iva_monto: 0, ieps_monto: 0, descuento_pct: 0,
+          producto_id: l.producto_id,
+        };
+      }),
+      subtotal: entregaTotal, iva: 0, ieps: 0, total: entregaTotal,
     };
   };
 
