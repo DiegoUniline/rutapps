@@ -64,6 +64,8 @@ export interface LiquidacionPdfParams {
     totalContado: number;
     totalCredito: number;
     cobrosEfectivo: number;
+    cobrosTransferencia: number;
+    cobrosTarjeta: number;
     totalGastos: number;
     efectivoEsperado: number;
     diferencia: number;
