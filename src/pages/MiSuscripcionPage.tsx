@@ -825,6 +825,133 @@ export default function MiSuscripcionPage() {
         </div>
       </div>
 
+      {/* ─── Dialog: Actualizar plan ─── */}
+      <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" /> {currentPlan ? 'Actualizar plan' : 'Elige tu plan'}
+            </DialogTitle>
+            <DialogDescription>
+              {currentPlan
+                ? 'Cambia la frecuencia de cobro o ajusta el número de usuarios.'
+                : 'Todos los usuarios comparten el mismo plan y frecuencia.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Frequency selector */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Frecuencia de cobro</label>
+              <div className="grid grid-cols-3 gap-2">
+                {subPlans.map(plan => {
+                  const isPlanCurrent = currentPlan?.id === plan.id;
+                  const isSelected = selectedFreq === plan.periodo;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedFreq(plan.periodo)}
+                      className={`relative p-3 rounded-xl border-2 transition-all text-left ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                          : 'border-border hover:border-primary/30'
+                      }`}
+                    >
+                      {isPlanCurrent && (
+                        <span className="absolute -top-2.5 left-2 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          Actual
+                        </span>
+                      )}
+                      {plan.descuento_pct > 0 && !isPlanCurrent && (
+                        <span className="absolute -top-2.5 right-2 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          {plan.descuento_pct}% desc.
+                        </span>
+                      )}
+                      <div className="text-xs font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
+                      <div className="text-xl font-black text-foreground mt-0.5">${plan.precio_por_usuario}</div>
+                      <div className="text-[9px] text-muted-foreground">por usuario / mes</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Users control */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Número de usuarios</label>
+              <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(-(currentUsuarios - 3), q - 1))} disabled={totalNewUsers <= 3}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center min-w-[50px]">
+                    <div className="text-2xl font-black text-foreground">{totalNewUsers}</div>
+                    <div className="text-[10px] text-muted-foreground">usuarios</div>
+                  </div>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => q + 1)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {extraUsers !== 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    {extraUsers > 0 ? `+${extraUsers} nuevo${extraUsers > 1 ? 's' : ''}` : `${extraUsers}`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Summary */}
+            {targetPlan && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    {totalNewUsers} × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
+                  </div>
+                  <div className="text-lg font-black text-foreground">
+                    ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString()} MXN
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Equivalente a ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
+                </div>
+
+                {hasChanges && updateCharge && (
+                  <>
+                    {updateCharge.isDowngrade ? (
+                      <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                        ℹ️ {updateCharge.detail}
+                      </p>
+                    ) : updateCharge.amount > 0 ? (
+                      <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                        💳 Cobro: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
+                        {pendingFacturas.length > 0 && (
+                          <span className="block mt-1 text-amber-600">⚠️ Se cancelará tu factura pendiente y se genera una nueva.</span>
+                        )}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpdateDialog(false)}>Cancelar</Button>
+            <Button
+              size="lg"
+              className="font-bold"
+              disabled={!hasChanges}
+              onClick={() => {
+                addUpdateToCart();
+                setShowUpdateDialog(false);
+              }}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" /> Confirmar cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ─── Dialog: Payment Method ─── */}
       <Dialog open={showPayMethod} onOpenChange={setShowPayMethod}>
         <DialogContent className="sm:max-w-md">
