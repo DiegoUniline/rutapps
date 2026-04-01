@@ -41,6 +41,22 @@ function getErrorMessage(code?: string): string {
   return errorMap[code || ""] || "Error al procesar el pago";
 }
 
+const ADMIN_PHONE = "526523171035768";
+
+// ── Notify admin (super admin) about payment events ──
+async function notifyAdmin(supabase: any, message: string) {
+  try {
+    // Find any empresa to use as context for whatsapp-sender (use first available)
+    const { data: anyEmpresa } = await supabase.from("empresas").select("id").limit(1).single();
+    if (!anyEmpresa?.id) return;
+    await supabase.functions.invoke("whatsapp-sender", {
+      body: { action: "send_text", empresa_id: anyEmpresa.id, phone: ADMIN_PHONE, message },
+    });
+  } catch (e) {
+    log("Admin notify non-blocking error", (e as Error).message);
+  }
+}
+
 // ── WhatsApp helper (with billing_notifications logging) ──
 async function sendWhatsApp(supabase: any, empresaId: string, message: string, tipo: string = "webhook", email?: string, monto_centavos?: number) {
   let phone: string | null = null;
