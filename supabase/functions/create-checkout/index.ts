@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const { data: userData, error: userError } = await anonClient.auth.getUser(token);
     if (userError || !userData.user?.email) throw new Error("No autenticado");
 
     const { price_id, quantity, empresa_id } = await req.json();
