@@ -1,60 +1,60 @@
 
 
-## Reestructurar "Tu plan y usuarios" — Separar cambio de plan vs agregar usuarios
+## Unificar "Actualizar plan" — Un solo flujo para frecuencia y usuarios
 
-### Problema
-La sección actual mezcla "cambiar frecuencia" con "agregar usuarios" como si fueran lo mismo. El usuario necesita ver claramente:
-1. Su frecuencia de cobro actual (mensual/semestral/anual)
-2. Poder cambiarla (esto afecta a TODOS los usuarios)
-3. Poder agregar más usuarios (heredan la frecuencia actual)
+### Concepto
+Eliminar las secciones separadas de "Cambiar frecuencia" y "Agregar usuarios". Reemplazar con una sola sección **"Actualizar plan"** donde el usuario ve:
+1. Su plan actual (frecuencia + usuarios + total)
+2. Puede ajustar frecuencia Y usuarios en el mismo lugar
+3. Un solo botón **"Actualizar plan"** que calcula la diferencia
 
-### Cambios en `src/pages/MiSuscripcionPage.tsx`
+### Lógica de cobro
+- **Subir usuarios**: Cobra la diferencia prorrateada del periodo actual
+- **Bajar usuarios**: Sin reembolso, el cambio aplica al siguiente periodo
+- **Cambiar a frecuencia mayor** (mensual→semestral): Cobra los meses restantes. Ej: si ya pagó 1 mes mensual y cambia a semestral, cobra 5 meses faltantes al precio semestral
+- **Cambiar a frecuencia menor** (anual→mensual): Aplica al siguiente periodo, sin reembolso
 
-**1. Cargar `subscription_plans` en vez de `planes`**
-- Cambiar la query de `planes` a `subscription_plans` (que tiene `periodo`, `precio_por_usuario`, `meses`, `descuento_pct`)
-- Cargar el `plan_id` actual de la suscripción para saber qué frecuencia tiene
-
-**2. Mostrar plan actual arriba**
-- Banner claro: "Tu plan actual: **Mensual** — 3 usuarios — $300/usuario/mes — Total: $900/mes"
-- Si no tiene plan asignado (trial), mostrar "Sin plan — elige uno"
-
-**3. Sección "Cambiar frecuencia de cobro"**
-- 3 botones/cards: Mensual / Semestral / Anual con precio por usuario y descuento
-- Al seleccionar uno diferente al actual → botón "Cambiar a [frecuencia]"
-- Esto actualiza el plan de TODOS los usuarios existentes
-- Muestra el nuevo total: `X usuarios × $Y = $Z/mes`
-
-**4. Sección "Agregar usuarios"**
-- Control +/- para ajustar cantidad (mínimo: usuarios actuales)
-- Muestra automáticamente la frecuencia heredada del plan actual
-- Total del cambio: `(nuevos - actuales) × precio = diferencia`
-- Botón "Agregar X usuarios"
-
-**5. Lógica de cart simplificada**
-- Si cambia frecuencia → item en cart "Cambiar a plan [Anual]" con el total
-- Si agrega usuarios → item "Agregar X usuarios" con el precio
-- Ambos pueden combinarse
-
-### Estructura visual
-
+### Estructura visual simplificada
 ```text
 ┌──────────────────────────────────────┐
 │ Tu plan actual                       │
-│ Cobro: MENSUAL | 3 usuarios         │
-│ $300/usuario/mes → Total: $900/mes   │
+│ MENSUAL | 3 usuarios | $900/mes      │
 ├──────────────────────────────────────┤
-│ Cambiar frecuencia de cobro          │
+│ ⚠️ Factura pendiente: $900           │
+│          [  Pagar ahora  ]           │
+├──────────────────────────────────────┤
+│ Actualizar plan                      │
+│                                      │
+│ Frecuencia:                          │
 │ [Mensual ✓] [Semestral] [Anual]     │
-│ Nuevo total: 3 × $270 = $810/mes    │
-│           [Cambiar plan]             │
+│                                      │
+│ Usuarios: [-] 3 [+]                  │
+│                                      │
+│ Resumen:                             │
+│ 3 usuarios × $270/mes = $810/mes     │
+│ Cobro por cambio: $1,350 (5 meses)   │
+│                                      │
+│      [ Actualizar plan ]             │
 ├──────────────────────────────────────┤
-│ Agregar usuarios                     │
-│ Usuarios adicionales: [-] 0 [+]     │
-│ Se cobrarán a tu plan Mensual       │
-│           [Agregar al pedido]        │
+│ Timbres CFDI                         │
+├──────────────────────────────────────┤
+│ Historial de facturas                │
 └──────────────────────────────────────┘
 ```
 
-### Archivos a modificar
-- `src/pages/MiSuscripcionPage.tsx` — reestructurar la sección de plan completa, usar `subscription_plans` en vez de `planes`, mostrar plan actual, separar cambio de frecuencia de agregar usuarios
+### Cambios en `src/pages/MiSuscripcionPage.tsx`
+1. **Eliminar** secciones separadas de "Cambiar frecuencia" y "Agregar usuarios" (lines ~589-731)
+2. **Crear** una sola sección "Actualizar plan" con:
+   - Selector de frecuencia (3 cards)
+   - Control +/- de usuarios (mínimo 3)
+   - Resumen con cálculo de diferencia/prorrateo
+3. **Simplificar cart**: Quitar tipos `plan` y `usuarios` separados → un solo tipo `actualizacion` que incluye ambos
+4. **Cálculo de cobro por cambio**:
+   - Si hay `current_period_end`, calcular meses restantes del periodo actual
+   - Diferencia = (nuevo_total_mensual × meses_restantes) - lo ya pagado del periodo
+   - Si diferencia > 0 → cobrar; si ≤ 0 → "Se aplica al siguiente periodo"
+5. **Botones finales**: Solo "Pagar pendiente" (si hay factura) y "Actualizar plan" (si hay cambios)
+
+### Archivo a modificar
+- `src/pages/MiSuscripcionPage.tsx`
 
