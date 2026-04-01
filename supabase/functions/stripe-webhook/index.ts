@@ -319,7 +319,8 @@ Deno.serve(async (req) => {
         const moneda = (charge.currency || "mxn").toUpperCase();
 
         await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 👋\nNo pudimos procesar tu pago de suscripción para *${empresaNombre || "tu empresa"}*.\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n🔄 *¿Qué puedes hacer?*\n1️⃣ Verifica que tu tarjeta tenga fondos\n2️⃣ Actualiza tu método de pago desde la app\n3️⃣ Si persiste, contacta a tu banco`
+          `¡Hola! 👋\nNo pudimos procesar tu pago de suscripción para *${empresaNombre || "tu empresa"}*.\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n🔄 *¿Qué puedes hacer?*\n1️⃣ Verifica que tu tarjeta tenga fondos\n2️⃣ Actualiza tu método de pago desde la app\n3️⃣ Si persiste, contacta a tu banco`,
+          "cobro_fallido", undefined, charge.amount || 0
         );
 
         log("Charge failed → WhatsApp sent", { empresaId, errorCode });
