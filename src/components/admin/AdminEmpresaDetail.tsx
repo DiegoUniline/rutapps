@@ -119,6 +119,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         current_period_start: subRes.data.current_period_start?.split('T')[0] || '',
         current_period_end: subRes.data.current_period_end?.split('T')[0] || '',
         trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
+        descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
       });
     }
 
