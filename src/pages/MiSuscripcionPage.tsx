@@ -272,6 +272,13 @@ export default function MiSuscripcionPage() {
       const tgtQty = totalNewUsers;
 
       if (updateItem) {
+        // Cancel pending invoices before updating
+        if (pendingFacturas.length > 0) {
+          for (const f of pendingFacturas) {
+            await supabase.from('facturas').update({ estado: 'cancelada' }).eq('id', f.id);
+          }
+        }
+
         if (!tgtPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
 
         if (subData?.stripe_subscription_id) {
