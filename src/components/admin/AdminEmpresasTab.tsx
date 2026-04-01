@@ -278,8 +278,8 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                         </TableCell>
                       </TableRow>
                     );
+                  });
                   })}
-                </TableBody>
               </Table>
             </div>
           )}
