@@ -631,7 +631,7 @@ export default function MiSuscripcionPage() {
                     const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
                     const basePrice = currentPlan.precio_por_usuario;
                     const effectivePrice = companyDiscount > 0
-                      ? Math.round(basePrice * (1 - companyDiscount / 100) * 100) / 100
+                      ? Math.round(basePrice * (1 - companyDiscount / 100))
                       : basePrice;
                     const totalPeriodo = effectivePrice * currentUsuarios * currentPlan.meses;
                     const totalMes = effectivePrice * currentUsuarios;

@@ -99,9 +99,13 @@ Deno.serve(async (req) => {
         }
 
         const qty = sub.max_usuarios || 3;
-        const subtotal = precioUnitario * qty;
         const descuento = sub.descuento_porcentaje || 0;
-        const total = Math.round(subtotal * (1 - descuento / 100) * 100) / 100;
+        // Round per-user price to whole peso to avoid fractional totals
+        const precioConDescuento = descuento > 0
+          ? Math.round(precioUnitario * (1 - descuento / 100))
+          : precioUnitario;
+        const subtotal = precioUnitario * qty;
+        const total = precioConDescuento * qty;
 
         const mesActual = now.toLocaleDateString("es-MX", { month: "long", year: "numeric" });
         const periodoFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
