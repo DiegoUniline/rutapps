@@ -633,7 +633,6 @@ export default function MiSuscripcionPage() {
                     const effectivePrice = companyDiscount > 0
                       ? Math.round(basePrice * (1 - companyDiscount / 100))
                       : basePrice;
-                      : basePrice;
                     const totalPeriodo = effectivePrice * currentUsuarios * currentPlan.meses;
                     const totalMes = effectivePrice * currentUsuarios;
                     const totalSinDescuento = basePrice * currentUsuarios * currentPlan.meses;
