@@ -101,6 +101,7 @@ export default function AdminSubscriptionsTab() {
       current_period_start: sub.current_period_start?.split('T')[0] || '',
       current_period_end: sub.current_period_end?.split('T')[0] || '',
       trial_ends_at: sub.trial_ends_at?.split('T')[0] || '',
+      descuento_porcentaje: (sub as any).descuento_porcentaje || 0,
     });
   }
 
