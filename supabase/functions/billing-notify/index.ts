@@ -261,8 +261,12 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const results: Array<{ id: string; action: string; status: string }> = [];
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+
+    // Use Mexico City timezone for all date calculations
+    const MX_TZ = "America/Mexico_City";
+    const nowMx = new Date().toLocaleDateString("en-CA", { timeZone: MX_TZ }); // YYYY-MM-DD
+    const todayStr = nowMx;
+    const today = new Date(todayStr + "T12:00:00Z"); // noon UTC as safe reference
 
     // Load global WhatsApp token (super admin config without empresa_id)
     const { data: waConfig } = await supabase
