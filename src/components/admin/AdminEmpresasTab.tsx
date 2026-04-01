@@ -42,6 +42,8 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: typeof Ch
   suspended: { label: 'Suspendida', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400', icon: XCircle },
   gracia: { label: 'Gracia', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400', icon: AlertCircle },
   cancelada: { label: 'Cancelada', color: 'bg-muted text-muted-foreground', icon: XCircle },
+  pendiente_pago: { label: 'Pendiente pago', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: AlertCircle },
+  sin_sub: { label: 'Sin suscripción', color: 'bg-muted text-muted-foreground', icon: XCircle },
 };
 
 export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?: (id: string) => void }) {
