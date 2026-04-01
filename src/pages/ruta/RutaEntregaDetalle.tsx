@@ -289,10 +289,10 @@ export default function RutaEntregaDetalle() {
       <div className="p-4 space-y-4 pb-28">
         <div className="grid grid-cols-5 gap-1">
           {[
-            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(cliente?.telefono ?? ''); setShowWADialog(true); }, disabled: !venta },
-            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadTicket, disabled: !venta },
-            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket, disabled: !venta },
-            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket, disabled: !venta },
+            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(cliente?.telefono ?? ''); setShowWADialog(true); }, disabled: false },
+            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadTicket, disabled: false },
+            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket, disabled: false },
+            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket, disabled: false },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta, disabled: !cliente },
           ].map(a => (
             <button key={a.label} onClick={a.onClick} disabled={a.disabled}
