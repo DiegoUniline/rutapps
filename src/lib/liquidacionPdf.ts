@@ -64,6 +64,8 @@ export interface LiquidacionPdfParams {
     totalContado: number;
     totalCredito: number;
     cobrosEfectivo: number;
+    cobrosTransferencia: number;
+    cobrosTarjeta: number;
     totalGastos: number;
     efectivoEsperado: number;
     diferencia: number;
@@ -119,9 +121,16 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
 
   const cuadreRows: [string, string][] = [
     ['Ventas contado:', `$${fmtCurrency(cuadre.totalContado)}`],
-    ['+ Cobros en efectivo:', `$${fmtCurrency(cuadre.cobrosEfectivo)}`],
-    ['− Gastos:', `-$${fmtCurrency(cuadre.totalGastos)}`],
+    ['Ventas crédito:', `$${fmtCurrency(cuadre.totalCredito)}`],
+    ['Cobros en efectivo:', `$${fmtCurrency(cuadre.cobrosEfectivo)}`],
   ];
+  if ((cuadre.cobrosTransferencia ?? 0) > 0) {
+    cuadreRows.push(['Cobros transferencia:', `$${fmtCurrency(cuadre.cobrosTransferencia)}`]);
+  }
+  if ((cuadre.cobrosTarjeta ?? 0) > 0) {
+    cuadreRows.push(['Cobros tarjeta:', `$${fmtCurrency(cuadre.cobrosTarjeta)}`]);
+  }
+  cuadreRows.push(['− Gastos:', `-$${fmtCurrency(cuadre.totalGastos)}`]);
 
   doc.setFontSize(9.5);
   for (const [lbl, val] of cuadreRows) {

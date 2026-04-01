@@ -331,6 +331,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     cuadre: {
                     totalContado, totalCredito,
                     cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
+                    cobrosTransferencia: cobrosPorMetodo['transferencia'] || 0,
+                    cobrosTarjeta: cobrosPorMetodo['tarjeta'] || 0,
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
@@ -401,6 +403,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   cuadre: {
                     totalContado, totalCredito,
                     cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
+                    cobrosTransferencia: cobrosPorMetodo['transferencia'] || 0,
+                    cobrosTarjeta: cobrosPorMetodo['tarjeta'] || 0,
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
@@ -485,7 +489,10 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Calculado por sistema</div>
               <div className="bg-card rounded-md p-3 space-y-1.5 text-[12px]">
                 <div className="flex justify-between"><span className="text-muted-foreground">Ventas contado</span><span className="font-semibold">${totalContado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold">${(cobrosPorMetodo['efectivo'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ventas crédito</span><span className="font-semibold">${totalCredito.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Cobros en efectivo</span><span className="font-semibold">${(cobrosPorMetodo['efectivo'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold">${(cobrosPorMetodo['transferencia'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
+                {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold">${(cobrosPorMetodo['tarjeta'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
                 <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                 <div className="border-t border-border pt-1.5 flex justify-between font-bold">
                   <span>Efectivo esperado</span>
@@ -923,6 +930,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const totalContado = ventasContadoArr.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
   const totalCobros = (cobrosPreview || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const cobrosEfectivoTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+  const cobrosTransferenciaTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'transferencia').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+  const cobrosTarjetaTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'tarjeta').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastosPreview || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
   const efectivoEsperado = cobrosEfectivoTotal - totalGastos;
 
@@ -1036,6 +1045,18 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
               <div className="text-muted-foreground">Cobros efectivo</div>
               <div className="font-bold text-foreground">${cobrosEfectivoTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
+            {cobrosTransferenciaTotal > 0 && (
+              <div className="bg-card rounded-md p-3 text-center">
+                <div className="text-muted-foreground">Cobros transferencia</div>
+                <div className="font-bold text-foreground">${cobrosTransferenciaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              </div>
+            )}
+            {cobrosTarjetaTotal > 0 && (
+              <div className="bg-card rounded-md p-3 text-center">
+                <div className="text-muted-foreground">Cobros tarjeta</div>
+                <div className="font-bold text-foreground">${cobrosTarjetaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              </div>
+            )}
             <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Gastos</div>
               <div className="font-bold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
