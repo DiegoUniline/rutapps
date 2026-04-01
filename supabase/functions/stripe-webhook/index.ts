@@ -10,6 +10,19 @@ const corsHeaders = {
 const log = (step: string, details?: any) =>
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
+// ── Normalize period dates to 1st of month boundaries ──
+// All billing cycles run 1st → 1st. Stripe may return dates like Apr 30 instead of May 1.
+function normalizePeriodStart(ts: number): string {
+  const d = new Date(ts * 1000);
+  // Snap to the 1st of the same month
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+}
+function normalizePeriodEnd(ts: number): string {
+  const d = new Date(ts * 1000);
+  // Snap to the 1st of the next month
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
+}
+
 // ── Stripe error codes → Spanish ──
 const errorMap: Record<string, string> = {
   card_declined: "Tu tarjeta fue rechazada por el banco",
@@ -174,8 +187,8 @@ Deno.serve(async (req) => {
           max_usuarios: qty,
           updated_at: new Date().toISOString(),
         };
-        if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
-        if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+        if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
+        if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
         await supabase.from("subscriptions").update(updateData).eq("empresa_id", empresaId);
 
@@ -185,10 +198,11 @@ Deno.serve(async (req) => {
           .eq("empresa_id", empresaId)
           .in("estado", ["pendiente", "procesando"]);
 
-        // WhatsApp
+        // WhatsApp — always show 1st of next month
         const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
+        const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
         await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${new Date(stripeSub.current_period_end * 1000).toLocaleDateString("es-MX")}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
         );
 
         log("Subscription activated", { empresaId, subscriptionId });
@@ -220,8 +234,8 @@ Deno.serve(async (req) => {
             status: "active",
             updated_at: new Date().toISOString(),
           };
-          if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
-          if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+          if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
+            if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
           await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 
@@ -233,9 +247,9 @@ Deno.serve(async (req) => {
               .eq("estado", "procesando");
           }
 
-          // WhatsApp
+          // WhatsApp — always show 1st of next month
           const monto = invoice.amount_paid ? (invoice.amount_paid / 100).toLocaleString() : "N/A";
-          const proximoCobro = new Date(stripeSub.current_period_end * 1000).toLocaleDateString("es-MX");
+          const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
           await sendWhatsApp(supabase, sub.empresa_id,
             `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
           );
@@ -326,8 +340,8 @@ Deno.serve(async (req) => {
           max_usuarios: qty,
           updated_at: new Date().toISOString(),
         };
-        if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
-        if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+        if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
+        if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
         await supabase.from("subscriptions").update(updateData).eq("stripe_subscription_id", sub.id);
 

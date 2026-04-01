@@ -443,9 +443,14 @@ export default function MiSuscripcionPage() {
               {subData.current_period_end && (
                 <div className="flex items-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-muted-foreground">Próximo vencimiento:</span>
+                  <span className="text-muted-foreground">Próximo cobro:</span>
                   <span className="font-medium text-foreground">
-                    {format(new Date(subData.current_period_end), "d 'de' MMMM yyyy", { locale: es })}
+                    {(() => {
+                      // Always show the 1st of the next month
+                      const d = new Date(subData.current_period_end);
+                      const firstOfNext = new Date(d.getFullYear(), d.getMonth() + (d.getDate() === 1 ? 0 : 1), 1);
+                      return format(firstOfNext, "d 'de' MMMM yyyy", { locale: es });
+                    })()}
                   </span>
                 </div>
               )}

@@ -116,6 +116,8 @@ Deno.serve(async (req) => {
       max_usuarios: qty,
       es_manual: true,
       updated_at: new Date().toISOString(),
+      // Always set period end to the 1st of next month
+      current_period_end: primeroDeSiguiente.toISOString(),
     };
     if (plan.stripe_price_id) subUpdatePayload.stripe_price_id = plan.stripe_price_id;
 
