@@ -10,6 +10,19 @@ const corsHeaders = {
 const log = (step: string, details?: any) =>
   console.log(`[STRIPE-WEBHOOK] ${step}${details ? ` — ${JSON.stringify(details)}` : ""}`);
 
+// ── Normalize period dates to 1st of month boundaries ──
+// All billing cycles run 1st → 1st. Stripe may return dates like Apr 30 instead of May 1.
+function normalizePeriodStart(ts: number): string {
+  const d = new Date(ts * 1000);
+  // Snap to the 1st of the same month
+  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString();
+}
+function normalizePeriodEnd(ts: number): string {
+  const d = new Date(ts * 1000);
+  // Snap to the 1st of the next month
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString();
+}
+
 // ── Stripe error codes → Spanish ──
 const errorMap: Record<string, string> = {
   card_declined: "Tu tarjeta fue rechazada por el banco",
