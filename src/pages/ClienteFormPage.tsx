@@ -449,22 +449,30 @@ export default function ClienteFormPage() {
           </div>
         </div>
         <div className="hidden sm:flex gap-2 shrink-0">
-          {form.foto_url ? (
-            <img src={form.foto_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
-          ) : (
-            <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center">
-              <Camera className="h-5 w-5 text-muted-foreground/40" />
-              <span className="text-[9px] text-muted-foreground">Foto</span>
-            </div>
-          )}
-          {form.foto_fachada_url ? (
-            <img src={form.foto_fachada_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
-          ) : (
-            <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center">
-              <Camera className="h-5 w-5 text-muted-foreground/40" />
-              <span className="text-[9px] text-muted-foreground">Fachada</span>
-            </div>
-          )}
+          <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'foto_url'); e.target.value = ''; }} />
+          <input ref={fachadaInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'foto_fachada_url'); e.target.value = ''; }} />
+          <button onClick={() => fotoInputRef.current?.click()} disabled={uploadingPhoto === 'foto'} className="relative group">
+            {form.foto_url ? (
+              <img src={form.foto_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
+            ) : (
+              <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer">
+                {uploadingPhoto === 'foto' ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary" />}
+                <span className="text-[9px] text-muted-foreground">Foto</span>
+              </div>
+            )}
+            {form.foto_url && <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-4 w-4 text-white" /></div>}
+          </button>
+          <button onClick={() => fachadaInputRef.current?.click()} disabled={uploadingPhoto === 'fachada'} className="relative group">
+            {form.foto_fachada_url ? (
+              <img src={form.foto_fachada_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
+            ) : (
+              <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer">
+                {uploadingPhoto === 'fachada' ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary" />}
+                <span className="text-[9px] text-muted-foreground">Fachada</span>
+              </div>
+            )}
+            {form.foto_fachada_url && <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-4 w-4 text-white" /></div>}
+          </button>
         </div>
       </div>
 
