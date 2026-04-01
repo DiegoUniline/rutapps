@@ -336,18 +336,16 @@ export default function MiSuscripcionPage() {
     if (!empresa?.id || !user) return;
     setPaying(true);
     try {
-      const planItem = cart.find(c => c.type === 'plan');
-      const usersItem = cart.find(c => c.type === 'usuarios');
+      const updateItem = cart.find(c => c.type === 'actualizacion');
       const timbresItem = cart.find(c => c.type === 'timbres');
       const concepto = cart.map(c => c.label).join(' + ');
-      const targetPlan = planItem ? newSelectedPlan : currentPlan;
-      const targetQty = currentUsuarios + extraUsers;
+      const tgtPlan = newSelectedPlan || currentPlan;
+      const tgtQty = totalNewUsers;
 
-      if (planItem || usersItem) {
-        const planForSelect = newSelectedPlan || currentPlan;
-        if (planForSelect) {
+      if (updateItem) {
+        if (tgtPlan) {
           await supabase.functions.invoke('select-plan', {
-            body: { plan_id: planForSelect.id, num_usuarios: targetQty },
+            body: { plan_id: tgtPlan.id, num_usuarios: tgtQty },
           });
         }
       }
@@ -355,13 +353,13 @@ export default function MiSuscripcionPage() {
       const { error } = await supabase.from('solicitudes_pago').insert({
         empresa_id: empresa.id,
         user_id: user.id,
-        tipo: (planItem || usersItem) ? 'suscripcion' : 'timbres',
+        tipo: updateItem ? 'suscripcion' : 'timbres',
         concepto,
         monto_centavos: cartTotal,
         metodo: 'transferencia',
         notas: transferNotes || null,
-        plan_price_id: targetPlan?.stripe_price_id || null,
-        cantidad_usuarios: (planItem || usersItem) ? targetQty : null,
+        plan_price_id: tgtPlan?.stripe_price_id || null,
+        cantidad_usuarios: updateItem ? tgtQty : null,
         cantidad_timbres: timbresItem ? timbresPacks * 100 : null,
       } as any);
 
