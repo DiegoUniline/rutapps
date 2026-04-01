@@ -47,6 +47,7 @@ export default function AdminSubscriptionsTab() {
   const [editForm, setEditForm] = useState({
     plan_id: '', max_usuarios: 3, status: 'trial',
     current_period_start: '', current_period_end: '', trial_ends_at: '',
+    descuento_porcentaje: 0,
   });
 
   // Create dialog
