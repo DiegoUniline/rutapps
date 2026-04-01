@@ -927,6 +927,8 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const totalContado = ventasContadoArr.reduce((s: number, v: any) => s + (Number(v.total) || 0), 0);
   const totalCobros = (cobrosPreview || []).reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const cobrosEfectivoTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'efectivo').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+  const cobrosTransferenciaTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'transferencia').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
+  const cobrosTarjetaTotal = (cobrosPreview || []).filter((c: any) => c.metodo_pago === 'tarjeta').reduce((s: number, c: any) => s + (Number(c.monto) || 0), 0);
   const totalGastos = (gastosPreview || []).reduce((s: number, g: any) => s + (Number(g.monto) || 0), 0);
   const efectivoEsperado = cobrosEfectivoTotal - totalGastos;
 
