@@ -619,36 +619,52 @@ export default function MiSuscripcionPage() {
         {/* Left: Plan + Timbres + History */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* ─── Tu plan actual ─── */}
-          {currentPlan && (
-            <Card className="border-primary/20">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
-                  <Crown className="h-5 w-5 text-primary" /> Tu plan actual
-                </h2>
-                <div className="flex flex-wrap items-center gap-4 bg-primary/5 rounded-xl p-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
-                      {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
-                    </Badge>
-                  </div>
-                  <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                  <div className="text-sm text-foreground">
-                    <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
-                  </div>
-                  <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                  <div>
-                    <div className="text-lg font-black text-foreground">
-                      ${(currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+          {/* ─── Tu plan actual + Actualizar ─── */}
+          <Card className="border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
+                    <Crown className="h-5 w-5 text-primary" /> Tu plan actual
+                  </h2>
+                  {currentPlan ? (
+                    <div className="flex flex-wrap items-center gap-4 bg-primary/5 rounded-xl p-4">
+                      <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
+                        {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
+                      </Badge>
+                      <Separator orientation="vertical" className="h-8 hidden sm:block" />
+                      <div className="text-sm text-foreground">
+                        <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
+                      </div>
+                      <Separator orientation="vertical" className="h-8 hidden sm:block" />
+                      <div>
+                        <div className="text-lg font-black text-foreground">
+                          ${(currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
-                    </div>
-                  </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sin plan activo — elige uno para continuar.</p>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <Button
+                  size="lg"
+                  className="h-12 text-base font-bold gap-2 shrink-0"
+                  onClick={() => {
+                    setExtraUsers(0);
+                    if (currentPlan) setSelectedFreq(currentPlan.periodo);
+                    setShowUpdateDialog(true);
+                  }}
+                >
+                  <RefreshCw className="h-5 w-5" />
+                  {currentPlan ? 'Actualizar plan' : 'Elegir plan'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* ─── Actualizar plan ─── */}
           <Card>
