@@ -2070,6 +2070,7 @@ export type Database = {
           fecha: string
           fecha_asignacion: string | null
           fecha_carga: string | null
+          fecha_entrega: string | null
           folio: string | null
           id: string
           notas: string | null
@@ -2089,6 +2090,7 @@ export type Database = {
           fecha?: string
           fecha_asignacion?: string | null
           fecha_carga?: string | null
+          fecha_entrega?: string | null
           folio?: string | null
           id?: string
           notas?: string | null
@@ -2108,6 +2110,7 @@ export type Database = {
           fecha?: string
           fecha_asignacion?: string | null
           fecha_carga?: string | null
+          fecha_entrega?: string | null
           folio?: string | null
           id?: string
           notas?: string | null
