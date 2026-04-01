@@ -564,6 +564,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} />
                   </div>
                   <div className="space-y-1.5">
+                    <Label className="text-sm">Descuento %</Label>
+                    <Input type="number" min={0} max={100} value={subForm.descuento_porcentaje}
+                      onChange={e => setSubForm((f: any) => ({ ...f, descuento_porcentaje: parseFloat(e.target.value) || 0 }))} />
+                  </div>
+                  <div className="space-y-1.5">
                     <Label className="text-sm">Fin trial</Label>
                     <Input type="date" value={subForm.trial_ends_at}
                       onChange={e => setSubForm((f: any) => ({ ...f, trial_ends_at: e.target.value }))} />
