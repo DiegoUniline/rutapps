@@ -75,8 +75,8 @@ export default function RutaEntregaDetalle() {
 
   const clienteId = (entrega as any)?.cliente_id;
   const { data: otrasPendientes } = useQuery({
-    queryKey: ['ruta-entrega-cuentas', clienteId, pedidoId],
-    enabled: !!clienteId && !!pedidoId,
+    queryKey: ['ruta-entrega-cuentas', clienteId],
+    enabled: !!clienteId,
     queryFn: async () => {
       const { data } = await supabase.from('ventas')
         .select('id, folio, fecha, total, saldo_pendiente')
