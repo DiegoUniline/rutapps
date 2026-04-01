@@ -61,7 +61,9 @@ async function fetchSubscription(userId: string, empresaId?: string): Promise<Om
       return state;
     }
 
-    const endDate = sub.status === 'trial' ? sub.trial_ends_at : sub.current_period_end;
+    const endDate = sub.status === 'trial'
+      ? (sub.trial_ends_at ?? sub.current_period_end)
+      : (sub.current_period_end ?? sub.trial_ends_at);
     const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
     const isBlocked = !isSuperAdmin && (
       sub.status === 'suspended' ||
