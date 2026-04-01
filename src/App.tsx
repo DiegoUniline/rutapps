@@ -222,6 +222,7 @@ function AppRoutes() {
   if (subscription.isBlocked) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
+        <SubscriptionBanner />
         <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <span className="font-bold text-lg text-foreground">RutApp</span>
@@ -252,6 +253,8 @@ function AppRoutes() {
   // Solo móvil — user can only access /ruta routes
   if (isSoloMovil) {
     return (
+      <>
+      <SubscriptionBanner />
       <Routes>
         <Route path="/ruta" element={<MobileLayout />}>
           <Route index element={<RutaClientesEntregas />} />
@@ -276,6 +279,7 @@ function AppRoutes() {
         <Route path="/conteo/:countId" element={<Suspense fallback={<PageLoader />}><ConteoFisicoPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/ruta" replace />} />
       </Routes>
+      </>
     );
   }
 
