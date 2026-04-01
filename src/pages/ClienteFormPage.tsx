@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { usePermisos } from '@/hooks/usePermisos';
+import { compressPhoto } from '@/lib/imageCompressor';
 import { Save, Trash2, Star, Camera, Plus, Minus, Search, X, Crosshair, Loader2, Upload, FileText } from 'lucide-react';
 import { GoogleMap, Marker } from '@react-google-maps/api';
 import GpsMapPicker from '@/components/GpsMapPicker';
@@ -237,6 +238,9 @@ export default function ClienteFormPage() {
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
   const [parsingCsf, setParsingCsf] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState<'foto' | 'fachada' | null>(null);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const fachadaInputRef = useRef<HTMLInputElement>(null);
   const { data: allListasPrecios } = useAllListasPrecios(empresa?.id);
 
   // Pedido sugerido state
@@ -284,6 +288,23 @@ export default function ClienteFormPage() {
   const isDirty = isNew || JSON.stringify(form) !== JSON.stringify(originalForm);
 
   const set = (key: keyof Cliente, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+
+  const handlePhotoUpload = async (file: File, field: 'foto_url' | 'foto_fachada_url') => {
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    const which = field === 'foto_url' ? 'foto' : 'fachada';
+    setUploadingPhoto(which as any);
+    try {
+      const compressed = await compressPhoto(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
+      const path = `clientes/${id ?? 'nuevo'}/${which}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
+      set(field as keyof Cliente, urlData.publicUrl);
+      toast.success('Imagen subida');
+    } catch (err: any) { toast.error(err.message || 'Error al subir imagen'); }
+    finally { setUploadingPhoto(null); }
+  };
 
   const handleSave = async () => {
     if (!form.nombre) { toast.error('Nombre es obligatorio'); return; }
@@ -428,22 +449,30 @@ export default function ClienteFormPage() {
           </div>
         </div>
         <div className="hidden sm:flex gap-2 shrink-0">
-          {form.foto_url ? (
-            <img src={form.foto_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
-          ) : (
-            <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center">
-              <Camera className="h-5 w-5 text-muted-foreground/40" />
-              <span className="text-[9px] text-muted-foreground">Foto</span>
-            </div>
-          )}
-          {form.foto_fachada_url ? (
-            <img src={form.foto_fachada_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
-          ) : (
-            <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center">
-              <Camera className="h-5 w-5 text-muted-foreground/40" />
-              <span className="text-[9px] text-muted-foreground">Fachada</span>
-            </div>
-          )}
+          <input ref={fotoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'foto_url'); e.target.value = ''; }} />
+          <input ref={fachadaInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handlePhotoUpload(f, 'foto_fachada_url'); e.target.value = ''; }} />
+          <button onClick={() => fotoInputRef.current?.click()} disabled={uploadingPhoto === 'foto'} className="relative group">
+            {form.foto_url ? (
+              <img src={form.foto_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
+            ) : (
+              <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer">
+                {uploadingPhoto === 'foto' ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary" />}
+                <span className="text-[9px] text-muted-foreground">Foto</span>
+              </div>
+            )}
+            {form.foto_url && <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-4 w-4 text-white" /></div>}
+          </button>
+          <button onClick={() => fachadaInputRef.current?.click()} disabled={uploadingPhoto === 'fachada'} className="relative group">
+            {form.foto_fachada_url ? (
+              <img src={form.foto_fachada_url} alt="" className="w-[80px] h-[80px] rounded object-cover border border-border" />
+            ) : (
+              <div className="w-[80px] h-[80px] rounded border-2 border-dashed border-border flex flex-col items-center justify-center hover:border-primary/50 hover:bg-accent/30 transition-colors cursor-pointer">
+                {uploadingPhoto === 'fachada' ? <Loader2 className="h-5 w-5 animate-spin text-primary" /> : <Camera className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary" />}
+                <span className="text-[9px] text-muted-foreground">Fachada</span>
+              </div>
+            )}
+            {form.foto_fachada_url && <div className="absolute inset-0 bg-black/40 rounded opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Camera className="h-4 w-4 text-white" /></div>}
+          </button>
         </div>
       </div>
 
