@@ -249,54 +249,50 @@ export default function MiSuscripcionPage() {
   async function handlePayWithCard() {
     setPaying(true);
     try {
-      const planItem = cart.find(c => c.type === 'plan');
-      const usersItem = cart.find(c => c.type === 'usuarios');
+      const updateItem = cart.find(c => c.type === 'actualizacion');
       const timbresItem = cart.find(c => c.type === 'timbres');
       let redirectUrl = '';
 
-      // Determine the target plan for checkout
-      const targetPlan = planItem ? newSelectedPlan : currentPlan;
-      const targetQty = currentUsuarios + extraUsers;
+      const tgtPlan = newSelectedPlan || currentPlan;
+      const tgtQty = totalNewUsers;
 
-      if (planItem || usersItem) {
-        if (!targetPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
+      if (updateItem) {
+        if (!tgtPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
 
         if (subData?.stripe_subscription_id) {
           // Update existing Stripe subscription
-          if (planItem) {
+          if (isFreqChange && tgtPlan) {
             const { data, error } = await supabase.functions.invoke('manage-subscription', {
-              body: { action: 'change_plan', new_price_id: targetPlan.stripe_price_id },
+              body: { action: 'change_plan', new_price_id: tgtPlan.stripe_price_id },
             });
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
           }
-          if (usersItem || (planItem && targetQty !== currentUsuarios)) {
+          if (tgtQty !== currentUsuarios) {
             await supabase.functions.invoke('manage-subscription', {
-              body: { action: 'update_quantity', new_quantity: targetQty },
+              body: { action: 'update_quantity', new_quantity: tgtQty },
             });
           }
-          // Update plan_id locally
-          if (planItem && newSelectedPlan) {
-            await supabase.from('subscriptions')
-              .update({ plan_id: newSelectedPlan.id, max_usuarios: targetQty, updated_at: new Date().toISOString() })
-              .eq('id', subData.id);
-          } else if (usersItem) {
-            await supabase.from('subscriptions')
-              .update({ max_usuarios: targetQty, updated_at: new Date().toISOString() })
-              .eq('id', subData.id);
-          }
+          // Update locally
+          await supabase.from('subscriptions')
+            .update({
+              plan_id: tgtPlan.id,
+              max_usuarios: tgtQty,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', subData.id);
           toast.success('Plan actualizado correctamente');
           setShowPayMethod(false);
           setCart([]);
+          setExtraUsers(0);
           loadData();
           return;
         } else {
           // No existing Stripe sub — select plan & create checkout
-          const planForCheckout = newSelectedPlan || currentPlan;
-          if (!planForCheckout?.stripe_price_id) throw new Error('Sin precio de Stripe configurado');
+          if (!tgtPlan?.stripe_price_id) throw new Error('Sin precio de Stripe configurado');
 
           const { data: spData, error: spError } = await supabase.functions.invoke('select-plan', {
-            body: { plan_id: planForCheckout.id, num_usuarios: targetQty },
+            body: { plan_id: tgtPlan.id, num_usuarios: tgtQty },
           });
           if (spError) throw spError;
           if (spData?.error) throw new Error(spData.error);
@@ -305,7 +301,7 @@ export default function MiSuscripcionPage() {
             redirectUrl = spData.checkout_url;
           } else {
             const { data, error } = await supabase.functions.invoke('create-checkout', {
-              body: { price_id: planForCheckout.stripe_price_id, quantity: targetQty, empresa_id: empresa?.id },
+              body: { price_id: tgtPlan.stripe_price_id, quantity: tgtQty, empresa_id: empresa?.id },
             });
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
