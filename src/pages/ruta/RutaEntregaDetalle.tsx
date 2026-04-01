@@ -228,12 +228,13 @@ export default function RutaEntregaDetalle() {
   };
 
   const handleWhatsAppSend = async () => {
-    if (!waPhone.trim() || !venta) return;
+    if (!waPhone.trim()) return;
+    const td = getTicketData();
+    if (!td) { toast.error('No hay datos'); return; }
     setSendingWA(true);
     try {
       const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
-      const td = getTicketData()!;
-      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta.id });
+      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta?.id ?? id ?? '' });
       if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); } else toast.error(result.error || 'Error');
     } catch (err: any) { toast.error(err.message); }
     finally { setSendingWA(false); }
