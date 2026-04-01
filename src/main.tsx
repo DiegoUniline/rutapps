@@ -50,6 +50,6 @@ if (isPreviewHost || isInIframe) {
 
     // Silent update: no visible reload on controller change
   });
-}
+} // end else-if serviceWorker
 
 createRoot(document.getElementById("root")!).render(<App />);
