@@ -91,6 +91,7 @@ export default function MiSuscripcionPage() {
   // Payment dialogs
   const [showPayMethod, setShowPayMethod] = useState(false);
   const [showTransferInfo, setShowTransferInfo] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
