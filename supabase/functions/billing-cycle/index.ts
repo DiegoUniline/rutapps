@@ -56,14 +56,37 @@ Deno.serve(async (req) => {
 
     // ═══ PART 1: Generate monthly invoices (day 1) ═══
     if (isFirstOfMonth) {
+      // Include active, past_due, gracia, and expired trial subs
       const { data: activeSubs } = await supabase
         .from("subscriptions")
-        .select("id, empresa_id, max_usuarios, stripe_subscription_id, stripe_price_id, plan_id, descuento_porcentaje")
-        .in("status", ["active"]);
+        .select("id, empresa_id, max_usuarios, stripe_subscription_id, stripe_price_id, plan_id, descuento_porcentaje, status, trial_ends_at")
+        .in("status", ["active", "past_due", "gracia", "trial"]);
 
-      log("Active subs to invoice", { count: activeSubs?.length || 0 });
+      // Filter: active subs always, others only if trial already ended
+      const subsToInvoice = (activeSubs || []).filter(s => {
+        if (s.status === "active") return true;
+        if (s.status === "trial") {
+          return s.trial_ends_at && new Date(s.trial_ends_at) <= now;
+        }
+        return true; // past_due, gracia
+      });
 
-      for (const sub of activeSubs || []) {
+      log("Subs to invoice", { count: subsToInvoice.length });
+
+      for (const sub of subsToInvoice) {
+        // Skip if pending invoice already exists for this period
+        const { data: existingInv } = await supabase
+          .from("facturas")
+          .select("id")
+          .eq("suscripcion_id", sub.id)
+          .eq("periodo_inicio", today)
+          .in("estado", ["pendiente", "procesando"])
+          .limit(1);
+        if (existingInv && existingInv.length > 0) {
+          log("Skipped (existing invoice)", { empresa: sub.empresa_id });
+          continue;
+        }
+
         // Get plan price
         let precioUnitario = 300; // default
         if (sub.plan_id) {
