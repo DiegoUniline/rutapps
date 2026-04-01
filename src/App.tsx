@@ -253,6 +253,8 @@ function AppRoutes() {
   // Solo móvil — user can only access /ruta routes
   if (isSoloMovil) {
     return (
+      <>
+      <SubscriptionBanner />
       <Routes>
         <Route path="/ruta" element={<MobileLayout />}>
           <Route index element={<RutaClientesEntregas />} />
