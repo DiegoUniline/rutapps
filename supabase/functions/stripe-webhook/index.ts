@@ -41,22 +41,48 @@ function getErrorMessage(code?: string): string {
   return errorMap[code || ""] || "Error al procesar el pago";
 }
 
-// ── WhatsApp helper ──
-async function sendWhatsApp(supabase: any, empresaId: string, message: string) {
+// ── WhatsApp helper (with billing_notifications logging) ──
+async function sendWhatsApp(supabase: any, empresaId: string, message: string, tipo: string = "webhook", email?: string, monto_centavos?: number) {
+  let phone: string | null = null;
+  let customerEmail = email || "";
+  let status = "sent";
+
   try {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("telefono")
+      .select("telefono, user_id")
       .eq("empresa_id", empresaId)
       .not("telefono", "is", null)
       .limit(1);
-    const phone = profiles?.[0]?.telefono;
-    if (!phone) return;
-    await supabase.functions.invoke("whatsapp-sender", {
+    phone = profiles?.[0]?.telefono;
+    if (!phone) { status = "error"; return; }
+
+    // Get email if not provided
+    if (!customerEmail && profiles?.[0]?.user_id) {
+      const { data: userData } = await supabase.auth.admin.getUserById(profiles[0].user_id);
+      customerEmail = userData?.user?.email || "";
+    }
+
+    const res = await supabase.functions.invoke("whatsapp-sender", {
       body: { action: "send_text", empresa_id: empresaId, phone, message },
     });
+    if (res.error) status = "error";
   } catch (e) {
+    status = "error";
     log("WhatsApp non-blocking error", (e as Error).message);
+  } finally {
+    // Always log to billing_notifications
+    try {
+      await supabase.from("billing_notifications").insert({
+        customer_email: customerEmail,
+        customer_phone: phone || "",
+        channel: "whatsapp",
+        tipo,
+        mensaje: message,
+        monto_centavos: monto_centavos || 0,
+        status,
+      });
+    } catch { /* silent */ }
   }
 }
 
@@ -202,7 +228,8 @@ Deno.serve(async (req) => {
         const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
         const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
         await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`,
+          "cobro_exitoso"
         );
 
         log("Subscription activated", { empresaId, subscriptionId });
@@ -251,7 +278,8 @@ Deno.serve(async (req) => {
           const monto = invoice.amount_paid ? (invoice.amount_paid / 100).toLocaleString() : "N/A";
           const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
           await sendWhatsApp(supabase, sub.empresa_id,
-            `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+            `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`,
+            "cobro_exitoso", undefined, invoice.amount_paid || 0
           );
 
           log("Invoice paid → subscription renewed", { subId, empresaId: sub.empresa_id });
@@ -291,7 +319,8 @@ Deno.serve(async (req) => {
         const moneda = (charge.currency || "mxn").toUpperCase();
 
         await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 👋\nNo pudimos procesar tu pago de suscripción para *${empresaNombre || "tu empresa"}*.\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n🔄 *¿Qué puedes hacer?*\n1️⃣ Verifica que tu tarjeta tenga fondos\n2️⃣ Actualiza tu método de pago desde la app\n3️⃣ Si persiste, contacta a tu banco`
+          `¡Hola! 👋\nNo pudimos procesar tu pago de suscripción para *${empresaNombre || "tu empresa"}*.\n💰 *Monto:* $${monto} ${moneda}\n❌ *Motivo:* ${errorMsg}\n🔄 *¿Qué puedes hacer?*\n1️⃣ Verifica que tu tarjeta tenga fondos\n2️⃣ Actualiza tu método de pago desde la app\n3️⃣ Si persiste, contacta a tu banco`,
+          "cobro_fallido", undefined, charge.amount || 0
         );
 
         log("Charge failed → WhatsApp sent", { empresaId, errorCode });
@@ -309,7 +338,8 @@ Deno.serve(async (req) => {
         const { empresaId, empresaNombre } = await getEmpresaByStripeSubId(supabase, sub.id);
         if (empresaId) {
           await sendWhatsApp(supabase, empresaId,
-            `¡Hola! ⚠️\nLa suscripción de *${empresaNombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`
+            `¡Hola! ⚠️\nLa suscripción de *${empresaNombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`,
+            "suspension"
           );
         }
 
