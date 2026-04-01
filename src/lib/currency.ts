@@ -50,6 +50,15 @@ export function formatCurrency(value: number | null | undefined, code?: string |
 }
 
 /**
+ * Format a number with max 2 decimal places for display (no currency symbol).
+ * Use this instead of raw .toLocaleString() for monetary values.
+ */
+export function fmtMoney(value: number | null | undefined): string {
+  if (value == null) return '0';
+  return Number(value).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+/**
  * Get just the currency symbol for inline use.
  */
 export function currencySymbol(code?: string | null): string {
