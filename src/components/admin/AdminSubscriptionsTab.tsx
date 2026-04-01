@@ -47,6 +47,7 @@ export default function AdminSubscriptionsTab() {
   const [editForm, setEditForm] = useState({
     plan_id: '', max_usuarios: 3, status: 'trial',
     current_period_start: '', current_period_end: '', trial_ends_at: '',
+    descuento_porcentaje: 0,
   });
 
   // Create dialog
@@ -100,6 +101,7 @@ export default function AdminSubscriptionsTab() {
       current_period_start: sub.current_period_start?.split('T')[0] || '',
       current_period_end: sub.current_period_end?.split('T')[0] || '',
       trial_ends_at: sub.trial_ends_at?.split('T')[0] || '',
+      descuento_porcentaje: (sub as any).descuento_porcentaje || 0,
     });
   }
 
@@ -109,6 +111,7 @@ export default function AdminSubscriptionsTab() {
       plan_id: editForm.plan_id || null,
       max_usuarios: editForm.max_usuarios,
       status: editForm.status,
+      descuento_porcentaje: editForm.descuento_porcentaje || 0,
       updated_at: new Date().toISOString(),
     };
     if (editForm.current_period_start) payload.current_period_start = editForm.current_period_start;
@@ -217,7 +220,12 @@ export default function AdminSubscriptionsTab() {
                   return (
                     <TableRow key={sub.id}>
                       <TableCell className="font-medium">{sub.empresas?.nombre || '—'}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{sub.subscription_plans?.nombre || 'Sin plan'}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {sub.subscription_plans?.nombre || 'Sin plan'}
+                        {(sub as any).descuento_porcentaje > 0 && (
+                          <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">-{(sub as any).descuento_porcentaje}%</Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={STATUS_MAP[sub.status]?.v || 'outline'}>
                           {STATUS_MAP[sub.status]?.l || sub.status}
@@ -296,10 +304,17 @@ export default function AdminSubscriptionsTab() {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Máx. usuarios</Label>
-              <Input type="number" min={1} value={editForm.max_usuarios}
-                onChange={e => setEditForm(f => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} className="h-9" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1"><Users className="h-3.5 w-3.5" /> Máx. usuarios</Label>
+                <Input type="number" min={1} value={editForm.max_usuarios}
+                  onChange={e => setEditForm(f => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} className="h-9" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Descuento %</Label>
+                <Input type="number" min={0} max={100} value={editForm.descuento_porcentaje}
+                  onChange={e => setEditForm(f => ({ ...f, descuento_porcentaje: parseFloat(e.target.value) || 0 }))} className="h-9" />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
