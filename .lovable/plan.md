@@ -1,55 +1,55 @@
 
 
-## Problem
+## Reestructura de la página "Mi Suscripción"
 
-The `togglePermiso` function creates optimistic records with fake IDs (`opt-...`). When the user clicks quickly:
-1. First click: creates `opt-ventas-ver` → upsert fires in background
-2. Second click: finds `opt-ventas-ver`, sees `id.startsWith('opt-')` is true → goes to upsert branch again
-3. The upsert response replaces the record with real DB data, but timing issues cause state to get out of sync
-4. When "Todo" is clicked, `toggleAllGroup` fetches fresh data from DB which may not include records still in-flight
+### Problemas actuales
+1. El botón de "Pagar" factura pendiente está enterrado en la tabla de historial al fondo — difícil de ver
+2. La sección "Elige tu plan" muestra planes como si fueran productos separados, cuando en realidad solo cambia la frecuencia de cobro (mensual/semestral/anual)
+3. No queda claro que el plan completo debe ser uno solo (no puede mezclar mensual con semestral)
 
-Additionally, `togglePermiso` doesn't check `savingPermisos`, so individual clicks during bulk operations cause conflicts.
+### Cambios propuestos
 
-## Fix
+**1. Banner de factura pendiente arriba (justo después del status)**
+- Si hay facturas con estado `pendiente`, mostrar un banner prominente con el monto y botón "Pagar ahora" inmediatamente después del status banner (antes de cualquier otra sección)
+- Estilo llamativo con borde amber/rojo y botón grande
 
-Replace `togglePermiso` with the approach from the technical advisor — use a deterministic synthetic ID (`roleId:modulo:accion`) for optimistic entries, do the upsert, then patch state with the real DB record. Also add the `savingPermisos` guard.
+**2. Reestructurar "Elige tu plan" → "Tu plan y usuarios"**
+- Mostrar primero el número de usuarios actuales con controles +/- para ajustar
+- Debajo, selector de frecuencia de cobro (Mensual / Semestral / Anual) como tabs o radio buttons — esto aplica a TODO el plan, no se mezcla
+- Mostrar el cálculo en tiempo real: `X usuarios × $Y/mes = $Z total/mes`
+- El botón "Agregar al pedido" refleja la configuración completa
 
-### Changes in `src/pages/UsuariosPage.tsx` (lines 175-198)
+**3. Lógica unificada de plan**
+- Al elegir frecuencia, se aplica a todos los usuarios por igual
+- No se permite tener usuarios en diferentes frecuencias
 
-Replace `togglePermiso` with:
+### Archivos a modificar
+- `src/pages/MiSuscripcionPage.tsx` — reestructurar layout completo
 
-```typescript
-const togglePermiso = async (roleId: string, modulo: string, accion: string) => {
-  if (savingPermisos) return;
-  const current = permisos.find(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion)?.permitido ?? false;
-  const permitido = !current;
-
-  // Optimistic update with deterministic key (not random temp ID)
-  setPermisos(prev => {
-    const i = prev.findIndex(p => p.role_id === roleId && p.modulo === modulo && p.accion === accion);
-    if (i >= 0) return prev.map((p, idx) => idx === i ? { ...p, permitido } : p);
-    return [...prev, { id: `${roleId}:${modulo}:${accion}`, role_id: roleId, modulo, accion, permitido }];
-  });
-
-  // Upsert using the DB unique constraint, then patch state with real record
-  const { data, error } = await supabase
-    .from('role_permisos')
-    .upsert({ role_id: roleId, modulo, accion, permitido }, { onConflict: 'role_id,modulo,accion' })
-    .select('id, role_id, modulo, accion, permitido')
-    .single();
-
-  if (!error && data) {
-    setPermisos(prev => prev.map(p =>
-      (p.role_id === roleId && p.modulo === modulo && p.accion === accion) ? data : p
-    ));
-  }
-  notifyPermisosChanged();
-};
+### Estructura visual resultante
+```text
+┌──────────────────────────────────────┐
+│ Mi Suscripción                       │
+├──────────────────────────────────────┤
+│ [Status Banner: Pago pendiente]      │
+│  3 USUARIOS  |  0 TIMBRES           │
+├──────────────────────────────────────┤
+│ ⚠️ Factura pendiente: $900 MXN       │
+│          [  Pagar ahora  ]           │
+├──────────────────────────────────────┤
+│ Tu plan                              │
+│ Usuarios: [-] 3 [+]                  │
+│                                      │
+│ Frecuencia:                          │
+│ [Mensual $300] [Semestral $270]      │
+│ [Anual $255]                         │
+│                                      │
+│ Total: 3 × $300 = $900/mes           │
+│          [ Agregar al pedido ]       │
+├──────────────────────────────────────┤
+│ Timbres CFDI (sin cambios)           │
+├──────────────────────────────────────┤
+│ Historial de facturas                │
+└──────────────────────────────────────┘
 ```
-
-Key differences from current code:
-- **Deterministic ID** (`roleId:modulo:accion`) instead of `opt-modulo-accion` — prevents duplicate optimistic entries
-- **No branching** on `id.startsWith('opt-')` — always upserts, always works
-- **Patches real ID back** from `.select().single()` so subsequent clicks use the real DB ID
-- **`savingPermisos` guard** prevents conflicts with bulk operations
 
