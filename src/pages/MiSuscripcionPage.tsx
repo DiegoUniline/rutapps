@@ -188,7 +188,7 @@ export default function MiSuscripcionPage() {
       return {
         amount: 0,
         label: 'Reducción de plan',
-        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString()} MXN/${periodoLabel.toLowerCase()}`,
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/${periodoLabel.toLowerCase()}`,
         isDowngrade: true,
         totalPeriodo: newTotalPeriodo,
       };
@@ -204,15 +204,15 @@ export default function MiSuscripcionPage() {
     if (hasPendingInvoice) {
       // Cancel pending invoice, charge new full period
       chargeAmount = newTotalPeriodo;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN\nSe cancela factura pendiente de $${pendingTotal.toLocaleString()} y se genera la nueva.`;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN\nSe cancela factura pendiente de $${pendingTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })} y se genera la nueva.`;
     } else if (currentPlan && diff > 0) {
       // Proportional difference
       chargeAmount = diff;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN\nDiferencia vs plan actual: $${chargeAmount.toLocaleString()} MXN`;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN\nDiferencia vs plan actual: $${chargeAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
     } else {
       // First time / no current plan
       chargeAmount = newTotalPeriodo;
-      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN`;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN`;
     }
 
     return {
@@ -581,7 +581,7 @@ export default function MiSuscripcionPage() {
                     Tienes {pendingFacturas.length} factura{pendingFacturas.length > 1 ? 's' : ''} pendiente{pendingFacturas.length > 1 ? 's' : ''} de pago
                   </p>
                   <p className="text-lg font-black text-foreground">
-                    ${pendingFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString()} MXN
+                    ${pendingFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                   </p>
                 </div>
               </div>
@@ -655,23 +655,23 @@ export default function MiSuscripcionPage() {
                       )}
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div className="text-sm text-foreground">
-                        <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString()}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
+                        <strong>{currentUsuarios}</strong> usuarios × <strong>${effectivePrice.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
                         {hasAnyDiscount && (
                           <span className="block text-xs text-muted-foreground line-through">
-                            Sin descuento: ${totalSinDescuento.toLocaleString()} MXN
+                            Sin descuento: ${totalSinDescuento.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                           </span>
                         )}
                       </div>
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div>
                         <div className="text-lg font-black text-foreground">
-                          ${totalPeriodo.toLocaleString()} MXN
+                          ${totalPeriodo.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                         </div>
                         <div className="text-[10px] text-muted-foreground">
-                          ${totalMes.toLocaleString()} MXN/mes
+                          ${totalMes.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes
                           {hasAnyDiscount && (
                             <span className="ml-1 text-green-600 font-semibold">
-                              (ahorras ${(totalSinDescuento - totalPeriodo).toLocaleString()} MXN)
+                              (ahorras ${(totalSinDescuento - totalPeriodo).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN)
                             </span>
                           )}
                         </div>
@@ -729,7 +729,7 @@ export default function MiSuscripcionPage() {
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <span className="text-sm font-semibold text-foreground">{timbresPacks * 100} timbres = ${(timbresPacks * 100).toLocaleString()} MXN</span>
+                <span className="text-sm font-semibold text-foreground">{timbresPacks * 100} timbres = ${(timbresPacks * 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
                 <Button size="sm" className="ml-auto" onClick={addTimbresToCart}>
                   <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
                 </Button>
@@ -773,7 +773,7 @@ export default function MiSuscripcionPage() {
                             {format(new Date(f.periodo_inicio), 'dd MMM', { locale: es })} — {format(new Date(f.periodo_fin), 'dd MMM yy', { locale: es })}
                           </td>
                           <td className="py-2.5 px-2 text-right text-foreground">{f.num_usuarios}</td>
-                          <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString()}</td>
+                          <td className="py-2.5 px-2 text-right font-semibold text-foreground">${f.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>
                           <td className="py-2.5 px-2 text-center">
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${facturaStatusColor[f.estado] || 'bg-muted text-muted-foreground'}`}>
                               {facturaStatusLabel[f.estado] || f.estado}
@@ -829,7 +829,7 @@ export default function MiSuscripcionPage() {
                           <div className="text-[11px] text-muted-foreground">{item.detail}</div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-sm font-bold text-foreground">${(item.amount / 100).toLocaleString()}</span>
+                          <span className="text-sm font-bold text-foreground">${(item.amount / 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })}</span>
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeFromCart(item.type)}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -842,7 +842,7 @@ export default function MiSuscripcionPage() {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-muted-foreground">Total</span>
-                    <span className="text-xl font-black text-foreground">${(cartTotal / 100).toLocaleString()} MXN</span>
+                    <span className="text-xl font-black text-foreground">${(cartTotal / 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
                   </div>
 
                   <Button className="w-full h-12 text-base font-bold" size="lg" onClick={() => setShowPayMethod(true)}>
@@ -942,12 +942,12 @@ export default function MiSuscripcionPage() {
                     {totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
                   </div>
                   <div className="text-xl font-black text-foreground">
-                    ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString()} MXN
+                    ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
                   </div>
                 </div>
                 <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Equivalente a <strong className="text-foreground">${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes</strong>
+                  Equivalente a <strong className="text-foreground">${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN/mes</strong>
                 </div>
 
                 {hasChanges && updateCharge && (
@@ -959,7 +959,7 @@ export default function MiSuscripcionPage() {
                     ) : updateCharge.amount > 0 ? (
                       <div className="border border-primary/30 rounded-lg p-3 space-y-1">
                         <div className="text-sm font-semibold text-foreground">
-                          💳 Cobro por actualización: <span className="text-primary">${(updateCharge.amount / 100).toLocaleString()} MXN</span>
+                          💳 Cobro por actualización: <span className="text-primary">${(updateCharge.amount / 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         {pendingFacturas.length > 0 && (
                           <p className="text-xs text-amber-600">⚠️ Se cancelará tu factura pendiente y se genera una nueva.</p>
@@ -994,7 +994,7 @@ export default function MiSuscripcionPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>¿Cómo deseas pagar?</DialogTitle>
-            <DialogDescription>Total: ${(cartTotal / 100).toLocaleString()} MXN</DialogDescription>
+            <DialogDescription>Total: ${(cartTotal / 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-4">
             <button
@@ -1059,7 +1059,7 @@ export default function MiSuscripcionPage() {
               </div>
               <div className="pt-2 border-t border-blue-100 dark:border-blue-800">
                 <span className="text-xs text-muted-foreground">Monto: </span>
-                <span className="font-bold text-foreground text-lg">${(cartTotal / 100).toLocaleString()} MXN</span>
+                <span className="font-bold text-foreground text-lg">${(cartTotal / 100).toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN</span>
               </div>
             </div>
             <div className="space-y-1">
