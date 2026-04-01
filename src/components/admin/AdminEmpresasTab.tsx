@@ -214,10 +214,13 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                           {(() => {
                             const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
                             if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
+                            // Normalize to 1st of next month
+                            const d = new Date(endDate);
+                            const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
                             return (
                               <div className="text-xs">
-                                <div className="font-medium">{format(new Date(endDate), 'dd MMM yyyy', { locale: es })}</div>
-                                {new Date(endDate) < new Date() && (
+                                <div className="font-medium">{format(normalized, 'dd MMM yyyy', { locale: es })}</div>
+                                {normalized < new Date() && (
                                   <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
                                 )}
                               </div>
