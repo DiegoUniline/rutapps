@@ -118,6 +118,7 @@ import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
 import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
 import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
 import RutaEntregas from "@/pages/ruta/RutaEntregas";
+import RutaEntregaDetalle from "@/pages/ruta/RutaEntregaDetalle";
 import RutaDescarga from "@/pages/ruta/RutaDescarga";
 import RutaMapaPage from "@/pages/ruta/RutaMapaPage";
 import RutaNavegacionPage from "@/pages/ruta/RutaNavegacionPage";
