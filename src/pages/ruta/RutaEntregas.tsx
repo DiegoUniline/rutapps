@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
-import { Truck, ChevronRight, Package, MapPin, Navigation } from 'lucide-react';
+import { Truck, ChevronRight, Package, MapPin, Navigation, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fmtDate } from '@/lib/utils';
