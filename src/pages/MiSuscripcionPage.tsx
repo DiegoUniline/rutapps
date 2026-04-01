@@ -364,6 +364,13 @@ export default function MiSuscripcionPage() {
       const tgtPlan = newSelectedPlan || currentPlan;
       const tgtQty = totalNewUsers;
 
+      // Cancel pending invoices before updating
+      if (updateItem && pendingFacturas.length > 0) {
+        for (const f of pendingFacturas) {
+          await supabase.from('facturas').update({ estado: 'cancelada' }).eq('id', f.id);
+        }
+      }
+
       if (updateItem) {
         if (tgtPlan) {
           await supabase.functions.invoke('select-plan', {
