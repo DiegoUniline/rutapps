@@ -91,6 +91,7 @@ export default function MiSuscripcionPage() {
   // Payment dialogs
   const [showPayMethod, setShowPayMethod] = useState(false);
   const [showTransferInfo, setShowTransferInfo] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
@@ -618,152 +619,52 @@ export default function MiSuscripcionPage() {
         {/* Left: Plan + Timbres + History */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* ─── Tu plan actual ─── */}
-          {currentPlan && (
-            <Card className="border-primary/20">
-              <CardContent className="p-6">
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
-                  <Crown className="h-5 w-5 text-primary" /> Tu plan actual
-                </h2>
-                <div className="flex flex-wrap items-center gap-4 bg-primary/5 rounded-xl p-4">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
-                      {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
-                    </Badge>
-                  </div>
-                  <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                  <div className="text-sm text-foreground">
-                    <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
-                  </div>
-                  <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                  <div>
-                    <div className="text-lg font-black text-foreground">
-                      ${(currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+          {/* ─── Tu plan actual + Actualizar ─── */}
+          <Card className="border-primary/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
+                    <Crown className="h-5 w-5 text-primary" /> Tu plan actual
+                  </h2>
+                  {currentPlan ? (
+                    <div className="flex flex-wrap items-center gap-4 bg-primary/5 rounded-xl p-4">
+                      <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
+                        {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
+                      </Badge>
+                      <Separator orientation="vertical" className="h-8 hidden sm:block" />
+                      <div className="text-sm text-foreground">
+                        <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
+                      </div>
+                      <Separator orientation="vertical" className="h-8 hidden sm:block" />
+                      <div>
+                        <div className="text-lg font-black text-foreground">
+                          ${(currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* ─── Actualizar plan ─── */}
-          <Card>
-            <CardContent className="p-6 space-y-5">
-              <div>
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                  <RefreshCw className="h-5 w-5 text-primary" /> {currentPlan ? 'Actualizar plan' : 'Elige tu plan'}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  {currentPlan
-                    ? 'Cambia la frecuencia de cobro o ajusta el número de usuarios. Todo tu equipo comparte el mismo plan.'
-                    : 'Todos los usuarios de tu empresa comparten el mismo plan y frecuencia de cobro.'}
-                </p>
-              </div>
-
-              {/* Frequency selector */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Frecuencia de cobro</label>
-                <div className="grid sm:grid-cols-3 gap-3">
-                  {subPlans.map(plan => {
-                    const isPlanCurrent = currentPlan?.id === plan.id;
-                    const isSelected = selectedFreq === plan.periodo;
-                    return (
-                      <button
-                        key={plan.id}
-                        onClick={() => setSelectedFreq(plan.periodo)}
-                        className={`relative p-4 rounded-xl border-2 transition-all text-left ${
-                          isSelected
-                            ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                            : 'border-border hover:border-primary/30'
-                        }`}
-                      >
-                        {isPlanCurrent && (
-                          <span className="absolute -top-2.5 left-3 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            Actual
-                          </span>
-                        )}
-                        {plan.descuento_pct > 0 && !isPlanCurrent && (
-                          <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            {plan.descuento_pct}% desc.
-                          </span>
-                        )}
-                        <div className="text-sm font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
-                        <div className="text-2xl font-black text-foreground mt-1">${plan.precio_por_usuario}</div>
-                        <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Users control */}
-              <div>
-                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Número de usuarios</label>
-                <div className="flex flex-wrap items-center gap-4 bg-muted/30 rounded-xl p-4">
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(-(currentUsuarios - 3), q - 1))} disabled={totalNewUsers <= 3}>
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <div className="text-center min-w-[60px]">
-                      <div className="text-2xl font-black text-foreground">{totalNewUsers}</div>
-                      <div className="text-[10px] text-muted-foreground">usuarios</div>
-                    </div>
-                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => q + 1)}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {extraUsers !== 0 && (
-                    <span className="text-sm text-muted-foreground">
-                      {extraUsers > 0 ? `+${extraUsers} usuario${extraUsers > 1 ? 's' : ''} nuevo${extraUsers > 1 ? 's' : ''}` : `${extraUsers} usuario${extraUsers < -1 ? 's' : ''}`}
-                    </span>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Sin plan activo — elige uno para continuar.</p>
                   )}
                 </div>
+                <Button
+                  size="lg"
+                  className="h-12 text-base font-bold gap-2 shrink-0"
+                  onClick={() => {
+                    setExtraUsers(0);
+                    if (currentPlan) setSelectedFreq(currentPlan.periodo);
+                    setShowUpdateDialog(true);
+                  }}
+                >
+                  <RefreshCw className="h-5 w-5" />
+                  {currentPlan ? 'Actualizar plan' : 'Elegir plan'}
+                </Button>
               </div>
-
-              {/* Summary / action */}
-              {targetPlan && (
-                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="text-sm text-muted-foreground">
-                      <strong className="text-foreground">{totalNewUsers}</strong> usuarios × <strong className="text-foreground">${targetPlan.precio_por_usuario}</strong>/mes × <strong className="text-foreground">{targetPlan.meses}</strong> meses
-                      <span className="mx-1">·</span>
-                      Plan <strong className="text-foreground">{PERIODO_LABEL[targetPlan.periodo]}</strong>
-                    </div>
-                    <div className="text-lg font-black text-foreground">
-                      ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString()} MXN
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Equivalente a ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
-                  </div>
-
-                  {hasChanges && updateCharge && (
-                    <>
-                      {updateCharge.isDowngrade ? (
-                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
-                          ℹ️ {updateCharge.detail}
-                        </p>
-                      ) : updateCharge.amount > 0 ? (
-                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 whitespace-pre-line">
-                          💳 Cobro: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
-                          {pendingFacturas.length > 0 && (
-                            <span className="block mt-1 text-amber-600">⚠️ Se cancelará tu factura pendiente y se generará una nueva.</span>
-                          )}
-                        </p>
-                      ) : null}
-                      <Button size="lg" className="w-full h-11 font-bold" onClick={addUpdateToCart}>
-                        <ArrowRight className="h-4 w-4 mr-2" /> Actualizar plan
-                      </Button>
-                    </>
-                  )}
-                </div>
-              )}
             </CardContent>
           </Card>
-
           {/* Timbres Section */}
           <Card>
             <CardContent className="p-6">
@@ -923,6 +824,133 @@ export default function MiSuscripcionPage() {
           </Card>
         </div>
       </div>
+
+      {/* ─── Dialog: Actualizar plan ─── */}
+      <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-primary" /> {currentPlan ? 'Actualizar plan' : 'Elige tu plan'}
+            </DialogTitle>
+            <DialogDescription>
+              {currentPlan
+                ? 'Cambia la frecuencia de cobro o ajusta el número de usuarios.'
+                : 'Todos los usuarios comparten el mismo plan y frecuencia.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-2">
+            {/* Frequency selector */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Frecuencia de cobro</label>
+              <div className="grid grid-cols-3 gap-2">
+                {subPlans.map(plan => {
+                  const isPlanCurrent = currentPlan?.id === plan.id;
+                  const isSelected = selectedFreq === plan.periodo;
+                  return (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedFreq(plan.periodo)}
+                      className={`relative p-3 rounded-xl border-2 transition-all text-left ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                          : 'border-border hover:border-primary/30'
+                      }`}
+                    >
+                      {isPlanCurrent && (
+                        <span className="absolute -top-2.5 left-2 bg-green-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          Actual
+                        </span>
+                      )}
+                      {plan.descuento_pct > 0 && !isPlanCurrent && (
+                        <span className="absolute -top-2.5 right-2 bg-primary text-primary-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                          {plan.descuento_pct}% desc.
+                        </span>
+                      )}
+                      <div className="text-xs font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
+                      <div className="text-xl font-black text-foreground mt-0.5">${plan.precio_por_usuario}</div>
+                      <div className="text-[9px] text-muted-foreground">por usuario / mes</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Users control */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Número de usuarios</label>
+              <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(-(currentUsuarios - 3), q - 1))} disabled={totalNewUsers <= 3}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <div className="text-center min-w-[50px]">
+                    <div className="text-2xl font-black text-foreground">{totalNewUsers}</div>
+                    <div className="text-[10px] text-muted-foreground">usuarios</div>
+                  </div>
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => q + 1)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {extraUsers !== 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    {extraUsers > 0 ? `+${extraUsers} nuevo${extraUsers > 1 ? 's' : ''}` : `${extraUsers}`}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Summary */}
+            {targetPlan && (
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    {totalNewUsers} × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
+                  </div>
+                  <div className="text-lg font-black text-foreground">
+                    ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString()} MXN
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Equivalente a ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
+                </div>
+
+                {hasChanges && updateCharge && (
+                  <>
+                    {updateCharge.isDowngrade ? (
+                      <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                        ℹ️ {updateCharge.detail}
+                      </p>
+                    ) : updateCharge.amount > 0 ? (
+                      <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                        💳 Cobro: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
+                        {pendingFacturas.length > 0 && (
+                          <span className="block mt-1 text-amber-600">⚠️ Se cancelará tu factura pendiente y se genera una nueva.</span>
+                        )}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUpdateDialog(false)}>Cancelar</Button>
+            <Button
+              size="lg"
+              className="font-bold"
+              disabled={!hasChanges}
+              onClick={() => {
+                addUpdateToCart();
+                setShowUpdateDialog(false);
+              }}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" /> Confirmar cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ─── Dialog: Payment Method ─── */}
       <Dialog open={showPayMethod} onOpenChange={setShowPayMethod}>
