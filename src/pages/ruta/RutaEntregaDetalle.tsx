@@ -104,8 +104,9 @@ export default function RutaEntregaDetalle() {
   const marcarEntregado = async () => {
     setSaving(true);
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase.from('entregas')
-        .update({ status: 'hecho', validado_at: new Date().toISOString() })
+        .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
         .eq('id', id!);
       if (error) throw error;
       toast.success('¡Entrega completada!');
