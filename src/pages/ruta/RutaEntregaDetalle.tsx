@@ -75,8 +75,8 @@ export default function RutaEntregaDetalle() {
 
   const clienteId = (entrega as any)?.cliente_id;
   const { data: otrasPendientes } = useQuery({
-    queryKey: ['ruta-entrega-cuentas', clienteId, pedidoId],
-    enabled: !!clienteId && !!pedidoId,
+    queryKey: ['ruta-entrega-cuentas', clienteId],
+    enabled: !!clienteId,
     queryFn: async () => {
       const { data } = await supabase.from('ventas')
         .select('id, folio, fecha, total, saldo_pendiente')
@@ -119,34 +119,62 @@ export default function RutaEntregaDetalle() {
   };
 
   const getTicketData = (): TicketData | null => {
-    if (!venta) return null;
     const e = empresa as any;
+    if (!e) return null;
+    const empresaData = {
+      nombre: e?.nombre ?? '', rfc: e?.rfc ?? null, razon_social: e?.razon_social ?? null,
+      telefono: e?.telefono ?? null, direccion: e?.direccion ?? null, colonia: e?.colonia ?? null,
+      ciudad: e?.ciudad ?? null, estado: e?.estado ?? null, cp: e?.cp ?? null,
+      email: e?.email ?? null, logo_url: e?.logo_url ?? null, moneda: e?.moneda ?? 'MXN',
+      notas_ticket: e?.notas_ticket ?? null, ticket_campos: e?.ticket_campos ?? null,
+    };
+
+    if (venta) {
+      return {
+        empresa: empresaData,
+        folio: venta.folio ?? 'Sin folio',
+        fecha: fmtDate(venta.fecha),
+        clienteNombre,
+        lineas: ventaLineas.map((l: any) => ({
+          nombre: l.productos?.nombre ?? l.descripcion ?? '—',
+          cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0,
+          iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0,
+          descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
+          producto_id: l.producto_id,
+        })),
+        subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0,
+        ieps: (venta as any).ieps_total ?? 0, total: ventaTotal,
+        condicionPago: venta.condicion_pago,
+        metodoPago: (venta as any).metodo_pago ?? undefined,
+        saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
+        promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
+          descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id,
+        })),
+      };
+    }
+
+    // Fallback: build ticket from entrega lines
+    const entregaTotal = lineas.reduce((acc: number, l: any) => {
+      const precio = l.productos?.precio_principal ?? 0;
+      return acc + (precio * (l.cantidad_entregada || l.cantidad_pedida || 0));
+    }, 0);
+
     return {
-      empresa: {
-        nombre: e?.nombre ?? '', rfc: e?.rfc ?? null, razon_social: e?.razon_social ?? null,
-        telefono: e?.telefono ?? null, direccion: e?.direccion ?? null, colonia: e?.colonia ?? null,
-        ciudad: e?.ciudad ?? null, estado: e?.estado ?? null, cp: e?.cp ?? null,
-        email: e?.email ?? null, logo_url: e?.logo_url ?? null, moneda: e?.moneda ?? 'MXN',
-        notas_ticket: e?.notas_ticket ?? null, ticket_campos: e?.ticket_campos ?? null,
-      },
-      folio: venta.folio ?? 'Sin folio',
-      fecha: fmtDate(venta.fecha),
+      empresa: empresaData,
+      folio: entrega.folio ?? 'Sin folio',
+      fecha: fmtDate(entrega.fecha),
       clienteNombre,
-      lineas: ventaLineas.map((l: any) => ({
-        nombre: l.productos?.nombre ?? l.descripcion ?? '—',
-        cantidad: l.cantidad, precio: l.precio_unitario ?? 0, total: l.total ?? 0,
-        iva_monto: l.iva_monto ?? 0, ieps_monto: l.ieps_monto ?? 0,
-        descuento_pct: l.descuento_porcentaje ?? l.descuento_pct ?? 0,
-        producto_id: l.producto_id,
-      })),
-      subtotal: venta.subtotal ?? 0, iva: venta.iva_total ?? 0,
-      ieps: (venta as any).ieps_total ?? 0, total: ventaTotal,
-      condicionPago: venta.condicion_pago,
-      metodoPago: (venta as any).metodo_pago ?? undefined,
-      saldoNuevo: ventaSaldo > 0 ? ventaSaldo : undefined,
-      promociones: ((venta as any).venta_promociones ?? []).filter((p: any) => (p.descuento ?? 0) > 0).map((p: any) => ({
-        descripcion: p.descripcion ?? p.nombre ?? '', descuento: p.descuento ?? 0, producto_id: p.producto_id,
-      })),
+      lineas: lineas.map((l: any) => {
+        const precio = l.productos?.precio_principal ?? 0;
+        const cant = l.cantidad_entregada || l.cantidad_pedida || 0;
+        return {
+          nombre: l.productos?.nombre ?? '—',
+          cantidad: cant, precio, total: precio * cant,
+          iva_monto: 0, ieps_monto: 0, descuento_pct: 0,
+          producto_id: l.producto_id,
+        };
+      }),
+      subtotal: entregaTotal, iva: 0, ieps: 0, total: entregaTotal,
     };
   };
 
@@ -154,13 +182,13 @@ export default function RutaEntregaDetalle() {
 
   const handlePrintTicket = async () => {
     const td = getTicketData();
-    if (!td) { toast.error('No hay pedido asociado'); return; }
+    if (!td) { toast.error('No hay datos para imprimir'); return; }
     await printTicket(td, { ticketAncho });
   };
 
   const handleDownloadTicket = async () => {
     let td = getTicketData();
-    if (!td) { toast.error('No hay pedido asociado'); return; }
+    if (!td) { toast.error('No hay datos para descargar'); return; }
     if (td.empresa.logo_url && !td.empresa.logo_url.startsWith('data:')) {
       try {
         const resp = await fetch(td.empresa.logo_url, { mode: 'cors' });
@@ -200,12 +228,13 @@ export default function RutaEntregaDetalle() {
   };
 
   const handleWhatsAppSend = async () => {
-    if (!waPhone.trim() || !venta) return;
+    if (!waPhone.trim()) return;
+    const td = getTicketData();
+    if (!td) { toast.error('No hay datos'); return; }
     setSendingWA(true);
     try {
       const { sendReceiptWhatsApp } = await import('@/lib/whatsappReceipt');
-      const td = getTicketData()!;
-      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta.id });
+      const result = await sendReceiptWhatsApp({ data: td, empresaId: empresa?.id ?? '', phone: waPhone, referencia_id: venta?.id ?? id ?? '' });
       if (result.success) { toast.success('Enviado por WhatsApp'); setShowWADialog(false); } else toast.error(result.error || 'Error');
     } catch (err: any) { toast.error(err.message); }
     finally { setSendingWA(false); }
@@ -261,10 +290,10 @@ export default function RutaEntregaDetalle() {
       <div className="p-4 space-y-4 pb-28">
         <div className="grid grid-cols-5 gap-1">
           {[
-            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(cliente?.telefono ?? ''); setShowWADialog(true); }, disabled: !venta },
-            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadTicket, disabled: !venta },
-            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket, disabled: !venta },
-            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket, disabled: !venta },
+            { icon: MessageCircle, label: 'WhatsApp', color: 'text-[#25D366]', onClick: () => { setWaPhone(cliente?.telefono ?? ''); setShowWADialog(true); }, disabled: false },
+            { icon: Download, label: 'Descargar', color: 'text-primary', onClick: handleDownloadTicket, disabled: false },
+            { icon: Printer, label: 'Imprimir', color: 'text-primary', onClick: handlePrintTicket, disabled: false },
+            { icon: Share2, label: 'Compartir', color: 'text-primary', onClick: handleShareTicket, disabled: false },
             { icon: Receipt, label: 'Edo. Cuenta', color: 'text-primary', onClick: handleEstadoCuenta, disabled: !cliente },
           ].map(a => (
             <button key={a.label} onClick={a.onClick} disabled={a.disabled}
