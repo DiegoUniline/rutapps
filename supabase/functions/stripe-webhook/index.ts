@@ -340,8 +340,8 @@ Deno.serve(async (req) => {
           max_usuarios: qty,
           updated_at: new Date().toISOString(),
         };
-        if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
-        if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+        if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
+        if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
         await supabase.from("subscriptions").update(updateData).eq("stripe_subscription_id", sub.id);
 
