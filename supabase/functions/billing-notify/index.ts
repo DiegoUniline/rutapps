@@ -164,20 +164,20 @@ async function sendWA(
   return status === "sent";
 }
 
-/* ─── Check if already notified today ─── */
+/* ─── Check if already notified today (Mexico TZ) ─── */
 async function alreadyNotifiedToday(
   supabase: ReturnType<typeof createClient>,
   email: string,
   tipo: string
 ): Promise<boolean> {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const MX_TZ = "America/Mexico_City";
+  const todayMx = new Date().toLocaleDateString("en-CA", { timeZone: MX_TZ });
   const { count } = await supabase
     .from("billing_notifications")
     .select("id", { count: "exact", head: true })
     .eq("customer_email", email)
     .eq("tipo", tipo)
-    .gte("created_at", todayStart.toISOString());
+    .gte("created_at", `${todayMx}T00:00:00-06:00`);
   return (count ?? 0) > 0;
 }
 
