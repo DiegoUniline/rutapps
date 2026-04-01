@@ -331,6 +331,8 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     cuadre: {
                     totalContado, totalCredito,
                     cobrosEfectivo: cobrosPorMetodo['efectivo'] || 0,
+                    cobrosTransferencia: cobrosPorMetodo['transferencia'] || 0,
+                    cobrosTarjeta: cobrosPorMetodo['tarjeta'] || 0,
                     totalGastos, efectivoEsperado: efectivoSistema,
                     diferencia: Number(descarga.efectivo_entregado) - efectivoSistema,
                   },
