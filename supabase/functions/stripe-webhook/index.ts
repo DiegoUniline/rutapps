@@ -278,7 +278,8 @@ Deno.serve(async (req) => {
           const monto = invoice.amount_paid ? (invoice.amount_paid / 100).toLocaleString() : "N/A";
           const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
           await sendWhatsApp(supabase, sub.empresa_id,
-            `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+            `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`,
+            "cobro_exitoso", undefined, invoice.amount_paid || 0
           );
 
           log("Invoice paid → subscription renewed", { subId, empresaId: sub.empresa_id });
