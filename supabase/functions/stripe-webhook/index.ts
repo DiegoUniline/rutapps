@@ -41,7 +41,7 @@ function getErrorMessage(code?: string): string {
   return errorMap[code || ""] || "Error al procesar el pago";
 }
 
-const ADMIN_PHONE = "526523171035768";
+const ADMIN_PHONE = "523171035768";
 
 // ── Notify admin (super admin) about payment events ──
 async function notifyAdmin(supabase: any, message: string) {
