@@ -1,21 +1,17 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
-import { Truck, Check, Package, MapPin, Navigation } from 'lucide-react';
+import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { Truck, ChevronRight, Package, MapPin, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fmtDate } from '@/lib/utils';
-import { toast } from 'sonner';
 
 export default function RutaEntregas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
   const vendedorId = profile?.vendedor_id;
-  const { mutate: offlineMutate, isPending } = useOfflineMutation();
 
-  // Query entregas assigned to this vendedor's route with status cargado or en_ruta
-  const { data: allEntregas, refetch } = useOfflineQuery('entregas', {
+  const { data: allEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
   }, { enabled: !!empresa?.id, orderBy: 'fecha' });
 
@@ -26,7 +22,6 @@ export default function RutaEntregas() {
   const clienteMap = new Map((clientes ?? []).map((c: any) => [c.id, c]));
   const productoMap = new Map((productos ?? []).map((p: any) => [p.id, p]));
 
-  // Filter: entregas cargadas/en_ruta assigned to this vendedor
   const entregas = (allEntregas ?? [])
     .filter((e: any) =>
       (e.status === 'cargado' || e.status === 'en_ruta') &&
@@ -39,22 +34,10 @@ export default function RutaEntregas() {
         .map((l: any) => ({
           ...l,
           _productoNombre: productoMap.get(l.producto_id)?.nombre ?? '—',
-          _productoCodigo: productoMap.get(l.producto_id)?.codigo ?? '',
         }));
-      return { ...e, _cliente: cliente, _lineas: lineas };
+      const totalPiezas = lineas.reduce((acc: number, l: any) => acc + (l.cantidad_entregada || l.cantidad_pedida || 0), 0);
+      return { ...e, _cliente: cliente, _lineas: lineas, _totalPiezas: totalPiezas };
     });
-
-  const marcarEntregado = async (id: string) => {
-    const entrega = (allEntregas ?? []).find((e: any) => e.id === id) as any;
-    if (!entrega) return;
-    await offlineMutate('entregas', 'update', {
-      ...entrega,
-      status: 'hecho',
-      validado_at: new Date().toISOString(),
-    });
-    toast.success('¡Entrega completada!');
-    refetch();
-  };
 
   return (
     <div className="p-4 space-y-4">
@@ -82,16 +65,22 @@ export default function RutaEntregas() {
       )}
 
       {entregas.map((e: any) => (
-        <div key={e.id} className="bg-card border border-border rounded-2xl overflow-hidden">
+        <button key={e.id}
+          onClick={() => navigate(`/ruta/entregas/${e.id}`)}
+          className="w-full text-left bg-card border border-border rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
+        >
           <div className="p-4 space-y-2">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-[11px] font-mono text-muted-foreground">{e.folio}</p>
                 <p className="text-[15px] font-semibold text-foreground">{e._cliente?.nombre ?? '—'}</p>
               </div>
-              <Badge variant="outline" className="text-[10px] border-warning text-warning shrink-0">
-                {e.status === 'en_ruta' ? 'En ruta' : 'Cargado'}
-              </Badge>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Badge variant="outline" className="text-[10px] border-warning text-warning">
+                  {e.status === 'en_ruta' ? 'En ruta' : 'Cargado'}
+                </Badge>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+              </div>
             </div>
 
             {(e._cliente?.direccion || e._cliente?.colonia) && (
@@ -101,24 +90,12 @@ export default function RutaEntregas() {
               </div>
             )}
 
-            <p className="text-[11px] text-muted-foreground">{fmtDate(e.fecha)}</p>
-
-            <div className="bg-card rounded-xl p-3 space-y-1">
-              {e._lineas.map((l: any, i: number) => (
-                <div key={i} className="flex justify-between text-[12px]">
-                  <span className="text-foreground">{l._productoNombre}</span>
-                  <span className="font-medium text-foreground">{l.cantidad_entregada || l.cantidad_pedida}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-end pt-1">
-              <Button size="sm" className="rounded-xl" onClick={() => marcarEntregado(e.id)} disabled={isPending}>
-                <Check className="h-4 w-4 mr-1" /> Entregar
-              </Button>
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-muted-foreground">{fmtDate(e.fecha)}</p>
+              <p className="text-[12px] font-medium text-foreground">{e._totalPiezas} pza{e._totalPiezas !== 1 ? 's' : ''} · {e._lineas.length} línea{e._lineas.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
