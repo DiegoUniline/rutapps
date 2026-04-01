@@ -188,7 +188,7 @@ export default function RutaEntregaDetalle() {
 
   const handleDownloadTicket = async () => {
     let td = getTicketData();
-    if (!td) { toast.error('No hay pedido asociado'); return; }
+    if (!td) { toast.error('No hay datos para descargar'); return; }
     if (td.empresa.logo_url && !td.empresa.logo_url.startsWith('data:')) {
       try {
         const resp = await fetch(td.empresa.logo_url, { mode: 'cors' });
