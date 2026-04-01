@@ -6,6 +6,53 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { fmtDate } from '@/lib/utils';
 
+function EntregaCard({ e, navigate, delivered }: { e: any; navigate: (path: string) => void; delivered?: boolean }) {
+  const statusLabel = e.status === 'hecho' ? 'Entregado' : e.status === 'en_ruta' ? 'En ruta' : 'Cargado';
+  const statusClass = e.status === 'hecho'
+    ? 'border-green-600/60 text-green-600'
+    : 'border-warning text-warning';
+  return (
+    <button
+      onClick={() => navigate(`/ruta/entregas/${e.id}`)}
+      className={cn(
+        'w-full text-left bg-card border border-border rounded-2xl overflow-hidden active:scale-[0.98] transition-transform',
+        delivered && 'opacity-60'
+      )}
+    >
+      <div className="p-4 space-y-2">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[11px] font-mono text-muted-foreground">{e.folio}</p>
+            <p className="text-[15px] font-semibold text-foreground">{e._cliente?.nombre ?? '—'}</p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge variant="outline" className={cn('text-[10px]', statusClass)}>
+              {statusLabel}
+            </Badge>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+          </div>
+        </div>
+
+        {(e._cliente?.direccion || e._cliente?.colonia) && (
+          <div className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>{[e._cliente?.direccion, e._cliente?.colonia].filter(Boolean).join(', ')}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-muted-foreground">
+            {delivered && e.fecha_entrega
+              ? `Entregado ${fmtDate(e.fecha_entrega)}`
+              : fmtDate(e.fecha)}
+          </p>
+          <p className="text-[12px] font-medium text-foreground">{e._totalPiezas} pza{e._totalPiezas !== 1 ? 's' : ''} · {e._lineas.length} línea{e._lineas.length !== 1 ? 's' : ''}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export default function RutaEntregas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
