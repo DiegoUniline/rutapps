@@ -220,7 +220,12 @@ export default function AdminSubscriptionsTab() {
                   return (
                     <TableRow key={sub.id}>
                       <TableCell className="font-medium">{sub.empresas?.nombre || '—'}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{sub.subscription_plans?.nombre || 'Sin plan'}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {sub.subscription_plans?.nombre || 'Sin plan'}
+                        {(sub as any).descuento_porcentaje > 0 && (
+                          <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">-{(sub as any).descuento_porcentaje}%</Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={STATUS_MAP[sub.status]?.v || 'outline'}>
                           {STATUS_MAP[sub.status]?.l || sub.status}
