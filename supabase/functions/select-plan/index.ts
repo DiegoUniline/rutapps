@@ -195,7 +195,26 @@ Deno.serve(async (req) => {
           }
 
           const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-          const session = await stripe.checkout.sessions.create({
+
+          // Check for empresa discount
+          let discounts: any[] = [];
+          const { data: subDiscount } = await supabase
+            .from("subscriptions")
+            .select("descuento_porcentaje")
+            .eq("empresa_id", profile.empresa_id)
+            .maybeSingle();
+          const descPct = subDiscount?.descuento_porcentaje || 0;
+          if (descPct > 0) {
+            const coupon = await stripe.coupons.create({
+              percent_off: descPct,
+              duration: "forever",
+              name: `Descuento ${descPct}% - ${profile.empresa_id.slice(0, 8)}`,
+            });
+            discounts = [{ coupon: coupon.id }];
+            log("Applied discount coupon", { descPct, couponId: coupon.id });
+          }
+
+          const sessionParams: any = {
             customer: customerId,
             line_items: [{ price: plan.stripe_price_id, quantity: qty }],
             mode: "subscription",
@@ -206,7 +225,11 @@ Deno.serve(async (req) => {
             },
             success_url: `${origin}/dashboard?checkout=success`,
             cancel_url: `${origin}/mi-suscripcion?checkout=cancelled`,
-          });
+          };
+          if (discounts.length > 0) {
+            sessionParams.discounts = discounts;
+          }
+          const session = await stripe.checkout.sessions.create(sessionParams);
           stripeCheckoutUrl = session.url || "";
           log("Stripe checkout URL generated", { url: stripeCheckoutUrl.slice(0, 60) });
         }
