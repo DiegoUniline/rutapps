@@ -4,7 +4,7 @@ import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { Truck, ChevronRight, Package, MapPin, Navigation, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, cn } from '@/lib/utils';
 
 function EntregaCard({ e, navigate, delivered }: { e: any; navigate: (path: string) => void; delivered?: boolean }) {
   const statusLabel = e.status === 'hecho' ? 'Entregado' : e.status === 'en_ruta' ? 'En ruta' : 'Cargado';
