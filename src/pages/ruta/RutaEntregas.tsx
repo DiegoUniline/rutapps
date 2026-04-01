@@ -66,46 +66,35 @@ export default function RutaEntregas() {
         )}
       </div>
 
-      {entregas.length === 0 && (
+      {pendientes.length === 0 && entregados.length === 0 && (
         <div className="text-center py-16">
           <Package className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-muted-foreground text-sm">No tienes entregas pendientes</p>
         </div>
       )}
 
-      {entregas.map((e: any) => (
-        <button key={e.id}
-          onClick={() => navigate(`/ruta/entregas/${e.id}`)}
-          className="w-full text-left bg-card border border-border rounded-2xl overflow-hidden active:scale-[0.98] transition-transform"
-        >
-          <div className="p-4 space-y-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-[11px] font-mono text-muted-foreground">{e.folio}</p>
-                <p className="text-[15px] font-semibold text-foreground">{e._cliente?.nombre ?? '—'}</p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <Badge variant="outline" className="text-[10px] border-warning text-warning">
-                  {e.status === 'en_ruta' ? 'En ruta' : 'Cargado'}
-                </Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-              </div>
-            </div>
+      {pendientes.length === 0 && entregados.length > 0 && (
+        <div className="text-center py-8">
+          <CheckCircle2 className="h-10 w-10 mx-auto mb-3 text-green-500/50" />
+          <p className="text-muted-foreground text-sm">¡Todas las entregas completadas!</p>
+        </div>
+      )}
 
-            {(e._cliente?.direccion || e._cliente?.colonia) && (
-              <div className="flex items-start gap-1.5 text-[12px] text-muted-foreground">
-                <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                <span>{[e._cliente?.direccion, e._cliente?.colonia].filter(Boolean).join(', ')}</span>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] text-muted-foreground">{fmtDate(e.fecha)}</p>
-              <p className="text-[12px] font-medium text-foreground">{e._totalPiezas} pza{e._totalPiezas !== 1 ? 's' : ''} · {e._lineas.length} línea{e._lineas.length !== 1 ? 's' : ''}</p>
-            </div>
-          </div>
-        </button>
+      {pendientes.map((e: any) => (
+        <EntregaCard key={e.id} e={e} navigate={navigate} />
       ))}
+
+      {entregados.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 pt-2">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="text-[13px] font-semibold text-muted-foreground">Entregados ({entregados.length})</span>
+          </div>
+          {entregados.map((e: any) => (
+            <EntregaCard key={e.id} e={e} navigate={navigate} delivered />
+          ))}
+        </>
+      )}
     </div>
   );
 }
