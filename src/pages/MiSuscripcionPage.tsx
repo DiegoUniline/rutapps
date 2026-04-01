@@ -628,13 +628,23 @@ export default function MiSuscripcionPage() {
                     <Crown className="h-5 w-5 text-primary" /> Tu plan actual
                   </h2>
                   {currentPlan ? (
-                    <div className="flex flex-wrap items-center gap-4 bg-primary/5 rounded-xl p-4">
+                    <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border p-4">
                       <Badge variant="outline" className="text-sm font-bold border-primary text-primary px-3 py-1">
                         {PERIODO_LABEL[currentPlan.periodo] || currentPlan.nombre}
                       </Badge>
+                      {currentPlan.descuento_pct > 0 && (
+                        <Badge className="bg-green-600 text-white text-xs">
+                          {currentPlan.descuento_pct}% descuento aplicado
+                        </Badge>
+                      )}
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div className="text-sm text-foreground">
                         <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
+                        {currentPlan.descuento_pct > 0 && (
+                          <span className="block text-xs text-muted-foreground line-through">
+                            Precio sin descuento: ${(300 * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+                          </span>
+                        )}
                       </div>
                       <Separator orientation="vertical" className="h-8 hidden sm:block" />
                       <div>
@@ -643,6 +653,11 @@ export default function MiSuscripcionPage() {
                         </div>
                         <div className="text-[10px] text-muted-foreground">
                           ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                          {currentPlan.descuento_pct > 0 && (
+                            <span className="ml-1 text-green-600 font-semibold">
+                              (ahorras ${((300 - currentPlan.precio_por_usuario) * currentUsuarios * currentPlan.meses).toLocaleString()} MXN)
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
