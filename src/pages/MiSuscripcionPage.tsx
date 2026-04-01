@@ -51,7 +51,7 @@ const BANK_INFO = {
 };
 
 interface CartItem {
-  type: 'plan' | 'usuarios' | 'timbres';
+  type: 'actualizacion' | 'timbres';
   label: string;
   detail: string;
   amount: number;
