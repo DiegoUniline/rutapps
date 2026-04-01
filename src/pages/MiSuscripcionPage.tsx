@@ -665,7 +665,8 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
-          {/* Timbres Section */}
+          {/* Timbres Section — solo visible para super admin */}
+          {user?.email === 'diego.leon@uniline.mx' && (
           <Card>
             <CardContent className="p-6">
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
@@ -703,6 +704,7 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Invoice History */}
           {facturas.length > 0 && (
