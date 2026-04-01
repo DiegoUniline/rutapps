@@ -151,17 +151,17 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
         <div className="px-6 pb-3 flex flex-wrap gap-1.5">
           <button
             onClick={() => setStatusFilter('todos')}
-            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${statusFilter === 'todos' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === 'todos' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             Todos ({empresas.length})
           </button>
           {STATUS_ORDER.filter(s => statusCounts[s]).map(s => {
-            const info = STATUS_MAP[s] || { label: s, color: 'bg-muted text-muted-foreground' };
+            const info = STATUS_MAP[s] || { label: s, color: 'text-muted-foreground' };
             return (
               <button
                 key={s}
                 onClick={() => setStatusFilter(statusFilter === s ? 'todos' : s)}
-                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${statusFilter === s ? info.color + ' ring-2 ring-offset-1 ring-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors border ${statusFilter === s ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
               >
                 {info.label} ({statusCounts[s]})
               </button>
