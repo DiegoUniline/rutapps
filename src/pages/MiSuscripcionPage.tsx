@@ -440,8 +440,7 @@ export default function MiSuscripcionPage() {
   // Pending invoices
   const pendingFacturas = facturas.filter(f => f.estado === 'pendiente');
 
-  // Is frequency different from current?
-  const isFreqChange = selectedFreq && currentPlan && selectedFreq !== currentPlan.periodo;
+  const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
