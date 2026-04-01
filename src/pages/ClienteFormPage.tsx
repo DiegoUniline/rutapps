@@ -238,6 +238,9 @@ export default function ClienteFormPage() {
   const [starred, setStarred] = useState(false);
   const [capturingGps, setCapturingGps] = useState(false);
   const [parsingCsf, setParsingCsf] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState<'foto' | 'fachada' | null>(null);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const fachadaInputRef = useRef<HTMLInputElement>(null);
   const { data: allListasPrecios } = useAllListasPrecios(empresa?.id);
 
   // Pedido sugerido state
