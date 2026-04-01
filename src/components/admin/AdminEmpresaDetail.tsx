@@ -119,6 +119,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
         current_period_start: subRes.data.current_period_start?.split('T')[0] || '',
         current_period_end: subRes.data.current_period_end?.split('T')[0] || '',
         trial_ends_at: subRes.data.trial_ends_at?.split('T')[0] || '',
+        descuento_porcentaje: (subRes.data as any).descuento_porcentaje || 0,
       });
     }
 
@@ -161,6 +162,7 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
       plan_id: subForm.plan_id || null,
       max_usuarios: subForm.max_usuarios,
       status: subForm.status,
+      descuento_porcentaje: subForm.descuento_porcentaje || 0,
       updated_at: new Date().toISOString(),
     };
     if (subForm.current_period_start) payload.current_period_start = subForm.current_period_start;
@@ -560,6 +562,11 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Label className="text-sm">Máx. usuarios</Label>
                     <Input type="number" min={1} value={subForm.max_usuarios}
                       onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Descuento %</Label>
+                    <Input type="number" min={0} max={100} value={subForm.descuento_porcentaje}
+                      onChange={e => setSubForm((f: any) => ({ ...f, descuento_porcentaje: parseFloat(e.target.value) || 0 }))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm">Fin trial</Label>
