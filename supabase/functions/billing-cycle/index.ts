@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
 
       log("Subs to invoice", { count: subsToInvoice.length });
 
-      for (const sub of activeSubs || []) {
+      for (const sub of subsToInvoice) {
         // Get plan price
         let precioUnitario = 300; // default
         if (sub.plan_id) {
