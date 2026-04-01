@@ -1,7 +1,10 @@
 import { ArrowLeft } from 'lucide-react';
+import { useCallback } from 'react';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { STEPS, STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
+import { printTicket } from '@/lib/printTicketUtil';
+import type { TicketData } from '@/lib/ticketHtml';
 import { StepTipo } from './StepTipo';
 import { StepSinCompra } from './StepSinCompra';
 import { StepCliente } from './StepCliente';
@@ -12,6 +15,29 @@ import { StepPago } from './StepPago';
 
 export default function RutaNuevaVenta() {
   const h = useRutaVenta();
+
+  const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '80';
+
+  const handlePrintTicket = useCallback(async () => {
+    if (!h.ticketInfo) return;
+    const lineas = h.cart.map(item => {
+      const lineSub = item.precio_unitario * item.cantidad;
+      const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0;
+      const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0;
+      return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, total: lineSub + lineIva + lineIeps, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, esCambio: item.es_cambio, producto_id: item.producto_id };
+    });
+    const td: TicketData = {
+      empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, moneda: (h.empresa as any)?.moneda },
+      folio: h.ticketInfo.folio, fecha: h.ticketInfo.fecha, clienteNombre: h.clienteNombre,
+      lineas, subtotal: h.totals.subtotal, iva: h.totals.iva, ieps: h.totals.ieps, total: h.totals.total,
+      condicionPago: h.condicionPago, metodoPago: h.pagos.map(p => p.metodo_pago).join(', '),
+      montoRecibido: h.montoRecibidoNum, cambio: h.cambio,
+      saldoAnterior: h.saldoPendienteTotal, pagoAplicado: h.totalAplicarCuentas,
+      saldoNuevo: h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0),
+      promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+    };
+    await printTicket(td, { ticketAncho });
+  }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, ticketAncho]);
 
   if (h.ticketInfo) {
     return (
@@ -26,6 +52,7 @@ export default function RutaNuevaVenta() {
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
         promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
+        onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />
     );
