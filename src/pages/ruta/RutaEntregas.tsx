@@ -53,7 +53,7 @@ export default function RutaEntregas() {
       <div className="flex items-center gap-2">
         <Truck className="h-5 w-5 text-primary" />
         <h1 className="text-[18px] font-bold text-foreground">Por entregar</h1>
-        <Badge variant="secondary" className="text-[11px]">{entregas.length} pendientes</Badge>
+        <Badge variant="secondary" className="text-[11px]">{pendientes.length} pendientes</Badge>
         {entregas.length > 0 && (
           <Button
             size="sm"
