@@ -51,7 +51,7 @@ const BANK_INFO = {
 };
 
 interface CartItem {
-  type: 'plan' | 'usuarios' | 'timbres';
+  type: 'actualizacion' | 'timbres';
   label: string;
   detail: string;
   amount: number;
@@ -157,38 +157,74 @@ export default function MiSuscripcionPage() {
   const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || 3;
   const newSelectedPlan = subPlans.find(p => p.periodo === selectedFreq) || null;
 
-  // ─── Cart helpers ───
-  function addFreqChangeToCart() {
-    if (!newSelectedPlan || newSelectedPlan.id === currentPlan?.id) return;
-    const filtered = cart.filter(c => c.type !== 'plan');
-    const totalMes = newSelectedPlan.precio_por_usuario * currentUsuarios;
-    filtered.push({
-      type: 'plan',
-      label: `Cambiar a plan ${PERIODO_LABEL[newSelectedPlan.periodo] || newSelectedPlan.nombre}`,
-      detail: `${currentUsuarios} usuarios × $${newSelectedPlan.precio_por_usuario}/usuario/mes`,
-      amount: totalMes * 100,
-    });
-    setCart(filtered);
-    toast.success(`Cambio a plan ${PERIODO_LABEL[newSelectedPlan.periodo]} agregado al pedido`);
+  // ─── Derived update state ───
+  const targetPlan = newSelectedPlan || currentPlan;
+  const totalNewUsers = currentUsuarios + extraUsers;
+  const isFreqChange = selectedFreq && currentPlan && selectedFreq !== currentPlan.periodo;
+  const isUserChange = extraUsers !== 0;
+  const hasChanges = isFreqChange || isUserChange;
+
+  // Calculate proration
+  function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean } {
+    if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false };
+
+    const newTotalMes = targetPlan.precio_por_usuario * totalNewUsers;
+    const currentTotalMes = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios : 0;
+
+    // Determine months remaining in current period
+    const periodEnd = subData?.current_period_end;
+    let monthsRemaining = 1;
+    if (periodEnd) {
+      const now = new Date();
+      const end = new Date(periodEnd);
+      const diffMs = end.getTime() - now.getTime();
+      monthsRemaining = Math.max(1, Math.ceil(diffMs / (30.44 * 24 * 60 * 60 * 1000)));
+    }
+
+    const diffMes = newTotalMes - currentTotalMes;
+    const isDowngrade = diffMes < 0;
+
+    if (isDowngrade) {
+      // No refund — applies next period
+      return {
+        amount: 0,
+        label: 'Reducción de plan',
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalMes.toLocaleString()}/mes`,
+        isDowngrade: true,
+      };
+    }
+
+    // Charge the difference for remaining months
+    const chargeTotal = diffMes * monthsRemaining;
+    const parts: string[] = [];
+    if (isFreqChange) parts.push(`frecuencia a ${PERIODO_LABEL[targetPlan.periodo]}`);
+    if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
+    
+    return {
+      amount: Math.round(chargeTotal * 100),
+      label: `Actualizar plan${parts.length ? ': ' + parts.join(', ') : ''}`,
+      detail: `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes = $${newTotalMes.toLocaleString()}/mes${monthsRemaining > 1 ? ` · Cobro prorrateo: $${chargeTotal.toLocaleString()} (${monthsRemaining} meses restantes)` : ''}`,
+      isDowngrade: false,
+    };
   }
 
-  function addUsersToCart() {
-    if (extraUsers <= 0) return;
-    const plan = currentPlan || newSelectedPlan;
-    if (!plan) {
-      toast.error('Primero elige una frecuencia de cobro');
+  // ─── Cart helpers ───
+  function addUpdateToCart() {
+    if (!targetPlan || !hasChanges) return;
+    if (totalNewUsers < 3) {
+      toast.error('Mínimo 3 usuarios');
       return;
     }
-    const filtered = cart.filter(c => c.type !== 'usuarios');
-    const totalMes = plan.precio_por_usuario * extraUsers;
+    const charge = calcUpdateCharge();
+    const filtered = cart.filter(c => c.type !== 'actualizacion');
     filtered.push({
-      type: 'usuarios',
-      label: `Agregar ${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`,
-      detail: `$${plan.precio_por_usuario}/usuario/mes — plan ${PERIODO_LABEL[plan.periodo] || plan.nombre}`,
-      amount: totalMes * 100,
+      type: 'actualizacion',
+      label: charge.label,
+      detail: charge.detail,
+      amount: charge.amount,
     });
     setCart(filtered);
-    toast.success(`${extraUsers} usuario(s) agregado(s) al pedido`);
+    toast.success(charge.isDowngrade ? 'Cambio programado para el siguiente periodo' : 'Actualización agregada al pedido');
   }
 
   function addTimbresToCart() {
@@ -213,54 +249,50 @@ export default function MiSuscripcionPage() {
   async function handlePayWithCard() {
     setPaying(true);
     try {
-      const planItem = cart.find(c => c.type === 'plan');
-      const usersItem = cart.find(c => c.type === 'usuarios');
+      const updateItem = cart.find(c => c.type === 'actualizacion');
       const timbresItem = cart.find(c => c.type === 'timbres');
       let redirectUrl = '';
 
-      // Determine the target plan for checkout
-      const targetPlan = planItem ? newSelectedPlan : currentPlan;
-      const targetQty = currentUsuarios + extraUsers;
+      const tgtPlan = newSelectedPlan || currentPlan;
+      const tgtQty = totalNewUsers;
 
-      if (planItem || usersItem) {
-        if (!targetPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
+      if (updateItem) {
+        if (!tgtPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
 
         if (subData?.stripe_subscription_id) {
           // Update existing Stripe subscription
-          if (planItem) {
+          if (isFreqChange && tgtPlan) {
             const { data, error } = await supabase.functions.invoke('manage-subscription', {
-              body: { action: 'change_plan', new_price_id: targetPlan.stripe_price_id },
+              body: { action: 'change_plan', new_price_id: tgtPlan.stripe_price_id },
             });
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
           }
-          if (usersItem || (planItem && targetQty !== currentUsuarios)) {
+          if (tgtQty !== currentUsuarios) {
             await supabase.functions.invoke('manage-subscription', {
-              body: { action: 'update_quantity', new_quantity: targetQty },
+              body: { action: 'update_quantity', new_quantity: tgtQty },
             });
           }
-          // Update plan_id locally
-          if (planItem && newSelectedPlan) {
-            await supabase.from('subscriptions')
-              .update({ plan_id: newSelectedPlan.id, max_usuarios: targetQty, updated_at: new Date().toISOString() })
-              .eq('id', subData.id);
-          } else if (usersItem) {
-            await supabase.from('subscriptions')
-              .update({ max_usuarios: targetQty, updated_at: new Date().toISOString() })
-              .eq('id', subData.id);
-          }
+          // Update locally
+          await supabase.from('subscriptions')
+            .update({
+              plan_id: tgtPlan.id,
+              max_usuarios: tgtQty,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', subData.id);
           toast.success('Plan actualizado correctamente');
           setShowPayMethod(false);
           setCart([]);
+          setExtraUsers(0);
           loadData();
           return;
         } else {
           // No existing Stripe sub — select plan & create checkout
-          const planForCheckout = newSelectedPlan || currentPlan;
-          if (!planForCheckout?.stripe_price_id) throw new Error('Sin precio de Stripe configurado');
+          if (!tgtPlan?.stripe_price_id) throw new Error('Sin precio de Stripe configurado');
 
           const { data: spData, error: spError } = await supabase.functions.invoke('select-plan', {
-            body: { plan_id: planForCheckout.id, num_usuarios: targetQty },
+            body: { plan_id: tgtPlan.id, num_usuarios: tgtQty },
           });
           if (spError) throw spError;
           if (spData?.error) throw new Error(spData.error);
@@ -269,7 +301,7 @@ export default function MiSuscripcionPage() {
             redirectUrl = spData.checkout_url;
           } else {
             const { data, error } = await supabase.functions.invoke('create-checkout', {
-              body: { price_id: planForCheckout.stripe_price_id, quantity: targetQty, empresa_id: empresa?.id },
+              body: { price_id: tgtPlan.stripe_price_id, quantity: tgtQty, empresa_id: empresa?.id },
             });
             if (error) throw error;
             if (data?.error) throw new Error(data.error);
@@ -304,18 +336,16 @@ export default function MiSuscripcionPage() {
     if (!empresa?.id || !user) return;
     setPaying(true);
     try {
-      const planItem = cart.find(c => c.type === 'plan');
-      const usersItem = cart.find(c => c.type === 'usuarios');
+      const updateItem = cart.find(c => c.type === 'actualizacion');
       const timbresItem = cart.find(c => c.type === 'timbres');
       const concepto = cart.map(c => c.label).join(' + ');
-      const targetPlan = planItem ? newSelectedPlan : currentPlan;
-      const targetQty = currentUsuarios + extraUsers;
+      const tgtPlan = newSelectedPlan || currentPlan;
+      const tgtQty = totalNewUsers;
 
-      if (planItem || usersItem) {
-        const planForSelect = newSelectedPlan || currentPlan;
-        if (planForSelect) {
+      if (updateItem) {
+        if (tgtPlan) {
           await supabase.functions.invoke('select-plan', {
-            body: { plan_id: planForSelect.id, num_usuarios: targetQty },
+            body: { plan_id: tgtPlan.id, num_usuarios: tgtQty },
           });
         }
       }
@@ -323,13 +353,13 @@ export default function MiSuscripcionPage() {
       const { error } = await supabase.from('solicitudes_pago').insert({
         empresa_id: empresa.id,
         user_id: user.id,
-        tipo: (planItem || usersItem) ? 'suscripcion' : 'timbres',
+        tipo: updateItem ? 'suscripcion' : 'timbres',
         concepto,
         monto_centavos: cartTotal,
         metodo: 'transferencia',
         notas: transferNotes || null,
-        plan_price_id: targetPlan?.stripe_price_id || null,
-        cantidad_usuarios: (planItem || usersItem) ? targetQty : null,
+        plan_price_id: tgtPlan?.stripe_price_id || null,
+        cantidad_usuarios: updateItem ? tgtQty : null,
         cantidad_timbres: timbresItem ? timbresPacks * 100 : null,
       } as any);
 
@@ -410,8 +440,7 @@ export default function MiSuscripcionPage() {
   // Pending invoices
   const pendingFacturas = facturas.filter(f => f.estado === 'pendiente');
 
-  // Is frequency different from current?
-  const isFreqChange = selectedFreq && currentPlan && selectedFreq !== currentPlan.periodo;
+  const updateCharge = hasChanges ? calcUpdateCharge() : null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -586,146 +615,110 @@ export default function MiSuscripcionPage() {
             </Card>
           )}
 
-          {/* ─── Cambiar frecuencia de cobro ─── */}
+          {/* ─── Actualizar plan ─── */}
           <Card>
             <CardContent className="p-6 space-y-5">
               <div>
                 <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                  <RefreshCw className="h-5 w-5 text-primary" /> {currentPlan ? 'Cambiar frecuencia de cobro' : 'Elige tu plan'}
+                  <RefreshCw className="h-5 w-5 text-primary" /> {currentPlan ? 'Actualizar plan' : 'Elige tu plan'}
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   {currentPlan
-                    ? 'Cambia la frecuencia y se aplica a todos tus usuarios. Los planes con mayor duración tienen descuento.'
+                    ? 'Cambia la frecuencia de cobro o ajusta el número de usuarios. Todo tu equipo comparte el mismo plan.'
                     : 'Todos los usuarios de tu empresa comparten el mismo plan y frecuencia de cobro.'}
                 </p>
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-3">
-                {subPlans.map(plan => {
-                  const isCurrentPlan = currentPlan?.id === plan.id;
-                  const isSelected = selectedFreq === plan.periodo;
-                  const totalMes = plan.precio_por_usuario * currentUsuarios;
-                  return (
-                    <button
-                      key={plan.id}
-                      onClick={() => setSelectedFreq(plan.periodo)}
-                      className={`relative p-4 rounded-xl border-2 transition-all text-left ${
-                        isSelected
-                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                          : 'border-border hover:border-primary/30'
-                      }`}
-                    >
-                      {isCurrentPlan && (
-                        <span className="absolute -top-2.5 left-3 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          Plan actual
-                        </span>
-                      )}
-                      {plan.descuento_pct > 0 && !isCurrentPlan && (
-                        <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          {plan.descuento_pct}% desc.
-                        </span>
-                      )}
-                      <div className="text-sm font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
-                      <div className="text-2xl font-black text-foreground mt-1">${plan.precio_por_usuario}</div>
-                      <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
-                      <Separator className="my-2" />
-                      <div className="text-xs text-muted-foreground">
-                        {currentUsuarios} usuarios × ${plan.precio_por_usuario} = <strong className="text-foreground">${totalMes.toLocaleString()}/mes</strong>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Change frequency action */}
-              {isFreqChange && newSelectedPlan && (
-                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Cambiar de <strong className="text-foreground">{PERIODO_LABEL[currentPlan!.periodo]}</strong> a <strong className="text-foreground">{PERIODO_LABEL[newSelectedPlan.periodo]}</strong>
-                    </div>
-                    <div className="text-lg font-black text-foreground">
-                      {currentUsuarios} usuarios × ${newSelectedPlan.precio_por_usuario} = ${(newSelectedPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
-                    </div>
-                  </div>
-                  <Button size="lg" className="h-11 font-bold shrink-0" onClick={addFreqChangeToCart}>
-                    <ArrowRight className="h-4 w-4 mr-2" /> Cambiar plan
-                  </Button>
-                </div>
-              )}
-
-              {/* First-time plan selection (no current plan) */}
-              {!currentPlan && selectedFreq && newSelectedPlan && (
-                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Plan <strong className="text-foreground">{PERIODO_LABEL[newSelectedPlan.periodo]}</strong> — {currentUsuarios} usuarios
-                    </div>
-                    <div className="text-lg font-black text-foreground">
-                      ${(newSelectedPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
-                    </div>
-                  </div>
-                  <Button size="lg" className="h-11 font-bold shrink-0" onClick={addFreqChangeToCart}>
-                    <ShoppingCart className="h-4 w-4 mr-2" /> Agregar al pedido
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* ─── Agregar usuarios ─── */}
-          <Card>
-            <CardContent className="p-6 space-y-4">
+              {/* Frequency selector */}
               <div>
-                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                  <Users className="h-5 w-5 text-primary" /> Agregar usuarios
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Los nuevos usuarios se cobrarán con tu plan actual{currentPlan ? ` (${PERIODO_LABEL[currentPlan.periodo]})` : ''}.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4 bg-muted/30 rounded-xl p-4">
-                <span className="text-sm font-medium text-foreground shrink-0">Usuarios adicionales:</span>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(0, q - 1))} disabled={extraUsers <= 0}>
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={extraUsers}
-                    onChange={e => {
-                      const v = parseInt(e.target.value);
-                      if (!isNaN(v) && v >= 0) setExtraUsers(v);
-                      else if (e.target.value === '') setExtraUsers(0);
-                    }}
-                    className="w-16 h-9 text-center text-xl font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => q + 1)}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Frecuencia de cobro</label>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {subPlans.map(plan => {
+                    const isPlanCurrent = currentPlan?.id === plan.id;
+                    const isSelected = selectedFreq === plan.periodo;
+                    return (
+                      <button
+                        key={plan.id}
+                        onClick={() => setSelectedFreq(plan.periodo)}
+                        className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                          isSelected
+                            ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                            : 'border-border hover:border-primary/30'
+                        }`}
+                      >
+                        {isPlanCurrent && (
+                          <span className="absolute -top-2.5 left-3 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            Actual
+                          </span>
+                        )}
+                        {plan.descuento_pct > 0 && !isPlanCurrent && (
+                          <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {plan.descuento_pct}% desc.
+                          </span>
+                        )}
+                        <div className="text-sm font-bold text-foreground">{PERIODO_LABEL[plan.periodo] || plan.nombre}</div>
+                        <div className="text-2xl font-black text-foreground mt-1">${plan.precio_por_usuario}</div>
+                        <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
+                      </button>
+                    );
+                  })}
                 </div>
-                {extraUsers > 0 && (currentPlan || newSelectedPlan) && (
-                  <span className="text-sm text-muted-foreground">
-                    +${((currentPlan || newSelectedPlan)!.precio_por_usuario * extraUsers).toLocaleString()}/mes
-                  </span>
-                )}
               </div>
 
-              {extraUsers > 0 && (
-                <div className="flex justify-between items-center bg-primary/5 rounded-xl border border-primary/20 p-4">
-                  <div>
+              {/* Users control */}
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">Número de usuarios</label>
+                <div className="flex flex-wrap items-center gap-4 bg-muted/30 rounded-xl p-4">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => Math.max(-(currentUsuarios - 3), q - 1))} disabled={totalNewUsers <= 3}>
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <div className="text-center min-w-[60px]">
+                      <div className="text-2xl font-black text-foreground">{totalNewUsers}</div>
+                      <div className="text-[10px] text-muted-foreground">usuarios</div>
+                    </div>
+                    <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setExtraUsers(q => q + 1)}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {extraUsers !== 0 && (
+                    <span className="text-sm text-muted-foreground">
+                      {extraUsers > 0 ? `+${extraUsers} usuario${extraUsers > 1 ? 's' : ''} nuevo${extraUsers > 1 ? 's' : ''}` : `${extraUsers} usuario${extraUsers < -1 ? 's' : ''}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Summary / action */}
+              {targetPlan && (
+                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-sm text-muted-foreground">
-                      {extraUsers} usuario{extraUsers > 1 ? 's' : ''} × ${(currentPlan || newSelectedPlan)?.precio_por_usuario}/mes
+                      <strong className="text-foreground">{totalNewUsers}</strong> usuarios × <strong className="text-foreground">${targetPlan.precio_por_usuario}</strong>/mes
+                      <span className="mx-1">·</span>
+                      Plan <strong className="text-foreground">{PERIODO_LABEL[targetPlan.periodo]}</strong>
                     </div>
                     <div className="text-lg font-black text-foreground">
-                      +${((currentPlan || newSelectedPlan)!.precio_por_usuario * extraUsers).toLocaleString()} MXN/mes
+                      ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
                     </div>
                   </div>
-                  <Button size="lg" className="h-11 font-bold shrink-0" onClick={addUsersToCart}>
-                    <Plus className="h-4 w-4 mr-2" /> Agregar al pedido
-                  </Button>
+
+                  {hasChanges && updateCharge && (
+                    <>
+                      {updateCharge.isDowngrade ? (
+                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                          ℹ️ {updateCharge.detail}
+                        </p>
+                      ) : updateCharge.amount > 0 ? (
+                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                          💳 Cobro por diferencia: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
+                        </p>
+                      ) : null}
+                      <Button size="lg" className="w-full h-11 font-bold" onClick={addUpdateToCart}>
+                        <ArrowRight className="h-4 w-4 mr-2" /> Actualizar plan
+                      </Button>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>
