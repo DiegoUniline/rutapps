@@ -1,7 +1,10 @@
 import { ArrowLeft } from 'lucide-react';
+import { useCallback } from 'react';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { STEPS, STEP_LABELS } from './types';
 import { useRutaVenta } from './useRutaVenta';
+import { printTicket } from '@/lib/printTicketUtil';
+import type { TicketData } from '@/lib/ticketHtml';
 import { StepTipo } from './StepTipo';
 import { StepSinCompra } from './StepSinCompra';
 import { StepCliente } from './StepCliente';
