@@ -904,32 +904,35 @@ export default function MiSuscripcionPage() {
 
             {/* Summary */}
             {targetPlan && (
-              <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-2">
+              <div className="rounded-xl border border-border p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-sm text-muted-foreground">
-                    {totalNewUsers} × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
+                    {totalNewUsers} usuarios × ${targetPlan.precio_por_usuario}/mes × {targetPlan.meses} meses
                   </div>
-                  <div className="text-lg font-black text-foreground">
+                  <div className="text-xl font-black text-foreground">
                     ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString()} MXN
                   </div>
                 </div>
+                <Separator />
                 <div className="text-xs text-muted-foreground">
-                  Equivalente a ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
+                  Equivalente a <strong className="text-foreground">${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes</strong>
                 </div>
 
                 {hasChanges && updateCharge && (
                   <>
                     {updateCharge.isDowngrade ? (
-                      <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+                      <div className="text-xs text-muted-foreground border border-border rounded-lg p-3">
                         ℹ️ {updateCharge.detail}
-                      </p>
+                      </div>
                     ) : updateCharge.amount > 0 ? (
-                      <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
-                        💳 Cobro: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
+                      <div className="border border-primary/30 rounded-lg p-3 space-y-1">
+                        <div className="text-sm font-semibold text-foreground">
+                          💳 Cobro por actualización: <span className="text-primary">${(updateCharge.amount / 100).toLocaleString()} MXN</span>
+                        </div>
                         {pendingFacturas.length > 0 && (
-                          <span className="block mt-1 text-amber-600">⚠️ Se cancelará tu factura pendiente y se genera una nueva.</span>
+                          <p className="text-xs text-amber-600">⚠️ Se cancelará tu factura pendiente y se genera una nueva.</p>
                         )}
-                      </p>
+                      </div>
                     ) : null}
                   </>
                 )}
