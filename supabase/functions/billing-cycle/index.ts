@@ -74,6 +74,19 @@ Deno.serve(async (req) => {
       log("Subs to invoice", { count: subsToInvoice.length });
 
       for (const sub of subsToInvoice) {
+        // Skip if pending invoice already exists for this period
+        const { data: existingInv } = await supabase
+          .from("facturas")
+          .select("id")
+          .eq("suscripcion_id", sub.id)
+          .eq("periodo_inicio", today)
+          .in("estado", ["pendiente", "procesando"])
+          .limit(1);
+        if (existingInv && existingInv.length > 0) {
+          log("Skipped (existing invoice)", { empresa: sub.empresa_id });
+          continue;
+        }
+
         // Get plan price
         let precioUnitario = 300; // default
         if (sub.plan_id) {
