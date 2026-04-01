@@ -564,9 +564,35 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                       onChange={e => setSubForm((f: any) => ({ ...f, max_usuarios: parseInt(e.target.value) || 1 }))} />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Descuento %</Label>
-                    <Input type="number" min={0} max={100} value={subForm.descuento_porcentaje}
-                      onChange={e => setSubForm((f: any) => ({ ...f, descuento_porcentaje: parseFloat(e.target.value) || 0 }))} />
+                    <Label className="text-sm">Precio final por usuario</Label>
+                    {(() => {
+                      const selectedPlan = plans.find(p => p.id === subForm.plan_id);
+                      const precioBase = selectedPlan?.precio_por_usuario || 0;
+                      const precioConDescuento = precioBase * (1 - (subForm.descuento_porcentaje || 0) / 100);
+                      return (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">$</span>
+                            <Input
+                              type="number" min={0} max={precioBase || 99999} step={1}
+                              value={Math.round(precioConDescuento)}
+                              onChange={e => {
+                                const nuevo = parseFloat(e.target.value) || 0;
+                                const pct = precioBase > 0 ? Math.round(((precioBase - nuevo) / precioBase) * 10000) / 100 : 0;
+                                setSubForm((f: any) => ({ ...f, descuento_porcentaje: Math.max(0, Math.min(100, pct)) }));
+                              }}
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">/usr</span>
+                          </div>
+                          {subForm.descuento_porcentaje > 0 && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Base: ${precioBase} → <span className="text-primary font-medium">{subForm.descuento_porcentaje.toFixed(1)}% desc.</span>
+                              {subForm.max_usuarios > 0 && <> · Total: <span className="font-semibold">${Math.round(precioConDescuento * subForm.max_usuarios)}/mes</span></>}
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-sm">Fin trial</Label>
