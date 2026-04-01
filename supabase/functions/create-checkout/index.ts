@@ -18,12 +18,18 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } }
+    );
+
+    const anonClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!
     );
 
     const authHeader = req.headers.get("Authorization")!;
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const { data: userData, error: userError } = await anonClient.auth.getUser(token);
     if (userError || !userData.user?.email) throw new Error("No autenticado");
 
     const { price_id, quantity, empresa_id } = await req.json();
@@ -48,9 +54,31 @@ Deno.serve(async (req) => {
     const now = new Date();
     const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     
+    // Check for empresa discount
+    let discounts: any[] = [];
+    if (empresa_id) {
+      const { data: subData } = await supabase
+        .from("subscriptions")
+        .select("descuento_porcentaje")
+        .eq("empresa_id", empresa_id)
+        .maybeSingle();
+      
+      const descuento = subData?.descuento_porcentaje || 0;
+      if (descuento > 0) {
+        // Create a Stripe coupon for this specific discount
+        const coupon = await stripe.coupons.create({
+          percent_off: descuento,
+          duration: "forever",
+          name: `Descuento ${descuento}% - ${empresa_id.slice(0, 8)}`,
+        });
+        discounts = [{ coupon: coupon.id }];
+        console.log(`Applied ${descuento}% discount coupon: ${coupon.id}`);
+      }
+    }
+
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: any = {
       customer: customerId,
       line_items: [{ price: price_id, quantity }],
       mode: "subscription",
@@ -61,7 +89,13 @@ Deno.serve(async (req) => {
       },
       success_url: `${origin}/dashboard?checkout=success`,
       cancel_url: `${origin}/dashboard?checkout=cancelled`,
-    });
+    };
+
+    if (discounts.length > 0) {
+      sessionParams.discounts = discounts;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
