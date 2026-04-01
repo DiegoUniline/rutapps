@@ -56,12 +56,22 @@ Deno.serve(async (req) => {
 
     // ═══ PART 1: Generate monthly invoices (day 1) ═══
     if (isFirstOfMonth) {
+      // Include active, past_due, gracia, and expired trial subs
       const { data: activeSubs } = await supabase
         .from("subscriptions")
-        .select("id, empresa_id, max_usuarios, stripe_subscription_id, stripe_price_id, plan_id, descuento_porcentaje")
-        .in("status", ["active"]);
+        .select("id, empresa_id, max_usuarios, stripe_subscription_id, stripe_price_id, plan_id, descuento_porcentaje, status, trial_ends_at")
+        .in("status", ["active", "past_due", "gracia", "trial"]);
 
-      log("Active subs to invoice", { count: activeSubs?.length || 0 });
+      // Filter: active subs always, others only if trial already ended
+      const subsToInvoice = (activeSubs || []).filter(s => {
+        if (s.status === "active") return true;
+        if (s.status === "trial") {
+          return s.trial_ends_at && new Date(s.trial_ends_at) <= now;
+        }
+        return true; // past_due, gracia
+      });
+
+      log("Subs to invoice", { count: subsToInvoice.length });
 
       for (const sub of activeSubs || []) {
         // Get plan price
