@@ -187,99 +187,116 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                 <TableBody>
                   {sortedGroups.map(group => {
                     const groupInfo = STATUS_MAP[group.status] || { label: group.status, color: 'bg-muted text-muted-foreground', icon: AlertCircle };
-                    return group.items.map((e, idx) => {
-                    const saldo = e.timbres_saldo?.[0]?.saldo ?? 0;
-                    const sub = e.subscriptions?.[0];
-                    const status = sub?.status || 'sin_sub';
-                    const statusInfo = STATUS_MAP[status];
-                    const hasStripeCustomer = !!sub?.stripe_customer_id;
-                    const hasStripeSub = !!sub?.stripe_subscription_id;
-                    const usersCount = e.profiles?.length || 0;
-
+                    const GroupIcon = groupInfo.icon;
                     return (
-                      <TableRow key={e.id} className="cursor-pointer hover:bg-card" onClick={() => onSelectEmpresa?.(e.id)}>
-                        <TableCell>
-                          <div className="font-medium">{e.nombre}</div>
-                          <div className="text-[10px] text-muted-foreground">{usersCount} usuario{usersCount !== 1 ? 's' : ''}</div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-xs space-y-0.5">
-                            <div className="text-muted-foreground">{e.email || '—'}</div>
-                            <div className="text-muted-foreground">{e.telefono || '—'}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {statusInfo ? (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusInfo.color}`}>
-                              <statusInfo.icon className="h-3 w-3" />
-                              {statusInfo.label}
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-muted-foreground">Sin sub</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="font-mono font-semibold text-sm">{sub?.max_usuarios ?? '—'}</span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className={`font-mono font-semibold text-sm ${saldo > 0 ? 'text-primary' : 'text-destructive'}`}>
-                            {saldo}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            {hasStripeCustomer ? (
-                              <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
-                                <CreditCard className="h-3 w-3" />
-                                Cliente
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-muted text-muted-foreground">
-                                <XCircle className="h-3 w-3" />
-                                Sin Stripe
-                              </Badge>
-                            )}
-                            {hasStripeSub && (
-                              <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400">
-                                Sub
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
-                            if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
-                            // Normalize to 1st of next month
-                            const d = new Date(endDate);
-                            const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
-                            return (
-                              <div className="text-xs">
-                                <div className="font-medium">{format(normalized, 'dd MMM yyyy', { locale: es })}</div>
-                                {normalized < new Date() && (
-                                  <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
+                      <React.Fragment key={group.status}>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50 border-t-2 border-border">
+                          <TableCell colSpan={9} className="py-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${groupInfo.color}`}>
+                                <GroupIcon className="h-3 w-3" />
+                                {groupInfo.label}
+                              </span>
+                              <span className="text-xs text-muted-foreground font-medium">
+                                ({group.items.length})
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        {group.items.map(e => {
+                          const saldo = e.timbres_saldo?.[0]?.saldo ?? 0;
+                          const sub = e.subscriptions?.[0];
+                          const status = sub?.status || 'sin_sub';
+                          const statusInfo = STATUS_MAP[status];
+                          const hasStripeCustomer = !!sub?.stripe_customer_id;
+                          const hasStripeSub = !!sub?.stripe_subscription_id;
+                          const usersCount = e.profiles?.length || 0;
+                          return (
+                            <TableRow key={e.id} className="cursor-pointer hover:bg-card" onClick={() => onSelectEmpresa?.(e.id)}>
+                              <TableCell>
+                                <div className="font-medium">{e.nombre}</div>
+                                <div className="text-[10px] text-muted-foreground">{usersCount} usuario{usersCount !== 1 ? 's' : ''}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-xs space-y-0.5">
+                                  <div className="text-muted-foreground">{e.email || '—'}</div>
+                                  <div className="text-muted-foreground">{e.telefono || '—'}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {statusInfo ? (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusInfo.color}`}>
+                                    <statusInfo.icon className="h-3 w-3" />
+                                    {statusInfo.label}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-muted-foreground">Sin sub</span>
                                 )}
-                              </div>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {format(new Date(e.created_at), 'dd MMM yyyy', { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1" onClick={ev => ev.stopPropagation()}>
-                            <Button size="sm" variant="ghost" title="Agregar timbres" onClick={() => { setSelectedEmpresa(e); setShowAddTimbres(true); }}>
-                              <Stamp className="h-4 w-4 text-primary" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteEmpresa(e.id, e.nombre)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className="font-mono font-semibold text-sm">{sub?.max_usuarios ?? '—'}</span>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <span className={`font-mono font-semibold text-sm ${saldo > 0 ? 'text-primary' : 'text-destructive'}`}>
+                                  {saldo}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5">
+                                  {hasStripeCustomer ? (
+                                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">
+                                      <CreditCard className="h-3 w-3" />
+                                      Cliente
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-muted text-muted-foreground">
+                                      <XCircle className="h-3 w-3" />
+                                      Sin Stripe
+                                    </Badge>
+                                  )}
+                                  {hasStripeSub && (
+                                    <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400">
+                                      Sub
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {(() => {
+                                  const endDate = sub?.status === 'trial' ? sub?.trial_ends_at : sub?.current_period_end;
+                                  if (!endDate) return <span className="text-xs text-muted-foreground">—</span>;
+                                  const d = new Date(endDate);
+                                  const normalized = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
+                                  return (
+                                    <div className="text-xs">
+                                      <div className="font-medium">{format(normalized, 'dd MMM yyyy', { locale: es })}</div>
+                                      {normalized < new Date() && (
+                                        <span className="text-[10px] text-destructive font-semibold">VENCIDO</span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {format(new Date(e.created_at), 'dd MMM yyyy', { locale: es })}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1" onClick={ev => ev.stopPropagation()}>
+                                  <Button size="sm" variant="ghost" title="Agregar timbres" onClick={() => { setSelectedEmpresa(e); setShowAddTimbres(true); }}>
+                                    <Stamp className="h-4 w-4 text-primary" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => deleteEmpresa(e.id, e.nombre)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </React.Fragment>
                     );
-                  });
                   })}
+                </TableBody>
               </Table>
             </div>
           )}
