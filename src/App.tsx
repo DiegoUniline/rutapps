@@ -279,6 +279,7 @@ function AppRoutes() {
         <Route path="/conteo/:countId" element={<Suspense fallback={<PageLoader />}><ConteoFisicoPage /></Suspense>} />
         <Route path="*" element={<Navigate to="/ruta" replace />} />
       </Routes>
+      </>
     );
   }
 
