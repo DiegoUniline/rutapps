@@ -228,7 +228,8 @@ Deno.serve(async (req) => {
         const { data: empresa } = await supabase.from("empresas").select("nombre").eq("id", empresaId).single();
         const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
         await sendWhatsApp(supabase, empresaId,
-          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
+          `¡Hola! 🎉\nTu suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *activada* exitosamente.\n✅ *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`,
+          "cobro_exitoso"
         );
 
         log("Subscription activated", { empresaId, subscriptionId });
