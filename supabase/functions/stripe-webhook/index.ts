@@ -234,8 +234,8 @@ Deno.serve(async (req) => {
             status: "active",
             updated_at: new Date().toISOString(),
           };
-          if (periodStart) updateData.current_period_start = new Date(periodStart * 1000).toISOString();
-          if (periodEnd) updateData.current_period_end = new Date(periodEnd * 1000).toISOString();
+          if (periodStart) updateData.current_period_start = normalizePeriodStart(periodStart);
+            if (periodEnd) updateData.current_period_end = normalizePeriodEnd(periodEnd);
 
           await supabase.from("subscriptions").update(updateData).eq("id", sub.id);
 
@@ -247,9 +247,9 @@ Deno.serve(async (req) => {
               .eq("estado", "procesando");
           }
 
-          // WhatsApp
+          // WhatsApp — always show 1st of next month
           const monto = invoice.amount_paid ? (invoice.amount_paid / 100).toLocaleString() : "N/A";
-          const proximoCobro = new Date(stripeSub.current_period_end * 1000).toLocaleDateString("es-MX");
+          const proximoCobro = periodEnd ? new Date(normalizePeriodEnd(periodEnd)).toLocaleDateString("es-MX") : "el 1ro del siguiente mes";
           await sendWhatsApp(supabase, sub.empresa_id,
             `¡Hola! 🎉\nTu pago de suscripción de *${empresaNombre || "tu empresa"}* se procesó correctamente.\n✅ *Monto cobrado:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\nGracias por confiar en *Uniline*. ¡Sigue creciendo tu negocio! 🚀`
           );
