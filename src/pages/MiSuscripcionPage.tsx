@@ -694,7 +694,6 @@ export default function MiSuscripcionPage() {
                   <RefreshCw className="h-5 w-5" />
                   {currentPlan ? 'Actualizar plan' : 'Elegir plan'}
                 </Button>
-                </Button>
               </div>
             </CardContent>
           </Card>
