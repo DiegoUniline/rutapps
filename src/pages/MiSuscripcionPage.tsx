@@ -164,47 +164,62 @@ export default function MiSuscripcionPage() {
   const isUserChange = extraUsers !== 0;
   const hasChanges = isFreqChange || isUserChange;
 
-  // Calculate proration
-  function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean } {
-    if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false };
+  // Calculate what to charge for the update
+  function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean; totalPeriodo: number } {
+    if (!targetPlan) return { amount: 0, label: '', detail: '', isDowngrade: false, totalPeriodo: 0 };
 
-    const newTotalMes = targetPlan.precio_por_usuario * totalNewUsers;
-    const currentTotalMes = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios : 0;
+    // Full period cost for new config
+    const newTotalPeriodo = targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses;
+    // What the user already paid this period (from last paid factura or current plan)
+    const currentTotalPeriodo = currentPlan ? currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses : 0;
 
-    // Determine months remaining in current period
-    const periodEnd = subData?.current_period_end;
-    let monthsRemaining = 1;
-    if (periodEnd) {
-      const now = new Date();
-      const end = new Date(periodEnd);
-      const diffMs = end.getTime() - now.getTime();
-      monthsRemaining = Math.max(1, Math.ceil(diffMs / (30.44 * 24 * 60 * 60 * 1000)));
-    }
+    const diff = newTotalPeriodo - currentTotalPeriodo;
+    const isDowngrade = diff < 0;
 
-    const diffMes = newTotalMes - currentTotalMes;
-    const isDowngrade = diffMes < 0;
+    const parts: string[] = [];
+    if (isFreqChange) parts.push(`${PERIODO_LABEL[targetPlan.periodo]}`);
+    if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
+    if (isUserChange && extraUsers < 0) parts.push(`${extraUsers} usuario${extraUsers < -1 ? 's' : ''}`);
+
+    const periodoLabel = PERIODO_LABEL[targetPlan.periodo] || targetPlan.periodo;
 
     if (isDowngrade) {
-      // No refund — applies next period
       return {
         amount: 0,
         label: 'Reducción de plan',
-        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalMes.toLocaleString()}/mes`,
+        detail: `Se aplica al siguiente periodo. Nuevo total: $${newTotalPeriodo.toLocaleString()} MXN/${periodoLabel.toLowerCase()}`,
         isDowngrade: true,
+        totalPeriodo: newTotalPeriodo,
       };
     }
 
-    // Charge the difference for remaining months
-    const chargeTotal = diffMes * monthsRemaining;
-    const parts: string[] = [];
-    if (isFreqChange) parts.push(`frecuencia a ${PERIODO_LABEL[targetPlan.periodo]}`);
-    if (isUserChange && extraUsers > 0) parts.push(`+${extraUsers} usuario${extraUsers > 1 ? 's' : ''}`);
-    
+    // If user has a pending invoice, we'll cancel it and charge the full new amount
+    const hasPendingInvoice = pendingFacturas.length > 0;
+    const pendingTotal = pendingFacturas.reduce((s, f) => s + f.total, 0);
+
+    let chargeAmount: number;
+    let chargeDetail: string;
+
+    if (hasPendingInvoice) {
+      // Cancel pending invoice, charge new full period
+      chargeAmount = newTotalPeriodo;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN\nSe cancela factura pendiente de $${pendingTotal.toLocaleString()} y se genera la nueva.`;
+    } else if (currentPlan && diff > 0) {
+      // Proportional difference
+      chargeAmount = diff;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN\nDiferencia vs plan actual: $${chargeAmount.toLocaleString()} MXN`;
+    } else {
+      // First time / no current plan
+      chargeAmount = newTotalPeriodo;
+      chargeDetail = `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes × ${targetPlan.meses} meses = $${newTotalPeriodo.toLocaleString()} MXN`;
+    }
+
     return {
-      amount: Math.round(chargeTotal * 100),
+      amount: Math.round(chargeAmount * 100),
       label: `Actualizar plan${parts.length ? ': ' + parts.join(', ') : ''}`,
-      detail: `${totalNewUsers} usuarios × $${targetPlan.precio_por_usuario}/mes = $${newTotalMes.toLocaleString()}/mes${monthsRemaining > 1 ? ` · Cobro prorrateo: $${chargeTotal.toLocaleString()} (${monthsRemaining} meses restantes)` : ''}`,
+      detail: chargeDetail,
       isDowngrade: false,
+      totalPeriodo: newTotalPeriodo,
     };
   }
 
@@ -257,6 +272,13 @@ export default function MiSuscripcionPage() {
       const tgtQty = totalNewUsers;
 
       if (updateItem) {
+        // Cancel pending invoices before updating
+        if (pendingFacturas.length > 0) {
+          for (const f of pendingFacturas) {
+            await supabase.from('facturas').update({ estado: 'cancelada' }).eq('id', f.id);
+          }
+        }
+
         if (!tgtPlan?.stripe_price_id) throw new Error('El plan seleccionado no tiene precio configurado en Stripe');
 
         if (subData?.stripe_subscription_id) {
@@ -341,6 +363,13 @@ export default function MiSuscripcionPage() {
       const concepto = cart.map(c => c.label).join(' + ');
       const tgtPlan = newSelectedPlan || currentPlan;
       const tgtQty = totalNewUsers;
+
+      // Cancel pending invoices before updating
+      if (updateItem && pendingFacturas.length > 0) {
+        for (const f of pendingFacturas) {
+          await supabase.from('facturas').update({ estado: 'cancelada' }).eq('id', f.id);
+        }
+      }
 
       if (updateItem) {
         if (tgtPlan) {
@@ -604,11 +633,16 @@ export default function MiSuscripcionPage() {
                   </div>
                   <Separator orientation="vertical" className="h-8 hidden sm:block" />
                   <div className="text-sm text-foreground">
-                    <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/usuario/mes
+                    <strong>{currentUsuarios}</strong> usuarios × <strong>${currentPlan.precio_por_usuario}</strong>/mes × <strong>{currentPlan.meses}</strong> meses
                   </div>
                   <Separator orientation="vertical" className="h-8 hidden sm:block" />
-                  <div className="text-lg font-black text-foreground">
-                    ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                  <div>
+                    <div className="text-lg font-black text-foreground">
+                      ${(currentPlan.precio_por_usuario * currentUsuarios * currentPlan.meses).toLocaleString()} MXN
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      ${(currentPlan.precio_por_usuario * currentUsuarios).toLocaleString()} MXN/mes
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -694,13 +728,16 @@ export default function MiSuscripcionPage() {
                 <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="text-sm text-muted-foreground">
-                      <strong className="text-foreground">{totalNewUsers}</strong> usuarios × <strong className="text-foreground">${targetPlan.precio_por_usuario}</strong>/mes
+                      <strong className="text-foreground">{totalNewUsers}</strong> usuarios × <strong className="text-foreground">${targetPlan.precio_por_usuario}</strong>/mes × <strong className="text-foreground">{targetPlan.meses}</strong> meses
                       <span className="mx-1">·</span>
                       Plan <strong className="text-foreground">{PERIODO_LABEL[targetPlan.periodo]}</strong>
                     </div>
                     <div className="text-lg font-black text-foreground">
-                      ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
+                      ${(targetPlan.precio_por_usuario * totalNewUsers * targetPlan.meses).toLocaleString()} MXN
                     </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Equivalente a ${(targetPlan.precio_por_usuario * totalNewUsers).toLocaleString()} MXN/mes
                   </div>
 
                   {hasChanges && updateCharge && (
@@ -710,8 +747,11 @@ export default function MiSuscripcionPage() {
                           ℹ️ {updateCharge.detail}
                         </p>
                       ) : updateCharge.amount > 0 ? (
-                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
-                          💳 Cobro por diferencia: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
+                        <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 whitespace-pre-line">
+                          💳 Cobro: <strong className="text-foreground">${(updateCharge.amount / 100).toLocaleString()} MXN</strong>
+                          {pendingFacturas.length > 0 && (
+                            <span className="block mt-1 text-amber-600">⚠️ Se cancelará tu factura pendiente y se generará una nueva.</span>
+                          )}
                         </p>
                       ) : null}
                       <Button size="lg" className="w-full h-11 font-bold" onClick={addUpdateToCart}>
