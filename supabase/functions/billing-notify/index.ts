@@ -164,20 +164,20 @@ async function sendWA(
   return status === "sent";
 }
 
-/* ─── Check if already notified today ─── */
+/* ─── Check if already notified today (Mexico TZ) ─── */
 async function alreadyNotifiedToday(
   supabase: ReturnType<typeof createClient>,
   email: string,
   tipo: string
 ): Promise<boolean> {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const MX_TZ = "America/Mexico_City";
+  const todayMx = new Date().toLocaleDateString("en-CA", { timeZone: MX_TZ });
   const { count } = await supabase
     .from("billing_notifications")
     .select("id", { count: "exact", head: true })
     .eq("customer_email", email)
     .eq("tipo", tipo)
-    .gte("created_at", todayStart.toISOString());
+    .gte("created_at", `${todayMx}T00:00:00-06:00`);
   return (count ?? 0) > 0;
 }
 
@@ -261,8 +261,12 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const results: Array<{ id: string; action: string; status: string }> = [];
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
+
+    // Use Mexico City timezone for all date calculations
+    const MX_TZ = "America/Mexico_City";
+    const nowMx = new Date().toLocaleDateString("en-CA", { timeZone: MX_TZ }); // YYYY-MM-DD
+    const todayStr = nowMx;
+    const today = new Date(todayStr + "T12:00:00Z"); // noon UTC as safe reference
 
     // Load global WhatsApp token (super admin config without empresa_id)
     const { data: waConfig } = await supabase
