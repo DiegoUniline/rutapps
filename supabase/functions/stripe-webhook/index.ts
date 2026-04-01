@@ -41,22 +41,48 @@ function getErrorMessage(code?: string): string {
   return errorMap[code || ""] || "Error al procesar el pago";
 }
 
-// ── WhatsApp helper ──
-async function sendWhatsApp(supabase: any, empresaId: string, message: string) {
+// ── WhatsApp helper (with billing_notifications logging) ──
+async function sendWhatsApp(supabase: any, empresaId: string, message: string, tipo: string = "webhook", email?: string, monto_centavos?: number) {
+  let phone: string | null = null;
+  let customerEmail = email || "";
+  let status = "sent";
+
   try {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("telefono")
+      .select("telefono, user_id")
       .eq("empresa_id", empresaId)
       .not("telefono", "is", null)
       .limit(1);
-    const phone = profiles?.[0]?.telefono;
-    if (!phone) return;
-    await supabase.functions.invoke("whatsapp-sender", {
+    phone = profiles?.[0]?.telefono;
+    if (!phone) { status = "error"; return; }
+
+    // Get email if not provided
+    if (!customerEmail && profiles?.[0]?.user_id) {
+      const { data: userData } = await supabase.auth.admin.getUserById(profiles[0].user_id);
+      customerEmail = userData?.user?.email || "";
+    }
+
+    const res = await supabase.functions.invoke("whatsapp-sender", {
       body: { action: "send_text", empresa_id: empresaId, phone, message },
     });
+    if (res.error) status = "error";
   } catch (e) {
+    status = "error";
     log("WhatsApp non-blocking error", (e as Error).message);
+  } finally {
+    // Always log to billing_notifications
+    try {
+      await supabase.from("billing_notifications").insert({
+        customer_email: customerEmail,
+        customer_phone: phone || "",
+        channel: "whatsapp",
+        tipo,
+        mensaje: message,
+        monto_centavos: monto_centavos || 0,
+        status,
+      });
+    } catch { /* silent */ }
   }
 }
 
