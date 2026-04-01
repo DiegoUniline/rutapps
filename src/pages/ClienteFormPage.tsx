@@ -289,6 +289,23 @@ export default function ClienteFormPage() {
 
   const set = (key: keyof Cliente, value: any) => setForm(prev => ({ ...prev, [key]: value }));
 
+  const handlePhotoUpload = async (file: File, field: 'foto_url' | 'foto_fachada_url') => {
+    if (!file.type.startsWith('image/')) { toast.error('Solo se permiten imágenes'); return; }
+    const which = field === 'foto_url' ? 'foto' : 'fachada';
+    setUploadingPhoto(which as any);
+    try {
+      const compressed = await compressPhoto(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
+      const path = `clientes/${id ?? 'nuevo'}/${which}_${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('empresa-assets').upload(path, compressed, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('empresa-assets').getPublicUrl(path);
+      set(field as keyof Cliente, urlData.publicUrl);
+      toast.success('Imagen subida');
+    } catch (err: any) { toast.error(err.message || 'Error al subir imagen'); }
+    finally { setUploadingPhoto(null); }
+  };
+
   const handleSave = async () => {
     if (!form.nombre) { toast.error('Nombre es obligatorio'); return; }
     if (!(form as any).lista_precio_id) { toast.error('Lista de precios es obligatoria'); return; }
