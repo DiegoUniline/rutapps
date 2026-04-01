@@ -248,6 +248,11 @@ Deno.serve(async (req) => {
           "cobro_exitoso"
         );
 
+        // Notify admin
+        await notifyAdmin(supabase,
+          `🟢 *COBRO EXITOSO — Nueva suscripción*\n\n🏢 *Empresa:* ${empresa?.nombre || "N/A"}\n👥 *Usuarios:* ${qty}\n📅 *Próximo cobro:* ${proximoCobro}\n🆔 Stripe Sub: ${subscriptionId}`
+        );
+
         log("Subscription activated", { empresaId, subscriptionId });
         break;
       }
