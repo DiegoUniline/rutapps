@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Separator } from '@/components/ui/separator';
 import {
   CreditCard, Users, Loader2, Crown, Plus, Minus, Stamp, BanknoteIcon,
-  Building2, Copy, ShoppingCart, Check, ArrowLeft, Sparkles, Clock, AlertTriangle, Trash2,
-  Receipt, FileText, Download
+  Building2, Copy, Check, AlertTriangle, Trash2,
+  Receipt, FileText, Clock, Sparkles, ShoppingCart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -54,7 +54,7 @@ interface CartItem {
   type: 'plan' | 'usuarios' | 'timbres';
   label: string;
   detail: string;
-  amount: number; // cents
+  amount: number;
 }
 
 export default function MiSuscripcionPage() {
@@ -70,11 +70,13 @@ export default function MiSuscripcionPage() {
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [facturas, setFacturas] = useState<FacturaRow[]>([]);
 
-  // Cart state
-  const [cart, setCart] = useState<CartItem[]>([]);
+  // Plan config
   const [selectedPlan, setSelectedPlan] = useState('');
   const [planQty, setPlanQty] = useState(3);
   const [timbresPacks, setTimbresPacks] = useState(1);
+
+  // Cart
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   // Payment dialogs
   const [showPayMethod, setShowPayMethod] = useState(false);
@@ -193,14 +195,12 @@ export default function MiSuscripcionPage() {
           loadData();
           return;
         } else {
-          // select-plan now generates the checkout URL + sends WA/email notifications
           const { data: spData, error: spError } = await supabase.functions.invoke('select-plan', {
             body: { plan_id: selectedPlan, num_usuarios: planQty },
           });
           if (spError) throw spError;
           if (spData?.error) throw new Error(spData.error);
 
-          // Use checkout_url from select-plan if available, otherwise fallback to create-checkout
           if (spData?.checkout_url) {
             redirectUrl = spData.checkout_url;
           } else {
@@ -226,7 +226,6 @@ export default function MiSuscripcionPage() {
       }
 
       if (redirectUrl) {
-        // Use location.href to avoid popup blockers
         window.location.href = redirectUrl;
       }
     } catch (e: any) {
@@ -245,7 +244,6 @@ export default function MiSuscripcionPage() {
       const timbresItem = cart.find(c => c.type === 'timbres');
       const concepto = cart.map(c => c.label).join(' + ');
 
-      // Create invoice via select-plan if plan selected
       if (planItem) {
         await supabase.functions.invoke('select-plan', {
           body: { plan_id: selectedPlan, num_usuarios: planQty },
@@ -283,7 +281,6 @@ export default function MiSuscripcionPage() {
   async function handlePayInvoice(factura: FacturaRow) {
     setPayingInvoice(factura.id);
     try {
-      // Find the plan linked to current subscription
       const plan = plans.find(p => p.stripe_price_id === subData?.stripe_price_id) || plans[0];
       if (!plan?.stripe_price_id) throw new Error('No se encontró un plan con precio de Stripe');
 
@@ -340,7 +337,10 @@ export default function MiSuscripcionPage() {
   const endDate = sub.status === 'trial' ? subData?.trial_ends_at : subData?.current_period_end;
   const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
 
-  // Compute proration preview for selected plan
+  // Pending invoices
+  const pendingFacturas = facturas.filter(f => f.estado === 'pendiente');
+
+  // Compute proration preview
   const selectedPlanData = plans.find(p => p.id === selectedPlan);
   let prorationPreview: { total: number; esProrrateo: boolean; diasRestantes: number } | null = null;
   if (selectedPlanData) {
@@ -356,11 +356,8 @@ export default function MiSuscripcionPage() {
     prorationPreview = { total, esProrrateo, diasRestantes };
   }
 
-  // Compute discount badge
-  const lowestPrice = plans.length > 0 ? plans[0].precio_base_mes : 300;
+  // Discount badge
   function getDiscount(plan: PlanRow) {
-    if (plan.precio_base_mes >= lowestPrice * 0.99) return null; // no discount on base
-    // Actually compute from highest (Mensual = first sorted by price asc, but Mensual is highest)
     const highestPrice = plans.reduce((max, p) => Math.max(max, p.precio_base_mes), 0);
     if (plan.precio_base_mes >= highestPrice) return null;
     const pct = Math.round((1 - plan.precio_base_mes / highestPrice) * 100);
@@ -368,14 +365,14 @@ export default function MiSuscripcionPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Crown className="h-6 w-6 text-primary" /> Mi Suscripción
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Administra tu plan, usuarios y timbres de facturación en un solo lugar.
+          Administra tu plan, usuarios y timbres de facturación.
         </p>
       </div>
 
@@ -428,7 +425,6 @@ export default function MiSuscripcionPage() {
             </div>
           </div>
 
-          {/* Payment dates */}
           {subData && (subData.current_period_start || subData.current_period_end) && (
             <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
               {subData.current_period_start && (
@@ -446,7 +442,6 @@ export default function MiSuscripcionPage() {
                   <span className="text-muted-foreground">Próximo cobro:</span>
                   <span className="font-medium text-foreground">
                     {(() => {
-                      // Always show the 1st of the next month
                       const d = new Date(subData.current_period_end);
                       const firstOfNext = new Date(d.getFullYear(), d.getMonth() + (d.getDate() === 1 ? 0 : 1), 1);
                       return format(firstOfNext, "d 'de' MMMM yyyy", { locale: es });
@@ -459,7 +454,39 @@ export default function MiSuscripcionPage() {
         </CardContent>
       </Card>
 
-      {/* Pending requests */}
+      {/* ⚠️ PROMINENT: Pending Invoice Banner — right after status */}
+      {pendingFacturas.length > 0 && (
+        <Card className="border-2 border-destructive/60 bg-destructive/5">
+          <CardContent className="p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-destructive/10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-destructive">
+                    Tienes {pendingFacturas.length} factura{pendingFacturas.length > 1 ? 's' : ''} pendiente{pendingFacturas.length > 1 ? 's' : ''} de pago
+                  </p>
+                  <p className="text-lg font-black text-foreground">
+                    ${pendingFacturas.reduce((sum, f) => sum + f.total, 0).toLocaleString()} MXN
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="lg"
+                className="h-12 text-base font-bold gap-2 shrink-0"
+                disabled={payingInvoice !== null}
+                onClick={() => handlePayInvoice(pendingFacturas[0])}
+              >
+                {payingInvoice ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                Pagar ahora
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending transfer requests */}
       {pendingSolicitudes.length > 0 && (
         <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 flex items-start gap-3">
           <Clock className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
@@ -474,80 +501,104 @@ export default function MiSuscripcionPage() {
         </div>
       )}
 
-      {/* Two-column layout: Products + Cart */}
+      {/* Two-column layout */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Products (2 cols) */}
+        {/* Left: Plan + Timbres + History */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Plans Section */}
-          <Card>
-            <CardContent className="p-6">
-              <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
-                <CreditCard className="h-5 w-5 text-primary" /> Elige tu plan
-              </h2>
-              <p className="text-xs text-muted-foreground mb-4">
-                Todos los planes incluyen acceso completo. Solo pagas por usuario.
-              </p>
 
-              <div className="grid sm:grid-cols-3 gap-3 mb-4">
-                {plans.map(plan => {
-                  const discount = getDiscount(plan);
-                  return (
-                    <button
-                      key={plan.id}
-                      onClick={() => setSelectedPlan(plan.id)}
-                      className={`relative p-4 rounded-xl border-2 transition-all text-left ${
-                        selectedPlan === plan.id
-                          ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
-                          : 'border-border hover:border-primary/30'
-                      }`}
-                    >
-                      {discount && (
-                        <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          {discount}
-                        </span>
-                      )}
-                      <div className="text-sm font-bold text-foreground">{plan.nombre}</div>
-                      <div className="text-2xl font-black text-foreground mt-1">${plan.precio_base_mes}</div>
-                      <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
-                    </button>
-                  );
-                })}
+          {/* ─── Tu plan y usuarios ─── */}
+          <Card>
+            <CardContent className="p-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
+                  <Users className="h-5 w-5 text-primary" /> Tu plan y usuarios
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Todos los usuarios de tu empresa comparten el mismo plan y frecuencia de cobro.
+                </p>
               </div>
 
-              {selectedPlan && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-4 bg-card rounded-xl p-4">
-                    <span className="text-sm text-muted-foreground shrink-0">Usuarios:</span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => Math.max(3, q - 1))} disabled={planQty <= 3}>
-                        <Minus className="h-3.5 w-3.5" />
-                      </Button>
-                      <Input
-                        type="number"
-                        min={3}
-                        value={planQty}
-                        onChange={e => {
-                          const v = parseInt(e.target.value);
-                          if (!isNaN(v) && v >= 3) setPlanQty(v);
-                          else if (e.target.value === '') setPlanQty(3);
-                        }}
-                        className="w-16 h-8 text-center text-lg font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setPlanQty(q => q + 1)}>
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
+              {/* Usuarios control */}
+              <div className="flex flex-wrap items-center gap-4 bg-muted/30 rounded-xl p-4">
+                <span className="text-sm font-medium text-foreground shrink-0">Número de usuarios:</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setPlanQty(q => Math.max(3, q - 1))} disabled={planQty <= 3}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min={3}
+                    value={planQty}
+                    onChange={e => {
+                      const v = parseInt(e.target.value);
+                      if (!isNaN(v) && v >= 3) setPlanQty(v);
+                      else if (e.target.value === '') setPlanQty(3);
+                    }}
+                    className="w-16 h-9 text-center text-xl font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => setPlanQty(q => q + 1)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-xs text-muted-foreground">(mínimo 3)</span>
+              </div>
+
+              {/* Frecuencia de cobro */}
+              <div>
+                <span className="text-sm font-medium text-foreground mb-2 block">Frecuencia de cobro:</span>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  {plans.map(plan => {
+                    const discount = getDiscount(plan);
+                    const totalMes = plan.precio_base_mes * planQty;
+                    return (
+                      <button
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan.id)}
+                        className={`relative p-4 rounded-xl border-2 transition-all text-left ${
+                          selectedPlan === plan.id
+                            ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                            : 'border-border hover:border-primary/30'
+                        }`}
+                      >
+                        {discount && (
+                          <span className="absolute -top-2.5 right-3 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {discount}
+                          </span>
+                        )}
+                        <div className="text-sm font-bold text-foreground">{plan.nombre}</div>
+                        <div className="text-2xl font-black text-foreground mt-1">${plan.precio_base_mes}</div>
+                        <div className="text-[10px] text-muted-foreground">por usuario / mes</div>
+                        <Separator className="my-2" />
+                        <div className="text-xs text-muted-foreground">
+                          {planQty} usuarios × ${plan.precio_base_mes} = <strong className="text-foreground">${totalMes.toLocaleString()}/mes</strong>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Total summary + add to cart */}
+              {selectedPlan && selectedPlanData && (
+                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="text-sm text-muted-foreground">
+                        Plan <strong className="text-foreground">{selectedPlanData.nombre}</strong> — {planQty} usuarios
+                      </div>
+                      <div className="text-2xl font-black text-foreground">
+                        ${(selectedPlanData.precio_base_mes * planQty).toLocaleString()} MXN / mes
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">(mín. 3)</span>
-                    <Button size="sm" className="ml-auto" onClick={addPlanToCart}>
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
+                    <Button size="lg" className="h-11 font-bold shrink-0" onClick={addPlanToCart}>
+                      <ShoppingCart className="h-4 w-4 mr-2" /> Agregar al pedido
                     </Button>
                   </div>
 
-                  {/* Proration preview */}
                   {prorationPreview && prorationPreview.esProrrateo && (
                     <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-3 text-sm">
                       <p className="font-medium text-blue-800 dark:text-blue-200">
-                        💡 Pago prorrateado: <strong>${prorationPreview.total.toLocaleString()} MXN</strong> por los {prorationPreview.diasRestantes} días restantes del mes.
+                        💡 Primer cobro prorrateado: <strong>${prorationPreview.total.toLocaleString()} MXN</strong> por los {prorationPreview.diasRestantes} días restantes del mes.
                       </p>
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                         A partir del día 1 del siguiente mes se cobra la mensualidad completa.
@@ -566,11 +617,10 @@ export default function MiSuscripcionPage() {
                 <Stamp className="h-5 w-5 text-primary" /> Timbres CFDI
               </h2>
               <p className="text-xs text-muted-foreground mb-4">
-                Cada timbre te permite generar una factura electrónica (CFDI). Se venden en paquetes de 100 a $1 MXN c/u.
-                <br />Tu saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
+                Paquetes de 100 timbres a $1 MXN c/u. Saldo actual: <strong>{timbresBalance ?? 0} timbres</strong>.
               </p>
 
-              <div className="flex items-center gap-4 bg-card rounded-xl p-4">
+              <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4">
                 <span className="text-sm text-muted-foreground shrink-0">Timbres:</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setTimbresPacks(p => Math.max(1, p - 1))} disabled={timbresPacks <= 1}>
@@ -599,7 +649,7 @@ export default function MiSuscripcionPage() {
             </CardContent>
           </Card>
 
-          {/* ─── Invoice History ─── */}
+          {/* Invoice History */}
           {facturas.length > 0 && (
             <Card>
               <CardContent className="p-6">
@@ -664,7 +714,7 @@ export default function MiSuscripcionPage() {
           )}
         </div>
 
-        {/* Right: Cart (1 col) */}
+        {/* Right: Cart */}
         <div className="lg:col-span-1">
           <Card className="sticky top-6 border-2 border-primary/20">
             <CardContent className="p-5 space-y-4">
@@ -677,14 +727,14 @@ export default function MiSuscripcionPage() {
                   <ShoppingCart className="h-10 w-10 text-muted-foreground/30 mx-auto" />
                   <p className="text-sm text-muted-foreground">Tu pedido está vacío</p>
                   <p className="text-xs text-muted-foreground">
-                    Selecciona un plan, usuarios o timbres y haz clic en <strong>"Agregar"</strong>.
+                    Configura tu plan y haz clic en <strong>"Agregar al pedido"</strong>.
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="space-y-3">
                     {cart.map(item => (
-                      <div key={item.type} className="flex items-start justify-between gap-2 bg-card rounded-lg p-3">
+                      <div key={item.type} className="flex items-start justify-between gap-2 bg-muted/30 rounded-lg p-3">
                         <div className="min-w-0">
                           <div className="text-sm font-semibold text-foreground">{item.label}</div>
                           <div className="text-[11px] text-muted-foreground">{item.detail}</div>
@@ -711,7 +761,7 @@ export default function MiSuscripcionPage() {
                   </Button>
 
                   <p className="text-[10px] text-muted-foreground text-center">
-                    Puedes pagar con tarjeta de crédito/débito o transferencia bancaria
+                    Tarjeta de crédito/débito o transferencia bancaria
                   </p>
                 </>
               )}
