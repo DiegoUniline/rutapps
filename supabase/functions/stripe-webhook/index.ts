@@ -303,6 +303,11 @@ Deno.serve(async (req) => {
             "cobro_exitoso", undefined, invoice.amount_paid || 0
           );
 
+          // Notify admin
+          await notifyAdmin(supabase,
+            `🟢 *COBRO EXITOSO — Renovación*\n\n🏢 *Empresa:* ${empresaNombre || "N/A"}\n💰 *Monto:* $${monto} MXN\n📅 *Próximo cobro:* ${proximoCobro}\n🆔 Stripe Sub: ${subId}`
+          );
+
           log("Invoice paid → subscription renewed", { subId, empresaId: sub.empresa_id });
         }
         break;
