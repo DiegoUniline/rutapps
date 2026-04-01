@@ -154,6 +154,29 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
             </div>
           </div>
         </CardHeader>
+
+        {/* Status filter chips */}
+        <div className="px-6 pb-3 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setStatusFilter('todos')}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${statusFilter === 'todos' ? 'bg-foreground text-background' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+          >
+            Todos ({empresas.length})
+          </button>
+          {STATUS_ORDER.filter(s => statusCounts[s]).map(s => {
+            const info = STATUS_MAP[s] || { label: s, color: 'bg-muted text-muted-foreground' };
+            return (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(statusFilter === s ? 'todos' : s)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-colors ${statusFilter === s ? info.color + ' ring-2 ring-offset-1 ring-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted/80'}`}
+              >
+                {info.label} ({statusCounts[s]})
+              </button>
+            );
+          })}
+        </div>
+
         <CardContent>
           {loading ? <div className="text-center py-8 text-muted-foreground">Cargando...</div> : (
             <div className="overflow-x-auto">
@@ -172,7 +195,9 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(e => {
+                  {sortedGroups.map(group => {
+                    const groupInfo = STATUS_MAP[group.status] || { label: group.status, color: 'bg-muted text-muted-foreground', icon: AlertCircle };
+                    return group.items.map((e, idx) => {
                     const saldo = e.timbres_saldo?.[0]?.saldo ?? 0;
                     const sub = e.subscriptions?.[0];
                     const status = sub?.status || 'sin_sub';
