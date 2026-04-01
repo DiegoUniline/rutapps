@@ -100,12 +100,33 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   }
 
   const filtered = empresas.filter(e => {
-    const matchSearch = e.nombre.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = e.nombre.toLowerCase().includes(search.toLowerCase()) ||
+      (e.email || '').toLowerCase().includes(search.toLowerCase()) ||
+      (e.telefono || '').toLowerCase().includes(search.toLowerCase());
     if (statusFilter === 'todos') return matchSearch;
     const sub = e.subscriptions?.[0];
     const status = sub?.status || 'sin_sub';
     return matchSearch && status === statusFilter;
   });
+
+  // Group by status
+  const STATUS_ORDER = ['active', 'trial', 'past_due', 'gracia', 'suspended', 'cancelada', 'sin_sub', 'pendiente_pago'];
+  const grouped = filtered.reduce<Record<string, EmpresaRow[]>>((acc, e) => {
+    const status = e.subscriptions?.[0]?.status || 'sin_sub';
+    if (!acc[status]) acc[status] = [];
+    acc[status].push(e);
+    return acc;
+  }, {});
+  const sortedGroups = STATUS_ORDER.filter(s => grouped[s]?.length).map(s => ({ status: s, items: grouped[s] }));
+  // Add any statuses not in order
+  Object.keys(grouped).filter(s => !STATUS_ORDER.includes(s)).forEach(s => sortedGroups.push({ status: s, items: grouped[s] }));
+
+  // Counts per status for filter chips
+  const statusCounts = empresas.reduce<Record<string, number>>((acc, e) => {
+    const s = e.subscriptions?.[0]?.status || 'sin_sub';
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <>
