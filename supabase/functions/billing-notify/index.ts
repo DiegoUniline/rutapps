@@ -89,9 +89,12 @@ function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
     if (c.mensaje_despedida) lines.push("\n¡Gracias por confiar en Rutapp! 🚀");
   }
   if (tpl.tipo === "cobro_exitoso") {
-    if (c.monto && vars.monto) lines.push(`Tu pago de *${vars.monto}* se procesó correctamente.`);
-    if (c.fecha_vigencia && vars.fechaVigencia) lines.push(`Vigente hasta el *${vars.fechaVigencia}*.`);
-    if (c.mensaje_despedida) lines.push("\n¡Gracias! 🎉");
+    lines.push("¡Tu pago ha sido procesado exitosamente! 💪\n");
+    if (c.monto && vars.monto) lines.push(`💰 *Monto:* ${vars.monto}`);
+    if (c.nombre_empresa && vars.numUsuarios) lines.push(`👥 *Usuarios activos:* ${vars.numUsuarios}`);
+    if (c.fecha_vigencia && vars.fechaVigencia) lines.push(`📅 *Próximo cobro:* ${vars.fechaVigencia}`);
+    lines.push("\nTu suscripción está al día y todos tus usuarios tienen acceso completo. 🟢");
+    if (c.mensaje_despedida) lines.push("\n¡Gracias por ser parte de *Rutapp*! Seguimos trabajando para que tu negocio crezca cada día. 🚀");
   }
   if (tpl.tipo === "cobro_fallido") {
     lines.push("No pudimos procesar tu pago.");
