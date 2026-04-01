@@ -1042,6 +1042,18 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
               <div className="text-muted-foreground">Cobros efectivo</div>
               <div className="font-bold text-foreground">${cobrosEfectivoTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
+            {cobrosTransferenciaTotal > 0 && (
+              <div className="bg-card rounded-md p-3 text-center">
+                <div className="text-muted-foreground">Cobros transferencia</div>
+                <div className="font-bold text-foreground">${cobrosTransferenciaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              </div>
+            )}
+            {cobrosTarjetaTotal > 0 && (
+              <div className="bg-card rounded-md p-3 text-center">
+                <div className="text-muted-foreground">Cobros tarjeta</div>
+                <div className="font-bold text-foreground">${cobrosTarjetaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              </div>
+            )}
             <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Gastos</div>
               <div className="font-bold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
