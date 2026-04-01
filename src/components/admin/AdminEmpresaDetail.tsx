@@ -609,6 +609,49 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
                     <Input type="date" value={subForm.current_period_end}
                       onChange={e => setSubForm((f: any) => ({ ...f, current_period_end: e.target.value }))} />
                   </div>
+
+                  {/* Resumen de cobro */}
+                  {(() => {
+                    const selectedPlan = plans.find(p => p.id === subForm.plan_id);
+                    if (!selectedPlan) return null;
+                    const precioBase = selectedPlan.precio_por_usuario;
+                    const desc = subForm.descuento_porcentaje || 0;
+                    const precioFinal = precioBase * (1 - desc / 100);
+                    const usuarios = subForm.max_usuarios || 1;
+                    const totalMes = precioFinal * usuarios;
+                    return (
+                      <div className="sm:col-span-2 rounded-lg border bg-muted/30 p-4 space-y-2">
+                        <p className="text-sm font-semibold">💰 Resumen de cobro</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Precio base</p>
+                            <p className="font-medium">${precioBase.toLocaleString()}/usr</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Descuento</p>
+                            <p className="font-medium">{desc > 0 ? `${desc.toFixed(1)}%` : 'Sin descuento'}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Precio final</p>
+                            <p className="font-medium text-primary">${Math.round(precioFinal).toLocaleString()}/usr</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Usuarios</p>
+                            <p className="font-medium">{usuarios}</p>
+                          </div>
+                        </div>
+                        <div className="border-t pt-2 flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Total mensual</span>
+                          <span className="text-lg font-bold text-primary">${Math.round(totalMes).toLocaleString()} MXN</span>
+                        </div>
+                        {desc > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Sin descuento sería ${(precioBase * usuarios).toLocaleString()} MXN — ahorro: ${Math.round(precioBase * usuarios - totalMes).toLocaleString()} MXN
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8">
