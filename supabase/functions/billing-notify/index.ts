@@ -212,6 +212,50 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // ─── Manual send mode ───
+    if (req.method === "POST") {
+      const body = await req.json().catch(() => null);
+      if (body?.manual_send) {
+        const { data: waConfig } = await supabase
+          .from("whatsapp_config")
+          .select("api_token")
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        const waToken = waConfig?.api_token;
+        if (!waToken) {
+          return new Response(JSON.stringify({ error: "No WhatsApp token" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+
+        // Load templates
+        const { data: tplRows } = await supabase
+          .from("billing_message_templates")
+          .select("tipo, campos, emoji, encabezado, activo");
+        const tplMapManual: Record<string, TemplateConfig> = { ...DEFAULT_TEMPLATES };
+        for (const row of tplRows || []) {
+          tplMapManual[row.tipo] = {
+            tipo: row.tipo,
+            campos: row.campos as Record<string, boolean>,
+            emoji: row.emoji,
+            encabezado: row.encabezado || DEFAULT_TEMPLATES[row.tipo]?.encabezado || "",
+            activo: row.activo,
+          };
+        }
+
+        const tpl = tplMapManual[body.tipo] || DEFAULT_TEMPLATES.cobro_exitoso;
+        const vars: TicketVars = {
+          nombre: body.nombre,
+          empresa: body.empresa,
+          monto: body.monto || undefined,
+          fechaVigencia: body.fecha_vigencia || undefined,
+          numUsuarios: body.num_usuarios || undefined,
+          fechaCobro: body.fecha_cobro || undefined,
+        };
+        const ok = await sendWA(supabase, waToken, body.phone, tpl, vars, body.email || "", null, body.monto_centavos || 0);
+        return new Response(JSON.stringify({ ok }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const results: Array<{ id: string; action: string; status: string }> = [];
     const today = new Date();
