@@ -258,3 +258,77 @@ export function useDashboardDevoluciones(range: DateRange, vendedorId?: string) 
     },
   });
 }
+
+export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: string) {
+  const { empresa } = useAuth();
+  return useQuery({
+    queryKey: ['dashboard-clientes-riesgo', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
+    enabled: !!empresa?.id,
+    staleTime: 3 * 60 * 1000,
+    queryFn: async () => {
+      const eid = empresa!.id;
+
+      // 1) Active clients
+      let clientesQ = supabase
+        .from('clientes')
+        .select('id, nombre, vendedor_id, vendedores(nombre)')
+        .eq('empresa_id', eid)
+        .eq('status', 'activo');
+      if (vendedorId) clientesQ = clientesQ.eq('vendedor_id', vendedorId);
+      const { data: clientes } = await clientesQ;
+
+      // 2) Sales in period (visited)
+      let ventasQ = supabase
+        .from('ventas')
+        .select('cliente_id')
+        .eq('empresa_id', eid)
+        .gte('fecha', fmt(range.from))
+        .lte('fecha', fmt(range.to))
+        .not('status', 'eq', 'cancelado');
+      const { data: ventasPeriodo } = await ventasQ;
+
+      const visitedSet = new Set((ventasPeriodo ?? []).map(v => v.cliente_id));
+
+      // 3) Not visited clients
+      const noVisitados = (clientes ?? []).filter(c => !visitedSet.has(c.id));
+      if (noVisitados.length === 0) return [];
+
+      // 4) Last sale for each unvisited client (last 180 days for perf)
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 180);
+      const noVisitadoIds = noVisitados.map(c => c.id);
+
+      const lastSaleMap = new Map<string, { fecha: string; total: number }>();
+      const batchSize = 200;
+      for (let i = 0; i < noVisitadoIds.length; i += batchSize) {
+        const batch = noVisitadoIds.slice(i, i + batchSize);
+        const { data: sales } = await supabase
+          .from('ventas')
+          .select('cliente_id, fecha, total')
+          .eq('empresa_id', eid)
+          .in('cliente_id', batch)
+          .not('status', 'eq', 'cancelado')
+          .gte('fecha', fmt(cutoff))
+          .order('fecha', { ascending: false });
+        for (const s of sales ?? []) {
+          if (!s.cliente_id || lastSaleMap.has(s.cliente_id)) continue;
+          lastSaleMap.set(s.cliente_id, { fecha: s.fecha, total: Number(s.total ?? 0) });
+        }
+      }
+
+      const todayMs = Date.now();
+      return noVisitados.map(c => {
+        const last = lastSaleMap.get(c.id);
+        return {
+          id: c.id,
+          nombre: c.nombre,
+          vendedor: (c.vendedores as any)?.nombre ?? 'Sin asignar',
+          ultimaCompraFecha: last?.fecha ?? null,
+          ultimaCompraValor: last?.total ?? 0,
+          diasSinComprar: last ? Math.floor((todayMs - new Date(last.fecha + 'T12:00:00').getTime()) / 86400000) : null,
+          visitadoHoy: false,
+        };
+      });
+    },
+  });
+}

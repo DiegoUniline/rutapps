@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import {
   DollarSign, TrendingUp, TrendingDown, ShoppingCart, CreditCard,
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
-  BarChart3, Users, Loader2, RotateCcw
+  BarChart3, Users, UserX, Loader2, RotateCcw
 } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -17,9 +17,10 @@ import {
   useDashboardVentas, useDashboardCobros, useDashboardCompras,
   useDashboardGastos, useDashboardCartera, useDashboardStock,
   useDashboardTopProductos, useDashboardVentasPorDia, useDashboardVentasPorVendedor,
-  useDashboardDevoluciones,
+  useDashboardDevoluciones, useDashboardClientesEnRiesgo,
   type DateRange
 } from '@/hooks/useDashboardData';
+import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
@@ -101,6 +102,7 @@ export default function DashboardPage() {
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
   const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
+  const { data: clientesEnRiesgo } = useDashboardClientesEnRiesgo(dateRange, vendedorId || undefined);
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
@@ -331,6 +333,18 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      )}
+
+      {/* Clientes en Riesgo */}
+      {(clientesEnRiesgo ?? []).length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4 mt-4">
+          <SectionTitle icon={UserX}>Clientes sin visitar — Ingreso en riesgo</SectionTitle>
+          <ClientesEnRiesgoWidget
+            clientes={clientesEnRiesgo ?? []}
+            fmtMoney={money}
+            maxItems={8}
+          />
         </div>
       )}
 
