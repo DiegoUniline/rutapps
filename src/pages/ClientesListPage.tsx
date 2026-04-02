@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { usePermisos } from '@/hooks/usePermisos';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Upload } from 'lucide-react';
+import { Plus, Upload, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { ImportDialog } from '@/components/ImportDialog';
 import { StatusChip } from '@/components/StatusChip';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -98,6 +99,8 @@ function ClientesTable() {
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canCreate = hasPermiso('clientes', 'crear');
+  const { empresa } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -105,6 +108,23 @@ function ClientesTable() {
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
   const { vendedores, zonas } = useDynamicFilterOptions();
+
+  // Count active clients without vendedor when visibility is 'propios'
+  const { data: sinVendedorCount } = useQuery({
+    queryKey: ['clientes-sin-vendedor', empresa?.id],
+    enabled: !!empresa?.id && clientesVisibilidad === 'propios',
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('clientes')
+        .select('id', { count: 'exact', head: true })
+        .eq('empresa_id', empresa!.id)
+        .is('vendedor_id', null)
+        .eq('status', 'activo');
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   const numericPageSize = getNumericPageSize(pageSize);
 
@@ -219,6 +239,15 @@ function ClientesTable() {
 
   return (
     <div className="space-y-3">
+      {clientesVisibilidad === 'propios' && (sinVendedorCount ?? 0) > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning-foreground">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
+          <span>
+            <strong>{sinVendedorCount} cliente{sinVendedorCount !== 1 ? 's' : ''} activo{sinVendedorCount !== 1 ? 's' : ''} sin vendedor asignado.</strong>{' '}
+            Con la configuración "Cada usuario ve solo sus clientes", estos clientes no serán visibles para ningún vendedor. Asígnales un vendedor para que aparezcan en su ruta.
+          </span>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
           search={search}
