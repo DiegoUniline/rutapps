@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Building2, Phone, Mail, User, Lock, Loader2, ShieldCheck, MessageCircle, Eye, EyeOff, Clock, AlertTriangle } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const COUNTRY_CODES = [
@@ -47,6 +47,8 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [showCooldownDialog, setShowCooldownDialog] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
@@ -55,6 +57,54 @@ export default function SignupPage() {
     countryCode: '+52',
     telefono: '',
   });
+
+  // Persistent cooldown timer that survives page reloads
+  const COOLDOWN_KEY = 'otp_cooldown_until';
+
+  const getCooldownRemaining = useCallback(() => {
+    const until = localStorage.getItem(COOLDOWN_KEY);
+    if (!until) return 0;
+    const remaining = Math.ceil((parseInt(until) - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  }, []);
+
+  const startCooldown = useCallback((seconds: number) => {
+    const until = Date.now() + seconds * 1000;
+    localStorage.setItem(COOLDOWN_KEY, until.toString());
+    setCooldownSeconds(seconds);
+    setShowCooldownDialog(true);
+  }, []);
+
+  // Initialize and tick cooldown
+  useEffect(() => {
+    const remaining = getCooldownRemaining();
+    if (remaining > 0) {
+      setCooldownSeconds(remaining);
+      setShowCooldownDialog(true);
+    }
+  }, [getCooldownRemaining]);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const interval = setInterval(() => {
+      const remaining = getCooldownRemaining();
+      if (remaining <= 0) {
+        setCooldownSeconds(0);
+        setShowCooldownDialog(false);
+        localStorage.removeItem(COOLDOWN_KEY);
+        clearInterval(interval);
+      } else {
+        setCooldownSeconds(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownSeconds, getCooldownRemaining]);
+
+  const formatCooldown = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const selectedCountry = COUNTRY_CODES.find(c => c.code === form.countryCode) || COUNTRY_CODES[0];
   const fullPhone = form.countryCode + form.telefono.replace(/\D/g, '');
@@ -85,18 +135,42 @@ export default function SignupPage() {
       toast.error(phoneError);
       return;
     }
+    if (getCooldownRemaining() > 0) {
+      setShowCooldownDialog(true);
+      setCooldownSeconds(getCooldownRemaining());
+      return;
+    }
     setSendingOtp(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { action: 'send', phone: fullPhone },
       });
-      if (error) throw new Error(error.message || 'Error al enviar código');
+      // Detect rate limit from edge function response
+      const errMsg = error?.message || data?.error || '';
+      const isRateLimit = errMsg.toLowerCase().includes('demasiados intentos') ||
+        errMsg.toLowerCase().includes('rate limit') ||
+        errMsg.toLowerCase().includes('too many') ||
+        errMsg.includes('429');
+      if (isRateLimit) {
+        // Extract minutes from message or default to 10
+        const minuteMatch = errMsg.match(/(\d+)\s*minuto/i);
+        const cooldownMins = minuteMatch ? parseInt(minuteMatch[1]) : 10;
+        startCooldown(cooldownMins * 60);
+        return;
+      }
+      if (error) throw new Error(errMsg || 'Error al enviar código');
       if (data?.error) throw new Error(data.error);
       setOtpSent(true);
       setShowOtpDialog(true);
       toast.success('Código enviado por WhatsApp 📲');
     } catch (err: any) {
-      toast.error(err.message || 'Error al enviar el código');
+      const msg = err.message || 'Error al enviar el código';
+      // Also catch rate limit from catch block
+      if (msg.includes('non-2xx') || msg.includes('429')) {
+        startCooldown(10 * 60);
+        return;
+      }
+      toast.error(msg);
     } finally {
       setSendingOtp(false);
     }
@@ -503,6 +577,49 @@ export default function SignupPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cooldown Dialog */}
+      <Dialog open={showCooldownDialog} onOpenChange={v => { if (!v && cooldownSeconds <= 0) setShowCooldownDialog(false); }}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader>
+            <div className="mx-auto mb-2 h-14 w-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <AlertTriangle className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+            </div>
+            <DialogTitle className="text-lg">Demasiados intentos</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Has enviado varios códigos de verificación en poco tiempo.
+              Por seguridad, necesitas esperar un momento antes de intentar de nuevo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {cooldownSeconds > 0 ? (
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 bg-muted rounded-full px-5 py-2.5">
+                  <Clock className="h-4 w-4 text-muted-foreground animate-pulse" />
+                  <span className="font-mono text-xl font-bold text-foreground">{formatCooldown(cooldownSeconds)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Podrás enviar un nuevo código cuando el temporizador llegue a 0:00
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full px-5 py-2.5">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">¡Listo! Ya puedes intentar de nuevo</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <Button
+            variant={cooldownSeconds > 0 ? "outline" : "default"}
+            onClick={() => setShowCooldownDialog(false)}
+            className="w-full"
+          >
+            {cooldownSeconds > 0 ? 'Entendido' : 'Continuar'}
+          </Button>
         </DialogContent>
       </Dialog>
     </div>
