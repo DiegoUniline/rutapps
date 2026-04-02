@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export function useDevoluciones(search?: string) {
   const { empresa } = useAuth();
