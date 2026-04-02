@@ -9,14 +9,15 @@ export function useDevoluciones(search?: string) {
     queryKey: ['devoluciones', empresa?.id, search],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('devoluciones')
-        .select('id, fecha, tipo, notas, vendedor_id, cliente_id, user_id, vendedores(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
-        .eq('empresa_id', empresa!.id)
-        .order('fecha', { ascending: false });
-      const { data, error } = await q;
-      if (error) throw error;
-      return data;
+      return fetchAllPages((from, to) => {
+        let q = supabase
+          .from('devoluciones')
+          .select('id, fecha, tipo, notas, vendedor_id, cliente_id, user_id, vendedores(nombre), clientes(nombre), devolucion_lineas(id, cantidad, motivo, productos!devolucion_lineas_producto_id_fkey(codigo, nombre))')
+          .eq('empresa_id', empresa!.id)
+          .order('fecha', { ascending: false })
+          .range(from, to);
+        return q;
+      });
     },
   });
 }

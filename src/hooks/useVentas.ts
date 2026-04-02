@@ -87,17 +87,18 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('ventas')
-        .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
-      if (search) q = q.or(`folio.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
-      if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as Venta[];
+      return fetchAllPages((from, to) => {
+        let q = supabase
+          .from('ventas')
+          .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+        if (search) q = q.or(`folio.ilike.%${search}%`);
+        if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Venta['status']);
+        if (tipoFilter && tipoFilter !== 'todos') q = q.eq('tipo', tipoFilter as Venta['tipo']);
+        return q;
+      }) as Promise<Venta[]>;
     },
   });
 }
