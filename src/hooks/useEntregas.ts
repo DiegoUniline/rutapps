@@ -2,6 +2,7 @@ import { todayLocal } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export type StatusEntrega = 'borrador' | 'surtido' | 'asignado' | 'cargado' | 'en_ruta' | 'hecho' | 'cancelado';
 
@@ -12,19 +13,19 @@ export function useEntregasList(search?: string, vendedorFilter?: string, status
     enabled: !!empresa?.id,
     staleTime: 30_000,
     queryFn: async () => {
-      let q = supabase
-        .from('entregas')
-        .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores!entregas_vendedor_id_fkey(nombre), ventas!entregas_pedido_id_fkey(folio), almacenes(nombre), vendedor_ruta:vendedores!entregas_vendedor_ruta_id_fkey(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('created_at', { ascending: false });
+      return fetchAllPages((from, to) => {
+        let q = supabase
+          .from('entregas')
+          .select('id, folio, fecha, status, notas, pedido_id, vendedor_id, cliente_id, almacen_id, vendedor_ruta_id, fecha_asignacion, fecha_carga, validado_at, clientes(nombre), vendedores!entregas_vendedor_id_fkey(nombre), ventas!entregas_pedido_id_fkey(folio), almacenes(nombre), vendedor_ruta:vendedores!entregas_vendedor_ruta_id_fkey(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .order('created_at', { ascending: false })
+          .range(from, to);
 
-      if (search) q = q.or(`folio.ilike.%${search}%`);
-      if (vendedorFilter && vendedorFilter !== 'todos') q = q.eq('vendedor_id', vendedorFilter);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+        if (search) q = q.or(`folio.ilike.%${search}%`);
+        if (vendedorFilter && vendedorFilter !== 'todos') q = q.eq('vendedor_id', vendedorFilter);
+        if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as any);
+        return q;
+      });
     },
   });
 }

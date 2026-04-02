@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
@@ -85,15 +86,16 @@ export function useProductos(search?: string, statusFilter?: string) {
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .order('nombre', { ascending: true });
-      if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
-      if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data as unknown as Producto[];
+      return fetchAllPages((from, to) => {
+        let q = supabase.from('productos')
+          .select('id, codigo, nombre, precio_principal, costo, cantidad, status, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, min, marca_id, marcas(nombre), clasificacion_id, clasificaciones(nombre), proveedor_id, proveedores(nombre), unidad_venta_id, unidades_venta:unidad_venta_id(abreviatura), unidad_compra_id, unidades_compra:unidad_compra_id(abreviatura), factor_conversion, calculo_costo, lista_id, listas(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .order('nombre', { ascending: true })
+          .range(from, to);
+        if (search) q = q.or(`nombre.ilike.%${search}%,codigo.ilike.%${search}%`);
+        if (statusFilter && statusFilter !== 'todos') q = q.eq('status', statusFilter as Producto['status']);
+        return q;
+      }) as Promise<Producto[]>;
     },
   });
 }
