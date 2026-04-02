@@ -336,6 +336,18 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Clientes en Riesgo */}
+      {(clientesEnRiesgo ?? []).length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4 mt-4">
+          <SectionTitle icon={UserX}>Clientes sin visitar — Ingreso en riesgo</SectionTitle>
+          <ClientesEnRiesgoWidget
+            clientes={clientesEnRiesgo ?? []}
+            fmtMoney={money}
+            maxItems={8}
+          />
+        </div>
+      )}
+
       {/* Bottom row: Top products, Top clients, Low stock */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
         {/* Top Products */}
