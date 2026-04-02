@@ -241,28 +241,37 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           l.aplica_a === 'todos'
         );
 
-        if (!rule) return null; // Only show products that match a rule
+        if (!rule) return null;
 
-        let precio = 0;
-        if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
-        else if (rule.tipo_calculo === 'margen_costo') precio = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
-        else if (rule.tipo_calculo === 'descuento_precio') precio = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
-
-        precio = applyRedondeo(precio, rule.redondeo ?? 'ninguno');
+        let precioRaw = 0;
+        if (rule.tipo_calculo === 'precio_fijo') precioRaw = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'margen_costo') precioRaw = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'descuento_precio') precioRaw = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
 
         const basePrecio = rule.base_precio ?? 'sin_impuestos';
-        let precioConImp = precio;
-        if (basePrecio !== 'con_impuestos') {
-          const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
-          const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
-          const baseIva = precio + (p.ieps_tipo === 'porcentaje' ? precio * iepsPct / 100 : 0);
+        const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
+        const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
+
+        let precioSinImp = precioRaw;
+        let precioConImp = precioRaw;
+
+        if (basePrecio === 'con_impuestos') {
+          precioConImp = precioRaw;
+          const divisor = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+          precioSinImp = divisor > 0 ? precioRaw / divisor : precioRaw;
+        } else {
+          precioSinImp = precioRaw;
+          const baseIva = precioRaw + (p.ieps_tipo === 'porcentaje' ? precioRaw * iepsPct / 100 : 0);
           precioConImp = baseIva + baseIva * ivaPct / 100;
         }
 
+        const precioFinal = applyRedondeo(precioConImp, rule.redondeo ?? 'ninguno');
+
         return {
           ...p,
-          precio_lista: precio,
-          precio_con_imp: precioConImp,
+          precio_lista: Math.round(precioSinImp * 100) / 100,
+          precio_con_imp: Math.round(precioConImp * 100) / 100,
+          precio_final: Math.round(precioFinal * 100) / 100,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
           comision_pct: rule.comision_pct ?? 0,
           base_precio: basePrecio,
@@ -284,8 +293,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
     { key: 'nombre', header: 'Producto', width: 30, format: 'text' as const },
     { key: 'costo', header: 'Costo', width: 12, format: 'currency' as const, align: 'right' as const },
     { key: 'precio_principal', header: 'Precio base', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_lista', header: 'Precio lista', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'precio_lista', header: 'Precio s/imp', width: 12, format: 'currency' as const, align: 'right' as const },
     { key: 'precio_con_imp', header: 'Precio c/imp', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'precio_final', header: 'Precio Final', width: 12, format: 'currency' as const, align: 'right' as const },
     { key: 'regla', header: 'Regla', width: 10, format: 'text' as const },
     { key: 'ganancia', header: 'Ganancia', width: 12, format: 'currency' as const, align: 'right' as const },
     { key: 'margen', header: 'Margen %', width: 10, format: 'percent' as const, align: 'right' as const },
@@ -345,6 +355,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               <th className="th-odoo text-right">Precio base</th>
               <th className="th-odoo text-right">Precio s/imp</th>
               <th className="th-odoo text-right">Precio c/imp</th>
+              <th className="th-odoo text-right font-bold">Precio Final</th>
               <th className="th-odoo text-left">Regla</th>
               <th className="th-odoo text-center">Base</th>
               <th className="th-odoo text-right">Ganancia</th>
@@ -363,7 +374,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{p.regla}</td>
                   <td className="py-1.5 px-3 text-center">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
@@ -377,7 +389,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+              <tr><td colSpan={12} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
             )}
           </tbody>
         </table>
