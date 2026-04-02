@@ -43,6 +43,13 @@ export function fmtCurrency(value: number | null | undefined, currencyCode?: str
   return formatCurrency(value, currencyCode);
 }
 
+/** Round a monetary value to 2 decimals, avoiding floating point artifacts */
+export function roundMoney(value: number | null | undefined): number {
+  const n = Number(value ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 /** Format a number with thousand separators (no fixed decimals for integers) */
 export function fmtNum(value: number | null | undefined): string {
   if (value == null) return '0';

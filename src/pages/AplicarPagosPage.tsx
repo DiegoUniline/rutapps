@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
-import { fmtDate, cn } from '@/lib/utils';
+import { fmtDate, cn, roundMoney } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Search, Banknote, Building2, CreditCard, Wallet, Check, ArrowLeft, AlertTriangle, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -54,11 +54,12 @@ function useClientesConSaldo(search: string) {
         const clienteNombre = v.clientes?.nombre ?? 'Sin cliente';
         const clienteCodigo = v.clientes?.codigo ?? null;
         const clienteTel = v.clientes?.telefono ?? null;
+        const saldoPendiente = roundMoney(v.saldo_pendiente ?? 0);
         if (existing) {
-          existing.saldo += v.saldo_pendiente ?? 0;
+          existing.saldo = roundMoney(existing.saldo + saldoPendiente);
           existing.docs += 1;
         } else {
-          map.set(cid, { id: cid, nombre: clienteNombre, codigo: clienteCodigo, telefono: clienteTel, saldo: v.saldo_pendiente ?? 0, docs: 1 });
+          map.set(cid, { id: cid, nombre: clienteNombre, codigo: clienteCodigo, telefono: clienteTel, saldo: saldoPendiente, docs: 1 });
         }
       });
 
@@ -115,30 +116,41 @@ export default function AplicarPagosPage() {
     return clientesRaw.filter(c => c.nombre.toLowerCase().includes(s) || (c.codigo ?? '').toLowerCase().includes(s));
   }, [clientesRaw, clienteSearch]);
 
-  const totalSaldoGlobal = clientesRaw?.reduce((s, c) => s + c.saldo, 0) ?? 0;
+  const totalSaldoGlobal = roundMoney(clientesRaw?.reduce((s, c) => s + c.saldo, 0) ?? 0);
   const totalDocsGlobal = clientesRaw?.reduce((s, c) => s + c.docs, 0) ?? 0;
 
   useMemo(() => {
-    if (ventasRaw) setVentas(ventasRaw.map(v => ({ ...v, montoAplicar: 0 })));
+    if (ventasRaw) setVentas(ventasRaw.map(v => ({
+      ...v,
+      total: roundMoney(v.total ?? 0),
+      saldo_pendiente: roundMoney(v.saldo_pendiente ?? 0),
+      montoAplicar: 0,
+    })));
   }, [ventasRaw]);
 
-  const totalPendiente = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
-  const totalDistribuido = ventas.reduce((s, v) => s + v.montoAplicar, 0);
-  const montoNum = parseFloat(montoRecibido) || 0;
-  const sinDistribuir = montoNum - totalDistribuido;
+  const totalPendiente = roundMoney(ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0));
+  const totalDistribuido = roundMoney(ventas.reduce((s, v) => s + v.montoAplicar, 0));
+  const montoNum = roundMoney(parseFloat(montoRecibido) || 0);
+  const sinDistribuir = roundMoney(montoNum - totalDistribuido);
 
-  const fmt = (n: number) => fmtCurrency(n);
+  const fmt = (n: number) => fmtCurrency(roundMoney(n));
 
   const updateMonto = useCallback((id: string, monto: number) => {
-    setVentas(prev => prev.map(v => v.id === id ? { ...v, montoAplicar: Math.min(Math.max(0, monto), v.saldo_pendiente) } : v));
+    const montoNormalizado = roundMoney(monto);
+    setVentas(prev => prev.map(v => {
+      if (v.id !== id) return v;
+      const saldoPendiente = roundMoney(v.saldo_pendiente);
+      return { ...v, montoAplicar: roundMoney(Math.min(Math.max(0, montoNormalizado), saldoPendiente)) };
+    }));
   }, []);
 
   const distribuirFIFO = useCallback(() => {
     if (!montoNum) return;
     let restante = montoNum;
     setVentas(prev => prev.map(v => {
-      const aplicar = Math.min(restante, v.saldo_pendiente);
-      restante -= aplicar;
+      const saldoPendiente = roundMoney(v.saldo_pendiente);
+      const aplicar = roundMoney(Math.min(restante, saldoPendiente));
+      restante = roundMoney(restante - aplicar);
       return { ...v, montoAplicar: aplicar };
     }));
   }, [montoNum]);
@@ -162,7 +174,13 @@ export default function AplicarPagosPage() {
 
   const handleAplicar = async () => {
     if (!empresa?.id || !user?.id || !selectedCliente) return;
-    const aplicaciones = ventas.filter(v => v.montoAplicar > 0);
+    const aplicaciones = ventas
+      .filter(v => v.montoAplicar > 0)
+      .map(v => ({
+        ...v,
+        montoAplicar: roundMoney(v.montoAplicar),
+        saldo_pendiente: roundMoney(v.saldo_pendiente),
+      }));
     if (aplicaciones.length === 0) { toast.error('Distribuye el monto a al menos una venta'); return; }
     if (totalDistribuido <= 0) { toast.error('El monto a distribuir debe ser mayor a 0'); return; }
 
@@ -172,7 +190,7 @@ export default function AplicarPagosPage() {
         empresa_id: empresa.id,
         cliente_id: selectedCliente.id,
         user_id: user.id,
-        monto: totalDistribuido,
+        monto: roundMoney(totalDistribuido),
         metodo_pago: metodoPago,
         referencia: referencia || null,
         notas: notas || null,
@@ -181,12 +199,12 @@ export default function AplicarPagosPage() {
       if (cobroErr) throw cobroErr;
 
       for (const v of aplicaciones) {
-        await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: v.id, monto_aplicado: v.montoAplicar });
-        const nuevoSaldo = Math.max(0, v.saldo_pendiente - v.montoAplicar);
+        await supabase.from('cobro_aplicaciones').insert({ cobro_id: cobro.id, venta_id: v.id, monto_aplicado: roundMoney(v.montoAplicar) });
+        const nuevoSaldo = roundMoney(Math.max(0, v.saldo_pendiente - v.montoAplicar));
         await supabase.from('ventas').update({ saldo_pendiente: nuevoSaldo }).eq('id', v.id);
       }
 
-      toast.success(`Pago de ${symbol}${fmt(totalDistribuido)} aplicado a ${aplicaciones.length} venta(s)`);
+      toast.success(`Pago de ${fmt(totalDistribuido)} aplicado a ${aplicaciones.length} venta(s)`);
       queryClient.invalidateQueries({ queryKey: ['ventas-pendientes-aplicar'] });
       queryClient.invalidateQueries({ queryKey: ['clientes-con-saldo'] });
       queryClient.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
@@ -222,9 +240,9 @@ export default function AplicarPagosPage() {
           clienteNombre: selectedCliente.nombre,
           aplicaciones: aplicaciones.map(v => ({
             folio: v.folio,
-            monto: v.montoAplicar,
-            saldoAnterior: v.saldo_pendiente,
-            saldoNuevo: Math.max(0, v.saldo_pendiente - v.montoAplicar),
+            monto: roundMoney(v.montoAplicar),
+            saldoAnterior: roundMoney(v.saldo_pendiente),
+            saldoNuevo: roundMoney(Math.max(0, v.saldo_pendiente - v.montoAplicar)),
           })),
         });
         printTicket(ticketData, { ticketAncho: (empresa as any).ticket_ancho ?? '80' });
@@ -380,15 +398,15 @@ export default function AplicarPagosPage() {
         <div className="bg-card border border-border rounded p-3 space-y-2">
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Total pendiente</span>
-            <span className="font-semibold text-warning tabular-nums">{symbol}{fmt(totalPendiente)}</span>
+            <span className="font-semibold text-warning tabular-nums">{fmt(totalPendiente)}</span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-muted-foreground">Distribuido</span>
-            <span className="font-bold text-primary tabular-nums">{symbol}{fmt(totalDistribuido)}</span>
+            <span className="font-bold text-primary tabular-nums">{fmt(totalDistribuido)}</span>
           </div>
           {sinDistribuir > 0.01 && (
             <div className="flex items-center gap-1 text-[11px] text-warning bg-warning/10 rounded px-2 py-1 font-medium">
-              <AlertTriangle className="h-3 w-3" /> {symbol}{fmt(sinDistribuir)} sin distribuir
+              <AlertTriangle className="h-3 w-3" /> {fmt(sinDistribuir)} sin distribuir
             </div>
           )}
           {sinDistribuir < -0.01 && (
@@ -485,7 +503,7 @@ export default function AplicarPagosPage() {
         <div className="flex justify-end">
           <Button onClick={handleAplicar} disabled={saving || totalDistribuido <= 0 || sinDistribuir < -0.01}
             className="bg-success hover:bg-success/90 text-white py-2.5 px-8 text-sm font-bold gap-2">
-            <Check className="h-4 w-4" /> {saving ? 'Procesando...' : `Aplicar pago ${symbol}${fmt(totalDistribuido)}`}
+            <Check className="h-4 w-4" /> {saving ? 'Procesando...' : `Aplicar pago ${fmt(totalDistribuido)}`}
           </Button>
         </div>
       )}

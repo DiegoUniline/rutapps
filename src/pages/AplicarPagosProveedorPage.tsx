@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
-import { fmtDate, cn } from '@/lib/utils';
+import { fmtDate, cn, roundMoney } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Search, Banknote, Building2, CreditCard, Wallet, Check, ArrowLeft, AlertTriangle, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -48,11 +48,12 @@ function useProveedoresConSaldo() {
         const pid = c.proveedor_id;
         if (!pid) return;
         const existing = map.get(pid);
+        const saldoPendiente = roundMoney(c.saldo_pendiente ?? 0);
         if (existing) {
-          existing.saldo += c.saldo_pendiente ?? 0;
+          existing.saldo = roundMoney(existing.saldo + saldoPendiente);
           existing.docs += 1;
         } else {
-          map.set(pid, { id: pid, nombre: c.proveedores?.nombre ?? 'Sin proveedor', saldo: c.saldo_pendiente ?? 0, docs: 1 });
+          map.set(pid, { id: pid, nombre: c.proveedores?.nombre ?? 'Sin proveedor', saldo: saldoPendiente, docs: 1 });
         }
       });
 
@@ -109,30 +110,41 @@ export default function AplicarPagosProveedorPage() {
     return proveedoresRaw.filter(p => p.nombre.toLowerCase().includes(s));
   }, [proveedoresRaw, provSearch]);
 
-  const totalSaldoGlobal = proveedoresRaw?.reduce((s, p) => s + p.saldo, 0) ?? 0;
+  const totalSaldoGlobal = roundMoney(proveedoresRaw?.reduce((s, p) => s + p.saldo, 0) ?? 0);
   const totalDocsGlobal = proveedoresRaw?.reduce((s, p) => s + p.docs, 0) ?? 0;
 
   useMemo(() => {
-    if (comprasRaw) setCompras(comprasRaw.map(c => ({ ...c, montoAplicar: 0 })));
+    if (comprasRaw) setCompras(comprasRaw.map(c => ({
+      ...c,
+      total: roundMoney(c.total ?? 0),
+      saldo_pendiente: roundMoney(c.saldo_pendiente ?? 0),
+      montoAplicar: 0,
+    })));
   }, [comprasRaw]);
 
-  const totalPendiente = compras.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0);
-  const totalDistribuido = compras.reduce((s, c) => s + c.montoAplicar, 0);
-  const montoNum = parseFloat(montoRecibido) || 0;
-  const sinDistribuir = montoNum - totalDistribuido;
+  const totalPendiente = roundMoney(compras.reduce((s, c) => s + (c.saldo_pendiente ?? 0), 0));
+  const totalDistribuido = roundMoney(compras.reduce((s, c) => s + c.montoAplicar, 0));
+  const montoNum = roundMoney(parseFloat(montoRecibido) || 0);
+  const sinDistribuir = roundMoney(montoNum - totalDistribuido);
 
-  const fmt = (n: number) => fmtCurrency(n);
+  const fmt = (n: number) => fmtCurrency(roundMoney(n));
 
   const updateMonto = useCallback((id: string, monto: number) => {
-    setCompras(prev => prev.map(c => c.id === id ? { ...c, montoAplicar: Math.min(Math.max(0, monto), c.saldo_pendiente) } : c));
+    const montoNormalizado = roundMoney(monto);
+    setCompras(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const saldoPendiente = roundMoney(c.saldo_pendiente);
+      return { ...c, montoAplicar: roundMoney(Math.min(Math.max(0, montoNormalizado), saldoPendiente)) };
+    }));
   }, []);
 
   const distribuirFIFO = useCallback(() => {
     if (!montoNum) return;
     let restante = montoNum;
     setCompras(prev => prev.map(c => {
-      const aplicar = Math.min(restante, c.saldo_pendiente);
-      restante -= aplicar;
+      const saldoPendiente = roundMoney(c.saldo_pendiente);
+      const aplicar = roundMoney(Math.min(restante, saldoPendiente));
+      restante = roundMoney(restante - aplicar);
       return { ...c, montoAplicar: aplicar };
     }));
   }, [montoNum]);
@@ -156,7 +168,13 @@ export default function AplicarPagosProveedorPage() {
 
   const handleAplicar = async () => {
     if (!empresa?.id || !user?.id || !selectedProv) return;
-    const aplicaciones = compras.filter(c => c.montoAplicar > 0);
+    const aplicaciones = compras
+      .filter(c => c.montoAplicar > 0)
+      .map(c => ({
+        ...c,
+        montoAplicar: roundMoney(c.montoAplicar),
+        saldo_pendiente: roundMoney(c.saldo_pendiente),
+      }));
     if (aplicaciones.length === 0) { toast.error('Distribuye el monto a al menos una compra'); return; }
     if (totalDistribuido <= 0) { toast.error('El monto a distribuir debe ser mayor a 0'); return; }
 
@@ -169,7 +187,7 @@ export default function AplicarPagosProveedorPage() {
           compra_id: c.id,
           proveedor_id: selectedProv.id,
           user_id: user.id,
-          monto: c.montoAplicar,
+          monto: roundMoney(c.montoAplicar),
           metodo_pago: metodoPago,
           referencia: referencia || null,
           notas: notas || null,
@@ -177,7 +195,7 @@ export default function AplicarPagosProveedorPage() {
         } as any);
         if (pagoErr) throw pagoErr;
 
-        const nuevoSaldo = Math.max(0, c.saldo_pendiente - c.montoAplicar);
+        const nuevoSaldo = roundMoney(Math.max(0, c.saldo_pendiente - c.montoAplicar));
         const updates: any = { saldo_pendiente: nuevoSaldo };
         if (nuevoSaldo <= 0.01) updates.status = 'pagada';
         await supabase.from('compras').update(updates).eq('id', c.id);

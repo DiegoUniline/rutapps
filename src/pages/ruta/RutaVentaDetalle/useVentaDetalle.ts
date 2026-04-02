@@ -5,7 +5,7 @@ import { useVenta } from '@/hooks/useVentas';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, roundMoney } from '@/lib/utils';
 import { buildTicketHTML as buildUnifiedTicketHTML, type TicketData } from '@/lib/ticketHtml';
 import { printTicket } from '@/lib/printTicketUtil';
 import { isBluetoothAvailable, connectPrinter, sendBytes } from '@/lib/bluetoothPrinter';
@@ -42,7 +42,7 @@ export function useVentaDetalle() {
 
   const clienteId = (venta as any)?.cliente_id;
   const { symbol: currSym } = useCurrency();
-  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  const fmt = (n: number) => roundMoney(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtM = (n: number) => `${currSym}${fmt(n)}`;
 
   const { data: clienteData } = useQuery({
@@ -74,13 +74,16 @@ export function useVentaDetalle() {
   const saldoPendienteOtras = ventasPendientesCredito ?? 0;
   const creditoDisponible = clienteData ? (clienteData.limite_credito ?? 0) - saldoPendienteOtras : 0;
   const excedeCredito = editCondicion === 'credito' && editTotals.total > creditoDisponible;
-  const saldoActual = venta?.saldo_pendiente ?? 0;
-  const totalAplicarOtras = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
-  const totalACobrar = montoAplicarActual + totalAplicarOtras;
-  const montoRecibidoNum = parseFloat(montoRecibido) || 0;
-  const cambio = montoRecibidoNum > totalACobrar ? montoRecibidoNum - totalACobrar : 0;
+  const saldoActual = roundMoney(venta?.saldo_pendiente ?? 0);
+  const totalAplicarOtras = roundMoney(cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0));
+  const totalACobrar = roundMoney(montoAplicarActual + totalAplicarOtras);
+  const montoRecibidoNum = roundMoney(parseFloat(montoRecibido) || 0);
+  const cambio = montoRecibidoNum > totalACobrar ? roundMoney(montoRecibidoNum - totalACobrar) : 0;
 
-  const updateMontoAplicarActual = (monto: number) => { setMontoAplicarActual(Math.min(Math.max(0, monto), saldoActual)); };
+  const updateMontoAplicarActual = (monto: number) => {
+    const montoNormalizado = roundMoney(monto);
+    setMontoAplicarActual(roundMoney(Math.min(Math.max(0, montoNormalizado), saldoActual)));
+  };
 
   const filteredProductos = productos?.filter(p => !searchProducto || p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) || p.codigo.toLowerCase().includes(searchProducto.toLowerCase()));
 
@@ -124,47 +127,66 @@ export function useVentaDetalle() {
   };
 
   const initCobrar = () => {
-    if (otrasPendientes?.length) { setCuentasPendientes(otrasPendientes.map(v => ({ id: v.id, folio: v.folio, fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, montoAplicar: 0 }))); } else { setCuentasPendientes([]); }
+    if (otrasPendientes?.length) {
+      setCuentasPendientes(otrasPendientes.map(v => ({
+        id: v.id,
+        folio: v.folio,
+        fecha: v.fecha,
+        total: roundMoney(v.total ?? 0),
+        saldo_pendiente: roundMoney(v.saldo_pendiente ?? 0),
+        montoAplicar: 0,
+      })));
+    } else {
+      setCuentasPendientes([]);
+    }
     setMetodoPago('efectivo');
-    setMontoAplicarActual(saldoActual);
-    setMontoRecibido(saldoActual > 0 ? saldoActual.toString() : '');
+    setMontoAplicarActual(roundMoney(saldoActual));
+    setMontoRecibido(saldoActual > 0 ? roundMoney(saldoActual).toFixed(2) : '');
     setReferenciaPago('');
     setView('cobrar');
   };
 
-  const updateCuentaMonto = (cid: string, monto: number) => { setCuentasPendientes(prev => prev.map(c => c.id === cid ? { ...c, montoAplicar: Math.min(Math.max(0, monto), c.saldo_pendiente) } : c)); };
-  const liquidarTodas = () => { setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: c.saldo_pendiente }))); };
+  const updateCuentaMonto = (cid: string, monto: number) => {
+    const montoNormalizado = roundMoney(monto);
+    setCuentasPendientes(prev => prev.map(c => c.id === cid ? {
+      ...c,
+      montoAplicar: roundMoney(Math.min(Math.max(0, montoNormalizado), roundMoney(c.saldo_pendiente))),
+    } : c));
+  };
+  const liquidarTodas = () => {
+    setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: roundMoney(c.saldo_pendiente) })));
+  };
 
   const handleCobrar = async () => {
     if (!user || !venta || totalACobrar <= 0) return;
     setSaving(true);
     try {
       if (!empresa?.id) throw new Error('Sin empresa');
-      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: totalACobrar, metodo_pago: metodoPago, referencia: referenciaPago || null }).select('id').single();
+      const { data: cobro, error: cobroErr } = await supabase.from('cobros').insert({ empresa_id: empresa.id, cliente_id: clienteId, user_id: user.id, monto: roundMoney(totalACobrar), metodo_pago: metodoPago, referencia: referenciaPago || null }).select('id').single();
       if (cobroErr) throw cobroErr;
       const aplicaciones: { cobro_id: string; venta_id: string; monto_aplicado: number }[] = [];
       const ticketApps: { folio: string; monto: number; saldoRestante: number }[] = [];
 
       // Apply to current sale
       if (montoAplicarActual > 0) {
-        aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: montoAplicarActual });
-        const newSaldo = saldoActual - montoAplicarActual;
+        aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
+        const newSaldo = roundMoney(saldoActual - montoAplicarActual);
         await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo), status: newSaldo <= 0.01 && venta.status === 'borrador' ? 'confirmado' as const : venta.status }).eq('id', venta.id);
-        ticketApps.push({ folio: venta.folio ?? 'Sin folio', monto: montoAplicarActual, saldoRestante: Math.max(0, newSaldo) });
+        ticketApps.push({ folio: venta.folio ?? 'Sin folio', monto: roundMoney(montoAplicarActual), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
       }
 
       // Apply to other pending sales
       for (const cuenta of cuentasPendientes) {
         if (cuenta.montoAplicar > 0) {
-          aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: cuenta.montoAplicar });
-          const newSaldo = cuenta.saldo_pendiente - cuenta.montoAplicar;
+          aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
+          const newSaldo = roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar);
           await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo) }).eq('id', cuenta.id);
-          ticketApps.push({ folio: cuenta.folio ?? '—', monto: cuenta.montoAplicar, saldoRestante: Math.max(0, newSaldo) });
+          ticketApps.push({ folio: cuenta.folio ?? '—', monto: roundMoney(cuenta.montoAplicar), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
         }
       }
 
       if (aplicaciones.length > 0) { const { error: appErr } = await supabase.from('cobro_aplicaciones').insert(aplicaciones); if (appErr) throw appErr; }
-      setTicketData({ monto: totalACobrar, cambio, metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
+      setTicketData({ monto: roundMoney(totalACobrar), cambio: roundMoney(cambio), metodo: metodoPago, folio: venta.folio ?? 'Sin folio', fecha: new Date().toLocaleString('es-MX'), aplicaciones: ticketApps });
       setView('ticket');
       toast.success('¡Cobro registrado!');
       ['venta', 'ruta-ventas', 'ruta-stats', 'ventas', 'ruta-cuentas-pendientes'].forEach(k => queryClient.invalidateQueries({ queryKey: [k === 'venta' ? 'venta' : k, ...(k === 'venta' ? [id] : [])] }));
