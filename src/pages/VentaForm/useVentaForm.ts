@@ -265,13 +265,15 @@ export function useVentaForm() {
       if (!l.producto_id) return l;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return l;
-      const newPrice = resolveProductPrice(tarifaRules, {
+      const prodForPricing: ProductForPricing = {
         id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
         clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16),
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
-      } as ProductForPricing, listaPrecioId);
-      if (newPrice === Number(l.precio_unitario)) return l;
-      return { ...l, precio_unitario: newPrice };
+      };
+      const pricing = resolveProductPricing(tarifaRules, prodForPricing, listaPrecioId);
+      const snap = buildSalePricingSnapshot(prodForPricing, pricing);
+      if (snap.unitPrice === Number(l.precio_unitario)) return l;
+      return { ...l, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice } as any;
     }));
   }, [tarifaRules, (form as any).lista_precio_id]);
 
