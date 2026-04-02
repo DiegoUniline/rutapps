@@ -52,6 +52,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { empresa, profile } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = getDiaFromDate(filterDate);
