@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveProductPrice, resolveProductPricing, calculatePrice, type TarifaLineaRule } from '@/lib/priceResolver';
+import { resolveProductPrice, resolveProductPricing, calculatePrice, toDisplayPrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { productoBasico, productoConIeps } from './fixtures/productos';
 import { reglaPrecioFijo, reglaMargenCosto, reglaDescuento } from './fixtures/tarifas';
 
@@ -63,8 +63,30 @@ describe('resolveProductPrice – placeholder rules fallback', () => {
   });
 });
 
-describe('resolveProductPricing – display price', () => {
-  it('keeps the rounded public price when the rule is con_impuestos', () => {
+describe('toDisplayPrice – always returns gross + rounded', () => {
+  it('adds taxes to net price for sin_impuestos rule', () => {
+    // productoBasico: iva 16%, no ieps → 12 * 1.16 = 13.92
+    const display = toDisplayPrice(12, productoBasico, 'ninguno');
+    expect(display).toBe(13.92);
+  });
+
+  it('applies redondeo as final step', () => {
+    // 12 * 1.16 = 13.92 → cercano → 14
+    const display = toDisplayPrice(12, productoBasico, 'cercano');
+    expect(display).toBe(14);
+  });
+});
+
+describe('resolveProductPricing – display price is always Precio Final (gross + rounded)', () => {
+  it('sin_impuestos: displayPrice includes taxes and rounding', () => {
+    const pricing = resolveProductPricing([reglaPrecioFijo], productoBasico);
+    // unitPrice = 12 (net), displayPrice = 12 * 1.16 = 13.92 (no rounding rule)
+    expect(pricing.unitPrice).toBe(12);
+    expect(pricing.displayPrice).toBe(13.92);
+    expect(pricing.basePrecio).toBe('sin_impuestos');
+  });
+
+  it('con_impuestos: displayPrice is gross with rounding', () => {
     const rule: TarifaLineaRule = {
       ...reglaPrecioFijo,
       tipo_calculo: 'precio_fijo',
@@ -75,17 +97,17 @@ describe('resolveProductPricing – display price', () => {
     };
 
     const pricing = resolveProductPricing([rule], productoBasico);
-
-    expect(pricing.unitPrice).toBe(24.14);
+    // 27.5 / 1.16 = 23.7069 → round2 = 23.71 (unitPrice)
+    // displayPrice: 23.71 * 1.16 = 27.5036 → round2 = 27.5 → cercano → 28
+    expect(pricing.unitPrice).toBe(23.71);
     expect(pricing.displayPrice).toBe(28);
     expect(pricing.basePrecio).toBe('con_impuestos');
   });
 
-  it('shows the same amount for display when the rule is sin_impuestos', () => {
-    const pricing = resolveProductPricing([reglaPrecioFijo], productoBasico);
-
-    expect(pricing.unitPrice).toBe(12);
-    expect(pricing.displayPrice).toBe(12);
-    expect(pricing.basePrecio).toBe('sin_impuestos');
+  it('no rules: displayPrice includes taxes on precio_principal', () => {
+    const pricing = resolveProductPricing([], productoBasico);
+    // precio_principal = 10, displayPrice = 10 * 1.16 = 11.6
+    expect(pricing.unitPrice).toBe(10);
+    expect(pricing.displayPrice).toBe(11.6);
   });
 });
