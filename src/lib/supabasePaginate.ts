@@ -1,5 +1,3 @@
-import type { PostgrestFilterBuilder } from '@supabase/supabase-js/dist/module/select-query-parser';
-
 const PAGE_SIZE = 1000;
 
 /**
