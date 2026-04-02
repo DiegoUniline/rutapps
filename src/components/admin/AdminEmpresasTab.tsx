@@ -67,6 +67,11 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaRow | null>(null);
   const [cantidadTimbres, setCantidadTimbres] = useState('10');
   const [addingTimbres, setAddingTimbres] = useState(false);
+  const [showCreateEmpresa, setShowCreateEmpresa] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newEmpresa, setNewEmpresa] = useState({
+    nombre: '', empresa: '', email: '', password: '123456', countryCode: '+52', telefono: '',
+  });
 
   useEffect(() => { load(); }, []);
 
