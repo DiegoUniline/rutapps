@@ -277,17 +277,23 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
       if (vendedorId) clientesQ = clientesQ.eq('vendedor_id', vendedorId);
       const { data: clientes } = await clientesQ;
 
-      // 2) Sales in period (visited)
-      let ventasQ = supabase
-        .from('ventas')
-        .select('cliente_id')
-        .eq('empresa_id', eid)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to))
-        .not('status', 'eq', 'cancelado');
-      const { data: ventasPeriodo } = await ventasQ;
-
-      const visitedSet = new Set((ventasPeriodo ?? []).map(v => v.cliente_id));
+      // 2) Sales in period (visited) — paginate to avoid 1000-row cap
+      const visitedSet = new Set<string>();
+      const PAGE = 1000;
+      let from = 0;
+      while (true) {
+        const { data: page } = await supabase
+          .from('ventas')
+          .select('cliente_id')
+          .eq('empresa_id', eid)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .not('status', 'eq', 'cancelado')
+          .range(from, from + PAGE - 1);
+        for (const v of page ?? []) if (v.cliente_id) visitedSet.add(v.cliente_id);
+        if (!page || page.length < PAGE) break;
+        from += PAGE;
+      }
 
       // 3) Not visited clients
       const noVisitados = (clientes ?? []).filter(c => !visitedSet.has(c.id));
