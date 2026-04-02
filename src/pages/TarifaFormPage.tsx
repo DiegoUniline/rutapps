@@ -355,6 +355,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               <th className="th-odoo text-right">Precio base</th>
               <th className="th-odoo text-right">Precio s/imp</th>
               <th className="th-odoo text-right">Precio c/imp</th>
+              <th className="th-odoo text-right font-bold">Precio Final</th>
               <th className="th-odoo text-left">Regla</th>
               <th className="th-odoo text-center">Base</th>
               <th className="th-odoo text-right">Ganancia</th>
@@ -373,7 +374,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{p.regla}</td>
                   <td className="py-1.5 px-3 text-center">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
