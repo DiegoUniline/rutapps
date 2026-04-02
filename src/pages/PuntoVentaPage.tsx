@@ -123,17 +123,69 @@ export default function PuntoVentaPage() {
     queryKey: ['pos-tarifa-lineas', effectiveTarifaId], enabled: !!effectiveTarifaId, staleTime: CATALOG_STALE,
     queryFn: async () => { const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', effectiveTarifaId!); return (data ?? []) as TarifaLineaRule[]; },
   });
-  const resolvePosPrice = useCallback((p: any): number => {
-    // No client or no tarifa → use precio_principal directly
-    if (!effectiveTarifaId) return p.precio_principal ?? 0;
-    const rules = effectiveTarifaLineas ?? [];
-    if (!rules.length) return p.precio_principal ?? 0;
-    return resolveProductPrice(rules, { id: p.id, precio_principal: p.precio_principal ?? 0, costo: p.costo ?? 0, clasificacion_id: p.clasificacion_id, tiene_iva: p.tiene_iva, iva_pct: p.iva_pct ?? 16, tiene_ieps: p.tiene_ieps, ieps_pct: p.ieps_pct ?? 0, ieps_tipo: p.ieps_tipo }, clienteListaPrecioId);
-  }, [effectiveTarifaId, effectiveTarifaLineas, clienteListaPrecioId]);
+
+  const productPricingMap = useMemo(() => {
+    const pricingByProduct = new Map<string, ReturnType<typeof resolveProductPricing>>();
+    if (!productos?.length) return pricingByProduct;
+
+    productos.forEach((p: any) => {
+      const fallbackPrice = r2(p.precio_principal ?? 0);
+      const pricing = effectiveTarifaId && (effectiveTarifaLineas?.length ?? 0) > 0
+        ? resolveProductPricing(
+            effectiveTarifaLineas ?? [],
+            {
+              id: p.id,
+              precio_principal: fallbackPrice,
+              costo: p.costo ?? 0,
+              clasificacion_id: p.clasificacion_id,
+              tiene_iva: p.tiene_iva,
+              iva_pct: p.iva_pct ?? 16,
+              tiene_ieps: p.tiene_ieps,
+              ieps_pct: p.ieps_pct ?? 0,
+              ieps_tipo: p.ieps_tipo,
+            },
+            clienteListaPrecioId,
+          )
+        : {
+            unitPrice: fallbackPrice,
+            displayPrice: fallbackPrice,
+            basePrecio: 'sin_impuestos' as const,
+            appliedRule: null,
+          };
+
+      pricingByProduct.set(p.id, pricing);
+    });
+
+    return pricingByProduct;
+  }, [productos, effectiveTarifaId, effectiveTarifaLineas, clienteListaPrecioId]);
+
+  const getProductPricing = useCallback((p: any) => {
+    return productPricingMap.get(p.id) ?? {
+      unitPrice: r2(p.precio_principal ?? 0),
+      displayPrice: r2(p.precio_principal ?? 0),
+      basePrecio: 'sin_impuestos' as const,
+      appliedRule: null,
+    };
+  }, [productPricingMap]);
+
+  const getDisplayUnitPrice = useCallback((item: Pick<PosItem, 'precio_unitario' | 'base_precio' | 'tiene_iva' | 'iva_pct' | 'tiene_ieps' | 'ieps_pct'>) => {
+    if (item.base_precio !== 'con_impuestos') return r2(item.precio_unitario);
+    return r2(item.precio_unitario * getTaxMultiplier(item));
+  }, []);
+
   useEffect(() => {
     if (cart.length === 0 || !productos) return;
-    setCart(prev => prev.map(item => { const prod = productos.find(p => p.id === item.producto_id); if (!prod) return item; return { ...item, precio_unitario: resolvePosPrice(prod) }; }));
-  }, [effectiveTarifaLineas, clienteListaPrecioId]);
+    setCart(prev => prev.map(item => {
+      const prod = productos.find(p => p.id === item.producto_id);
+      if (!prod) return item;
+      const pricing = getProductPricing(prod);
+      return {
+        ...item,
+        precio_unitario: pricing.unitPrice,
+        base_precio: pricing.basePrecio as BasePrecioMode,
+      };
+    }));
+  }, [cart.length, productos, getProductPricing]);
 
   // ---- Promotions engine ----
   const { data: promocionesActivas } = usePromocionesActivas();
