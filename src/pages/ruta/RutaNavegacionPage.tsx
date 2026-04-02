@@ -78,7 +78,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   }, []);
 
   // Fetch clients for today (respecting visibility)
-  const clientesVisibilidad = empresa?.clientes_visibilidad ?? 'todos';
+  const clientesVisibilidad = (empresa as any)?.clientes_visibilidad ?? 'todos';
   const { data: clientesData } = useQuery({
     queryKey: ['nav-clientes', empresa?.id, filterDia, vendedorId, clientesVisibilidad],
     enabled: !!empresa?.id,
