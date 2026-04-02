@@ -359,47 +359,47 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
         <table className="w-full text-[12px]">
           <thead>
             <tr className="border-b border-border bg-card">
-              <th className="th-odoo text-left">Código</th>
-              <th className="th-odoo text-left">Producto</th>
-              <th className="th-odoo text-right">Costo</th>
-              <th className="th-odoo text-right">Precio base</th>
-              <th className="th-odoo text-right">Precio s/imp</th>
-              <th className="th-odoo text-right">Precio c/imp</th>
-              <th className="th-odoo text-right font-bold">Precio Final</th>
-              <th className="th-odoo text-left">Regla</th>
-              <th className="th-odoo text-center">Base</th>
-              <th className="th-odoo text-right">Ganancia</th>
-              <th className="th-odoo text-right">Margen %</th>
-              <th className="th-odoo text-right">Comisión %</th>
+              <th className="th-odoo text-left" rowSpan={2}>Código</th>
+              <th className="th-odoo text-left" rowSpan={2}>Producto</th>
+              <th className="th-odoo text-right" rowSpan={2}>Costo</th>
+              <th className="th-odoo text-center border-l border-border" colSpan={2}>Regla</th>
+              <th className="th-odoo text-center border-l border-border" colSpan={2}>Impuestos</th>
+              <th className="th-odoo text-right border-l border-border font-bold bg-primary/5" rowSpan={2}>Precio Final</th>
+              <th className="th-odoo text-center border-l border-border" colSpan={2}>Rentabilidad</th>
+            </tr>
+            <tr className="border-b border-border bg-card text-[10px]">
+              <th className="py-1 px-3 text-center border-l border-border text-muted-foreground font-normal">Tipo</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Neto</th>
+              <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">IEPS</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">IVA</th>
+              <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">Ganancia</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Margen</th>
             </tr>
           </thead>
           <tbody>
             {filtered.slice(0, 200).map(p => {
-              const ganancia = p.precio_lista - p.costo;
-              const margen = p.costo > 0 ? (ganancia / p.costo) * 100 : 0;
+              const margen = p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0;
               return (
                 <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-muted-foreground">{p.regla}</td>
-                  <td className="py-1.5 px-3 text-center">
+                  <td className="py-1.5 px-3 text-center border-l border-border/40">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
+                      {p.regla} {p.base_precio === 'con_impuestos' ? '(c/imp)' : '(s/imp)'}
                     </span>
                   </td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? `$ ${p.monto_ieps.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{p.monto_iva > 0 ? `$ ${p.monto_iva.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold border-l border-border/40 ${p.ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {p.ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={12} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+              <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
             )}
           </tbody>
         </table>
