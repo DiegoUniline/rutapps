@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';

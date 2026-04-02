@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export type DateRange = { from: Date; to: Date };
 
@@ -17,17 +18,18 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
     queryKey: ['dashboard-ventas', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('ventas')
-        .select('id, fecha, total, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelado' as any);
-      if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) => {
+        let q = supabase
+          .from('ventas')
+          .select('id, fecha, total, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .neq('status', 'cancelado' as any)
+          .range(from, to);
+        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+        return q;
+      });
     },
   });
 }
@@ -38,16 +40,17 @@ export function useDashboardCobros(range: DateRange, vendedorId?: string) {
     queryKey: ['dashboard-cobros', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('cobros')
-        .select('id, fecha, monto, metodo_pago, cliente_id')
-        .eq('empresa_id', empresa!.id)
-        .neq('status', 'cancelado')
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to));
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) => {
+        const q = supabase
+          .from('cobros')
+          .select('id, fecha, monto, metodo_pago, cliente_id')
+          .eq('empresa_id', empresa!.id)
+          .neq('status', 'cancelado')
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .range(from, to);
+        return q;
+      });
     },
   });
 }
@@ -58,14 +61,15 @@ export function useDashboardCompras(range: DateRange) {
     queryKey: ['dashboard-compras', empresa?.id, fmt(range.from), fmt(range.to)],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('compras')
-        .select('id, fecha, total, saldo_pendiente, status, proveedor_id, proveedores(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to));
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) =>
+        supabase
+          .from('compras')
+          .select('id, fecha, total, saldo_pendiente, status, proveedor_id, proveedores(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .range(from, to)
+      );
     },
   });
 }
@@ -76,16 +80,17 @@ export function useDashboardGastos(range: DateRange, vendedorId?: string) {
     queryKey: ['dashboard-gastos', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('gastos')
-        .select('id, fecha, monto, concepto, vendedor_id')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to));
-      if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) => {
+        let q = supabase
+          .from('gastos')
+          .select('id, fecha, monto, concepto, vendedor_id')
+          .eq('empresa_id', empresa!.id)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .range(from, to);
+        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+        return q;
+      });
     },
   });
 }
@@ -96,17 +101,17 @@ export function useDashboardCartera() {
     queryKey: ['dashboard-cartera', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), condicion_pago')
-        .eq('empresa_id', empresa!.id)
-        .eq('condicion_pago', 'credito')
-        .gt('saldo_pendiente', 0)
-        .neq('status', 'cancelado' as any)
-        .order('fecha', { ascending: true })
-        .limit(500);
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) =>
+        supabase
+          .from('ventas')
+          .select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), condicion_pago')
+          .eq('empresa_id', empresa!.id)
+          .eq('condicion_pago', 'credito')
+          .gt('saldo_pendiente', 0)
+          .neq('status', 'cancelado' as any)
+          .order('fecha', { ascending: true })
+          .range(from, to)
+      );
     },
   });
 }
@@ -118,16 +123,16 @@ export function useDashboardStock() {
     staleTime: 5 * 60 * 1000,
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('productos')
-        .select('id, codigo, nombre, cantidad, min, max, precio_principal, costo, status')
-        .eq('empresa_id', empresa!.id)
-        .eq('se_puede_vender', true)
-        .not('status', 'eq', 'inactivo')
-        .order('cantidad', { ascending: true })
-        .limit(500);
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) =>
+        supabase
+          .from('productos')
+          .select('id, codigo, nombre, cantidad, min, max, precio_principal, costo, status')
+          .eq('empresa_id', empresa!.id)
+          .eq('se_puede_vender', true)
+          .not('status', 'eq', 'inactivo')
+          .order('cantidad', { ascending: true })
+          .range(from, to)
+      );
     },
   });
 }
@@ -138,17 +143,19 @@ export function useDashboardTopProductos(range: DateRange) {
     queryKey: ['dashboard-top-productos', empresa?.id, fmt(range.from), fmt(range.to)],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('venta_lineas')
-        .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status, empresa_id)')
-        .eq('ventas.empresa_id', empresa!.id)
-        .gte('ventas.fecha', fmt(range.from))
-        .lte('ventas.fecha', fmt(range.to))
-        .neq('ventas.status', 'cancelado');
-      if (error) throw error;
+      const data = await fetchAllPages((from, to) =>
+        supabase
+          .from('venta_lineas')
+          .select('producto_id, cantidad, total, venta_id, ventas!inner(fecha, status, empresa_id)')
+          .eq('ventas.empresa_id', empresa!.id)
+          .gte('ventas.fecha', fmt(range.from))
+          .lte('ventas.fecha', fmt(range.to))
+          .neq('ventas.status', 'cancelado')
+          .range(from, to)
+      );
 
       const map = new Map<string, { qty: number; total: number }>();
-      (data ?? []).forEach((l) => {
+      data.forEach((l: any) => {
         const existing = map.get(l.producto_id) ?? { qty: 0, total: 0 };
         existing.qty += Number(l.cantidad);
         existing.total += Number(l.total ?? 0);
@@ -179,19 +186,21 @@ export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) 
     queryKey: ['dashboard-ventas-dia', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
-        .from('ventas')
-        .select('fecha, total')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelado');
-      if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-      const { data, error } = await q;
-      if (error) throw error;
+      const data = await fetchAllPages((from, to) => {
+        let q = supabase
+          .from('ventas')
+          .select('fecha, total')
+          .eq('empresa_id', empresa!.id)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .neq('status', 'cancelado')
+          .range(from, to);
+        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+        return q;
+      });
 
       const map = new Map<string, number>();
-      (data ?? []).forEach(v => {
+      data.forEach((v: any) => {
         map.set(v.fecha, (map.get(v.fecha) ?? 0) + Number(v.total ?? 0));
       });
 
@@ -213,18 +222,20 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
     queryKey: ['dashboard-ventas-vendedor', empresa?.id, fmt(range.from), fmt(range.to)],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ventas')
-        .select('vendedor_id, total, vendedores(nombre)')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to))
-        .neq('status', 'cancelado')
-        .not('vendedor_id', 'is', null);
-      if (error) throw error;
+      const data = await fetchAllPages((from, to) =>
+        supabase
+          .from('ventas')
+          .select('vendedor_id, total, vendedores(nombre)')
+          .eq('empresa_id', empresa!.id)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .neq('status', 'cancelado')
+          .not('vendedor_id', 'is', null)
+          .range(from, to)
+      );
 
       const map = new Map<string, { nombre: string; total: number; count: number }>();
-      (data ?? []).forEach((v) => {
+      data.forEach((v: any) => {
         const vendedorName = (v.vendedores as { nombre: string } | null)?.nombre ?? 'N/A';
         const existing = map.get(v.vendedor_id!) ?? { nombre: vendedorName, total: 0, count: 0 };
         existing.total += Number(v.total ?? 0);
@@ -245,16 +256,17 @@ export function useDashboardDevoluciones(range: DateRange, vendedorId?: string) 
     queryKey: ['dashboard-devoluciones', empresa?.id, fmt(range.from), fmt(range.to), vendedorId],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = (supabase as any)
-        .from('devoluciones')
-        .select('id, fecha, tipo, vendedor_id, vendedores(nombre), clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
-        .eq('empresa_id', empresa!.id)
-        .gte('fecha', fmt(range.from))
-        .lte('fecha', fmt(range.to));
-      if (vendedorId) q = q.eq('vendedor_id', vendedorId);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      return fetchAllPages((from, to) => {
+        let q = (supabase as any)
+          .from('devoluciones')
+          .select('id, fecha, tipo, vendedor_id, vendedores(nombre), clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+          .eq('empresa_id', empresa!.id)
+          .gte('fecha', fmt(range.from))
+          .lte('fecha', fmt(range.to))
+          .range(from, to);
+        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+        return q;
+      });
     },
   });
 }
@@ -268,19 +280,22 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
     queryFn: async () => {
       const eid = empresa!.id;
 
-      // 1) Active clients
-      let clientesQ = supabase
-        .from('clientes')
-        .select('id, nombre, vendedor_id, vendedores(nombre)')
-        .eq('empresa_id', eid)
-        .eq('status', 'activo');
-      if (vendedorId) clientesQ = clientesQ.eq('vendedor_id', vendedorId);
-      const { data: clientes } = await clientesQ;
+      // 1) Active clients (paginated)
+      const clientes = await fetchAllPages((from, to) => {
+        let q = supabase
+          .from('clientes')
+          .select('id, nombre, vendedor_id, vendedores(nombre)')
+          .eq('empresa_id', eid)
+          .eq('status', 'activo')
+          .range(from, to);
+        if (vendedorId) q = q.eq('vendedor_id', vendedorId);
+        return q;
+      });
 
-      // 2) Sales in period (visited) — paginate to avoid 1000-row cap
+      // 2) Sales in period (visited) — paginated
       const visitedSet = new Set<string>();
       const PAGE = 1000;
-      let from = 0;
+      let offset = 0;
       while (true) {
         const { data: page } = await supabase
           .from('ventas')
@@ -289,20 +304,20 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
           .not('status', 'eq', 'cancelado')
-          .range(from, from + PAGE - 1);
+          .range(offset, offset + PAGE - 1);
         for (const v of page ?? []) if (v.cliente_id) visitedSet.add(v.cliente_id);
         if (!page || page.length < PAGE) break;
-        from += PAGE;
+        offset += PAGE;
       }
 
       // 3) Not visited clients
-      const noVisitados = (clientes ?? []).filter(c => !visitedSet.has(c.id));
+      const noVisitados = clientes.filter((c: any) => !visitedSet.has(c.id));
       if (noVisitados.length === 0) return [];
 
       // 4) Last sale for each unvisited client (last 180 days for perf)
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 180);
-      const noVisitadoIds = noVisitados.map(c => c.id);
+      const noVisitadoIds = noVisitados.map((c: any) => c.id);
 
       const lastSaleMap = new Map<string, { fecha: string; total: number }>();
       const batchSize = 200;
@@ -323,7 +338,7 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
       }
 
       const todayMs = Date.now();
-      return noVisitados.map(c => {
+      return noVisitados.map((c: any) => {
         const last = lastSaleMap.get(c.id);
         return {
           id: c.id,

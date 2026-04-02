@@ -1,25 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-
-const PAGE_SIZE = 1000;
-
-/** Fetch all rows from a query using .range() pagination to avoid the 1000-row default limit */
-async function fetchAllPages<T>(buildQuery: (from: number, to: number) => any): Promise<T[]> {
-  const all: T[] = [];
-  let page = 0;
-  while (true) {
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    const { data, error } = await buildQuery(from, to);
-    if (error) throw error;
-    const rows = (data ?? []) as T[];
-    all.push(...rows);
-    if (rows.length < PAGE_SIZE) break; // last page
-    page++;
-  }
-  return all;
-}
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export function useReportesData(desde: string, hasta: string, vendedorIds?: string[], statusFilter?: string[]) {
   const { empresa } = useAuth();

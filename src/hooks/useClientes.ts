@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
