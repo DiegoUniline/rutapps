@@ -13,6 +13,7 @@ import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, use
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
+import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
@@ -222,68 +223,72 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
       if (!prods || !lineas) return [];
 
-      // Only use general tarifa rules (not list-specific overrides)
-      const filteredLineas = lineas.filter((l: any) => !l.lista_precio_id);
+      // Convert DB lineas to TarifaLineaRule format for the resolver
+      const rules: TarifaLineaRule[] = lineas
+        .filter((l: any) => !l.lista_precio_id)
+        .map((l: any) => ({
+          aplica_a: l.aplica_a,
+          producto_ids: l.producto_ids ?? [],
+          clasificacion_ids: l.clasificacion_ids ?? [],
+          tipo_calculo: l.tipo_calculo,
+          precio: l.precio ?? 0,
+          precio_minimo: l.precio_minimo,
+          margen_pct: l.margen_pct,
+          descuento_pct: l.descuento_pct,
+          redondeo: l.redondeo ?? 'ninguno',
+          base_precio: l.base_precio ?? 'sin_impuestos',
+          lista_precio_id: null,
+        }));
 
-      const applyRedondeo = (precio: number, redondeo: string) => {
-        if (!redondeo || redondeo === 'ninguno') return precio;
-        if (redondeo === 'arriba') return Math.ceil(precio);
-        if (redondeo === 'abajo') return Math.floor(precio);
-        return Math.round(precio);
-      };
+      const r2 = (v: number) => Math.round(v * 100) / 100;
 
       return prods.map(p => {
-        const rule = filteredLineas.find((l: any) =>
-          l.aplica_a === 'producto' && (l.producto_ids ?? []).includes(p.id)
-        ) ?? filteredLineas.find((l: any) =>
-          l.aplica_a === 'categoria' && (l.clasificacion_ids ?? []).includes(p.clasificacion_id)
-        ) ?? filteredLineas.find((l: any) =>
-          l.aplica_a === 'todos'
-        );
+        const producto: ProductForPricing = {
+          id: p.id,
+          precio_principal: p.precio_principal,
+          costo: p.costo,
+          clasificacion_id: p.clasificacion_id,
+          tiene_iva: p.tiene_iva,
+          iva_pct: p.iva_pct,
+          tiene_ieps: p.tiene_ieps,
+          ieps_pct: p.ieps_pct,
+          ieps_tipo: p.ieps_tipo,
+        };
 
-        if (!rule) return null;
+        const pricing = resolveProductPricing(rules, producto);
+        if (!pricing.appliedRule) return null;
 
-        let precioRaw = 0;
-        if (rule.tipo_calculo === 'precio_fijo') precioRaw = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
-        else if (rule.tipo_calculo === 'margen_costo') precioRaw = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
-        else if (rule.tipo_calculo === 'descuento_precio') precioRaw = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
-
+        const rule = pricing.appliedRule;
         const basePrecio = rule.base_precio ?? 'sin_impuestos';
         const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
         const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
-        const r2 = (v: number) => Math.round(v * 100) / 100;
 
-        let precioNeto: number;
-        let montoIeps: number;
-        let montoIva: number;
-        let precioConImpSinRedondeo: number;
-
-        if (basePrecio === 'con_impuestos') {
-          // precioRaw ya incluye impuestos → extraer neto
-          const divisor = (1 + iepsPct / 100) * (1 + ivaPct / 100);
-          precioNeto = r2(divisor > 0 ? precioRaw / divisor : precioRaw);
-          montoIeps = r2(precioNeto * iepsPct / 100);
-          montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
-          precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
-        } else {
-          // precioRaw es neto → sumar impuestos
-          precioNeto = r2(precioRaw);
-          montoIeps = r2(precioNeto * iepsPct / 100);
-          montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
-          precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
-        }
-
-        const precioFinal = r2(applyRedondeo(precioConImpSinRedondeo, rule.redondeo ?? 'ninguno'));
+        // Derive display values from the resolver
+        const precioNeto = pricing.unitPrice;
+        const montoIeps = r2(precioNeto * iepsPct / 100);
+        const montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
+        const precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
+        const precioFinal = pricing.displayPrice;
         const ganancia = r2(precioNeto - p.costo);
 
-        // Costo con impuestos (para vista c/imp)
+        // Raw rule price for display
+        const precioRegla = pricing.rawDisplayPrice != null
+          ? r2(basePrecio === 'con_impuestos' ? pricing.rawUnitPrice * ((1 + iepsPct / 100) * (1 + ivaPct / 100)) : pricing.rawUnitPrice)
+          : precioNeto;
+
+        // Costo con impuestos
         const costoIeps = r2(p.costo * iepsPct / 100);
         const costoIva = r2((p.costo + costoIeps) * ivaPct / 100);
         const costoConImp = r2(p.costo + costoIeps + costoIva);
 
+        // Regla label
+        let reglaLabel = 'Fijo';
+        if (rule.tipo_calculo === 'margen_costo') reglaLabel = `+${rule.margen_pct}%`;
+        else if (rule.tipo_calculo === 'descuento_precio') reglaLabel = `-${rule.descuento_pct}%`;
+
         return {
           ...p,
-          precio_regla: r2(precioRaw),
+          precio_regla: r2(pricing.rawUnitPrice * (basePrecio === 'con_impuestos' ? (1 + iepsPct / 100) * (1 + ivaPct / 100) : 1)),
           precio_neto: precioNeto,
           monto_ieps: montoIeps,
           monto_iva: montoIva,
@@ -291,9 +296,9 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           precio_final: precioFinal,
           ganancia,
           costo_con_imp: costoConImp,
-          regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
+          regla: reglaLabel,
           redondeo_tipo: rule.redondeo ?? 'ninguno',
-          comision_pct: rule.comision_pct ?? 0,
+          comision_pct: (rule as any).comision_pct ?? 0,
           base_precio: basePrecio,
         };
       }).filter(Boolean);
