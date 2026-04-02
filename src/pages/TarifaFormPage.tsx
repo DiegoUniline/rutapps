@@ -303,9 +303,10 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
   const exportColumns = [
     { key: 'codigo', header: 'Código', width: 10, format: 'text' as const },
-    { key: 'nombre', header: 'Producto', width: 26, format: 'text' as const },
+    { key: 'nombre', header: 'Producto', width: 24, format: 'text' as const },
     { key: 'costo', header: 'Costo', width: 10, format: 'currency' as const, align: 'right' as const },
     { key: 'regla', header: 'Regla', width: 8, format: 'text' as const },
+    { key: 'precio_regla', header: 'Precio Regla', width: 11, format: 'currency' as const, align: 'right' as const },
     { key: 'precio_neto', header: 'Precio Neto', width: 11, format: 'currency' as const, align: 'right' as const },
     { key: 'monto_ieps', header: 'IEPS', width: 9, format: 'currency' as const, align: 'right' as const },
     { key: 'monto_iva', header: 'IVA', width: 9, format: 'currency' as const, align: 'right' as const },
