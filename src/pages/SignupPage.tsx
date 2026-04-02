@@ -47,6 +47,8 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [showCooldownDialog, setShowCooldownDialog] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [form, setForm] = useState({
     nombre: '',
     empresa: '',
@@ -55,6 +57,54 @@ export default function SignupPage() {
     countryCode: '+52',
     telefono: '',
   });
+
+  // Persistent cooldown timer that survives page reloads
+  const COOLDOWN_KEY = 'otp_cooldown_until';
+
+  const getCooldownRemaining = useCallback(() => {
+    const until = localStorage.getItem(COOLDOWN_KEY);
+    if (!until) return 0;
+    const remaining = Math.ceil((parseInt(until) - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  }, []);
+
+  const startCooldown = useCallback((seconds: number) => {
+    const until = Date.now() + seconds * 1000;
+    localStorage.setItem(COOLDOWN_KEY, until.toString());
+    setCooldownSeconds(seconds);
+    setShowCooldownDialog(true);
+  }, []);
+
+  // Initialize and tick cooldown
+  useEffect(() => {
+    const remaining = getCooldownRemaining();
+    if (remaining > 0) {
+      setCooldownSeconds(remaining);
+      setShowCooldownDialog(true);
+    }
+  }, [getCooldownRemaining]);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return;
+    const interval = setInterval(() => {
+      const remaining = getCooldownRemaining();
+      if (remaining <= 0) {
+        setCooldownSeconds(0);
+        setShowCooldownDialog(false);
+        localStorage.removeItem(COOLDOWN_KEY);
+        clearInterval(interval);
+      } else {
+        setCooldownSeconds(remaining);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownSeconds, getCooldownRemaining]);
+
+  const formatCooldown = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  };
 
   const selectedCountry = COUNTRY_CODES.find(c => c.code === form.countryCode) || COUNTRY_CODES[0];
   const fullPhone = form.countryCode + form.telefono.replace(/\D/g, '');
