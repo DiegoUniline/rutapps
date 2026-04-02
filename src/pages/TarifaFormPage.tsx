@@ -365,13 +365,14 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               <th className="th-odoo text-left" rowSpan={2}>Producto</th>
               <th className="th-odoo text-right" rowSpan={2}>Costo</th>
               <th className="th-odoo text-center border-l border-border" colSpan={2}>Regla</th>
+              <th className="th-odoo text-right border-l border-border" rowSpan={2}>Neto</th>
               <th className="th-odoo text-center border-l border-border" colSpan={2}>Impuestos</th>
               <th className="th-odoo text-right border-l border-border font-bold bg-primary/5" rowSpan={2}>Precio Final</th>
               <th className="th-odoo text-center border-l border-border" colSpan={2}>Rentabilidad</th>
             </tr>
             <tr className="border-b border-border bg-card text-[10px]">
               <th className="py-1 px-3 text-center border-l border-border text-muted-foreground font-normal">Tipo</th>
-              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Neto</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Precio</th>
               <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">IEPS</th>
               <th className="py-1 px-3 text-right text-muted-foreground font-normal">IVA</th>
               <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">Ganancia</th>
@@ -391,7 +392,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                       {p.regla} {p.base_precio === 'con_impuestos' ? '(c/imp)' : '(s/imp)'}
                     </span>
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">$ {p.precio_regla.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">$ {p.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? `$ ${p.monto_ieps.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{p.monto_iva > 0 ? `$ ${p.monto_iva.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -401,7 +403,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+              <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
             )}
           </tbody>
         </table>
