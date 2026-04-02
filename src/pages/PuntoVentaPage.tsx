@@ -11,28 +11,23 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
+import { buildPosLinePricing, getTaxMultiplier as posGetTaxMult, round2 as posR2, type BasePrecioMode } from '@/lib/posPricing';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 
 const CATALOG_STALE = 5 * 60 * 1000;
-
-type BasePrecioMode = 'con_impuestos' | 'sin_impuestos';
-
-const r2 = (n: number) => Math.round(n * 100) / 100;
-
-const getTaxMultiplier = (item: { tiene_iva: boolean; iva_pct: number; tiene_ieps: boolean; ieps_pct: number }) => {
-  const ieps = item.tiene_ieps ? (item.ieps_pct ?? 0) : 0;
-  const iva = item.tiene_iva ? (item.iva_pct ?? 0) : 0;
-  return (1 + ieps / 100) * (1 + iva / 100);
-};
+const r2 = posR2;
+const getTaxMultiplier = posGetTaxMult;
 
 interface PosItem {
   producto_id: string;
   codigo: string;
   nombre: string;
   precio_unitario: number;
+  precio_unitario_sin_redondeo: number;
+  precio_display_sin_redondeo: number;
   cantidad: number;
   tiene_iva: boolean;
   iva_pct: number;
@@ -40,6 +35,7 @@ interface PosItem {
   ieps_pct: number;
   unidad: string;
   base_precio: BasePrecioMode;
+  redondeo: string;
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -163,8 +159,9 @@ export default function PuntoVentaPage() {
             basePrecio: 'sin_impuestos' as const,
             appliedRule: null,
           };
+      const pricingWithRaw = 'rawUnitPrice' in pricing ? pricing : { ...pricing, rawUnitPrice: pricing.unitPrice, rawDisplayPrice: pricing.displayPrice };
 
-      pricingByProduct.set(p.id, pricing);
+      pricingByProduct.set(p.id, pricingWithRaw as ReturnType<typeof resolveProductPricing>);
     });
 
     return pricingByProduct;
@@ -174,6 +171,8 @@ export default function PuntoVentaPage() {
     return productPricingMap.get(p.id) ?? {
       unitPrice: r2(p.precio_principal ?? 0),
       displayPrice: r2(p.precio_principal ?? 0),
+      rawUnitPrice: r2(p.precio_principal ?? 0),
+      rawDisplayPrice: r2(p.precio_principal ?? 0),
       basePrecio: 'sin_impuestos' as const,
       appliedRule: null,
     };
@@ -193,7 +192,10 @@ export default function PuntoVentaPage() {
       return {
         ...item,
         precio_unitario: pricing.unitPrice,
+        precio_unitario_sin_redondeo: pricing.rawUnitPrice,
+        precio_display_sin_redondeo: pricing.rawDisplayPrice,
         base_precio: pricing.basePrecio as BasePrecioMode,
+        redondeo: pricing.appliedRule?.redondeo ?? 'ninguno',
       };
     }));
   }, [cart.length, productos, getProductPricing]);
@@ -201,21 +203,52 @@ export default function PuntoVentaPage() {
   // ---- Promotions engine ----
   const { data: promocionesActivas } = usePromocionesActivas();
 
-  const promoResults = useMemo(() => {
+  const promoResultsRaw = useMemo(() => {
     if (!promocionesActivas?.length || cart.length === 0) return [] as PromoResult[];
     const cartForPromo: CartItemForPromo[] = cart.map(item => {
       const prod = productos?.find(p => p.id === item.producto_id);
       return {
         producto_id: item.producto_id,
         clasificacion_id: prod?.clasificacion_id ?? undefined,
-        precio_unitario: getDisplayUnitPrice(item),
+        precio_unitario: item.base_precio === 'con_impuestos'
+          ? item.precio_display_sin_redondeo
+          : item.precio_unitario_sin_redondeo,
         cantidad: item.cantidad,
       };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined);
-  }, [promocionesActivas, cart, productos, clienteId, getDisplayUnitPrice]);
+  }, [promocionesActivas, cart, productos, clienteId]);
 
-  const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+  // Build per-product raw promo discount map
+  const promoRawByProduct = useMemo(() => {
+    const m = new Map<string, number>();
+    promoResultsRaw.forEach(pr => {
+      if (!pr.producto_id || pr.descuento <= 0) return;
+      m.set(pr.producto_id, r2((m.get(pr.producto_id) ?? 0) + pr.descuento));
+    });
+    return m;
+  }, [promoResultsRaw]);
+
+  // Build line pricing with promo applied before rounding
+  const linePricingMap = useMemo(() => {
+    const m = new Map<string, ReturnType<typeof buildPosLinePricing>>();
+    cart.forEach(item => {
+      m.set(item.producto_id, buildPosLinePricing(item, promoRawByProduct.get(item.producto_id) ?? 0));
+    });
+    return m;
+  }, [cart, promoRawByProduct]);
+
+  // Adjust displayed promo discounts to match effective (post-rounding) discount
+  const promoResults = useMemo(() => {
+    return promoResultsRaw.map(pr => {
+      if (!pr.producto_id || pr.descuento <= 0) return pr;
+      const rawTotal = promoRawByProduct.get(pr.producto_id) ?? 0;
+      const effectiveTotal = linePricingMap.get(pr.producto_id)?.effectiveDiscount ?? rawTotal;
+      if (rawTotal <= 0) return pr;
+      return { ...pr, descuento: r2((pr.descuento / rawTotal) * effectiveTotal) };
+    });
+  }, [promoResultsRaw, promoRawByProduct, linePricingMap]);
+
   const promoGratis = useMemo(() => promoResults.filter(r => r.tipo === 'producto_gratis'), [promoResults]);
 
   // Barcode scanner: listen for rapid key presses
@@ -305,6 +338,8 @@ export default function PuntoVentaPage() {
         codigo: p.codigo,
         nombre: p.nombre,
         precio_unitario: pricing.unitPrice,
+        precio_unitario_sin_redondeo: pricing.rawUnitPrice,
+        precio_display_sin_redondeo: pricing.rawDisplayPrice,
         cantidad: p.es_granel ? 0 : 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
@@ -312,6 +347,7 @@ export default function PuntoVentaPage() {
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
         unidad: p.es_granel ? (p.unidad_granel ?? 'kg') : 'pz',
         base_precio: pricing.basePrecio as BasePrecioMode,
+        redondeo: pricing.appliedRule?.redondeo ?? 'ninguno',
         _max_stock: canSellWithout ? Infinity : stock,
         _es_granel: p.es_granel ?? false,
       }];
@@ -336,11 +372,13 @@ export default function PuntoVentaPage() {
   const updatePrice = (id: string, price: number) => {
     setCart(prev => prev.map(c => {
       if (c.producto_id !== id) return c;
-      if (c.base_precio !== 'con_impuestos') return { ...c, precio_unitario: r2(price) };
+      if (c.base_precio !== 'con_impuestos') return { ...c, precio_unitario: r2(price), precio_unitario_sin_redondeo: price, precio_display_sin_redondeo: price };
       const divisor = getTaxMultiplier(c);
       return {
         ...c,
         precio_unitario: divisor > 0 ? r2(price / divisor) : r2(price),
+        precio_unitario_sin_redondeo: divisor > 0 ? price / divisor : price,
+        precio_display_sin_redondeo: price,
       };
     }));
   };
@@ -348,20 +386,18 @@ export default function PuntoVentaPage() {
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.producto_id !== id));
 
   const totals = useMemo(() => {
-    const r2 = (n: number) => Math.round(n * 100) / 100;
-    let subtotal = 0, iva = 0, ieps = 0, items = 0;
+    let subtotal = 0, iva = 0, ieps = 0, items = 0, descuento = 0, total = 0;
     cart.forEach(item => {
-      const line = r2(item.precio_unitario * item.cantidad);
-      subtotal += line;
-      const lineIeps = item.tiene_ieps ? r2(line * (item.ieps_pct / 100)) : 0;
-      ieps += lineIeps;
-      if (item.tiene_iva) iva += r2((line + lineIeps) * (item.iva_pct / 100));
+      const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item);
+      subtotal += lp.subtotal;
+      iva += lp.iva;
+      ieps += lp.ieps;
+      descuento += lp.effectiveDiscount;
+      total += lp.finalGross;
       items += item.cantidad;
     });
-    const descuento = r2(totalDescuentoPromo);
-    const totalFinal = r2(Math.max(0, subtotal + iva + ieps - descuento));
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), descuento, total: totalFinal, items };
-  }, [cart, totalDescuentoPromo]);
+    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), descuento: r2(descuento), total: r2(total), items };
+  }, [cart, linePricingMap]);
 
   const paySplitsComputed = useMemo(() => {
     const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
