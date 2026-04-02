@@ -471,7 +471,11 @@ export default function PuntoVentaPage() {
 
       // 4. Insert cobros if contado (one per method with amount)
       if (condicion === 'contado' && totals.total > 0) {
-        for (const split of paySplitsComputed) {
+        // Fallback: if no payment splits entered, create a single efectivo cobro for the full amount
+        const splitsToUse = paySplitsComputed.length > 0
+          ? paySplitsComputed
+          : [{ metodo: 'efectivo' as PayMethod, monto: totals.total, referencia: '' }];
+        for (const split of splitsToUse) {
           if (split.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
           const { error: cobErr } = await supabase.from('cobros').insert({
