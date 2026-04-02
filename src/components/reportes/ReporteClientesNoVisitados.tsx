@@ -243,13 +243,13 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
                     </td>
                     <td className="py-1.5 px-3 text-muted-foreground">{c.telefono ?? '—'}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
-                )}
-
+      ))}
       {data.totalClientes === 0 && (
         <div className="py-8 text-center text-muted-foreground text-[13px]">
           No hay clientes activos para mostrar
