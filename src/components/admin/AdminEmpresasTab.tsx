@@ -8,10 +8,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Building2, Search, Trash2, Stamp, CreditCard, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Building2, Search, Trash2, Stamp, CreditCard, CheckCircle2, XCircle, AlertCircle, Clock, Plus, User, Mail, Phone, Lock, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
+
+const COUNTRY_CODES = [
+  { code: '+52', country: 'MX', label: '🇲🇽 México (+52)', digits: 10 },
+  { code: '+502', country: 'GT', label: '🇬🇹 Guatemala (+502)', digits: 8 },
+  { code: '+57', country: 'CO', label: '🇨🇴 Colombia (+57)', digits: 10 },
+  { code: '+54', country: 'AR', label: '🇦🇷 Argentina (+54)', digits: 10 },
+  { code: '+51', country: 'PE', label: '🇵🇪 Perú (+51)', digits: 9 },
+  { code: '+56', country: 'CL', label: '🇨🇱 Chile (+56)', digits: 9 },
+  { code: '+1', country: 'US', label: '🇺🇸 EE.UU. (+1)', digits: 10 },
+];
 
 interface ProfileRow {
   nombre: string | null;
