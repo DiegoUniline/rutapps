@@ -340,6 +340,76 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
     });
   };
 
+  const conImp = filtered.filter(p => p.base_precio === 'con_impuestos');
+  const sinImp = filtered.filter(p => p.base_precio !== 'con_impuestos');
+
+  const fmt = (v: number) => `$ ${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const renderGroup = (items: typeof filtered, isConImp: boolean) => {
+    if (items.length === 0) return null;
+    const rows = items.slice(0, 200);
+    return (
+      <div className="border border-border rounded overflow-hidden">
+        <div className={`px-3 py-2 text-[11px] font-semibold flex items-center gap-2 ${isConImp ? 'bg-accent/40 text-accent-foreground' : 'bg-muted/60 text-muted-foreground'}`}>
+          <span className={`px-1.5 py-0.5 rounded text-[10px] ${isConImp ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
+            {isConImp ? 'C/Impuestos' : 'S/Impuestos'}
+          </span>
+          <span>{items.length} productos</span>
+          <span className="ml-2 font-normal text-[10px]">
+            {isConImp
+              ? 'Costo → Regla (bruto) → Extrae Neto → Impuestos → Redondeo = Precio Final'
+              : 'Costo → Regla (neto) → Impuestos → Redondeo = Precio Final'}
+          </span>
+        </div>
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="border-b border-border bg-card">
+              <th className="th-odoo text-left">Código</th>
+              <th className="th-odoo text-left">Producto</th>
+              <th className="th-odoo text-right">Costo</th>
+              <th className="th-odoo text-center border-l border-border">Regla</th>
+              <th className="th-odoo text-right">{isConImp ? 'Precio Regla (bruto)' : 'Precio Regla (neto)'}</th>
+              {isConImp && <th className="th-odoo text-right border-l border-border">Neto (extraído)</th>}
+              <th className="th-odoo text-right border-l border-border">IEPS</th>
+              <th className="th-odoo text-right">IVA</th>
+              <th className="th-odoo text-right border-l border-border">Antes Redondeo</th>
+              <th className="th-odoo text-center">Redondeo</th>
+              <th className="th-odoo text-right font-bold bg-primary/5 border-l border-border">Precio Final</th>
+              <th className="th-odoo text-right border-l border-border">Ganancia</th>
+              <th className="th-odoo text-right">Margen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(p => {
+              const margen = p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0;
+              const antesRedondeo = p.precio_neto + p.monto_ieps + p.monto_iva;
+              return (
+                <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
+                  <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{fmt(p.costo)}</td>
+                  <td className="py-1.5 px-3 text-center border-l border-border/40">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{p.regla}</span>
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">{fmt(p.precio_regla)}</td>
+                  {isConImp && <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{fmt(p.precio_neto)}</td>}
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? fmt(p.monto_ieps) : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{p.monto_iva > 0 ? fmt(p.monto_iva) : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{fmt(Math.round(antesRedondeo * 100) / 100)}</td>
+                  <td className="py-1.5 px-3 text-center text-[10px] text-muted-foreground">{p.redondeo_tipo === 'ninguno' ? '—' : `${p.redondeo_tipo}`}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">{fmt(p.precio_final)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold border-l border-border/40 ${p.ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>{fmt(p.ganancia)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        {items.length > 200 && <p className="text-[11px] text-muted-foreground px-3 py-2">Mostrando 200 de {items.length}.</p>}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="flex items-center gap-3 mb-3 flex-wrap">
@@ -357,60 +427,13 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           <ExportButton onExcel={handleExportExcel} onPDF={handleExportPDF} />
         </div>
       </div>
-      <div className="overflow-x-auto border border-border rounded">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-border bg-card">
-              <th className="th-odoo text-left" rowSpan={2}>Código</th>
-              <th className="th-odoo text-left" rowSpan={2}>Producto</th>
-              <th className="th-odoo text-right" rowSpan={2}>Costo</th>
-              <th className="th-odoo text-center border-l border-border" colSpan={2}>Regla</th>
-              <th className="th-odoo text-right border-l border-border" rowSpan={2}>Neto</th>
-              <th className="th-odoo text-center border-l border-border" colSpan={2}>Impuestos</th>
-              <th className="th-odoo text-right border-l border-border font-bold bg-primary/5" rowSpan={2}>Precio Final</th>
-              <th className="th-odoo text-center border-l border-border" colSpan={2}>Rentabilidad</th>
-            </tr>
-            <tr className="border-b border-border bg-card text-[10px]">
-              <th className="py-1 px-3 text-center border-l border-border text-muted-foreground font-normal">Tipo</th>
-              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Precio</th>
-              <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">IEPS</th>
-              <th className="py-1 px-3 text-right text-muted-foreground font-normal">IVA</th>
-              <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">Ganancia</th>
-              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Margen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.slice(0, 200).map(p => {
-              const margen = p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0;
-              return (
-                <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
-                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
-                  <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-center border-l border-border/40">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      {p.regla} {p.base_precio === 'con_impuestos' ? '(c/imp)' : '(s/imp)'}
-                    </span>
-                  </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">$ {p.precio_regla.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">$ {p.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? `$ ${p.monto_ieps.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{p.monto_iva > 0 ? `$ ${p.monto_iva.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold border-l border-border/40 ${p.ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {p.ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
-            )}
-          </tbody>
-        </table>
+      <div className="space-y-4">
+        {renderGroup(conImp, true)}
+        {renderGroup(sinImp, false)}
+        {filtered.length === 0 && (
+          <div className="text-center py-6 text-muted-foreground border border-border rounded">Sin productos</div>
+        )}
       </div>
-      {filtered.length > 200 && (
-        <p className="text-[11px] text-muted-foreground mt-2">Mostrando 200 de {filtered.length}. Usa el buscador para filtrar.</p>
-      )}
     </div>
   );
 }
