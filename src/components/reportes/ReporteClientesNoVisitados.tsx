@@ -248,7 +248,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
             </table>
           </div>
         </div>
-      ))}
+                )}
 
       {data.totalClientes === 0 && (
         <div className="py-8 text-center text-muted-foreground text-[13px]">
