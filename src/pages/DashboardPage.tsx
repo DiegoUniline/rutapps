@@ -101,7 +101,7 @@ export default function DashboardPage() {
   const { data: topProductos } = useDashboardTopProductos(dateRange);
   const { data: ventasPorDia } = useDashboardVentasPorDia(dateRange, vendedorId || undefined);
   const { data: ventasPorVendedor } = useDashboardVentasPorVendedor(dateRange);
-  const { data: devoluciones } = useDashboardDevoluciones(dateRange, vendedorId || undefined);
+  const { data: clientesEnRiesgo } = useDashboardClientesEnRiesgo(dateRange, vendedorId || undefined);
 
   const MOTIVO_LABELS: Record<string, string> = { no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro' };
 
