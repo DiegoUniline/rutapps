@@ -6,7 +6,8 @@ import { queueOperation } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
-import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
+import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
+import { buildPosLinePricing, type PosPricingItem } from '@/lib/posPricing';
 import { toast } from 'sonner';
 import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type PromoResult } from '@/hooks/usePromociones';
 import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea } from './types';
@@ -146,6 +147,20 @@ export function useRutaVenta() {
     };
   }, [tarifaLineasOffline, clienteListaPrecioId]);
 
+  /** Full pricing info for building cart items with raw data */
+  const resolvePricingFull = useMemo(() => {
+    const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
+    return (producto: any) => {
+      const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo };
+      if (!rules.length) {
+        const fallback = pf.precio_principal;
+        return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };
+      }
+      const r = resolveProductPricing(rules, pf, clienteListaPrecioId);
+      return { unitPrice: r.unitPrice, rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' };
+    };
+  }, [tarifaLineasOffline, clienteListaPrecioId]);
+
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
   const pedidoSugerido = useMemo(() => {
     if (!pedidoSugeridoRaw || !productos) return [];
@@ -190,7 +205,8 @@ export function useRutaVenta() {
       setCart(cart.map(c => c.producto_id === p.id && c.es_cambio === esCambio ? { ...c, cantidad: newQty } : c));
     } else {
       if (maxQty < 1) { toast.error('Sin stock a bordo'); return; }
-      setCart([...cart, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, precio_unitario: esCambio ? 0 : resolvePrice(p), cantidad: 1, unidad: 'pz', unidad_id: p.unidad_venta_id ?? undefined, tiene_iva: esCambio ? false : (p.tiene_iva ?? false), iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0), tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false), ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0), es_cambio: esCambio }]);
+      const pf = resolvePricingFull(p);
+      setCart([...cart, { producto_id: p.id, codigo: p.codigo, nombre: p.nombre, precio_unitario: esCambio ? 0 : pf.unitPrice, cantidad: 1, unidad: 'pz', unidad_id: p.unidad_venta_id ?? undefined, tiene_iva: esCambio ? false : (p.tiene_iva ?? false), iva_pct: esCambio ? 0 : (p.tiene_iva ? (p.iva_pct ?? 16) : 0), tiene_ieps: esCambio ? false : (p.tiene_ieps ?? false), ieps_pct: esCambio ? 0 : (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0), es_cambio: esCambio, precio_unitario_sin_redondeo: esCambio ? 0 : pf.rawUnitPrice, precio_display_sin_redondeo: esCambio ? 0 : pf.rawDisplayPrice, base_precio: pf.basePrecio, redondeo: pf.redondeo }]);
     }
   };
 
@@ -209,7 +225,7 @@ export function useRutaVenta() {
   const processDevolucionesAndGoToProductos = () => {
     let newCart = cart.filter(c => !c.es_cambio);
     if (newCart.length === 0 && pedidoSugerido && pedidoSugerido.length > 0) {
-      newCart = pedidoSugerido.map((ps: any) => ({ producto_id: ps.productos.id, codigo: ps.productos.codigo, nombre: ps.productos.nombre, precio_unitario: resolvePrice(ps.productos), cantidad: ps.cantidad, unidad: (ps.productos.unidades as any)?.abreviatura || 'pz', unidad_id: ps.productos.unidad_venta_id ?? undefined, tiene_iva: ps.productos.tiene_iva ?? false, iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0, tiene_ieps: ps.productos.tiene_ieps ?? false, ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0 }));
+      newCart = pedidoSugerido.map((ps: any) => { const pf = resolvePricingFull(ps.productos); return { producto_id: ps.productos.id, codigo: ps.productos.codigo, nombre: ps.productos.nombre, precio_unitario: pf.unitPrice, cantidad: ps.cantidad, unidad: (ps.productos.unidades as any)?.abreviatura || 'pz', unidad_id: ps.productos.unidad_venta_id ?? undefined, tiene_iva: ps.productos.tiene_iva ?? false, iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0, tiene_ieps: ps.productos.tiene_ieps ?? false, ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0, precio_unitario_sin_redondeo: pf.rawUnitPrice, precio_display_sin_redondeo: pf.rawDisplayPrice, base_precio: pf.basePrecio, redondeo: pf.redondeo }; });
     }
     // Add replacement products (reposición) at $0
     devoluciones.filter(d => d.accion === 'reposicion' && d.reemplazo_producto_id).forEach(d => {
@@ -233,18 +249,47 @@ export function useRutaVenta() {
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined);
   }, [promocionesActivas, cart, clienteId, selectedCliente, productos]);
-  const totalDescuentoPromos = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+
+  // Build a map of raw promo discount per product
+  const promoRawByProduct = useMemo(() => {
+    const m = new Map<string, number>();
+    promoResults.forEach(r => {
+      if (r.producto_id) m.set(r.producto_id, (m.get(r.producto_id) ?? 0) + r.descuento);
+    });
+    return m;
+  }, [promoResults]);
 
   const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
 
   const totals = useMemo(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    let subtotal = 0, iva = 0, ieps = 0, items = 0;
-    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = r2(item.precio_unitario * item.cantidad); subtotal += lineaSub; if (!sinImpuestos) { const lineIeps = item.tiene_ieps ? r2(lineaSub * (item.ieps_pct / 100)) : 0; ieps += lineIeps; if (item.tiene_iva) iva += r2((lineaSub + lineIeps) * (item.iva_pct / 100)); } items += item.cantidad; });
-    const totalDescuentos = r2(totalDescuentoPromos + descuentoDevolucion);
-    const total = r2(Math.max(0, subtotal + ieps + iva - totalDescuentos));
+    let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
+    cart.forEach(item => {
+      if (item.es_cambio) { items += item.cantidad; return; }
+      const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
+      const pricingItem: PosPricingItem = {
+        precio_unitario: item.precio_unitario,
+        precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
+        precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
+        cantidad: item.cantidad,
+        tiene_iva: sinImpuestos ? false : item.tiene_iva,
+        iva_pct: item.iva_pct,
+        tiene_ieps: sinImpuestos ? false : item.tiene_ieps,
+        ieps_pct: item.ieps_pct,
+        base_precio: (item.base_precio ?? 'sin_impuestos') as any,
+        redondeo: item.redondeo ?? 'ninguno',
+      };
+      const lp = buildPosLinePricing(pricingItem, promoDisc);
+      subtotal += lp.subtotal;
+      iva += lp.iva;
+      ieps += lp.ieps;
+      descuentoPromo += lp.effectiveDiscount;
+      items += item.cantidad;
+    });
+    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion);
+    const total = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
     return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion) };
-  }, [cart, totalDescuentoPromos, descuentoDevolucion, sinImpuestos]);
+  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;

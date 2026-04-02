@@ -7,7 +7,8 @@ import { useProductosForSelect, useAlmacenes, useTarifasForSelect } from '@/hook
 import { useClientes } from '@/hooks/useClientes';
 import { useEntregasByPedido, useCrearEntrega, calcRemainingQty } from '@/hooks/useEntregas';
 import { supabase } from '@/lib/supabase';
-import { resolveProductPrice, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
+import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
+import { buildPosLinePricing, type PosPricingItem, type BasePrecioMode } from '@/lib/posPricing';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Venta, VentaLinea, StatusVenta } from '@/types';
 import { toast } from 'sonner';
@@ -155,7 +156,23 @@ export function useVentaForm() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(existingVenta as any)?.id, isNew]);
 
-  // Totals
+  // Build raw pricing map from tarifa for promo-before-rounding logic
+  const rawPricingMap = useMemo(() => {
+    const m = new Map<string, { rawUnitPrice: number; rawDisplayPrice: number; basePrecio: string; redondeo: string }>();
+    if (!tarifaRules?.length || !productosList) return m;
+    const listaPrecioId = (form as any).lista_precio_id || null;
+    lineas.forEach(l => {
+      if (!l.producto_id || m.has(l.producto_id)) return;
+      const prod = productosList.find((p: any) => p.id === l.producto_id);
+      if (!prod) return;
+      const pf: ProductForPricing = { id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0, clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16), tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo };
+      const r = resolveProductPricing(tarifaRules, pf, listaPrecioId);
+      m.set(l.producto_id, { rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' });
+    });
+    return m;
+  }, [tarifaRules, lineas, productosList, (form as any).lista_precio_id]);
+
+  // Totals (line-level: manual discount only, no promos yet)
   const totals = useMemo(() => {
     let subtotal = 0, descuento_total = 0, iva_total = 0, ieps_total = 0;
     const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -195,18 +212,46 @@ export function useVentaForm() {
     return evaluatePromociones(promocionesActivas, cartForPromo, form.cliente_id ?? undefined, undefined);
   }, [promocionesActivas, lineas, productosList, form.cliente_id]);
 
-  const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+  // Build per-product promo discount map
+  const promoByProduct = useMemo(() => {
+    const m = new Map<string, number>();
+    promoResults.forEach(r => {
+      if (r.producto_id) m.set(r.producto_id, (m.get(r.producto_id) ?? 0) + r.descuento);
+    });
+    return m;
+  }, [promoResults]);
 
-  // Combine totals with promo discounts
+  // Combine totals with promo discounts using buildPosLinePricing (promo before rounding)
   const finalTotals = useMemo(() => {
-    const promoDesc = totalDescuentoPromo;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    let promoEffective = 0;
+    lineas.forEach(l => {
+      if (!l.producto_id) return;
+      const promoDisc = promoByProduct.get(l.producto_id) ?? 0;
+      if (promoDisc <= 0) return;
+      const raw = rawPricingMap.get(l.producto_id);
+      const pricingItem: PosPricingItem = {
+        precio_unitario: Number(l.precio_unitario) || 0,
+        precio_unitario_sin_redondeo: raw?.rawUnitPrice ?? (Number(l.precio_unitario) || 0),
+        precio_display_sin_redondeo: raw?.rawDisplayPrice ?? (Number(l.precio_unitario) || 0),
+        cantidad: Number(l.cantidad) || 1,
+        tiene_iva: sinImpuestos ? false : !!(l as any).iva_pct,
+        iva_pct: Number(l.iva_pct) || 0,
+        tiene_ieps: sinImpuestos ? false : !!(l as any).ieps_pct,
+        ieps_pct: Number(l.ieps_pct) || 0,
+        base_precio: (raw?.basePrecio ?? 'sin_impuestos') as BasePrecioMode,
+        redondeo: raw?.redondeo ?? 'ninguno',
+      };
+      const lp = buildPosLinePricing(pricingItem, promoDisc);
+      promoEffective += lp.effectiveDiscount;
+    });
     return {
       ...totals,
-      descuento_total: totals.descuento_total + promoDesc,
-      descuento_promo: promoDesc,
-      total: Math.max(0, totals.total - promoDesc),
+      descuento_total: r2(totals.descuento_total + promoEffective),
+      descuento_promo: r2(promoEffective),
+      total: r2(Math.max(0, totals.total - promoEffective)),
     };
-  }, [totals, totalDescuentoPromo]);
+  }, [totals, promoByProduct, rawPricingMap, lineas, sinImpuestos]);
 
   // Re-price existing lines when tarifa rules or lista_precio changes
   useEffect(() => {
