@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ClientesEnRiesgoWidget, type ClienteEnRiesgo } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertCircle,
