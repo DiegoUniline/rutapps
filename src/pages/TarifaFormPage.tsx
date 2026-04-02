@@ -241,28 +241,37 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           l.aplica_a === 'todos'
         );
 
-        if (!rule) return null; // Only show products that match a rule
+        if (!rule) return null;
 
-        let precio = 0;
-        if (rule.tipo_calculo === 'precio_fijo') precio = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
-        else if (rule.tipo_calculo === 'margen_costo') precio = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
-        else if (rule.tipo_calculo === 'descuento_precio') precio = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
-
-        precio = applyRedondeo(precio, rule.redondeo ?? 'ninguno');
+        let precioRaw = 0;
+        if (rule.tipo_calculo === 'precio_fijo') precioRaw = Math.max(rule.precio ?? 0, rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'margen_costo') precioRaw = Math.max(p.costo * (1 + (rule.margen_pct ?? 0) / 100), rule.precio_minimo ?? 0);
+        else if (rule.tipo_calculo === 'descuento_precio') precioRaw = Math.max(p.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100), rule.precio_minimo ?? 0);
 
         const basePrecio = rule.base_precio ?? 'sin_impuestos';
-        let precioConImp = precio;
-        if (basePrecio !== 'con_impuestos') {
-          const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
-          const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
-          const baseIva = precio + (p.ieps_tipo === 'porcentaje' ? precio * iepsPct / 100 : 0);
+        const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
+        const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
+
+        let precioSinImp = precioRaw;
+        let precioConImp = precioRaw;
+
+        if (basePrecio === 'con_impuestos') {
+          precioConImp = precioRaw;
+          const divisor = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+          precioSinImp = divisor > 0 ? precioRaw / divisor : precioRaw;
+        } else {
+          precioSinImp = precioRaw;
+          const baseIva = precioRaw + (p.ieps_tipo === 'porcentaje' ? precioRaw * iepsPct / 100 : 0);
           precioConImp = baseIva + baseIva * ivaPct / 100;
         }
 
+        const precioFinal = applyRedondeo(precioConImp, rule.redondeo ?? 'ninguno');
+
         return {
           ...p,
-          precio_lista: precio,
-          precio_con_imp: precioConImp,
+          precio_lista: Math.round(precioSinImp * 100) / 100,
+          precio_con_imp: Math.round(precioConImp * 100) / 100,
+          precio_final: Math.round(precioFinal * 100) / 100,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
           comision_pct: rule.comision_pct ?? 0,
           base_precio: basePrecio,
