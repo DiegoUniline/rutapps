@@ -1,6 +1,6 @@
 /**
  * Resolves the sale price of a product based on the tarifa rules and lista de precios.
- * 
+ *
  * Hierarchy: 1) Product-specific rule, 2) Category rule, 3) Global ('todos') rule
  * Falls back to producto.precio_principal if no tarifa rule matches.
  */
@@ -31,11 +31,28 @@ export interface ProductForPricing {
   ieps_tipo?: string;
 }
 
+export interface ResolvedProductPricing {
+  unitPrice: number;
+  displayPrice: number;
+  basePrecio: string;
+  appliedRule: TarifaLineaRule | null;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function applyRedondeo(precio: number, redondeo: string): number {
   if (!redondeo || redondeo === 'ninguno') return precio;
   if (redondeo === 'arriba') return Math.ceil(precio);
   if (redondeo === 'abajo') return Math.floor(precio);
   return Math.round(precio); // cercano
+}
+
+function getTaxMultiplier(producto: ProductForPricing): number {
+  const iepsPct = producto.tiene_ieps ? (producto.ieps_pct ?? 0) : 0;
+  const ivaPct = producto.tiene_iva ? (producto.iva_pct ?? 0) : 0;
+  return (1 + iepsPct / 100) * (1 + ivaPct / 100);
 }
 
 /**
@@ -47,18 +64,15 @@ function findMatchingRule(
   producto: ProductForPricing,
   listaPrecioId?: string | null
 ): TarifaLineaRule | null {
-  // Filter rules by lista_precio_id: if provided match that list, otherwise only rules without a list
   const filtered = listaPrecioId
     ? rules.filter(r => r.lista_precio_id === listaPrecioId || !r.lista_precio_id)
     : rules.filter(r => !r.lista_precio_id);
 
-  // 1) Product-specific
   const prodRule = filtered.find(
     r => r.aplica_a === 'producto' && (r.producto_ids ?? []).includes(producto.id)
   );
   if (prodRule) return prodRule;
 
-  // 2) Category-specific
   if (producto.clasificacion_id) {
     const catRule = filtered.find(
       r => r.aplica_a === 'categoria' && (r.clasificacion_ids ?? []).includes(producto.clasificacion_id!)
@@ -66,7 +80,6 @@ function findMatchingRule(
     if (catRule) return catRule;
   }
 
-  // 3) Global
   const globalRule = filtered.find(r => r.aplica_a === 'todos');
   return globalRule ?? null;
 }
@@ -80,8 +93,6 @@ export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricin
 
   if (rule.tipo_calculo === 'precio_fijo') {
     precio = rule.precio ?? 0;
-    // A precio_fijo of 0 is a placeholder rule (e.g. category template);
-    // return null so the resolver falls back to the next rule or precio_principal
     if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
   } else if (rule.tipo_calculo === 'margen_costo') {
     precio = (producto.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
@@ -89,23 +100,63 @@ export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricin
     precio = producto.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100);
   }
 
-  // Apply minimum price
   precio = Math.max(precio, rule.precio_minimo ?? 0);
-
-  // Apply rounding
   precio = applyRedondeo(precio, rule.redondeo ?? 'ninguno');
 
-  // If base_precio is 'con_impuestos', the calculated price includes taxes;
-  // we need to extract the pre-tax price for the sale line
   if (rule.base_precio === 'con_impuestos') {
-    const iepsPct = producto.tiene_ieps ? (producto.ieps_pct ?? 0) : 0;
-    const ivaPct = producto.tiene_iva ? (producto.iva_pct ?? 0) : 0;
-    // precio = base + ieps + iva = base * (1 + ieps%) * (1 + iva%)
-    const divisor = (1 + iepsPct / 100) * (1 + ivaPct / 100);
+    const divisor = getTaxMultiplier(producto);
     precio = divisor > 0 ? precio / divisor : precio;
   }
 
-  return Math.round(precio * 100) / 100;
+  return round2(precio);
+}
+
+export function toDisplayPrice(
+  unitPrice: number,
+  producto: ProductForPricing,
+  basePrecio?: string | null
+): number {
+  if (basePrecio !== 'con_impuestos') return round2(unitPrice);
+  return round2(unitPrice * getTaxMultiplier(producto));
+}
+
+/**
+ * Resolve both the persisted unit price and the customer-facing display price.
+ */
+export function resolveProductPricing(
+  rules: TarifaLineaRule[],
+  producto: ProductForPricing,
+  listaPrecioId?: string | null
+): ResolvedProductPricing {
+  const rule = findMatchingRule(rules, producto, listaPrecioId);
+
+  if (!rule) {
+    const fallback = round2(producto.precio_principal);
+    return {
+      unitPrice: fallback,
+      displayPrice: fallback,
+      basePrecio: 'sin_impuestos',
+      appliedRule: null,
+    };
+  }
+
+  const unitPrice = calculatePrice(rule, producto);
+  if (unitPrice == null) {
+    const fallback = round2(producto.precio_principal);
+    return {
+      unitPrice: fallback,
+      displayPrice: fallback,
+      basePrecio: 'sin_impuestos',
+      appliedRule: null,
+    };
+  }
+
+  return {
+    unitPrice,
+    displayPrice: toDisplayPrice(unitPrice, producto, rule.base_precio),
+    basePrecio: rule.base_precio ?? 'sin_impuestos',
+    appliedRule: rule,
+  };
 }
 
 /**
@@ -117,9 +168,5 @@ export function resolveProductPrice(
   producto: ProductForPricing,
   listaPrecioId?: string | null
 ): number {
-  const rule = findMatchingRule(rules, producto, listaPrecioId);
-  if (!rule) return producto.precio_principal;
-  const price = calculatePrice(rule, producto);
-  // If calculatePrice returns null (e.g. placeholder rule), fall back to precio_principal
-  return price ?? producto.precio_principal;
+  return resolveProductPricing(rules, producto, listaPrecioId).unitPrice;
 }
