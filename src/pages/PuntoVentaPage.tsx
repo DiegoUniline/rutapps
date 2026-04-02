@@ -375,6 +375,11 @@ export default function PuntoVentaPage() {
       const almacenId = profile?.almacen_id || null;
       const today = todayInTimezone(empresa?.zona_horaria);
 
+      if (!profile?.vendedor_id) {
+        toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador.');
+        return;
+      }
+
       // Fetch client's previous balance (sum of saldo_pendiente on all their ventas)
       let saldoAnteriorCliente = 0;
       if (clienteId) {
@@ -387,15 +392,47 @@ export default function PuntoVentaPage() {
         saldoAnteriorCliente = (saldoRows ?? []).reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
       }
 
-      // 1. Insert venta
-      if (!profile?.vendedor_id) {
-        toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador.');
-        return;
+      // Resolve a valid client for "Público general" so contado sales can always register cobros
+      let clientePublicoId: string | null = null;
+      if (!clienteId && condicion === 'contado') {
+        const { data: publicClient, error: publicClientLookupErr } = await supabase
+          .from('clientes')
+          .select('id')
+          .eq('empresa_id', empresa.id)
+          .eq('status', 'activo')
+          .in('nombre', ['Público general', 'Publico general', 'Público General', 'Publico General'])
+          .limit(1)
+          .maybeSingle();
+
+        if (publicClientLookupErr) throw publicClientLookupErr;
+
+        if (publicClient?.id) {
+          clientePublicoId = publicClient.id;
+        } else {
+          const { data: createdPublicClient, error: publicClientCreateErr } = await supabase
+            .from('clientes')
+            .insert({
+              empresa_id: empresa.id,
+              nombre: 'Público general',
+              status: 'activo',
+              credito: false,
+              vendedor_id: profile.vendedor_id,
+            })
+            .select('id')
+            .single();
+
+          if (publicClientCreateErr) throw publicClientCreateErr;
+          clientePublicoId = createdPublicClient.id;
+        }
       }
+
+      const ventaClienteId = clienteId ?? clientePublicoId;
+
+      // 1. Insert venta
       const { data: ventaData, error: ventaErr } = await supabase.from('ventas').insert({
         id: ventaId,
         empresa_id: empresa.id,
-        cliente_id: clienteId,
+        cliente_id: ventaClienteId,
         tipo: 'venta_directa',
         vendedor_id: profile.vendedor_id,
         condicion_pago: condicion,
@@ -471,6 +508,11 @@ export default function PuntoVentaPage() {
 
       // 4. Insert cobros if contado (one per method with amount)
       if (condicion === 'contado' && totals.total > 0) {
+        const clienteCobroId = clienteId ?? clientePublicoId;
+        if (!clienteCobroId) {
+          throw new Error('No se pudo asignar un cliente para registrar el cobro.');
+        }
+
         // Fallback: if no payment splits entered, create a single efectivo cobro for the full amount
         const splitsToUse = paySplitsComputed.length > 0
           ? paySplitsComputed
@@ -481,7 +523,7 @@ export default function PuntoVentaPage() {
           const { error: cobErr } = await supabase.from('cobros').insert({
             id: cobroId,
             empresa_id: empresa.id,
-            cliente_id: clienteId ?? empresa.id,
+            cliente_id: clienteCobroId,
             user_id: user.id,
             monto: Math.min(split.monto, totals.total),
             metodo_pago: split.metodo,
