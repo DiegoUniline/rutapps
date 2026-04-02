@@ -131,8 +131,24 @@ export default function PuntoVentaPage() {
     },
   });
 
-  // Only load tarifa rules when a real client with tarifa is selected
-  const effectiveTarifaId = clienteTarifaId || null;
+  // Default tarifa from the empresa's principal lista de precios
+  const { data: defaultListaPrecio } = useQuery({
+    queryKey: ['pos-default-lista-precio', empresa?.id],
+    staleTime: CATALOG_STALE,
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('lista_precios')
+        .select('tarifa_id')
+        .eq('empresa_id', empresa!.id)
+        .eq('es_principal', true)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const defaultTarifaId = defaultListaPrecio?.tarifa_id ?? null;
+
+  // Use client tarifa if available, otherwise fall back to empresa's default
+  const effectiveTarifaId = clienteTarifaId || defaultTarifaId;
   const { data: effectiveTarifaLineas } = useQuery({
     queryKey: ['pos-tarifa-lineas', effectiveTarifaId], enabled: !!effectiveTarifaId, staleTime: CATALOG_STALE,
     queryFn: async () => { const { data } = await supabase.from('tarifa_lineas').select('*').eq('tarifa_id', effectiveTarifaId!); return (data ?? []) as TarifaLineaRule[]; },
