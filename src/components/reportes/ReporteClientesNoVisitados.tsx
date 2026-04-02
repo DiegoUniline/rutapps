@@ -1,7 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
-import { UserX } from 'lucide-react';
+import { UserCheck, UserX } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface Props {
   desde: string;
@@ -9,7 +11,7 @@ interface Props {
   vendedorIds?: string[];
 }
 
-interface ClienteNoVisitado {
+interface ClienteReporte {
   id: string;
   codigo: string | null;
   nombre: string;
@@ -18,7 +20,8 @@ interface ClienteNoVisitado {
   dia_visita: string[];
   telefono: string | null;
   direccion: string | null;
-  ultimo_contacto: string | null;
+  visitado: boolean;
+  ultima_visita: string | null;
 }
 
 export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props) {
@@ -43,22 +46,55 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
       const { data: clientes, error: cErr } = await clientesQ;
       if (cErr) throw cErr;
 
-      // 2) Get distinct client_ids that had sales in the period
+      // 2) Get sales in the period with date for last visit
       const { data: ventasClientes, error: vErr } = await supabase
         .from('ventas')
-        .select('cliente_id')
+        .select('cliente_id, fecha')
         .eq('empresa_id', eid)
         .gte('fecha', desde)
         .lte('fecha', hasta)
         .not('status', 'eq', 'cancelado');
       if (vErr) throw vErr;
 
-      const visitedSet = new Set((ventasClientes ?? []).map(v => v.cliente_id));
+      // Build map: cliente_id -> last visit date in period
+      const visitMap = new Map<string, string>();
+      for (const v of ventasClientes ?? []) {
+        if (!v.cliente_id) continue;
+        const existing = visitMap.get(v.cliente_id);
+        if (!existing || v.fecha > existing) visitMap.set(v.cliente_id, v.fecha);
+      }
 
-      // 3) Filter out visited clients
-      const noVisitados: ClienteNoVisitado[] = (clientes ?? [])
-        .filter(c => !visitedSet.has(c.id))
-        .map(c => ({
+      // 3) For non-visited clients, get their last visit ever
+      const clienteIds = (clientes ?? []).map(c => c.id);
+      const noVisitadoIds = clienteIds.filter(id => !visitMap.has(id));
+      
+      const lastVisitMap = new Map<string, string>();
+      if (noVisitadoIds.length > 0) {
+        // Batch query: get most recent sale per unvisited client
+        const batchSize = 200;
+        for (let i = 0; i < noVisitadoIds.length; i += batchSize) {
+          const batch = noVisitadoIds.slice(i, i + batchSize);
+          const { data: lastSales } = await supabase
+            .from('ventas')
+            .select('cliente_id, fecha')
+            .eq('empresa_id', eid)
+            .in('cliente_id', batch)
+            .not('status', 'eq', 'cancelado')
+            .order('fecha', { ascending: false });
+          for (const s of lastSales ?? []) {
+            if (!s.cliente_id) continue;
+            if (!lastVisitMap.has(s.cliente_id)) lastVisitMap.set(s.cliente_id, s.fecha);
+          }
+        }
+      }
+
+      // 4) Build full list
+      const todos: ClienteReporte[] = (clientes ?? []).map(c => {
+        const visitado = visitMap.has(c.id);
+        const ultimaVisita = visitado
+          ? (visitMap.get(c.id) ?? null)
+          : (lastVisitMap.get(c.id) ?? null);
+        return {
           id: c.id,
           codigo: c.codigo,
           nombre: c.nombre,
@@ -67,30 +103,39 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
           dia_visita: (c.dia_visita ?? []) as string[],
           telefono: c.telefono,
           direccion: c.direccion,
-          ultimo_contacto: null,
-        }));
+          visitado,
+          ultima_visita: ultimaVisita,
+        };
+      });
 
       // Group by vendedor
-      const porVendedor: Record<string, ClienteNoVisitado[]> = {};
-      for (const c of noVisitados) {
+      const porVendedor: Record<string, ClienteReporte[]> = {};
+      for (const c of todos) {
         const key = c.vendedor;
         if (!porVendedor[key]) porVendedor[key] = [];
         porVendedor[key].push(c);
       }
 
       const grupos = Object.entries(porVendedor)
-        .map(([vendedor, items]) => ({ vendedor, items, count: items.length }))
-        .sort((a, b) => b.count - a.count);
+        .map(([vendedor, items]) => {
+          const noVisitados = items.filter(i => !i.visitado).length;
+          // Sort: non-visited first, then by name
+          items.sort((a, b) => {
+            if (a.visitado !== b.visitado) return a.visitado ? 1 : -1;
+            return a.nombre.localeCompare(b.nombre);
+          });
+          return { vendedor, items, total: items.length, noVisitados };
+        })
+        .sort((a, b) => b.noVisitados - a.noVisitados);
+
+      const totalNoVisitados = todos.filter(c => !c.visitado).length;
 
       return {
-        totalClientes: (clientes ?? []).length,
-        totalVisitados: visitedSet.size,
-        totalNoVisitados: noVisitados.length,
-        pctNoVisitados: (clientes ?? []).length > 0
-          ? ((noVisitados.length / (clientes ?? []).length) * 100)
-          : 0,
+        totalClientes: todos.length,
+        totalVisitados: todos.length - totalNoVisitados,
+        totalNoVisitados,
+        pctNoVisitados: todos.length > 0 ? (totalNoVisitados / todos.length) * 100 : 0,
         grupos,
-        noVisitados,
       };
     },
   });
@@ -101,6 +146,12 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
   const diasLabel: Record<string, string> = {
     lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue',
     viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom',
+  };
+
+  const formatFecha = (f: string | null) => {
+    if (!f) return '—';
+    try { return format(new Date(f + 'T12:00:00'), 'dd MMM yyyy', { locale: es }); }
+    catch { return f; }
   };
 
   return (
@@ -133,25 +184,43 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
               <UserX className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-[12px] font-semibold text-foreground">{g.vendedor}</span>
             </div>
-            <span className="text-[11px] text-muted-foreground">{g.count} cliente{g.count !== 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span className="text-green-600 font-medium">{g.total - g.noVisitados} visitados</span>
+              <span className="text-destructive font-medium">{g.noVisitados} sin visita</span>
+              <span>{g.total} total</span>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="text-[9px] text-muted-foreground uppercase border-b border-border">
                   <th className="text-left py-2 px-3 w-8">#</th>
+                  <th className="text-center py-2 px-3 w-16">Estado</th>
                   <th className="text-left py-2 px-3">Código</th>
                   <th className="text-left py-2 px-3">Cliente</th>
+                  <th className="text-left py-2 px-3">Última visita</th>
                   <th className="text-left py-2 px-3">Días visita</th>
                   <th className="text-left py-2 px-3">Teléfono</th>
                 </tr>
               </thead>
               <tbody>
                 {g.items.map((c, i) => (
-                  <tr key={c.id} className="border-b border-border/50">
+                  <tr key={c.id} className={`border-b border-border/50 ${c.visitado ? 'bg-green-50/40 dark:bg-green-950/10' : ''}`}>
                     <td className="py-1.5 px-3 font-semibold text-muted-foreground">{i + 1}</td>
+                    <td className="py-1.5 px-3 text-center">
+                      {c.visitado ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-700 dark:text-green-400">
+                          <UserCheck className="h-3 w-3" /> Sí
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive">
+                          <UserX className="h-3 w-3" /> No
+                        </span>
+                      )}
+                    </td>
                     <td className="py-1.5 px-3 text-muted-foreground">{c.codigo ?? '—'}</td>
                     <td className="py-1.5 px-3 font-medium text-foreground">{c.nombre}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground">{formatFecha(c.ultima_visita)}</td>
                     <td className="py-1.5 px-3">
                       {c.dia_visita.length > 0
                         ? c.dia_visita.map(d => diasLabel[d] ?? d).join(', ')
@@ -167,9 +236,9 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
         </div>
       ))}
 
-      {data.totalNoVisitados === 0 && (
+      {data.totalClientes === 0 && (
         <div className="py-8 text-center text-muted-foreground text-[13px]">
-          🎉 Todos los clientes fueron visitados en este período
+          No hay clientes activos para mostrar
         </div>
       )}
     </div>
