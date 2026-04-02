@@ -278,6 +278,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
         return {
           ...p,
+          precio_regla: r2(precioRaw),
           precio_neto: precioNeto,
           monto_ieps: montoIeps,
           monto_iva: montoIva,
