@@ -357,8 +357,8 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
     const rows = items.slice(0, 200);
     return (
       <div className="border border-border rounded overflow-hidden">
-        <div className={`px-3 py-2 text-[11px] font-semibold flex items-center gap-2 ${isConImp ? 'bg-accent/40 text-accent-foreground' : 'bg-muted/60 text-muted-foreground'}`}>
-          <span className={`px-1.5 py-0.5 rounded text-[10px] ${isConImp ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
+        <div className="px-3 py-2 text-[11px] font-semibold flex items-center gap-2 bg-primary/5 text-foreground">
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-primary/10 text-primary font-semibold">
             {isConImp ? 'C/Impuestos' : 'S/Impuestos'}
           </span>
           <span>{items.length} productos</span>
