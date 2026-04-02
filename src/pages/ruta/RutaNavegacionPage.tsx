@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
