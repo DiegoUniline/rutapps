@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ClientesEnRiesgoWidget, type ClienteEnRiesgo } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   AlertCircle,
@@ -262,15 +263,17 @@ export default function SupervisorDashboardPage() {
   });
 
   const { data: clientesAsignados } = useQuery({
-    queryKey: ['supervisor-clientes-asignados', empresa?.id, allDashboardSellerIds],
-    enabled: !!empresa?.id && allDashboardSellerIds.length > 0,
+    queryKey: ['supervisor-clientes-asignados', empresa?.id],
+    enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('clientes')
-        .select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita')
-        .eq('empresa_id', empresa!.id)
-        .in('vendedor_id', allDashboardSellerIds);
-      return (data ?? []) as any[];
+      return fetchAllPages<any>((from, to) =>
+        supabase
+          .from('clientes')
+          .select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita')
+          .eq('empresa_id', empresa!.id)
+          .eq('status', 'activo')
+          .range(from, to)
+      );
     },
   });
 
@@ -280,14 +283,16 @@ export default function SupervisorDashboardPage() {
     queryFn: async () => {
       const desde = new Date();
       desde.setDate(desde.getDate() - 90);
-      const { data } = await supabase
-        .from('ventas')
-        .select('id, cliente_id, fecha, total')
-        .eq('empresa_id', empresa!.id)
-        .neq('status', 'cancelado')
-        .gte('fecha', desde.toISOString().slice(0, 10))
-        .order('fecha', { ascending: false });
-      return (data ?? []) as any[];
+      return fetchAllPages<any>((from, to) =>
+        supabase
+          .from('ventas')
+          .select('id, cliente_id, fecha, total')
+          .eq('empresa_id', empresa!.id)
+          .neq('status', 'cancelado')
+          .gte('fecha', desde.toISOString().slice(0, 10))
+          .order('fecha', { ascending: false })
+          .range(from, to)
+      );
     },
   });
 
