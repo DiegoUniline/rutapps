@@ -25,6 +25,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
+  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || 'PZA';
 
   if (isEmpty && readOnly) return null;

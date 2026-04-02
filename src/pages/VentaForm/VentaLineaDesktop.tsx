@@ -31,6 +31,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
+  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || '';
   const impuestosLabel = lineData.impuestos_label || '';
 
