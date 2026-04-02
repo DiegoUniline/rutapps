@@ -109,10 +109,10 @@ function ClientesTable() {
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
   const { vendedores, zonas } = useDynamicFilterOptions();
 
-  // Count active clients without vendedor when visibility is 'propios'
+  // Count active clients without vendedor
   const { data: sinVendedorCount } = useQuery({
     queryKey: ['clientes-sin-vendedor', empresa?.id],
-    enabled: !!empresa?.id && clientesVisibilidad === 'propios',
+    enabled: !!empresa?.id,
     staleTime: 60_000,
     queryFn: async () => {
       const { count, error } = await supabase
