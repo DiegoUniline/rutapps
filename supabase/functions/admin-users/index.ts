@@ -157,6 +157,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "confirm-email") {
+      const { user_id } = params;
+      // Only super admins can confirm emails
+      const { data: isSA } = await adminClient.rpc('is_super_admin', { p_user_id: caller.id });
+      if (!isSA) {
+        return new Response(JSON.stringify({ error: "No autorizado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { error } = await adminClient.auth.admin.updateUserById(user_id, {
+        email_confirm: true,
+      });
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "create-user") {
       const { email, password, nombre, role_id, almacen_id } = params;
 

@@ -8,10 +8,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Building2, Search, Trash2, Stamp, CreditCard, CheckCircle2, XCircle, AlertCircle, Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Building2, Search, Trash2, Stamp, CreditCard, CheckCircle2, XCircle, AlertCircle, Clock, Plus, User, Mail, Phone, Lock, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
+
+const COUNTRY_CODES = [
+  { code: '+52', country: 'MX', label: '🇲🇽 México (+52)', digits: 10 },
+  { code: '+502', country: 'GT', label: '🇬🇹 Guatemala (+502)', digits: 8 },
+  { code: '+57', country: 'CO', label: '🇨🇴 Colombia (+57)', digits: 10 },
+  { code: '+54', country: 'AR', label: '🇦🇷 Argentina (+54)', digits: 10 },
+  { code: '+51', country: 'PE', label: '🇵🇪 Perú (+51)', digits: 9 },
+  { code: '+56', country: 'CL', label: '🇨🇱 Chile (+56)', digits: 9 },
+  { code: '+1', country: 'US', label: '🇺🇸 EE.UU. (+1)', digits: 10 },
+];
 
 interface ProfileRow {
   nombre: string | null;
@@ -56,6 +67,11 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
   const [selectedEmpresa, setSelectedEmpresa] = useState<EmpresaRow | null>(null);
   const [cantidadTimbres, setCantidadTimbres] = useState('10');
   const [addingTimbres, setAddingTimbres] = useState(false);
+  const [showCreateEmpresa, setShowCreateEmpresa] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newEmpresa, setNewEmpresa] = useState({
+    nombre: '', empresa: '', email: '', password: '123456', countryCode: '+52', telefono: '',
+  });
 
   useEffect(() => { load(); }, []);
 
@@ -101,6 +117,56 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
     }
   }
 
+  async function handleCreateEmpresa() {
+    const { nombre, empresa, email, password, countryCode, telefono } = newEmpresa;
+    if (!nombre.trim() || !empresa.trim() || !email.trim() || !password) {
+      toast.error('Todos los campos son obligatorios');
+      return;
+    }
+    const country = COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0];
+    const digits = telefono.replace(/\D/g, '');
+    if (digits.length !== country.digits) {
+      toast.error(`El teléfono debe tener ${country.digits} dígitos para ${country.country}`);
+      return;
+    }
+    const fullPhone = countryCode + digits;
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: nombre,
+            phone: fullPhone,
+            empresa_nombre: empresa,
+            accepted_terms_at: new Date().toISOString(),
+            verified_via: 'admin',
+          },
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+
+      // Auto-confirm the email via admin edge function
+      if (data.user) {
+        await supabase.functions.invoke('admin-users', {
+          body: { action: 'confirm-email', user_id: data.user.id },
+        });
+      }
+
+      toast.success(`Empresa "${empresa}" creada exitosamente`);
+      setShowCreateEmpresa(false);
+      setNewEmpresa({ nombre: '', empresa: '', email: '', password: '123456', countryCode: '+52', telefono: '' });
+      setTimeout(() => load(), 1500); // wait for triggers
+    } catch (e: any) {
+      toast.error(e.message || 'Error al crear empresa');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   const filtered = empresas.filter(e => {
     const matchSearch = e.nombre.toLowerCase().includes(search.toLowerCase()) ||
       (e.email || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -139,6 +205,9 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               <Building2 className="h-5 w-5 text-primary" /> Empresas ({empresas.length})
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => setShowCreateEmpresa(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Crear empresa
+              </Button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-64" />
@@ -331,6 +400,59 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               <Button variant="outline" className="flex-1" onClick={() => setShowAddTimbres(false)}>Cancelar</Button>
               <Button className="flex-1" disabled={addingTimbres} onClick={handleAddTimbres}>
                 {addingTimbres ? 'Agregando...' : `Agregar ${cantidadTimbres || 0} timbres`}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Empresa Dialog */}
+      <Dialog open={showCreateEmpresa} onOpenChange={setShowCreateEmpresa}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" /> Crear nueva empresa
+            </DialogTitle>
+            <DialogDescription>
+              Crea una empresa con su usuario administrador. No requiere verificación OTP.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" /> Nombre del dueño</Label>
+              <Input value={newEmpresa.nombre} onChange={e => setNewEmpresa(f => ({ ...f, nombre: e.target.value }))} placeholder="Juan Pérez" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Building2 className="h-3 w-3" /> Nombre de empresa</Label>
+              <Input value={newEmpresa.empresa} onChange={e => setNewEmpresa(f => ({ ...f, empresa: e.target.value }))} placeholder="Distribuidora Norte" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Mail className="h-3 w-3" /> Email</Label>
+              <Input type="email" value={newEmpresa.email} onChange={e => setNewEmpresa(f => ({ ...f, email: e.target.value }))} placeholder="usuario@empresa.com" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" /> Teléfono</Label>
+              <div className="flex gap-2">
+                <Select value={newEmpresa.countryCode} onValueChange={v => setNewEmpresa(f => ({ ...f, countryCode: v }))}>
+                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_CODES.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input value={newEmpresa.telefono} onChange={e => setNewEmpresa(f => ({ ...f, telefono: e.target.value }))} placeholder="1234567890" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Lock className="h-3 w-3" /> Contraseña</Label>
+              <Input value={newEmpresa.password} onChange={e => setNewEmpresa(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCreateEmpresa(false)}>Cancelar</Button>
+              <Button className="flex-1" disabled={creating} onClick={handleCreateEmpresa}>
+                {creating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+                Crear empresa
               </Button>
             </div>
           </div>
