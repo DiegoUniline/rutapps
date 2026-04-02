@@ -199,12 +199,17 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
                   <th className="text-left py-2 px-3">Código</th>
                   <th className="text-left py-2 px-3">Cliente</th>
                   <th className="text-left py-2 px-3">Última visita</th>
+                  <th className="text-right py-2 px-3">Días sin visita</th>
                   <th className="text-left py-2 px-3">Días visita</th>
                   <th className="text-left py-2 px-3">Teléfono</th>
                 </tr>
               </thead>
               <tbody>
-                {g.items.map((c, i) => (
+                {g.items.map((c, i) => {
+                  const diasSinVisita = c.ultima_visita
+                    ? Math.floor((Date.now() - new Date(c.ultima_visita + 'T12:00:00').getTime()) / 86400000)
+                    : null;
+                  return (
                   <tr key={c.id} className={`border-b border-border/50 ${c.visitado ? 'bg-green-50/40 dark:bg-green-950/10' : ''}`}>
                     <td className="py-1.5 px-3 font-semibold text-muted-foreground">{i + 1}</td>
                     <td className="py-1.5 px-3 text-center">
@@ -221,6 +226,15 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
                     <td className="py-1.5 px-3 text-muted-foreground">{c.codigo ?? '—'}</td>
                     <td className="py-1.5 px-3 font-medium text-foreground">{c.nombre}</td>
                     <td className="py-1.5 px-3 text-muted-foreground">{formatFecha(c.ultima_visita)}</td>
+                    <td className="py-1.5 px-3 text-right">
+                      {diasSinVisita !== null ? (
+                        <span className={`font-medium ${diasSinVisita > 30 ? 'text-destructive' : diasSinVisita > 14 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                          {diasSinVisita} días
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-destructive italic">Nunca visitado</span>
+                      )}
+                    </td>
                     <td className="py-1.5 px-3">
                       {c.dia_visita.length > 0
                         ? c.dia_visita.map(d => diasLabel[d] ?? d).join(', ')
@@ -229,13 +243,13 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
                     </td>
                     <td className="py-1.5 px-3 text-muted-foreground">{c.telefono ?? '—'}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       ))}
-
       {data.totalClientes === 0 && (
         <div className="py-8 text-center text-muted-foreground text-[13px]">
           No hay clientes activos para mostrar
