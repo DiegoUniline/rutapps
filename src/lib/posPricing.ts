@@ -68,7 +68,8 @@ export function buildPosLinePricing(item: PosPricingItem, rawPromoDiscount = 0):
   const origGross = round2(origSub + origIeps + origIva);
 
   if (rawPromoDiscount <= 0) {
-    return { subtotal: origSub, iva: origIva, ieps: origIeps, gross: origGross, effectiveDiscount: 0, finalGross: origGross };
+    const finalGross = round2(applyRedondeo(origGross, item.redondeo));
+    return { subtotal: origSub, iva: origIva, ieps: origIeps, gross: origGross, effectiveDiscount: 0, finalGross };
   }
 
   // --- With promo ---
