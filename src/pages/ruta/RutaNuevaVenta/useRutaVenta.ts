@@ -147,6 +147,20 @@ export function useRutaVenta() {
     };
   }, [tarifaLineasOffline, clienteListaPrecioId]);
 
+  /** Full pricing info for building cart items with raw data */
+  const resolvePricingFull = useMemo(() => {
+    const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
+    return (producto: any) => {
+      const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo };
+      if (!rules.length) {
+        const fallback = pf.precio_principal;
+        return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };
+      }
+      const r = resolveProductPricing(rules, pf, clienteListaPrecioId);
+      return { unitPrice: r.unitPrice, rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' };
+    };
+  }, [tarifaLineasOffline, clienteListaPrecioId]);
+
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
   const pedidoSugerido = useMemo(() => {
     if (!pedidoSugeridoRaw || !productos) return [];
