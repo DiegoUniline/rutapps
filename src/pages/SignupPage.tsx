@@ -135,18 +135,42 @@ export default function SignupPage() {
       toast.error(phoneError);
       return;
     }
+    if (getCooldownRemaining() > 0) {
+      setShowCooldownDialog(true);
+      setCooldownSeconds(getCooldownRemaining());
+      return;
+    }
     setSendingOtp(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-otp', {
         body: { action: 'send', phone: fullPhone },
       });
-      if (error) throw new Error(error.message || 'Error al enviar código');
+      // Detect rate limit from edge function response
+      const errMsg = error?.message || data?.error || '';
+      const isRateLimit = errMsg.toLowerCase().includes('demasiados intentos') ||
+        errMsg.toLowerCase().includes('rate limit') ||
+        errMsg.toLowerCase().includes('too many') ||
+        errMsg.includes('429');
+      if (isRateLimit) {
+        // Extract minutes from message or default to 10
+        const minuteMatch = errMsg.match(/(\d+)\s*minuto/i);
+        const cooldownMins = minuteMatch ? parseInt(minuteMatch[1]) : 10;
+        startCooldown(cooldownMins * 60);
+        return;
+      }
+      if (error) throw new Error(errMsg || 'Error al enviar código');
       if (data?.error) throw new Error(data.error);
       setOtpSent(true);
       setShowOtpDialog(true);
       toast.success('Código enviado por WhatsApp 📲');
     } catch (err: any) {
-      toast.error(err.message || 'Error al enviar el código');
+      const msg = err.message || 'Error al enviar el código';
+      // Also catch rate limit from catch block
+      if (msg.includes('non-2xx') || msg.includes('429')) {
+        startCooldown(10 * 60);
+        return;
+      }
+      toast.error(msg);
     } finally {
       setSendingOtp(false);
     }
