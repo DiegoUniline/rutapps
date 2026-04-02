@@ -265,13 +265,15 @@ export function useVentaForm() {
       if (!l.producto_id) return l;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return l;
-      const newPrice = resolveProductPrice(tarifaRules, {
+      const prodForPricing: ProductForPricing = {
         id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
         clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16),
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
-      } as ProductForPricing, listaPrecioId);
-      if (newPrice === Number(l.precio_unitario)) return l;
-      return { ...l, precio_unitario: newPrice };
+      };
+      const pricing = resolveProductPricing(tarifaRules, prodForPricing, listaPrecioId);
+      const snap = buildSalePricingSnapshot(prodForPricing, pricing);
+      if (snap.unitPrice === Number(l.precio_unitario)) return l;
+      return { ...l, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice } as any;
     }));
   }, [tarifaRules, (form as any).lista_precio_id]);
 
@@ -290,12 +292,16 @@ export function useVentaForm() {
     const taxes: string[] = [];
     if (producto.tiene_iva) taxes.push(`IVA ${ivaPct}%`);
     if (producto.tiene_ieps) { taxes.push(producto.ieps_tipo === 'cuota' ? 'IEPS cuota' : `IEPS ${iepsPct}%`); }
-    const resolvedPrice = tarifaRules?.length ? resolveProductPrice(tarifaRules, {
+    const prodForPricing: ProductForPricing = {
       id: productoId, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
       clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: Number(producto.iva_pct ?? 16),
       tiene_ieps: producto.tiene_ieps, ieps_pct: Number(producto.ieps_pct ?? 0), ieps_tipo: producto.ieps_tipo,
-    } as ProductForPricing, (form as any).lista_precio_id) : Number(producto.precio_principal) || 0;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: resolvedPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') } as any; return next; });
+    };
+    const pricing = tarifaRules?.length ? resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id) : null;
+    const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
+    const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
+    const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') } as any; return next; });
     setDirty(true);
   };
 

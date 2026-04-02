@@ -18,8 +18,6 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
   const desc = Number(l.descuento_pct) || 0;
-  const lineData = l as any;
-  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const base = r2(qty * price * (1 - desc / 100));
   const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));
   const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
@@ -27,6 +25,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
   const isEmpty = !l.producto_id;
   const lineData = l as any;
+  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const unidadLabel = lineData.unidad_label || 'PZA';
 
   if (isEmpty && readOnly) return null;
