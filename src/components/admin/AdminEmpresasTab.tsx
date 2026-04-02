@@ -205,6 +205,9 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
               <Building2 className="h-5 w-5 text-primary" /> Empresas ({empresas.length})
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button size="sm" onClick={() => setShowCreateEmpresa(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Crear empresa
+              </Button>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 w-64" />
