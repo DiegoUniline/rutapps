@@ -109,10 +109,10 @@ function ClientesTable() {
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
   const { vendedores, zonas } = useDynamicFilterOptions();
 
-  // Count active clients without vendedor when visibility is 'propios'
+  // Count active clients without vendedor
   const { data: sinVendedorCount } = useQuery({
     queryKey: ['clientes-sin-vendedor', empresa?.id],
-    enabled: !!empresa?.id && clientesVisibilidad === 'propios',
+    enabled: !!empresa?.id,
     staleTime: 60_000,
     queryFn: async () => {
       const { count, error } = await supabase
@@ -239,12 +239,14 @@ function ClientesTable() {
 
   return (
     <div className="space-y-3">
-      {clientesVisibilidad === 'propios' && (sinVendedorCount ?? 0) > 0 && (
+      {(sinVendedorCount ?? 0) > 0 && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
           <span>
             <strong>{sinVendedorCount} cliente{sinVendedorCount !== 1 ? 's' : ''} activo{sinVendedorCount !== 1 ? 's' : ''} sin vendedor asignado.</strong>{' '}
-            Con la configuración "Cada usuario ve solo sus clientes", estos clientes no serán visibles para ningún vendedor. Asígnales un vendedor para que aparezcan en su ruta.
+            {clientesVisibilidad === 'propios'
+              ? 'Con la configuración "Cada usuario ve solo sus clientes", estos clientes no serán visibles para ningún vendedor. Asígnales un vendedor para que aparezcan en su ruta.'
+              : 'Se recomienda asignarles un vendedor para una mejor organización.'}
           </span>
         </div>
       )}
