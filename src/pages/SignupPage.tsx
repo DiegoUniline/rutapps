@@ -579,6 +579,49 @@ export default function SignupPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cooldown Dialog */}
+      <Dialog open={showCooldownDialog} onOpenChange={v => { if (!v && cooldownSeconds <= 0) setShowCooldownDialog(false); }}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogHeader>
+            <div className="mx-auto mb-2 h-14 w-14 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <AlertTriangle className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+            </div>
+            <DialogTitle className="text-lg">Demasiados intentos</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed">
+              Has enviado varios códigos de verificación en poco tiempo.
+              Por seguridad, necesitas esperar un momento antes de intentar de nuevo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {cooldownSeconds > 0 ? (
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 bg-muted rounded-full px-5 py-2.5">
+                  <Clock className="h-4 w-4 text-muted-foreground animate-pulse" />
+                  <span className="font-mono text-xl font-bold text-foreground">{formatCooldown(cooldownSeconds)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Podrás enviar un nuevo código cuando el temporizador llegue a 0:00
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full px-5 py-2.5">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">¡Listo! Ya puedes intentar de nuevo</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <Button
+            variant={cooldownSeconds > 0 ? "outline" : "default"}
+            onClick={() => setShowCooldownDialog(false)}
+            className="w-full"
+          >
+            {cooldownSeconds > 0 ? 'Entendido' : 'Continuar'}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
