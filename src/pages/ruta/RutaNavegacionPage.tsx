@@ -77,17 +77,22 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Fetch clients for today
+  // Fetch clients for today (respecting visibility)
+  const clientesVisibilidad = (empresa as any)?.clientes_visibilidad ?? 'todos';
   const { data: clientesData } = useQuery({
-    queryKey: ['nav-clientes', empresa?.id, filterDia],
+    queryKey: ['nav-clientes', empresa?.id, filterDia, vendedorId, clientesVisibilidad],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase
+      let q = supabase
         .from('clientes')
         .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('orden', { ascending: true });
+      if (clientesVisibilidad === 'propios' && vendedorId) {
+        q = q.eq('vendedor_id', vendedorId);
+      }
+      const { data } = await q;
       return (data ?? []).filter(c =>
         c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng
       );
