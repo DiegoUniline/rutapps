@@ -417,7 +417,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{costoIva > 0 ? fmt(costoIva) : '—'}</td>
                   <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-foreground">{fmt(p.costo_con_imp)}</td>
                   <td className="py-1.5 px-3 text-center border-l border-border/40">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{p.regla}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{p.regla}</span>
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">{fmt(p.precio_regla)}</td>
                   <td className="py-1.5 px-3 text-center border-l border-border/40 text-[10px] text-muted-foreground">{p.redondeo_tipo === 'ninguno' ? '—' : p.redondeo_tipo}</td>
@@ -431,7 +431,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{fmt(p.costo)}</td>
                   <td className="py-1.5 px-3 text-center border-l border-border/40">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{p.regla}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{p.regla}</span>
                   </td>
                   <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">{fmt(p.precio_neto)}</td>
                   <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? fmt(p.monto_ieps) : '—'}</td>
@@ -729,7 +729,7 @@ export default function TarifaFormPage() {
     const styles: Record<string, string> = {
       producto: 'bg-primary/10 text-primary',
       categoria: 'bg-accent text-accent-foreground',
-      todos: 'bg-muted text-muted-foreground',
+      todos: 'bg-primary/10 text-primary',
     };
     return <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${styles[aplica]}`}>{APLICA_LABELS[aplica]}</span>;
   };
