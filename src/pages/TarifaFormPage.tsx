@@ -389,7 +389,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={11} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+              <tr><td colSpan={12} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
             )}
           </tbody>
         </table>
