@@ -251,28 +251,40 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
         const basePrecio = rule.base_precio ?? 'sin_impuestos';
         const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
         const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
+        const r2 = (v: number) => Math.round(v * 100) / 100;
 
-        let precioSinImp = precioRaw;
-        let precioConImp = precioRaw;
+        let precioNeto: number;
+        let montoIeps: number;
+        let montoIva: number;
+        let precioConImpSinRedondeo: number;
 
         if (basePrecio === 'con_impuestos') {
-          precioConImp = precioRaw;
+          // precioRaw ya incluye impuestos → extraer neto
           const divisor = (1 + iepsPct / 100) * (1 + ivaPct / 100);
-          precioSinImp = divisor > 0 ? precioRaw / divisor : precioRaw;
+          precioNeto = r2(divisor > 0 ? precioRaw / divisor : precioRaw);
+          montoIeps = r2(precioNeto * iepsPct / 100);
+          montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
+          precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
         } else {
-          precioSinImp = precioRaw;
-          const baseIva = precioRaw + (p.ieps_tipo === 'porcentaje' ? precioRaw * iepsPct / 100 : 0);
-          precioConImp = baseIva + baseIva * ivaPct / 100;
+          // precioRaw es neto → sumar impuestos
+          precioNeto = r2(precioRaw);
+          montoIeps = r2(precioNeto * iepsPct / 100);
+          montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
+          precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
         }
 
-        const precioFinal = applyRedondeo(precioConImp, rule.redondeo ?? 'ninguno');
+        const precioFinal = r2(applyRedondeo(precioConImpSinRedondeo, rule.redondeo ?? 'ninguno'));
+        const ganancia = r2(precioNeto - p.costo);
 
         return {
           ...p,
-          precio_lista: Math.round(precioSinImp * 100) / 100,
-          precio_con_imp: Math.round(precioConImp * 100) / 100,
-          precio_final: Math.round(precioFinal * 100) / 100,
+          precio_neto: precioNeto,
+          monto_ieps: montoIeps,
+          monto_iva: montoIva,
+          precio_final: precioFinal,
+          ganancia,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
+          redondeo_tipo: rule.redondeo ?? 'ninguno',
           comision_pct: rule.comision_pct ?? 0,
           base_precio: basePrecio,
         };
@@ -289,23 +301,21 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   
 
   const exportColumns = [
-    { key: 'codigo', header: 'Código', width: 12, format: 'text' as const },
-    { key: 'nombre', header: 'Producto', width: 30, format: 'text' as const },
-    { key: 'costo', header: 'Costo', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_principal', header: 'Precio base', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_lista', header: 'Precio s/imp', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_con_imp', header: 'Precio c/imp', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'codigo', header: 'Código', width: 10, format: 'text' as const },
+    { key: 'nombre', header: 'Producto', width: 26, format: 'text' as const },
+    { key: 'costo', header: 'Costo', width: 10, format: 'currency' as const, align: 'right' as const },
+    { key: 'regla', header: 'Regla', width: 8, format: 'text' as const },
+    { key: 'precio_neto', header: 'Precio Neto', width: 11, format: 'currency' as const, align: 'right' as const },
+    { key: 'monto_ieps', header: 'IEPS', width: 9, format: 'currency' as const, align: 'right' as const },
+    { key: 'monto_iva', header: 'IVA', width: 9, format: 'currency' as const, align: 'right' as const },
     { key: 'precio_final', header: 'Precio Final', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'regla', header: 'Regla', width: 10, format: 'text' as const },
-    { key: 'ganancia', header: 'Ganancia', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'margen', header: 'Margen %', width: 10, format: 'percent' as const, align: 'right' as const },
-    { key: 'comision_pct', header: 'Comisión %', width: 10, format: 'percent' as const, align: 'right' as const },
+    { key: 'ganancia', header: 'Ganancia', width: 10, format: 'currency' as const, align: 'right' as const },
+    { key: 'margen', header: 'Margen %', width: 9, format: 'percent' as const, align: 'right' as const },
   ];
 
   const exportData = filtered.map(p => ({
     ...p,
-    ganancia: p.precio_lista - p.costo,
-    margen: p.costo > 0 ? ((p.precio_lista - p.costo) / p.costo) * 100 : 0,
+    margen: p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0,
   }));
 
   const handleExportExcel = () => {
@@ -349,47 +359,47 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
         <table className="w-full text-[12px]">
           <thead>
             <tr className="border-b border-border bg-card">
-              <th className="th-odoo text-left">Código</th>
-              <th className="th-odoo text-left">Producto</th>
-              <th className="th-odoo text-right">Costo</th>
-              <th className="th-odoo text-right">Precio base</th>
-              <th className="th-odoo text-right">Precio s/imp</th>
-              <th className="th-odoo text-right">Precio c/imp</th>
-              <th className="th-odoo text-right font-bold">Precio Final</th>
-              <th className="th-odoo text-left">Regla</th>
-              <th className="th-odoo text-center">Base</th>
-              <th className="th-odoo text-right">Ganancia</th>
-              <th className="th-odoo text-right">Margen %</th>
-              <th className="th-odoo text-right">Comisión %</th>
+              <th className="th-odoo text-left" rowSpan={2}>Código</th>
+              <th className="th-odoo text-left" rowSpan={2}>Producto</th>
+              <th className="th-odoo text-right" rowSpan={2}>Costo</th>
+              <th className="th-odoo text-center border-l border-border" colSpan={2}>Regla</th>
+              <th className="th-odoo text-center border-l border-border" colSpan={2}>Impuestos</th>
+              <th className="th-odoo text-right border-l border-border font-bold bg-primary/5" rowSpan={2}>Precio Final</th>
+              <th className="th-odoo text-center border-l border-border" colSpan={2}>Rentabilidad</th>
+            </tr>
+            <tr className="border-b border-border bg-card text-[10px]">
+              <th className="py-1 px-3 text-center border-l border-border text-muted-foreground font-normal">Tipo</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Neto</th>
+              <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">IEPS</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">IVA</th>
+              <th className="py-1 px-3 text-right border-l border-border text-muted-foreground font-normal">Ganancia</th>
+              <th className="py-1 px-3 text-right text-muted-foreground font-normal">Margen</th>
             </tr>
           </thead>
           <tbody>
             {filtered.slice(0, 200).map(p => {
-              const ganancia = p.precio_lista - p.costo;
-              const margen = p.costo > 0 ? (ganancia / p.costo) * 100 : 0;
+              const margen = p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0;
               return (
                 <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.costo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">$ {p.precio_principal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">$ {p.precio_lista.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_con_imp.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                  <td className="py-1.5 px-3 text-muted-foreground">{p.regla}</td>
-                  <td className="py-1.5 px-3 text-center">
+                  <td className="py-1.5 px-3 text-center border-l border-border/40">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
-                      {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
+                      {p.regla} {p.base_precio === 'con_impuestos' ? '(c/imp)' : '(s/imp)'}
                     </span>
                   </td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground">$ {p.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? `$ ${p.monto_ieps.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{p.monto_iva > 0 ? `$ ${p.monto_iva.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">$ {p.precio_final.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold border-l border-border/40 ${p.ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {p.ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
-                  <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
                 </tr>
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={12} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
+              <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">Sin productos</td></tr>
             )}
           </tbody>
         </table>
