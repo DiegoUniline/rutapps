@@ -851,7 +851,8 @@ export default function PuntoVentaPage() {
               </div>
             )}
             {cart.map(item => {
-              const lineTotal = Math.round(item.precio_unitario * item.cantidad * 100) / 100;
+              const displayUnitPrice = getDisplayUnitPrice(item);
+              const lineTotal = r2(displayUnitPrice * item.cantidad);
               const itemPromos = promoResults.filter(r => r.producto_id === item.producto_id && r.descuento > 0);
               return (
                 <div key={item.producto_id} className="group rounded-lg px-3 py-2 bg-accent/30 hover:bg-accent/50 transition-colors">
