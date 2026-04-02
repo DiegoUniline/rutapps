@@ -251,28 +251,40 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
         const basePrecio = rule.base_precio ?? 'sin_impuestos';
         const iepsPct = p.tiene_ieps ? (p.ieps_pct ?? 0) : 0;
         const ivaPct = p.tiene_iva ? (p.iva_pct ?? 0) : 0;
+        const r2 = (v: number) => Math.round(v * 100) / 100;
 
-        let precioSinImp = precioRaw;
-        let precioConImp = precioRaw;
+        let precioNeto: number;
+        let montoIeps: number;
+        let montoIva: number;
+        let precioConImpSinRedondeo: number;
 
         if (basePrecio === 'con_impuestos') {
-          precioConImp = precioRaw;
+          // precioRaw ya incluye impuestos → extraer neto
           const divisor = (1 + iepsPct / 100) * (1 + ivaPct / 100);
-          precioSinImp = divisor > 0 ? precioRaw / divisor : precioRaw;
+          precioNeto = r2(divisor > 0 ? precioRaw / divisor : precioRaw);
+          montoIeps = r2(precioNeto * iepsPct / 100);
+          montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
+          precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
         } else {
-          precioSinImp = precioRaw;
-          const baseIva = precioRaw + (p.ieps_tipo === 'porcentaje' ? precioRaw * iepsPct / 100 : 0);
-          precioConImp = baseIva + baseIva * ivaPct / 100;
+          // precioRaw es neto → sumar impuestos
+          precioNeto = r2(precioRaw);
+          montoIeps = r2(precioNeto * iepsPct / 100);
+          montoIva = r2((precioNeto + montoIeps) * ivaPct / 100);
+          precioConImpSinRedondeo = r2(precioNeto + montoIeps + montoIva);
         }
 
-        const precioFinal = applyRedondeo(precioConImp, rule.redondeo ?? 'ninguno');
+        const precioFinal = r2(applyRedondeo(precioConImpSinRedondeo, rule.redondeo ?? 'ninguno'));
+        const ganancia = r2(precioNeto - p.costo);
 
         return {
           ...p,
-          precio_lista: Math.round(precioSinImp * 100) / 100,
-          precio_con_imp: Math.round(precioConImp * 100) / 100,
-          precio_final: Math.round(precioFinal * 100) / 100,
+          precio_neto: precioNeto,
+          monto_ieps: montoIeps,
+          monto_iva: montoIva,
+          precio_final: precioFinal,
+          ganancia,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
+          redondeo_tipo: rule.redondeo ?? 'ninguno',
           comision_pct: rule.comision_pct ?? 0,
           base_precio: basePrecio,
         };
