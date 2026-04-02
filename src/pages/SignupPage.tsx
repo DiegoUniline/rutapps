@@ -14,11 +14,14 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 
 const COUNTRY_CODES = [
   { code: '+52', country: 'MX', label: '🇲🇽 México (+52)', digits: 10 },
+  { code: '+34', country: 'ES', label: '🇪🇸 España (+34)', digits: 9 },
+  { code: '+1', country: 'US', label: '🇺🇸 EE.UU./Canadá (+1)', digits: 10 },
   { code: '+502', country: 'GT', label: '🇬🇹 Guatemala (+502)', digits: 8 },
   { code: '+57', country: 'CO', label: '🇨🇴 Colombia (+57)', digits: 10 },
   { code: '+54', country: 'AR', label: '🇦🇷 Argentina (+54)', digits: 10 },
   { code: '+51', country: 'PE', label: '🇵🇪 Perú (+51)', digits: 9 },
   { code: '+56', country: 'CL', label: '🇨🇱 Chile (+56)', digits: 9 },
+  { code: '+55', country: 'BR', label: '🇧🇷 Brasil (+55)', digits: 11 },
   { code: '+593', country: 'EC', label: '🇪🇨 Ecuador (+593)', digits: 9 },
   { code: '+591', country: 'BO', label: '🇧🇴 Bolivia (+591)', digits: 8 },
   { code: '+595', country: 'PY', label: '🇵🇾 Paraguay (+595)', digits: 9 },
@@ -28,7 +31,8 @@ const COUNTRY_CODES = [
   { code: '+503', country: 'SV', label: '🇸🇻 El Salvador (+503)', digits: 8 },
   { code: '+504', country: 'HN', label: '🇭🇳 Honduras (+504)', digits: 8 },
   { code: '+505', country: 'NI', label: '🇳🇮 Nicaragua (+505)', digits: 8 },
-  { code: '+1', country: 'US', label: '🇺🇸 EE.UU. (+1)', digits: 10 },
+  { code: '+58', country: 'VE', label: '🇻🇪 Venezuela (+58)', digits: 10 },
+  { code: '+809', country: 'DO', label: '🇩🇴 Rep. Dominicana (+809)', digits: 10 },
 ];
 
 type VerificationMethod = 'whatsapp' | 'email' | null;

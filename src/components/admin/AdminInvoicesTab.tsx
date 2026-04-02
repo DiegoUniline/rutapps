@@ -42,15 +42,25 @@ const PLANES_PREDEFINIDOS = [
 
 const COUNTRY_CODES = [
   { code: '+52', flag: '🇲🇽', name: 'México' },
-  { code: '+1', flag: '🇺🇸', name: 'USA/Canadá' },
+  { code: '+34', flag: '🇪🇸', name: 'España' },
+  { code: '+1', flag: '🇺🇸', name: 'EE.UU./Canadá' },
+  { code: '+502', flag: '🇬🇹', name: 'Guatemala' },
   { code: '+57', flag: '🇨🇴', name: 'Colombia' },
   { code: '+54', flag: '🇦🇷', name: 'Argentina' },
   { code: '+56', flag: '🇨🇱', name: 'Chile' },
   { code: '+51', flag: '🇵🇪', name: 'Perú' },
-  { code: '+34', flag: '🇪🇸', name: 'España' },
   { code: '+55', flag: '🇧🇷', name: 'Brasil' },
   { code: '+593', flag: '🇪🇨', name: 'Ecuador' },
   { code: '+591', flag: '🇧🇴', name: 'Bolivia' },
+  { code: '+595', flag: '🇵🇾', name: 'Paraguay' },
+  { code: '+598', flag: '🇺🇾', name: 'Uruguay' },
+  { code: '+507', flag: '🇵🇦', name: 'Panamá' },
+  { code: '+506', flag: '🇨🇷', name: 'Costa Rica' },
+  { code: '+503', flag: '🇸🇻', name: 'El Salvador' },
+  { code: '+504', flag: '🇭🇳', name: 'Honduras' },
+  { code: '+505', flag: '🇳🇮', name: 'Nicaragua' },
+  { code: '+58', flag: '🇻🇪', name: 'Venezuela' },
+  { code: '+809', flag: '🇩🇴', name: 'Rep. Dominicana' },
 ];
 
 function detectCountryCode(phone: string): { lada: string; number: string } {
