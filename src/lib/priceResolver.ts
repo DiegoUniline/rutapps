@@ -87,35 +87,8 @@ function findMatchingRule(
 }
 
 /**
- * Calculate price from a tarifa rule and product data.
- * Returns the price BEFORE taxes (unit price for the sale line).
- */
-export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricing): number | null {
-  let precio = 0;
-
-  if (rule.tipo_calculo === 'precio_fijo') {
-    precio = rule.precio ?? 0;
-    if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
-  } else if (rule.tipo_calculo === 'margen_costo') {
-    precio = (producto.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
-  } else if (rule.tipo_calculo === 'descuento_precio') {
-    precio = producto.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100);
-  }
-
-  precio = Math.max(precio, rule.precio_minimo ?? 0);
-  precio = applyRedondeo(precio, rule.redondeo ?? 'ninguno');
-
-  if (rule.base_precio === 'con_impuestos') {
-    const divisor = getTaxMultiplier(producto);
-    precio = divisor > 0 ? precio / divisor : precio;
-  }
-
-  return round2(precio);
-}
-
-/**
- * Same as calculatePrice but returns the pre-rounding base amount.
- * Used by POS to apply promotions before the final rounding step.
+ * Get the raw rule price BEFORE rounding or tax adjustment.
+ * Returns null for placeholder rules (precio_fijo = 0 with no minimum).
  */
 export function calculateRawPrice(rule: TarifaLineaRule, producto: ProductForPricing): number | null {
   let precio = 0;
@@ -132,17 +105,41 @@ export function calculateRawPrice(rule: TarifaLineaRule, producto: ProductForPri
   return Math.max(precio, rule.precio_minimo ?? 0);
 }
 
+/**
+ * Calculate the NET (before-tax) unit price from a tarifa rule.
+ * Flow: Raw rule price → extract net (if con_impuestos) → round2
+ * Rounding (redondeo) is NOT applied here — it applies on the final gross price.
+ */
+export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricing): number | null {
+  const raw = calculateRawPrice(rule, producto);
+  if (raw == null) return null;
+
+  let neto = raw;
+  if (rule.base_precio === 'con_impuestos') {
+    const divisor = getTaxMultiplier(producto);
+    neto = divisor > 0 ? raw / divisor : raw;
+  }
+
+  return round2(neto);
+}
+
+/**
+ * Calculate the customer-facing display price (gross = net + taxes + redondeo).
+ * This is the "Precio Final" the customer pays.
+ */
 export function toDisplayPrice(
   unitPrice: number,
   producto: ProductForPricing,
-  basePrecio?: string | null
+  redondeo?: string,
 ): number {
-  if (basePrecio !== 'con_impuestos') return round2(unitPrice);
-  return round2(unitPrice * getTaxMultiplier(producto));
+  const gross = round2(unitPrice * getTaxMultiplier(producto));
+  return round2(applyRedondeo(gross, redondeo ?? 'ninguno'));
 }
 
 /**
  * Resolve both the persisted unit price and the customer-facing display price.
+ *
+ * Flow: Cost → Tarifa Rule (net or gross) → Net extraction → +Taxes → Redondeo → Precio Final
  */
 export function resolveProductPricing(
   rules: TarifaLineaRule[],
@@ -153,11 +150,12 @@ export function resolveProductPricing(
 
   if (!rule) {
     const fallback = round2(producto.precio_principal);
+    const fallbackDisplay = round2(fallback * getTaxMultiplier(producto));
     return {
       unitPrice: fallback,
-      displayPrice: fallback,
+      displayPrice: fallbackDisplay,
       rawUnitPrice: fallback,
-      rawDisplayPrice: fallback,
+      rawDisplayPrice: fallback * getTaxMultiplier(producto),
       basePrecio: 'sin_impuestos',
       appliedRule: null,
     };
@@ -166,11 +164,12 @@ export function resolveProductPricing(
   const unitPrice = calculatePrice(rule, producto);
   if (unitPrice == null) {
     const fallback = round2(producto.precio_principal);
+    const fallbackDisplay = round2(fallback * getTaxMultiplier(producto));
     return {
       unitPrice: fallback,
-      displayPrice: fallback,
+      displayPrice: fallbackDisplay,
       rawUnitPrice: fallback,
-      rawDisplayPrice: fallback,
+      rawDisplayPrice: fallback * getTaxMultiplier(producto),
       basePrecio: 'sin_impuestos',
       appliedRule: null,
     };
@@ -178,19 +177,17 @@ export function resolveProductPricing(
 
   const rawBase = calculateRawPrice(rule, producto) ?? producto.precio_principal;
   let rawUnitPrice: number;
-  let rawDisplayPrice: number;
   if (rule.base_precio === 'con_impuestos') {
-    rawDisplayPrice = rawBase;
     const divisor = getTaxMultiplier(producto);
     rawUnitPrice = divisor > 0 ? rawBase / divisor : rawBase;
   } else {
     rawUnitPrice = rawBase;
-    rawDisplayPrice = rawBase;
   }
+  const rawDisplayPrice = rawUnitPrice * getTaxMultiplier(producto);
 
   return {
     unitPrice,
-    displayPrice: toDisplayPrice(unitPrice, producto, rule.base_precio),
+    displayPrice: toDisplayPrice(unitPrice, producto, rule.redondeo),
     rawUnitPrice,
     rawDisplayPrice,
     basePrecio: rule.base_precio ?? 'sin_impuestos',
