@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
@@ -51,6 +52,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { empresa, profile } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const { isLoaded } = useGoogleMaps();
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = getDiaFromDate(filterDate);
@@ -77,25 +79,24 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // Fetch clients for today (respecting visibility)
-  const clientesVisibilidad = (empresa as any)?.clientes_visibilidad ?? 'todos';
+  // Fetch clients for today (respecting visibility — same logic as RutaClientes)
   const { data: clientesData } = useQuery({
-    queryKey: ['nav-clientes', empresa?.id, filterDia, vendedorId, clientesVisibilidad],
+    queryKey: ['nav-clientes', empresa?.id, filterDia, profile?.id, clientesVisibilidad],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      let q = supabase
+      const { data } = await supabase
         .from('clientes')
-        .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden')
+        .select('id, nombre, direccion, colonia, telefono, dia_visita, gps_lat, gps_lng, orden, vendedor_id')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('orden', { ascending: true });
-      if (clientesVisibilidad === 'propios' && vendedorId) {
-        q = q.eq('vendedor_id', vendedorId);
-      }
-      const { data } = await q;
-      return (data ?? []).filter(c =>
-        c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng
-      );
+      return (data ?? []).filter(c => {
+        // Respect visibility setting
+        if (clientesVisibilidad === 'propios' && profile?.id) {
+          if (c.vendedor_id !== profile.id) return false;
+        }
+        return c.dia_visita?.some((d: string) => d.toLowerCase() === filterDia.toLowerCase()) && c.gps_lat && c.gps_lng;
+      });
     },
   });
 
