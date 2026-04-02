@@ -315,7 +315,38 @@ export function useVentaForm() {
   };
 
   const addLine = () => { if (readOnly) return; setLineas(prev => [...prev, emptyLine()]); setDirty(true); setTimeout(() => focusCell(lineas.length, 0), 50); };
-  const updateLine = (idx: number, field: string, val: any) => { if (readOnly) return; setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val }; return next; }); setDirty(true); };
+  const updateLine = (idx: number, field: string, val: any) => {
+    if (readOnly) return;
+    // When tax fields change, recalculate pricing with new tax settings so rounding still applies
+    if ((field === 'iva_pct' || field === 'ieps_pct') && tarifaRules?.length) {
+      const line = lineas[idx];
+      if (line?.producto_id) {
+        const prod = productosList?.find((p: any) => p.id === line.producto_id);
+        if (prod) {
+          const newIvaPct = field === 'iva_pct' ? Number(val) : Number(line.iva_pct);
+          const newIepsPct = field === 'ieps_pct' ? Number(val) : Number(line.ieps_pct);
+          const prodForPricing: ProductForPricing = {
+            id: line.producto_id!, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
+            clasificacion_id: prod.clasificacion_id,
+            tiene_iva: newIvaPct > 0, iva_pct: newIvaPct > 0 ? newIvaPct : Number(prod.iva_pct ?? 16),
+            tiene_ieps: newIepsPct > 0, ieps_pct: newIepsPct > 0 ? newIepsPct : Number(prod.ieps_pct ?? 0),
+            ieps_tipo: prod.ieps_tipo,
+          };
+          const pricing = resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id);
+          const snap = buildSalePricingSnapshot(prodForPricing, pricing);
+          setLineas(prev => {
+            const next = [...prev];
+            next[idx] = { ...next[idx], [field]: val, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice } as any;
+            return next;
+          });
+          setDirty(true);
+          return;
+        }
+      }
+    }
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], [field]: val }; return next; });
+    setDirty(true);
+  };
   const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
 
   const handleSave = async (autoConfirm = false) => {
