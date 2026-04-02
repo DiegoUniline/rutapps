@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { pickColumns, CARGA_COLUMNS } from '@/lib/allowlist';
 
 export function useCargas(search?: string, statusFilter?: string) {
