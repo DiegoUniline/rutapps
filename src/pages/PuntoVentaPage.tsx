@@ -179,7 +179,7 @@ export default function PuntoVentaPage() {
     };
   }, [productPricingMap]);
 
-  const getDisplayUnitPrice = useCallback((item: Pick<PosItem, 'precio_unitario' | 'base_precio' | 'tiene_iva' | 'iva_pct' | 'tiene_ieps' | 'ieps_pct'>) => {
+  const getDisplayUnitPrice = useCallback((item: PosItem) => {
     if (item.base_precio !== 'con_impuestos') return r2(item.precio_unitario);
     return r2(item.precio_unitario * getTaxMultiplier(item));
   }, []);
