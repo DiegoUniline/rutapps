@@ -276,14 +276,21 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
         const precioFinal = r2(applyRedondeo(precioConImpSinRedondeo, rule.redondeo ?? 'ninguno'));
         const ganancia = r2(precioNeto - p.costo);
 
+        // Costo con impuestos (para vista c/imp)
+        const costoIeps = r2(p.costo * iepsPct / 100);
+        const costoIva = r2((p.costo + costoIeps) * ivaPct / 100);
+        const costoConImp = r2(p.costo + costoIeps + costoIva);
+
         return {
           ...p,
           precio_regla: r2(precioRaw),
           precio_neto: precioNeto,
           monto_ieps: montoIeps,
           monto_iva: montoIva,
+          precio_con_imp_sin_redondeo: precioConImpSinRedondeo,
           precio_final: precioFinal,
           ganancia,
+          costo_con_imp: costoConImp,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
           redondeo_tipo: rule.redondeo ?? 'ninguno',
           comision_pct: rule.comision_pct ?? 0,
@@ -357,33 +364,68 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           <span>{items.length} productos</span>
           <span className="ml-2 font-normal text-[10px]">
             {isConImp
-              ? 'Costo → Regla (bruto) → Extrae Neto → Impuestos → Redondeo = Precio Final'
-              : 'Costo → Regla (neto) → Impuestos → Redondeo = Precio Final'}
+              ? 'Costo → +Impuestos → Costo c/imp → Regla → Precio Venta → Redondeo → Precio Final'
+              : 'Costo → Regla → Precio Neto → +Impuestos → Redondeo → Precio Final'}
           </span>
         </div>
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="border-b border-border bg-card">
-              <th className="th-odoo text-left">Código</th>
-              <th className="th-odoo text-left">Producto</th>
-              <th className="th-odoo text-right">Costo</th>
-              <th className="th-odoo text-center border-l border-border">Regla</th>
-              <th className="th-odoo text-right">{isConImp ? 'Precio Regla (bruto)' : 'Precio Regla (neto)'}</th>
-              {isConImp && <th className="th-odoo text-right border-l border-border">Neto (extraído)</th>}
-              <th className="th-odoo text-right border-l border-border">IEPS</th>
-              <th className="th-odoo text-right">IVA</th>
-              <th className="th-odoo text-right border-l border-border">Antes Redondeo</th>
-              <th className="th-odoo text-center">Redondeo</th>
-              <th className="th-odoo text-right font-bold bg-primary/5 border-l border-border">Precio Final</th>
-              <th className="th-odoo text-right border-l border-border">Ganancia</th>
-              <th className="th-odoo text-right">Margen</th>
-            </tr>
+            {isConImp ? (
+              <tr className="border-b border-border bg-card">
+                <th className="th-odoo text-left">Código</th>
+                <th className="th-odoo text-left">Producto</th>
+                <th className="th-odoo text-right">Costo</th>
+                <th className="th-odoo text-right border-l border-border">IEPS</th>
+                <th className="th-odoo text-right">IVA</th>
+                <th className="th-odoo text-right border-l border-border">Costo c/imp</th>
+                <th className="th-odoo text-center border-l border-border">Regla</th>
+                <th className="th-odoo text-right">Precio Venta</th>
+                <th className="th-odoo text-center border-l border-border">Redondeo</th>
+                <th className="th-odoo text-right font-bold bg-primary/5 border-l border-border">Precio Final</th>
+                <th className="th-odoo text-right border-l border-border">Ganancia</th>
+                <th className="th-odoo text-right">Margen</th>
+              </tr>
+            ) : (
+              <tr className="border-b border-border bg-card">
+                <th className="th-odoo text-left">Código</th>
+                <th className="th-odoo text-left">Producto</th>
+                <th className="th-odoo text-right">Costo</th>
+                <th className="th-odoo text-center border-l border-border">Regla</th>
+                <th className="th-odoo text-right">Precio Neto</th>
+                <th className="th-odoo text-right border-l border-border">IEPS</th>
+                <th className="th-odoo text-right">IVA</th>
+                <th className="th-odoo text-right border-l border-border">Subtotal</th>
+                <th className="th-odoo text-center border-l border-border">Redondeo</th>
+                <th className="th-odoo text-right font-bold bg-primary/5 border-l border-border">Precio Final</th>
+                <th className="th-odoo text-right border-l border-border">Ganancia</th>
+                <th className="th-odoo text-right">Margen</th>
+              </tr>
+            )}
           </thead>
           <tbody>
             {rows.map(p => {
               const margen = p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0;
-              const antesRedondeo = p.precio_neto + p.monto_ieps + p.monto_iva;
-              return (
+              const costoIeps = Math.round(p.costo * (p.tiene_ieps ? (p.ieps_pct ?? 0) : 0) / 100 * 100) / 100;
+              const costoIva = Math.round((p.costo + costoIeps) * (p.tiene_iva ? (p.iva_pct ?? 0) : 0) / 100 * 100) / 100;
+
+              return isConImp ? (
+                <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
+                  <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
+                  <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{fmt(p.costo)}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{costoIeps > 0 ? fmt(costoIeps) : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{costoIva > 0 ? fmt(costoIva) : '—'}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-foreground">{fmt(p.costo_con_imp)}</td>
+                  <td className="py-1.5 px-3 text-center border-l border-border/40">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{p.regla}</span>
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">{fmt(p.precio_regla)}</td>
+                  <td className="py-1.5 px-3 text-center border-l border-border/40 text-[10px] text-muted-foreground">{p.redondeo_tipo === 'ninguno' ? '—' : p.redondeo_tipo}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">{fmt(p.precio_final)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold border-l border-border/40 ${p.ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>{fmt(p.ganancia)}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
+                </tr>
+              ) : (
                 <tr key={p.id} className="border-b border-border/40 hover:bg-card/50">
                   <td className="py-1.5 px-3 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 px-3 text-foreground">{p.nombre}</td>
@@ -391,12 +433,11 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
                   <td className="py-1.5 px-3 text-center border-l border-border/40">
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{p.regla}</span>
                   </td>
-                  <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">{fmt(p.precio_regla)}</td>
-                  {isConImp && <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{fmt(p.precio_neto)}</td>}
+                  <td className="py-1.5 px-3 text-right font-mono text-foreground font-semibold">{fmt(p.precio_neto)}</td>
                   <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{p.monto_ieps > 0 ? fmt(p.monto_ieps) : '—'}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{p.monto_iva > 0 ? fmt(p.monto_iva) : '—'}</td>
-                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{fmt(Math.round(antesRedondeo * 100) / 100)}</td>
-                  <td className="py-1.5 px-3 text-center text-[10px] text-muted-foreground">{p.redondeo_tipo === 'ninguno' ? '—' : `${p.redondeo_tipo}`}</td>
+                  <td className="py-1.5 px-3 text-right font-mono border-l border-border/40 text-muted-foreground">{fmt(p.precio_con_imp_sin_redondeo)}</td>
+                  <td className="py-1.5 px-3 text-center border-l border-border/40 text-[10px] text-muted-foreground">{p.redondeo_tipo === 'ninguno' ? '—' : p.redondeo_tipo}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-bold text-primary border-l border-border/40 bg-primary/5">{fmt(p.precio_final)}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold border-l border-border/40 ${p.ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>{fmt(p.ganancia)}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
