@@ -134,7 +134,10 @@ export function useVentaForm() {
   // Load existing venta — only once per venta id
   useEffect(() => {
     if (!existingVenta) {
-      if (isNew) setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id }));
+      if (isNew) {
+        const defaultTarifa = tarifasList?.find((t: any) => t.tipo === 'general')?.id;
+        setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id, ...(defaultTarifa ? { tarifa_id: defaultTarifa } : {}) }));
+      }
       return;
     }
     const ventaId = (existingVenta as any).id;
