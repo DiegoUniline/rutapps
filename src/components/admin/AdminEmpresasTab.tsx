@@ -405,6 +405,59 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Empresa Dialog */}
+      <Dialog open={showCreateEmpresa} onOpenChange={setShowCreateEmpresa}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" /> Crear nueva empresa
+            </DialogTitle>
+            <DialogDescription>
+              Crea una empresa con su usuario administrador. No requiere verificación OTP.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><User className="h-3 w-3" /> Nombre del dueño</Label>
+              <Input value={newEmpresa.nombre} onChange={e => setNewEmpresa(f => ({ ...f, nombre: e.target.value }))} placeholder="Juan Pérez" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Building2 className="h-3 w-3" /> Nombre de empresa</Label>
+              <Input value={newEmpresa.empresa} onChange={e => setNewEmpresa(f => ({ ...f, empresa: e.target.value }))} placeholder="Distribuidora Norte" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Mail className="h-3 w-3" /> Email</Label>
+              <Input type="email" value={newEmpresa.email} onChange={e => setNewEmpresa(f => ({ ...f, email: e.target.value }))} placeholder="usuario@empresa.com" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" /> Teléfono</Label>
+              <div className="flex gap-2">
+                <Select value={newEmpresa.countryCode} onValueChange={v => setNewEmpresa(f => ({ ...f, countryCode: v }))}>
+                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_CODES.map(c => (
+                      <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input value={newEmpresa.telefono} onChange={e => setNewEmpresa(f => ({ ...f, telefono: e.target.value }))} placeholder="1234567890" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs flex items-center gap-1"><Lock className="h-3 w-3" /> Contraseña</Label>
+              <Input value={newEmpresa.password} onChange={e => setNewEmpresa(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCreateEmpresa(false)}>Cancelar</Button>
+              <Button className="flex-1" disabled={creating} onClick={handleCreateEmpresa}>
+                {creating ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+                Crear empresa
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
