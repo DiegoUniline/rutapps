@@ -301,23 +301,21 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   
 
   const exportColumns = [
-    { key: 'codigo', header: 'Código', width: 12, format: 'text' as const },
-    { key: 'nombre', header: 'Producto', width: 30, format: 'text' as const },
-    { key: 'costo', header: 'Costo', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_principal', header: 'Precio base', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_lista', header: 'Precio s/imp', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'precio_con_imp', header: 'Precio c/imp', width: 12, format: 'currency' as const, align: 'right' as const },
+    { key: 'codigo', header: 'Código', width: 10, format: 'text' as const },
+    { key: 'nombre', header: 'Producto', width: 26, format: 'text' as const },
+    { key: 'costo', header: 'Costo', width: 10, format: 'currency' as const, align: 'right' as const },
+    { key: 'regla', header: 'Regla', width: 8, format: 'text' as const },
+    { key: 'precio_neto', header: 'Precio Neto', width: 11, format: 'currency' as const, align: 'right' as const },
+    { key: 'monto_ieps', header: 'IEPS', width: 9, format: 'currency' as const, align: 'right' as const },
+    { key: 'monto_iva', header: 'IVA', width: 9, format: 'currency' as const, align: 'right' as const },
     { key: 'precio_final', header: 'Precio Final', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'regla', header: 'Regla', width: 10, format: 'text' as const },
-    { key: 'ganancia', header: 'Ganancia', width: 12, format: 'currency' as const, align: 'right' as const },
-    { key: 'margen', header: 'Margen %', width: 10, format: 'percent' as const, align: 'right' as const },
-    { key: 'comision_pct', header: 'Comisión %', width: 10, format: 'percent' as const, align: 'right' as const },
+    { key: 'ganancia', header: 'Ganancia', width: 10, format: 'currency' as const, align: 'right' as const },
+    { key: 'margen', header: 'Margen %', width: 9, format: 'percent' as const, align: 'right' as const },
   ];
 
   const exportData = filtered.map(p => ({
     ...p,
-    ganancia: p.precio_lista - p.costo,
-    margen: p.costo > 0 ? ((p.precio_lista - p.costo) / p.costo) * 100 : 0,
+    margen: p.costo > 0 ? (p.ganancia / p.costo) * 100 : 0,
   }));
 
   const handleExportExcel = () => {
