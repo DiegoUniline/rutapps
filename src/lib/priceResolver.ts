@@ -34,6 +34,8 @@ export interface ProductForPricing {
 export interface ResolvedProductPricing {
   unitPrice: number;
   displayPrice: number;
+  rawUnitPrice: number;
+  rawDisplayPrice: number;
   basePrecio: string;
   appliedRule: TarifaLineaRule | null;
 }
@@ -111,6 +113,25 @@ export function calculatePrice(rule: TarifaLineaRule, producto: ProductForPricin
   return round2(precio);
 }
 
+/**
+ * Same as calculatePrice but returns the pre-rounding base amount.
+ * Used by POS to apply promotions before the final rounding step.
+ */
+export function calculateRawPrice(rule: TarifaLineaRule, producto: ProductForPricing): number | null {
+  let precio = 0;
+
+  if (rule.tipo_calculo === 'precio_fijo') {
+    precio = rule.precio ?? 0;
+    if (precio <= 0 && (rule.precio_minimo ?? 0) <= 0) return null;
+  } else if (rule.tipo_calculo === 'margen_costo') {
+    precio = (producto.costo ?? 0) * (1 + (rule.margen_pct ?? 0) / 100);
+  } else if (rule.tipo_calculo === 'descuento_precio') {
+    precio = producto.precio_principal * (1 - (rule.descuento_pct ?? 0) / 100);
+  }
+
+  return Math.max(precio, rule.precio_minimo ?? 0);
+}
+
 export function toDisplayPrice(
   unitPrice: number,
   producto: ProductForPricing,
@@ -135,6 +156,8 @@ export function resolveProductPricing(
     return {
       unitPrice: fallback,
       displayPrice: fallback,
+      rawUnitPrice: fallback,
+      rawDisplayPrice: fallback,
       basePrecio: 'sin_impuestos',
       appliedRule: null,
     };
@@ -146,14 +169,30 @@ export function resolveProductPricing(
     return {
       unitPrice: fallback,
       displayPrice: fallback,
+      rawUnitPrice: fallback,
+      rawDisplayPrice: fallback,
       basePrecio: 'sin_impuestos',
       appliedRule: null,
     };
   }
 
+  const rawBase = calculateRawPrice(rule, producto) ?? producto.precio_principal;
+  let rawUnitPrice: number;
+  let rawDisplayPrice: number;
+  if (rule.base_precio === 'con_impuestos') {
+    rawDisplayPrice = rawBase;
+    const divisor = getTaxMultiplier(producto);
+    rawUnitPrice = divisor > 0 ? rawBase / divisor : rawBase;
+  } else {
+    rawUnitPrice = rawBase;
+    rawDisplayPrice = rawBase;
+  }
+
   return {
     unitPrice,
     displayPrice: toDisplayPrice(unitPrice, producto, rule.base_precio),
+    rawUnitPrice,
+    rawDisplayPrice,
     basePrecio: rule.base_precio ?? 'sin_impuestos',
     appliedRule: rule,
   };
