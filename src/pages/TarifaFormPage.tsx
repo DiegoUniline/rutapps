@@ -13,6 +13,7 @@ import { useTarifa, useSaveTarifa, useSaveTarifaLinea, useDeleteTarifaLinea, use
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
+import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
