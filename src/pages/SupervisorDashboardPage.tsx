@@ -721,6 +721,36 @@ export default function SupervisorDashboardPage() {
         <KpiCard icon={Users} label="Activos" value={String(dashboardStats.sellersWithActivity)} sub={`de ${sellerRows.length} vendedores`} />
       </section>
 
+      {/* Clientes en Riesgo widget */}
+      {clienteActivity.filter(c => !c.visitado).length > 0 && (
+        <section>
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                Clientes sin visitar — Ingreso en riesgo
+              </CardTitle>
+              <CardDescription>Clientes no visitados hoy, ordenados por valor de última compra.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ClientesEnRiesgoWidget
+                clientes={clienteActivity.filter(c => !c.visitado).map(c => ({
+                  id: c.id,
+                  nombre: c.nombre,
+                  vendedor: c.vendedorNombre,
+                  ultimaCompraFecha: c.ultimaVisitaFecha,
+                  ultimaCompraValor: c.ultimaVisitaValor,
+                  diasSinComprar: c.diasSinComprar,
+                  visitadoHoy: false,
+                }))}
+                fmtMoney={fmtMoney}
+                maxItems={12}
+              />
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
       <section className="grid gap-4 xl:grid-cols-[1.45fr_0.95fr]">
         <Card className="overflow-hidden border-border/80">
           <CardHeader className="pb-3">
