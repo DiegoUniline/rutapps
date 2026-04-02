@@ -23,6 +23,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
+  const lineData = l as any;
+  const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
   const desc = Number(l.descuento_pct) || 0;
   const base = r2(qty * price * (1 - desc / 100));
   const ieps = r2(base * ((Number(l.ieps_pct) || 0) / 100));

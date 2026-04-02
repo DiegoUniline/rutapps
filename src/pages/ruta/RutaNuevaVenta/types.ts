@@ -19,6 +19,7 @@ export interface CartItem {
   base_precio?: string;
   /** Rounding rule from tarifa */
   redondeo?: string;
+  display_unit_price?: number;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';
