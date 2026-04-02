@@ -11,28 +11,23 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
 import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
+import { buildPosLinePricing, getTaxMultiplier as posGetTaxMult, round2 as posR2, type BasePrecioMode } from '@/lib/posPricing';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 
 const CATALOG_STALE = 5 * 60 * 1000;
-
-type BasePrecioMode = 'con_impuestos' | 'sin_impuestos';
-
-const r2 = (n: number) => Math.round(n * 100) / 100;
-
-const getTaxMultiplier = (item: { tiene_iva: boolean; iva_pct: number; tiene_ieps: boolean; ieps_pct: number }) => {
-  const ieps = item.tiene_ieps ? (item.ieps_pct ?? 0) : 0;
-  const iva = item.tiene_iva ? (item.iva_pct ?? 0) : 0;
-  return (1 + ieps / 100) * (1 + iva / 100);
-};
+const r2 = posR2;
+const getTaxMultiplier = posGetTaxMult;
 
 interface PosItem {
   producto_id: string;
   codigo: string;
   nombre: string;
   precio_unitario: number;
+  precio_unitario_sin_redondeo: number;
+  precio_display_sin_redondeo: number;
   cantidad: number;
   tiene_iva: boolean;
   iva_pct: number;
@@ -40,6 +35,7 @@ interface PosItem {
   ieps_pct: number;
   unidad: string;
   base_precio: BasePrecioMode;
+  redondeo: string;
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
