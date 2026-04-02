@@ -11,6 +11,14 @@ export interface CartItem {
   tiene_ieps: boolean;
   ieps_pct: number;
   es_cambio?: boolean;
+  /** Raw net price before rounding (from tarifa) */
+  precio_unitario_sin_redondeo?: number;
+  /** Raw gross/display price before rounding */
+  precio_display_sin_redondeo?: number;
+  /** 'con_impuestos' | 'sin_impuestos' */
+  base_precio?: string;
+  /** Rounding rule from tarifa */
+  redondeo?: string;
 }
 
 export type AccionDevolucion = 'reposicion' | 'nota_credito' | 'devolucion_dinero' | 'descuento_venta';
