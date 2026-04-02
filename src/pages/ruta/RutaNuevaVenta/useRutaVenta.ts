@@ -249,18 +249,47 @@ export function useRutaVenta() {
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId || undefined, (selectedCliente as any)?.zona_id || undefined);
   }, [promocionesActivas, cart, clienteId, selectedCliente, productos]);
-  const totalDescuentoPromos = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
+
+  // Build a map of raw promo discount per product
+  const promoRawByProduct = useMemo(() => {
+    const m = new Map<string, number>();
+    promoResults.forEach(r => {
+      if (r.producto_id) m.set(r.producto_id, (m.get(r.producto_id) ?? 0) + r.descuento);
+    });
+    return m;
+  }, [promoResults]);
 
   const descuentoDevolucion = useMemo(() => devoluciones.filter(d => d.accion === 'descuento_venta').reduce((s, d) => s + d.precio_unitario * d.cantidad, 0), [devoluciones]);
 
   const totals = useMemo(() => {
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    let subtotal = 0, iva = 0, ieps = 0, items = 0;
-    cart.forEach(item => { if (item.es_cambio) { items += item.cantidad; return; } const lineaSub = r2(item.precio_unitario * item.cantidad); subtotal += lineaSub; if (!sinImpuestos) { const lineIeps = item.tiene_ieps ? r2(lineaSub * (item.ieps_pct / 100)) : 0; ieps += lineIeps; if (item.tiene_iva) iva += r2((lineaSub + lineIeps) * (item.iva_pct / 100)); } items += item.cantidad; });
-    const totalDescuentos = r2(totalDescuentoPromos + descuentoDevolucion);
-    const total = r2(Math.max(0, subtotal + ieps + iva - totalDescuentos));
+    let subtotal = 0, iva = 0, ieps = 0, items = 0, descuentoPromo = 0;
+    cart.forEach(item => {
+      if (item.es_cambio) { items += item.cantidad; return; }
+      const promoDisc = promoRawByProduct.get(item.producto_id) ?? 0;
+      const pricingItem: PosPricingItem = {
+        precio_unitario: item.precio_unitario,
+        precio_unitario_sin_redondeo: item.precio_unitario_sin_redondeo ?? item.precio_unitario,
+        precio_display_sin_redondeo: item.precio_display_sin_redondeo ?? item.precio_unitario,
+        cantidad: item.cantidad,
+        tiene_iva: sinImpuestos ? false : item.tiene_iva,
+        iva_pct: item.iva_pct,
+        tiene_ieps: sinImpuestos ? false : item.tiene_ieps,
+        ieps_pct: item.ieps_pct,
+        base_precio: (item.base_precio ?? 'sin_impuestos') as any,
+        redondeo: item.redondeo ?? 'ninguno',
+      };
+      const lp = buildPosLinePricing(pricingItem, promoDisc);
+      subtotal += lp.subtotal;
+      iva += lp.iva;
+      ieps += lp.ieps;
+      descuentoPromo += lp.effectiveDiscount;
+      items += item.cantidad;
+    });
+    const totalDescuentos = r2(descuentoPromo + descuentoDevolucion);
+    const total = r2(Math.max(0, subtotal + ieps + iva - descuentoDevolucion));
     return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), total, items, descuento: totalDescuentos, descuentoDevolucion: r2(descuentoDevolucion) };
-  }, [cart, totalDescuentoPromos, descuentoDevolucion, sinImpuestos]);
+  }, [cart, promoRawByProduct, descuentoDevolucion, sinImpuestos]);
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
