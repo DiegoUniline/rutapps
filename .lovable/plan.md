@@ -1,60 +1,40 @@
 
 
-## Unificar "Actualizar plan" — Un solo flujo para frecuencia y usuarios
+## Plan: Unificar el Precio Final en todo el sistema
 
-### Concepto
-Eliminar las secciones separadas de "Cambiar frecuencia" y "Agregar usuarios". Reemplazar con una sola sección **"Actualizar plan"** donde el usuario ve:
-1. Su plan actual (frecuencia + usuarios + total)
-2. Puede ajustar frecuencia Y usuarios en el mismo lugar
-3. Un solo botón **"Actualizar plan"** que calcula la diferencia
+### Problema actual
+Hay **dos cálculos independientes** del precio final:
+1. **Vista Precios** (`TarifaFormPage.tsx`): calcula `precio_final` con lógica inline
+2. **priceResolver.ts**: calcula `displayPrice` con lógica similar pero que puede divergir
 
-### Lógica de cobro
-- **Subir usuarios**: Cobra la diferencia prorrateada del periodo actual
-- **Bajar usuarios**: Sin reembolso, el cambio aplica al siguiente periodo
-- **Cambiar a frecuencia mayor** (mensual→semestral): Cobra los meses restantes. Ej: si ya pagó 1 mes mensual y cambia a semestral, cobra 5 meses faltantes al precio semestral
-- **Cambiar a frecuencia menor** (anual→mensual): Aplica al siguiente periodo, sin reembolso
+Cuando POS, Venta Desktop o Venta Móvil resuelven el precio, usan `priceResolver` — pero si hay diferencia matemática mínima (ej. orden de redondeos intermedios), el precio mostrado no coincide con Vista Precios.
 
-### Estructura visual simplificada
-```text
-┌──────────────────────────────────────┐
-│ Tu plan actual                       │
-│ MENSUAL | 3 usuarios | $900/mes      │
-├──────────────────────────────────────┤
-│ ⚠️ Factura pendiente: $900           │
-│          [  Pagar ahora  ]           │
-├──────────────────────────────────────┤
-│ Actualizar plan                      │
-│                                      │
-│ Frecuencia:                          │
-│ [Mensual ✓] [Semestral] [Anual]     │
-│                                      │
-│ Usuarios: [-] 3 [+]                  │
-│                                      │
-│ Resumen:                             │
-│ 3 usuarios × $270/mes = $810/mes     │
-│ Cobro por cambio: $1,350 (5 meses)   │
-│                                      │
-│      [ Actualizar plan ]             │
-├──────────────────────────────────────┤
-│ Timbres CFDI                         │
-├──────────────────────────────────────┤
-│ Historial de facturas                │
-└──────────────────────────────────────┘
-```
+### Solución
+Hacer que **todos los módulos usen una sola fuente de verdad**: `resolveProductPricing()` de `priceResolver.ts`. Vista Precios también debe usar esta función en vez de calcular por su cuenta.
 
-### Cambios en `src/pages/MiSuscripcionPage.tsx`
-1. **Eliminar** secciones separadas de "Cambiar frecuencia" y "Agregar usuarios" (lines ~589-731)
-2. **Crear** una sola sección "Actualizar plan" con:
-   - Selector de frecuencia (3 cards)
-   - Control +/- de usuarios (mínimo 3)
-   - Resumen con cálculo de diferencia/prorrateo
-3. **Simplificar cart**: Quitar tipos `plan` y `usuarios` separados → un solo tipo `actualizacion` que incluye ambos
-4. **Cálculo de cobro por cambio**:
-   - Si hay `current_period_end`, calcular meses restantes del periodo actual
-   - Diferencia = (nuevo_total_mensual × meses_restantes) - lo ya pagado del periodo
-   - Si diferencia > 0 → cobrar; si ≤ 0 → "Se aplica al siguiente periodo"
-5. **Botones finales**: Solo "Pagar pendiente" (si hay factura) y "Actualizar plan" (si hay cambios)
+### Cambios
 
-### Archivo a modificar
-- `src/pages/MiSuscripcionPage.tsx`
+**1. `src/pages/TarifaFormPage.tsx` — Vista Precios usa `priceResolver`**
+- Eliminar la lógica inline de cálculo (líneas ~246-298)
+- Importar `resolveProductPricing` y `toDisplayPrice` de `priceResolver.ts`
+- Para cada producto con regla, llamar `resolveProductPricing(rules, producto)` y usar su resultado (`displayPrice` = Precio Final, `unitPrice` = Neto)
+- Seguir calculando los campos de presentación extra (costo c/imp, ganancia, margen) a partir de los valores devueltos por el resolver
+- Resultado: Vista Precios y POS/Venta comparten exactamente la misma matemática
+
+**2. Verificar `src/lib/priceResolver.ts` — `displayPrice` = Precio Final correcto**
+- Confirmar que `displayPrice` sigue el flujo: Regla → Neto (si con_impuestos, extraer) → +Impuestos → Redondeo
+- Si hay discrepancia con la lógica actual de Vista Precios, ajustar `priceResolver` como fuente de verdad
+
+**3. Tests — Actualizar `src/test/priceResolver.test.ts`**
+- Validar que `displayPrice` para reglas `sin_impuestos` y `con_impuestos` coincida con los valores que Vista Precios mostraba antes (ej. costo $22, +25%, redondeo cercano → $32)
+
+### Resultado esperado
+- Lo que Vista Precios muestra como "Precio Final" es **exactamente** lo que POS, Venta Desktop y Venta Móvil usan
+- Un solo punto de cálculo: `priceResolver.ts`
+- Sin duplicación de lógica
+
+### Archivos a modificar
+- `src/pages/TarifaFormPage.tsx` (Vista Precios usa priceResolver)
+- `src/lib/priceResolver.ts` (verificar/ajustar si necesario)
+- `src/test/priceResolver.test.ts` (validar consistencia)
 
