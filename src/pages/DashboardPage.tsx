@@ -5,7 +5,7 @@ import { es } from 'date-fns/locale';
 import {
   DollarSign, TrendingUp, TrendingDown, ShoppingCart, CreditCard,
   Package, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight,
-  BarChart3, Users, Loader2, RotateCcw
+  BarChart3, Users, UserX, Loader2, RotateCcw
 } from 'lucide-react';
 import { cn, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
