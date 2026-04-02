@@ -499,7 +499,7 @@ export default function PuntoVentaPage() {
       }
 
       // Save ticket data for display
-      const metodosUsados = paySplitsComputed.map(s => s.metodo).join(' + ');
+      const metodosUsados = (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo' }]).map(s => s.metodo).join(' + ');
       setLastVentaData({
         folio: ventaData?.folio ?? ventaId.slice(0, 8),
         fecha: today,
