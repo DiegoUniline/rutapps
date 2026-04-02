@@ -273,6 +273,8 @@ export default function PuntoVentaPage() {
   const addToCart = (p: any) => {
     const stock = p.cantidad ?? 0;
     const canSellWithout = p.vender_sin_stock;
+    const pricing = getProductPricing(p);
+
     setCart(prev => {
       const existing = prev.find(c => c.producto_id === p.id);
       if (existing) {
@@ -291,13 +293,14 @@ export default function PuntoVentaPage() {
         producto_id: p.id,
         codigo: p.codigo,
         nombre: p.nombre,
-        precio_unitario: resolvePosPrice(p),
+        precio_unitario: pricing.unitPrice,
         cantidad: p.es_granel ? 0 : 1,
         tiene_iva: p.tiene_iva ?? false,
         iva_pct: p.tiene_iva ? (p.iva_pct ?? 16) : 0,
         tiene_ieps: p.tiene_ieps ?? false,
         ieps_pct: p.tiene_ieps ? (p.ieps_pct ?? 0) : 0,
         unidad: p.es_granel ? (p.unidad_granel ?? 'kg') : 'pz',
+        base_precio: pricing.basePrecio as BasePrecioMode,
         _max_stock: canSellWithout ? Infinity : stock,
         _es_granel: p.es_granel ?? false,
       }];
@@ -320,7 +323,15 @@ export default function PuntoVentaPage() {
   };
 
   const updatePrice = (id: string, price: number) => {
-    setCart(prev => prev.map(c => c.producto_id === id ? { ...c, precio_unitario: price } : c));
+    setCart(prev => prev.map(c => {
+      if (c.producto_id !== id) return c;
+      if (c.base_precio !== 'con_impuestos') return { ...c, precio_unitario: r2(price) };
+      const divisor = getTaxMultiplier(c);
+      return {
+        ...c,
+        precio_unitario: divisor > 0 ? r2(price / divisor) : r2(price),
+      };
+    }));
   };
 
   const removeItem = (id: string) => setCart(prev => prev.filter(c => c.producto_id !== id));
