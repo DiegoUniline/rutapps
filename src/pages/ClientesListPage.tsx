@@ -99,6 +99,8 @@ function ClientesTable() {
   const isMobile = useIsMobile();
   const { hasPermiso } = usePermisos();
   const canCreate = hasPermiso('clientes', 'crear');
+  const { empresa } = useAuth();
+  const { clientesVisibilidad } = useDataVisibility('clientes');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -106,6 +108,23 @@ function ClientesTable() {
   const [importOpen, setImportOpen] = useState(false);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('clientes');
   const { vendedores, zonas } = useDynamicFilterOptions();
+
+  // Count active clients without vendedor when visibility is 'propios'
+  const { data: sinVendedorCount } = useQuery({
+    queryKey: ['clientes-sin-vendedor', empresa?.id],
+    enabled: !!empresa?.id && clientesVisibilidad === 'propios',
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('clientes')
+        .select('id', { count: 'exact', head: true })
+        .eq('empresa_id', empresa!.id)
+        .is('vendedor_id', null)
+        .eq('status', 'activo');
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
 
   const numericPageSize = getNumericPageSize(pageSize);
 
