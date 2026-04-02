@@ -21,6 +21,13 @@ const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
 const getTaxMultiplier = posGetTaxMult;
 
+const applyDisplayRedondeo = (precio: number, redondeo: string) => {
+  if (!redondeo || redondeo === 'ninguno') return precio;
+  if (redondeo === 'arriba') return Math.ceil(precio);
+  if (redondeo === 'abajo') return Math.floor(precio);
+  return Math.round(precio);
+};
+
 interface PosItem {
   producto_id: string;
   codigo: string;
@@ -179,8 +186,35 @@ export default function PuntoVentaPage() {
   }, [productPricingMap]);
 
   const getDisplayUnitPrice = useCallback((item: PosItem) => {
-    if (item.base_precio !== 'con_impuestos') return r2(item.precio_unitario);
-    return r2(item.precio_unitario * getTaxMultiplier(item));
+    const rawGrossPerUnit = item.base_precio === 'con_impuestos'
+      ? item.precio_display_sin_redondeo
+      : item.precio_unitario_sin_redondeo * getTaxMultiplier(item);
+    return r2(applyDisplayRedondeo(rawGrossPerUnit, item.redondeo));
+  }, []);
+
+  const splitFinalGross = useCallback((item: PosItem, finalGross: number) => {
+    const gross = r2(finalGross);
+    const taxMultiplier = getTaxMultiplier(item);
+
+    if (taxMultiplier <= 0 || (!item.tiene_iva && !item.tiene_ieps)) {
+      return { subtotal: gross, ieps: 0, iva: 0 };
+    }
+
+    const subtotalBase = r2(gross / taxMultiplier);
+
+    if (item.tiene_ieps && item.tiene_iva) {
+      const ieps = r2(subtotalBase * ((item.ieps_pct ?? 0) / 100));
+      const iva = r2(gross - subtotalBase - ieps);
+      return { subtotal: r2(gross - ieps - iva), ieps, iva };
+    }
+
+    if (item.tiene_ieps) {
+      const ieps = r2(gross - subtotalBase);
+      return { subtotal: r2(gross - ieps), ieps, iva: 0 };
+    }
+
+    const iva = r2(gross - subtotalBase);
+    return { subtotal: r2(gross - iva), ieps: 0, iva };
   }, []);
 
   useEffect(() => {
@@ -237,6 +271,15 @@ export default function PuntoVentaPage() {
     });
     return m;
   }, [cart, promoRawByProduct]);
+
+  const getChargedLineTotal = useCallback((item: PosItem) => {
+    const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
+    if (promoRaw > 0) {
+      return linePricingMap.get(item.producto_id)?.finalGross ?? buildPosLinePricing(item, promoRaw).finalGross;
+    }
+
+    return r2(getDisplayUnitPrice(item) * item.cantidad);
+  }, [promoRawByProduct, linePricingMap, getDisplayUnitPrice]);
 
   // Adjust displayed promo discounts to match effective (post-rounding) discount
   const promoResults = useMemo(() => {
@@ -372,13 +415,15 @@ export default function PuntoVentaPage() {
   const updatePrice = (id: string, price: number) => {
     setCart(prev => prev.map(c => {
       if (c.producto_id !== id) return c;
-      if (c.base_precio !== 'con_impuestos') return { ...c, precio_unitario: r2(price), precio_unitario_sin_redondeo: price, precio_display_sin_redondeo: price };
       const divisor = getTaxMultiplier(c);
+      const grossPrice = Math.max(0, price);
+      const rawNetPrice = divisor > 0 ? grossPrice / divisor : grossPrice;
+
       return {
         ...c,
-        precio_unitario: divisor > 0 ? r2(price / divisor) : r2(price),
-        precio_unitario_sin_redondeo: divisor > 0 ? price / divisor : price,
-        precio_display_sin_redondeo: price,
+        precio_unitario: r2(rawNetPrice),
+        precio_unitario_sin_redondeo: rawNetPrice,
+        precio_display_sin_redondeo: grossPrice,
       };
     }));
   };
@@ -388,16 +433,20 @@ export default function PuntoVentaPage() {
   const totals = useMemo(() => {
     let subtotal = 0, iva = 0, ieps = 0, items = 0, descuento = 0, total = 0;
     cart.forEach(item => {
-      const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item);
-      subtotal += lp.subtotal;
-      iva += lp.iva;
-      ieps += lp.ieps;
+      const promoRaw = promoRawByProduct.get(item.producto_id) ?? 0;
+      const lp = linePricingMap.get(item.producto_id) ?? buildPosLinePricing(item, promoRaw);
+      const chargedLineTotal = getChargedLineTotal(item);
+      const breakdown = splitFinalGross(item, chargedLineTotal);
+
+      subtotal += breakdown.subtotal;
+      iva += breakdown.iva;
+      ieps += breakdown.ieps;
       descuento += lp.effectiveDiscount;
-      total += lp.finalGross;
+      total += chargedLineTotal;
       items += item.cantidad;
     });
     return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), descuento: r2(descuento), total: r2(total), items };
-  }, [cart, linePricingMap]);
+  }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross]);
 
   const paySplitsComputed = useMemo(() => {
     const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
@@ -562,22 +611,21 @@ export default function PuntoVentaPage() {
       // 2. Insert lines
       const r2 = (n: number) => Math.round(n * 100) / 100;
       const lineas = cart.map(item => {
-        const lineSub = r2(item.precio_unitario * item.cantidad);
-        const lineIeps = item.tiene_ieps ? r2(lineSub * (item.ieps_pct / 100)) : 0;
-        const lineIva = item.tiene_iva ? r2((lineSub + lineIeps) * (item.iva_pct / 100)) : 0;
+        const chargedLineTotal = getChargedLineTotal(item);
+        const breakdown = splitFinalGross(item, chargedLineTotal);
         return {
           venta_id: ventaId,
           producto_id: item.producto_id,
           descripcion: item.nombre,
           cantidad: item.cantidad,
-          precio_unitario: item.precio_unitario,
-          subtotal: lineSub,
+          precio_unitario: item.cantidad > 0 ? r2(breakdown.subtotal / item.cantidad) : 0,
+          subtotal: breakdown.subtotal,
           iva_pct: item.iva_pct,
-          iva_monto: lineIva,
+          iva_monto: breakdown.iva,
           ieps_pct: item.ieps_pct,
-          ieps_monto: lineIeps,
+          ieps_monto: breakdown.ieps,
           descuento_pct: 0,
-          total: r2(lineSub + lineIeps + lineIva),
+          total: chargedLineTotal,
         };
       });
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
@@ -657,17 +705,16 @@ export default function PuntoVentaPage() {
         fecha: today,
         clienteNombre,
         lineas: cart.map(item => {
-          const lineSub = r2(item.precio_unitario * item.cantidad);
-          const lineIeps = item.tiene_ieps ? r2(lineSub * (item.ieps_pct / 100)) : 0;
-          const lineIva = item.tiene_iva ? r2((lineSub + lineIeps) * (item.iva_pct / 100)) : 0;
+          const chargedLineTotal = getChargedLineTotal(item);
+          const breakdown = splitFinalGross(item, chargedLineTotal);
           return {
             nombre: item.nombre,
             cantidad: item.cantidad,
-            precio: item.precio_unitario,
-            subtotal: lineSub,
-            iva_monto: lineIva,
-            ieps_monto: lineIeps,
-            total: r2(lineSub + lineIeps + lineIva),
+            precio: getDisplayUnitPrice(item),
+            subtotal: breakdown.subtotal,
+            iva_monto: breakdown.iva,
+            ieps_monto: breakdown.ieps,
+            total: chargedLineTotal,
             producto_id: item.producto_id,
           };
         }),
@@ -888,7 +935,7 @@ export default function PuntoVentaPage() {
             )}
             {cart.map(item => {
               const displayUnitPrice = getDisplayUnitPrice(item);
-              const lineTotal = r2(displayUnitPrice * item.cantidad);
+              const lineTotal = getChargedLineTotal(item);
               const itemPromos = promoResults.filter(r => r.producto_id === item.producto_id && r.descuento > 0);
               return (
                 <div key={item.producto_id} className="group rounded-lg px-3 py-2 bg-accent/30 hover:bg-accent/50 transition-colors">
