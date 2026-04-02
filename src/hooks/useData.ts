@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
 import { pickColumns, PRODUCTO_COLUMNS, TARIFA_COLUMNS, TARIFA_LINEA_COLUMNS, PRODUCTO_PROVEEDOR_COLUMNS } from '@/lib/allowlist';
