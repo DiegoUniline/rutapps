@@ -117,6 +117,56 @@ export default function AdminEmpresasTab({ onSelectEmpresa }: { onSelectEmpresa?
     }
   }
 
+  async function handleCreateEmpresa() {
+    const { nombre, empresa, email, password, countryCode, telefono } = newEmpresa;
+    if (!nombre.trim() || !empresa.trim() || !email.trim() || !password) {
+      toast.error('Todos los campos son obligatorios');
+      return;
+    }
+    const country = COUNTRY_CODES.find(c => c.code === countryCode) || COUNTRY_CODES[0];
+    const digits = telefono.replace(/\D/g, '');
+    if (digits.length !== country.digits) {
+      toast.error(`El teléfono debe tener ${country.digits} dígitos para ${country.country}`);
+      return;
+    }
+    const fullPhone = countryCode + digits;
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: nombre,
+            phone: fullPhone,
+            empresa_nombre: empresa,
+            accepted_terms_at: new Date().toISOString(),
+            verified_via: 'admin',
+          },
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+
+      // Auto-confirm the email via admin edge function
+      if (data.user) {
+        await supabase.functions.invoke('admin-users', {
+          body: { action: 'confirm-email', user_id: data.user.id },
+        });
+      }
+
+      toast.success(`Empresa "${empresa}" creada exitosamente`);
+      setShowCreateEmpresa(false);
+      setNewEmpresa({ nombre: '', empresa: '', email: '', password: '123456', countryCode: '+52', telefono: '' });
+      setTimeout(() => load(), 1500); // wait for triggers
+    } catch (e: any) {
+      toast.error(e.message || 'Error al crear empresa');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   const filtered = empresas.filter(e => {
     const matchSearch = e.nombre.toLowerCase().includes(search.toLowerCase()) ||
       (e.email || '').toLowerCase().includes(search.toLowerCase()) ||
