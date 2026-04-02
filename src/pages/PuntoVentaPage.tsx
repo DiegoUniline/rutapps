@@ -10,13 +10,23 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import TicketVenta from '@/components/ruta/TicketVenta';
-import { resolveProductPrice, type TarifaLineaRule } from '@/lib/priceResolver';
+import { resolveProductPricing, type TarifaLineaRule } from '@/lib/priceResolver';
 import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
 
 const CATALOG_STALE = 5 * 60 * 1000;
+
+type BasePrecioMode = 'con_impuestos' | 'sin_impuestos';
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+const getTaxMultiplier = (item: { tiene_iva: boolean; iva_pct: number; tiene_ieps: boolean; ieps_pct: number }) => {
+  const ieps = item.tiene_ieps ? (item.ieps_pct ?? 0) : 0;
+  const iva = item.tiene_iva ? (item.iva_pct ?? 0) : 0;
+  return (1 + ieps / 100) * (1 + iva / 100);
+};
 
 interface PosItem {
   producto_id: string;
@@ -29,6 +39,7 @@ interface PosItem {
   tiene_ieps: boolean;
   ieps_pct: number;
   unidad: string;
+  base_precio: BasePrecioMode;
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
@@ -168,7 +179,7 @@ export default function PuntoVentaPage() {
     };
   }, [productPricingMap]);
 
-  const getDisplayUnitPrice = useCallback((item: Pick<PosItem, 'precio_unitario' | 'base_precio' | 'tiene_iva' | 'iva_pct' | 'tiene_ieps' | 'ieps_pct'>) => {
+  const getDisplayUnitPrice = useCallback((item: PosItem) => {
     if (item.base_precio !== 'con_impuestos') return r2(item.precio_unitario);
     return r2(item.precio_unitario * getTaxMultiplier(item));
   }, []);
@@ -795,7 +806,7 @@ export default function PuntoVentaPage() {
                     <p className="text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
                     <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[14px] font-bold text-primary">{fmtM(p.precio_principal ?? 0)}<span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
+                      <span className="text-[14px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
                       <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                         {fmtNum(stock)} disp.
                       </span>
@@ -840,7 +851,8 @@ export default function PuntoVentaPage() {
               </div>
             )}
             {cart.map(item => {
-              const lineTotal = Math.round(item.precio_unitario * item.cantidad * 100) / 100;
+              const displayUnitPrice = getDisplayUnitPrice(item);
+              const lineTotal = r2(displayUnitPrice * item.cantidad);
               const itemPromos = promoResults.filter(r => r.producto_id === item.producto_id && r.descuento > 0);
               return (
                 <div key={item.producto_id} className="group rounded-lg px-3 py-2 bg-accent/30 hover:bg-accent/50 transition-colors">
@@ -879,7 +891,7 @@ export default function PuntoVentaPage() {
                     <input
                       type="number"
                       className="w-20 text-[12px] font-medium text-foreground bg-background border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={item.precio_unitario}
+                      value={displayUnitPrice}
                       onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v); }}
                       onFocus={e => e.target.select()}
                     />
