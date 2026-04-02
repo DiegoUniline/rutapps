@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveProductPrice, calculatePrice, type TarifaLineaRule } from '@/lib/priceResolver';
+import { resolveProductPrice, resolveProductPricing, calculatePrice, type TarifaLineaRule } from '@/lib/priceResolver';
 import { productoBasico, productoConIeps } from './fixtures/productos';
 import { reglaPrecioFijo, reglaMargenCosto, reglaDescuento } from './fixtures/tarifas';
 
@@ -23,20 +23,18 @@ describe('resolveProductPrice', () => {
 
   it('applies margen_costo rule as global fallback', () => {
     const price = resolveProductPrice([reglaMargenCosto], productoConIeps);
-    // costo=8, margen=50% → 12, redondeo arriba → 12
     expect(price).toBe(12);
   });
 
   it('enforces precio_minimo', () => {
     const lowCostProduct = { ...productoBasico, costo: 2 };
     const price = resolveProductPrice([reglaMargenCosto], lowCostProduct);
-    // costo=2, margen 50% → 3, min is 8
     expect(price).toBe(8);
   });
 
   it('product rule has priority over category rule', () => {
     const price = resolveProductPrice([reglaPrecioFijo, reglaDescuento], productoBasico);
-    expect(price).toBe(12); // precio fijo wins
+    expect(price).toBe(12);
   });
 });
 
@@ -44,7 +42,7 @@ describe('calculatePrice – base_precio con_impuestos', () => {
   it('extracts pre-tax price when base includes taxes', () => {
     const rule = { ...reglaPrecioFijo, precio: 11.6, base_precio: 'con_impuestos' };
     const price = calculatePrice(rule, productoBasico);
-    expect(price).toBe(10); // 11.6 / 1.16
+    expect(price).toBe(10);
   });
 
   it('returns null for precio_fijo = 0 placeholder rules', () => {
@@ -61,6 +59,33 @@ describe('resolveProductPrice – placeholder rules fallback', () => {
       clasificacion_ids: ['cat-001'], producto_ids: [],
     };
     const price = resolveProductPrice([placeholderRule], productoBasico);
-    expect(price).toBe(10); // falls back to precio_principal
+    expect(price).toBe(10);
+  });
+});
+
+describe('resolveProductPricing – display price', () => {
+  it('keeps the rounded public price when the rule is con_impuestos', () => {
+    const rule: TarifaLineaRule = {
+      ...reglaPrecioFijo,
+      tipo_calculo: 'precio_fijo',
+      precio: 27.5,
+      precio_minimo: null,
+      redondeo: 'cercano',
+      base_precio: 'con_impuestos',
+    };
+
+    const pricing = resolveProductPricing([rule], productoBasico);
+
+    expect(pricing.unitPrice).toBe(24.14);
+    expect(pricing.displayPrice).toBe(28);
+    expect(pricing.basePrecio).toBe('con_impuestos');
+  });
+
+  it('shows the same amount for display when the rule is sin_impuestos', () => {
+    const pricing = resolveProductPricing([reglaPrecioFijo], productoBasico);
+
+    expect(pricing.unitPrice).toBe(12);
+    expect(pricing.displayPrice).toBe(12);
+    expect(pricing.basePrecio).toBe('sin_impuestos');
   });
 });
