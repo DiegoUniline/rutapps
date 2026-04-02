@@ -208,12 +208,12 @@ export default function PuntoVentaPage() {
       return {
         producto_id: item.producto_id,
         clasificacion_id: prod?.clasificacion_id ?? undefined,
-        precio_unitario: item.precio_unitario,
+        precio_unitario: getDisplayUnitPrice(item),
         cantidad: item.cantidad,
       };
     });
     return evaluatePromociones(promocionesActivas, cartForPromo, clienteId ?? undefined, undefined);
-  }, [promocionesActivas, cart, productos, clienteId]);
+  }, [promocionesActivas, cart, productos, clienteId, getDisplayUnitPrice]);
 
   const totalDescuentoPromo = useMemo(() => promoResults.reduce((s, r) => s + r.descuento, 0), [promoResults]);
   const promoGratis = useMemo(() => promoResults.filter(r => r.tipo === 'producto_gratis'), [promoResults]);
