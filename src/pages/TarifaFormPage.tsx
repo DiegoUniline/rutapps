@@ -276,14 +276,21 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
         const precioFinal = r2(applyRedondeo(precioConImpSinRedondeo, rule.redondeo ?? 'ninguno'));
         const ganancia = r2(precioNeto - p.costo);
 
+        // Costo con impuestos (para vista c/imp)
+        const costoIeps = r2(p.costo * iepsPct / 100);
+        const costoIva = r2((p.costo + costoIeps) * ivaPct / 100);
+        const costoConImp = r2(p.costo + costoIeps + costoIva);
+
         return {
           ...p,
           precio_regla: r2(precioRaw),
           precio_neto: precioNeto,
           monto_ieps: montoIeps,
           monto_iva: montoIva,
+          precio_con_imp_sin_redondeo: precioConImpSinRedondeo,
           precio_final: precioFinal,
           ganancia,
+          costo_con_imp: costoConImp,
           regla: rule.tipo_calculo === 'precio_fijo' ? 'Fijo' : rule.tipo_calculo === 'margen_costo' ? `+${rule.margen_pct}%` : `-${rule.descuento_pct}%`,
           redondeo_tipo: rule.redondeo ?? 'ninguno',
           comision_pct: rule.comision_pct ?? 0,
