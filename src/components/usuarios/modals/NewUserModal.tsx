@@ -44,7 +44,7 @@ export default function NewUserModal({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label-odoo">Email (usuario) <span className="text-destructive">*</span></label>
+              <label className="label-odoo label-required">Email (usuario)</label>
               <input className="input-odoo w-full" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="correo@ejemplo.com" />
             </div>
             <div>
