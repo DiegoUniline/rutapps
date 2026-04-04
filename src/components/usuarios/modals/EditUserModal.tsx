@@ -46,7 +46,7 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
             <input className="input-odoo w-full" value={editForm.telefono} onChange={e => setEditForm({ ...editForm, telefono: e.target.value })} placeholder="10 dígitos" />
           </div>
           <div>
-            <label className="label-odoo">Rol</label>
+            <label className="label-odoo label-required">Rol</label>
             {isOwner ? (
               <div className="input-odoo w-full bg-accent/30 text-muted-foreground cursor-not-allowed flex items-center gap-2">
                 <Shield className="h-3.5 w-3.5 text-primary" />

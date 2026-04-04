@@ -56,7 +56,7 @@ export default function NewUserModal({
           {/* Rol with quick-create */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="label-odoo mb-0">Rol <span className="text-destructive">*</span></label>
+              <label className="label-odoo mb-0 label-required">Rol</label>
               <button type="button" onClick={() => { setQuickCreateRole(true); setQuickRoleName(''); }}
                 className="text-[11px] text-primary hover:underline flex items-center gap-0.5">
                 <Plus className="h-3 w-3" /> Crear rol
