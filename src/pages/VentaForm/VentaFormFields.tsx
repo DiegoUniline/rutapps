@@ -147,7 +147,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     <div className="grid grid-cols-3 gap-4">
       <div className="space-y-3">
         <div><label className="label-odoo">Tipo</label>{renderTipo()}</div>
-        <div><label className="label-odoo">Cliente</label>{renderCliente()}</div>
+        <div><label className="label-odoo label-required">Cliente</label>{renderCliente()}</div>
         <div><label className="label-odoo">Condición de pago</label>{renderCondicion()}</div>
       </div>
       <div className="space-y-3">
