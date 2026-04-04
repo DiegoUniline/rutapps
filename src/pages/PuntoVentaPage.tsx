@@ -3,8 +3,9 @@ import { todayInTimezone } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
-  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag
+  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
