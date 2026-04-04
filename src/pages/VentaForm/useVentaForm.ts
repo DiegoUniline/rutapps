@@ -352,6 +352,7 @@ export function useVentaForm() {
   const handleSave = async (autoConfirm = false) => {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
+    if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
     if (!profile?.vendedor_id) {
       toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador para sincronizar tu cuenta.');
       return;
