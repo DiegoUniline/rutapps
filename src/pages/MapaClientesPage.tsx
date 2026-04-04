@@ -512,41 +512,50 @@ export default function MapaClientesPage() {
                 />
               ))
             ) : (
-              <MarkerClusterer
-                options={{
-                  maxZoom: 14,
-                  gridSize: 50,
-                  minimumClusterSize: 5,
-                }}
-              >
-                {(clusterer) => (
-                  <>
-                    {withGps.map((c: any) => {
-                      const orden = c.orden as number | null;
-                      const hasOrden = typeof orden === 'number' && orden > 0;
-                      return (
+              <>
+                {/* Numbered markers (with orden) rendered outside cluster so labels always show */}
+                {withGps.filter((c: any) => typeof c.orden === 'number' && c.orden > 0).map((c: any) => (
+                  <Marker
+                    key={c.id}
+                    position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                    icon={{
+                      path: google.maps.SymbolPath.CIRCLE,
+                      fillColor: getMarkerColor(c),
+                      fillOpacity: 1,
+                      strokeColor: '#fff',
+                      strokeWeight: 2.5,
+                      scale: 14,
+                      labelOrigin: new google.maps.Point(0, 0),
+                    }}
+                    label={{ text: `${c.orden}`, color: '#fff', fontSize: '10px', fontWeight: '700' }}
+                    onClick={() => setSelectedCliente(c)}
+                    title={c.nombre}
+                  />
+                ))}
+                {/* Non-ordered markers stay clustered */}
+                <MarkerClusterer
+                  options={{
+                    maxZoom: 14,
+                    gridSize: 50,
+                    minimumClusterSize: 5,
+                  }}
+                >
+                  {(clusterer) => (
+                    <>
+                      {withGps.filter((c: any) => !c.orden || c.orden <= 0).map((c: any) => (
                         <Marker
                           key={c.id}
                           position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                          icon={hasOrden ? {
-                            path: google.maps.SymbolPath.CIRCLE,
-                            fillColor: getMarkerColor(c),
-                            fillOpacity: 1,
-                            strokeColor: '#fff',
-                            strokeWeight: 2.5,
-                            scale: 14,
-                            labelOrigin: new google.maps.Point(0, 0),
-                          } : getMarkerIcon(c)}
-                          label={hasOrden ? { text: `${orden}`, color: '#fff', fontSize: '10px', fontWeight: '700' } : undefined}
+                          icon={getMarkerIcon(c)}
                           onClick={() => setSelectedCliente(c)}
                           title={c.nombre}
                           clusterer={clusterer}
                         />
-                      );
-                    })}
-                  </>
-                )}
-              </MarkerClusterer>
+                      ))}
+                    </>
+                  )}
+                </MarkerClusterer>
+              </>
             )}
 
             {selectedCliente && (
