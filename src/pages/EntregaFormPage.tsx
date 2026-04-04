@@ -339,7 +339,7 @@ export default function EntregaFormPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-3">
               <div>
-                <label className="label-odoo">Cliente</label>
+                <label className="label-odoo label-required">Cliente</label>
                 {readOnly || !isNew ? (
                   <div className="text-[13px] py-1.5 px-1 text-foreground">{form.clientes?.nombre ?? clientesList?.find(c => c.id === form.cliente_id)?.nombre ?? '—'}</div>
                 ) : (
