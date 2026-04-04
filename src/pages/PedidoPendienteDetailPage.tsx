@@ -219,7 +219,7 @@ export default function PedidoPendienteDetailPage() {
             <h3 className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Opciones para nueva entrega</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="label-odoo">Almacén origen</label>
+                <label className="label-odoo label-required">Almacén origen</label>
                 <SearchableSelect
                   options={(almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }))}
                   value={almacenId}

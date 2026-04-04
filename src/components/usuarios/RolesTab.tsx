@@ -84,7 +84,7 @@ export default function RolesTab({
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="label-odoo">Nombre del rol</label>
+                <label className="label-odoo label-required">Nombre del rol</label>
                 <input className="input-odoo w-full" value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="Ej: Vendedor, Supervisor..." autoFocus />
               </div>
               <div>

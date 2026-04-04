@@ -52,7 +52,7 @@ export default function ResetPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="label-odoo">Nueva contraseña</label>
+              <label className="label-odoo label-required">Nueva contraseña</label>
               <div className="relative">
                 <input type={showPassword ? "text" : "password"} className="input-odoo pr-10" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
                 <button
