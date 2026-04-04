@@ -16,6 +16,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
