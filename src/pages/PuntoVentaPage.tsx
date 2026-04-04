@@ -48,6 +48,7 @@ interface PosItem {
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
+type PayMode = 'efectivo' | 'transferencia' | 'tarjeta' | 'mixto';
 
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
@@ -79,6 +80,11 @@ export default function PuntoVentaPage() {
   const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
   const [sinImpuestos, setSinImpuestos] = useState(false);
+  const [payMode, setPayMode] = useState<PayMode>('efectivo');
+  const [clienteCredito, setClienteCredito] = useState(false);
+  const [clienteDiasCredito, setClienteDiasCredito] = useState(0);
+  const [clienteLimiteCredito, setClienteLimiteCredito] = useState(0);
+  const [fechaVencimiento, setFechaVencimiento] = useState('');
   const isMobile = useIsMobile();
 
   const almacenId = profile?.almacen_id || null;
@@ -511,7 +517,9 @@ export default function PuntoVentaPage() {
       if (e.key === 'F2') {
         e.preventDefault();
         if (!showPago && !showTicket && cart.length > 0) {
-          if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2));
+          setPayMode('efectivo');
+          setPayEfectivo(totals.total.toFixed(2));
+          setPayTransferencia(''); setPayTarjeta('');
           setShowPago(true);
         } else if (showPago && faltante <= 0) {
           handleCobrar();
@@ -532,13 +540,18 @@ export default function PuntoVentaPage() {
     setClienteTarifaId(null);
     setClienteListaPrecioId(null);
     setClienteListaNombre(null);
+    setClienteCredito(false);
+    setClienteDiasCredito(0);
+    setClienteLimiteCredito(0);
     setCondicion('contado');
+    setPayMode('efectivo');
     setShowPago(false);
     setPayEfectivo('');
     setPayTransferencia('');
     setPayTarjeta('');
     setRefTransferencia('');
     setRefTarjeta('');
+    setFechaVencimiento('');
     setSearch('');
   };
 
@@ -1118,7 +1131,20 @@ export default function PuntoVentaPage() {
             </div>
 
             <button
-              onClick={() => { if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2)); setShowPago(true); }}
+              onClick={() => {
+                setPayMode('efectivo');
+                setPayEfectivo(totals.total.toFixed(2));
+                setPayTransferencia('');
+                setPayTarjeta('');
+                setCondicion('contado');
+                // Auto-set credit expiry
+                if (clienteDiasCredito > 0) {
+                  const d = new Date();
+                  d.setDate(d.getDate() + clienteDiasCredito);
+                  setFechaVencimiento(d.toISOString().slice(0, 10));
+                }
+                setShowPago(true);
+              }}
               disabled={cart.length === 0}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-30 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
             >
@@ -1150,7 +1176,7 @@ export default function PuntoVentaPage() {
             </div>
             <div className="max-h-72 overflow-auto px-2 pb-2">
               <button
-                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setClienteListaNombre(null); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
+                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setClienteListaNombre(null); setClienteCredito(false); setClienteDiasCredito(0); setClienteLimiteCredito(0); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
                 className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent text-[13px] text-foreground font-medium"
               >
                 Público general
@@ -1164,6 +1190,9 @@ export default function PuntoVentaPage() {
                     setClienteListaPrecioId((c as any).lista_precio_id || null);
                     const lpName = (c as any).lista_precios?.nombre ?? null;
                     setClienteListaNombre(lpName);
+                    setClienteCredito(!!(c as any).credito);
+                    setClienteDiasCredito((c as any).dias_credito ?? 0);
+                    setClienteLimiteCredito((c as any).limite_credito ?? 0);
                     setShowClientes(false); setClienteSearch(''); 
                     if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); 
                   }}
@@ -1185,8 +1214,9 @@ export default function PuntoVentaPage() {
       {/* ─── Payment modal ─── */}
       {showPago && (
         <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-end sm:items-center justify-center" onClick={() => !saving && setShowPago(false)}>
-          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden border border-border max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-6 pt-5 pb-3 border-b border-border">
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg overflow-hidden border border-border max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="px-5 pt-5 pb-3 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-[16px] font-bold text-foreground">Cobrar</h3>
                 <button onClick={() => setShowPago(false)} className="p-1 rounded-md hover:bg-accent">
@@ -1199,35 +1229,93 @@ export default function PuntoVentaPage() {
               </div>
             </div>
 
-            <div className="px-4 sm:px-6 py-4 space-y-4 overflow-auto flex-1">
-              {/* Condición */}
+            <div className="px-5 py-4 space-y-4 overflow-auto flex-1">
+              {/* Sin impuestos toggle */}
+              <div className="flex items-center justify-between rounded-lg bg-accent/40 px-3 py-2">
+                <span className="text-[12px] font-medium text-foreground">Sin impuestos</span>
+                <Switch checked={sinImpuestos} onCheckedChange={setSinImpuestos} className="scale-90" />
+              </div>
+
+              {/* Condición de pago — solo mostrar Crédito si el cliente tiene crédito */}
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</label>
                 <div className="flex gap-2 mt-1.5">
-                  {(['contado', 'credito'] as const).map(c => (
-                    <button key={c} onClick={() => setCondicion(c)}
-                      className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-all ${condicion === c ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'}`}>
-                      {c === 'contado' ? 'Contado' : 'Crédito'}
+                  <button onClick={() => { setCondicion('contado'); setPayMode('efectivo'); setPayEfectivo(totals.total.toFixed(2)); setPayTransferencia(''); setPayTarjeta(''); }}
+                    className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-all ${condicion === 'contado' ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'}`}>
+                    Contado
+                  </button>
+                  {clienteCredito && (
+                    <button onClick={() => {
+                      setCondicion('credito');
+                      setPayMode('efectivo');
+                      setPayEfectivo(''); setPayTransferencia(''); setPayTarjeta('');
+                      if (clienteDiasCredito > 0) {
+                        const d = new Date(); d.setDate(d.getDate() + clienteDiasCredito);
+                        setFechaVencimiento(d.toISOString().slice(0, 10));
+                      }
+                    }}
+                      className={`flex-1 py-2 rounded-lg text-[12px] font-semibold transition-all ${condicion === 'credito' ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'}`}>
+                      Crédito
                     </button>
-                  ))}
+                  )}
                 </div>
               </div>
 
+              {/* Credit details */}
+              {condicion === 'credito' && (
+                <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-3 space-y-2">
+                  <div className="flex items-center justify-between text-[12px]">
+                    <span className="text-muted-foreground">Límite de crédito</span>
+                    <span className="font-semibold text-foreground">{fmtM(clienteLimiteCredito)}</span>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-muted-foreground">Fecha de vencimiento</label>
+                    <input type="date" value={fechaVencimiento} onChange={e => setFechaVencimiento(e.target.value)}
+                      className="w-full mt-1 bg-background border border-border rounded-lg px-3 py-2 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Se registrará a crédito — no se cobra ahora</p>
+                </div>
+              )}
+
+              {/* Payment method selector — only for contado */}
               {condicion === 'contado' && (
                 <>
-                  <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Ingresa el monto por método</label>
+                  <div>
+                    <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Método de pago</label>
+                    <div className="grid grid-cols-4 gap-1.5 mt-1.5">
+                      {([
+                        { key: 'efectivo' as PayMode, label: 'Efectivo', icon: Wallet },
+                        { key: 'transferencia' as PayMode, label: 'Transfer.', icon: Banknote },
+                        { key: 'tarjeta' as PayMode, label: 'Tarjeta', icon: CreditCard },
+                        { key: 'mixto' as PayMode, label: 'Mixto', icon: Package },
+                      ]).map(m => (
+                        <button key={m.key} onClick={() => {
+                          setPayMode(m.key);
+                          if (m.key === 'efectivo') { setPayEfectivo(totals.total.toFixed(2)); setPayTransferencia(''); setPayTarjeta(''); }
+                          else if (m.key === 'transferencia') { setPayEfectivo(''); setPayTransferencia(totals.total.toFixed(2)); setPayTarjeta(''); }
+                          else if (m.key === 'tarjeta') { setPayEfectivo(''); setPayTransferencia(''); setPayTarjeta(totals.total.toFixed(2)); }
+                          else if (m.key === 'mixto') { setPayEfectivo(''); setPayTransferencia(''); setPayTarjeta(''); }
+                        }}
+                          className={`flex flex-col items-center gap-1 py-2 rounded-lg text-[10px] font-semibold transition-all ${payMode === m.key ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground hover:bg-accent'}`}>
+                          <m.icon className="h-4 w-4" />
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-                  {/* Compact payment methods */}
-                  <div className="space-y-2.5">
-                    {/* Efectivo */}
+                  {/* Efectivo input */}
+                  {(payMode === 'efectivo' || payMode === 'mixto') && (
                     <div className="rounded-xl border border-border p-3">
                       <div className="flex items-center gap-2 mb-2">
                         <Wallet className="h-4 w-4 text-primary" />
                         <span className="text-[12px] font-semibold text-foreground flex-1">Efectivo</span>
-                        <button onClick={() => {
-                          const rest = Math.max(0, totals.total - (parseFloat(payTransferencia) || 0) - (parseFloat(payTarjeta) || 0));
-                          setPayEfectivo(rest.toFixed(2));
-                        }} className="text-[10px] text-primary font-semibold hover:underline">Exacto</button>
+                        {payMode === 'mixto' && (
+                          <button onClick={() => {
+                            const rest = Math.max(0, totals.total - (parseFloat(payTransferencia) || 0) - (parseFloat(payTarjeta) || 0));
+                            setPayEfectivo(rest.toFixed(2));
+                          }} className="text-[10px] text-primary font-semibold hover:underline">Exacto</button>
+                        )}
                       </div>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
@@ -1236,7 +1324,7 @@ export default function PuntoVentaPage() {
                           value={payEfectivo} placeholder="0.00" onChange={e => setPayEfectivo(e.target.value)} autoFocus
                         />
                       </div>
-                      {quickAmounts.length > 0 && (
+                      {payMode === 'efectivo' && quickAmounts.length > 0 && (
                         <div className="flex gap-1.5 mt-2">
                           {quickAmounts.map(a => (
                             <button key={a} onClick={() => setPayEfectivo(a.toString())}
@@ -1247,54 +1335,57 @@ export default function PuntoVentaPage() {
                         </div>
                       )}
                     </div>
+                  )}
 
-                    {/* Transferencia + Tarjeta inline */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl border border-border p-3">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <Banknote className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-[11px] font-semibold text-foreground flex-1">Transferencia</span>
+                  {/* Transferencia input */}
+                  {(payMode === 'transferencia' || payMode === 'mixto') && (
+                    <div className="rounded-xl border border-border p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Banknote className="h-4 w-4 text-primary" />
+                        <span className="text-[12px] font-semibold text-foreground flex-1">Transferencia</span>
+                        {payMode === 'mixto' && (
                           <button onClick={() => {
                             const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTarjeta) || 0));
                             setPayTransferencia(rest.toFixed(2));
-                          }} className="text-[9px] text-primary font-semibold hover:underline">Exacto</button>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">{s}</span>
-                          <input type="number" inputMode="decimal"
-                            className="w-full bg-accent/30 border border-border rounded-lg pl-6 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={payTransferencia} placeholder="0.00" onChange={e => setPayTransferencia(e.target.value)}
-                          />
-                        </div>
-                        {(parseFloat(payTransferencia) || 0) > 0 && (
-                          <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-1.5"
-                            value={refTransferencia} placeholder="Ref. (opcional)" onChange={e => setRefTransferencia(e.target.value)} />
+                          }} className="text-[10px] text-primary font-semibold hover:underline">Exacto</button>
                         )}
                       </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
+                        <input type="number" inputMode="decimal"
+                          className="w-full bg-accent/30 border border-border rounded-lg pl-7 pr-2 py-2.5 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={payTransferencia} placeholder="0.00" onChange={e => setPayTransferencia(e.target.value)}
+                        />
+                      </div>
+                      <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-3 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-2"
+                        value={refTransferencia} placeholder="Referencia (opcional)" onChange={e => setRefTransferencia(e.target.value)} />
+                    </div>
+                  )}
 
-                      <div className="rounded-xl border border-border p-3">
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <CreditCard className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-[11px] font-semibold text-foreground flex-1">Tarjeta</span>
+                  {/* Tarjeta input */}
+                  {(payMode === 'tarjeta' || payMode === 'mixto') && (
+                    <div className="rounded-xl border border-border p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CreditCard className="h-4 w-4 text-primary" />
+                        <span className="text-[12px] font-semibold text-foreground flex-1">Tarjeta</span>
+                        {payMode === 'mixto' && (
                           <button onClick={() => {
                             const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTransferencia) || 0));
                             setPayTarjeta(rest.toFixed(2));
-                          }} className="text-[9px] text-primary font-semibold hover:underline">Exacto</button>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">{s}</span>
-                          <input type="number" inputMode="decimal"
-                            className="w-full bg-accent/30 border border-border rounded-lg pl-6 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            value={payTarjeta} placeholder="0.00" onChange={e => setPayTarjeta(e.target.value)}
-                          />
-                        </div>
-                        {(parseFloat(payTarjeta) || 0) > 0 && (
-                          <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-1.5"
-                            value={refTarjeta} placeholder="Ref. (opcional)" onChange={e => setRefTarjeta(e.target.value)} />
+                          }} className="text-[10px] text-primary font-semibold hover:underline">Exacto</button>
                         )}
                       </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
+                        <input type="number" inputMode="decimal"
+                          className="w-full bg-accent/30 border border-border rounded-lg pl-7 pr-2 py-2.5 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={payTarjeta} placeholder="0.00" onChange={e => setPayTarjeta(e.target.value)}
+                        />
+                      </div>
+                      <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-3 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-2"
+                        value={refTarjeta} placeholder="Referencia (opcional)" onChange={e => setRefTarjeta(e.target.value)} />
                     </div>
-                  </div>
+                  )}
 
                   {/* Summary */}
                   <div className="rounded-lg bg-accent/40 px-4 py-2.5 flex items-center justify-between">
@@ -1319,18 +1410,13 @@ export default function PuntoVentaPage() {
                   </div>
                 </>
               )}
-
-              {condicion === 'credito' && (
-                <div className="bg-accent/50 rounded-lg p-3 text-center">
-                  <p className="text-[12px] text-muted-foreground">Se registrará a crédito — no se cobra ahora</p>
-                </div>
-              )}
             </div>
 
-            <div className="px-4 sm:px-6 pb-5 pt-2">
+            {/* Confirm button */}
+            <div className="px-5 pb-5 pt-2">
               <button
                 onClick={handleCobrar}
-                disabled={saving || cart.length === 0}
+                disabled={saving || cart.length === 0 || (condicion === 'contado' && faltante > 0 && payMode !== 'efectivo')}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl py-4 text-[16px] font-bold disabled:opacity-40 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 <Check className="h-5 w-5" />
