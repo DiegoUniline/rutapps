@@ -39,7 +39,14 @@ interface TicketVars {
 }
 
 /* ─── Default templates ─── */
+const YOUTUBE_CHANNEL = "https://www.youtube.com/@RutAppMx";
+
 const DEFAULT_TEMPLATES: Record<string, TemplateConfig> = {
+  bienvenida: {
+    tipo: "bienvenida", emoji: "🎉", encabezado: "¡Bienvenido a Rutapp!",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_despedida: true },
+  },
   pre_cobro: {
     tipo: "pre_cobro", emoji: "🔔", encabezado: "Recordatorio de cobro — Rutapp",
     activo: true,
@@ -61,14 +68,19 @@ const DEFAULT_TEMPLATES: Record<string, TemplateConfig> = {
     campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_contacto: true },
   },
   trial_expira_manana: {
-    tipo: "trial_expira_manana", emoji: "⏳", encabezado: "Tu prueba gratuita vence mañana — Rutapp",
+    tipo: "trial_expira_manana", emoji: "⏰", encabezado: "¡Tu prueba gratuita termina mañana! — Rutapp",
     activo: true,
     campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_despedida: true },
   },
   trial_expirado: {
-    tipo: "trial_expirado", emoji: "⚠️", encabezado: "Tu prueba gratuita ha vencido — Rutapp",
+    tipo: "trial_expirado", emoji: "💡", encabezado: "Tu prueba gratuita ha terminado — Rutapp",
     activo: true,
     campos: { nombre_cliente: true, nombre_empresa: true, dias_gracia: true, enlace_facturacion: true, advertencia_suspension: true },
+  },
+  trial_suspendido: {
+    tipo: "trial_suspendido", emoji: "👋", encabezado: "Te extrañamos en Rutapp",
+    activo: true,
+    campos: { nombre_cliente: true, nombre_empresa: true, enlace_facturacion: true, mensaje_contacto: true },
   },
 };
 
