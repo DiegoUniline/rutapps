@@ -77,6 +77,24 @@ export default function MobileLayout() {
     }
   };
 
+  // POS has its own full-screen layout — render only the outlet
+  if (isPosRoute) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        {isUpdating && (
+          <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-fade-in">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <div className="text-center">
+              <p className="text-base font-bold text-foreground">Actualizando versión…</p>
+              <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+            </div>
+          </div>
+        )}
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Updating overlay */}
@@ -121,7 +139,6 @@ export default function MobileLayout() {
             <button
               onClick={() => {
                 if (isStandalone) {
-                  // Force navigation out of mobile layout within standalone PWA
                   window.location.href = '/dashboard';
                 } else {
                   navigate('/dashboard');
