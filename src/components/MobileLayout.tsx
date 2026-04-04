@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2 } from 'lucide-react';
+import { ShoppingCart, Users, Package, Monitor, UserCircle, Moon, Sun, FileText, PackageCheck, RefreshCw, MoreHorizontal, Download, Loader2, ScanBarcode } from 'lucide-react';
 import { UnilineFooter } from '@/components/UnilineFooter';
 import SyncCloudButton from '@/components/ruta/SyncCloudButton';
 import OfflineBanner from '@/components/ruta/OfflineBanner';
@@ -14,6 +14,7 @@ import { locationService } from '@/lib/locationService';
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
   { label: 'Ventas', icon: ShoppingCart, path: '/ruta/ventas' },
+  { label: 'POS', icon: ScanBarcode, path: '/ruta/pos' },
   { label: 'Stock', icon: Package, path: '/ruta/stock' },
 ];
 
@@ -41,6 +42,7 @@ export default function MobileLayout() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
+  const isPosRoute = location.pathname === '/ruta/pos';
 
   // Start GPS watching once on mount, stop on unmount
   useEffect(() => {
@@ -74,6 +76,24 @@ export default function MobileLayout() {
       window.location.reload();
     }
   };
+
+  // POS has its own full-screen layout — render only the outlet
+  if (isPosRoute) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        {isUpdating && (
+          <div className="fixed inset-0 z-[100] bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center gap-4 animate-fade-in">
+            <Loader2 className="h-10 w-10 text-primary animate-spin" />
+            <div className="text-center">
+              <p className="text-base font-bold text-foreground">Actualizando versión…</p>
+              <p className="text-sm text-muted-foreground mt-1">Limpiando caché y recargando</p>
+            </div>
+          </div>
+        )}
+        <Outlet />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -119,7 +139,6 @@ export default function MobileLayout() {
             <button
               onClick={() => {
                 if (isStandalone) {
-                  // Force navigation out of mobile layout within standalone PWA
                   window.location.href = '/dashboard';
                 } else {
                   navigate('/dashboard');

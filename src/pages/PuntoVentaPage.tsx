@@ -16,6 +16,7 @@ import { printTicket, buildTicketDataFromVenta } from '@/lib/printTicketUtil';
 import { fmtDate, fmtNum } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { usePromocionesActivas, evaluatePromociones, type PromoResult, type CartItemForPromo } from '@/hooks/usePromociones';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const CATALOG_STALE = 5 * 60 * 1000;
 const r2 = posR2;
@@ -74,6 +75,8 @@ export default function PuntoVentaPage() {
   const [lastScanTime, setLastScanTime] = useState(0);
   const [clienteTarifaId, setClienteTarifaId] = useState<string | null>(null);
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
+  const isMobile = useIsMobile();
 
   const almacenId = profile?.almacen_id || null;
 
@@ -779,45 +782,44 @@ export default function PuntoVentaPage() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Top bar */}
-      <header className="h-12 bg-card border-b border-border flex items-center px-4 gap-3 shrink-0">
-        <button onClick={() => navigate('/dashboard')} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
+      <header className="h-12 bg-card border-b border-border flex items-center px-3 sm:px-4 gap-2 sm:gap-3 shrink-0">
+        <button onClick={() => navigate(-1)} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
           <ArrowLeft className="h-4 w-4 text-foreground" />
         </button>
-        <div className="flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-primary" />
-          <span className="text-[16px] font-bold text-foreground tracking-tight">Punto de venta</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+          <span className="text-[14px] sm:text-[16px] font-bold text-foreground tracking-tight truncate">Punto de venta</span>
         </div>
         <div className="flex-1" />
         {/* Client selector */}
         <button
           onClick={() => setShowClientes(true)}
-          className="flex items-center gap-2 bg-accent/60 hover:bg-accent rounded-lg px-3 py-1.5 transition-colors"
+          className="flex items-center gap-1.5 bg-accent/60 hover:bg-accent rounded-lg px-2 sm:px-3 py-1.5 transition-colors min-w-0"
         >
-          <User className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[12px] font-medium text-foreground max-w-[180px] truncate">{clienteNombre}</span>
+          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-[11px] sm:text-[12px] font-medium text-foreground max-w-[100px] sm:max-w-[180px] truncate">{clienteNombre}</span>
         </button>
-        <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline">
+        <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline shrink-0">
           Limpiar
         </button>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* ─── LEFT: Products ─── */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+        <div className={`${isMobile ? (mobileView === 'products' ? 'flex' : 'hidden') : 'flex'} flex-1 flex-col min-w-0 ${!isMobile ? 'border-r border-border' : ''}`}>
           {/* Search + scanner */}
-          <div className="px-4 pt-3 pb-2 flex gap-2">
+          <div className="px-3 sm:px-4 pt-3 pb-2 flex gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 id="pos-search"
                 type="text"
-                placeholder="Buscar producto o escanear código..."
+                placeholder="Buscar producto o escanear..."
                 className="w-full bg-accent/50 border border-border rounded-lg pl-10 pr-3 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && search.trim()) {
-                    // Try exact barcode match
                     const found = productos?.find(p =>
                       p.codigo.toLowerCase() === search.trim().toLowerCase() ||
                       (p.clave_alterna && p.clave_alterna.toLowerCase() === search.trim().toLowerCase())
@@ -829,18 +831,20 @@ export default function PuntoVentaPage() {
                     }
                   }
                 }}
-                autoFocus
+                autoFocus={!isMobile}
               />
             </div>
-            <div className="flex items-center gap-1 bg-accent/30 rounded-lg px-3 text-muted-foreground">
-              <Barcode className="h-4 w-4" />
-              <span className="text-[10px] font-medium">Escáner activo</span>
-            </div>
+            {!isMobile && (
+              <div className="flex items-center gap-1 bg-accent/30 rounded-lg px-3 text-muted-foreground">
+                <Barcode className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Escáner activo</span>
+              </div>
+            )}
           </div>
 
           {/* Active promotions banner */}
           {promocionesActivas && promocionesActivas.length > 0 && (
-            <div className="px-4 pb-2">
+            <div className="px-3 sm:px-4 pb-2">
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {promocionesActivas.map(p => {
                   const isGratis = p.tipo === 'producto_gratis';
@@ -850,14 +854,14 @@ export default function PuntoVentaPage() {
                   return (
                     <div
                       key={p.id}
-                      className="shrink-0 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2 flex items-center gap-2 min-w-[180px] max-w-[260px]"
+                      className="shrink-0 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2 flex items-center gap-2 min-w-[160px] max-w-[240px]"
                     >
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        {isGratis ? <Gift className="h-4 w-4 text-primary" /> : <Tag className="h-4 w-4 text-primary" />}
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        {isGratis ? <Gift className="h-3.5 w-3.5 text-primary" /> : <Tag className="h-3.5 w-3.5 text-primary" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-foreground truncate leading-tight">{p.nombre}</p>
-                        <p className="text-[10px] text-primary font-medium truncate">
+                        <p className="text-[10px] sm:text-[11px] font-bold text-foreground truncate leading-tight">{p.nombre}</p>
+                        <p className="text-[9px] sm:text-[10px] text-primary font-medium truncate">
                           {isGratis && `${p.cantidad_minima}×${(p.cantidad_minima || 1) - (p.cantidad_gratis || 1)} · Lleva ${p.cantidad_minima}, paga ${(p.cantidad_minima || 1) - (p.cantidad_gratis || 1)}`}
                           {isPct && `${p.valor}% de descuento`}
                           {isMonto && `$${p.valor} desc. por unidad`}
@@ -875,8 +879,8 @@ export default function PuntoVentaPage() {
           )}
 
           {/* Product grid */}
-          <div className="flex-1 overflow-auto px-4 pb-4">
-            <div className="grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+          <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
+            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'} gap-2`}>
               {filteredProducts.map(p => {
                 const inCart = cart.find(c => c.producto_id === p.id);
                 const stock = p.cantidad ?? 0;
@@ -884,7 +888,7 @@ export default function PuntoVentaPage() {
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    className={`relative rounded-xl border p-3 text-left transition-all active:scale-[0.97] hover:shadow-md ${
+                    className={`relative rounded-xl border p-2.5 sm:p-3 text-left transition-all active:scale-[0.97] hover:shadow-md ${
                       inCart
                         ? 'border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20'
                         : 'border-border bg-card hover:border-primary/20'
@@ -895,19 +899,19 @@ export default function PuntoVentaPage() {
                         {inCart.cantidad}
                       </div>
                     )}
-                    <div className="w-full aspect-square rounded-lg bg-accent/50 mb-2 flex items-center justify-center overflow-hidden">
+                    <div className="w-full aspect-square rounded-lg bg-accent/50 mb-1.5 sm:mb-2 flex items-center justify-center overflow-hidden">
                       {p.imagen_url ? (
                         <img src={p.imagen_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                       ) : (
-                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                        <Package className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/30" />
                       )}
                     </div>
-                    <p className="text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
+                    <p className="text-[10px] sm:text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[14px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
-                      <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                        {fmtNum(stock)} disp.
+                      <span className="text-[12px] sm:text-[14px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[8px] sm:text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
+                      <span className={`text-[8px] sm:text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                        {fmtNum(stock)}
                       </span>
                     </div>
                   </button>
@@ -923,12 +927,29 @@ export default function PuntoVentaPage() {
           </div>
         </div>
 
+        {/* ─── Mobile floating cart button ─── */}
+        {isMobile && mobileView === 'products' && cart.length > 0 && (
+          <button
+            onClick={() => setMobileView('cart')}
+            className="fixed bottom-6 right-4 z-40 bg-primary text-primary-foreground rounded-2xl px-5 py-3.5 shadow-xl shadow-primary/30 flex items-center gap-2.5 active:scale-95 transition-transform"
+          >
+            <Receipt className="h-5 w-5" />
+            <span className="text-[14px] font-bold">{fmtM(totals.total)}</span>
+            <span className="bg-primary-foreground/20 text-primary-foreground text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center">{cart.length}</span>
+          </button>
+        )}
+
         {/* ─── RIGHT: Cart ─── */}
-        <div className="w-[380px] xl:w-[420px] flex flex-col bg-card shrink-0">
+        <div className={`${isMobile ? (mobileView === 'cart' ? 'fixed inset-0 z-50 flex' : 'hidden') : 'w-[380px] xl:w-[420px] flex shrink-0'} flex-col bg-card`}>
           {/* Cart header */}
-          <div className="px-4 pt-3 pb-2 border-b border-border">
+          <div className={`px-4 ${isMobile ? 'pt-[max(0.75rem,env(safe-area-inset-top))]' : 'pt-3'} pb-2 border-b border-border`}>
             <div className="flex items-center justify-between">
               <h2 className="text-[13px] font-semibold text-foreground flex items-center gap-1.5">
+                {isMobile && (
+                  <button onClick={() => setMobileView('products')} className="p-1 rounded-md hover:bg-accent mr-1">
+                    <ArrowLeft className="h-4 w-4 text-foreground" />
+                  </button>
+                )}
                 <Receipt className="h-4 w-4 text-primary" />
                 Ticket
                 {cart.length > 0 && <span className="text-muted-foreground font-normal">({totals.items} art.)</span>}
@@ -1115,8 +1136,8 @@ export default function PuntoVentaPage() {
 
       {/* ─── Payment modal ─── */}
       {showPago && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center" onClick={() => !saving && setShowPago(false)}>
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-border" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-end sm:items-center justify-center" onClick={() => !saving && setShowPago(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden border border-border max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-5 pb-3 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-[16px] font-bold text-foreground">Cobrar</h3>
@@ -1130,7 +1151,7 @@ export default function PuntoVentaPage() {
               </div>
             </div>
 
-            <div className="px-6 py-4 space-y-4">
+            <div className="px-4 sm:px-6 py-4 space-y-4 overflow-auto flex-1">
               {/* Condición */}
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</label>
@@ -1149,7 +1170,7 @@ export default function PuntoVentaPage() {
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Ingresa el monto por método</label>
 
                   {/* 3-column grid for payment methods */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {/* Efectivo */}
                     <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
                       <div className="flex items-center gap-2">
@@ -1293,7 +1314,7 @@ export default function PuntoVentaPage() {
               )}
             </div>
 
-            <div className="px-6 pb-5 pt-2">
+            <div className="px-4 sm:px-6 pb-5 pt-2">
               <button
                 onClick={handleCobrar}
                 disabled={saving || cart.length === 0}
