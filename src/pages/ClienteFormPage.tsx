@@ -663,7 +663,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Lista de precios *" value={(form as any).lista_precio_id} onChange={v => {
+                  <OdooField label="Lista de precios" value={(form as any).lista_precio_id} required onChange={v => {
                     set('lista_precio_id' as any, v || null);
                     // Auto-resolve tarifa_id from lista
                     const lista = allListasPrecios?.find(l => l.id === v);
