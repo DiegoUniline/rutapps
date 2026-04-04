@@ -161,6 +161,26 @@ export function useRutaVenta() {
     };
   }, [tarifaLineasOffline, clienteListaPrecioId]);
 
+  // Recalculate cart prices when client tarifa changes
+  useEffect(() => {
+    if (cart.length === 0 || !productos) return;
+    setCart(prev => prev.map(item => {
+      if (item.es_cambio) return item;
+      const prod = productos.find((p: any) => p.id === item.producto_id);
+      if (!prod) return item;
+      const pf = resolvePricingFull(prod);
+      if (pf.unitPrice === item.precio_unitario) return item;
+      return {
+        ...item,
+        precio_unitario: pf.unitPrice,
+        precio_unitario_sin_redondeo: pf.rawUnitPrice,
+        precio_display_sin_redondeo: pf.rawDisplayPrice,
+        base_precio: pf.basePrecio,
+        redondeo: pf.redondeo,
+      };
+    }));
+  }, [resolvePricingFull, productos]);
+
   const { data: pedidoSugeridoRaw } = useOfflineQuery('cliente_pedido_sugerido', { cliente_id: clienteId }, { enabled: !!clienteId });
   const pedidoSugerido = useMemo(() => {
     if (!pedidoSugeridoRaw || !productos) return [];
