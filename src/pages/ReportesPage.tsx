@@ -217,7 +217,8 @@ export default function ReportesPage() {
   const [selectedVendedores, setSelectedVendedores] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const { data: vendedoresList } = useVendedores();
-  const { data, isLoading } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined);
+  const { data, isLoading, error } = useReportesData(desde, hasta, selectedVendedores.length > 0 ? selectedVendedores : undefined, selectedStatuses.length > 0 ? selectedStatuses : undefined);
+  if (error) console.error('[ReportesPage] query error:', error);
   const [tab, setTab] = useState<ReportTab>('resumen');
 
   const statusOptions = [
@@ -436,6 +437,7 @@ export default function ReportesPage() {
       </div>
 
       {isLoading && <div className="py-12 text-center text-muted-foreground">Cargando reportes...</div>}
+      {error && <div className="py-12 text-center text-destructive text-sm">Error al cargar reportes: {(error as any)?.message ?? 'Error desconocido'}</div>}
 
       {data && (() => {
         const tabTitles: Record<ReportTab, string> = {
