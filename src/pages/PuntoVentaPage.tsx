@@ -538,13 +538,18 @@ export default function PuntoVentaPage() {
     setClienteTarifaId(null);
     setClienteListaPrecioId(null);
     setClienteListaNombre(null);
+    setClienteCredito(false);
+    setClienteDiasCredito(0);
+    setClienteLimiteCredito(0);
     setCondicion('contado');
+    setPayMode('efectivo');
     setShowPago(false);
     setPayEfectivo('');
     setPayTransferencia('');
     setPayTarjeta('');
     setRefTransferencia('');
     setRefTarjeta('');
+    setFechaVencimiento('');
     setSearch('');
   };
 
