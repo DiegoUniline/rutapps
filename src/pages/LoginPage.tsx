@@ -118,7 +118,7 @@ export default function LoginPage() {
           </div>
           {!isForgot && (
             <div>
-              <label className="label-odoo">Contraseña</label>
+              <label className="label-odoo label-required">Contraseña</label>
               <div className="relative">
                 <input type={showPassword ? "text" : "password"} className="input-odoo pr-10" value={password} onChange={e => setPassword(e.target.value)} required />
                 <button
