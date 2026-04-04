@@ -261,6 +261,7 @@ function AppRoutes() {
           <Route index element={<RutaClientesEntregas />} />
           <Route path="dashboard" element={<RutaDashboard />} />
           <Route path="ventas" element={<RutaVentasTab />} />
+          <Route path="pos" element={<Suspense fallback={<PageLoader />}><PuntoVentaPage /></Suspense>} />
           <Route path="carga" element={<RutaMiCarga />} />
           <Route path="cobros" element={<RutaCobros />} />
           <Route path="stock" element={<RutaStock />} />
