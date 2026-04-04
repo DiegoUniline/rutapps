@@ -586,7 +586,7 @@ export default function TraspasoFormPage() {
             <div className="space-y-3">
               {(tipo === 'almacen_almacen' || tipo === 'ruta_almacen') && (
                 <div>
-                  <label className="label-odoo">Almacén destino</label>
+                  <label className="label-odoo label-required">Almacén destino</label>
                   {readOnly ? (
                     <div className="text-[13px] py-1.5 px-1 text-foreground">{destinoLabel || '—'}</div>
                   ) : (
