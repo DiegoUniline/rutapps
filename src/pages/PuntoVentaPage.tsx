@@ -77,9 +77,22 @@ export default function PuntoVentaPage() {
   const [clienteTarifaId, setClienteTarifaId] = useState<string | null>(null);
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
+  const [sinImpuestos, setSinImpuestos] = useState(false);
   const isMobile = useIsMobile();
 
   const almacenId = profile?.almacen_id || null;
+
+  // Almacen name
+  const { data: almacenData } = useQuery({
+    queryKey: ['pos-almacen-name', almacenId],
+    staleTime: CATALOG_STALE,
+    enabled: !!almacenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('almacenes').select('nombre').eq('id', almacenId!).maybeSingle();
+      return data;
+    },
+  });
+  const almacenNombre = almacenData?.nombre ?? null;
 
   // Products
   const { data: productosRaw } = useQuery({
