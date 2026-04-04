@@ -141,7 +141,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
-        .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id')
+        .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
@@ -149,21 +149,23 @@ export default function PuntoVentaPage() {
     },
   });
 
-  // Default tarifa from the empresa's principal lista de precios
-  const { data: defaultListaPrecio } = useQuery({
-    queryKey: ['pos-default-lista-precio', empresa?.id],
+  // Default lista de precios
+  const { data: defaultListaPrecioData } = useQuery({
+    queryKey: ['pos-default-lista-precio-full', empresa?.id],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('lista_precios')
-        .select('tarifa_id')
+        .select('tarifa_id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('es_principal', true)
         .maybeSingle();
       return data;
     },
   });
-  const defaultTarifaId = defaultListaPrecio?.tarifa_id ?? null;
+  const defaultTarifaId = defaultListaPrecioData?.tarifa_id ?? null;
+  const defaultListaNombre = defaultListaPrecioData?.nombre ?? null;
+  const effectiveListaNombre = clienteListaNombre || defaultListaNombre;
 
   // Use client tarifa if available, otherwise fall back to empresa's default
   const effectiveTarifaId = clienteTarifaId || defaultTarifaId;
