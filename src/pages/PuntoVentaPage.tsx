@@ -1188,6 +1188,9 @@ export default function PuntoVentaPage() {
                     setClienteListaPrecioId((c as any).lista_precio_id || null);
                     const lpName = (c as any).lista_precios?.nombre ?? null;
                     setClienteListaNombre(lpName);
+                    setClienteCredito(!!(c as any).credito);
+                    setClienteDiasCredito((c as any).dias_credito ?? 0);
+                    setClienteLimiteCredito((c as any).limite_credito ?? 0);
                     setShowClientes(false); setClienteSearch(''); 
                     if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); 
                   }}
