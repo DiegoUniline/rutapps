@@ -212,7 +212,6 @@ Deno.serve(async (req) => {
 
         if (!empresaId) { log("No empresa_id for checkout"); break; }
 
-        const stripeSub = await stripe.subscriptions.retrieve(subscriptionId);
         const item0 = stripeSub.items.data[0];
         const priceId = item0?.price?.id;
         const qty = item0?.quantity || 3;
