@@ -437,6 +437,7 @@ export default function ReportesPage() {
       </div>
 
       {isLoading && <div className="py-12 text-center text-muted-foreground">Cargando reportes...</div>}
+      {error && <div className="py-12 text-center text-destructive text-sm">Error al cargar reportes: {(error as any)?.message ?? 'Error desconocido'}</div>}
 
       {data && (() => {
         const tabTitles: Record<ReportTab, string> = {
