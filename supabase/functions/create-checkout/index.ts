@@ -50,10 +50,6 @@ Deno.serve(async (req) => {
       customerId = newCustomer.id;
     }
 
-    // Calculate proration: bill from today to the 1st of next month
-    const now = new Date();
-    const nextFirst = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    
     // Check for empresa discount
     let discounts: any[] = [];
     if (empresa_id) {
@@ -65,7 +61,6 @@ Deno.serve(async (req) => {
       
       const descuento = subData?.descuento_porcentaje || 0;
       if (descuento > 0) {
-        // Create a Stripe coupon for this specific discount
         const coupon = await stripe.coupons.create({
           percent_off: descuento,
           duration: "forever",
@@ -78,13 +73,13 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://rutapp.mx";
 
+    // Charge the full plan price immediately, no proration.
+    // Billing will recur monthly from the signup date.
     const sessionParams: any = {
       customer: customerId,
       line_items: [{ price: price_id, quantity }],
       mode: "subscription",
       subscription_data: {
-        billing_cycle_anchor: Math.floor(nextFirst.getTime() / 1000),
-        proration_behavior: "create_prorations",
         metadata: { empresa_id: empresa_id || "" },
       },
       success_url: `${origin}/dashboard?checkout=success`,
