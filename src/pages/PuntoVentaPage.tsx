@@ -782,24 +782,24 @@ export default function PuntoVentaPage() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Top bar */}
-      <header className="h-12 bg-card border-b border-border flex items-center px-4 gap-3 shrink-0">
-        <button onClick={() => navigate('/dashboard')} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
+      <header className="h-12 bg-card border-b border-border flex items-center px-3 sm:px-4 gap-2 sm:gap-3 shrink-0">
+        <button onClick={() => navigate(-1)} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
           <ArrowLeft className="h-4 w-4 text-foreground" />
         </button>
-        <div className="flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5 text-primary" />
-          <span className="text-[16px] font-bold text-foreground tracking-tight">Punto de venta</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+          <span className="text-[14px] sm:text-[16px] font-bold text-foreground tracking-tight truncate">Punto de venta</span>
         </div>
         <div className="flex-1" />
         {/* Client selector */}
         <button
           onClick={() => setShowClientes(true)}
-          className="flex items-center gap-2 bg-accent/60 hover:bg-accent rounded-lg px-3 py-1.5 transition-colors"
+          className="flex items-center gap-1.5 bg-accent/60 hover:bg-accent rounded-lg px-2 sm:px-3 py-1.5 transition-colors min-w-0"
         >
-          <User className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[12px] font-medium text-foreground max-w-[180px] truncate">{clienteNombre}</span>
+          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-[11px] sm:text-[12px] font-medium text-foreground max-w-[100px] sm:max-w-[180px] truncate">{clienteNombre}</span>
         </button>
-        <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline">
+        <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline shrink-0">
           Limpiar
         </button>
       </header>
