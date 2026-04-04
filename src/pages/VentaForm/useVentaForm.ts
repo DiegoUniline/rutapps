@@ -137,7 +137,12 @@ export function useVentaForm() {
     if (!existingVenta) {
       if (isNew) {
         const defaultTarifa = tarifasList?.find((t: any) => t.tipo === 'general')?.id;
-        setForm(prev => ({ ...prev, vendedor_id: profile?.vendedor_id ?? profile?.id, ...(defaultTarifa ? { tarifa_id: defaultTarifa } : {}) }));
+        setForm(prev => ({
+          ...prev,
+          vendedor_id: profile?.vendedor_id ?? profile?.id,
+          ...(defaultTarifa ? { tarifa_id: defaultTarifa } : {}),
+          ...(profile?.almacen_id ? { almacen_id: profile.almacen_id } : {}),
+        }));
       }
       return;
     }
