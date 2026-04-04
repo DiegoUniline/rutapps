@@ -481,7 +481,8 @@ export default function PuntoVentaPage() {
       total += chargedLineTotal;
       items += item.cantidad;
     });
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), descuento: r2(descuento), total: r2(total), items };
+    const finalTotal = sinImpuestos ? r2(subtotal - descuento) : r2(total);
+    return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: finalTotal, items };
   }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross]);
 
   const paySplitsComputed = useMemo(() => {
