@@ -48,6 +48,7 @@ interface PosItem {
 }
 
 type PayMethod = 'efectivo' | 'transferencia' | 'tarjeta';
+type PayMode = 'efectivo' | 'transferencia' | 'tarjeta' | 'mixto';
 
 export default function PuntoVentaPage() {
   const navigate = useNavigate();
