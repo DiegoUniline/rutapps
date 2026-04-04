@@ -80,6 +80,11 @@ export default function PuntoVentaPage() {
   const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
   const [sinImpuestos, setSinImpuestos] = useState(false);
+  const [payMode, setPayMode] = useState<PayMode>('efectivo');
+  const [clienteCredito, setClienteCredito] = useState(false);
+  const [clienteDiasCredito, setClienteDiasCredito] = useState(0);
+  const [clienteLimiteCredito, setClienteLimiteCredito] = useState(0);
+  const [fechaVencimiento, setFechaVencimiento] = useState('');
   const isMobile = useIsMobile();
 
   const almacenId = profile?.almacen_id || null;
