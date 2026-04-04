@@ -505,7 +505,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooField label="Código" value={form.codigo} onChange={v => set('codigo', v)} placeholder="Se asigna automáticamente" readOnly={!isNew} />
-                <OdooField label="Nombre *" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} />
+                <OdooField label="Nombre" value={form.nombre} onChange={v => set('nombre', v)} placeholder="Nombre del cliente" alwaysEdit={isNew} required />
                 <OdooField label="Persona de Contacto" value={form.contacto} onChange={v => set('contacto', v)} />
                 <OdooField label="Teléfono" value={form.telefono} onChange={v => {
                   const digits = v.replace(/\D/g, '');
@@ -663,7 +663,7 @@ export default function ClienteFormPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-1">
               <div className="space-y-1">
                 <OdooSection title="Precios">
-                  <OdooField label="Lista de precios *" value={(form as any).lista_precio_id} onChange={v => {
+                  <OdooField label="Lista de precios" value={(form as any).lista_precio_id} required onChange={v => {
                     set('lista_precio_id' as any, v || null);
                     // Auto-resolve tarifa_id from lista
                     const lista = allListasPrecios?.find(l => l.id === v);
@@ -673,7 +673,7 @@ export default function ClienteFormPage() {
                     placeholder="Seleccionar lista de precios..." />
                 </OdooSection>
                 <OdooSection title="Visitas">
-                  <OdooField label="Frecuencia *" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
+                  <OdooField label="Frecuencia" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select" required
                     options={frecuenciaOpts} />
                   <div className="odoo-field-row">
                     <span className="odoo-field-label">Días de visita *</span>

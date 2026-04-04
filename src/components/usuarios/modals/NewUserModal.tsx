@@ -39,16 +39,16 @@ export default function NewUserModal({
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="label-odoo">Nombre</label>
+            <label className="label-odoo label-required">Nombre</label>
             <input className="input-odoo w-full" value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} placeholder="Nombre completo" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label-odoo">Email (usuario) <span className="text-destructive">*</span></label>
+              <label className="label-odoo label-required">Email (usuario)</label>
               <input className="input-odoo w-full" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="correo@ejemplo.com" />
             </div>
             <div>
-              <label className="label-odoo">Contraseña inicial <span className="text-destructive">*</span></label>
+              <label className="label-odoo label-required">Contraseña inicial</label>
               <input className="input-odoo w-full" type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
             </div>
           </div>
@@ -56,7 +56,7 @@ export default function NewUserModal({
           {/* Rol with quick-create */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="label-odoo mb-0">Rol <span className="text-destructive">*</span></label>
+              <label className="label-odoo mb-0 label-required">Rol</label>
               <button type="button" onClick={() => { setQuickCreateRole(true); setQuickRoleName(''); }}
                 className="text-[11px] text-primary hover:underline flex items-center gap-0.5">
                 <Plus className="h-3 w-3" /> Crear rol

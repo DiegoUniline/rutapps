@@ -14,7 +14,7 @@ export default function PasswordModal({ nombre, newPassword, setNewPassword, set
         <h3 className="text-sm font-semibold text-foreground">Cambiar contraseña</h3>
         <p className="text-xs text-muted-foreground">Usuario: <strong>{nombre}</strong></p>
         <div>
-          <label className="label-odoo">Nueva contraseña</label>
+          <label className="label-odoo label-required">Nueva contraseña</label>
           <input className="input-odoo" type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Mínimo 6 caracteres" autoFocus />
         </div>
         <div className="flex gap-2 justify-end">

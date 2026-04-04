@@ -129,14 +129,14 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     return (
       <div className="space-y-3">
         <div><label className="label-odoo">Tipo</label>{renderTipo()}</div>
-        <div><label className="label-odoo">Cliente</label>{renderCliente()}</div>
+        <div><label className="label-odoo label-required">Cliente</label>{renderCliente()}</div>
         <div><label className="label-odoo">Condición de pago</label>{renderCondicion()}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className="label-odoo">Fecha</label>{readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div> : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}</div>
           <div>{renderEntrega()}</div>
         </div>
         <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Al guardar' : '—')}</div></div>
-        <div><label className="label-odoo">Almacén</label>{renderAlmacen()}</div>
+        <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
         {renderDescuentoExtra()}
         {renderSaldo()}
       </div>
@@ -147,7 +147,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     <div className="grid grid-cols-3 gap-4">
       <div className="space-y-3">
         <div><label className="label-odoo">Tipo</label>{renderTipo()}</div>
-        <div><label className="label-odoo">Cliente</label>{renderCliente()}</div>
+        <div><label className="label-odoo label-required">Cliente</label>{renderCliente()}</div>
         <div><label className="label-odoo">Condición de pago</label>{renderCondicion()}</div>
       </div>
       <div className="space-y-3">
@@ -156,7 +156,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
         <div><label className="label-odoo">Folio</label><div className="text-[13px] text-muted-foreground py-1.5 px-1">{form.folio || (isNew ? 'Se asigna al guardar' : '—')}</div></div>
       </div>
       <div className="space-y-3">
-        <div><label className="label-odoo">Almacén</label>{renderAlmacen()}</div>
+        <div><label className="label-odoo label-required">Almacén</label>{renderAlmacen()}</div>
         {renderDescuentoExtra()}
         {renderSaldo()}
       </div>

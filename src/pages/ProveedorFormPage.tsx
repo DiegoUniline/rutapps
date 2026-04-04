@@ -195,7 +195,7 @@ export default function ProveedorFormPage() {
               content: (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-1">
-                    <OdooField label="Nombre *" value={form.nombre}
+                    <OdooField label="Nombre" value={form.nombre} required
                       onChange={v => set('nombre', v)} />
                     <OdooField label="Contacto" value={form.contacto ?? ''}
                       onChange={v => set('contacto', v)} />

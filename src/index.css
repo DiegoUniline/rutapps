@@ -263,6 +263,10 @@ html, body {
   .label-odoo {
     @apply text-[12px] text-muted-foreground font-semibold mb-1 block;
   }
+  .label-required::after {
+    content: ' *';
+    @apply text-destructive;
+  }
 
   /* Tabs */
   .odoo-tab {
