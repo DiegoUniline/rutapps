@@ -113,7 +113,7 @@ export default function LoginPage() {
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="label-odoo">Email</label>
+            <label className="label-odoo label-required">Email</label>
             <input type="email" className="input-odoo" value={email} onChange={e => setEmail(e.target.value)} required />
           </div>
           {!isForgot && (
