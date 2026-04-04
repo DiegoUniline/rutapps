@@ -1129,7 +1129,20 @@ export default function PuntoVentaPage() {
             </div>
 
             <button
-              onClick={() => { if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2)); setShowPago(true); }}
+              onClick={() => {
+                setPayMode('efectivo');
+                setPayEfectivo(totals.total.toFixed(2));
+                setPayTransferencia('');
+                setPayTarjeta('');
+                setCondicion('contado');
+                // Auto-set credit expiry
+                if (clienteDiasCredito > 0) {
+                  const d = new Date();
+                  d.setDate(d.getDate() + clienteDiasCredito);
+                  setFechaVencimiento(d.toISOString().slice(0, 10));
+                }
+                setShowPago(true);
+              }}
               disabled={cart.length === 0}
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-30 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
             >
