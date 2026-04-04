@@ -531,6 +531,7 @@ export default function PuntoVentaPage() {
     setClienteNombre('Público general');
     setClienteTarifaId(null);
     setClienteListaPrecioId(null);
+    setClienteListaNombre(null);
     setCondicion('contado');
     setShowPago(false);
     setPayEfectivo('');
