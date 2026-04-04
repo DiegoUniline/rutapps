@@ -42,6 +42,7 @@ export default function MobileLayout() {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
 
   const isMoreActive = morePaths.some(p => location.pathname.startsWith(p));
+  const isPosRoute = location.pathname === '/ruta/pos';
 
   // Start GPS watching once on mount, stop on unmount
   useEffect(() => {
