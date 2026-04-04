@@ -1050,13 +1050,7 @@ export default function PuntoVentaPage() {
                       </button>
                     </div>
                     <span className="text-[10px] text-muted-foreground">×</span>
-                    <input
-                      type="number"
-                      className="w-20 text-[12px] font-medium text-foreground bg-background border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={displayUnitPrice}
-                      onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v); }}
-                      onFocus={e => e.target.select()}
-                    />
+                    <span className="text-[12px] font-medium text-foreground tabular-nums">{fmtM(displayUnitPrice)}</span>
                     <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
                   {itemPromos.length > 0 && (
