@@ -564,6 +564,9 @@ export default function MapaClientesPage() {
                     ) : null}
                   </div>
                   {selectedCliente.codigo && <div className="text-xs text-gray-500 font-mono mb-1">{selectedCliente.codigo}</div>}
+                  {typeof selectedCliente.orden === 'number' && selectedCliente.orden > 0 && (
+                    <div className="text-[10px] text-gray-500 mb-1">📍 Orden de ruta: <strong>{selectedCliente.orden}</strong></div>
+                  )}
                   {selectedCliente.direccion && <div className="text-xs text-gray-600 mb-2">{selectedCliente.direccion}{selectedCliente.colonia ? `, ${selectedCliente.colonia}` : ''}</div>}
                   {selectedCliente.vendedores?.nombre && (
                     <div className="text-[10px] text-gray-500 mb-1">🧑‍💼 {selectedCliente.vendedores.nombre}</div>
