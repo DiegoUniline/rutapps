@@ -1151,7 +1151,7 @@ export default function PuntoVentaPage() {
               </div>
             </div>
 
-            <div className="px-6 py-4 space-y-4">
+            <div className="px-4 sm:px-6 py-4 space-y-4 overflow-auto flex-1">
               {/* Condición */}
               <div>
                 <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Condición de pago</label>
