@@ -521,16 +521,29 @@ export default function MapaClientesPage() {
               >
                 {(clusterer) => (
                   <>
-                    {withGps.map((c: any) => (
-                      <Marker
-                        key={c.id}
-                        position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                        icon={getMarkerIcon(c)}
-                        onClick={() => setSelectedCliente(c)}
-                        title={c.nombre}
-                        clusterer={clusterer}
-                      />
-                    ))}
+                    {withGps.map((c: any) => {
+                      const orden = c.orden as number | null;
+                      const hasOrden = typeof orden === 'number' && orden > 0;
+                      return (
+                        <Marker
+                          key={c.id}
+                          position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                          icon={hasOrden ? {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: getMarkerColor(c),
+                            fillOpacity: 1,
+                            strokeColor: '#fff',
+                            strokeWeight: 2.5,
+                            scale: 14,
+                            labelOrigin: new google.maps.Point(0, 0),
+                          } : getMarkerIcon(c)}
+                          label={hasOrden ? { text: `${orden}`, color: '#fff', fontSize: '10px', fontWeight: '700' } : undefined}
+                          onClick={() => setSelectedCliente(c)}
+                          title={c.nombre}
+                          clusterer={clusterer}
+                        />
+                      );
+                    })}
                   </>
                 )}
               </MarkerClusterer>
@@ -551,6 +564,9 @@ export default function MapaClientesPage() {
                     ) : null}
                   </div>
                   {selectedCliente.codigo && <div className="text-xs text-gray-500 font-mono mb-1">{selectedCliente.codigo}</div>}
+                  {typeof selectedCliente.orden === 'number' && selectedCliente.orden > 0 && (
+                    <div className="text-[10px] text-gray-500 mb-1">📍 Orden de ruta: <strong>{selectedCliente.orden}</strong></div>
+                  )}
                   {selectedCliente.direccion && <div className="text-xs text-gray-600 mb-2">{selectedCliente.direccion}{selectedCliente.colonia ? `, ${selectedCliente.colonia}` : ''}</div>}
                   {selectedCliente.vendedores?.nombre && (
                     <div className="text-[10px] text-gray-500 mb-1">🧑‍💼 {selectedCliente.vendedores.nombre}</div>
