@@ -517,7 +517,9 @@ export default function PuntoVentaPage() {
       if (e.key === 'F2') {
         e.preventDefault();
         if (!showPago && !showTicket && cart.length > 0) {
-          if (condicion === 'contado') setPayEfectivo(totals.total.toFixed(2));
+          setPayMode('efectivo');
+          setPayEfectivo(totals.total.toFixed(2));
+          setPayTransferencia(''); setPayTarjeta('');
           setShowPago(true);
         } else if (showPago && faltante <= 0) {
           handleCobrar();
