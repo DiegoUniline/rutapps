@@ -289,6 +289,20 @@ export default function SignupPage() {
 
       if (signupError) throw signupError;
 
+      // Send welcome WhatsApp message (fire-and-forget)
+      try {
+        await supabase.functions.invoke('billing-notify', {
+          body: {
+            manual_send: true,
+            tipo: 'bienvenida',
+            nombre: form.nombre,
+            empresa: form.empresa,
+            phone: fullPhone,
+            email: form.email.trim().toLowerCase(),
+          },
+        });
+      } catch { /* silent - welcome msg is best-effort */ }
+
       const successMsg = verificationMethod === 'email'
         ? '¡Cuenta creada! Revisa tu correo electrónico para confirmar tu cuenta y activarla.'
         : '¡Cuenta creada exitosamente! Revisa tu email para confirmar tu cuenta.';
