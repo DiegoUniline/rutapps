@@ -1136,8 +1136,8 @@ export default function PuntoVentaPage() {
 
       {/* ─── Payment modal ─── */}
       {showPago && (
-        <div className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center" onClick={() => !saving && setShowPago(false)}>
-          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-border" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[60] bg-foreground/40 flex items-end sm:items-center justify-center" onClick={() => !saving && setShowPago(false)}>
+          <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-2xl overflow-hidden border border-border max-h-[92vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="px-6 pt-5 pb-3 border-b border-border">
               <div className="flex items-center justify-between">
                 <h3 className="text-[16px] font-bold text-foreground">Cobrar</h3>
