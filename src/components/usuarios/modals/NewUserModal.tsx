@@ -39,7 +39,7 @@ export default function NewUserModal({
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="label-odoo">Nombre</label>
+            <label className="label-odoo label-required">Nombre</label>
             <input className="input-odoo w-full" value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} placeholder="Nombre completo" />
           </div>
           <div className="grid grid-cols-2 gap-3">
