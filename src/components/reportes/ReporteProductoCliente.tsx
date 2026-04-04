@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
+import { ColumnChooser, useColumnVisibility, type ColumnDef } from './ColumnChooser';
 
 interface VentaLinea {
   producto_id: string;
@@ -38,14 +39,22 @@ interface ClienteGroup {
   cantidadTotal: number;
 }
 
+const INNER_COLUMNS: ColumnDef[] = [
+  { key: 'codigo', label: 'Código' },
+  { key: 'producto', label: 'Producto' },
+  { key: 'cantidad', label: 'Uds' },
+  { key: 'total', label: 'Total' },
+  { key: 'pct', label: '% Participación' },
+];
+
 export function ReporteProductoCliente({ data }: { data: any }) {
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const { visible, setVisible, isVisible } = useColumnVisibility(INNER_COLUMNS);
 
   const ventaLineas: VentaLinea[] = data.ventaLineas ?? [];
 
-  // Group by client, then by product
   const clienteMap: Record<string, ClienteGroup> = {};
   for (const l of ventaLineas) {
     const cid = l.ventas?.cliente_id ?? 'sin-cliente';
@@ -67,10 +76,7 @@ export function ReporteProductoCliente({ data }: { data: any }) {
   }
 
   let clientes = Object.values(clienteMap).sort((a, b) => b.totalGeneral - a.totalGeneral);
-
-  for (const c of clientes) {
-    c.productos.sort((a, b) => b.total - a.total);
-  }
+  for (const c of clientes) c.productos.sort((a, b) => b.total - a.total);
 
   if (search) {
     const q = search.toLowerCase();
@@ -92,21 +98,26 @@ export function ReporteProductoCliente({ data }: { data: any }) {
   const grandTotal = clientes.reduce((s, c) => s + c.totalGeneral, 0);
   const grandQty = clientes.reduce((s, c) => s + c.cantidadTotal, 0);
 
+  const innerColCount = INNER_COLUMNS.filter(c => visible.has(c.key)).length;
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Clientes</div>
-          <div className="text-lg font-bold text-foreground">{clientes.length}</div>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-3 flex-1">
+          <div className="bg-card border border-border rounded-lg p-3 text-center">
+            <div className="text-[9px] text-muted-foreground uppercase font-semibold">Clientes</div>
+            <div className="text-lg font-bold text-foreground">{clientes.length}</div>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-3 text-center">
+            <div className="text-[9px] text-muted-foreground uppercase font-semibold">Unidades</div>
+            <div className="text-lg font-bold text-foreground">{grandQty.toLocaleString()}</div>
+          </div>
+          <div className="bg-card border border-border rounded-lg p-3 text-center">
+            <div className="text-[9px] text-muted-foreground uppercase font-semibold">Venta total</div>
+            <div className="text-lg font-bold text-foreground">{fmt(grandTotal)}</div>
+          </div>
         </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Unidades totales</div>
-          <div className="text-lg font-bold text-foreground">{grandQty.toLocaleString()}</div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-3 text-center">
-          <div className="text-[9px] text-muted-foreground uppercase font-semibold">Venta total</div>
-          <div className="text-lg font-bold text-foreground">{fmt(grandTotal)}</div>
-        </div>
+        <ColumnChooser columns={INNER_COLUMNS} visible={visible} onChange={setVisible} />
       </div>
 
       <div className="relative max-w-sm">
@@ -146,30 +157,29 @@ export function ReporteProductoCliente({ data }: { data: any }) {
                 <table className="w-full text-[11px]">
                   <thead>
                     <tr className="text-[9px] text-muted-foreground uppercase border-b border-border/50">
-                      <th className="py-1.5 px-3 text-left">Código</th>
-                      <th className="py-1.5 px-3 text-left">Producto</th>
-                      <th className="py-1.5 px-3 text-right">Uds</th>
-                      <th className="py-1.5 px-3 text-right">Total</th>
-                      <th className="py-1.5 px-3 text-right w-16">%</th>
+                      {isVisible('codigo') && <th className="py-1.5 px-3 text-left">Código</th>}
+                      {isVisible('producto') && <th className="py-1.5 px-3 text-left">Producto</th>}
+                      {isVisible('cantidad') && <th className="py-1.5 px-3 text-right">Uds</th>}
+                      {isVisible('total') && <th className="py-1.5 px-3 text-right">Total</th>}
+                      {isVisible('pct') && <th className="py-1.5 px-3 text-right w-16">%</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {c.productos.map(p => (
                       <tr key={p.productoId} className="border-b border-border/30">
-                        <td className="py-1 px-3 font-mono text-muted-foreground">{p.codigo}</td>
-                        <td className="py-1 px-3 font-medium">{p.nombre}</td>
-                        <td className="py-1 px-3 text-right">{p.cantidad}</td>
-                        <td className="py-1 px-3 text-right font-semibold">{fmt(p.total)}</td>
-                        <td className="py-1 px-3 text-right text-muted-foreground">
-                          {c.totalGeneral > 0 ? ((p.total / c.totalGeneral) * 100).toFixed(1) : 0}%
-                        </td>
+                        {isVisible('codigo') && <td className="py-1 px-3 font-mono text-muted-foreground">{p.codigo}</td>}
+                        {isVisible('producto') && <td className="py-1 px-3 font-medium">{p.nombre}</td>}
+                        {isVisible('cantidad') && <td className="py-1 px-3 text-right">{p.cantidad}</td>}
+                        {isVisible('total') && <td className="py-1 px-3 text-right font-semibold">{fmt(p.total)}</td>}
+                        {isVisible('pct') && <td className="py-1 px-3 text-right text-muted-foreground">{c.totalGeneral > 0 ? ((p.total / c.totalGeneral) * 100).toFixed(1) : 0}%</td>}
                       </tr>
                     ))}
                     <tr className="border-t border-border">
-                      <td colSpan={2} className="py-1.5 px-3 font-bold text-[11px] text-muted-foreground">Total</td>
-                      <td className="py-1.5 px-3 text-right font-bold">{c.cantidadTotal}</td>
-                      <td className="py-1.5 px-3 text-right font-bold">{fmt(c.totalGeneral)}</td>
-                      <td></td>
+                      {isVisible('codigo') && <td className="py-1.5 px-3"></td>}
+                      {isVisible('producto') && <td className="py-1.5 px-3 font-bold text-[11px] text-muted-foreground">Total</td>}
+                      {isVisible('cantidad') && <td className="py-1.5 px-3 text-right font-bold">{c.cantidadTotal}</td>}
+                      {isVisible('total') && <td className="py-1.5 px-3 text-right font-bold">{fmt(c.totalGeneral)}</td>}
+                      {isVisible('pct') && <td></td>}
                     </tr>
                   </tbody>
                 </table>
