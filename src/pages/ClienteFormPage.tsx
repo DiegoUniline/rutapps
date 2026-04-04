@@ -673,7 +673,7 @@ export default function ClienteFormPage() {
                     placeholder="Seleccionar lista de precios..." />
                 </OdooSection>
                 <OdooSection title="Visitas">
-                  <OdooField label="Frecuencia *" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select"
+                  <OdooField label="Frecuencia" value={form.frecuencia} onChange={v => set('frecuencia', v as FrecuenciaVisita)} type="select" required
                     options={frecuenciaOpts} />
                   <div className="odoo-field-row">
                     <span className="odoo-field-label">Días de visita *</span>
