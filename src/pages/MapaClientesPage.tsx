@@ -521,16 +521,29 @@ export default function MapaClientesPage() {
               >
                 {(clusterer) => (
                   <>
-                    {withGps.map((c: any) => (
-                      <Marker
-                        key={c.id}
-                        position={{ lat: c.gps_lat, lng: c.gps_lng }}
-                        icon={getMarkerIcon(c)}
-                        onClick={() => setSelectedCliente(c)}
-                        title={c.nombre}
-                        clusterer={clusterer}
-                      />
-                    ))}
+                    {withGps.map((c: any) => {
+                      const orden = c.orden as number | null;
+                      const hasOrden = typeof orden === 'number' && orden > 0;
+                      return (
+                        <Marker
+                          key={c.id}
+                          position={{ lat: c.gps_lat, lng: c.gps_lng }}
+                          icon={hasOrden ? {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            fillColor: getMarkerColor(c),
+                            fillOpacity: 1,
+                            strokeColor: '#fff',
+                            strokeWeight: 2.5,
+                            scale: 14,
+                            labelOrigin: new google.maps.Point(0, 0),
+                          } : getMarkerIcon(c)}
+                          label={hasOrden ? { text: `${orden}`, color: '#fff', fontSize: '10px', fontWeight: '700' } : undefined}
+                          onClick={() => setSelectedCliente(c)}
+                          title={c.nombre}
+                          clusterer={clusterer}
+                        />
+                      );
+                    })}
                   </>
                 )}
               </MarkerClusterer>
