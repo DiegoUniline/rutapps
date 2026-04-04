@@ -1217,117 +1217,82 @@ export default function PuntoVentaPage() {
                 <>
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Ingresa el monto por método</label>
 
-                  {/* 3-column grid for payment methods */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Compact payment methods */}
+                  <div className="space-y-2.5">
                     {/* Efectivo */}
-                    <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Wallet className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <span className="text-[12px] font-semibold text-foreground">Efectivo</span>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-background border border-border rounded-lg pl-7 pr-2 py-2 text-[15px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={payEfectivo}
-                          placeholder={fmt(totals.total)}
-                          onChange={e => setPayEfectivo(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-1">
+                    <div className="rounded-xl border border-border p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="h-4 w-4 text-primary" />
+                        <span className="text-[12px] font-semibold text-foreground flex-1">Efectivo</span>
                         <button onClick={() => {
                           const rest = Math.max(0, totals.total - (parseFloat(payTransferencia) || 0) - (parseFloat(payTarjeta) || 0));
                           setPayEfectivo(rest.toFixed(2));
-                        }}
-                          className="px-2 py-1 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                          Exacto
-                        </button>
-                        {quickAmounts.map(a => (
-                          <button key={a} onClick={() => setPayEfectivo(a.toString())}
-                            className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${parseFloat(payEfectivo) === a ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border hover:bg-accent'}`}>
-                            ${fmt(a)}
-                          </button>
-                        ))}
+                        }} className="text-[10px] text-primary font-semibold hover:underline">Exacto</button>
                       </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
+                        <input type="number" inputMode="decimal"
+                          className="w-full bg-accent/30 border border-border rounded-lg pl-7 pr-2 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={payEfectivo} placeholder="0.00" onChange={e => setPayEfectivo(e.target.value)} autoFocus
+                        />
+                      </div>
+                      {quickAmounts.length > 0 && (
+                        <div className="flex gap-1.5 mt-2">
+                          {quickAmounts.map(a => (
+                            <button key={a} onClick={() => setPayEfectivo(a.toString())}
+                              className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${parseFloat(payEfectivo) === a ? 'bg-primary text-primary-foreground' : 'bg-accent/50 text-foreground border border-border hover:bg-accent'}`}>
+                              {fmtM(a)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Transferencia */}
-                    <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                    {/* Transferencia + Tarjeta inline */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-border p-3">
+                        <div className="flex items-center gap-1.5 mb-2">
                           <Banknote className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-[11px] font-semibold text-foreground flex-1">Transferencia</span>
+                          <button onClick={() => {
+                            const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTarjeta) || 0));
+                            setPayTransferencia(rest.toFixed(2));
+                          }} className="text-[9px] text-primary font-semibold hover:underline">Exacto</button>
                         </div>
-                        <span className="text-[12px] font-semibold text-foreground">Transferencia</span>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">{s}</span>
+                          <input type="number" inputMode="decimal"
+                            className="w-full bg-accent/30 border border-border rounded-lg pl-6 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={payTransferencia} placeholder="0.00" onChange={e => setPayTransferencia(e.target.value)}
+                          />
+                        </div>
+                        {(parseFloat(payTransferencia) || 0) > 0 && (
+                          <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-1.5"
+                            value={refTransferencia} placeholder="Ref. (opcional)" onChange={e => setRefTransferencia(e.target.value)} />
+                        )}
                       </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-background border border-border rounded-lg pl-7 pr-2 py-2 text-[15px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={payTransferencia}
-                          placeholder="0.00"
-                          onChange={e => setPayTransferencia(e.target.value)}
-                        />
-                      </div>
-                      <button onClick={() => {
-                        const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTarjeta) || 0));
-                        setPayTransferencia(rest.toFixed(2));
-                      }}
-                        className="w-full px-2 py-1 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                        Monto exacto
-                      </button>
-                      {(parseFloat(payTransferencia) || 0) > 0 && (
-                        <input
-                          type="text"
-                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          value={refTransferencia}
-                          placeholder="Referencia (opcional)"
-                          onChange={e => setRefTransferencia(e.target.value)}
-                        />
-                      )}
-                    </div>
 
-                    {/* Tarjeta */}
-                    <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <div className="rounded-xl border border-border p-3">
+                        <div className="flex items-center gap-1.5 mb-2">
                           <CreditCard className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-[11px] font-semibold text-foreground flex-1">Tarjeta</span>
+                          <button onClick={() => {
+                            const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTransferencia) || 0));
+                            setPayTarjeta(rest.toFixed(2));
+                          }} className="text-[9px] text-primary font-semibold hover:underline">Exacto</button>
                         </div>
-                        <span className="text-[12px] font-semibold text-foreground">Tarjeta</span>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">{s}</span>
+                          <input type="number" inputMode="decimal"
+                            className="w-full bg-accent/30 border border-border rounded-lg pl-6 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={payTarjeta} placeholder="0.00" onChange={e => setPayTarjeta(e.target.value)}
+                          />
+                        </div>
+                        {(parseFloat(payTarjeta) || 0) > 0 && (
+                          <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-1.5"
+                            value={refTarjeta} placeholder="Ref. (opcional)" onChange={e => setRefTarjeta(e.target.value)} />
+                        )}
                       </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-background border border-border rounded-lg pl-7 pr-2 py-2 text-[15px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={payTarjeta}
-                          placeholder="0.00"
-                          onChange={e => setPayTarjeta(e.target.value)}
-                        />
-                      </div>
-                      <button onClick={() => {
-                        const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTransferencia) || 0));
-                        setPayTarjeta(rest.toFixed(2));
-                      }}
-                        className="w-full px-2 py-1 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                        Monto exacto
-                      </button>
-                      {(parseFloat(payTarjeta) || 0) > 0 && (
-                        <input
-                          type="text"
-                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          value={refTarjeta}
-                          placeholder="Referencia (opcional)"
-                          onChange={e => setRefTarjeta(e.target.value)}
-                        />
-                      )}
                     </div>
                   </div>
 
