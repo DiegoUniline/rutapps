@@ -539,9 +539,11 @@ Deno.serve(async (req) => {
 
       await supabase.from("subscriptions").update({ status: "suspended", updated_at: new Date().toISOString() }).eq("id", sub.id);
       const profile = await getProfileForEmpresa(supabase, sub.empresa_id);
-      if (waToken && profile?.telefono && tplMap.suspension.activo) {
+      // Use friendlier template for trial users who never paid
+      const trialTpl = tplMap.trial_suspendido || DEFAULT_TEMPLATES.trial_suspendido;
+      if (waToken && profile?.telefono && trialTpl.activo) {
         const empresaNombre = await getEmpresaName(supabase, sub.empresa_id);
-        await sendWA(supabase, waToken, profile.telefono, tplMap.suspension, {
+        await sendWA(supabase, waToken, profile.telefono, trialTpl, {
           nombre: profile.nombre || "",
           empresa: empresaNombre,
           enlaceFacturacion: FACTURACION_URL,
