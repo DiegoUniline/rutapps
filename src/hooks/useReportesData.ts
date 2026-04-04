@@ -109,7 +109,17 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         cliMap[cid].ventas += 1;
         cliMap[cid].pendiente += v.saldo_pendiente ?? 0;
       }
-      const ventasPorCliente = Object.entries(cliMap).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.total - a.total);
+      // Compute utilidad per client from ventaLineas
+      const clientUtilMap: Record<string, number> = {};
+      const clientCostoMap: Record<string, number> = {};
+      for (const l of ventaLineas) {
+        const cid = l.ventas?.cliente_id ?? '';
+        const prod = productos.find((p: any) => p.id === l.producto_id);
+        const costo = (prod?.costo ?? 0) * (l.cantidad ?? 0);
+        clientCostoMap[cid] = (clientCostoMap[cid] ?? 0) + costo;
+        clientUtilMap[cid] = (clientUtilMap[cid] ?? 0) + ((l.total ?? 0) - costo);
+      }
+      const ventasPorCliente = Object.entries(cliMap).map(([id, v]) => ({ id, ...v, costo: clientCostoMap[id] ?? 0, utilidad: clientUtilMap[id] ?? 0 })).sort((a, b) => b.total - a.total);
 
       // === TOP VENDEDORES ===
       const vendMap: Record<string, { nombre: string; total: number; ventas: number }> = {};
