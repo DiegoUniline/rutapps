@@ -129,7 +129,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     return (
       <div className="space-y-3">
         <div><label className="label-odoo">Tipo</label>{renderTipo()}</div>
-        <div><label className="label-odoo">Cliente</label>{renderCliente()}</div>
+        <div><label className="label-odoo label-required">Cliente</label>{renderCliente()}</div>
         <div><label className="label-odoo">Condición de pago</label>{renderCondicion()}</div>
         <div className="grid grid-cols-2 gap-3">
           <div><label className="label-odoo">Fecha</label>{readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{fmtDate(form.fecha)}</div> : <OdooDatePicker value={form.fecha} onChange={v => set('fecha', v)} />}</div>
