@@ -76,6 +76,7 @@ export default function PuntoVentaPage() {
   const [lastScanTime, setLastScanTime] = useState(0);
   const [clienteTarifaId, setClienteTarifaId] = useState<string | null>(null);
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
+  const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
   const [sinImpuestos, setSinImpuestos] = useState(false);
   const isMobile = useIsMobile();
