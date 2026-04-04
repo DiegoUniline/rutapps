@@ -940,7 +940,7 @@ export default function PuntoVentaPage() {
         )}
 
         {/* ─── RIGHT: Cart ─── */}
-        <div className="w-[380px] xl:w-[420px] flex flex-col bg-card shrink-0">
+        <div className={`${isMobile ? (mobileView === 'cart' ? 'fixed inset-0 z-50 flex' : 'hidden') : 'w-[380px] xl:w-[420px] flex shrink-0'} flex-col bg-card`}>
           {/* Cart header */}
           <div className="px-4 pt-3 pb-2 border-b border-border">
             <div className="flex items-center justify-between">
