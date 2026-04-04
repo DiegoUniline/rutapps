@@ -203,7 +203,11 @@ Deno.serve(async (req) => {
 
         const customerId = session.customer as string;
         const subscriptionId = session.subscription as string;
+
+        // empresa_id can be in session metadata or subscription metadata
+        const stripeSub = await stripe.subscriptions.retrieve(subscriptionId);
         const empresaId = session.metadata?.empresa_id ||
+          stripeSub.metadata?.empresa_id ||
           (await getEmpresaFromCustomer(stripe, supabase, customerId)).empresaId;
 
         if (!empresaId) { log("No empresa_id for checkout"); break; }
