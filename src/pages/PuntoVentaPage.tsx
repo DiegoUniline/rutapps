@@ -804,23 +804,22 @@ export default function PuntoVentaPage() {
         </button>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* ─── LEFT: Products ─── */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+        <div className={`${isMobile ? (mobileView === 'products' ? 'flex' : 'hidden') : 'flex'} flex-1 flex-col min-w-0 ${!isMobile ? 'border-r border-border' : ''}`}>
           {/* Search + scanner */}
-          <div className="px-4 pt-3 pb-2 flex gap-2">
+          <div className="px-3 sm:px-4 pt-3 pb-2 flex gap-2">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 id="pos-search"
                 type="text"
-                placeholder="Buscar producto o escanear código..."
+                placeholder="Buscar producto o escanear..."
                 className="w-full bg-accent/50 border border-border rounded-lg pl-10 pr-3 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && search.trim()) {
-                    // Try exact barcode match
                     const found = productos?.find(p =>
                       p.codigo.toLowerCase() === search.trim().toLowerCase() ||
                       (p.clave_alterna && p.clave_alterna.toLowerCase() === search.trim().toLowerCase())
@@ -832,18 +831,20 @@ export default function PuntoVentaPage() {
                     }
                   }
                 }}
-                autoFocus
+                autoFocus={!isMobile}
               />
             </div>
-            <div className="flex items-center gap-1 bg-accent/30 rounded-lg px-3 text-muted-foreground">
-              <Barcode className="h-4 w-4" />
-              <span className="text-[10px] font-medium">Escáner activo</span>
-            </div>
+            {!isMobile && (
+              <div className="flex items-center gap-1 bg-accent/30 rounded-lg px-3 text-muted-foreground">
+                <Barcode className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Escáner activo</span>
+              </div>
+            )}
           </div>
 
           {/* Active promotions banner */}
           {promocionesActivas && promocionesActivas.length > 0 && (
-            <div className="px-4 pb-2">
+            <div className="px-3 sm:px-4 pb-2">
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {promocionesActivas.map(p => {
                   const isGratis = p.tipo === 'producto_gratis';
@@ -853,14 +854,14 @@ export default function PuntoVentaPage() {
                   return (
                     <div
                       key={p.id}
-                      className="shrink-0 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2 flex items-center gap-2 min-w-[180px] max-w-[260px]"
+                      className="shrink-0 rounded-lg border border-primary/20 bg-primary/[0.04] px-3 py-2 flex items-center gap-2 min-w-[160px] max-w-[240px]"
                     >
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        {isGratis ? <Gift className="h-4 w-4 text-primary" /> : <Tag className="h-4 w-4 text-primary" />}
+                      <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        {isGratis ? <Gift className="h-3.5 w-3.5 text-primary" /> : <Tag className="h-3.5 w-3.5 text-primary" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-foreground truncate leading-tight">{p.nombre}</p>
-                        <p className="text-[10px] text-primary font-medium truncate">
+                        <p className="text-[10px] sm:text-[11px] font-bold text-foreground truncate leading-tight">{p.nombre}</p>
+                        <p className="text-[9px] sm:text-[10px] text-primary font-medium truncate">
                           {isGratis && `${p.cantidad_minima}×${(p.cantidad_minima || 1) - (p.cantidad_gratis || 1)} · Lleva ${p.cantidad_minima}, paga ${(p.cantidad_minima || 1) - (p.cantidad_gratis || 1)}`}
                           {isPct && `${p.valor}% de descuento`}
                           {isMonto && `$${p.valor} desc. por unidad`}
@@ -878,8 +879,8 @@ export default function PuntoVentaPage() {
           )}
 
           {/* Product grid */}
-          <div className="flex-1 overflow-auto px-4 pb-4">
-            <div className="grid grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+          <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
+            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'} gap-2`}>
               {filteredProducts.map(p => {
                 const inCart = cart.find(c => c.producto_id === p.id);
                 const stock = p.cantidad ?? 0;
@@ -887,7 +888,7 @@ export default function PuntoVentaPage() {
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    className={`relative rounded-xl border p-3 text-left transition-all active:scale-[0.97] hover:shadow-md ${
+                    className={`relative rounded-xl border p-2.5 sm:p-3 text-left transition-all active:scale-[0.97] hover:shadow-md ${
                       inCart
                         ? 'border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20'
                         : 'border-border bg-card hover:border-primary/20'
@@ -898,19 +899,19 @@ export default function PuntoVentaPage() {
                         {inCart.cantidad}
                       </div>
                     )}
-                    <div className="w-full aspect-square rounded-lg bg-accent/50 mb-2 flex items-center justify-center overflow-hidden">
+                    <div className="w-full aspect-square rounded-lg bg-accent/50 mb-1.5 sm:mb-2 flex items-center justify-center overflow-hidden">
                       {p.imagen_url ? (
                         <img src={p.imagen_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                       ) : (
-                        <Package className="h-8 w-8 text-muted-foreground/30" />
+                        <Package className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/30" />
                       )}
                     </div>
-                    <p className="text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
+                    <p className="text-[10px] sm:text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
+                    <p className="text-[9px] sm:text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
                     <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[14px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
-                      <span className={`text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
-                        {fmtNum(stock)} disp.
+                      <span className="text-[12px] sm:text-[14px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[8px] sm:text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
+                      <span className={`text-[8px] sm:text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                        {fmtNum(stock)}
                       </span>
                     </div>
                   </button>
@@ -925,6 +926,18 @@ export default function PuntoVentaPage() {
             </div>
           </div>
         </div>
+
+        {/* ─── Mobile floating cart button ─── */}
+        {isMobile && mobileView === 'products' && cart.length > 0 && (
+          <button
+            onClick={() => setMobileView('cart')}
+            className="fixed bottom-6 right-4 z-40 bg-primary text-primary-foreground rounded-2xl px-5 py-3.5 shadow-xl shadow-primary/30 flex items-center gap-2.5 active:scale-95 transition-transform"
+          >
+            <Receipt className="h-5 w-5" />
+            <span className="text-[14px] font-bold">{fmtM(totals.total)}</span>
+            <span className="bg-primary-foreground/20 text-primary-foreground text-[11px] font-bold rounded-full w-6 h-6 flex items-center justify-center">{cart.length}</span>
+          </button>
+        )}
 
         {/* ─── RIGHT: Cart ─── */}
         <div className="w-[380px] xl:w-[420px] flex flex-col bg-card shrink-0">
