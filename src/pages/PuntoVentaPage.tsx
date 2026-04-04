@@ -3,8 +3,9 @@ import { todayInTimezone } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Plus, Minus, Trash2, X, User, ShoppingCart, CreditCard,
-  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag
+  Wallet, Banknote, Check, Barcode, ArrowLeft, Receipt, Package, Gift, Tag, Warehouse
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
@@ -75,10 +76,24 @@ export default function PuntoVentaPage() {
   const [lastScanTime, setLastScanTime] = useState(0);
   const [clienteTarifaId, setClienteTarifaId] = useState<string | null>(null);
   const [clienteListaPrecioId, setClienteListaPrecioId] = useState<string | null>(null);
+  const [clienteListaNombre, setClienteListaNombre] = useState<string | null>(null);
   const [mobileView, setMobileView] = useState<'products' | 'cart'>('products');
+  const [sinImpuestos, setSinImpuestos] = useState(false);
   const isMobile = useIsMobile();
 
   const almacenId = profile?.almacen_id || null;
+
+  // Almacen name
+  const { data: almacenData } = useQuery({
+    queryKey: ['pos-almacen-name', almacenId],
+    staleTime: CATALOG_STALE,
+    enabled: !!almacenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('almacenes').select('nombre').eq('id', almacenId!).maybeSingle();
+      return data;
+    },
+  });
+  const almacenNombre = almacenData?.nombre ?? null;
 
   // Products
   const { data: productosRaw } = useQuery({
@@ -126,7 +141,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('clientes')
-        .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id')
+        .select('id, codigo, nombre, credito, limite_credito, dias_credito, tarifa_id, lista_precio_id, lista_precios:lista_precio_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('nombre');
@@ -134,21 +149,23 @@ export default function PuntoVentaPage() {
     },
   });
 
-  // Default tarifa from the empresa's principal lista de precios
-  const { data: defaultListaPrecio } = useQuery({
-    queryKey: ['pos-default-lista-precio', empresa?.id],
+  // Default lista de precios
+  const { data: defaultListaPrecioData } = useQuery({
+    queryKey: ['pos-default-lista-precio-full', empresa?.id],
     staleTime: CATALOG_STALE,
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('lista_precios')
-        .select('tarifa_id')
+        .select('tarifa_id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('es_principal', true)
         .maybeSingle();
       return data;
     },
   });
-  const defaultTarifaId = defaultListaPrecio?.tarifa_id ?? null;
+  const defaultTarifaId = defaultListaPrecioData?.tarifa_id ?? null;
+  const defaultListaNombre = defaultListaPrecioData?.nombre ?? null;
+  const effectiveListaNombre = clienteListaNombre || defaultListaNombre;
 
   // Use client tarifa if available, otherwise fall back to empresa's default
   const effectiveTarifaId = clienteTarifaId || defaultTarifaId;
@@ -464,8 +481,9 @@ export default function PuntoVentaPage() {
       total += chargedLineTotal;
       items += item.cantidad;
     });
-    return { subtotal: r2(subtotal), iva: r2(iva), ieps: r2(ieps), descuento: r2(descuento), total: r2(total), items };
-  }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross]);
+    const finalTotal = sinImpuestos ? r2(subtotal - descuento) : r2(total);
+    return { subtotal: r2(subtotal), iva: sinImpuestos ? 0 : r2(iva), ieps: sinImpuestos ? 0 : r2(ieps), descuento: r2(descuento), total: finalTotal, items };
+  }, [cart, linePricingMap, promoRawByProduct, getChargedLineTotal, splitFinalGross, sinImpuestos]);
 
   const paySplitsComputed = useMemo(() => {
     const splits: { metodo: PayMethod; monto: number; referencia: string }[] = [];
@@ -513,6 +531,7 @@ export default function PuntoVentaPage() {
     setClienteNombre('Público general');
     setClienteTarifaId(null);
     setClienteListaPrecioId(null);
+    setClienteListaNombre(null);
     setCondicion('contado');
     setShowPago(false);
     setPayEfectivo('');
@@ -782,26 +801,49 @@ export default function PuntoVentaPage() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Top bar */}
-      <header className="h-12 bg-card border-b border-border flex items-center px-3 sm:px-4 gap-2 sm:gap-3 shrink-0">
-        <button onClick={() => navigate(-1)} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
-          <ArrowLeft className="h-4 w-4 text-foreground" />
-        </button>
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-          <span className="text-[14px] sm:text-[16px] font-bold text-foreground tracking-tight truncate">Punto de venta</span>
+      <header className="bg-card border-b border-border shrink-0">
+        <div className="h-12 flex items-center px-3 sm:px-4 gap-2 sm:gap-3">
+          <button onClick={() => navigate(-1)} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
+            <ArrowLeft className="h-4 w-4 text-foreground" />
+          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+            <span className="text-[14px] sm:text-[16px] font-bold text-foreground tracking-tight truncate">Punto de venta</span>
+          </div>
+          <div className="flex-1" />
+          {/* Sin impuestos switch */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground font-medium hidden sm:inline">Sin imp.</span>
+            <Switch checked={sinImpuestos} onCheckedChange={setSinImpuestos} className="scale-75" />
+          </div>
+          {/* Client selector */}
+          <button
+            onClick={() => setShowClientes(true)}
+            className="flex items-center gap-1.5 bg-accent/60 hover:bg-accent rounded-lg px-2 sm:px-3 py-1.5 transition-colors min-w-0"
+          >
+            <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-[11px] sm:text-[12px] font-medium text-foreground max-w-[80px] sm:max-w-[140px] truncate">{clienteNombre}</span>
+          </button>
+          <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline shrink-0">
+            Limpiar
+          </button>
         </div>
-        <div className="flex-1" />
-        {/* Client selector */}
-        <button
-          onClick={() => setShowClientes(true)}
-          className="flex items-center gap-1.5 bg-accent/60 hover:bg-accent rounded-lg px-2 sm:px-3 py-1.5 transition-colors min-w-0"
-        >
-          <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <span className="text-[11px] sm:text-[12px] font-medium text-foreground max-w-[100px] sm:max-w-[180px] truncate">{clienteNombre}</span>
-        </button>
-        <button onClick={clearAll} className="text-[11px] text-destructive font-medium hover:underline shrink-0">
-          Limpiar
-        </button>
+        {/* Info bar: almacén + lista de precio */}
+        <div className="flex items-center gap-3 px-3 sm:px-4 pb-1.5 text-[10px]">
+          {almacenNombre && (
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Warehouse className="h-3 w-3" /> {almacenNombre}
+            </span>
+          )}
+          {effectiveListaNombre && (
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Tag className="h-3 w-3" /> {effectiveListaNombre}
+            </span>
+          )}
+          {sinImpuestos && (
+            <span className="text-primary font-semibold">Sin impuestos</span>
+          )}
+        </div>
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -1008,13 +1050,7 @@ export default function PuntoVentaPage() {
                       </button>
                     </div>
                     <span className="text-[10px] text-muted-foreground">×</span>
-                    <input
-                      type="number"
-                      className="w-20 text-[12px] font-medium text-foreground bg-background border border-border rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      value={displayUnitPrice}
-                      onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) updatePrice(item.producto_id, v); }}
-                      onFocus={e => e.target.select()}
-                    />
+                    <span className="text-[12px] font-medium text-foreground tabular-nums">{fmtM(displayUnitPrice)}</span>
                     <span className="flex-1 text-right text-[13px] font-bold text-foreground tabular-nums">{fmtM(lineTotal)}</span>
                   </div>
                   {itemPromos.length > 0 && (
@@ -1087,7 +1123,7 @@ export default function PuntoVentaPage() {
               className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[15px] font-bold disabled:opacity-30 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
             >
               <CreditCard className="h-5 w-5" />
-              Cobrar ${fmt(totals.total)}
+              Cobrar {fmtM(totals.total)}
               <kbd className="ml-2 text-[10px] opacity-60 bg-white/20 px-1.5 py-0.5 rounded">F2</kbd>
             </button>
           </div>
@@ -1114,7 +1150,7 @@ export default function PuntoVentaPage() {
             </div>
             <div className="max-h-72 overflow-auto px-2 pb-2">
               <button
-                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
+                onClick={() => { setClienteId(null); setClienteNombre('Público general'); setClienteTarifaId(null); setClienteListaPrecioId(null); setClienteListaNombre(null); setShowClientes(false); setClienteSearch(''); if (condicion === 'credito') setCondicion('contado'); }}
                 className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent text-[13px] text-foreground font-medium"
               >
                 Público general
@@ -1122,11 +1158,23 @@ export default function PuntoVentaPage() {
               {filteredClientes.map(c => (
                 <button
                   key={c.id}
-                  onClick={() => { setClienteId(c.id); setClienteNombre(c.nombre); setClienteTarifaId((c as any).tarifa_id || null); setClienteListaPrecioId((c as any).lista_precio_id || null); setShowClientes(false); setClienteSearch(''); if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); }}
+                  onClick={() => { 
+                    setClienteId(c.id); setClienteNombre(c.nombre); 
+                    setClienteTarifaId((c as any).tarifa_id || null); 
+                    setClienteListaPrecioId((c as any).lista_precio_id || null);
+                    const lpName = (c as any).lista_precios?.nombre ?? null;
+                    setClienteListaNombre(lpName);
+                    setShowClientes(false); setClienteSearch(''); 
+                    if (!(c as any).credito && condicion === 'credito') setCondicion('contado'); 
+                  }}
                   className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-accent transition-colors ${clienteId === c.id ? 'bg-primary/10' : ''}`}
                 >
                   <p className="text-[13px] font-medium text-foreground truncate">{c.nombre}</p>
-                  <div className="flex items-center gap-2">{c.codigo && <span className="text-[10px] text-muted-foreground">{c.codigo}</span>}{(c as any).credito && <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Crédito</span>}</div>
+                  <div className="flex items-center gap-2">
+                    {c.codigo && <span className="text-[10px] text-muted-foreground">{c.codigo}</span>}
+                    {(c as any).credito && <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Crédito</span>}
+                    {(c as any).lista_precios?.nombre && <span className="text-[9px] text-muted-foreground">{(c as any).lista_precios.nombre}</span>}
+                  </div>
                 </button>
               ))}
             </div>
@@ -1169,117 +1217,82 @@ export default function PuntoVentaPage() {
                 <>
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Ingresa el monto por método</label>
 
-                  {/* 3-column grid for payment methods */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Compact payment methods */}
+                  <div className="space-y-2.5">
                     {/* Efectivo */}
-                    <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Wallet className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                        <span className="text-[12px] font-semibold text-foreground">Efectivo</span>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-background border border-border rounded-lg pl-7 pr-2 py-2 text-[15px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={payEfectivo}
-                          placeholder={fmt(totals.total)}
-                          onChange={e => setPayEfectivo(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-1">
+                    <div className="rounded-xl border border-border p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="h-4 w-4 text-primary" />
+                        <span className="text-[12px] font-semibold text-foreground flex-1">Efectivo</span>
                         <button onClick={() => {
                           const rest = Math.max(0, totals.total - (parseFloat(payTransferencia) || 0) - (parseFloat(payTarjeta) || 0));
                           setPayEfectivo(rest.toFixed(2));
-                        }}
-                          className="px-2 py-1 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                          Exacto
-                        </button>
-                        {quickAmounts.map(a => (
-                          <button key={a} onClick={() => setPayEfectivo(a.toString())}
-                            className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${parseFloat(payEfectivo) === a ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground border border-border hover:bg-accent'}`}>
-                            ${fmt(a)}
-                          </button>
-                        ))}
+                        }} className="text-[10px] text-primary font-semibold hover:underline">Exacto</button>
                       </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
+                        <input type="number" inputMode="decimal"
+                          className="w-full bg-accent/30 border border-border rounded-lg pl-7 pr-2 py-2.5 text-[16px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          value={payEfectivo} placeholder="0.00" onChange={e => setPayEfectivo(e.target.value)} autoFocus
+                        />
+                      </div>
+                      {quickAmounts.length > 0 && (
+                        <div className="flex gap-1.5 mt-2">
+                          {quickAmounts.map(a => (
+                            <button key={a} onClick={() => setPayEfectivo(a.toString())}
+                              className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${parseFloat(payEfectivo) === a ? 'bg-primary text-primary-foreground' : 'bg-accent/50 text-foreground border border-border hover:bg-accent'}`}>
+                              {fmtM(a)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Transferencia */}
-                    <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                    {/* Transferencia + Tarjeta inline */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-border p-3">
+                        <div className="flex items-center gap-1.5 mb-2">
                           <Banknote className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-[11px] font-semibold text-foreground flex-1">Transferencia</span>
+                          <button onClick={() => {
+                            const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTarjeta) || 0));
+                            setPayTransferencia(rest.toFixed(2));
+                          }} className="text-[9px] text-primary font-semibold hover:underline">Exacto</button>
                         </div>
-                        <span className="text-[12px] font-semibold text-foreground">Transferencia</span>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">{s}</span>
+                          <input type="number" inputMode="decimal"
+                            className="w-full bg-accent/30 border border-border rounded-lg pl-6 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={payTransferencia} placeholder="0.00" onChange={e => setPayTransferencia(e.target.value)}
+                          />
+                        </div>
+                        {(parseFloat(payTransferencia) || 0) > 0 && (
+                          <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-1.5"
+                            value={refTransferencia} placeholder="Ref. (opcional)" onChange={e => setRefTransferencia(e.target.value)} />
+                        )}
                       </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-background border border-border rounded-lg pl-7 pr-2 py-2 text-[15px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={payTransferencia}
-                          placeholder="0.00"
-                          onChange={e => setPayTransferencia(e.target.value)}
-                        />
-                      </div>
-                      <button onClick={() => {
-                        const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTarjeta) || 0));
-                        setPayTransferencia(rest.toFixed(2));
-                      }}
-                        className="w-full px-2 py-1 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                        Monto exacto
-                      </button>
-                      {(parseFloat(payTransferencia) || 0) > 0 && (
-                        <input
-                          type="text"
-                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          value={refTransferencia}
-                          placeholder="Referencia (opcional)"
-                          onChange={e => setRefTransferencia(e.target.value)}
-                        />
-                      )}
-                    </div>
 
-                    {/* Tarjeta */}
-                    <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <div className="rounded-xl border border-border p-3">
+                        <div className="flex items-center gap-1.5 mb-2">
                           <CreditCard className="h-3.5 w-3.5 text-primary" />
+                          <span className="text-[11px] font-semibold text-foreground flex-1">Tarjeta</span>
+                          <button onClick={() => {
+                            const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTransferencia) || 0));
+                            setPayTarjeta(rest.toFixed(2));
+                          }} className="text-[9px] text-primary font-semibold hover:underline">Exacto</button>
                         </div>
-                        <span className="text-[12px] font-semibold text-foreground">Tarjeta</span>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground">{s}</span>
+                          <input type="number" inputMode="decimal"
+                            className="w-full bg-accent/30 border border-border rounded-lg pl-6 pr-2 py-2 text-[14px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            value={payTarjeta} placeholder="0.00" onChange={e => setPayTarjeta(e.target.value)}
+                          />
+                        </div>
+                        {(parseFloat(payTarjeta) || 0) > 0 && (
+                          <input type="text" className="w-full bg-accent/20 border border-border rounded-lg px-2.5 py-1.5 text-[10px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none mt-1.5"
+                            value={refTarjeta} placeholder="Ref. (opcional)" onChange={e => setRefTarjeta(e.target.value)} />
+                        )}
                       </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground font-medium">{s}</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className="w-full bg-background border border-border rounded-lg pl-7 pr-2 py-2 text-[15px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                          value={payTarjeta}
-                          placeholder="0.00"
-                          onChange={e => setPayTarjeta(e.target.value)}
-                        />
-                      </div>
-                      <button onClick={() => {
-                        const rest = Math.max(0, totals.total - (parseFloat(payEfectivo) || 0) - (parseFloat(payTransferencia) || 0));
-                        setPayTarjeta(rest.toFixed(2));
-                      }}
-                        className="w-full px-2 py-1 rounded-md text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors">
-                        Monto exacto
-                      </button>
-                      {(parseFloat(payTarjeta) || 0) > 0 && (
-                        <input
-                          type="text"
-                          className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                          value={refTarjeta}
-                          placeholder="Referencia (opcional)"
-                          onChange={e => setRefTarjeta(e.target.value)}
-                        />
-                      )}
                     </div>
                   </div>
 
