@@ -165,7 +165,7 @@ export function OdooField({
   // Text / Number fields (unchanged logic)
   return (
     <div className="odoo-field-row">
-      <span className="odoo-field-label">
+      <span className={cn("odoo-field-label", required && "label-required")}>
         {label}
         {help && <HelpCircle className="h-3 w-3 odoo-help-icon" />}
       </span>
