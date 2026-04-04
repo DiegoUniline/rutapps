@@ -1170,7 +1170,7 @@ export default function PuntoVentaPage() {
                   <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Ingresa el monto por método</label>
 
                   {/* 3-column grid for payment methods */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {/* Efectivo */}
                     <div className="rounded-xl border border-border bg-accent/20 p-3 space-y-2">
                       <div className="flex items-center gap-2">
