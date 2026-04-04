@@ -38,7 +38,7 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
             {authUsers.find(au => au.id === editingUser.user_id)?.email || '—'}
           </div>
           <div>
-            <label className="label-odoo">Nombre</label>
+            <label className="label-odoo label-required">Nombre</label>
             <input className="input-odoo w-full" value={editForm.nombre} onChange={e => setEditForm({ ...editForm, nombre: e.target.value })} placeholder="Nombre completo" />
           </div>
           <div>
