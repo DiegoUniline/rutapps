@@ -942,9 +942,14 @@ export default function PuntoVentaPage() {
         {/* ─── RIGHT: Cart ─── */}
         <div className={`${isMobile ? (mobileView === 'cart' ? 'fixed inset-0 z-50 flex' : 'hidden') : 'w-[380px] xl:w-[420px] flex shrink-0'} flex-col bg-card`}>
           {/* Cart header */}
-          <div className="px-4 pt-3 pb-2 border-b border-border">
+          <div className={`px-4 ${isMobile ? 'pt-[max(0.75rem,env(safe-area-inset-top))]' : 'pt-3'} pb-2 border-b border-border`}>
             <div className="flex items-center justify-between">
               <h2 className="text-[13px] font-semibold text-foreground flex items-center gap-1.5">
+                {isMobile && (
+                  <button onClick={() => setMobileView('products')} className="p-1 rounded-md hover:bg-accent mr-1">
+                    <ArrowLeft className="h-4 w-4 text-foreground" />
+                  </button>
+                )}
                 <Receipt className="h-4 w-4 text-primary" />
                 Ticket
                 {cart.length > 0 && <span className="text-muted-foreground font-normal">({totals.items} art.)</span>}
