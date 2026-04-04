@@ -1314,7 +1314,7 @@ export default function PuntoVentaPage() {
               )}
             </div>
 
-            <div className="px-6 pb-5 pt-2">
+            <div className="px-4 sm:px-6 pb-5 pt-2">
               <button
                 onClick={handleCobrar}
                 disabled={saving || cart.length === 0}
