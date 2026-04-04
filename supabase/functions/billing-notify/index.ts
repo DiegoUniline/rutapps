@@ -93,6 +93,15 @@ function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
   const empresaLine = c.nombre_empresa && vars.empresa ? ` de *${vars.empresa}*` : "";
   lines.push(`${greeting}${empresaLine},\n`);
 
+  if (tpl.tipo === "bienvenida") {
+    lines.push("¡Nos da mucho gusto que estés aquí! 🙌\n");
+    lines.push("Tu cuenta de *Rutapp* ya está lista. Tienes una prueba gratuita para que explores todo el sistema sin compromiso.\n");
+    lines.push("📺 *Aprende a usar Rutapp paso a paso:*");
+    lines.push(YOUTUBE_CHANNEL);
+    lines.push("\nAhí encontrarás videos con todo lo que necesitas para sacarle el máximo provecho a tu negocio.\n");
+    if (c.enlace_facturacion) lines.push(`💳 *Ver mi suscripción:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+    if (c.mensaje_despedida) lines.push("\n¡Bienvenido a bordo! Estamos para ayudarte. 🚀");
+  }
   if (tpl.tipo === "pre_cobro") {
     if (c.fecha_cobro && vars.fechaCobro) lines.push(`Mañana *${vars.fechaCobro}* se realizará tu cobro automático`);
     if (c.monto && vars.monto) lines.push(`de *${vars.monto}*`);
@@ -117,21 +126,29 @@ function buildTextMessage(tpl: TemplateConfig, vars: TicketVars): string {
   }
   if (tpl.tipo === "suspension") {
     lines.push("Tu cuenta ha sido *suspendida* por falta de pago.");
-    if (c.enlace_facturacion) lines.push(`\n${vars.enlaceFacturacion || ""}`);
-    if (c.mensaje_contacto) lines.push("\nSi tienes dudas, contáctanos.");
+    if (c.enlace_facturacion) lines.push(`\nPara reactivar tu acceso inmediatamente, realiza tu pago aquí:\n💳 ${vars.enlaceFacturacion || ""}`);
+    if (c.mensaje_contacto) lines.push("\nSi tienes dudas o necesitas ayuda, contáctanos. Queremos seguir siendo parte de tu negocio. 💪");
   }
   if (tpl.tipo === "trial_expira_manana") {
-    lines.push("Tu periodo de prueba gratuita *vence mañana*.");
-    lines.push("\nPara seguir usando Rutapp sin interrupciones, activa tu plan ahora:");
-    if (c.enlace_facturacion) lines.push(`\n💳 *Activar plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
-    if (c.mensaje_despedida) lines.push("\n¡Esperamos que estés disfrutando Rutapp! 🚀");
+    lines.push("¡Esperamos que estés disfrutando *Rutapp*! 🎯\n");
+    lines.push("Tu prueba gratuita termina mañana. Si te ha gustado lo que has visto, activa tu plan para no perder nada de lo que ya avanzaste:\n");
+    if (c.enlace_facturacion) lines.push(`💳 *Activar mi plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+    lines.push(`\n📺 ¿Aún no exploras todo? Mira nuestros tutoriales: ${YOUTUBE_CHANNEL}`);
+    if (c.mensaje_despedida) lines.push("\n¡Estamos seguros de que Rutapp va a ayudar a crecer tu negocio! 🚀");
   }
   if (tpl.tipo === "trial_expirado") {
-    lines.push("Tu periodo de prueba gratuita *ha vencido*.");
-    if (c.dias_gracia) lines.push(`\nTienes *${GRACE_DAYS} días de gracia* antes de que tu cuenta sea suspendida.`);
-    lines.push("\nActiva tu plan para no perder acceso a tus datos:");
-    if (c.enlace_facturacion) lines.push(`\n💳 *Activar plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
-    if (c.advertencia_suspension) lines.push("\n⚠️ Después del periodo de gracia tu acceso será suspendido.");
+    lines.push("Tu prueba gratuita ha terminado, pero *tus datos siguen seguros* con nosotros. 🔒\n");
+    lines.push("Aún puedes activar tu plan y continuar justo donde lo dejaste:");
+    if (c.enlace_facturacion) lines.push(`\n💳 *Activar mi plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+    lines.push(`\n📺 Revisa todo lo que puedes hacer: ${YOUTUBE_CHANNEL}`);
+    if (c.advertencia_suspension) lines.push(`\n⏰ Tienes *${GRACE_DAYS} días* para activar tu plan antes de que tu acceso se pause.`);
+  }
+  if (tpl.tipo === "trial_suspendido") {
+    lines.push("Tu periodo de prueba terminó y tu acceso ha sido pausado temporalmente.\n");
+    lines.push("Pero no te preocupes, *todos tus datos están guardados*. Solo activa tu plan y todo estará como lo dejaste:\n");
+    if (c.enlace_facturacion) lines.push(`💳 *Activar mi plan:* ${vars.enlaceFacturacion || FACTURACION_URL}`);
+    lines.push(`\n📺 Descubre todo lo que Rutapp puede hacer por tu negocio: ${YOUTUBE_CHANNEL}`);
+    if (c.mensaje_contacto) lines.push("\n¿Tienes dudas? Escríbenos, con gusto te ayudamos. 😊");
   }
   return lines.join("\n");
 }
