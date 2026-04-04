@@ -48,7 +48,7 @@ export default function NewUserModal({
               <input className="input-odoo w-full" type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} placeholder="correo@ejemplo.com" />
             </div>
             <div>
-              <label className="label-odoo">Contraseña inicial <span className="text-destructive">*</span></label>
+              <label className="label-odoo label-required">Contraseña inicial</label>
               <input className="input-odoo w-full" type="text" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
             </div>
           </div>
