@@ -97,11 +97,15 @@ function getExportConfig(tab: ReportTab, data: any, desde: string, hasta: string
           { key: 'nombre', header: 'Vendedor', width: 25 },
           { key: 'ventas', header: 'Ventas', format: 'number', width: 10 },
           { key: 'total', header: 'Total', format: 'currency', width: 14 },
+          { key: 'costo', header: 'Costo', format: 'currency', width: 14 },
+          { key: 'utilidad', header: 'Utilidad', format: 'currency', width: 14 },
         ],
         data: items,
         totals: {
           ventas: items.reduce((s: number, v: any) => s + v.ventas, 0),
           total: items.reduce((s: number, v: any) => s + v.total, 0),
+          costo: items.reduce((s: number, v: any) => s + (v.costo ?? 0), 0),
+          utilidad: items.reduce((s: number, v: any) => s + (v.utilidad ?? 0), 0),
         },
       };
     }
