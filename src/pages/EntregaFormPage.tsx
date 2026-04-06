@@ -18,6 +18,7 @@ import {
 import { useProductosForSelect, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
