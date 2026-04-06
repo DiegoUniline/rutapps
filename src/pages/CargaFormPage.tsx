@@ -196,19 +196,25 @@ export default function CargaFormPage() {
     try {
       // When sending to route, deduct stock from warehouse
       if (newStatus === 'en_ruta') {
-        // Re-fetch current carga lines to get accurate quantities
+        // Re-fetch current carga lines and deduct from stock_almacen (trigger auto-recalcs productos.cantidad)
+        const almId = form.almacen_id;
         const { data: currentLineas } = await supabase
           .from('carga_lineas')
           .select('producto_id, cantidad_cargada')
           .eq('carga_id', id);
         for (const cl of (currentLineas ?? [])) {
-          // Fetch current stock and decrement
-          const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', cl.producto_id).single();
-          if (prod) {
-            await supabase
-              .from('productos')
-              .update({ cantidad: Math.max(0, (prod.cantidad ?? 0) - cl.cantidad_cargada) } as any)
-              .eq('id', cl.producto_id);
+          if (almId) {
+            const { data: sa } = await supabase.from('stock_almacen')
+              .select('id, cantidad')
+              .eq('almacen_id', almId)
+              .eq('producto_id', cl.producto_id)
+              .maybeSingle();
+            if (sa) {
+              await supabase.from('stock_almacen').update({
+                cantidad: Math.max(0, (sa.cantidad ?? 0) - cl.cantidad_cargada),
+                updated_at: new Date().toISOString(),
+              } as any).eq('id', sa.id);
+            }
           }
         }
       }

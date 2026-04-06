@@ -682,13 +682,8 @@ export default function PuntoVentaPage() {
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
       if (linErr) throw linErr;
 
-      // 3. Deduct stock from global inventory and log movements
+      // 3. Deduct stock from warehouse and log movements (trigger auto-recalcs productos.cantidad)
       for (const item of cart) {
-        const { data: prod } = await supabase.from('productos').select('cantidad').eq('id', item.producto_id).single();
-        const currentQty = Number(prod?.cantidad ?? 0);
-        await supabase.from('productos').update({ cantidad: Math.max(0, currentQty - item.cantidad) } as any).eq('id', item.producto_id);
-        
-        // Deduct from stock_almacen if almacen assigned
         if (almacenId) {
           const { data: sa } = await supabase.from('stock_almacen')
             .select('id, cantidad')
