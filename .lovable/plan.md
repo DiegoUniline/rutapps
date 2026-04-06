@@ -1,76 +1,43 @@
 
 
-# Sistema de Cupones de Descuento
+## Bug Analysis: Surtido no descuenta stock del almacen
 
-## Resumen
+### Root Cause
 
-Crear un módulo completo de cupones de descuento que el Super Admin pueda gestionar desde el Panel Master, y que los clientes puedan aplicar al momento de pagar su suscripción.
+The `surtir_linea_entrega` database function has a critical bug: **deducts from `productos.cantidad` (global stock) but NEVER updates `stock_almacen`** (warehouse-specific stock).
 
-## Modelo de datos
+The function does:
+1. Locks `productos` row, checks global stock
+2. Deducts from `productos.cantidad` (global)
+3. Marks `entrega_lineas` as fulfilled
+4. Logs `movimientos_inventario`
 
-Nueva tabla `cupones`:
+**Missing**: It never touches `stock_almacen`, so the warehouse-specific inventory stays the same. Since the inventory page now reads from `stock_almacen`, the user sees no change.
 
-| Campo | Tipo | Descripcion |
-|-------|------|-------------|
-| id | uuid PK | |
-| codigo | text UNIQUE | Codigo que escribe el cliente (ej: BIENVENIDO20) |
-| descripcion | text | Nota interna |
-| descuento_pct | numeric | Porcentaje de descuento (0-100) |
-| planes_aplicables | text[] | ['mensual','semestral','anual'] o vacio = todos |
-| uso_maximo | int | Cuantas veces se puede usar en total (null = ilimitado) |
-| uso_por_empresa | int | Veces por empresa (1 = una sola vez) |
-| usos_actuales | int default 0 | Contador global |
-| meses_duracion | int | Cuantos meses aplica el descuento (null = mientras dure el plan) |
-| acumulable | boolean default false | Si se suma al descuento especial de la empresa o lo reemplaza |
-| activo | boolean default true | |
-| vigencia_inicio | date | |
-| vigencia_fin | date | |
-| created_at | timestamptz | |
+### Fix
 
-Nueva tabla `cupon_usos` (registro de quien lo uso):
+**Update the `surtir_linea_entrega` function** to also deduct from `stock_almacen` for the given `p_almacen_origen_id`, matching the pattern already used in `confirmar_traspaso` and `apply_immediate_sale_inventory`.
 
-| Campo | Tipo |
-|-------|------|
-| id | uuid PK |
-| cupon_id | uuid FK |
-| empresa_id | uuid |
-| subscription_id | uuid |
-| aplicado_at | timestamptz |
-| meses_restantes | int | Cuantos meses le quedan de descuento |
+### Changes
 
-RLS: `cupones` lectura publica para authenticated, escritura solo super_admin. `cupon_usos` tenant isolation + super_admin.
+1. **Migration**: Recreate `surtir_linea_entrega` adding a `stock_almacen` deduction block:
+   - SELECT the `stock_almacen` row for the almacen + product (with `FOR UPDATE` lock)
+   - Validate stock against the warehouse quantity (not global)
+   - UPDATE `stock_almacen.cantidad` to deduct
+   - Keep existing `productos.cantidad` deduction for global total consistency
 
-## Cambios en el Panel Master (Super Admin)
+This is a single migration file change. No frontend code changes needed.
 
-**Nuevo tab "Cupones"** en `SuperAdminPage.tsx` con componente `AdminCuponesTab.tsx`:
-- Tabla con todos los cupones: codigo, descuento, usos/maximo, planes, acumulable, vigencia, activo
-- Boton crear cupon con formulario completo
-- Editar/desactivar cupones existentes
-- Ver detalle de empresas que lo han usado
+### Technical Detail
 
-## Cambios en Mi Suscripcion (Cliente)
+```text
+BEFORE (broken):
+  productos.cantidad -= surtido    ✓
+  stock_almacen.cantidad           ✗ (never touched)
 
-En `MiSuscripcionPage.tsx`:
-- Campo "Tengo un cupon" con input + boton "Aplicar"
-- Validacion en tiempo real: codigo existe, esta activo, en vigencia, no excede uso maximo, la empresa no lo ha usado mas de `uso_por_empresa` veces, el plan actual esta en `planes_aplicables`
-- Si `acumulable = true`: el descuento del cupon se SUMA al `descuento_porcentaje` de la suscripcion
-- Si `acumulable = false`: se usa el MAYOR entre el cupon y el descuento existente
-- Mostrar desglose visual del descuento aplicado antes de confirmar pago
-
-## Logica de cobro
-
-En `billing-cycle/index.ts` y `create-checkout/index.ts`:
-- Al generar factura, verificar si la empresa tiene un cupon activo en `cupon_usos` con `meses_restantes > 0`
-- Aplicar el descuento segun la regla de acumulabilidad
-- Decrementar `meses_restantes` cada ciclo
-- Cuando `meses_restantes` llega a 0, el cupon deja de aplicar automaticamente
-
-## Archivos a crear/modificar
-
-1. **Migracion SQL** — Tablas `cupones` y `cupon_usos` con RLS
-2. **`src/components/admin/AdminCuponesTab.tsx`** — CRUD completo de cupones
-3. **`src/pages/SuperAdminPage.tsx`** — Agregar tab "Cupones"
-4. **`src/pages/MiSuscripcionPage.tsx`** — Input de cupon + validacion + desglose
-5. **`supabase/functions/billing-cycle/index.ts`** — Aplicar descuento de cupon al facturar
-6. **`supabase/functions/create-checkout/index.ts`** — Considerar cupon en checkout Stripe
+AFTER (fixed):
+  productos.cantidad -= surtido    ✓
+  stock_almacen.cantidad -= surtido ✓ (new)
+  Validates against stock_almacen   ✓ (warehouse-level check)
+```
 
