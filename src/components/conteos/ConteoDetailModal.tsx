@@ -108,14 +108,7 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
             user_id: user!.id,
           } as any);
 
-          // Update producto cantidad
-          const { data: totalStock } = await supabase
-            .from('stock_almacen')
-            .select('cantidad')
-            .eq('producto_id', linea.producto_id)
-            .eq('empresa_id', conteo?.empresa_id);
-          const totalQty = (totalStock ?? []).reduce((s: number, r: any) => s + (r.cantidad ?? 0), 0);
-          await supabase.from('productos').update({ cantidad: totalQty } as any).eq('id', linea.producto_id);
+          // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
         }
 
         // Mark as adjusted
