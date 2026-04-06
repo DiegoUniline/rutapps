@@ -454,6 +454,13 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                   {currentStep.distance?.text} · {currentStep.duration?.text}
                 </p>
               </div>
+              <button
+                onClick={() => { setVoiceEnabled(v => !v); if (voiceEnabled) window.speechSynthesis.cancel(); }}
+                className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center shrink-0"
+                title={voiceEnabled ? 'Silenciar' : 'Activar voz'}
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
               <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center shrink-0">
                 <X className="h-4 w-4" />
               </button>
