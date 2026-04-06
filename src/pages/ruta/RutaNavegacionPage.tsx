@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,21 @@ import { Button } from '@/components/ui/button';
 import { cn, todayLocal } from '@/lib/utils';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
+
+/* ─── Voice Navigation ─── */
+const speak = (text: string) => {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'es-MX';
+  utt.rate = 1.05;
+  utt.pitch = 1;
+  // Try to pick a Spanish voice
+  const voices = window.speechSynthesis.getVoices();
+  const esVoice = voices.find(v => v.lang.startsWith('es'));
+  if (esVoice) utt.voice = esVoice;
+  window.speechSynthesis.speak(utt);
+};
 
 /** Pick an icon for a maneuver instruction */
 function ManeuverIcon({ maneuver }: { maneuver?: string }) {
