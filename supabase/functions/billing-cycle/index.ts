@@ -160,14 +160,28 @@ Deno.serve(async (req) => {
     // Check subs in grace/past_due status
     const { data: graceSubs } = await supabase
       .from("subscriptions")
-      .select("id, empresa_id, current_period_end, status")
+      .select("id, empresa_id, current_period_end, status, stripe_subscription_id, trial_ends_at")
       .in("status", ["past_due", "gracia"]);
 
     for (const sub of graceSubs || []) {
-      const endDate = sub.current_period_end ? new Date(sub.current_period_end) : null;
-      if (!endDate) continue;
+      // Determine if this is a trial-origin user (never paid)
+      const isTrialOrigin = !sub.stripe_subscription_id;
 
-      const daysPastDue = Math.floor((now.getTime() - endDate.getTime()) / 86400000);
+      // For trial-origin users, use trial_ends_at as the reference date
+      const refDate = isTrialOrigin && sub.trial_ends_at
+        ? new Date(sub.trial_ends_at)
+        : sub.current_period_end ? new Date(sub.current_period_end) : null;
+      if (!refDate) continue;
+
+      const daysPastDue = Math.floor((now.getTime() - refDate.getTime()) / 86400000);
+
+      const { data: empresa } = await supabase
+        .from("empresas")
+        .select("nombre")
+        .eq("id", sub.empresa_id)
+        .single();
+
+      const empresaNombre = empresa?.nombre || "tu empresa";
 
       if (daysPastDue >= DIAS_GRACIA) {
         // Suspend
@@ -176,30 +190,32 @@ Deno.serve(async (req) => {
           .update({ status: "suspended", updated_at: now.toISOString() })
           .eq("id", sub.id);
 
-        const { data: empresa } = await supabase
-          .from("empresas")
-          .select("nombre")
-          .eq("id", sub.empresa_id)
-          .single();
+        if (isTrialOrigin) {
+          // Never paid → trial suspension message
+          await sendWhatsApp(supabase, sub.empresa_id,
+            `👋 *Te extrañamos en Rutapp*\n\nHola, tu periodo de prueba de *${empresaNombre}* terminó y tu acceso ha sido pausado temporalmente.\n\nPero no te preocupes, *todos tus datos están guardados*. Solo activa tu plan y todo estará como lo dejaste:\n\n💳 *Activar mi plan:* https://rutapps.lovable.app/facturacion\n\n📺 Descubre todo lo que Rutapp puede hacer por tu negocio: https://www.youtube.com/@RutAppMx\n\n¿Tienes dudas? Escríbenos, con gusto te ayudamos. 😊`
+          );
+        } else {
+          // Was paying → account suspended message
+          await sendWhatsApp(supabase, sub.empresa_id,
+            `⚠️ *Suscripción suspendida — Rutapp*\n\nHola, la suscripción de *${empresaNombre}* ha sido *suspendida* por falta de pago.\n\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\n\nTus datos están seguros. 🔐`
+          );
+        }
 
-        await sendWhatsApp(supabase, sub.empresa_id,
-          `¡Hola! ⚠️\nLa suscripción de *${empresa?.nombre || "tu empresa"}* ha sido *suspendida*.\n🔒 Tu acceso ha sido restringido temporalmente.\nPara reactivar:\n1️⃣ Abre la app → *Mi Suscripción*\n2️⃣ Actualiza tu método de pago\n3️⃣ Tu acceso se restaurará al instante ✅\nTus datos están seguros. 🔐`
-        );
-
-        log("Subscription suspended", { empresa: sub.empresa_id, daysPastDue });
+        log("Subscription suspended", { empresa: sub.empresa_id, daysPastDue, isTrialOrigin });
       } else {
         // Send daily grace reminder
         const diasRestantes = DIAS_GRACIA - daysPastDue;
 
-        const { data: empresa } = await supabase
-          .from("empresas")
-          .select("nombre")
-          .eq("id", sub.empresa_id)
-          .single();
-
-        await sendWhatsApp(supabase, sub.empresa_id,
-          `¡Hola! 👋\nTe recordamos que el pago de *${empresa?.nombre || "tu empresa"}* aún está pendiente.\n⏳ Te quedan *${diasRestantes} día${diasRestantes !== 1 ? "s" : ""}* de gracia antes de la suspensión.\n💳 Actualiza tu método de pago para evitar interrupciones.`
-        );
+        if (isTrialOrigin) {
+          await sendWhatsApp(supabase, sub.empresa_id,
+            `👋 *Tu prueba de Rutapp terminó*\n\nHola, el periodo de prueba de *${empresaNombre}* ha finalizado.\n\n⏳ Te quedan *${diasRestantes} día${diasRestantes !== 1 ? "s" : ""}* antes de que tu acceso sea pausado.\n\n💳 Activa tu plan ahora: https://rutapps.lovable.app/facturacion\n\nTus datos están seguros y listos para cuando actives. 😊`
+          );
+        } else {
+          await sendWhatsApp(supabase, sub.empresa_id,
+            `¡Hola! 👋\nTe recordamos que el pago de *${empresaNombre}* aún está pendiente.\n⏳ Te quedan *${diasRestantes} día${diasRestantes !== 1 ? "s" : ""}* de gracia antes de la suspensión.\n💳 Actualiza tu método de pago para evitar interrupciones.`
+          );
+        }
 
         // Update status to gracia if not already
         if (sub.status !== "gracia") {
@@ -209,11 +225,12 @@ Deno.serve(async (req) => {
             .eq("id", sub.id);
         }
 
-        log("Grace reminder sent", { empresa: sub.empresa_id, diasRestantes });
+        log("Grace reminder sent", { empresa: sub.empresa_id, diasRestantes, isTrialOrigin });
       }
     }
 
     // ═══ PART 3: Trial expiration check (daily) ═══
+    // Move expired trials to past_due so Part 2 handles grace + messaging
     const { data: trialSubs } = await supabase
       .from("subscriptions")
       .select("id, empresa_id, trial_ends_at")
@@ -222,15 +239,14 @@ Deno.serve(async (req) => {
 
     for (const sub of trialSubs || []) {
       const trialEnd = new Date(sub.trial_ends_at);
-      const daysPastTrial = Math.floor((now.getTime() - trialEnd.getTime()) / 86400000);
-
-      if (daysPastTrial >= DIAS_GRACIA) {
+      if (now >= trialEnd) {
+        // Move to past_due — Part 2 will handle grace period and messaging
         await supabase
           .from("subscriptions")
-          .update({ status: "suspended", updated_at: now.toISOString() })
+          .update({ status: "past_due", updated_at: now.toISOString() })
           .eq("id", sub.id);
 
-        log("Trial suspended", { empresa: sub.empresa_id, daysPastTrial });
+        log("Trial expired → past_due", { empresa: sub.empresa_id });
       }
     }
 
