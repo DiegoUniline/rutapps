@@ -197,7 +197,7 @@ export default function CargaFormPage() {
       // When sending to route, deduct stock from warehouse
       if (newStatus === 'en_ruta') {
         // Re-fetch current carga lines and deduct from stock_almacen (trigger auto-recalcs productos.cantidad)
-        const almId = form.almacen_id;
+        const almId = almacenId;
         const { data: currentLineas } = await supabase
           .from('carga_lineas')
           .select('producto_id, cantidad_cargada')
