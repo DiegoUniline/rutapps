@@ -329,18 +329,27 @@ export default function CompraFormPage() {
           const factor = Number(l._factor_conversion) || 1;
           const piezas = (Number(l.cantidad) || 0) * factor;
 
-          // Get current stock
-          const { data: prod } = await supabase
-            .from('productos')
-            .select('cantidad')
-            .eq('id', l.producto_id!)
-            .single();
-
-          const currentQty = Number(prod?.cantidad ?? 0);
-          await supabase
-            .from('productos')
-            .update({ cantidad: currentQty + piezas } as any)
-            .eq('id', l.producto_id!);
+          // Upsert stock_almacen (trigger auto-recalcs productos.cantidad)
+          if (almacenId) {
+            const { data: sa } = await supabase.from('stock_almacen')
+              .select('id, cantidad')
+              .eq('almacen_id', almacenId)
+              .eq('producto_id', l.producto_id!)
+              .maybeSingle();
+            if (sa) {
+              await supabase.from('stock_almacen').update({
+                cantidad: (sa.cantidad ?? 0) + piezas,
+                updated_at: new Date().toISOString(),
+              } as any).eq('id', sa.id);
+            } else {
+              await supabase.from('stock_almacen').insert({
+                empresa_id: empresa!.id,
+                almacen_id: almacenId,
+                producto_id: l.producto_id!,
+                cantidad: piezas,
+              });
+            }
+          }
 
           // Log inventory movement
           await supabase.from('movimientos_inventario').insert({
