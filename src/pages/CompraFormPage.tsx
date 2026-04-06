@@ -388,29 +388,28 @@ export default function CompraFormPage() {
         const validLines = lineas.filter(l => l.producto_id);
         const today = todayLocal();
 
-        // Fetch all product quantities in parallel
-        const prodResults = await Promise.all(
-          validLines.map(l =>
-            supabase.from('productos').select('id, cantidad').eq('id', l.producto_id!).single()
-          )
-        );
-
-        // Build all updates and movements in parallel
+        // Deduct from stock_almacen and log movements (trigger auto-recalcs productos.cantidad)
         const updates: Array<Promise<any>> = [];
-        for (let i = 0; i < validLines.length; i++) {
-          const l = validLines[i];
+        for (const l of validLines) {
           const factor = Number(l._factor_conversion) || 1;
           const piezas = (Number(l.cantidad) || 0) * factor;
-          const currentQty = Number(prodResults[i].data?.cantidad ?? 0);
 
-          updates.push(
-            Promise.resolve(
-              supabase
-                .from('productos')
-                .update({ cantidad: Math.max(0, currentQty - piezas) } as any)
-                .eq('id', l.producto_id!)
-            )
-          );
+          if (form.almacen_id) {
+            updates.push((async () => {
+              const { data: sa } = await supabase.from('stock_almacen')
+                .select('id, cantidad')
+                .eq('almacen_id', form.almacen_id)
+                .eq('producto_id', l.producto_id!)
+                .maybeSingle();
+              if (sa) {
+                await supabase.from('stock_almacen').update({
+                  cantidad: Math.max(0, (sa.cantidad ?? 0) - piezas),
+                  updated_at: new Date().toISOString(),
+                } as any).eq('id', sa.id);
+              }
+            })());
+          }
+
           updates.push(
             Promise.resolve(
               supabase.from('movimientos_inventario').insert({
