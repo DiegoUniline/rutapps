@@ -234,19 +234,7 @@ export default function AuditoriaResultadosPage() {
 
       // Sync global totals from stock_almacen
       if (almacenIdAuditoria && adjustedProductIds.length > 0) {
-        const uniqueIds = [...new Set(adjustedProductIds)];
-        const { data: stockRows } = await supabase
-          .from('stock_almacen')
-          .select('producto_id, cantidad')
-          .eq('empresa_id', empresa!.id)
-          .in('producto_id', uniqueIds as any);
-        const totalMap = new Map<string, number>();
-        for (const row of (stockRows ?? [])) {
-          totalMap.set(row.producto_id, (totalMap.get(row.producto_id) ?? 0) + (row.cantidad ?? 0));
-        }
-        await Promise.all(uniqueIds.map(pid =>
-          supabase.from('productos').update({ cantidad: totalMap.get(pid) ?? 0 } as any).eq('id', pid)
-        ));
+        // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
       }
 
       for (const [lineaId, config] of Object.entries(ajustes)) {
