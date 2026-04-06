@@ -5110,6 +5110,33 @@ export type Database = {
           },
         ]
       }
+      wa_optouts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          motivo: string | null
+          nombre: string | null
+          telefono: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          nombre?: string | null
+          telefono: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          motivo?: string | null
+          nombre?: string | null
+          telefono?: string
+        }
+        Relationships: []
+      }
       whatsapp_config: {
         Row: {
           activo: boolean
