@@ -56,6 +56,8 @@ export default function EntregaFormPage() {
   const { data: clientesList } = useClientes();
 
   const [lineas, setLineas] = useState<any[]>([]);
+  const [showSurtirDialog, setShowSurtirDialog] = useState(false);
+  const [surtirAlmacenId, setSurtirAlmacenId] = useState('');
   const [form, setForm] = useState<any>({});
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [showExpressDialog, setShowExpressDialog] = useState(false);
