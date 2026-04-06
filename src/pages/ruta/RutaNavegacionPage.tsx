@@ -290,10 +290,9 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const currentStep = steps[currentStepIdx];
   const nextStep = steps[currentStepIdx + 1];
 
-  // Auto-advance step based on user proximity
+  // Auto-advance step based on user proximity + voice
   useEffect(() => {
     if (!userLocation || steps.length === 0) return;
-    // Find closest upcoming step
     for (let i = currentStepIdx; i < steps.length; i++) {
       const endLat = steps[i].end_location.lat();
       const endLng = steps[i].end_location.lng();
@@ -303,17 +302,40 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       );
       if (dist < 30 && i > currentStepIdx) {
         setCurrentStepIdx(i);
+        // Speak next instruction
+        if (voiceEnabled && i !== lastSpokenStepRef.current) {
+          lastSpokenStepRef.current = i;
+          const nextI = steps[i + 1];
+          if (nextI) speak(stripHtml(nextI.instructions));
+        }
         break;
       }
     }
-  }, [userLocation, steps, currentStepIdx]);
+  }, [userLocation, steps, currentStepIdx, voiceEnabled]);
 
-  // Keep camera centered on user's blue dot while navigating (Google Maps-like)
+  // Speak initial instruction when directions arrive
   useEffect(() => {
-    if (!navigatingTo || !userLocation || !mapRef.current) return;
-    mapRef.current.setCenter(userLocation);
-    mapRef.current.setZoom(17);
+    if (voiceEnabled && steps.length > 0 && lastSpokenStepRef.current === -1) {
+      lastSpokenStepRef.current = 0;
+      speak(stripHtml(steps[0].instructions));
+    }
+  }, [steps.length, voiceEnabled]);
+
+  // Keep camera centered on user while navigating (auto-follow)
+  useEffect(() => {
+    if (!navigatingTo || !userLocation || !mapRef.current || !followUserRef.current) return;
+    mapRef.current.panTo(userLocation);
   }, [navigatingTo, userLocation?.lat, userLocation?.lng]);
+
+  // Detect user manually dragging -> disable follow; re-enable on recenter
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const listener = map.addListener('dragstart', () => {
+      if (navigatingTo) followUserRef.current = false;
+    });
+    return () => google.maps.event.removeListener(listener);
+  }, [navigatingTo]);
 
   if (totalCount === 0) {
     return (
