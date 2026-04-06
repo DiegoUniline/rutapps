@@ -65,13 +65,13 @@ export default function AdminWaCampaignsTab() {
 
   const toggleFilter = (value: string) => {
     if (value === 'all') {
-      setSelectedFilters(['all']);
+      // Toggle all on/off
+      setSelectedFilters(prev => prev.includes('all') ? [] : ['all']);
     } else {
       setSelectedFilters(prev => {
         const without = prev.filter(f => f !== 'all');
         if (without.includes(value)) {
-          const next = without.filter(f => f !== value);
-          return next.length === 0 ? ['all'] : next;
+          return without.filter(f => f !== value);
         }
         return [...without, value];
       });
@@ -250,9 +250,9 @@ export default function AdminWaCampaignsTab() {
               ))}
             </div>
 
-            <Button variant="outline" size="sm" onClick={handlePreview} disabled={loadingPreview} className="w-full">
+            <Button variant="outline" size="sm" onClick={handlePreview} disabled={loadingPreview || selectedFilters.length === 0} className="w-full">
               {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
-              Previsualizar destinatarios
+              {selectedFilters.length === 0 ? 'Selecciona al menos una audiencia' : 'Previsualizar destinatarios'}
             </Button>
           </CardContent>
         </Card>
