@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Navigation, Phone, Check, ShoppingCart, Truck, MapPin, ChevronUp, X, CornerUpLeft, CornerUpRight, ArrowUp, RotateCw, CalendarDays, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,21 @@ import { Button } from '@/components/ui/button';
 import { cn, todayLocal } from '@/lib/utils';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import { toast } from 'sonner';
+
+/* ─── Voice Navigation ─── */
+const speak = (text: string) => {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'es-MX';
+  utt.rate = 1.05;
+  utt.pitch = 1;
+  // Try to pick a Spanish voice
+  const voices = window.speechSynthesis.getVoices();
+  const esVoice = voices.find(v => v.lang.startsWith('es'));
+  if (esVoice) utt.voice = esVoice;
+  window.speechSynthesis.speak(utt);
+};
 
 /** Pick an icon for a maneuver instruction */
 function ManeuverIcon({ maneuver }: { maneuver?: string }) {
@@ -67,6 +82,9 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
   const vendedorId = profile?.vendedor_id;
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const lastSpokenStepRef = useRef(-1);
+  const followUserRef = useRef(true); // true = camera follows user
 
   // Watch user location
   useEffect(() => {
@@ -196,22 +214,31 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     setNavigatingTo(stop.id);
     setActiveStopId(stop.id);
     setCurrentStepIdx(0);
+    lastSpokenStepRef.current = -1;
+    followUserRef.current = true;
     setPanelOpen(true);
-    // Initial center on user while directions load
     if (mapRef.current && userLocation) {
       mapRef.current.setCenter(userLocation);
       mapRef.current.setZoom(17);
     }
+    if (voiceEnabled) speak(`Navegando hacia ${stop.nombre}`);
   };
 
   const recenterMap = useCallback(() => {
-    if (mapRef.current && stops.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
-      if (userLocation) bounds.extend(userLocation);
-      mapRef.current.fitBounds(bounds, 60);
+    followUserRef.current = true;
+    if (mapRef.current) {
+      if (navigatingTo && userLocation) {
+        // While navigating, recenter on user
+        mapRef.current.setCenter(userLocation);
+        mapRef.current.setZoom(17);
+      } else if (stops.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
+        if (userLocation) bounds.extend(userLocation);
+        mapRef.current.fitBounds(bounds, 60);
+      }
     }
-  }, [stops, userLocation]);
+  }, [stops, userLocation, navigatingTo]);
 
   const stopNavigation = () => {
     setNavigatingTo(null);
@@ -226,7 +253,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     setActiveStopId(stop.id);
     setPanelOpen(true);
     toast.success(`¡Llegaste a ${stop.nombre}!`);
-    // Center map on the stop
+    if (voiceEnabled) speak(`Has llegado a ${stop.nombre}`);
     if (mapRef.current) {
       mapRef.current.setCenter({ lat: stop.gps_lat, lng: stop.gps_lng });
       mapRef.current.setZoom(17);
@@ -263,10 +290,9 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const currentStep = steps[currentStepIdx];
   const nextStep = steps[currentStepIdx + 1];
 
-  // Auto-advance step based on user proximity
+  // Auto-advance step based on user proximity + voice
   useEffect(() => {
     if (!userLocation || steps.length === 0) return;
-    // Find closest upcoming step
     for (let i = currentStepIdx; i < steps.length; i++) {
       const endLat = steps[i].end_location.lat();
       const endLng = steps[i].end_location.lng();
@@ -276,17 +302,40 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
       );
       if (dist < 30 && i > currentStepIdx) {
         setCurrentStepIdx(i);
+        // Speak next instruction
+        if (voiceEnabled && i !== lastSpokenStepRef.current) {
+          lastSpokenStepRef.current = i;
+          const nextI = steps[i + 1];
+          if (nextI) speak(stripHtml(nextI.instructions));
+        }
         break;
       }
     }
-  }, [userLocation, steps, currentStepIdx]);
+  }, [userLocation, steps, currentStepIdx, voiceEnabled]);
 
-  // Keep camera centered on user's blue dot while navigating (Google Maps-like)
+  // Speak initial instruction when directions arrive
   useEffect(() => {
-    if (!navigatingTo || !userLocation || !mapRef.current) return;
-    mapRef.current.setCenter(userLocation);
-    mapRef.current.setZoom(17);
+    if (voiceEnabled && steps.length > 0 && lastSpokenStepRef.current === -1) {
+      lastSpokenStepRef.current = 0;
+      speak(stripHtml(steps[0].instructions));
+    }
+  }, [steps.length, voiceEnabled]);
+
+  // Keep camera centered on user while navigating (auto-follow)
+  useEffect(() => {
+    if (!navigatingTo || !userLocation || !mapRef.current || !followUserRef.current) return;
+    mapRef.current.panTo(userLocation);
   }, [navigatingTo, userLocation?.lat, userLocation?.lng]);
+
+  // Detect user manually dragging -> disable follow; re-enable on recenter
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const listener = map.addListener('dragstart', () => {
+      if (navigatingTo) followUserRef.current = false;
+    });
+    return () => google.maps.event.removeListener(listener);
+  }, [navigatingTo]);
 
   if (totalCount === 0) {
     return (
@@ -405,6 +454,13 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
                   {currentStep.distance?.text} · {currentStep.duration?.text}
                 </p>
               </div>
+              <button
+                onClick={() => { setVoiceEnabled(v => !v); if (voiceEnabled) window.speechSynthesis.cancel(); }}
+                className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center shrink-0"
+                title={voiceEnabled ? 'Silenciar' : 'Activar voz'}
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </button>
               <button onClick={stopNavigation} className="w-8 h-8 rounded-lg bg-primary-foreground/20 flex items-center justify-center shrink-0">
                 <X className="h-4 w-4" />
               </button>
