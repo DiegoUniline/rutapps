@@ -73,6 +73,15 @@ export default function AdminWaCampaignsTab() {
     });
   }, []);
 
+  // Pending recipients modal state
+  const [pendingModal, setPendingModal] = useState<{
+    campaign: any;
+    pending: any[];
+    removedPending: Set<string>;
+  } | null>(null);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [sendingPending, setSendingPending] = useState(false);
+
   const toggleFilter = (value: string) => {
     if (value === 'all') {
       setSelectedFilters(prev => prev.includes('all') ? [] : ['all']);
