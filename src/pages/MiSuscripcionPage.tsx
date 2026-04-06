@@ -782,6 +782,43 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
+          {/* ─── Cupón de descuento ─── */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
+                <Ticket className="h-5 w-5 text-primary" /> Cupón de descuento
+              </h2>
+              {activeCupon ? (
+                <div className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-4 mt-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-600 text-white font-mono">{(activeCupon.cupones as any)?.codigo}</Badge>
+                    <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                      {(activeCupon.cupones as any)?.descuento_pct}% de descuento
+                      {(activeCupon.cupones as any)?.acumulable ? ' (acumulable)' : ''}
+                    </span>
+                  </div>
+                  {activeCupon.meses_restantes !== null && (
+                    <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                      {activeCupon.meses_restantes > 0 ? `${activeCupon.meses_restantes} meses restantes` : 'Último mes de descuento'}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mt-3">
+                  <Input
+                    value={cuponCode}
+                    onChange={e => setCuponCode(e.target.value.toUpperCase())}
+                    placeholder="Ingresa tu código"
+                    className="max-w-[200px] font-mono"
+                  />
+                  <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
+                    {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Timbres Section — solo visible para super admin */}
           {user?.email === 'diego.leon@uniline.mx' && (
           <Card>
