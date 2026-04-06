@@ -826,7 +826,7 @@ export default function AdminWaCampaignsTab() {
                           size="sm"
                           className="h-7 text-xs gap-1"
                           disabled={resending === c.id}
-                          onClick={(e) => { e.stopPropagation(); handleResendPending(c); }}
+                          onClick={(e) => { e.stopPropagation(); handleShowPending(c); }}
                         >
                           {resending === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
                           Enviar a faltantes
