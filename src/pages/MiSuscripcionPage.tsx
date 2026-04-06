@@ -169,6 +169,81 @@ export default function MiSuscripcionPage() {
     }
   }
 
+  async function handleApplyCupon() {
+    if (!cuponCode.trim() || !empresa?.id) return;
+    setCuponLoading(true);
+    try {
+      const code = cuponCode.trim().toUpperCase();
+      // Fetch coupon
+      const { data: cupon, error: cErr } = await supabase
+        .from('cupones')
+        .select('*')
+        .eq('activo', true)
+        .ilike('codigo', code)
+        .maybeSingle();
+
+      if (cErr) throw cErr;
+      if (!cupon) throw new Error('Cupón no encontrado o inactivo');
+
+      // Validate vigencia
+      const today = new Date().toISOString().slice(0, 10);
+      if (cupon.vigencia_inicio && today < cupon.vigencia_inicio) throw new Error('Este cupón aún no es válido');
+      if (cupon.vigencia_fin && today > cupon.vigencia_fin) throw new Error('Este cupón ha expirado');
+
+      // Validate uso_maximo
+      if (cupon.uso_maximo && cupon.usos_actuales >= cupon.uso_maximo) throw new Error('Este cupón ya alcanzó su límite de usos');
+
+      // Validate uso_por_empresa
+      const { count } = await supabase
+        .from('cupon_usos')
+        .select('id', { count: 'exact', head: true })
+        .eq('cupon_id', cupon.id)
+        .eq('empresa_id', empresa.id);
+      if ((count || 0) >= (cupon.uso_por_empresa || 1)) throw new Error('Ya usaste este cupón el número máximo de veces');
+
+      // Validate planes_aplicables
+      if (cupon.planes_aplicables?.length > 0 && currentPlan) {
+        if (!cupon.planes_aplicables.includes(currentPlan.periodo)) {
+          throw new Error(`Este cupón solo aplica para planes: ${cupon.planes_aplicables.join(', ')}`);
+        }
+      }
+
+      // Apply: insert cupon_usos
+      const { error: insertErr } = await supabase.from('cupon_usos').insert({
+        cupon_id: cupon.id,
+        empresa_id: empresa.id,
+        subscription_id: subData?.id || null,
+        meses_restantes: cupon.meses_duracion || null,
+      });
+      if (insertErr) throw insertErr;
+
+      // Increment usos_actuales
+      await supabase.from('cupones').update({ usos_actuales: (cupon.usos_actuales || 0) + 1 }).eq('id', cupon.id);
+
+      // Calculate effective discount
+      const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
+      let newDiscount: number;
+      if (cupon.acumulable) {
+        newDiscount = Math.min(100, companyDiscount + cupon.descuento_pct);
+      } else {
+        newDiscount = Math.max(companyDiscount, cupon.descuento_pct);
+      }
+
+      // Update subscription discount
+      if (subData?.id && newDiscount !== companyDiscount) {
+        await supabase.from('subscriptions').update({ descuento_porcentaje: newDiscount }).eq('id', subData.id);
+      }
+
+      toast.success(`¡Cupón ${cupon.codigo} aplicado! ${cupon.descuento_pct}% de descuento${cupon.meses_duracion ? ` por ${cupon.meses_duracion} meses` : ''}`);
+      setCuponCode('');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al aplicar cupón');
+    } finally {
+      setCuponLoading(false);
+    }
+  }
+
   const currentUsuarios = subData?.max_usuarios || sub.maxUsuarios || 3;
   const newSelectedPlan = subPlans.find(p => p.periodo === selectedFreq) || null;
 
