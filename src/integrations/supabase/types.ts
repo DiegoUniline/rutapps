@@ -5445,31 +5445,18 @@ export type Database = {
         }
         Returns: undefined
       }
-      surtir_linea_entrega:
-        | {
-            Args: {
-              p_almacen_origen_id: string
-              p_cantidad_surtida: number
-              p_empresa_id: string
-              p_entrega_id: string
-              p_linea_id: string
-              p_producto_id: string
-              p_user_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_almacen_origen_id: string
-              p_cantidad_surtida: number
-              p_empresa_id: string
-              p_entrega_id: string
-              p_linea_id: string
-              p_producto_id: string
-              p_user_id: string
-            }
-            Returns: undefined
-          }
+      surtir_linea_entrega: {
+        Args: {
+          p_almacen_origen_id: string
+          p_cantidad_surtida: number
+          p_empresa_id: string
+          p_entrega_id: string
+          p_linea_id: string
+          p_producto_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       user_role_empresa_id: { Args: { p_user_id: string }; Returns: string }
       verify_admin_pin: {
         Args: { p_pin: string; p_user_id: string }
