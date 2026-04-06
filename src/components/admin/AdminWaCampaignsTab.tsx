@@ -52,8 +52,16 @@ export default function AdminWaCampaignsTab() {
   const [extraNumbers, setExtraNumbers] = useState<{ phone: string; name: string }[]>([]);
   const [newPhone, setNewPhone] = useState('');
   const [newName, setNewName] = useState('');
+  const [optouts, setOptouts] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load optouts on mount
+  useEffect(() => {
+    supabase.from('wa_optouts').select('telefono').then(({ data }) => {
+      if (data) setOptouts(new Set(data.map((r: any) => r.telefono)));
+    });
+  }, []);
 
   const toggleFilter = (value: string) => {
     if (value === 'all') {
