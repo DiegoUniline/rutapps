@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   CreditCard, Users, Loader2, Crown, Plus, Minus, Stamp, BanknoteIcon,
   Building2, Copy, Check, AlertTriangle, Trash2,
-  Receipt, FileText, Clock, Sparkles, ShoppingCart, ArrowRight, RefreshCw,
+  Receipt, FileText, Clock, Sparkles, ShoppingCart, ArrowRight, RefreshCw, Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -96,6 +96,11 @@ export default function MiSuscripcionPage() {
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
 
+  // Coupon
+  const [cuponCode, setCuponCode] = useState('');
+  const [cuponLoading, setCuponLoading] = useState(false);
+  const [activeCupon, setActiveCupon] = useState<any>(null); // active cupon_usos for this empresa
+
   useEffect(() => {
     if (!empresa?.id) return;
     loadData();
@@ -112,12 +117,13 @@ export default function MiSuscripcionPage() {
 
   async function loadData() {
     setLoading(true);
-    const [subRes, timbresRes, solRes, plansRes, facturasRes] = await Promise.all([
+    const [subRes, timbresRes, solRes, plansRes, facturasRes, cuponRes] = await Promise.all([
       supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
       supabase.from('subscription_plans').select('*').eq('activo', true).order('precio_por_usuario', { ascending: false }),
       supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
+      supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }).limit(1),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
@@ -125,6 +131,14 @@ export default function MiSuscripcionPage() {
     const plans = (plansRes.data as SubPlanRow[]) || [];
     setSubPlans(plans);
     setFacturas((facturasRes.data as any[]) || []);
+
+    // Active coupon
+    const cuponUso = (cuponRes.data as any[])?.[0];
+    if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
+      setActiveCupon(cuponUso);
+    } else {
+      setActiveCupon(null);
+    }
 
     // Resolve current plan
     if (subRes.data?.plan_id) {
@@ -152,6 +166,81 @@ export default function MiSuscripcionPage() {
       }
     } catch (e: any) {
       toast.error('Error verificando compra: ' + e.message);
+    }
+  }
+
+  async function handleApplyCupon() {
+    if (!cuponCode.trim() || !empresa?.id) return;
+    setCuponLoading(true);
+    try {
+      const code = cuponCode.trim().toUpperCase();
+      // Fetch coupon
+      const { data: cupon, error: cErr } = await supabase
+        .from('cupones')
+        .select('*')
+        .eq('activo', true)
+        .ilike('codigo', code)
+        .maybeSingle();
+
+      if (cErr) throw cErr;
+      if (!cupon) throw new Error('Cupón no encontrado o inactivo');
+
+      // Validate vigencia
+      const today = new Date().toISOString().slice(0, 10);
+      if (cupon.vigencia_inicio && today < cupon.vigencia_inicio) throw new Error('Este cupón aún no es válido');
+      if (cupon.vigencia_fin && today > cupon.vigencia_fin) throw new Error('Este cupón ha expirado');
+
+      // Validate uso_maximo
+      if (cupon.uso_maximo && cupon.usos_actuales >= cupon.uso_maximo) throw new Error('Este cupón ya alcanzó su límite de usos');
+
+      // Validate uso_por_empresa
+      const { count } = await supabase
+        .from('cupon_usos')
+        .select('id', { count: 'exact', head: true })
+        .eq('cupon_id', cupon.id)
+        .eq('empresa_id', empresa.id);
+      if ((count || 0) >= (cupon.uso_por_empresa || 1)) throw new Error('Ya usaste este cupón el número máximo de veces');
+
+      // Validate planes_aplicables
+      if (cupon.planes_aplicables?.length > 0 && currentPlan) {
+        if (!cupon.planes_aplicables.includes(currentPlan.periodo)) {
+          throw new Error(`Este cupón solo aplica para planes: ${cupon.planes_aplicables.join(', ')}`);
+        }
+      }
+
+      // Apply: insert cupon_usos
+      const { error: insertErr } = await supabase.from('cupon_usos').insert({
+        cupon_id: cupon.id,
+        empresa_id: empresa.id,
+        subscription_id: subData?.id || null,
+        meses_restantes: cupon.meses_duracion || null,
+      });
+      if (insertErr) throw insertErr;
+
+      // Increment usos_actuales
+      await supabase.from('cupones').update({ usos_actuales: (cupon.usos_actuales || 0) + 1 }).eq('id', cupon.id);
+
+      // Calculate effective discount
+      const companyDiscount = subData?.descuento_porcentaje ? Number(subData.descuento_porcentaje) : 0;
+      let newDiscount: number;
+      if (cupon.acumulable) {
+        newDiscount = Math.min(100, companyDiscount + cupon.descuento_pct);
+      } else {
+        newDiscount = Math.max(companyDiscount, cupon.descuento_pct);
+      }
+
+      // Update subscription discount
+      if (subData?.id && newDiscount !== companyDiscount) {
+        await supabase.from('subscriptions').update({ descuento_porcentaje: newDiscount }).eq('id', subData.id);
+      }
+
+      toast.success(`¡Cupón ${cupon.codigo} aplicado! ${cupon.descuento_pct}% de descuento${cupon.meses_duracion ? ` por ${cupon.meses_duracion} meses` : ''}`);
+      setCuponCode('');
+      loadData();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al aplicar cupón');
+    } finally {
+      setCuponLoading(false);
     }
   }
 
@@ -693,6 +782,43 @@ export default function MiSuscripcionPage() {
               </div>
             </CardContent>
           </Card>
+          {/* ─── Cupón de descuento ─── */}
+          <Card>
+            <CardContent className="p-6">
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
+                <Ticket className="h-5 w-5 text-primary" /> Cupón de descuento
+              </h2>
+              {activeCupon ? (
+                <div className="rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 p-4 mt-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-600 text-white font-mono">{(activeCupon.cupones as any)?.codigo}</Badge>
+                    <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                      {(activeCupon.cupones as any)?.descuento_pct}% de descuento
+                      {(activeCupon.cupones as any)?.acumulable ? ' (acumulable)' : ''}
+                    </span>
+                  </div>
+                  {activeCupon.meses_restantes !== null && (
+                    <p className="text-xs text-green-700 dark:text-green-400 mt-1">
+                      {activeCupon.meses_restantes > 0 ? `${activeCupon.meses_restantes} meses restantes` : 'Último mes de descuento'}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mt-3">
+                  <Input
+                    value={cuponCode}
+                    onChange={e => setCuponCode(e.target.value.toUpperCase())}
+                    placeholder="Ingresa tu código"
+                    className="max-w-[200px] font-mono"
+                  />
+                  <Button onClick={handleApplyCupon} disabled={cuponLoading || !cuponCode.trim()} size="sm">
+                    {cuponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aplicar'}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Timbres Section — solo visible para super admin */}
           {user?.email === 'diego.leon@uniline.mx' && (
           <Card>

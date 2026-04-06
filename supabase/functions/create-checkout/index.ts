@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── Check for empresa discount ───
+    // ─── Check for empresa discount (base + coupon) ───
     let discounts: any[] = [];
     if (empresa_id) {
       const { data: subData } = await supabase
@@ -149,7 +149,29 @@ Deno.serve(async (req) => {
         .eq("empresa_id", empresa_id)
         .maybeSingle();
 
-      const descuento = subData?.descuento_porcentaje || 0;
+      let descuento = subData?.descuento_porcentaje || 0;
+
+      // Check for active coupon
+      const { data: cuponUso } = await supabase
+        .from("cupon_usos")
+        .select("meses_restantes, cupones:cupon_id(descuento_pct, acumulable)")
+        .eq("empresa_id", empresa_id)
+        .order("aplicado_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
+        const cupon = cuponUso.cupones as any;
+        if (cupon) {
+          if (cupon.acumulable) {
+            descuento = Math.min(100, descuento + (cupon.descuento_pct || 0));
+          } else {
+            descuento = Math.max(descuento, cupon.descuento_pct || 0);
+          }
+          log("Coupon applied to checkout", { cuponPct: cupon.descuento_pct, totalDescuento: descuento });
+        }
+      }
+
       if (descuento > 0) {
         const coupon = await stripe.coupons.create({
           percent_off: descuento,
