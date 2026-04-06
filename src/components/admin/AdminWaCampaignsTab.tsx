@@ -487,49 +487,106 @@ export default function AdminWaCampaignsTab() {
           </CardContent>
         </Card>
 
-        {/* Recipients List with remove */}
-        {(activeRecipients.length > 0 || extraNumbers.length > 0) && (
+        {/* Recipients Table */}
+        {(recipients.length > 0 || extraNumbers.length > 0) && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground flex items-center justify-between">
                 <span>Destinatarios</span>
-                <Badge variant="outline" className="text-xs">{allSendTargets.length}</Badge>
+                <div className="flex items-center gap-2">
+                  {removedIds.size > 0 && (
+                    <Button variant="link" size="sm" className="text-[10px] p-0 h-auto" onClick={() => setRemovedIds(new Set())}>
+                      Restaurar {removedIds.size}
+                    </Button>
+                  )}
+                  <Badge variant="outline" className="text-xs">{allSendTargets.length}</Badge>
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="max-h-[350px] overflow-y-auto space-y-0.5">
-                {activeRecipients.map((r: any) => (
-                    <div key={r._idx} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-xs group">
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium">{r.nombre}</span>
-                        <span className="text-muted-foreground ml-1.5 truncate">— {r.empresa_nombre}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[10px] text-muted-foreground">{r.telefono}</span>
-                        <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeRecipient(r._idx)}
-                        >
-                          <X className="h-3 w-3 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                ))}
-                {extraNumbers.map((n, i) => (
-                  <div key={`extra-${i}`} className="flex items-center justify-between py-1.5 px-2 rounded bg-primary/5 text-xs">
-                    <span>📱 {n.name} — {n.phone}</span>
-                    <Badge variant="secondary" className="text-[10px]">Manual</Badge>
-                  </div>
-                ))}
+            <CardContent className="p-0">
+              <div className="max-h-[400px] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="text-[10px]">
+                      <TableHead className="py-1.5 px-2 text-[10px]">Nombre</TableHead>
+                      <TableHead className="py-1.5 px-2 text-[10px]">Teléfono</TableHead>
+                      <TableHead className="py-1.5 px-2 text-[10px] text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeRecipients.map((r: any) => (
+                      <TableRow key={r._idx} className="text-xs group">
+                        <TableCell className="py-1.5 px-2 font-medium">{r.nombre}</TableCell>
+                        <TableCell className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{r.telefono}</TableCell>
+                        <TableCell className="py-1.5 px-2 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              title="No quiere publicidad"
+                              onClick={() => toggleOptout(r.telefono, r.nombre)}
+                            >
+                              <Ban className="h-3 w-3 text-orange-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => removeRecipient(r._idx)}
+                            >
+                              <X className="h-3 w-3 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {extraNumbers.map((n, i) => (
+                      <TableRow key={`extra-${i}`} className="text-xs bg-primary/5">
+                        <TableCell className="py-1.5 px-2 font-medium">📱 {n.name}</TableCell>
+                        <TableCell className="py-1.5 px-2 text-muted-foreground font-mono text-[11px]">{n.phone}</TableCell>
+                        <TableCell className="py-1.5 px-2 text-right">
+                          <Badge variant="secondary" className="text-[10px]">Manual</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              {removedIds.size > 0 && (
-                <Button variant="link" size="sm" className="text-xs mt-2 p-0 h-auto" onClick={() => setRemovedIds(new Set())}>
-                  Restaurar {removedIds.size} eliminados
-                </Button>
-              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Blocked list */}
+        {optouts.size > 0 && (
+          <Card className="border-orange-200 bg-orange-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-1.5">
+                <ShieldX className="h-4 w-4 text-orange-500" /> Bloqueados ({optouts.size})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="max-h-[150px] overflow-y-auto">
+                <Table>
+                  <TableBody>
+                    {[...optouts].map(phone => (
+                      <TableRow key={phone} className="text-xs">
+                        <TableCell className="py-1 px-2 font-mono text-[11px]">{phone}</TableCell>
+                        <TableCell className="py-1 px-2 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 text-[10px] text-orange-600"
+                            onClick={() => toggleOptout(phone, phone)}
+                          >
+                            Desbloquear
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -542,9 +599,8 @@ export default function AdminWaCampaignsTab() {
             </h4>
             <ul className="text-xs text-muted-foreground space-y-1.5">
               <li>• Usa <code className="bg-muted px-1 rounded">{'{nombre}'}</code> y <code className="bg-muted px-1 rounded">{'{empresa}'}</code> para personalizar</li>
-              <li>• Puedes seleccionar varias audiencias a la vez</li>
-              <li>• Sube imágenes directamente o pega una URL</li>
-              <li>• Quita destinatarios individuales antes de enviar</li>
+              <li>• <Ban className="inline h-3 w-3 text-orange-500" /> marca usuarios que no quieren publicidad</li>
+              <li>• Los bloqueados se excluyen automáticamente de todos los envíos</li>
               <li>• Ajusta la pausa para evitar bloqueos de WhatsApp</li>
             </ul>
           </CardContent>
