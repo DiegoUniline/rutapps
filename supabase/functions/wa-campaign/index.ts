@@ -33,29 +33,61 @@ Deno.serve(async (req) => {
     const { data: sa } = await supabase.from("super_admins").select("id").eq("user_id", user.id).maybeSingle();
     if (!sa) throw new Error("No autorizado");
 
-    const { action, filter, message, image_url, caption } = await req.json();
+    const body = await req.json();
+    const { action } = body;
 
-    // Action: get_recipients — returns filtered list
+    // Support both old single 'filter' and new multi 'filters' array
+    const filters: string[] = body.filters || (body.filter ? [body.filter] : ['all']);
+
+    // Action: get_recipients
     if (action === "get_recipients") {
-      const recipients = await getRecipients(supabase, filter);
+      const recipients = await getRecipients(supabase, filters);
       return new Response(JSON.stringify({ recipients, count: recipients.length }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Action: send_campaign — send to all filtered recipients
+    // Action: send_campaign
     if (action === "send_campaign") {
       const apiToken = Deno.env.get("WHATSAPP_OTP_TOKEN");
       if (!apiToken) throw new Error("WHATSAPP_OTP_TOKEN not configured");
 
-      const recipients = await getRecipients(supabase, filter);
-      log("Campaign started", { filter, recipientCount: recipients.length });
+      const { message, image_url, delay_seconds = 2, recipient_phones, manual_recipients } = body;
+
+      // Build final recipient list
+      let finalRecipients: { telefono: string; nombre: string; empresa_nombre: string }[];
+
+      if (recipient_phones && Array.isArray(recipient_phones)) {
+        // Use the filtered list from frontend (already has removals applied)
+        const allFromDb = await getRecipients(supabase, filters);
+        const phoneSet = new Set(recipient_phones);
+        finalRecipients = allFromDb.filter(r => r.telefono && phoneSet.has(r.telefono));
+      } else {
+        finalRecipients = await getRecipients(supabase, filters);
+      }
+
+      // Add manual recipients
+      if (manual_recipients && Array.isArray(manual_recipients)) {
+        for (const m of manual_recipients) {
+          if (m.telefono) {
+            finalRecipients.push({
+              telefono: m.telefono,
+              nombre: m.nombre || m.telefono,
+              empresa_nombre: "",
+            });
+          }
+        }
+      }
+
+      log("Campaign started", { filters, recipientCount: finalRecipients.length, delay: delay_seconds });
 
       let sent = 0;
       let failed = 0;
       const errors: string[] = [];
+      const delayMs = (delay_seconds || 2) * 1000;
 
-      for (const r of recipients) {
+      for (let i = 0; i < finalRecipients.length; i++) {
+        const r = finalRecipients[i];
         if (!r.telefono) { failed++; continue; }
 
         const normalizedPhone = r.telefono.replace(/[\s\-\(\)]/g, "");
@@ -65,52 +97,40 @@ Deno.serve(async (req) => {
           .replace(/\{telefono\}/g, normalizedPhone);
 
         try {
-          // Send image first if provided
           if (image_url) {
-            const imgBody = {
-              action: "send-image",
-              phone: normalizedPhone,
-              url: image_url,
-              caption: personalizedMsg || caption || "",
-            };
             const imgRes = await fetch(WHATSAPI_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-api-token": apiToken },
-              body: JSON.stringify(imgBody),
+              body: JSON.stringify({
+                action: "send-image",
+                phone: normalizedPhone,
+                url: image_url,
+                caption: personalizedMsg || "",
+              }),
             });
             if (!imgRes.ok) {
-              const errText = await imgRes.text();
-              throw new Error(`Image send failed: ${errText}`);
+              throw new Error(`Image send failed: ${await imgRes.text()}`);
             }
-            // If image has caption with the message, don't send text separately
-            if (personalizedMsg && !caption) {
-              sent++;
-              continue;
-            }
-          }
-
-          // Send text message
-          if (personalizedMsg && (!image_url || caption)) {
-            const textBody = {
-              action: "send-text",
-              phone: normalizedPhone,
-              message: personalizedMsg,
-            };
+          } else if (personalizedMsg) {
             const textRes = await fetch(WHATSAPI_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-api-token": apiToken },
-              body: JSON.stringify(textBody),
+              body: JSON.stringify({
+                action: "send-text",
+                phone: normalizedPhone,
+                message: personalizedMsg,
+              }),
             });
             if (!textRes.ok) {
-              const errText = await textRes.text();
-              throw new Error(`Text send failed: ${errText}`);
+              throw new Error(`Text send failed: ${await textRes.text()}`);
             }
           }
 
           sent++;
-          // Small delay to avoid rate limiting
-          if (sent % 10 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // Configurable delay between messages
+          if (i < finalRecipients.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, delayMs));
           }
         } catch (e) {
           failed++;
@@ -119,9 +139,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      log("Campaign completed", { sent, failed, total: recipients.length });
+      log("Campaign completed", { sent, failed, total: finalRecipients.length });
 
-      return new Response(JSON.stringify({ success: true, sent, failed, total: recipients.length, errors: errors.slice(0, 10) }), {
+      return new Response(JSON.stringify({ success: true, sent, failed, total: finalRecipients.length, errors: errors.slice(0, 10) }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -144,15 +164,13 @@ interface Recipient {
   status: string;
 }
 
-async function getRecipients(supabase: any, filter: string): Promise<Recipient[]> {
-  // Get all subscriptions with empresa info
+async function getRecipients(supabase: any, filters: string[]): Promise<Recipient[]> {
   const { data: subs } = await supabase
     .from("subscriptions")
     .select("empresa_id, status, trial_ends_at, stripe_subscription_id, empresas:empresa_id(nombre)");
 
   if (!subs) return [];
 
-  // Build empresa status map
   const empresaStatus: Record<string, { status: string; hasStripe: boolean; nombre: string }> = {};
   for (const s of subs) {
     empresaStatus[s.empresa_id] = {
@@ -162,47 +180,55 @@ async function getRecipients(supabase: any, filter: string): Promise<Recipient[]
     };
   }
 
-  // Filter empresas by criteria
-  let filteredEmpresaIds: string[];
-  switch (filter) {
-    case "trial":
-      filteredEmpresaIds = Object.entries(empresaStatus)
-        .filter(([, v]) => v.status === "trial")
-        .map(([k]) => k);
-      break;
-    case "active_paying":
-      filteredEmpresaIds = Object.entries(empresaStatus)
-        .filter(([, v]) => v.status === "active" && v.hasStripe)
-        .map(([k]) => k);
-      break;
-    case "suspended":
-      filteredEmpresaIds = Object.entries(empresaStatus)
-        .filter(([, v]) => v.status === "suspended")
-        .map(([k]) => k);
-      break;
-    case "past_due":
-      filteredEmpresaIds = Object.entries(empresaStatus)
-        .filter(([, v]) => ["past_due", "gracia"].includes(v.status))
-        .map(([k]) => k);
-      break;
-    case "never_paid":
-      filteredEmpresaIds = Object.entries(empresaStatus)
-        .filter(([, v]) => !v.hasStripe && ["suspended", "past_due", "gracia"].includes(v.status))
-        .map(([k]) => k);
-      break;
-    case "all":
-    default:
-      filteredEmpresaIds = Object.keys(empresaStatus);
-      break;
+  // If 'all' is in filters, return everything
+  if (filters.includes('all')) {
+    const allIds = Object.keys(empresaStatus);
+    return await getProfilesForEmpresas(supabase, allIds, empresaStatus);
   }
 
-  if (filteredEmpresaIds.length === 0) return [];
+  // Merge results from all selected filters (union)
+  const matchedIds = new Set<string>();
 
-  // Get profiles with phone for those empresas
+  for (const filter of filters) {
+    const entries = Object.entries(empresaStatus);
+    let ids: string[] = [];
+
+    switch (filter) {
+      case "trial":
+        ids = entries.filter(([, v]) => v.status === "trial").map(([k]) => k);
+        break;
+      case "active_paying":
+        ids = entries.filter(([, v]) => v.status === "active" && v.hasStripe).map(([k]) => k);
+        break;
+      case "suspended":
+        ids = entries.filter(([, v]) => v.status === "suspended").map(([k]) => k);
+        break;
+      case "past_due":
+        ids = entries.filter(([, v]) => ["past_due", "gracia"].includes(v.status)).map(([k]) => k);
+        break;
+      case "never_paid":
+        ids = entries.filter(([, v]) => !v.hasStripe && ["suspended", "past_due", "gracia"].includes(v.status)).map(([k]) => k);
+        break;
+    }
+
+    ids.forEach(id => matchedIds.add(id));
+  }
+
+  if (matchedIds.size === 0) return [];
+  return await getProfilesForEmpresas(supabase, Array.from(matchedIds), empresaStatus);
+}
+
+async function getProfilesForEmpresas(
+  supabase: any,
+  empresaIds: string[],
+  empresaStatus: Record<string, { status: string; hasStripe: boolean; nombre: string }>
+): Promise<Recipient[]> {
+  if (empresaIds.length === 0) return [];
+
   const { data: profiles } = await supabase
     .from("profiles")
     .select("nombre, telefono, empresa_id")
-    .in("empresa_id", filteredEmpresaIds)
+    .in("empresa_id", empresaIds)
     .not("telefono", "is", null);
 
   if (!profiles) return [];
