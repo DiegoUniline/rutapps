@@ -179,12 +179,7 @@ export default function AjustesInventarioPage() {
       totalMap.set(row.producto_id, (totalMap.get(row.producto_id) ?? 0) + (row.cantidad ?? 0));
     }
 
-    await Promise.all(uniqueIds.map((productoId) =>
-      supabase
-        .from('productos')
-        .update({ cantidad: totalMap.get(productoId) ?? 0 } as any)
-        .eq('id', productoId)
-    ));
+    // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
   };
 
   // Initialize rows when products load

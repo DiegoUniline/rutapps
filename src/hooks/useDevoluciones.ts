@@ -100,13 +100,7 @@ export function useSaveDevolucion() {
             });
           }
 
-          // Update global product stock
-          const prod = prodMap.get(l.producto_id);
-          if (prod) {
-            await supabase.from('productos').update({
-              cantidad: (prod.cantidad ?? 0) + l.cantidad,
-            }).eq('id', l.producto_id);
-          }
+          // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
 
           // Log inventory movement
           await supabase.from('movimientos_inventario').insert({

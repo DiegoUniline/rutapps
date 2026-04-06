@@ -198,13 +198,7 @@ export default function AuditoriaResultadosPage() {
           } as any, { onConflict: 'almacen_id,producto_id' });
           adjustedProductIds.push(linea.producto_id);
         } else {
-          const { data: prod } = await supabase
-            .from('productos')
-            .select('cantidad')
-            .eq('id', linea.producto_id)
-            .maybeSingle();
-          stockAnterior = prod?.cantidad ?? 0;
-          await supabase.from('productos').update({ cantidad: linea.cantidad_real } as any).eq('id', linea.producto_id);
+          // productos.cantidad is auto-recalculated by trigger when stock_almacen changes
         }
 
         const diffReal = (linea.cantidad_real ?? 0) - stockAnterior;
