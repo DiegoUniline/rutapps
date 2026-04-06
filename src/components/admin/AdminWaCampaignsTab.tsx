@@ -71,7 +71,10 @@ export default function AdminWaCampaignsTab() {
     setRemovedIds(new Set());
   };
 
-  const activeRecipients = recipients.filter((_, i) => !removedIds.has(String(i)));
+  const activeRecipients = recipients
+    .map((r: any, i: number) => ({ ...r, _idx: i }))
+    .filter((r: any) => !removedIds.has(String(r._idx)))
+    .sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
   const allSendTargets = [
     ...activeRecipients,
     ...extraNumbers.filter(n => n.phone.trim()),
@@ -472,10 +475,8 @@ export default function AdminWaCampaignsTab() {
             </CardHeader>
             <CardContent>
               <div className="max-h-[350px] overflow-y-auto space-y-0.5">
-                {recipients.map((r: any, i: number) => {
-                  if (removedIds.has(String(i))) return null;
-                  return (
-                    <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-xs group">
+                {activeRecipients.map((r: any) => (
+                    <div key={r._idx} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50 text-xs group">
                       <div className="flex-1 min-w-0">
                         <span className="font-medium">{r.nombre}</span>
                         <span className="text-muted-foreground ml-1.5 truncate">— {r.empresa_nombre}</span>
@@ -487,14 +488,13 @@ export default function AdminWaCampaignsTab() {
                           variant="ghost"
                           size="icon"
                           className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeRecipient(i)}
+                          onClick={() => removeRecipient(r._idx)}
                         >
                           <X className="h-3 w-3 text-destructive" />
                         </Button>
                       </div>
                     </div>
-                  );
-                })}
+                ))}
                 {extraNumbers.map((n, i) => (
                   <div key={`extra-${i}`} className="flex items-center justify-between py-1.5 px-2 rounded bg-primary/5 text-xs">
                     <span>📱 {n.name} — {n.phone}</span>
