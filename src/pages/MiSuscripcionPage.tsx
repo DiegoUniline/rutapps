@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   CreditCard, Users, Loader2, Crown, Plus, Minus, Stamp, BanknoteIcon,
   Building2, Copy, Check, AlertTriangle, Trash2,
-  Receipt, FileText, Clock, Sparkles, ShoppingCart, ArrowRight, RefreshCw,
+  Receipt, FileText, Clock, Sparkles, ShoppingCart, ArrowRight, RefreshCw, Ticket,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -95,6 +95,11 @@ export default function MiSuscripcionPage() {
   const [transferNotes, setTransferNotes] = useState('');
   const [paying, setPaying] = useState(false);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+
+  // Coupon
+  const [cuponCode, setCuponCode] = useState('');
+  const [cuponLoading, setCuponLoading] = useState(false);
+  const [activeCupon, setActiveCupon] = useState<any>(null); // active cupon_usos for this empresa
 
   useEffect(() => {
     if (!empresa?.id) return;
