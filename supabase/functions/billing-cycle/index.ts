@@ -99,7 +99,43 @@ Deno.serve(async (req) => {
         }
 
         const qty = sub.max_usuarios || 3;
-        const descuento = sub.descuento_porcentaje || 0;
+        let descuento = sub.descuento_porcentaje || 0;
+
+        // ─── Check active coupon ───
+        const { data: cuponUso } = await supabase
+          .from("cupon_usos")
+          .select("id, meses_restantes, cupon_id, cupones:cupon_id(descuento_pct, acumulable)")
+          .eq("empresa_id", sub.empresa_id)
+          .order("aplicado_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let cuponDescuento = 0;
+        if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
+          const cupon = cuponUso.cupones as any;
+          if (cupon) {
+            cuponDescuento = cupon.descuento_pct || 0;
+            if (cupon.acumulable) {
+              descuento = Math.min(100, descuento + cuponDescuento);
+            } else {
+              descuento = Math.max(descuento, cuponDescuento);
+            }
+          }
+
+          // Decrement meses_restantes
+          if (cuponUso.meses_restantes !== null) {
+            const newMeses = cuponUso.meses_restantes - 1;
+            await supabase.from("cupon_usos").update({ meses_restantes: newMeses }).eq("id", cuponUso.id);
+
+            // If coupon expired, recalculate subscription discount without it
+            if (newMeses <= 0 && cupon?.acumulable) {
+              const baseDiscount = sub.descuento_porcentaje || 0;
+              await supabase.from("subscriptions").update({ descuento_porcentaje: baseDiscount }).eq("id", sub.id);
+            }
+          }
+          log("Coupon applied", { empresa: sub.empresa_id, cuponDescuento, totalDescuento: descuento, mesesRestantes: cuponUso.meses_restantes });
+        }
+
         // Round per-user price to whole peso to avoid fractional totals
         const precioConDescuento = descuento > 0
           ? Math.round(precioUnitario * (1 - descuento / 100))
