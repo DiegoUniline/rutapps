@@ -18,7 +18,7 @@ import {
 import { useProductosForSelect, useAlmacenes } from '@/hooks/useData';
 import { useClientes } from '@/hooks/useClientes';
 import { supabase } from '@/lib/supabase';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { cn, fmtDate , todayLocal } from '@/lib/utils';
 import { generarEntregaPdf } from '@/lib/entregaPdf';
@@ -250,14 +250,32 @@ export default function EntregaFormPage() {
   const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
   const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
 
-  // Stock summary for surtir dialog
+  // Stock summary for surtir dialog — query stock_almacen for the selected warehouse
   const pendientesParaSurtir = lineas.filter((l: any) => !l.hecho);
+
+  const { data: stockAlmacenSurtir } = useQuery({
+    queryKey: ['stock_almacen_surtir', surtirAlmacenId],
+    queryFn: async () => {
+      if (!surtirAlmacenId) return [];
+      const { data } = await supabase
+        .from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', surtirAlmacenId);
+      return data ?? [];
+    },
+    enabled: !!surtirAlmacenId && showSurtirDialog,
+  });
+
+  const stockAlmacenMap = new Map(
+    (stockAlmacenSurtir ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0])
+  );
+
   const resumenSurtir = pendientesParaSurtir.map((l: any) => {
     const prod = l.productos ?? productosList?.find((p: any) => p.id === l.producto_id);
     return {
       nombre: prod ? `${prod.codigo} · ${prod.nombre}` : '—',
       pedida: Number(l.cantidad_pedida) || 0,
-      stock: prod?.cantidad ?? 0,
+      stock: stockAlmacenMap.get(l.producto_id) ?? 0,
     };
   });
 
