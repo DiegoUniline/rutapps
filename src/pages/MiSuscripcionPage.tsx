@@ -234,6 +234,33 @@ export default function MiSuscripcionPage() {
         await supabase.from('subscriptions').update({ descuento_porcentaje: newDiscount }).eq('id', subData.id);
       }
 
+      // Recalculate pending invoices with new discount
+      if (currentPlan) {
+        const { data: pendingInvoices } = await supabase
+          .from('facturas')
+          .select('id, num_usuarios, precio_unitario')
+          .eq('empresa_id', empresa.id)
+          .eq('estado', 'pendiente');
+
+        if (pendingInvoices && pendingInvoices.length > 0) {
+          for (const inv of pendingInvoices) {
+            const pu = inv.precio_unitario || currentPlan.precio_por_usuario;
+            const precioConDescuento = newDiscount > 0
+              ? Math.round(pu * (1 - newDiscount / 100))
+              : pu;
+            const qty = inv.num_usuarios || 3;
+            const newTotal = precioConDescuento * qty;
+            const newSubtotal = pu * qty;
+            await supabase.from('facturas').update({
+              descuento_porcentaje: newDiscount,
+              subtotal: newSubtotal,
+              total: newTotal,
+            }).eq('id', inv.id);
+          }
+          toast.success(`Se actualizaron ${pendingInvoices.length} factura(s) pendiente(s) con el nuevo descuento`);
+        }
+      }
+
       toast.success(`¡Cupón ${cupon.codigo} aplicado! ${cupon.descuento_pct}% de descuento${cupon.meses_duracion ? ` por ${cupon.meses_duracion} meses` : ''}`);
       setCuponCode('');
       loadData();
