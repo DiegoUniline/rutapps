@@ -242,17 +242,6 @@ export default function EntregaFormPage() {
     setLineas(prev => [...prev, { producto_id: '', cantidad_pedida: 0, cantidad_entregada: 0, hecho: false }]);
   };
 
-  if (!isNew && isLoading) {
-    return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
-  }
-
-  const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
-  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
-  const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
-
-  // Stock summary for surtir dialog — query stock_almacen for the selected warehouse
-  const pendientesParaSurtir = lineas.filter((l: any) => !l.hecho);
-
   const { data: stockAlmacenSurtir } = useQuery({
     queryKey: ['stock_almacen_surtir', surtirAlmacenId],
     queryFn: async () => {
@@ -265,6 +254,17 @@ export default function EntregaFormPage() {
     },
     enabled: !!surtirAlmacenId && showSurtirDialog,
   });
+
+  if (!isNew && isLoading) {
+    return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
+  }
+
+  const vendedorOptions = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));
+  const clienteOptions = (clientesList ?? []).map(c => ({ value: c.id, label: `${c.codigo ? c.codigo + ' · ' : ''}${c.nombre}` }));
+  const almacenOptions = (almacenesList ?? []).map(a => ({ value: a.id, label: a.nombre }));
+
+  // Stock summary for surtir dialog
+  const pendientesParaSurtir = lineas.filter((l: any) => !l.hecho);
 
   const stockAlmacenMap = new Map(
     (stockAlmacenSurtir ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0])
