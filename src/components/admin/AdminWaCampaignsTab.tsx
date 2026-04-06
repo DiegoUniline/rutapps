@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import {
   Send, Users, Loader2, Eye, Image, MessageCircle,
   Sparkles, AlertTriangle, CheckCircle2, XCircle,
-  Upload, X, Plus, Phone, Clock, SmilePlus, Ban, ShieldX,
+  Upload, X, Plus, Phone, Clock, SmilePlus, Ban, ShieldX, Youtube,
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
