@@ -83,11 +83,25 @@ export default function AdminWaCampaignsTab() {
   const activeRecipients = recipients
     .map((r: any, i: number) => ({ ...r, _idx: i }))
     .filter((r: any) => !removedIds.has(String(r._idx)))
+    .filter((r: any) => !r.telefono || !optouts.has(r.telefono.replace(/[\s\-\(\)]/g, '')))
     .sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
   const allSendTargets = [
     ...activeRecipients,
     ...extraNumbers.filter(n => n.phone.trim()),
   ];
+
+  async function toggleOptout(telefono: string, nombre: string) {
+    const normalized = telefono.replace(/[\s\-\(\)]/g, '');
+    if (optouts.has(normalized)) {
+      await supabase.from('wa_optouts').delete().eq('telefono', normalized);
+      setOptouts(prev => { const n = new Set(prev); n.delete(normalized); return n; });
+      toast.success(`${nombre} desbloqueado`);
+    } else {
+      await supabase.from('wa_optouts').insert({ telefono: normalized, nombre });
+      setOptouts(prev => new Set([...prev, normalized]));
+      toast.success(`${nombre} marcado como no quiere publicidad`);
+    }
+  }
 
   async function handleImageUpload(file: File) {
     setUploadingImage(true);
