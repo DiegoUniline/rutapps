@@ -250,9 +250,9 @@ export default function AdminWaCampaignsTab() {
               ))}
             </div>
 
-            <Button variant="outline" size="sm" onClick={handlePreview} disabled={loadingPreview} className="w-full">
+            <Button variant="outline" size="sm" onClick={handlePreview} disabled={loadingPreview || selectedFilters.length === 0} className="w-full">
               {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
-              Previsualizar destinatarios
+              {selectedFilters.length === 0 ? 'Selecciona al menos una audiencia' : 'Previsualizar destinatarios'}
             </Button>
           </CardContent>
         </Card>
