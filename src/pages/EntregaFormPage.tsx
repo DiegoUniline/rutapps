@@ -61,9 +61,7 @@ export default function EntregaFormPage() {
   const [form, setForm] = useState<any>({});
   const [showAsignarDialog, setShowAsignarDialog] = useState(false);
   const [showExpressDialog, setShowExpressDialog] = useState(false);
-  const [showSurtirDialog, setShowSurtirDialog] = useState(false);
   const [selectedVendedorRuta, setSelectedVendedorRuta] = useState('');
-  const [surtirAlmacenId, setSurtirAlmacenId] = useState('');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const readOnly = !isNew && (form.status === 'hecho' || form.status === 'cancelado' || form.status === 'cargado' || form.status === 'en_ruta');
