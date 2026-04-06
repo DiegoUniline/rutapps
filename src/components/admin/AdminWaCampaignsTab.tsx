@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,10 @@ import { toast } from 'sonner';
 import {
   Send, Users, Loader2, Eye, Image, MessageCircle,
   Sparkles, AlertTriangle, CheckCircle2, XCircle,
-  Upload, X, Plus, Phone, Clock, SmilePlus,
+  Upload, X, Plus, Phone, Clock, SmilePlus, Ban, ShieldX,
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const FILTERS = [
   { value: 'all', label: 'Todos los usuarios', icon: '👥', desc: 'Todos los registrados con teléfono' },
