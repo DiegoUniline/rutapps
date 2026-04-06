@@ -1,35 +1,76 @@
 
 
-## Plan: POS debe usar la tarifa de la Lista Principal cuando no hay cliente seleccionado
+# Sistema de Cupones de Descuento
 
-### Problema
-En POS, cuando el usuario está como "Público general" (sin cliente seleccionado), `clienteTarifaId` es `null`. Esto hace que **no se carguen reglas de tarifa** y el producto muestra `precio_principal` en vez del precio calculado por la regla.
+## Resumen
 
-La ruta móvil (`useRutaVenta.ts` línea 138) ya tiene un fallback: busca la tarifa de tipo `'general'`. POS no tiene esto.
+Crear un módulo completo de cupones de descuento que el Super Admin pueda gestionar desde el Panel Master, y que los clientes puedan aplicar al momento de pagar su suscripción.
 
-**Datos reales del producto Coca-Cola 2L:**
-- Costo: $22, IVA 16%
-- La empresa tiene "Lista General" (`es_principal: true`) con tarifa `dc07e82d`
-- Esa tarifa tiene una regla específica para este producto: margen 25% sobre costo, sin_impuestos, redondeo cercano
-- Cálculo correcto: $22 × 1.25 = $27.50 → + IVA = $31.90 → redondeo = **$32.00**
-- Sin reglas (fallback actual): muestra `precio_principal` = $32 (coincide por casualidad, pero no para otros productos)
+## Modelo de datos
 
-### Cambios
+Nueva tabla `cupones`:
 
-**1. `src/pages/PuntoVentaPage.tsx` — Cargar tarifa principal de la empresa como fallback**
-- Agregar un query para obtener la `lista_precios` donde `es_principal = true` de la empresa
-- Usar su `tarifa_id` como fallback cuando `clienteTarifaId` es `null`
-- Cambiar: `const effectiveTarifaId = clienteTarifaId || defaultTarifaId;`
-- Esto asegura que POS siempre resuelve precios con reglas, igual que la ruta móvil
+| Campo | Tipo | Descripcion |
+|-------|------|-------------|
+| id | uuid PK | |
+| codigo | text UNIQUE | Codigo que escribe el cliente (ej: BIENVENIDO20) |
+| descripcion | text | Nota interna |
+| descuento_pct | numeric | Porcentaje de descuento (0-100) |
+| planes_aplicables | text[] | ['mensual','semestral','anual'] o vacio = todos |
+| uso_maximo | int | Cuantas veces se puede usar en total (null = ilimitado) |
+| uso_por_empresa | int | Veces por empresa (1 = una sola vez) |
+| usos_actuales | int default 0 | Contador global |
+| meses_duracion | int | Cuantos meses aplica el descuento (null = mientras dure el plan) |
+| acumulable | boolean default false | Si se suma al descuento especial de la empresa o lo reemplaza |
+| activo | boolean default true | |
+| vigencia_inicio | date | |
+| vigencia_fin | date | |
+| created_at | timestamptz | |
 
-**2. Verificar que `useVentaForm.ts` (ventas desktop) también tenga el mismo fallback**
-- Si no lo tiene, aplicar la misma lógica
+Nueva tabla `cupon_usos` (registro de quien lo uso):
 
-### Resultado
-- Con o sin cliente seleccionado, POS usa las reglas de la tarifa principal
-- El precio mostrado coincide exactamente con Vista Precios de la tarifa
+| Campo | Tipo |
+|-------|------|
+| id | uuid PK |
+| cupon_id | uuid FK |
+| empresa_id | uuid |
+| subscription_id | uuid |
+| aplicado_at | timestamptz |
+| meses_restantes | int | Cuantos meses le quedan de descuento |
 
-### Archivos a modificar
-- `src/pages/PuntoVentaPage.tsx`
-- `src/pages/VentaForm/useVentaForm.ts` (verificar/ajustar)
+RLS: `cupones` lectura publica para authenticated, escritura solo super_admin. `cupon_usos` tenant isolation + super_admin.
+
+## Cambios en el Panel Master (Super Admin)
+
+**Nuevo tab "Cupones"** en `SuperAdminPage.tsx` con componente `AdminCuponesTab.tsx`:
+- Tabla con todos los cupones: codigo, descuento, usos/maximo, planes, acumulable, vigencia, activo
+- Boton crear cupon con formulario completo
+- Editar/desactivar cupones existentes
+- Ver detalle de empresas que lo han usado
+
+## Cambios en Mi Suscripcion (Cliente)
+
+En `MiSuscripcionPage.tsx`:
+- Campo "Tengo un cupon" con input + boton "Aplicar"
+- Validacion en tiempo real: codigo existe, esta activo, en vigencia, no excede uso maximo, la empresa no lo ha usado mas de `uso_por_empresa` veces, el plan actual esta en `planes_aplicables`
+- Si `acumulable = true`: el descuento del cupon se SUMA al `descuento_porcentaje` de la suscripcion
+- Si `acumulable = false`: se usa el MAYOR entre el cupon y el descuento existente
+- Mostrar desglose visual del descuento aplicado antes de confirmar pago
+
+## Logica de cobro
+
+En `billing-cycle/index.ts` y `create-checkout/index.ts`:
+- Al generar factura, verificar si la empresa tiene un cupon activo en `cupon_usos` con `meses_restantes > 0`
+- Aplicar el descuento segun la regla de acumulabilidad
+- Decrementar `meses_restantes` cada ciclo
+- Cuando `meses_restantes` llega a 0, el cupon deja de aplicar automaticamente
+
+## Archivos a crear/modificar
+
+1. **Migracion SQL** — Tablas `cupones` y `cupon_usos` con RLS
+2. **`src/components/admin/AdminCuponesTab.tsx`** — CRUD completo de cupones
+3. **`src/pages/SuperAdminPage.tsx`** — Agregar tab "Cupones"
+4. **`src/pages/MiSuscripcionPage.tsx`** — Input de cupon + validacion + desglose
+5. **`supabase/functions/billing-cycle/index.ts`** — Aplicar descuento de cupon al facturar
+6. **`supabase/functions/create-checkout/index.ts`** — Considerar cupon en checkout Stripe
 
