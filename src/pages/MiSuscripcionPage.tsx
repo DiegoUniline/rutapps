@@ -670,7 +670,11 @@ export default function MiSuscripcionPage() {
                   <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="text-muted-foreground">Próximo cobro:</span>
                   <span className="font-medium text-foreground">
-                    {format(new Date(subData.current_period_end), "d 'de' MMMM yyyy", { locale: es })}
+                    {(() => {
+                      const now = new Date();
+                      const firstNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                      return format(firstNextMonth, "d 'de' MMMM yyyy", { locale: es });
+                    })()}
                   </span>
                 </div>
               )}
