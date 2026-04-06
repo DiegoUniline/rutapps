@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
         .eq("empresa_id", empresa_id)
         .maybeSingle();
 
-      let descuento = subData?.descuento_porcentaje || 0;
+      const baseDescuento = subData?.descuento_porcentaje || 0;
 
       // Check for active coupon
       const { data: cuponUso } = await supabase
@@ -160,26 +160,72 @@ Deno.serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
+      let cuponDescuento = 0;
+      let cuponMeses: number | null = null;
+      let cuponAcumulable = false;
+
       if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
         const cupon = cuponUso.cupones as any;
         if (cupon) {
-          if (cupon.acumulable) {
-            descuento = Math.min(100, descuento + (cupon.descuento_pct || 0));
-          } else {
-            descuento = Math.max(descuento, cupon.descuento_pct || 0);
-          }
-          log("Coupon applied to checkout", { cuponPct: cupon.descuento_pct, totalDescuento: descuento });
+          cuponDescuento = cupon.descuento_pct || 0;
+          cuponMeses = cuponUso.meses_restantes;
+          cuponAcumulable = !!cupon.acumulable;
+          log("Coupon found", { cuponPct: cuponDescuento, meses: cuponMeses, acumulable: cuponAcumulable });
         }
       }
 
-      if (descuento > 0) {
-        const coupon = await stripe.coupons.create({
-          percent_off: descuento,
+      // Build Stripe discounts: separate permanent (base) from temporary (coupon)
+      if (cuponDescuento > 0 && cuponAcumulable && baseDescuento > 0) {
+        // Both active and accumulate: create two separate Stripe coupons
+        const baseCoupon = await stripe.coupons.create({
+          percent_off: baseDescuento,
           duration: "forever",
-          name: `Descuento ${descuento}% - ${empresa_id.slice(0, 8)}`,
+          name: `Descuento empresa ${baseDescuento}%`,
+        });
+        discounts.push({ coupon: baseCoupon.id });
+
+        const tempCoupon = await stripe.coupons.create({
+          percent_off: cuponDescuento,
+          duration: cuponMeses ? "repeating" : "forever",
+          ...(cuponMeses ? { duration_in_months: cuponMeses } : {}),
+          name: `Cupón ${cuponDescuento}% (${cuponMeses ? cuponMeses + ' meses' : 'permanente'})`,
+        });
+        discounts.push({ coupon: tempCoupon.id });
+        log("Applied accumulated discounts", { base: baseDescuento, cupon: cuponDescuento, meses: cuponMeses });
+
+      } else if (cuponDescuento > 0 && !cuponAcumulable) {
+        // Non-accumulative: use whichever is higher
+        const finalPct = Math.max(baseDescuento, cuponDescuento);
+        const isFromCupon = cuponDescuento >= baseDescuento;
+        const coupon = await stripe.coupons.create({
+          percent_off: finalPct,
+          duration: isFromCupon && cuponMeses ? "repeating" : "forever",
+          ...(isFromCupon && cuponMeses ? { duration_in_months: cuponMeses } : {}),
+          name: `Descuento ${finalPct}% - ${empresa_id.slice(0, 8)}`,
         });
         discounts = [{ coupon: coupon.id }];
-        log("Applied discount", { descuento, couponId: coupon.id });
+        log("Applied best discount", { finalPct, source: isFromCupon ? 'cupon' : 'base', meses: isFromCupon ? cuponMeses : null });
+
+      } else if (cuponDescuento > 0) {
+        // Only coupon, no base
+        const coupon = await stripe.coupons.create({
+          percent_off: cuponDescuento,
+          duration: cuponMeses ? "repeating" : "forever",
+          ...(cuponMeses ? { duration_in_months: cuponMeses } : {}),
+          name: `Cupón ${cuponDescuento}% (${cuponMeses ? cuponMeses + ' meses' : 'permanente'})`,
+        });
+        discounts = [{ coupon: coupon.id }];
+        log("Applied coupon only", { cuponDescuento, meses: cuponMeses });
+
+      } else if (baseDescuento > 0) {
+        // Only base discount, permanent
+        const coupon = await stripe.coupons.create({
+          percent_off: baseDescuento,
+          duration: "forever",
+          name: `Descuento empresa ${baseDescuento}%`,
+        });
+        discounts = [{ coupon: coupon.id }];
+        log("Applied base discount only", { baseDescuento });
       }
     }
 
