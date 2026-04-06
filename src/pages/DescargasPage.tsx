@@ -494,6 +494,16 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold">${(cobrosPorMetodo['transferencia'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
                 {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold">${(cobrosPorMetodo['tarjeta'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
                 <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                {(gastos || []).length > 0 && (
+                  <div className="pl-3 space-y-0.5 border-l-2 border-destructive/20 ml-1">
+                    {(gastos || []).map((g: any) => (
+                      <div key={g.id} className="flex justify-between text-[11px]">
+                        <span className="text-muted-foreground/80">{g.concepto}</span>
+                        <span className="text-destructive/80">-${(Number(g.monto) || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="border-t border-border pt-1.5 flex justify-between font-bold">
                   <span>Efectivo esperado</span>
                   <span>${efectivoSistema.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
