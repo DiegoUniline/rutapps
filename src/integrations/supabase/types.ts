@@ -1652,6 +1652,106 @@ export type Database = {
           },
         ]
       }
+      cupon_usos: {
+        Row: {
+          aplicado_at: string | null
+          cupon_id: string
+          empresa_id: string
+          id: string
+          meses_restantes: number | null
+          subscription_id: string | null
+        }
+        Insert: {
+          aplicado_at?: string | null
+          cupon_id: string
+          empresa_id: string
+          id?: string
+          meses_restantes?: number | null
+          subscription_id?: string | null
+        }
+        Update: {
+          aplicado_at?: string | null
+          cupon_id?: string
+          empresa_id?: string
+          id?: string
+          meses_restantes?: number | null
+          subscription_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cupon_usos_cupon_id_fkey"
+            columns: ["cupon_id"]
+            isOneToOne: false
+            referencedRelation: "cupones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cupon_usos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cupon_usos_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cupones: {
+        Row: {
+          activo: boolean | null
+          acumulable: boolean | null
+          codigo: string
+          created_at: string | null
+          descripcion: string | null
+          descuento_pct: number
+          id: string
+          meses_duracion: number | null
+          planes_aplicables: string[] | null
+          uso_maximo: number | null
+          uso_por_empresa: number | null
+          usos_actuales: number | null
+          vigencia_fin: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          acumulable?: boolean | null
+          codigo: string
+          created_at?: string | null
+          descripcion?: string | null
+          descuento_pct?: number
+          id?: string
+          meses_duracion?: number | null
+          planes_aplicables?: string[] | null
+          uso_maximo?: number | null
+          uso_por_empresa?: number | null
+          usos_actuales?: number | null
+          vigencia_fin?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          acumulable?: boolean | null
+          codigo?: string
+          created_at?: string | null
+          descripcion?: string | null
+          descuento_pct?: number
+          id?: string
+          meses_duracion?: number | null
+          planes_aplicables?: string[] | null
+          uso_maximo?: number | null
+          uso_por_empresa?: number | null
+          usos_actuales?: number | null
+          vigencia_fin?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: []
+      }
       descarga_ruta: {
         Row: {
           aprobado_por: string | null
