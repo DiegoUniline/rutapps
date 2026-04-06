@@ -71,7 +71,10 @@ export default function AdminWaCampaignsTab() {
     setRemovedIds(new Set());
   };
 
-  const activeRecipients = recipients.filter((_, i) => !removedIds.has(String(i)));
+  const activeRecipients = recipients
+    .map((r: any, i: number) => ({ ...r, _idx: i }))
+    .filter((r: any) => !removedIds.has(String(r._idx)))
+    .sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
   const allSendTargets = [
     ...activeRecipients,
     ...extraNumbers.filter(n => n.phone.trim()),
