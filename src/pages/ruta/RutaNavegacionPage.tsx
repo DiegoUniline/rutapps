@@ -253,7 +253,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     setActiveStopId(stop.id);
     setPanelOpen(true);
     toast.success(`¡Llegaste a ${stop.nombre}!`);
-    // Center map on the stop
+    if (voiceEnabled) speak(`Has llegado a ${stop.nombre}`);
     if (mapRef.current) {
       mapRef.current.setCenter({ lat: stop.gps_lat, lng: stop.gps_lng });
       mapRef.current.setZoom(17);
