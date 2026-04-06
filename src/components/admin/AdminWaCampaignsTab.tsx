@@ -65,13 +65,13 @@ export default function AdminWaCampaignsTab() {
 
   const toggleFilter = (value: string) => {
     if (value === 'all') {
-      setSelectedFilters(['all']);
+      // Toggle all on/off
+      setSelectedFilters(prev => prev.includes('all') ? [] : ['all']);
     } else {
       setSelectedFilters(prev => {
         const without = prev.filter(f => f !== 'all');
         if (without.includes(value)) {
-          const next = without.filter(f => f !== value);
-          return next.length === 0 ? ['all'] : next;
+          return without.filter(f => f !== value);
         }
         return [...without, value];
       });
