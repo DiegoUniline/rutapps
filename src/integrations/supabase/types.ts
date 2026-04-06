@@ -5110,6 +5110,83 @@ export type Database = {
           },
         ]
       }
+      wa_campaign_sends: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          empresa_nombre: string | null
+          error_detalle: string | null
+          id: string
+          nombre: string | null
+          status: string
+          telefono: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          empresa_nombre?: string | null
+          error_detalle?: string | null
+          id?: string
+          nombre?: string | null
+          status?: string
+          telefono: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          empresa_nombre?: string | null
+          error_detalle?: string | null
+          id?: string
+          nombre?: string | null
+          status?: string
+          telefono?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_campaign_sends_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "wa_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wa_campaigns: {
+        Row: {
+          created_at: string
+          filters: string[] | null
+          id: string
+          image_url: string | null
+          message: string | null
+          status: string
+          total_failed: number
+          total_recipients: number
+          total_sent: number
+        }
+        Insert: {
+          created_at?: string
+          filters?: string[] | null
+          id?: string
+          image_url?: string | null
+          message?: string | null
+          status?: string
+          total_failed?: number
+          total_recipients?: number
+          total_sent?: number
+        }
+        Update: {
+          created_at?: string
+          filters?: string[] | null
+          id?: string
+          image_url?: string | null
+          message?: string | null
+          status?: string
+          total_failed?: number
+          total_recipients?: number
+          total_sent?: number
+        }
+        Relationships: []
+      }
       wa_optouts: {
         Row: {
           created_at: string

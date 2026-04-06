@@ -47,6 +47,67 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Action: get_campaigns (history)
+    if (action === "get_campaigns") {
+      const { data: campaigns } = await supabase
+        .from("wa_campaigns")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return new Response(JSON.stringify({ campaigns: campaigns || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action: get_campaign_sends (detail for one campaign)
+    if (action === "get_campaign_sends") {
+      const { campaign_id } = body;
+      if (!campaign_id) throw new Error("campaign_id requerido");
+      const { data: sends } = await supabase
+        .from("wa_campaign_sends")
+        .select("*")
+        .eq("campaign_id", campaign_id)
+        .order("nombre");
+      return new Response(JSON.stringify({ sends: sends || [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action: get_campaign_pending (recipients NOT yet sent in a campaign)
+    if (action === "get_campaign_pending") {
+      const { campaign_id } = body;
+      if (!campaign_id) throw new Error("campaign_id requerido");
+
+      // Get campaign details
+      const { data: campaign } = await supabase
+        .from("wa_campaigns")
+        .select("*")
+        .eq("id", campaign_id)
+        .single();
+      if (!campaign) throw new Error("Campaña no encontrada");
+
+      // Get already sent phones
+      const { data: sentRows } = await supabase
+        .from("wa_campaign_sends")
+        .select("telefono")
+        .eq("campaign_id", campaign_id)
+        .eq("status", "sent");
+      const sentPhones = new Set((sentRows || []).map((r: any) => r.telefono));
+
+      // Get all recipients for same filters
+      const allRecipients = await getRecipients(supabase, campaign.filters || []);
+      const pending = allRecipients.filter(r => r.telefono && !sentPhones.has(r.telefono.replace(/[\s\-\(\)]/g, "")));
+
+      return new Response(JSON.stringify({
+        campaign,
+        pending,
+        count: pending.length,
+        already_sent: sentPhones.size,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Action: send_campaign
     if (action === "send_campaign") {
       const apiToken = Deno.env.get("WHATSAPP_OTP_TOKEN");
@@ -58,7 +119,6 @@ Deno.serve(async (req) => {
       let finalRecipients: { telefono: string; nombre: string; empresa_nombre: string }[];
 
       if (recipient_phones && Array.isArray(recipient_phones)) {
-        // Use the filtered list from frontend (already has removals applied)
         const allFromDb = await getRecipients(supabase, filters);
         const phoneSet = new Set(recipient_phones);
         finalRecipients = allFromDb.filter(r => r.telefono && phoneSet.has(r.telefono));
@@ -79,12 +139,28 @@ Deno.serve(async (req) => {
         }
       }
 
-      log("Campaign started", { filters, recipientCount: finalRecipients.length, delay: delay_seconds });
+      log("Campaign started", { filters, recipientCount: finalRecipients.length, delay: delay_seconds, hasImage: !!image_url });
+
+      // Create campaign record
+      const { data: campaignRow } = await supabase
+        .from("wa_campaigns")
+        .insert({
+          message: message || null,
+          image_url: image_url || null,
+          filters,
+          total_recipients: finalRecipients.length,
+          status: "sending",
+        })
+        .select("id")
+        .single();
+
+      const campaignId = campaignRow?.id;
 
       let sent = 0;
       let failed = 0;
       const errors: string[] = [];
       const delayMs = (delay_seconds || 2) * 1000;
+      const sendRecords: any[] = [];
 
       for (let i = 0; i < finalRecipients.length; i++) {
         const r = finalRecipients[i];
@@ -96,8 +172,12 @@ Deno.serve(async (req) => {
           .replace(/\{empresa\}/g, r.empresa_nombre || "")
           .replace(/\{telefono\}/g, normalizedPhone);
 
+        let sendStatus = "sent";
+        let errorDetalle: string | null = null;
+
         try {
           if (image_url) {
+            log("Sending image", { phone: normalizedPhone, url: image_url });
             const imgRes = await fetch(WHATSAPI_URL, {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-api-token": apiToken },
@@ -108,8 +188,10 @@ Deno.serve(async (req) => {
                 caption: personalizedMsg || "",
               }),
             });
+            const imgBody = await imgRes.text();
+            log("Image response", { status: imgRes.status, body: imgBody });
             if (!imgRes.ok) {
-              throw new Error(`Image send failed: ${await imgRes.text()}`);
+              throw new Error(`Image send failed: ${imgBody}`);
             }
           } else if (personalizedMsg) {
             const textRes = await fetch(WHATSAPI_URL, {
@@ -127,21 +209,47 @@ Deno.serve(async (req) => {
           }
 
           sent++;
-
-          // Configurable delay between messages
-          if (i < finalRecipients.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-          }
         } catch (e) {
           failed++;
-          errors.push(`${r.nombre} (${normalizedPhone}): ${(e as Error).message}`);
-          log("Send failed", { phone: normalizedPhone, error: (e as Error).message });
+          sendStatus = "failed";
+          errorDetalle = (e as Error).message;
+          errors.push(`${r.nombre} (${normalizedPhone}): ${errorDetalle}`);
+          log("Send failed", { phone: normalizedPhone, error: errorDetalle });
+        }
+
+        // Record individual send
+        sendRecords.push({
+          campaign_id: campaignId,
+          telefono: normalizedPhone,
+          nombre: r.nombre || null,
+          empresa_nombre: r.empresa_nombre || null,
+          status: sendStatus,
+          error_detalle: errorDetalle,
+        });
+
+        // Configurable delay between messages
+        if (i < finalRecipients.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, delayMs));
         }
       }
 
-      log("Campaign completed", { sent, failed, total: finalRecipients.length });
+      // Batch insert send records
+      if (sendRecords.length > 0 && campaignId) {
+        await supabase.from("wa_campaign_sends").insert(sendRecords);
+      }
 
-      return new Response(JSON.stringify({ success: true, sent, failed, total: finalRecipients.length, errors: errors.slice(0, 10) }), {
+      // Update campaign totals
+      if (campaignId) {
+        await supabase.from("wa_campaigns").update({
+          total_sent: sent,
+          total_failed: failed,
+          status: "completed",
+        }).eq("id", campaignId);
+      }
+
+      log("Campaign completed", { campaignId, sent, failed, total: finalRecipients.length });
+
+      return new Response(JSON.stringify({ success: true, sent, failed, total: finalRecipients.length, campaign_id: campaignId, errors: errors.slice(0, 10) }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
