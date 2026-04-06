@@ -342,6 +342,18 @@ export default function AdminWaCampaignsTab() {
                   </div>
                 </PopoverContent>
               </Popover>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => {
+                  const ytBlock = '\n\n📺 Descubre todo lo que Rutapp puede hacer por tu negocio: https://www.youtube.com/@RutAppMx';
+                  setMessage(prev => prev + ytBlock);
+                  textareaRef.current?.focus();
+                }}
+              >
+                <Youtube className="h-3.5 w-3.5 text-red-500" /> Incluir canal YouTube
+              </Button>
             </div>
 
             <Textarea
