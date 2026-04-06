@@ -375,12 +375,7 @@ export default function InventarioPage() {
               ))}
               {filteredProducts && filteredProducts.length > 0 && (
                 <TableRow className="bg-card font-bold">
-                  <TableCell colSpan={3} className="sticky left-0 bg-card">Totales</TableCell>
-                  <TableCell className="text-center">{fmtNum(data.totales.stockAlmacen)}</TableCell>
-                  {(data.rutas ?? []).map(r => {
-                    const total = Object.values(r.stockByProduct).reduce((s, v) => s + v, 0);
-                    return <TableCell key={r.id} className="text-center text-warning">{fmtNum(total)}</TableCell>;
-                  })}
+                  <TableCell colSpan={3}>Totales</TableCell>
                   <TableCell className="text-center">{fmtNum(data.totales.stockTotal)}</TableCell>
                   <TableCell className="text-right">$ {fmt(data.totales.valorCostoTotal)}</TableCell>
                   <TableCell className="text-right text-success">$ {fmt(data.totales.valorVentaTotal)}</TableCell>
