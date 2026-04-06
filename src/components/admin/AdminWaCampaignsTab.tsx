@@ -73,6 +73,15 @@ export default function AdminWaCampaignsTab() {
     });
   }, []);
 
+  // Pending recipients modal state
+  const [pendingModal, setPendingModal] = useState<{
+    campaign: any;
+    pending: any[];
+    removedPending: Set<string>;
+  } | null>(null);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [sendingPending, setSendingPending] = useState(false);
+
   const toggleFilter = (value: string) => {
     if (value === 'all') {
       setSelectedFilters(prev => prev.includes('all') ? [] : ['all']);
@@ -258,22 +267,67 @@ export default function AdminWaCampaignsTab() {
     }
   }
 
-  async function handleResendPending(campaign: any) {
+  async function handleShowPending(campaign: any) {
+    setLoadingPending(true);
     setResending(campaign.id);
     try {
-      // Get pending recipients for this campaign
       const { data: pendingData, error: pendErr } = await supabase.functions.invoke('wa-campaign', {
         body: { action: 'get_campaign_pending', campaign_id: campaign.id },
       });
       if (pendErr) throw pendErr;
 
-      if (!pendingData.pending || pendingData.pending.length === 0) {
-        toast.info('No hay destinatarios pendientes — todos ya recibieron la campaña');
+      // Filter out optouts
+      const filtered = (pendingData.pending || []).filter((r: any) => {
+        const norm = (r.telefono || '').replace(/[\s\-\(\)]/g, '');
+        return !optouts.has(norm);
+      });
+
+      if (filtered.length === 0) {
+        toast.info('No hay destinatarios pendientes — todos ya recibieron la campaña o están bloqueados');
         return;
       }
 
-      const pendingPhones = pendingData.pending.map((r: any) => r.telefono);
-      toast.info(`Enviando a ${pendingPhones.length} pendientes...`);
+      setPendingModal({
+        campaign,
+        pending: filtered.sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || '', 'es')),
+        removedPending: new Set(),
+      });
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cargar pendientes');
+    } finally {
+      setLoadingPending(false);
+      setResending(null);
+    }
+  }
+
+  function removePendingRecipient(telefono: string) {
+    if (!pendingModal) return;
+    setPendingModal({
+      ...pendingModal,
+      removedPending: new Set([...pendingModal.removedPending, telefono]),
+    });
+  }
+
+  function restorePendingRecipient(telefono: string) {
+    if (!pendingModal) return;
+    const next = new Set(pendingModal.removedPending);
+    next.delete(telefono);
+    setPendingModal({ ...pendingModal, removedPending: next });
+  }
+
+  async function handleConfirmSendPending() {
+    if (!pendingModal) return;
+    const { campaign, pending, removedPending } = pendingModal;
+    const toSend = pending.filter(r => !removedPending.has(r.telefono?.replace(/[\s\-\(\)]/g, '') || ''));
+
+    if (toSend.length === 0) {
+      toast.error('No hay destinatarios para enviar');
+      return;
+    }
+
+    setSendingPending(true);
+    try {
+      const pendingPhones = toSend.map((r: any) => r.telefono);
 
       const { data, error } = await supabase.functions.invoke('wa-campaign', {
         body: {
@@ -288,11 +342,12 @@ export default function AdminWaCampaignsTab() {
       if (error) throw error;
       if (data.sent > 0) toast.success(`✅ ${data.sent} mensajes enviados a pendientes`);
       if (data.failed > 0) toast.warning(`⚠️ ${data.failed} fallaron`);
+      setPendingModal(null);
       loadCampaigns();
     } catch (e: any) {
-      toast.error(e.message || 'Error al reenviar');
+      toast.error(e.message || 'Error al enviar');
     } finally {
-      setResending(null);
+      setSendingPending(false);
     }
   }
 
@@ -771,7 +826,7 @@ export default function AdminWaCampaignsTab() {
                           size="sm"
                           className="h-7 text-xs gap-1"
                           disabled={resending === c.id}
-                          onClick={(e) => { e.stopPropagation(); handleResendPending(c); }}
+                          onClick={(e) => { e.stopPropagation(); handleShowPending(c); }}
                         >
                           {resending === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
                           Enviar a faltantes
@@ -845,6 +900,93 @@ export default function AdminWaCampaignsTab() {
           </CardContent>
         )}
       </Card>
+
+      {/* Pending Recipients Modal */}
+      {pendingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setPendingModal(null)}>
+          <div className="bg-background rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                Destinatarios pendientes
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Estos usuarios aún no recibieron esta campaña. Los bloqueados ya fueron excluidos.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-0">
+              {(() => {
+                const activePending = pendingModal.pending.filter(r => {
+                  const norm = (r.telefono || '').replace(/[\s\-\(\)]/g, '');
+                  return !pendingModal.removedPending.has(norm);
+                });
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="text-[10px]">
+                        <TableHead className="py-1.5 px-3 text-[10px]">Nombre</TableHead>
+                        <TableHead className="py-1.5 px-3 text-[10px]">Teléfono</TableHead>
+                        <TableHead className="py-1.5 px-3 text-[10px] text-right">Quitar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingModal.pending.map((r: any) => {
+                        const norm = (r.telefono || '').replace(/[\s\-\(\)]/g, '');
+                        const isRemoved = pendingModal.removedPending.has(norm);
+                        return (
+                          <TableRow key={norm} className={`text-xs ${isRemoved ? 'opacity-40 line-through' : ''}`}>
+                            <TableCell className="py-1.5 px-3 font-medium">{r.nombre || '—'}</TableCell>
+                            <TableCell className="py-1.5 px-3 font-mono text-[11px] text-muted-foreground">{r.telefono}</TableCell>
+                            <TableCell className="py-1.5 px-3 text-right">
+                              {isRemoved ? (
+                                <Button variant="ghost" size="sm" className="h-5 text-[10px]" onClick={() => restorePendingRecipient(norm)}>
+                                  Restaurar
+                                </Button>
+                              ) : (
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePendingRecipient(norm)}>
+                                  <X className="h-3 w-3 text-destructive" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                      {activePending.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-xs text-muted-foreground py-6">
+                            Todos fueron removidos
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                );
+              })()}
+            </div>
+
+            <div className="p-4 border-t flex items-center justify-between gap-3">
+              <div className="text-xs text-muted-foreground">
+                {pendingModal.pending.length - pendingModal.removedPending.size} pendientes
+                {pendingModal.removedPending.size > 0 && ` (${pendingModal.removedPending.size} removidos)`}
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPendingModal(null)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={sendingPending || pendingModal.pending.length - pendingModal.removedPending.size === 0}
+                  onClick={handleConfirmSendPending}
+                >
+                  {sendingPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Send className="h-4 w-4 mr-1.5" />}
+                  Enviar a {pendingModal.pending.length - pendingModal.removedPending.size} pendientes
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
