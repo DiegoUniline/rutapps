@@ -214,22 +214,31 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     setNavigatingTo(stop.id);
     setActiveStopId(stop.id);
     setCurrentStepIdx(0);
+    lastSpokenStepRef.current = -1;
+    followUserRef.current = true;
     setPanelOpen(true);
-    // Initial center on user while directions load
     if (mapRef.current && userLocation) {
       mapRef.current.setCenter(userLocation);
       mapRef.current.setZoom(17);
     }
+    if (voiceEnabled) speak(`Navegando hacia ${stop.nombre}`);
   };
 
   const recenterMap = useCallback(() => {
-    if (mapRef.current && stops.length > 0) {
-      const bounds = new google.maps.LatLngBounds();
-      stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
-      if (userLocation) bounds.extend(userLocation);
-      mapRef.current.fitBounds(bounds, 60);
+    followUserRef.current = true;
+    if (mapRef.current) {
+      if (navigatingTo && userLocation) {
+        // While navigating, recenter on user
+        mapRef.current.setCenter(userLocation);
+        mapRef.current.setZoom(17);
+      } else if (stops.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        stops.forEach(s => bounds.extend({ lat: s.gps_lat, lng: s.gps_lng }));
+        if (userLocation) bounds.extend(userLocation);
+        mapRef.current.fitBounds(bounds, 60);
+      }
     }
-  }, [stops, userLocation]);
+  }, [stops, userLocation, navigatingTo]);
 
   const stopNavigation = () => {
     setNavigatingTo(null);
