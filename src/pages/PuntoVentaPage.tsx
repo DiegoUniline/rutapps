@@ -682,33 +682,7 @@ export default function PuntoVentaPage() {
       const { error: linErr } = await supabase.from('venta_lineas').insert(lineas);
       if (linErr) throw linErr;
 
-      // 3. Deduct stock from warehouse and log movements (trigger auto-recalcs productos.cantidad)
-      for (const item of cart) {
-        if (almacenId) {
-          const { data: sa } = await supabase.from('stock_almacen')
-            .select('id, cantidad')
-            .eq('almacen_id', almacenId)
-            .eq('producto_id', item.producto_id)
-            .maybeSingle();
-          if (sa) {
-            await supabase.from('stock_almacen').update({ cantidad: Math.max(0, sa.cantidad - item.cantidad), updated_at: new Date().toISOString() } as any).eq('id', sa.id);
-          }
-        }
-        
-        // Log inventory movement
-        await supabase.from('movimientos_inventario').insert({
-          empresa_id: empresa.id,
-          tipo: 'salida',
-          producto_id: item.producto_id,
-          cantidad: item.cantidad,
-          almacen_origen_id: almacenId,
-          referencia_tipo: 'venta',
-          referencia_id: ventaId,
-          user_id: user.id,
-          fecha: today,
-          notas: `Venta POS ${ventaData?.folio ?? ventaId.slice(0, 8)}`,
-        } as any);
-      }
+      // 3. Stock deduction + movement logging handled by DB trigger (apply_immediate_sale_inventory)
 
       // 4. Insert cobros if contado (one per method with amount)
       if (condicion === 'contado' && totals.total > 0) {
