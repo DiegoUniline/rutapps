@@ -117,12 +117,13 @@ export default function MiSuscripcionPage() {
 
   async function loadData() {
     setLoading(true);
-    const [subRes, timbresRes, solRes, plansRes, facturasRes] = await Promise.all([
+    const [subRes, timbresRes, solRes, plansRes, facturasRes, cuponRes] = await Promise.all([
       supabase.from('subscriptions').select('*').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('timbres_saldo').select('saldo').eq('empresa_id', empresa!.id).maybeSingle(),
       supabase.from('solicitudes_pago').select('*').eq('empresa_id', empresa!.id).eq('status', 'pendiente').order('created_at', { ascending: false }),
       supabase.from('subscription_plans').select('*').eq('activo', true).order('precio_por_usuario', { ascending: false }),
       supabase.from('facturas').select('id, numero_factura, periodo_inicio, periodo_fin, num_usuarios, total, estado, es_prorrateo, fecha_emision, fecha_pago').eq('empresa_id', empresa!.id).order('fecha_emision', { ascending: false }).limit(20),
+      supabase.from('cupon_usos').select('*, cupones:cupon_id(codigo, descuento_pct, acumulable, meses_duracion)').eq('empresa_id', empresa!.id).order('aplicado_at', { ascending: false }).limit(1),
     ]);
     setSubData(subRes.data);
     setTimbresBalance(timbresRes.data?.saldo ?? 0);
@@ -130,6 +131,14 @@ export default function MiSuscripcionPage() {
     const plans = (plansRes.data as SubPlanRow[]) || [];
     setSubPlans(plans);
     setFacturas((facturasRes.data as any[]) || []);
+
+    // Active coupon
+    const cuponUso = (cuponRes.data as any[])?.[0];
+    if (cuponUso && (cuponUso.meses_restantes === null || cuponUso.meses_restantes > 0)) {
+      setActiveCupon(cuponUso);
+    } else {
+      setActiveCupon(null);
+    }
 
     // Resolve current plan
     if (subRes.data?.plan_id) {
