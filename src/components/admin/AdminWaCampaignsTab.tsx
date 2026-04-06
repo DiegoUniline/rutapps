@@ -267,22 +267,67 @@ export default function AdminWaCampaignsTab() {
     }
   }
 
-  async function handleResendPending(campaign: any) {
+  async function handleShowPending(campaign: any) {
+    setLoadingPending(true);
     setResending(campaign.id);
     try {
-      // Get pending recipients for this campaign
       const { data: pendingData, error: pendErr } = await supabase.functions.invoke('wa-campaign', {
         body: { action: 'get_campaign_pending', campaign_id: campaign.id },
       });
       if (pendErr) throw pendErr;
 
-      if (!pendingData.pending || pendingData.pending.length === 0) {
-        toast.info('No hay destinatarios pendientes — todos ya recibieron la campaña');
+      // Filter out optouts
+      const filtered = (pendingData.pending || []).filter((r: any) => {
+        const norm = (r.telefono || '').replace(/[\s\-\(\)]/g, '');
+        return !optouts.has(norm);
+      });
+
+      if (filtered.length === 0) {
+        toast.info('No hay destinatarios pendientes — todos ya recibieron la campaña o están bloqueados');
         return;
       }
 
-      const pendingPhones = pendingData.pending.map((r: any) => r.telefono);
-      toast.info(`Enviando a ${pendingPhones.length} pendientes...`);
+      setPendingModal({
+        campaign,
+        pending: filtered.sort((a: any, b: any) => (a.nombre || '').localeCompare(b.nombre || '', 'es')),
+        removedPending: new Set(),
+      });
+    } catch (e: any) {
+      toast.error(e.message || 'Error al cargar pendientes');
+    } finally {
+      setLoadingPending(false);
+      setResending(null);
+    }
+  }
+
+  function removePendingRecipient(telefono: string) {
+    if (!pendingModal) return;
+    setPendingModal({
+      ...pendingModal,
+      removedPending: new Set([...pendingModal.removedPending, telefono]),
+    });
+  }
+
+  function restorePendingRecipient(telefono: string) {
+    if (!pendingModal) return;
+    const next = new Set(pendingModal.removedPending);
+    next.delete(telefono);
+    setPendingModal({ ...pendingModal, removedPending: next });
+  }
+
+  async function handleConfirmSendPending() {
+    if (!pendingModal) return;
+    const { campaign, pending, removedPending } = pendingModal;
+    const toSend = pending.filter(r => !removedPending.has(r.telefono?.replace(/[\s\-\(\)]/g, '') || ''));
+
+    if (toSend.length === 0) {
+      toast.error('No hay destinatarios para enviar');
+      return;
+    }
+
+    setSendingPending(true);
+    try {
+      const pendingPhones = toSend.map((r: any) => r.telefono);
 
       const { data, error } = await supabase.functions.invoke('wa-campaign', {
         body: {
@@ -297,11 +342,12 @@ export default function AdminWaCampaignsTab() {
       if (error) throw error;
       if (data.sent > 0) toast.success(`✅ ${data.sent} mensajes enviados a pendientes`);
       if (data.failed > 0) toast.warning(`⚠️ ${data.failed} fallaron`);
+      setPendingModal(null);
       loadCampaigns();
     } catch (e: any) {
-      toast.error(e.message || 'Error al reenviar');
+      toast.error(e.message || 'Error al enviar');
     } finally {
-      setResending(null);
+      setSendingPending(false);
     }
   }
 
