@@ -347,7 +347,7 @@ export default function AdminWaCampaignsTab() {
                 size="sm"
                 className="h-7 gap-1 text-xs"
                 onClick={() => {
-                  const ytBlock = '\n\n📺 Descubre todo lo que Rutapp puede hacer por tu negocio: https://www.youtube.com/@RutAppMx';
+                  const ytBlock = '\n\n📺 Sácale el máximo provecho a Rutapp con nuestros tutoriales: https://www.youtube.com/@RutAppMx';
                   setMessage(prev => prev + ytBlock);
                   textareaRef.current?.focus();
                 }}
