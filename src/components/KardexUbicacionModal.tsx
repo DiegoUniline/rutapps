@@ -232,7 +232,30 @@ export default function KardexUbicacionModal({
             </tbody>
           </table>
         </div>
-      </DialogContent>
+
+        {/* Stock comparison footer */}
+        {rows.length > 0 && (() => {
+          const saldoFinal = rows[rows.length - 1]?.saldo ?? 0;
+          const coincide = saldoFinal === stockActual;
+          return (
+            <div className={cn(
+              "flex items-center justify-between px-4 py-2.5 rounded-lg border text-[13px]",
+              coincide
+                ? "border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
+                : "border-destructive/50 bg-destructive/5"
+            )}>
+              <div className="flex gap-6">
+                <span>Stock real (almacén): <strong>{fmtNum(stockActual)}</strong></span>
+                <span>Saldo kardex: <strong>{fmtNum(saldoFinal)}</strong></span>
+              </div>
+              {coincide ? (
+                <span className="text-green-700 dark:text-green-400 font-medium">✅ Coinciden</span>
+              ) : (
+                <span className="text-destructive font-semibold">🔴 Descuadre: {fmtNum(saldoFinal - stockActual)}</span>
+              )}
+            </div>
+          );
+        })()}
     </Dialog>
   );
 }
