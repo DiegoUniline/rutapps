@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { queueOperation } from '@/lib/syncQueue';
 import { getOfflineTable } from '@/lib/offlineDb';
+import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { resolveProductPrice, resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
@@ -123,22 +124,24 @@ export function useRutaVenta() {
 
         // Fetch real-time saldo from server to avoid stale credit check
         if (navigator.onLine && c.credito) {
-          try {
-            const { data: ventasOnline } = await supabase
-              .from('ventas')
-              .select('saldo_pendiente')
-              .eq('empresa_id', empresa!.id)
-              .eq('cliente_id', urlClienteId!)
-              .eq('condicion_pago', 'credito')
-              .gt('saldo_pendiente', 0)
-              .in('status', ['confirmado', 'entregado', 'facturado']);
-            if (ventasOnline) {
-              const saldoReal = ventasOnline.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0);
-              if (Math.abs(saldoReal - saldoPendienteTotal) > 1) {
-                toast.warning(`Saldo actualizado desde servidor: $${saldoReal.toFixed(2)}`);
+          (async () => {
+            try {
+              const { data: ventasOnline } = await supabase
+                .from('ventas')
+                .select('saldo_pendiente')
+                .eq('empresa_id', empresa!.id)
+                .eq('cliente_id', urlClienteId!)
+                .eq('condicion_pago', 'credito')
+                .gt('saldo_pendiente', 0)
+                .in('status', ['confirmado', 'entregado', 'facturado']);
+              if (ventasOnline) {
+                const saldoReal = ventasOnline.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0);
+                if (Math.abs(saldoReal - saldoPendienteTotal) > 1) {
+                  toast.warning(`Saldo actualizado desde servidor: $${saldoReal.toFixed(2)}`);
+                }
               }
-            }
-          } catch {} // offline — continue with cached data
+            } catch {} // offline — continue with cached data
+          })();
         }
       }
     }
