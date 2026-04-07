@@ -58,7 +58,12 @@ export default function KardexUbicacionModal({
 
   const filtered = useMemo(() => {
     let list = [...rows].reverse();
-    if (filterTipo !== 'todos') list = list.filter(r => r.tipo === filterTipo);
+    if (filterTipo.startsWith('ref:')) {
+      const refKey = filterTipo.slice(4);
+      list = list.filter(r => r.referencia_tipo === refKey);
+    } else if (filterTipo !== 'todos') {
+      list = list.filter(r => r.tipo === filterTipo);
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(r =>
