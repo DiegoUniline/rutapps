@@ -363,8 +363,8 @@ export function useVentaForm() {
       return;
     }
     try {
-      // Validate stock for venta_directa with entrega_inmediata
-      if (form.tipo === 'venta_directa' && form.entrega_inmediata && form.almacen_id) {
+      // Validate stock for ALL venta_directa (immediate or not — you shouldn't sell what you don't have)
+      if (form.tipo === 'venta_directa' && form.almacen_id) {
         const productIds = lineas.filter(l => l.producto_id).map(l => l.producto_id!);
         if (productIds.length > 0) {
           const { data: stockRows } = await supabase
