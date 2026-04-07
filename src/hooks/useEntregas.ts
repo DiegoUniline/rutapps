@@ -349,22 +349,25 @@ export function useValidarEntrega() {
       } as any).eq('id', entregaId);
       if (error) throw error;
 
-      // Deduct stock_camion for the ruta vendor
+      // Deduct from vendedor's almacen via stock_almacen
       const { data: ent } = await supabase.from('entregas')
         .select('empresa_id, vendedor_ruta_id, vendedor_id, entrega_lineas(producto_id, cantidad_entregada, hecho)')
         .eq('id', entregaId).single();
 
       const vendId = ent?.vendedor_ruta_id || ent?.vendedor_id;
       if (vendId) {
-        for (const l of (ent?.entrega_lineas ?? []).filter((l: any) => l.hecho && l.cantidad_entregada > 0)) {
-          const { data: sc } = await supabase.from('stock_camion')
-            .select('id, cantidad_actual').eq('empresa_id', ent!.empresa_id)
-            .eq('vendedor_id', vendId).eq('producto_id', (l as any).producto_id)
-            .order('fecha', { ascending: false }).limit(1).maybeSingle();
-          if (sc) {
-            await supabase.from('stock_camion')
-              .update({ cantidad_actual: Math.max(0, sc.cantidad_actual - (l as any).cantidad_entregada) } as any)
-              .eq('id', sc.id);
+        const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', vendId).maybeSingle();
+        const almId = prof?.almacen_id;
+        if (almId) {
+          for (const l of (ent?.entrega_lineas ?? []).filter((l: any) => l.hecho && l.cantidad_entregada > 0)) {
+            const { data: sa } = await supabase.from('stock_almacen')
+              .select('id, cantidad').eq('almacen_id', almId)
+              .eq('producto_id', (l as any).producto_id).maybeSingle();
+            if (sa) {
+              await supabase.from('stock_almacen')
+                .update({ cantidad: Math.max(0, sa.cantidad - (l as any).cantidad_entregada), updated_at: new Date().toISOString() } as any)
+                .eq('id', sa.id);
+            }
           }
         }
       }
