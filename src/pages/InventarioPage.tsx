@@ -441,8 +441,7 @@ export default function InventarioPage() {
                       return (
                         <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
                           {qty ? fmtNum(qty) : '—'}
-                          {qty > 0 && (
-                            <button
+                          <button
                               onClick={() => setKardex({
                                 productoId: p.id,
                                 productoNombre: p.nombre,
@@ -456,7 +455,6 @@ export default function InventarioPage() {
                             >
                               📋
                             </button>
-                          )}
                         </TableCell>
                       );
                     })}
