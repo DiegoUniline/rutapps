@@ -94,17 +94,17 @@ export function useVentaLineasPaginated(
       if (statusFilter && statusFilter !== 'todos') {
         const arr = statusFilter.split(',');
         if (arr.length > 1) q = q.in('ventas.status', arr as any);
-        else q = q.eq('ventas.status', statusFilter);
+        else q = q.eq('ventas.status', statusFilter as any);
       }
       if (tipoFilter && tipoFilter !== 'todos') {
         const arr = tipoFilter.split(',');
         if (arr.length > 1) q = q.in('ventas.tipo', arr as any);
-        else q = q.eq('ventas.tipo', tipoFilter);
+        else q = q.eq('ventas.tipo', tipoFilter as any);
       }
       if (condicionFilter && condicionFilter !== 'todos') {
         const arr = condicionFilter.split(',');
         if (arr.length > 1) q = q.in('ventas.condicion_pago', arr as any);
-        else q = q.eq('ventas.condicion_pago', condicionFilter);
+        else q = q.eq('ventas.condicion_pago', condicionFilter as any);
       }
       if (vendedorFilter && vendedorFilter !== 'todos') {
         const arr = vendedorFilter.split(',');
