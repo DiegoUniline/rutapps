@@ -206,19 +206,16 @@ function useInventarioData() {
         .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
         .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
-      // Products with enriched data
+      // Products with enriched data — all stock comes from stock_almacen only
       const productosEnriquecidos = (productos ?? []).map(p => {
         const stockAlmacen = getTotalStockEnUbicaciones(p.id);
-        const stockRuta = rutaStock[p.id] ?? 0;
-        const stockTotal = stockAlmacen + stockRuta;
+        const stockTotal = stockAlmacen;
         const stockTipoAlmacen = hasWarehouseStock ? getStockByTipo(p.id, 'almacen') : stockAlmacen;
-        const stockTipoRutaAlm = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
-        // "Rutas" card = almacenes tipo ruta + cargas/stock_camion en ruta
-        const stockTipoRuta = stockTipoRutaAlm + stockRuta;
+        const stockTipoRuta = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
         return {
           ...p,
           stockAlmacen,
-          stockRuta,
+          stockRuta: 0,
           stockTotal,
           stockTipoAlmacen,
           stockTipoRuta,
@@ -363,23 +360,14 @@ export default function InventarioPage() {
 
       {/* Almacen view */}
       {view === 'almacen' && data && (() => {
-        // Build combined locations: almacenes + rutas
-        const ubicaciones = [
-          ...(data.almacenes ?? []).map(a => ({
-            id: a.id,
-            nombre: a.nombre,
-            tipo: 'almacen' as const,
-            icon: Warehouse,
-            getStock: (prodId: string) => data.stockAlmacenMap[a.id]?.[prodId] ?? 0,
-          })),
-          ...(data.rutas ?? []).map(r => ({
-            id: r.id,
-            nombre: r.vendedor,
-            tipo: 'ruta' as const,
-            icon: Truck,
-            getStock: (prodId: string) => r.stockByProduct[prodId] ?? 0,
-          })),
-        ];
+        // Only almacenes (includes tipo almacen and tipo ruta)
+        const ubicaciones = (data.almacenes ?? []).map(a => ({
+          id: a.id,
+          nombre: a.nombre,
+          tipo: ((a as any).tipo ?? 'almacen') as 'almacen' | 'ruta',
+          icon: ((a as any).tipo === 'ruta' ? Truck : Warehouse) as typeof Warehouse,
+          getStock: (prodId: string) => data.stockAlmacenMap[a.id]?.[prodId] ?? 0,
+        }));
 
         return (
         <div className="bg-card border border-border rounded overflow-x-auto">
