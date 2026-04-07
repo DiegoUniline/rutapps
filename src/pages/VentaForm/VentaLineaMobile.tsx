@@ -35,8 +35,10 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           {readOnly ? (
-            <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</div>
-            {prod?._stock != null && <div className="text-[10px] text-muted-foreground font-medium">Stock: {prod._stock}</div>}
+            <>
+              <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</div>
+              {prod?._stock != null && <div className="text-[10px] text-muted-foreground font-medium">Stock: {prod._stock}</div>}
+            </>
           ) : (
             <ProductSearchInput
               products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
