@@ -101,7 +101,9 @@ export default function ConteoDetailModal({ conteoId, open, onClose }: Props) {
             tipo: dif > 0 ? 'entrada' : 'salida',
             producto_id: linea.producto_id,
             cantidad: Math.abs(dif),
-            almacen_origen_id: conteo?.almacen_id,
+            ...(dif > 0
+              ? { almacen_destino_id: conteo?.almacen_id }
+              : { almacen_origen_id: conteo?.almacen_id }),
             referencia_tipo: 'conteo_fisico',
             referencia_id: conteoId,
             notas: `Ajuste por conteo físico ${conteo?.folio}. Contado: ${linea.cantidad_contada}, Sistema: ${stockActual}`,
