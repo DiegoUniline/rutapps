@@ -292,6 +292,7 @@ export default function InventarioPage() {
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
+  const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
 
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
