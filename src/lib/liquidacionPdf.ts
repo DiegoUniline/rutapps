@@ -120,9 +120,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   y += 6;
 
   const cuadreRows: [string, string][] = [
-    ['Ventas contado:', `$${fmtCurrency(cuadre.totalContado)}`],
-    ['Ventas crédito:', `$${fmtCurrency(cuadre.totalCredito)}`],
-    ['Cobros en efectivo:', `$${fmtCurrency(cuadre.cobrosEfectivo)}`],
+    ['+ Cobros en efectivo:', `$${fmtCurrency(cuadre.cobrosEfectivo)}`],
   ];
   if ((cuadre.cobrosTransferencia ?? 0) > 0) {
     cuadreRows.push(['Cobros transferencia:', `$${fmtCurrency(cuadre.cobrosTransferencia)}`]);
