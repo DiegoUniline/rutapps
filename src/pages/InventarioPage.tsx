@@ -206,19 +206,16 @@ function useInventarioData() {
         .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
         .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
-      // Products with enriched data
+      // Products with enriched data — all stock comes from stock_almacen only
       const productosEnriquecidos = (productos ?? []).map(p => {
         const stockAlmacen = getTotalStockEnUbicaciones(p.id);
-        const stockRuta = rutaStock[p.id] ?? 0;
-        const stockTotal = stockAlmacen + stockRuta;
+        const stockTotal = stockAlmacen;
         const stockTipoAlmacen = hasWarehouseStock ? getStockByTipo(p.id, 'almacen') : stockAlmacen;
-        const stockTipoRutaAlm = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
-        // "Rutas" card = almacenes tipo ruta + cargas/stock_camion en ruta
-        const stockTipoRuta = stockTipoRutaAlm + stockRuta;
+        const stockTipoRuta = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
         return {
           ...p,
           stockAlmacen,
-          stockRuta,
+          stockRuta: 0,
           stockTotal,
           stockTipoAlmacen,
           stockTipoRuta,
