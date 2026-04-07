@@ -195,7 +195,7 @@ function useInventarioData() {
         let totalUnidades = 0, valorCosto = 0, valorVenta = 0;
         const lineasDetalle: any[] = [];
         for (const [prodId, qty] of Object.entries(almStock)) {
-          if ((qty as number) <= 0) continue;
+          if ((qty as number) === 0) continue;
           totalUnidades += qty as number;
           const prod = (productos ?? []).find(p => p.id === prodId);
           valorCosto += (qty as number) * (prod?.costo ?? 0);
@@ -440,7 +440,7 @@ export default function InventarioPage() {
                       const qty = u.getStock(p.id);
                       return (
                         <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
-                          {qty ? fmtNum(qty) : '—'}
+                          {qty !== 0 ? <span className={cn(qty < 0 && "text-destructive")}>{fmtNum(qty)}</span> : '—'}
                           <button
                               onClick={() => setKardex({
                                 productoId: p.id,
