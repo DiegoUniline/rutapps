@@ -549,6 +549,19 @@ export default function InventarioPage() {
       {view === 'rutas' && selectedRuta && (
         <RutaDetail ruta={selectedRuta} onBack={() => setSelectedRuta(null)} />
       )}
+
+      {kardex && (
+        <KardexUbicacionModal
+          open={!!kardex}
+          onClose={() => setKardex(null)}
+          productoId={kardex.productoId}
+          productoNombre={kardex.productoNombre}
+          ubicacionId={kardex.ubicacionId}
+          ubicacionNombre={kardex.ubicacionNombre}
+          ubicacionTipo={kardex.ubicacionTipo}
+          stockActual={kardex.stock}
+        />
+      )}
     </div>
   );
 }
