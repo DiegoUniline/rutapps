@@ -495,6 +495,10 @@ export function useVentaForm() {
       return;
     }
     if (newStatus === 'borrador') {
+      if (['entregado', 'facturado'].includes(form.status ?? '')) {
+        toast.error('Una venta entregada no puede volver a borrador, solo cancelar');
+        return;
+      }
       const prevStatus = form.status;
       setForm(prev => ({ ...prev, status: 'borrador' }));
       await saveVenta.mutateAsync({ id: form.id, status: 'borrador' } as any);
