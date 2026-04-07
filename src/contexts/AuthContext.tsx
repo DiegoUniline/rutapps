@@ -139,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, [realEmpresa]);
 
+  const initialisedRef = useRef(false);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') return;
@@ -169,8 +171,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [loadUserData]);
-
-  const initialisedRef = useRef(false);
 
   const signOut = async () => { await supabase.auth.signOut(); };
 
