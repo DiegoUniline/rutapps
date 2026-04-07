@@ -12,12 +12,14 @@ const REFERENCIA_LABELS: Record<string, string> = {
   auditoria: 'Auditoría',
   compra: 'Compra',
   venta: 'Venta',
+  venta_ruta: 'Venta ruta',
   traspaso: 'Traspaso',
-  entrega: 'Entrega',
+  entrega: 'Surtido / Entrega',
   carga: 'Carga camión',
   devolucion: 'Devolución',
   descarga: 'Descarga ruta',
   cancelacion_venta: 'Cancel. venta',
+  conteo: 'Conteo físico',
   manual: 'Manual',
 };
 
@@ -109,6 +111,20 @@ export default function KardexUbicacionModal({
           </div>
           <Input type="date" className="h-8 text-[12px] w-[140px]" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} placeholder="Desde" />
           <Input type="date" className="h-8 text-[12px] w-[140px]" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} placeholder="Hasta" />
+          <select
+            className="h-8 text-[12px] border border-border rounded px-2 bg-background text-foreground"
+            value={filterTipo}
+            onChange={e => setFilterTipo(e.target.value)}
+          >
+            <option value="todos">Todos los tipos</option>
+            <option value="entrada">Solo entradas</option>
+            <option value="salida">Solo salidas</option>
+            <optgroup label="Por concepto">
+              {Object.entries(REFERENCIA_LABELS).map(([k, v]) => (
+                <option key={k} value={`ref:${k}`}>{v}</option>
+              ))}
+            </optgroup>
+          </select>
           <div className="flex gap-1">
             {[
               { key: 'todos', label: 'Todos' },
