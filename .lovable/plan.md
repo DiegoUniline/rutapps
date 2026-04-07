@@ -1,43 +1,41 @@
 
 
-## Bug Analysis: Surtido no descuenta stock del almacen
+## Plan: Bloquear "A borrador" en ventas entregadas
 
-### Root Cause
+### Regla de negocio
+Una venta que ya fue entregada (`entregado`, `facturado`) **no puede volver a borrador**. Solo puede **cancelarse**, y la cancelación ya restaura el stock vía el trigger `restore_cancelled_sale_inventory`.
 
-The `surtir_linea_entrega` database function has a critical bug: **deducts from `productos.cantidad` (global stock) but NEVER updates `stock_almacen`** (warehouse-specific stock).
+### Cambios
 
-The function does:
-1. Locks `productos` row, checks global stock
-2. Deducts from `productos.cantidad` (global)
-3. Marks `entrega_lineas` as fulfilled
-4. Logs `movimientos_inventario`
+**1. `src/components/venta/VentaFormHeader.tsx` (Desktop)**
+- Cambiar la condición del botón "A borrador" de:
+  `status !== 'cancelado' && status !== 'borrador'`
+  a:
+  `status === 'confirmado'`
+- Es decir, solo ventas en estado **confirmado** pueden volver a borrador. Entregadas, facturadas, etc. no.
 
-**Missing**: It never touches `stock_almacen`, so the warehouse-specific inventory stays the same. Since the inventory page now reads from `stock_almacen`, the user sees no change.
+**2. `src/pages/ruta/RutaVentaDetalle/DetalleView.tsx` (Mobile)**
+- Línea ~91-92: Cambiar la condición que muestra "A borrador" de:
+  `venta.status !== 'cancelado'`
+  a:
+  `venta.status === 'confirmado'`
+- Línea ~185-186: Aplicar la misma restricción al botón inferior "A borrador".
 
-### Fix
+**3. `src/pages/VentaForm/useVentaForm.ts` (Backend guard)**
+- En el handler de `newStatus === 'borrador'` (~línea 497), agregar validación:
+  ```
+  if (['entregado','facturado'].includes(form.status)) {
+    toast.error('Una venta entregada no puede volver a borrador, solo cancelar');
+    return;
+  }
+  ```
 
-**Update the `surtir_linea_entrega` function** to also deduct from `stock_almacen` for the given `p_almacen_origen_id`, matching the pattern already used in `confirmar_traspaso` and `apply_immediate_sale_inventory`.
+**4. `src/pages/ruta/RutaVentaDetalle/useVentaDetalle.ts` (Backend guard mobile)**
+- Agregar la misma validación en la función `handleVolverBorrador`.
 
-### Changes
-
-1. **Migration**: Recreate `surtir_linea_entrega` adding a `stock_almacen` deduction block:
-   - SELECT the `stock_almacen` row for the almacen + product (with `FOR UPDATE` lock)
-   - Validate stock against the warehouse quantity (not global)
-   - UPDATE `stock_almacen.cantidad` to deduct
-   - Keep existing `productos.cantidad` deduction for global total consistency
-
-This is a single migration file change. No frontend code changes needed.
-
-### Technical Detail
-
-```text
-BEFORE (broken):
-  productos.cantidad -= surtido    ✓
-  stock_almacen.cantidad           ✗ (never touched)
-
-AFTER (fixed):
-  productos.cantidad -= surtido    ✓
-  stock_almacen.cantidad -= surtido ✓ (new)
-  Validates against stock_almacen   ✓ (warehouse-level check)
-```
+### Resultado
+- Ventas en `confirmado` → pueden ir a borrador o cancelarse
+- Ventas en `entregado` / `facturado` → solo pueden cancelarse (y el trigger restaura stock)
+- Ventas en `borrador` → pueden editarse libremente
+- Ventas en `cancelado` → no tienen acciones de estado
 
