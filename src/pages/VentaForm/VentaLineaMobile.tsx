@@ -38,7 +38,7 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
             <div className="text-sm font-medium truncate">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</div>
           ) : (
             <ProductSearchInput
-              products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
+              products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
               value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
               onSelect={pid => onProductSelect(idx, pid)} autoFocus={idx === lineas.length - 1 && isEmpty} readOnly={readOnly}
             />
