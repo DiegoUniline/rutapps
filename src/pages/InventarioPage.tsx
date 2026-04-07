@@ -439,8 +439,24 @@ export default function InventarioPage() {
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
                       return (
-                        <TableCell key={u.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
+                        <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
                           {qty ? fmtNum(qty) : '—'}
+                          {qty > 0 && (
+                            <button
+                              onClick={() => setKardex({
+                                productoId: p.id,
+                                productoNombre: p.nombre,
+                                ubicacionId: u.id,
+                                ubicacionNombre: u.nombre,
+                                ubicacionTipo: u.tipo === 'ruta' ? 'camion' : 'almacen',
+                                stock: qty,
+                              })}
+                              className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/cell:opacity-100 transition-opacity text-[11px] hover:bg-accent rounded p-0.5"
+                              title="Ver kardex de ubicación"
+                            >
+                              📋
+                            </button>
+                          )}
                         </TableCell>
                       );
                     })}
