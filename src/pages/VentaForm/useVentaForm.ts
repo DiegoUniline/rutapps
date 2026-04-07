@@ -57,7 +57,7 @@ export function useVentaForm() {
   const deleteVenta = useDeleteVenta();
   const queryClient = useQueryClient();
   const { data: clientesList } = useClientes();
-  const { data: productosList } = useProductosForSelect();
+  const { data: productosListRaw } = useProductosForSelect();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
   const crearEntrega = useCrearEntrega();
@@ -75,6 +75,31 @@ export function useVentaForm() {
   const canCreateVenta = hasPermiso('ventas', 'crear');
   const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
   const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  // Fetch stock per almacen for filtering products on venta_directa
+  const { data: stockAlmacenData } = useQuery({
+    queryKey: ['stock-almacen-form', form.almacen_id],
+    enabled: !!form.almacen_id && form.tipo === 'venta_directa',
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', form.almacen_id!);
+      return data ?? [];
+    },
+  });
+
+  // For venta_directa, hide products with 0 stock (unless vender_sin_stock)
+  const productosList = useMemo(() => {
+    if (!productosListRaw) return productosListRaw;
+    if (form.tipo !== 'venta_directa') return productosListRaw;
+    const stockMap = new Map((stockAlmacenData ?? []).map((s: any) => [s.producto_id, s.cantidad ?? 0]));
+    return productosListRaw.filter((p: any) => {
+      if (p.vender_sin_stock) return true;
+      const qty = form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0);
+      return qty > 0;
+    });
+  }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
     const key = `${row}-${col}`;
