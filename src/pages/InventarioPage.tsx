@@ -45,99 +45,6 @@ function useInventarioData() {
         .select('almacen_id, producto_id, cantidad')
         .eq('empresa_id', eid);
 
-      // Active cargas metadata
-      const { data: cargas } = await supabase
-        .from('cargas')
-        .select('id, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), repartidor:repartidor_id(nombre), almacen:almacen_id(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
-        .eq('empresa_id', eid)
-        .in('status', ['en_ruta', 'pendiente'] as any)
-        .order('fecha', { ascending: false });
-
-      // Stock camión from entregas cargadas
-      const { data: stockCamion } = await supabase
-        .from('stock_camion')
-        .select('id, vendedor_id, producto_id, cantidad_inicial, cantidad_actual, fecha, created_at, vendedores:vendedor_id(nombre)')
-        .eq('empresa_id', eid)
-        .neq('cantidad_actual', 0);
-
-      // Mobile route stock comes only from stock_camion.
-      // Active cargas are used as route metadata, not as stock source,
-      // to avoid duplicating inventory in route columns and totals.
-      const rutaStock: Record<string, number> = {};
-      const cargaDetails: any[] = [];
-      const rutaBreakdown: Record<string, { vendedor: string; stockByProduct: Record<string, number> }> = {};
-      const cargaMetaByVendedor: Record<string, { fecha: string | null; status: string; almacen: string | null; repartidor: string | null }> = {};
-
-      for (const c of (cargas ?? [])) {
-        const rutaKey = c.vendedor_id ?? c.id;
-        if (!rutaKey || cargaMetaByVendedor[rutaKey]) continue;
-        cargaMetaByVendedor[rutaKey] = {
-          fecha: c.fecha,
-          status: c.status,
-          almacen: (c.almacen as any)?.nombre ?? null,
-          repartidor: (c.repartidor as any)?.nombre ?? null,
-        };
-      }
-
-      const scByVendedor: Record<string, { vendedor: string; items: any[]; byProduct: Record<string, any> }> = {};
-      for (const sc of (stockCamion ?? [])) {
-        const vid = sc.vendedor_id;
-        if (!vid) continue;
-        if (!scByVendedor[vid]) {
-          scByVendedor[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', items: [], byProduct: {} };
-        }
-        scByVendedor[vid].items.push(sc);
-        const qty = Number(sc.cantidad_actual ?? 0);
-        const initial = Number(sc.cantidad_inicial ?? 0);
-        rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + qty;
-        if (!rutaBreakdown[vid]) rutaBreakdown[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', stockByProduct: {} };
-        rutaBreakdown[vid].stockByProduct[sc.producto_id] = (rutaBreakdown[vid].stockByProduct[sc.producto_id] ?? 0) + qty;
-
-        const prod = (productos ?? []).find(p => p.id === sc.producto_id);
-        const current = scByVendedor[vid].byProduct[sc.producto_id] ?? {
-          producto_id: sc.producto_id,
-          codigo: prod?.codigo ?? '',
-          nombre: prod?.nombre ?? '',
-          cargado: 0,
-          entregado: 0,
-          devuelto: 0,
-          abordo: 0,
-          costo: prod?.costo ?? 0,
-          precio: prod?.precio_principal ?? 0,
-        };
-        current.cargado += initial;
-        current.abordo += qty;
-        scByVendedor[vid].byProduct[sc.producto_id] = current;
-      }
-
-      for (const [vid, group] of Object.entries(scByVendedor)) {
-        const lineasDetalle = Object.values(group.byProduct)
-          .map((linea: any) => ({
-            ...linea,
-            entregado: linea.cargado - linea.abordo,
-          }))
-          .sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
-        const total = lineasDetalle.reduce((sum: number, linea: any) => sum + linea.abordo, 0);
-        const valCosto = lineasDetalle.reduce((sum: number, linea: any) => sum + (linea.abordo * linea.costo), 0);
-        const valVenta = lineasDetalle.reduce((sum: number, linea: any) => sum + (linea.abordo * linea.precio), 0);
-        const meta = cargaMetaByVendedor[vid];
-
-        cargaDetails.push({
-          id: meta?.fecha ? `carga-${vid}-${meta.fecha}` : `sc-${vid}`,
-          origen: 'ruta',
-          vendedor: group.vendedor,
-          vendedor_id: vid,
-          repartidor: meta?.repartidor ?? null,
-          almacen: meta?.almacen ?? null,
-          fecha: meta?.fecha ?? (group.items ?? [])[0]?.fecha ?? null,
-          status: meta?.status ?? 'cargado',
-          totalUnidades: total,
-          valorCosto: valCosto,
-          valorVenta: valVenta,
-          lineas: lineasDetalle,
-        });
-      }
-
       // Build stock_almacen map: almacen_id -> producto_id -> cantidad
       const stockAlmacenMap: Record<string, Record<string, number>> = {};
       for (const sa of (stockAlmacenData ?? [])) {
@@ -145,9 +52,7 @@ function useInventarioData() {
         stockAlmacenMap[sa.almacen_id][sa.producto_id] = sa.cantidad;
       }
       const hasWarehouseStock = (stockAlmacenData?.length ?? 0) > 0;
-      // Separate almacen IDs by tipo
-      const almacenTipoMap: Record<string, string> = {};
-      for (const alm of (almacenes ?? [])) almacenTipoMap[alm.id] = (alm as any).tipo ?? 'almacen';
+
       const getStockByTipo = (productoId: string, tipo: 'almacen' | 'ruta') => {
         return (almacenes ?? [])
           .filter(a => ((a as any).tipo ?? 'almacen') === tipo)
@@ -160,7 +65,8 @@ function useInventarioData() {
         return (almacenes ?? []).reduce((sum, alm) => sum + (stockAlmacenMap[alm.id]?.[productoId] ?? 0), 0);
       };
 
-      // Also include almacenes with stock as "route" cards
+      // Build "Rutas activas" cards from almacenes tipo ruta
+      const cargaDetails: any[] = [];
       for (const alm of (almacenes ?? [])) {
         const almStock = stockAlmacenMap[alm.id] ?? {};
         let totalUnidades = 0, valorCosto = 0, valorVenta = 0;
@@ -186,7 +92,7 @@ function useInventarioData() {
         if (totalUnidades > 0) {
           cargaDetails.push({
             id: `alm-${alm.id}`,
-            origen: 'almacen',
+            origen: (alm as any).tipo === 'ruta' ? 'ruta' : 'almacen',
             vendedor: alm.nombre,
             vendedor_id: null,
             repartidor: null,
@@ -196,15 +102,10 @@ function useInventarioData() {
             totalUnidades,
             valorCosto,
             valorVenta,
-            lineas: lineasDetalle,
+            lineas: lineasDetalle.sort((a: any, b: any) => a.nombre.localeCompare(b.nombre)),
           });
         }
       }
-
-      // Build sorted list of routes for columns
-      const rutas = Object.entries(rutaBreakdown)
-        .map(([id, r]) => ({ id, vendedor: r.vendedor, stockByProduct: r.stockByProduct }))
-        .sort((a, b) => a.vendedor.localeCompare(b.vendedor));
 
       // Products with enriched data — all stock comes from stock_almacen only
       const productosEnriquecidos = (productos ?? []).map(p => {
