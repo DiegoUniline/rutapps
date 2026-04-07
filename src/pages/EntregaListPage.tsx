@@ -215,10 +215,10 @@ export default function EntregaListPage() {
           fecha_asignacion: new Date().toISOString(),
         } as any).eq('id', eid);
         if (cargarTambien) {
-          const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho').eq('entrega_id', eid);
+          const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
           for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
             await supabase.from('stock_camion').insert({ empresa_id: empresa!.id, vendedor_id: vendedorRutaId, producto_id: l.producto_id, cantidad_inicial: l.cantidad_entregada, cantidad_actual: l.cantidad_entregada, fecha: today } as any);
-            await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, vendedor_destino_id: vendedorRutaId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
+            await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, vendedor_destino_id: vendedorRutaId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
           }
           await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
         }
@@ -240,10 +240,10 @@ export default function EntregaListPage() {
         const eid = (entrega as any).id;
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         if (!vendId) continue;
-        const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho').eq('entrega_id', eid);
+        const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
         for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
           await supabase.from('stock_camion').insert({ empresa_id: empresa!.id, vendedor_id: vendId, producto_id: l.producto_id, cantidad_inicial: l.cantidad_entregada, cantidad_actual: l.cantidad_entregada, fecha: today } as any);
-          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, vendedor_destino_id: vendId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
+          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, vendedor_destino_id: vendId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
         }
         await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
       }
