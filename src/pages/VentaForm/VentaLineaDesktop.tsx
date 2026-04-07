@@ -67,10 +67,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
     <tr className={cn("border-b border-table-border transition-colors group", isEmpty ? "bg-transparent" : "hover:bg-table-hover")}>
       <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}</span> : (
+        {readOnly ? <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}{prod?._stock != null && <span className="ml-1.5 text-[10px] text-muted-foreground font-medium">(Stock: {prod._stock})</span>}</span> : (
           <ProductSearchInput
-            products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal }))}
-            value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}` : undefined}
+            products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
+            value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}${prod._stock != null ? ` (Stock: ${prod._stock})` : ''}` : undefined}
             onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly}
             registerRef={el => setCellRef(idx, 0, el)}
           />

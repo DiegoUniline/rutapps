@@ -89,7 +89,7 @@ export function useVentaForm() {
     },
   });
 
-  // For venta_directa, hide products with 0 stock (unless vender_sin_stock)
+  // For venta_directa, hide products with 0 stock (unless vender_sin_stock) and enrich with stock qty
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
     if (form.tipo !== 'venta_directa') return productosListRaw;
@@ -98,7 +98,10 @@ export function useVentaForm() {
       if (p.vender_sin_stock) return true;
       const qty = form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0);
       return qty > 0;
-    });
+    }).map((p: any) => ({
+      ...p,
+      _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
+    }));
   }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
@@ -347,6 +350,18 @@ export function useVentaForm() {
   const addLine = () => { if (readOnly) return; setLineas(prev => [...prev, emptyLine()]); setDirty(true); setTimeout(() => focusCell(lineas.length, 0), 50); };
   const updateLine = (idx: number, field: string, val: any) => {
     if (readOnly) return;
+    // Validate max stock for entrega inmediata
+    if (field === 'cantidad' && form.tipo === 'venta_directa' && form.entrega_inmediata) {
+      const line = lineas[idx];
+      if (line?.producto_id) {
+        const prod = productosList?.find((p: any) => p.id === line.producto_id);
+        const stock = prod?._stock ?? Infinity;
+        if (prod && !prod.vender_sin_stock && Number(val) > stock) {
+          toast.error(`Stock máximo para "${prod.nombre}": ${stock}`);
+          val = stock;
+        }
+      }
+    }
     // When tax fields change, recalculate pricing with new tax settings so rounding still applies
     if ((field === 'iva_pct' || field === 'ieps_pct') && tarifaRules?.length) {
       const line = lineas[idx];

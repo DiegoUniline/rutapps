@@ -7,6 +7,7 @@ interface ProductOption {
   codigo: string;
   nombre: string;
   precio_principal?: number;
+  _stock?: number;
 }
 
 interface ProductoDropdownProps {
@@ -108,11 +109,18 @@ export default function ProductoDropdown({
               <span className="text-muted-foreground font-mono mr-1.5">{highlightMatch(p.codigo, search)}</span>
               {highlightMatch(p.nombre, search)}
             </span>
-            {p.precio_principal != null && (
-              <span className="text-muted-foreground shrink-0 font-mono text-[11px]">
-                ${Number(p.precio_principal).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-              </span>
-            )}
+            <span className="flex items-center gap-2 shrink-0">
+              {p._stock != null && (
+                <span className="text-[10px] font-medium text-muted-foreground bg-accent/60 rounded px-1.5 py-0.5">
+                  {p._stock}
+                </span>
+              )}
+              {p.precio_principal != null && (
+                <span className="text-muted-foreground font-mono text-[11px]">
+                  ${Number(p.precio_principal).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </span>
+              )}
+            </span>
           </div>
         ))
       )}
