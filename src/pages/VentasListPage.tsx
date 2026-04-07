@@ -142,7 +142,7 @@ export default function VentasListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
           search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
-          placeholder="Buscar por folio o cliente..."
+          placeholder={isProductView ? "Buscar por producto, código o folio..." : "Buscar por folio o cliente..."}
           filterOptions={FILTER_OPTIONS} activeFilters={filters}
           onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
           onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
