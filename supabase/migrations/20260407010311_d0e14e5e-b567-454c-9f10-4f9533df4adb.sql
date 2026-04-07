@@ -1,0 +1,1 @@
+ALTER FUNCTION public.apply_immediate_sale_inventory() SET search_path = public;
