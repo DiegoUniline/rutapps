@@ -343,6 +343,26 @@ export function useValidarEntrega() {
         validado_at: new Date().toISOString(),
       } as any).eq('id', entregaId);
       if (error) throw error;
+
+      // Deduct stock_camion for the ruta vendor
+      const { data: ent } = await supabase.from('entregas')
+        .select('empresa_id, vendedor_ruta_id, vendedor_id, entrega_lineas(producto_id, cantidad_entregada, hecho)')
+        .eq('id', entregaId).single();
+
+      const vendId = ent?.vendedor_ruta_id || ent?.vendedor_id;
+      if (vendId) {
+        for (const l of (ent?.entrega_lineas ?? []).filter((l: any) => l.hecho && l.cantidad_entregada > 0)) {
+          const { data: sc } = await supabase.from('stock_camion')
+            .select('id, cantidad_actual').eq('empresa_id', ent!.empresa_id)
+            .eq('vendedor_id', vendId).eq('producto_id', (l as any).producto_id)
+            .order('fecha', { ascending: false }).limit(1).maybeSingle();
+          if (sc) {
+            await supabase.from('stock_camion')
+              .update({ cantidad_actual: Math.max(0, sc.cantidad_actual - (l as any).cantidad_entregada) } as any)
+              .eq('id', sc.id);
+          }
+        }
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
@@ -356,6 +376,25 @@ export function useCancelarEntrega() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (entregaId: string) => {
+      // Restore stock for surtidas lines before cancelling
+      const { data: lineas } = await supabase
+        .from('entrega_lineas')
+        .select('producto_id, cantidad_entregada, hecho, almacen_origen_id')
+        .eq('entrega_id', entregaId);
+
+      const { data: ent } = await supabase.from('entregas').select('empresa_id').eq('id', entregaId).single();
+
+      for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0 && l.almacen_origen_id)) {
+        const { data: existing } = await supabase.from('stock_almacen')
+          .select('id, cantidad').eq('empresa_id', ent!.empresa_id)
+          .eq('almacen_id', l.almacen_origen_id).eq('producto_id', l.producto_id).maybeSingle();
+        if (existing) {
+          await supabase.from('stock_almacen').update({ cantidad: existing.cantidad + l.cantidad_entregada } as any).eq('id', existing.id);
+        } else {
+          await supabase.from('stock_almacen').insert({ empresa_id: ent!.empresa_id, almacen_id: l.almacen_origen_id, producto_id: l.producto_id, cantidad: l.cantidad_entregada } as any);
+        }
+      }
+
       const { error } = await supabase.from('entregas').update({ status: 'cancelado' } as any).eq('id', entregaId);
       if (error) throw error;
     },

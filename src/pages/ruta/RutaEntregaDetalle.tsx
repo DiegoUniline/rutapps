@@ -109,6 +109,15 @@ export default function RutaEntregaDetalle() {
         .update({ status: 'hecho', validado_at: now, fecha_entrega: now } as any)
         .eq('id', id!);
       if (error) throw error;
+
+      // Also mark the linked venta as entregado if still confirmado
+      if (entrega?.pedido_id) {
+        await supabase.from('ventas')
+          .update({ status: 'entregado' } as any)
+          .eq('id', entrega.pedido_id)
+          .in('status', ['confirmado']);
+      }
+
       toast.success('¡Entrega completada!');
       queryClient.invalidateQueries({ queryKey: ['ruta-entrega-detalle', id] });
       queryClient.invalidateQueries({ queryKey: ['entregas'] });
