@@ -602,6 +602,11 @@ export default function PuntoVentaPage() {
     try {
       const ventaId = crypto.randomUUID();
       const almacenId = profile?.almacen_id || null;
+      if (!almacenId) {
+        toast.error('No puedes vender sin un almacén asignado a tu perfil.');
+        setSaving(false);
+        return;
+      }
       const today = todayInTimezone(empresa?.zona_horaria);
 
       if (!profile?.vendedor_id) {
