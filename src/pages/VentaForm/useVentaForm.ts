@@ -442,7 +442,7 @@ export function useVentaForm() {
       }
       await Promise.all(linePromises);
       if (isNew && autoConfirm) {
-        const saldo = form.condicion_pago === 'contado' ? 0 : finalTotals.total;
+        const saldo = finalTotals.total;
         await saveVenta.mutateAsync({ id: ventaId, status: 'confirmado', saldo_pendiente: saldo } as any);
         toast.success('Venta confirmada');
       } else { toast.success('Venta guardada'); }
