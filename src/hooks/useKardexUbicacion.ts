@@ -48,6 +48,7 @@ export function useKardexUbicacion(
           `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
         );
       } else {
+        // For camion/vendedor: all movements linked to this vendedor
         q = q.eq('vendedor_destino_id', ubicacionId!);
       }
 
