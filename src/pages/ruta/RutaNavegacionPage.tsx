@@ -72,8 +72,39 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const [filterDate, setFilterDate] = useState(todayLocal());
   const filterDia = getDiaFromDate(filterDate);
   const [activeStopId, setActiveStopId] = useState<string | null>(null);
-  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [arrivedIds, setArrivedIds] = useState<Set<string>>(new Set());
+
+  // Persist completed/arrived across navigation using sessionStorage keyed by date
+  const storageKeyCompleted = `nav-completed-${filterDate}`;
+  const storageKeyArrived = `nav-arrived-${filterDate}`;
+
+  const [completedIds, setCompletedIdsRaw] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(storageKeyCompleted);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [arrivedIds, setArrivedIdsRaw] = useState<Set<string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(storageKeyArrived);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  const setCompletedIds = useCallback((updater: (prev: Set<string>) => Set<string>) => {
+    setCompletedIdsRaw(prev => {
+      const next = updater(prev);
+      try { sessionStorage.setItem(storageKeyCompleted, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, [storageKeyCompleted]);
+
+  const setArrivedIds = useCallback((updater: (prev: Set<string>) => Set<string>) => {
+    setArrivedIdsRaw(prev => {
+      const next = updater(prev);
+      try { sessionStorage.setItem(storageKeyArrived, JSON.stringify([...next])); } catch {}
+      return next;
+    });
+  }, [storageKeyArrived]);
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
