@@ -29,8 +29,6 @@ export function useKardexUbicacion(
     queryKey: ['kardex-ubicacion', productoId, ubicacionId, ubicacionTipo, empresa?.id, fechaDesde, fechaHasta],
     enabled: !!productoId && !!ubicacionId && !!empresa?.id,
     queryFn: async () => {
-      // For almacen: movements where this almacen is origin OR destination
-      // For camion (vendedor): movements where vendedor_destino_id matches
       let q = supabase
         .from('movimientos_inventario')
         .select('id, fecha, created_at, tipo, cantidad, referencia_tipo, referencia_id, notas, almacen_origen_id, almacen_destino_id, vendedor_destino_id')
@@ -42,7 +40,13 @@ export function useKardexUbicacion(
       if (fechaHasta) q = q.lte('fecha', fechaHasta);
 
       if (ubicacionTipo === 'almacen') {
-        q = q.or(`almacen_origen_id.eq.${ubicacionId},almacen_destino_id.eq.${ubicacionId}`);
+        // Only fetch movements relevant to THIS almacen's perspective:
+        // - tipo=salida WHERE almacen_origen = this (stock left here)
+        // - tipo=entrada WHERE almacen_destino = this (stock arrived here)
+        // This prevents double-counting traspasos/entregas that have both columns set
+        q = q.or(
+          `and(almacen_origen_id.eq.${ubicacionId},tipo.eq.salida),and(almacen_destino_id.eq.${ubicacionId},tipo.eq.entrada)`
+        );
       } else {
         q = q.eq('vendedor_destino_id', ubicacionId!);
       }
@@ -59,20 +63,11 @@ export function useKardexUbicacion(
     return query.data.map((m: any) => {
       let delta = 0;
       if (ubicacionTipo === 'almacen') {
-        // Simple rule: if this almacen is the destination → stock entered (+)
-        //              if this almacen is the origin   → stock left   (-)
-        const isDestino = m.almacen_destino_id === ubicacionId;
-        const isOrigen = m.almacen_origen_id === ubicacionId;
-        if (isDestino && isOrigen) {
-          // Self-transfer (ajuste) — use tipo to determine sign
-          delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
-        } else if (isDestino) {
-          delta = m.cantidad;
-        } else if (isOrigen) {
-          delta = -m.cantidad;
-        }
+        // After the filtered query, the logic is simple:
+        // tipo='entrada' means stock arrived at this almacen → +
+        // tipo='salida' means stock left this almacen → -
+        delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
       } else {
-        // Camión/ruta
         delta = m.tipo === 'entrada' ? m.cantidad : m.tipo === 'salida' ? -m.cantidad : 0;
       }
       saldo += delta;
