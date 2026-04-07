@@ -87,19 +87,38 @@ export default function PuntoVentaPage() {
   const [fechaVencimiento, setFechaVencimiento] = useState('');
   const isMobile = useIsMobile();
 
-  const almacenId = profile?.almacen_id || null;
+  const { overrideEmpresaId } = useAuth();
+
+  // When viewing another company (super admin), fetch its first almacen instead of using profile's
+  const { data: overrideAlmacen } = useQuery({
+    queryKey: ['pos-override-almacen', empresa?.id],
+    staleTime: CATALOG_STALE,
+    enabled: !!overrideEmpresaId && !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase.from('almacenes')
+        .select('id, nombre')
+        .eq('empresa_id', empresa!.id)
+        .eq('activo', true)
+        .order('nombre')
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const almacenId = overrideEmpresaId ? (overrideAlmacen?.id ?? null) : (profile?.almacen_id || null);
 
   // Almacen name
   const { data: almacenData } = useQuery({
     queryKey: ['pos-almacen-name', almacenId],
     staleTime: CATALOG_STALE,
-    enabled: !!almacenId,
+    enabled: !!almacenId && !overrideEmpresaId,
     queryFn: async () => {
       const { data } = await supabase.from('almacenes').select('nombre').eq('id', almacenId!).maybeSingle();
       return data;
     },
   });
-  const almacenNombre = almacenData?.nombre ?? null;
+  const almacenNombre = overrideEmpresaId ? (overrideAlmacen?.nombre ?? null) : (almacenData?.nombre ?? null);
 
   // Products
   const { data: productosRaw } = useQuery({
