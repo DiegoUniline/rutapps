@@ -360,7 +360,9 @@ export default function AjustesInventarioPage() {
             referencia_tipo: 'ajuste',
             user_id: user?.id,
             fecha: today,
-            almacen_origen_id: almacenId || null,
+            ...(diferencia > 0
+              ? { almacen_destino_id: almacenId || null }
+              : { almacen_origen_id: almacenId || null }),
             notas: `Ajuste masivo: ${motivo}`,
           } as any);
         }
