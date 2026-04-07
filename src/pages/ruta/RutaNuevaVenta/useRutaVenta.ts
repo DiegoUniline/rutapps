@@ -373,11 +373,11 @@ export function useRutaVenta() {
       let localFolio = '';
       // Try to get folio from server first (prevents duplicates between offline vendors)
       try {
-        const { data: folioData } = await supabase.rpc('generate_folio', {
+        const { data: folioData } = await (supabase.rpc as any)('generate_folio', {
           p_empresa_id: empresa.id,
           p_tipo: tipoVenta === 'pedido' ? 'PED' : 'VTA',
         });
-        if (folioData) localFolio = folioData;
+        if (folioData) localFolio = String(folioData);
       } catch {}
 
       // Offline fallback: use UUID-based folio, will NOT collide
