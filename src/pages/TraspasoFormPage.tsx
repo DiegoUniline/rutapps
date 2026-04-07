@@ -168,15 +168,25 @@ export default function TraspasoFormPage() {
     },
   });
 
-  // Fetch stock_camion for ruta origin
-  const { data: stockCamion } = useQuery({
-    queryKey: ['stock-camion-vendedor', vendedorOrigenId],
+  // Fetch vendedor's almacen_id from profiles for ruta_almacen type
+  const { data: vendedorAlmacenId } = useQuery({
+    queryKey: ['vendedor-almacen', vendedorOrigenId],
     enabled: tipo === 'ruta_almacen' && !!vendedorOrigenId,
     queryFn: async () => {
-      const { data } = await supabase.from('stock_camion')
-        .select('producto_id, cantidad_actual')
-        .eq('vendedor_id', vendedorOrigenId)
-        .gt('cantidad_actual', 0);
+      const { data } = await supabase.from('profiles').select('almacen_id').eq('id', vendedorOrigenId).maybeSingle();
+      return data?.almacen_id ?? null;
+    },
+  });
+
+  // Fetch stock from vendedor's almacen (replaces stock_camion)
+  const { data: stockVendedorAlmacen } = useQuery({
+    queryKey: ['stock-almacen-vendedor', vendedorAlmacenId],
+    enabled: tipo === 'ruta_almacen' && !!vendedorAlmacenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', vendedorAlmacenId!)
+        .gt('cantidad', 0);
       return data ?? [];
     },
   });
