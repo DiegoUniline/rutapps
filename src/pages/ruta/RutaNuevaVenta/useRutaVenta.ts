@@ -120,6 +120,26 @@ export function useRutaVenta() {
       if (c) {
         setClienteNombre(c.nombre);
         setClienteCredito({ credito: c.credito ?? false, limite: c.limite_credito ?? 0, dias: c.dias_credito ?? 0 });
+
+        // Fetch real-time saldo from server to avoid stale credit check
+        if (navigator.onLine && c.credito) {
+          try {
+            const { data: ventasOnline } = await supabase
+              .from('ventas')
+              .select('saldo_pendiente')
+              .eq('empresa_id', empresa!.id)
+              .eq('cliente_id', urlClienteId!)
+              .eq('condicion_pago', 'credito')
+              .gt('saldo_pendiente', 0)
+              .in('status', ['confirmado', 'entregado', 'facturado']);
+            if (ventasOnline) {
+              const saldoReal = ventasOnline.reduce((s: number, v: any) => s + (v.saldo_pendiente ?? 0), 0);
+              if (Math.abs(saldoReal - saldoPendienteTotal) > 1) {
+                toast.warning(`Saldo actualizado desde servidor: $${saldoReal.toFixed(2)}`);
+              }
+            }
+          } catch {} // offline — continue with cached data
+        }
       }
     }
   }, [urlClienteId, clientes]);
@@ -348,8 +368,20 @@ export function useRutaVenta() {
     try {
       const ventaId = crypto.randomUUID();
       let localFolio = '';
-      try { const ventasTable = getOfflineTable('ventas'); if (ventasTable) { const av = await ventasTable.toArray(); const prefix = tipoVenta === 'pedido' ? 'PED' : 'VTA'; const ev = av.filter((v: any) => v.empresa_id === empresa.id); let maxNum = 0; for (const v of ev) { const f = v.folio ?? ''; const match = f.match(new RegExp(`^${prefix}-(\\d+)$`)); if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10)); } localFolio = `${prefix}-${String(maxNum + 1).padStart(4, '0')}`; } } catch {}
-      if (!localFolio) localFolio = `${tipoVenta === 'pedido' ? 'PED' : 'VTA'}-${ventaId.slice(0, 6).toUpperCase()}`;
+      // Try to get folio from server first (prevents duplicates between offline vendors)
+      try {
+        const { data: folioData } = await supabase.rpc('generate_folio', {
+          p_empresa_id: empresa.id,
+          p_tipo: tipoVenta === 'pedido' ? 'PED' : 'VTA',
+        });
+        if (folioData) localFolio = folioData;
+      } catch {}
+
+      // Offline fallback: use UUID-based folio, will NOT collide
+      if (!localFolio) {
+        const prefix = tipoVenta === 'pedido' ? 'PED' : 'VTA';
+        localFolio = `${prefix}-${ventaId.slice(0, 8).toUpperCase()}`;
+      }
 
       if (devoluciones.length > 0 && clienteId) {
         const devId = crypto.randomUUID();

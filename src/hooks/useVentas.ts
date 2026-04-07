@@ -301,6 +301,14 @@ export function useDeleteVenta() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Validate no cobros applied before deleting
+      const { count, error: checkErr } = await supabase
+        .from('cobro_aplicaciones')
+        .select('id', { count: 'exact', head: true })
+        .eq('venta_id', id);
+      if (checkErr) throw checkErr;
+      if (count && count > 0) throw new Error('No puedes eliminar una venta con pagos aplicados. Cancélala primero.');
+
       const { error } = await supabase.from('ventas').delete().eq('id', id);
       if (error) throw error;
     },

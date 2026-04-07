@@ -273,6 +273,34 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         } as any)
         .eq('id', descarga.id);
       if (error) throw error;
+
+      // Deduct stock_camion when approving descarga
+      if (accion === 'aprobada') {
+        const { data: descLineas } = await supabase
+          .from('descarga_ruta_lineas')
+          .select('producto_id, cantidad_real')
+          .eq('descarga_id', descarga.id);
+
+        if (descLineas && descarga.vendedor_id) {
+          for (const l of descLineas) {
+            if (!l.cantidad_real || l.cantidad_real <= 0) continue;
+            const { data: sc } = await supabase
+              .from('stock_camion')
+              .select('id, cantidad_actual')
+              .eq('empresa_id', descarga.empresa_id)
+              .eq('vendedor_id', descarga.vendedor_id)
+              .eq('producto_id', l.producto_id)
+              .order('fecha', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (sc) {
+              await supabase.from('stock_camion')
+                .update({ cantidad_actual: Math.max(0, sc.cantidad_actual - l.cantidad_real) } as any)
+                .eq('id', sc.id);
+            }
+          }
+        }
+      }
     },
     onSuccess: (_, accion) => {
       toast.success(accion === 'aprobada' ? 'Liquidación aprobada' : 'Liquidación rechazada');
