@@ -68,6 +68,83 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   });
 }
 
+/** Paginated product lines (venta_lineas) with header data for "Products" view */
+export function useVentaLineasPaginated(
+  search?: string, statusFilter?: string, tipoFilter?: string,
+  page = 1, pageSize = 80, condicionFilter?: string,
+  vendedorFilter?: string, dateFrom?: string, dateTo?: string
+) {
+  const { empresa } = useAuth();
+  const { seeAll, profileId } = useDataVisibility('ventas');
+  const filterOwn = !seeAll && !!profileId;
+
+  return useQuery({
+    queryKey: ['venta-lineas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      let q = supabase
+        .from('venta_lineas')
+        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, clientes(nombre), vendedores(nombre))', { count: 'exact' })
+        .eq('ventas.empresa_id', empresa!.id)
+        .order('created_at', { ascending: false, referencedTable: undefined })
+        .range((page - 1) * pageSize, page * pageSize - 1);
+
+      if (filterOwn) q = q.eq('ventas.vendedor_id', profileId!);
+
+      if (statusFilter && statusFilter !== 'todos') {
+        const arr = statusFilter.split(',');
+        if (arr.length > 1) q = q.in('ventas.status', arr as any);
+        else q = q.eq('ventas.status', statusFilter);
+      }
+      if (tipoFilter && tipoFilter !== 'todos') {
+        const arr = tipoFilter.split(',');
+        if (arr.length > 1) q = q.in('ventas.tipo', arr as any);
+        else q = q.eq('ventas.tipo', tipoFilter);
+      }
+      if (condicionFilter && condicionFilter !== 'todos') {
+        const arr = condicionFilter.split(',');
+        if (arr.length > 1) q = q.in('ventas.condicion_pago', arr as any);
+        else q = q.eq('ventas.condicion_pago', condicionFilter);
+      }
+      if (vendedorFilter && vendedorFilter !== 'todos') {
+        const arr = vendedorFilter.split(',');
+        if (arr.length > 1) q = q.in('ventas.vendedor_id', arr as any);
+        else q = q.eq('ventas.vendedor_id', vendedorFilter);
+      }
+      if (dateFrom) q = q.gte('ventas.fecha', dateFrom);
+      if (dateTo) q = q.lte('ventas.fecha', dateTo);
+
+      if (search) {
+        const s = search.replace(/'/g, "''");
+        q = q.or(`productos.nombre.ilike.%${s}%,productos.codigo.ilike.%${s}%,ventas.folio.ilike.%${s}%`);
+      }
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+
+      const rows = (data ?? []).map((row: any) => ({
+        linea_id: row.id,
+        venta_id: row.venta_id,
+        producto_id: row.producto_id,
+        cantidad: row.cantidad,
+        precio_unitario: row.precio_unitario,
+        linea_total: row.total,
+        producto_codigo: row.productos?.codigo ?? '',
+        producto_nombre: row.productos?.nombre ?? '',
+        folio: row.ventas?.folio,
+        fecha: row.ventas?.fecha,
+        status: row.ventas?.status,
+        tipo: row.ventas?.tipo,
+        condicion_pago: row.ventas?.condicion_pago,
+        cliente_nombre: row.ventas?.clientes?.nombre,
+        vendedor_nombre: row.ventas?.vendedores?.nombre,
+      }));
+
+      return { rows, total: count ?? 0 };
+    },
+  });
+}
+
 /** All ventas (for lookups) */
 export function useVentas(search?: string, statusFilter?: string, tipoFilter?: string) {
   const qc = useQueryClient();
