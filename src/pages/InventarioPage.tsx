@@ -351,13 +351,13 @@ export default function InventarioPage() {
       {/* Rutas view */}
       {view === 'rutas' && data && !selectedRuta && (
         <div className="space-y-3">
-          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').length === 0 && (
+          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
               <p>No hay rutas activas</p>
             </div>
           )}
-          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').map(c => (
+          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').map(c => (
             <div
               key={c.id}
               className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/40 transition-colors"
@@ -390,13 +390,13 @@ export default function InventarioPage() {
             </div>
           ))}
 
-          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').length > 0 && (
+          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').length > 0 && (
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm font-semibold text-foreground">Total en rutas</p>
                 <div className="text-right">
-                  <p className="text-sm font-bold">Costo: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').reduce((s, c) => s + c.valorCosto, 0))}</p>
-                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').reduce((s, c) => s + c.valorVenta, 0))}</p>
+                  <p className="text-sm font-bold">Costo: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').reduce((s, c) => s + c.valorCosto, 0))}</p>
+                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').reduce((s, c) => s + c.valorVenta, 0))}</p>
                 </div>
               </div>
             </div>
