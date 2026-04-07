@@ -124,9 +124,7 @@ export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string 
     <!-- RESUMEN DE COBROS -->
     <div style="padding:4px 0">
       <div style="font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:#555;margin-bottom:4px">Resumen de cobros</div>
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Ventas contado</span><span>${fmt(cuadre.totalContado)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Ventas crédito</span><span>${fmt(cuadre.totalCredito)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cobros en efectivo</span><span>${fmt(cuadre.cobrosEfectivo)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">+ Cobros en efectivo</span><span>${fmt(cuadre.cobrosEfectivo)}</span></div>
       ${cuadre.cobrosTransferencia > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cobros transferencia</span><span>${fmt(cuadre.cobrosTransferencia)}</span></div>` : ''}
       ${cuadre.cobrosTarjeta > 0 ? `<div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">Cobros tarjeta</span><span>${fmt(cuadre.cobrosTarjeta)}</span></div>` : ''}
       <div style="display:flex;justify-content:space-between;font-size:10px"><span style="color:#666">− Gastos</span><span style="color:#dc2626">-${fmt(cuadre.totalGastos)}</span></div>
