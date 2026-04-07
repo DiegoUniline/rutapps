@@ -799,6 +799,22 @@ export default function PuntoVentaPage() {
     return [...new Set(amounts)].sort((a, b) => a - b).slice(0, 4);
   }, [totals.total]);
 
+  // Block POS if user has no warehouse assigned
+  if (!almacenId) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-background px-6 text-center gap-4">
+        <Warehouse className="h-16 w-16 text-muted-foreground/40" />
+        <h1 className="text-xl font-bold text-foreground">Sin almacén asignado</h1>
+        <p className="text-sm text-muted-foreground max-w-md">
+          No puedes vender en Punto de Venta sin tener un almacén asignado a tu perfil. Contacta al administrador para que te asigne uno.
+        </p>
+        <button onClick={() => navigate(-1)} className="mt-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+          Volver
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Top bar */}
