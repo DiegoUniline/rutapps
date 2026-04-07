@@ -6,6 +6,7 @@ interface ProductOption {
   codigo: string;
   nombre: string;
   precio_principal?: number;
+  _stock?: number;
 }
 
 interface Props {
