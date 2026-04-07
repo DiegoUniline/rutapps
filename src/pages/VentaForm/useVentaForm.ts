@@ -363,6 +363,38 @@ export function useVentaForm() {
       return;
     }
     try {
+      // Validate stock for venta_directa with entrega_inmediata
+      if (form.tipo === 'venta_directa' && form.entrega_inmediata && form.almacen_id) {
+        const productIds = lineas.filter(l => l.producto_id).map(l => l.producto_id!);
+        if (productIds.length > 0) {
+          const { data: stockRows } = await supabase
+            .from('stock_almacen')
+            .select('producto_id, cantidad')
+            .eq('almacen_id', form.almacen_id)
+            .in('producto_id', productIds);
+
+          const { data: prodFlags } = await supabase
+            .from('productos')
+            .select('id, nombre, vender_sin_stock')
+            .in('id', productIds);
+
+          const stockMap = new Map((stockRows ?? []).map(s => [s.producto_id, s.cantidad]));
+          const prodMap = new Map((prodFlags ?? []).map(p => [p.id, p]));
+
+          for (const l of lineas) {
+            if (!l.producto_id) continue;
+            const prod = prodMap.get(l.producto_id);
+            if (prod?.vender_sin_stock) continue;
+            const disponible = stockMap.get(l.producto_id) ?? 0;
+            const qty = Number(l.cantidad) || 0;
+            if (qty > disponible) {
+              toast.error(`Stock insuficiente para "${prod?.nombre ?? 'Producto'}". Disponible: ${disponible}, solicitado: ${qty}`);
+              return;
+            }
+          }
+        }
+      }
+
       const payload = { ...form, ...finalTotals, vendedor_id: profile.vendedor_id };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
