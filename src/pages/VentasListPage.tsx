@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote } from 'lucide-react';
+import { Plus, Banknote, List, Package } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -14,7 +14,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-import { useVentasPaginated, useDeleteVenta } from '@/hooks/useVentas';
+import { useVentasPaginated, useVentaLineasPaginated, useDeleteVenta } from '@/hooks/useVentas';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,6 +26,7 @@ import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePaginat
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS } from './ventas/ventasConstants';
 import { VentasDesktopTable } from './ventas/VentasDesktopTable';
+import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
 
 function useVendedoresForFilter() {
