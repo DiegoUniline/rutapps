@@ -360,23 +360,14 @@ export default function InventarioPage() {
 
       {/* Almacen view */}
       {view === 'almacen' && data && (() => {
-        // Build combined locations: almacenes + rutas
-        const ubicaciones = [
-          ...(data.almacenes ?? []).map(a => ({
-            id: a.id,
-            nombre: a.nombre,
-            tipo: 'almacen' as const,
-            icon: Warehouse,
-            getStock: (prodId: string) => data.stockAlmacenMap[a.id]?.[prodId] ?? 0,
-          })),
-          ...(data.rutas ?? []).map(r => ({
-            id: r.id,
-            nombre: r.vendedor,
-            tipo: 'ruta' as const,
-            icon: Truck,
-            getStock: (prodId: string) => r.stockByProduct[prodId] ?? 0,
-          })),
-        ];
+        // Only almacenes (includes tipo almacen and tipo ruta)
+        const ubicaciones = (data.almacenes ?? []).map(a => ({
+          id: a.id,
+          nombre: a.nombre,
+          tipo: ((a as any).tipo ?? 'almacen') as 'almacen' | 'ruta',
+          icon: ((a as any).tipo === 'ruta' ? Truck : Warehouse) as typeof Warehouse,
+          getStock: (prodId: string) => data.stockAlmacenMap[a.id]?.[prodId] ?? 0,
+        }));
 
         return (
         <div className="bg-card border border-border rounded overflow-x-auto">
