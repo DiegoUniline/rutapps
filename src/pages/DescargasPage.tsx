@@ -274,7 +274,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .eq('id', descarga.id);
       if (error) throw error;
 
-      // Deduct stock_camion when approving descarga
+      // Deduct from vendedor's almacen via stock_almacen when approving descarga
       if (accion === 'aprobada') {
         const { data: descLineas } = await supabase
           .from('descarga_ruta_lineas')
@@ -282,21 +282,23 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           .eq('descarga_id', descarga.id);
 
         if (descLineas && descarga.vendedor_id) {
-          for (const l of descLineas) {
-            if (!l.cantidad_real || l.cantidad_real <= 0) continue;
-            const { data: sc } = await supabase
-              .from('stock_camion')
-              .select('id, cantidad_actual')
-              .eq('empresa_id', descarga.empresa_id)
-              .eq('vendedor_id', descarga.vendedor_id)
-              .eq('producto_id', l.producto_id)
-              .order('fecha', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (sc) {
-              await supabase.from('stock_camion')
-                .update({ cantidad_actual: Math.max(0, sc.cantidad_actual - l.cantidad_real) } as any)
-                .eq('id', sc.id);
+          // Get vendedor's almacen_id
+          const { data: prof } = await supabase.from('profiles').select('almacen_id').eq('id', descarga.vendedor_id).maybeSingle();
+          const almId = prof?.almacen_id;
+          if (almId) {
+            for (const l of descLineas) {
+              if (!l.cantidad_real || l.cantidad_real <= 0) continue;
+              const { data: sa } = await supabase
+                .from('stock_almacen')
+                .select('id, cantidad')
+                .eq('almacen_id', almId)
+                .eq('producto_id', l.producto_id)
+                .maybeSingle();
+              if (sa) {
+                await supabase.from('stock_almacen')
+                  .update({ cantidad: Math.max(0, sa.cantidad - l.cantidad_real), updated_at: new Date().toISOString() } as any)
+                  .eq('id', sa.id);
+              }
             }
           }
         }

@@ -168,15 +168,25 @@ export default function TraspasoFormPage() {
     },
   });
 
-  // Fetch stock_camion for ruta origin
-  const { data: stockCamion } = useQuery({
-    queryKey: ['stock-camion-vendedor', vendedorOrigenId],
+  // Fetch vendedor's almacen_id from profiles for ruta_almacen type
+  const { data: vendedorAlmacenId } = useQuery({
+    queryKey: ['vendedor-almacen', vendedorOrigenId],
     enabled: tipo === 'ruta_almacen' && !!vendedorOrigenId,
     queryFn: async () => {
-      const { data } = await supabase.from('stock_camion')
-        .select('producto_id, cantidad_actual')
-        .eq('vendedor_id', vendedorOrigenId)
-        .gt('cantidad_actual', 0);
+      const { data } = await supabase.from('profiles').select('almacen_id').eq('id', vendedorOrigenId).maybeSingle();
+      return data?.almacen_id ?? null;
+    },
+  });
+
+  // Fetch stock from vendedor's almacen (replaces stock_camion)
+  const { data: stockVendedorAlmacen } = useQuery({
+    queryKey: ['stock-almacen-vendedor', vendedorAlmacenId],
+    enabled: tipo === 'ruta_almacen' && !!vendedorAlmacenId,
+    queryFn: async () => {
+      const { data } = await supabase.from('stock_almacen')
+        .select('producto_id, cantidad')
+        .eq('almacen_id', vendedorAlmacenId!)
+        .gt('cantidad', 0);
       return data ?? [];
     },
   });
@@ -200,8 +210,8 @@ export default function TraspasoFormPage() {
     if (readOnly) return allProductos; // show all for read-only view
 
     if (tipo === 'ruta_almacen') {
-      if (!stockCamion || !vendedorOrigenId) return [];
-      const scMap = new Map(stockCamion.map(s => [s.producto_id, s.cantidad_actual]));
+      if (!stockVendedorAlmacen || !vendedorOrigenId) return [];
+      const scMap = new Map(stockVendedorAlmacen.map(s => [s.producto_id, s.cantidad]));
       return allProductos
         .filter(p => (scMap.get(p.id) ?? 0) > 0)
         .map(p => ({ ...p, cantidad: scMap.get(p.id) ?? 0 }));
@@ -217,20 +227,20 @@ export default function TraspasoFormPage() {
 
     // Fallback: show all products with global stock > 0
     return allProductos.filter(p => (p.cantidad ?? 0) > 0);
-  }, [allProductos, stockCamion, stockAlmacenOrigen, tipo, vendedorOrigenId, almacenOrigenId, readOnly]);
+  }, [allProductos, stockVendedorAlmacen, stockAlmacenOrigen, tipo, vendedorOrigenId, almacenOrigenId, readOnly]);
 
   // Max stock map for validation
   const maxStockMap = useMemo(() => {
     const map = new Map<string, number>();
-    if (tipo === 'ruta_almacen' && stockCamion) {
-      stockCamion.forEach(s => map.set(s.producto_id, s.cantidad_actual));
+    if (tipo === 'ruta_almacen' && stockVendedorAlmacen) {
+      stockVendedorAlmacen.forEach(s => map.set(s.producto_id, s.cantidad));
     } else if (stockAlmacenOrigen && almacenOrigenId) {
       stockAlmacenOrigen.forEach(s => map.set(s.producto_id, s.cantidad));
     } else if (allProductos) {
       allProductos.forEach(p => map.set(p.id, p.cantidad ?? 0));
     }
     return map;
-  }, [allProductos, stockCamion, stockAlmacenOrigen, tipo, almacenOrigenId]);
+  }, [allProductos, stockVendedorAlmacen, stockAlmacenOrigen, tipo, almacenOrigenId]);
 
   const almacenOpts = (almacenes ?? []).map(a => ({ value: a.id, label: a.nombre }));
   const vendedorOpts = (vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }));

@@ -202,11 +202,31 @@ export default function EntregaListPage() {
     onError: (err: any) => toast.error(err.message),
   });
 
+  // Helper: get vendedor's almacen_id from profiles
+  const getVendedorAlmacen = async (vendId: string) => {
+    const { data } = await supabase.from('profiles').select('almacen_id').eq('id', vendId).maybeSingle();
+    return data?.almacen_id ?? null;
+  };
+
+  // Helper: upsert stock_almacen
+  const upsertStockAlmacen = async (empresaId: string, almacenId: string, productoId: string, qty: number) => {
+    const { data: existing } = await supabase.from('stock_almacen')
+      .select('id, cantidad').eq('almacen_id', almacenId).eq('producto_id', productoId).maybeSingle();
+    if (existing) {
+      await supabase.from('stock_almacen').update({ cantidad: existing.cantidad + qty, updated_at: new Date().toISOString() } as any).eq('id', existing.id);
+    } else {
+      await supabase.from('stock_almacen').insert({ empresa_id: empresaId, almacen_id: almacenId, producto_id: productoId, cantidad: qty } as any);
+    }
+  };
+
   // Bulk asignar
   const bulkAsignarMut = useMutation({
     mutationFn: async ({ cargarTambien }: { cargarTambien: boolean }) => {
       if (!vendedorRutaId) throw new Error('Selecciona un repartidor');
       const today = todayLocal();
+      const almDestinoId = await getVendedorAlmacen(vendedorRutaId);
+      if (cargarTambien && !almDestinoId) throw new Error('El vendedor no tiene almacén asignado');
+
       for (const entrega of selectedEntregas) {
         const eid = (entrega as any).id;
         await supabase.from('entregas').update({
@@ -214,11 +234,11 @@ export default function EntregaListPage() {
           vendedor_ruta_id: vendedorRutaId,
           fecha_asignacion: new Date().toISOString(),
         } as any).eq('id', eid);
-        if (cargarTambien) {
+        if (cargarTambien && almDestinoId) {
           const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
           for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
-            await supabase.from('stock_camion').insert({ empresa_id: empresa!.id, vendedor_id: vendedorRutaId, producto_id: l.producto_id, cantidad_inicial: l.cantidad_entregada, cantidad_actual: l.cantidad_entregada, fecha: today } as any);
-            await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, vendedor_destino_id: vendedorRutaId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
+            await upsertStockAlmacen(empresa!.id, almDestinoId, l.producto_id, l.cantidad_entregada);
+            await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, almacen_destino_id: almDestinoId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a ubicación' } as any);
           }
           await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
         }
@@ -227,7 +247,7 @@ export default function EntregaListPage() {
     onSuccess: (_, vars) => {
       toast.success(`${selectedEntregas.length} entrega(s) ${vars.cargarTambien ? 'asignadas y cargadas' : 'asignadas a ruta'}`);
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
-      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
       setSelectedIds(new Set()); setShowAsignarDialog(false); setVendedorRutaId('');
     },
     onError: (err: any) => toast.error(err.message),
@@ -240,10 +260,12 @@ export default function EntregaListPage() {
         const eid = (entrega as any).id;
         const vendId = (entrega as any).vendedor_ruta_id || (entrega as any).vendedor_id;
         if (!vendId) continue;
+        const almDestinoId = await getVendedorAlmacen(vendId);
+        if (!almDestinoId) continue;
         const { data: lineas } = await supabase.from('entrega_lineas').select('id, producto_id, cantidad_entregada, hecho, almacen_origen_id').eq('entrega_id', eid);
         for (const l of (lineas ?? []).filter(l => l.hecho && l.cantidad_entregada > 0)) {
-          await supabase.from('stock_camion').insert({ empresa_id: empresa!.id, vendedor_id: vendId, producto_id: l.producto_id, cantidad_inicial: l.cantidad_entregada, cantidad_actual: l.cantidad_entregada, fecha: today } as any);
-          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, vendedor_destino_id: vendId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a camión' } as any);
+          await upsertStockAlmacen(empresa!.id, almDestinoId, l.producto_id, l.cantidad_entregada);
+          await supabase.from('movimientos_inventario').insert({ empresa_id: empresa!.id, tipo: 'entrada', producto_id: l.producto_id, cantidad: l.cantidad_entregada, almacen_origen_id: (l as any).almacen_origen_id ?? null, almacen_destino_id: almDestinoId, referencia_tipo: 'entrega', referencia_id: eid, user_id: user?.id, fecha: today, notas: 'Carga masiva a ubicación' } as any);
         }
         await supabase.from('entregas').update({ status: 'cargado', fecha_carga: new Date().toISOString() } as any).eq('id', eid);
       }
@@ -251,7 +273,7 @@ export default function EntregaListPage() {
     onSuccess: () => {
       toast.success(`${selectedEntregas.length} entrega(s) cargadas`);
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
-      qc.invalidateQueries({ queryKey: ['stock-camion'] });
+      qc.invalidateQueries({ queryKey: ['stock-almacen'] });
       setSelectedIds(new Set());
     },
     onError: (err: any) => toast.error(err.message),
