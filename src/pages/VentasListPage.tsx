@@ -223,10 +223,21 @@ export default function VentasListPage() {
         </div>
       ) : isProductView ? (
         <>
-          <div className="bg-card border border-border rounded overflow-x-auto">
-            <VentasProductosTable items={productRows} fmt={fmt} />
-          </div>
-          {total > 0 && (
+          <GroupedTableWrapper
+            groupBy={groupBy}
+            groups={productGroups}
+            renderTable={(items) => (
+              <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
+                <VentasProductosTable items={items} fmt={fmt} />
+              </div>
+            )}
+            renderSummary={(items) => (
+              <span className="text-[11px] text-muted-foreground font-medium">
+                {fmtCurrency(items.reduce((s: number, r: any) => s + (r.linea_total ?? 0), 0))}
+              </span>
+            )}
+          />
+          {!groupBy && total > 0 && (
             <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
           )}
         </>
