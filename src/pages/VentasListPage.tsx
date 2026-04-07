@@ -154,6 +154,29 @@ export default function VentasListPage() {
           onDateToChange={v => { setDateTo(v); setPage(1); }}
         />
         <div className="flex items-center gap-2 shrink-0">
+          {/* View toggle */}
+          {!isMobile && (
+            <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+              <button
+                onClick={() => { setViewMode('ventas'); setPage(1); }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
+                  viewMode === 'ventas' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <List className="h-3.5 w-3.5" /> Ventas
+              </button>
+              <button
+                onClick={() => { setViewMode('productos'); setPage(1); }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
+                  viewMode === 'productos' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Package className="h-3.5 w-3.5" /> Productos
+              </button>
+            </div>
+          )}
           {!isMobile && (
             <ExportButton
               onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: totalVentas, saldo_pendiente: totalSaldo } })}
@@ -171,15 +194,25 @@ export default function VentasListPage() {
         </div>
       </div>
 
-      {!isLoading && total > 0 && (
+      {!activeLoading && total > 0 && (
         <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
-          <span><strong className="text-foreground">{total}</strong> ventas</span>
-          <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
-          {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+          {isProductView ? (
+            <>
+              <span><strong className="text-foreground">{total}</strong> líneas</span>
+              <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
+              <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
+            </>
+          ) : (
+            <>
+              <span><strong className="text-foreground">{total}</strong> ventas</span>
+              <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
+              {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+            </>
+          )}
         </div>
       )}
 
-      {isLoading ? (
+      {activeLoading ? (
         <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 10} /></div>
       ) : isMobile ? (
         <div className="space-y-2">
@@ -188,6 +221,15 @@ export default function VentasListPage() {
             <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
           )}
         </div>
+      ) : isProductView ? (
+        <>
+          <div className="bg-card border border-border rounded overflow-x-auto">
+            <VentasProductosTable items={productRows} fmt={fmt} />
+          </div>
+          {total > 0 && (
+            <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
+          )}
+        </>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} renderSummary={(items) => (<span className="text-[11px] text-muted-foreground font-medium">{fmtCurrency(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}</span>)} />
