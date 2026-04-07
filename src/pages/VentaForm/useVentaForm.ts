@@ -60,6 +60,21 @@ export function useVentaForm() {
   const { data: productosListRaw } = useProductosForSelect();
   const { data: tarifasList } = useTarifasForSelect();
   const { data: almacenesList } = useAlmacenes();
+  const crearEntrega = useCrearEntrega();
+  const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
+  const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
+  const [dirty, setDirty] = useState(false);
+  const loadedVentaIdRef = useRef<string | null>(null);
+  const { requestPin, PinDialog } = usePinAuth();
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
+  const [sinImpuestos, setSinImpuestos] = useState(false);
+  const { hasPermiso } = usePermisos();
+  const canEditVenta = hasPermiso('ventas', 'editar');
+  const canCreateVenta = hasPermiso('ventas', 'crear');
+  const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
+  const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   // Fetch stock per almacen for filtering products on venta_directa
   const { data: stockAlmacenData } = useQuery({
@@ -85,21 +100,6 @@ export function useVentaForm() {
       return qty > 0;
     });
   }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
-  const crearEntrega = useCrearEntrega();
-  const [form, setForm] = useState<Partial<Venta>>(emptyVenta());
-  const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
-  const [dirty, setDirty] = useState(false);
-  const loadedVentaIdRef = useRef<string | null>(null);
-  const { requestPin, PinDialog } = usePinAuth();
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [showPdfModal, setShowPdfModal] = useState(false);
-  const [showFacturaDrawer, setShowFacturaDrawer] = useState(false);
-  const [sinImpuestos, setSinImpuestos] = useState(false);
-  const { hasPermiso } = usePermisos();
-  const canEditVenta = hasPermiso('ventas', 'editar');
-  const canCreateVenta = hasPermiso('ventas', 'crear');
-  const readOnly = isNew ? !canCreateVenta : (form.status !== 'borrador' || !canEditVenta);
-  const cellRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
     const key = `${row}-${col}`;
