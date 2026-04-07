@@ -87,7 +87,7 @@ export default function PuntoVentaPage() {
   const [fechaVencimiento, setFechaVencimiento] = useState('');
   const isMobile = useIsMobile();
 
-  const { overrideEmpresaId } = useAuth();
+  
 
   // When viewing another company (super admin), fetch its first almacen instead of using profile's
   const { data: overrideAlmacen } = useQuery({
