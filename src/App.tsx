@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate, useLocation, Link } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -166,10 +166,27 @@ function AppRoutes() {
 
   const isSoloMovil = user && !permisosLoading && hasPermiso('solo_movil', 'ver');
 
+  const [loadingTooLong, setLoadingTooLong] = useState(false);
+  useEffect(() => {
+    if (!(loading || subscription.loading)) { setLoadingTooLong(false); return; }
+    const t = setTimeout(() => setLoadingTooLong(true), 8000);
+    return () => clearTimeout(t);
+  }, [loading, subscription.loading]);
+
   if (loading || subscription.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-muted-foreground text-sm">Cargando...</div>
+        <div className="text-center space-y-4">
+          <div className="text-muted-foreground text-sm">Cargando...</div>
+          {loadingTooLong && user && (
+            <button
+              onClick={() => signOut()}
+              className="text-xs text-destructive underline hover:text-destructive/80"
+            >
+              Cerrar sesión
+            </button>
+          )}
+        </div>
       </div>
     );
   }
