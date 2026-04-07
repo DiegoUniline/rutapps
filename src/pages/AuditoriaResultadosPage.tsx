@@ -212,7 +212,9 @@ export default function AuditoriaResultadosPage() {
           referencia_id: id,
           user_id: user?.id,
           fecha: today,
-          almacen_origen_id: almacenIdAuditoria,
+          ...(diffReal > 0
+            ? { almacen_destino_id: almacenIdAuditoria }
+            : { almacen_origen_id: almacenIdAuditoria }),
           notas: motivo,
         } as any);
 
