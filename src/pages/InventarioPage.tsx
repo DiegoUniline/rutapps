@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import KardexUbicacionModal from '@/components/KardexUbicacionModal';
 import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
@@ -291,6 +292,7 @@ export default function InventarioPage() {
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
+  const [kardex, setKardex] = useState<{ productoId: string; productoNombre: string; ubicacionId: string; ubicacionNombre: string; ubicacionTipo: 'almacen' | 'camion'; stock: number } | null>(null);
 
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
@@ -437,8 +439,24 @@ export default function InventarioPage() {
                     {ubicaciones.map(u => {
                       const qty = u.getStock(p.id);
                       return (
-                        <TableCell key={u.id} className={cn("text-center font-medium", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
+                        <TableCell key={u.id} className={cn("text-center font-medium relative group/cell", qty <= 0 ? "text-muted-foreground" : u.tipo === 'ruta' ? "text-warning" : "")}>
                           {qty ? fmtNum(qty) : '—'}
+                          {qty > 0 && (
+                            <button
+                              onClick={() => setKardex({
+                                productoId: p.id,
+                                productoNombre: p.nombre,
+                                ubicacionId: u.id,
+                                ubicacionNombre: u.nombre,
+                                ubicacionTipo: u.tipo === 'ruta' ? 'camion' : 'almacen',
+                                stock: qty,
+                              })}
+                              className="absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 group-hover/cell:opacity-100 transition-opacity text-[11px] hover:bg-accent rounded p-0.5"
+                              title="Ver kardex de ubicación"
+                            >
+                              📋
+                            </button>
+                          )}
                         </TableCell>
                       );
                     })}
@@ -530,6 +548,19 @@ export default function InventarioPage() {
       {/* Ruta detail view */}
       {view === 'rutas' && selectedRuta && (
         <RutaDetail ruta={selectedRuta} onBack={() => setSelectedRuta(null)} />
+      )}
+
+      {kardex && (
+        <KardexUbicacionModal
+          open={!!kardex}
+          onClose={() => setKardex(null)}
+          productoId={kardex.productoId}
+          productoNombre={kardex.productoNombre}
+          ubicacionId={kardex.ubicacionId}
+          ubicacionNombre={kardex.ubicacionNombre}
+          ubicacionTipo={kardex.ubicacionTipo}
+          stockActual={kardex.stock}
+        />
       )}
     </div>
   );
