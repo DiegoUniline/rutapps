@@ -4,7 +4,7 @@ import HelpButton from '@/components/HelpButton';
 import VideoHelpButton from '@/components/VideoHelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Banknote } from 'lucide-react';
+import { Plus, Banknote, List, Package } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { OdooFilterBar } from '@/components/OdooFilterBar';
@@ -14,7 +14,7 @@ import { ExportButton } from '@/components/ExportButton';
 import { GroupedTableWrapper } from '@/components/GroupedTableWrapper';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { exportToExcel, exportToPDF } from '@/lib/exportUtils';
-import { useVentasPaginated, useDeleteVenta } from '@/hooks/useVentas';
+import { useVentasPaginated, useVentaLineasPaginated, useDeleteVenta } from '@/hooks/useVentas';
 import { usePermisos } from '@/hooks/usePermisos';
 import { useClientes } from '@/hooks/useClientes';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -26,6 +26,7 @@ import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePaginat
 
 import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS } from './ventas/ventasConstants';
 import { VentasDesktopTable } from './ventas/VentasDesktopTable';
+import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
 
 function useVendedoresForFilter() {
@@ -55,6 +56,7 @@ export default function VentasListPage() {
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'ventas' | 'productos'>('ventas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSizeOption>(readStoredPageSize);
@@ -70,6 +72,7 @@ export default function VentasListPage() {
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
+  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -86,7 +89,13 @@ export default function VentasListPage() {
     return ventasRaw.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
   }, [ventasRaw, clienteFilter]);
 
-  const total = (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
+  // Active dataset depending on view mode
+  const isProductView = viewMode === 'productos';
+  const productRows = lineasData?.rows ?? [];
+
+  const total = isProductView
+    ? (lineasData?.total ?? 0)
+    : (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
   const totalPages = numericPageSize > 0 ? Math.max(1, Math.ceil(total / numericPageSize)) : 1;
@@ -97,9 +106,13 @@ export default function VentasListPage() {
   const toggleAll = () => { allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map(v => v.id))); };
   const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
 
+  const activeLoading = isProductView ? isLoadingLineas : isLoading;
+
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
   const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+  const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
+  const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
   const groupLabelFn = (item: any, key: string) => {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
@@ -129,7 +142,7 @@ export default function VentasListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <OdooFilterBar
           search={search} onSearchChange={val => { setSearch(val); setPage(1); }}
-          placeholder="Buscar por folio o cliente..."
+          placeholder={isProductView ? "Buscar por producto, código o folio..." : "Buscar por folio o cliente..."}
           filterOptions={FILTER_OPTIONS} activeFilters={filters}
           onToggleFilter={(key, val) => { toggleFilterValue(key, val); setPage(1); }}
           onSetFilter={(key, vals) => { setFilter(key, vals); setPage(1); }}
@@ -141,6 +154,29 @@ export default function VentasListPage() {
           onDateToChange={v => { setDateTo(v); setPage(1); }}
         />
         <div className="flex items-center gap-2 shrink-0">
+          {/* View toggle */}
+          {!isMobile && (
+            <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border">
+              <button
+                onClick={() => { setViewMode('ventas'); setPage(1); }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
+                  viewMode === 'ventas' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <List className="h-3.5 w-3.5" /> Ventas
+              </button>
+              <button
+                onClick={() => { setViewMode('productos'); setPage(1); }}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-colors",
+                  viewMode === 'productos' ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Package className="h-3.5 w-3.5" /> Productos
+              </button>
+            </div>
+          )}
           {!isMobile && (
             <ExportButton
               onExcel={() => exportToExcel({ fileName: 'Ventas', title: 'Reporte de Ventas', columns: VENTAS_COLUMNS, data: ventas.map(v => ({ ...v, cliente_nombre: (v.clientes as { nombre?: string } | null)?.nombre || '' })), totals: { total: totalVentas, saldo_pendiente: totalSaldo } })}
@@ -158,15 +194,25 @@ export default function VentasListPage() {
         </div>
       </div>
 
-      {!isLoading && total > 0 && (
+      {!activeLoading && total > 0 && (
         <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
-          <span><strong className="text-foreground">{total}</strong> ventas</span>
-          <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
-          {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+          {isProductView ? (
+            <>
+              <span><strong className="text-foreground">{total}</strong> líneas</span>
+              <span>Cantidad: <strong className="text-foreground">{totalCantidad}</strong></span>
+              <span>Total: <strong className="text-foreground">{fmt(totalLineas)}</strong></span>
+            </>
+          ) : (
+            <>
+              <span><strong className="text-foreground">{total}</strong> ventas</span>
+              <span>Total: <strong className="text-foreground">{fmt(totalVentas)}</strong></span>
+              {totalSaldo > 0 && <span>Saldo: <strong className="text-warning">{fmt(totalSaldo)}</strong></span>}
+            </>
+          )}
         </div>
       )}
 
-      {isLoading ? (
+      {activeLoading ? (
         <div className="bg-card border border-border rounded p-4"><TableSkeleton rows={8} cols={isMobile ? 3 : 10} /></div>
       ) : isMobile ? (
         <div className="space-y-2">
@@ -175,6 +221,15 @@ export default function VentasListPage() {
             <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
           )}
         </div>
+      ) : isProductView ? (
+        <>
+          <div className="bg-card border border-border rounded overflow-x-auto">
+            <VentasProductosTable items={productRows} fmt={fmt} />
+          </div>
+          {total > 0 && (
+            <TablePagination from={from} to={to} total={total} page={page} totalPages={totalPages} pageSize={pageSize} onPageSizeChange={handlePageSizeChange} onFirst={() => setPage(1)} onPrev={() => setPage(p => Math.max(1, p - 1))} onNext={() => setPage(p => Math.min(totalPages, p + 1))} onLast={() => setPage(totalPages)} />
+          )}
+        </>
       ) : (
         <>
           <GroupedTableWrapper groupBy={groupBy} groups={groups} renderTable={renderTable} renderSummary={(items) => (<span className="text-[11px] text-muted-foreground font-medium">{fmtCurrency(items.reduce((s: number, v: any) => s + (v.total ?? 0), 0))}</span>)} />
