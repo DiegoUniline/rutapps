@@ -59,18 +59,16 @@ export function useKardexUbicacion(
     return query.data.map((m: any) => {
       let delta = 0;
       if (ubicacionTipo === 'almacen') {
-        // Entrada al almacén = +, Salida del almacén = -
-        if (m.tipo === 'entrada' && m.almacen_destino_id === ubicacionId) {
+        // Simple rule: if this almacen is the destination → stock entered (+)
+        //              if this almacen is the origin   → stock left   (-)
+        const isDestino = m.almacen_destino_id === ubicacionId;
+        const isOrigen = m.almacen_origen_id === ubicacionId;
+        if (isDestino && isOrigen) {
+          // Self-transfer (ajuste) — use tipo to determine sign
+          delta = m.tipo === 'entrada' ? m.cantidad : -m.cantidad;
+        } else if (isDestino) {
           delta = m.cantidad;
-        } else if (m.tipo === 'salida' && m.almacen_origen_id === ubicacionId) {
-          delta = -m.cantidad;
-        } else if (m.tipo === 'transferencia') {
-          if (m.almacen_destino_id === ubicacionId) delta = m.cantidad;
-          if (m.almacen_origen_id === ubicacionId) delta = -m.cantidad;
-        } else if (m.tipo === 'entrada' && m.almacen_origen_id === ubicacionId) {
-          // Some entries log the almacen in origen (e.g. compra)
-          delta = m.cantidad;
-        } else if (m.tipo === 'salida' && m.almacen_destino_id === ubicacionId) {
+        } else if (isOrigen) {
           delta = -m.cantidad;
         }
       } else {
