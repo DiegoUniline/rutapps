@@ -241,7 +241,9 @@ function useInventarioData() {
         const stockRuta = rutaStock[p.id] ?? 0;
         const stockTotal = stockAlmacen + stockRuta;
         const stockTipoAlmacen = hasWarehouseStock ? getStockByTipo(p.id, 'almacen') : stockAlmacen;
-        const stockTipoRuta = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
+        const stockTipoRutaAlm = hasWarehouseStock ? getStockByTipo(p.id, 'ruta') : 0;
+        // "Rutas" card = almacenes tipo ruta + cargas/stock_camion en ruta
+        const stockTipoRuta = stockTipoRutaAlm + stockRuta;
         return {
           ...p,
           stockAlmacen,
