@@ -56,6 +56,7 @@ export default function VentasListPage() {
   const canDelete = hasPermiso('ventas', 'eliminar');
   const deleteVenta = useDeleteVenta();
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'ventas' | 'productos'>('ventas');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<PageSizeOption>(readStoredPageSize);
