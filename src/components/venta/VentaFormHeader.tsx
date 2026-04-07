@@ -111,7 +111,7 @@ export function VentaFormHeader({
             <Check className="h-3.5 w-3.5" /> Guardar y confirmar
           </button>
         )}
-        {!isNew && status === 'confirmado' && (
+        {!isNew && status === 'confirmado' && !entregaInmediata && (
           <button onClick={() => onStatusChange('borrador' as any)} className="btn-odoo-secondary text-warning text-xs">
             <RotateCcw className="h-3.5 w-3.5" /> A borrador
           </button>
