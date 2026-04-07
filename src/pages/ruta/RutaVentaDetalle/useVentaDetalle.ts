@@ -254,6 +254,10 @@ export function useVentaDetalle() {
 
   const handleVolverBorrador = async () => {
     if (!venta || venta.status === 'borrador' || venta.status === 'cancelado') return;
+    if (['entregado', 'facturado'].includes(venta.status)) {
+      toast.error('Una venta entregada no puede volver a borrador, solo cancelar');
+      return;
+    }
     setSaving(true);
     try {
       const prevStatus = venta.status;

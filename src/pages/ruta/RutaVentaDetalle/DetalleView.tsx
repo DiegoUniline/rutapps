@@ -88,7 +88,7 @@ function ActionsBar({ clienteData, setShowWADialog, setWaPhone, handleDownloadPD
   ];
   if (venta.status === 'borrador') {
     actions.push({ icon: Pencil, label: 'Editar', color: 'text-primary', onClick: initEditar });
-  } else if (venta.status !== 'cancelado') {
+  } else if (venta.status === 'confirmado') {
     actions.push({ icon: RotateCcw, label: 'A borrador', color: 'text-warning', onClick: handleVolverBorrador });
   }
 
@@ -182,7 +182,7 @@ function BottomActions({ venta, saving, initEditar, initCobrar, handleCancelar, 
     <>
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
         <div className="flex gap-2">
-          {venta.status !== 'cancelado' && venta.status !== 'borrador' && (
+          {venta.status === 'confirmado' && (
             <button onClick={handleVolverBorrador} disabled={saving} className="flex-1 bg-warning/10 border border-warning/20 text-warning rounded-xl py-3 text-[13px] font-semibold active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-40">
               <RotateCcw className="h-4 w-4" /> A borrador
             </button>
