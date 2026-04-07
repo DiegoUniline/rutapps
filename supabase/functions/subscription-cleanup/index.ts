@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         "compra_lineas", "entrega_lineas", "devolucion_lineas", "auditoria_lineas",
         "descarga_ruta_lineas", "tarifa_lineas", "producto_tarifas", "producto_lotes",
         "cliente_pedido_sugerido", "promocion_aplicada", "movimientos_inventario",
-        "ajustes_inventario", "stock_camion", "gastos", "pago_compras", "cobros",
+        "ajustes_inventario", "gastos", "pago_compras", "cobros",
       ];
 
       // These have empresa_id directly
