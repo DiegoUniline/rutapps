@@ -178,7 +178,7 @@ export default function TraspasoFormPage() {
     },
   });
 
-  // Fetch stock from vendedor's almacen (replaces stock_camion)
+  // Fetch stock from vendedor's assigned almacen
   const { data: stockVendedorAlmacen } = useQuery({
     queryKey: ['stock-almacen-vendedor', vendedorAlmacenId],
     enabled: tipo === 'ruta_almacen' && !!vendedorAlmacenId,
