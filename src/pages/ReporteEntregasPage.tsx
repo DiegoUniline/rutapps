@@ -271,8 +271,8 @@ export default function ReporteEntregasPage() {
                     <TableCell className="text-[11px] font-medium py-1.5">{e.clientes?.nombre ?? '—'}</TableCell>
                     <TableCell className="text-[11px] text-muted-foreground py-1.5">{e.vendedores?.nombre ?? '—'}</TableCell>
                     <TableCell className="text-center py-1.5">
-                      <Badge variant={e.status === 'entregado' ? 'default' : 'outline'} className={cn("text-[9px]", e.status === 'entregado' ? 'bg-success text-success-foreground' : 'border-warning text-warning')}>
-                        {e.status === 'confirmado' ? 'Pendiente' : 'Entregado'}
+                      <Badge variant={e.status === 'entregado' || e.status === 'facturado' ? 'default' : 'outline'} className={cn("text-[9px]", e.status === 'entregado' || e.status === 'facturado' ? 'bg-success text-success-foreground' : 'border-warning text-warning')}>
+                        {e.status === 'confirmado' ? 'Pendiente' : e.status === 'facturado' ? 'Facturado' : 'Entregado'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center text-[11px] text-muted-foreground py-1.5">{e.venta_lineas?.length ?? 0}</TableCell>
