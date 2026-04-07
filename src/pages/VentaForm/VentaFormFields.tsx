@@ -32,7 +32,7 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
     : (
       <div className="flex gap-1">
         {['pedido', 'venta_directa'].map(t => (
-          <button key={t} onClick={() => { set('tipo', t); set('condicion_pago', t === 'pedido' ? 'por_definir' : 'contado'); }}
+          <button key={t} onClick={() => { set('tipo', t); set('condicion_pago', t === 'pedido' ? 'por_definir' : 'contado'); if (t === 'venta_directa') set('entrega_inmediata', true); }}
             className={cn("flex-1 py-1.5 text-[12px] font-medium rounded border transition-colors", form.tipo === t ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-input hover:bg-secondary")}>
             {t === 'pedido' ? 'Pedido' : 'Venta directa'}
           </button>
@@ -63,19 +63,13 @@ export function VentaFormFields({ form, readOnly, isNew, clienteOptions, almacen
 
   const renderEntrega = () => (
     <>
-      <label className="label-odoo flex items-center gap-1">
-        <span>Entrega</span>
-        {!readOnly && (
-          <label className="inline-flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer">
-            <input type="checkbox" checked={!!form.entrega_inmediata} onChange={e => set('entrega_inmediata', e.target.checked)} className="rounded border-input h-3 w-3" />
-            {isMobile ? 'Inm.' : 'Inmediata'}
-          </label>
-        )}
-      </label>
-      {form.entrega_inmediata
+      <label className="label-odoo">Entrega</label>
+      {form.tipo === 'venta_directa'
         ? <div className="text-xs text-muted-foreground py-1.5 px-1">{isMobile ? 'Inmediata' : 'Entrega inmediata'}</div>
-        : readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega || '—'}</div>
-        : <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha entrega" />
+        : form.entrega_inmediata
+          ? <div className="text-xs text-muted-foreground py-1.5 px-1">{isMobile ? 'Inmediata' : 'Entrega inmediata'}</div>
+          : readOnly ? <div className="text-[13px] py-1.5 px-1 text-foreground">{form.fecha_entrega || '—'}</div>
+          : <OdooDatePicker value={form.fecha_entrega} onChange={v => set('fecha_entrega', v)} placeholder="Fecha entrega" />
       }
     </>
   );
