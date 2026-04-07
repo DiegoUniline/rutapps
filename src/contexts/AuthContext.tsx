@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { setGlobalTimezone } from '@/lib/utils';
 import { getOfflineTable } from '@/lib/offlineDb';
@@ -139,9 +139,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, [realEmpresa]);
 
-  useEffect(() => {
-    let initialised = false;
+  const initialisedRef = useRef(false);
 
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED') return;
 
@@ -155,14 +155,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      initialisedRef.current = true;
       const u = session?.user ?? null;
       setUser(u);
       loadUserData(u).finally(() => setLoading(false));
-      initialised = true;
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!initialised) {
+      if (!initialisedRef.current) {
         const u = session?.user ?? null;
         setUser(u);
         loadUserData(u).finally(() => setLoading(false));
