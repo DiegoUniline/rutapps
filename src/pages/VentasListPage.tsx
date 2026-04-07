@@ -118,13 +118,14 @@ export default function VentasListPage() {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
     if (key === 'tipo') return TIPO_LABELS[item.tipo] ?? item.tipo;
     if (key === 'condicion_pago') return CONDICION_LABELS[item.condicion_pago] ?? item.condicion_pago;
-    if (key === 'vendedor') return item.vendedores?.nombre ?? 'Sin vendedor';
-    if (key === 'cliente') return item.clientes?.nombre ?? 'Sin cliente';
+    if (key === 'vendedor') return item.vendedores?.nombre ?? item.vendedor_nombre ?? 'Sin vendedor';
+    if (key === 'cliente') return item.clientes?.nombre ?? item.cliente_nombre ?? 'Sin cliente';
     if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
     return '';
   };
 
   const groups = useMemo(() => groupData(pageData, groupBy, groupLabelFn, groupByLevels), [pageData, groupBy, groupByLevels]);
+  const productGroups = useMemo(() => groupData(productRows, groupBy, groupLabelFn, groupByLevels), [productRows, groupBy, groupByLevels]);
 
   const renderTable = (items: any[]) => (
     <div className={cn(!groupBy && "bg-card border border-border rounded overflow-x-auto")}>
