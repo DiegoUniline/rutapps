@@ -232,6 +232,7 @@ export function useCargarEntrega() {
           tipo: 'entrada',
           producto_id: l.producto_id,
           cantidad: l.cantidad_entregada,
+          almacen_origen_id: l.almacen_origen_id ?? null,
           vendedor_destino_id: vendedorId,
           referencia_tipo: 'entrega',
           referencia_id: entregaId,
