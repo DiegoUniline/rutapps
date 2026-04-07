@@ -148,7 +148,6 @@ function useInventarioData() {
         productos: productosEnriquecidos,
         cargas: cargaDetails,
         totales,
-        rutas,
         almacenes: almacenes ?? [],
         stockAlmacenMap,
       };
