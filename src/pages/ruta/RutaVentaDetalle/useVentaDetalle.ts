@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { queueOperation } from '@/lib/syncQueue';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVenta } from '@/hooks/useVentas';
@@ -110,14 +111,21 @@ export function useVentaDetalle() {
     setSaving(true);
     try {
       const newLineas = editLineas.map(item => ({ venta_id: id!, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, subtotal: item.precio_unitario * item.cantidad, iva_pct: item.iva_pct, iva_monto: item.tiene_iva ? item.precio_unitario * item.cantidad * (item.iva_pct / 100) : 0, ieps_pct: 0, ieps_monto: 0, descuento_pct: 0, total: item.precio_unitario * item.cantidad * (1 + (item.tiene_iva ? item.iva_pct / 100 : 0)) }));
-      // Insert first, then delete old — if insert fails, old lines remain intact
-      const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas);
-      if (linErr) throw linErr;
-      // Delete old lines (those not just inserted)
-      const newIds = newLineas.map(l => l.producto_id);
-      await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${(await supabase.from('venta_lineas').select('id').eq('venta_id', id!).order('created_at', { ascending: false }).limit(newLineas.length)).data?.map(r => r.id).join(',') ?? ''})`);
-      const { error: ventaErr } = await supabase.from('ventas').update({ condicion_pago: editCondicion as any, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, total: editTotals.total, saldo_pendiente: editTotals.total }).eq('id', id!);
-      if (ventaErr) throw ventaErr;
+
+      const ventaUpdate = { condicion_pago: editCondicion as any, notas: editNotas || null, subtotal: editTotals.subtotal, iva_total: editTotals.iva, total: editTotals.total, saldo_pendiente: editTotals.total };
+
+      if (navigator.onLine) {
+        // Insert first, then delete old — if insert fails, old lines remain intact
+        const { error: linErr } = await supabase.from('venta_lineas').insert(newLineas);
+        if (linErr) throw linErr;
+        // Delete old lines (those not just inserted)
+        await supabase.from('venta_lineas').delete().eq('venta_id', id!).not('id', 'in', `(${(await supabase.from('venta_lineas').select('id').eq('venta_id', id!).order('created_at', { ascending: false }).limit(newLineas.length)).data?.map(r => r.id).join(',') ?? ''})`);
+        const { error: ventaErr } = await supabase.from('ventas').update(ventaUpdate).eq('id', id!);
+        if (ventaErr) throw ventaErr;
+      } else {
+        await queueOperation('ventas', 'update', { id: id!, ...ventaUpdate });
+      }
+
       toast.success('Venta actualizada');
       queryClient.invalidateQueries({ queryKey: ['venta', id] });
       queryClient.invalidateQueries({ queryKey: ['ventas'] });
@@ -171,7 +179,12 @@ export function useVentaDetalle() {
       if (montoAplicarActual > 0) {
         aplicaciones.push({ cobro_id: cobro.id, venta_id: venta.id, monto_aplicado: roundMoney(montoAplicarActual) });
         const newSaldo = roundMoney(saldoActual - montoAplicarActual);
-        await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo), status: newSaldo <= 0.01 && venta.status === 'borrador' ? 'confirmado' as const : venta.status }).eq('id', venta.id);
+        const saldoUpdate = { saldo_pendiente: Math.max(0, newSaldo), status: newSaldo <= 0.01 && venta.status === 'borrador' ? 'confirmado' as const : venta.status };
+        if (navigator.onLine) {
+          await supabase.from('ventas').update(saldoUpdate).eq('id', venta.id);
+        } else {
+          await queueOperation('ventas', 'update', { id: venta.id, ...saldoUpdate });
+        }
         ticketApps.push({ folio: venta.folio ?? 'Sin folio', monto: roundMoney(montoAplicarActual), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
       }
 
@@ -180,7 +193,11 @@ export function useVentaDetalle() {
         if (cuenta.montoAplicar > 0) {
           aplicaciones.push({ cobro_id: cobro.id, venta_id: cuenta.id, monto_aplicado: roundMoney(cuenta.montoAplicar) });
           const newSaldo = roundMoney(cuenta.saldo_pendiente - cuenta.montoAplicar);
-          await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo) }).eq('id', cuenta.id);
+          if (navigator.onLine) {
+            await supabase.from('ventas').update({ saldo_pendiente: Math.max(0, newSaldo) }).eq('id', cuenta.id);
+          } else {
+            await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, newSaldo) });
+          }
           ticketApps.push({ folio: cuenta.folio ?? '—', monto: roundMoney(cuenta.montoAplicar), saldoRestante: roundMoney(Math.max(0, newSaldo)) });
         }
       }

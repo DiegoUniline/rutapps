@@ -5416,6 +5416,10 @@ export type Database = {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
       }
+      generate_folio: {
+        Args: { p_empresa_id: string; p_tipo: string }
+        Returns: string
+      }
       get_audit_users: {
         Args: { p_auditoria_id: string }
         Returns: {

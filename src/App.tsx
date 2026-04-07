@@ -114,7 +114,7 @@ import RutaGastos from "@/pages/ruta/RutaGastos";
 import RutaNuevaVenta from "@/pages/ruta/RutaNuevaVenta/index";
 import RutaCobros from "@/pages/ruta/RutaCobros";
 import RutaCobrar from "@/pages/ruta/RutaCobrar";
-import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle";
+import RutaVentaDetalle from "@/pages/ruta/RutaVentaDetalle/index";
 import RutaMiCarga from "@/pages/ruta/RutaMiCarga";
 import RutaDevolucion from "@/pages/ruta/RutaDevolucion";
 import RutaEntregas from "@/pages/ruta/RutaEntregas";
