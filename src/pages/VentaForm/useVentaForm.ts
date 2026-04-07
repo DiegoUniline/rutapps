@@ -350,6 +350,18 @@ export function useVentaForm() {
   const addLine = () => { if (readOnly) return; setLineas(prev => [...prev, emptyLine()]); setDirty(true); setTimeout(() => focusCell(lineas.length, 0), 50); };
   const updateLine = (idx: number, field: string, val: any) => {
     if (readOnly) return;
+    // Validate max stock for entrega inmediata
+    if (field === 'cantidad' && form.tipo === 'venta_directa' && form.entrega_inmediata) {
+      const line = lineas[idx];
+      if (line?.producto_id) {
+        const prod = productosList?.find((p: any) => p.id === line.producto_id);
+        const stock = prod?._stock ?? Infinity;
+        if (prod && !prod.vender_sin_stock && Number(val) > stock) {
+          toast.error(`Stock máximo para "${prod.nombre}": ${stock}`);
+          val = stock;
+        }
+      }
+    }
     // When tax fields change, recalculate pricing with new tax settings so rounding still applies
     if ((field === 'iva_pct' || field === 'ieps_pct') && tarifaRules?.length) {
       const line = lineas[idx];
