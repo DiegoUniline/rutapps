@@ -94,6 +94,8 @@ export default function KardexUbicacionModal({
     URL.revokeObjectURL(url);
   };
 
+  const stockLabel = ubicacionTipo === 'camion' ? 'Stock real (ruta)' : 'Stock real (almacén)';
+
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
@@ -245,7 +247,7 @@ export default function KardexUbicacionModal({
                 : "border-destructive/50 bg-destructive/5"
             )}>
               <div className="flex gap-6">
-                <span>Stock real (almacén): <strong>{fmtNum(stockActual)}</strong></span>
+                <span>{stockLabel}: <strong>{fmtNum(stockActual)}</strong></span>
                 <span>Saldo kardex: <strong>{fmtNum(saldoFinal)}</strong></span>
               </div>
               {coincide ? (

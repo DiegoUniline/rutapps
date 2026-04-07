@@ -45,7 +45,7 @@ function useInventarioData() {
         .select('almacen_id, producto_id, cantidad')
         .eq('empresa_id', eid);
 
-      // Active cargas (en_ruta) with their lines
+      // Active cargas metadata
       const { data: cargas } = await supabase
         .from('cargas')
         .select('id, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), repartidor:repartidor_id(nombre), almacen:almacen_id(nombre), fecha, status, carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta)')
@@ -56,110 +56,81 @@ function useInventarioData() {
       // Stock camión from entregas cargadas
       const { data: stockCamion } = await supabase
         .from('stock_camion')
-        .select('id, vendedor_id, producto_id, cantidad_inicial, cantidad_actual, fecha, vendedores:vendedor_id(nombre)')
+        .select('id, vendedor_id, producto_id, cantidad_inicial, cantidad_actual, fecha, created_at, vendedores:vendedor_id(nombre)')
         .eq('empresa_id', eid)
-        .gt('cantidad_actual', 0);
+        .neq('cantidad_actual', 0);
 
-      // Build route stock map: producto_id -> qty on route
-      // AND per-route breakdown: rutaId -> { vendedor, stockByProduct }
+      // Mobile route stock comes only from stock_camion.
+      // Active cargas are used as route metadata, not as stock source,
+      // to avoid duplicating inventory in route columns and totals.
       const rutaStock: Record<string, number> = {};
       const cargaDetails: any[] = [];
       const rutaBreakdown: Record<string, { vendedor: string; stockByProduct: Record<string, number> }> = {};
+      const cargaMetaByVendedor: Record<string, { fecha: string | null; status: string; almacen: string | null; repartidor: string | null }> = {};
 
       for (const c of (cargas ?? [])) {
-        let cargaTotal = 0;
-        let cargaValorCosto = 0;
-        let cargaValorVenta = 0;
         const rutaKey = c.vendedor_id ?? c.id;
-        const vendedorNombre = (c.vendedores as any)?.nombre ?? '—';
-        if (!rutaBreakdown[rutaKey]) rutaBreakdown[rutaKey] = { vendedor: vendedorNombre, stockByProduct: {} };
-
-        const lineasDetalle: any[] = [];
-        for (const cl of (c.carga_lineas ?? [])) {
-          const enRuta = cl.cantidad_cargada - cl.cantidad_vendida - cl.cantidad_devuelta;
-          const qty = Math.max(0, enRuta);
-          rutaStock[cl.producto_id] = (rutaStock[cl.producto_id] ?? 0) + qty;
-          rutaBreakdown[rutaKey].stockByProduct[cl.producto_id] = (rutaBreakdown[rutaKey].stockByProduct[cl.producto_id] ?? 0) + qty;
-          const prod = (productos ?? []).find(p => p.id === cl.producto_id);
-          cargaTotal += qty;
-          cargaValorCosto += qty * (prod?.costo ?? 0);
-          cargaValorVenta += qty * (prod?.precio_principal ?? 0);
-          lineasDetalle.push({
-            producto_id: cl.producto_id,
-            codigo: prod?.codigo ?? '',
-            nombre: prod?.nombre ?? '',
-            cargado: cl.cantidad_cargada,
-            entregado: cl.cantidad_vendida,
-            devuelto: cl.cantidad_devuelta,
-            abordo: qty,
-            costo: prod?.costo ?? 0,
-            precio: prod?.precio_principal ?? 0,
-          });
-        }
-        cargaDetails.push({
-          id: c.id,
-          origen: 'carga',
-          vendedor: vendedorNombre,
-          vendedor_id: c.vendedor_id,
-          repartidor: (c.repartidor as any)?.nombre,
-          almacen: (c.almacen as any)?.nombre,
+        if (!rutaKey || cargaMetaByVendedor[rutaKey]) continue;
+        cargaMetaByVendedor[rutaKey] = {
           fecha: c.fecha,
           status: c.status,
-          totalUnidades: cargaTotal,
-          valorCosto: cargaValorCosto,
-          valorVenta: cargaValorVenta,
-          lineas: lineasDetalle,
-        });
+          almacen: (c.almacen as any)?.nombre ?? null,
+          repartidor: (c.repartidor as any)?.nombre ?? null,
+        };
       }
 
-      // Group stock_camion by vendedor
-      const scByVendedor: Record<string, { vendedor: string; items: typeof stockCamion }> = {};
+      const scByVendedor: Record<string, { vendedor: string; items: any[]; byProduct: Record<string, any> }> = {};
       for (const sc of (stockCamion ?? [])) {
         const vid = sc.vendedor_id;
+        if (!vid) continue;
         if (!scByVendedor[vid]) {
-          scByVendedor[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', items: [] };
+          scByVendedor[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', items: [], byProduct: {} };
         }
-        scByVendedor[vid].items!.push(sc);
-        const qty = Math.max(0, sc.cantidad_actual);
+        scByVendedor[vid].items.push(sc);
+        const qty = Number(sc.cantidad_actual ?? 0);
+        const initial = Number(sc.cantidad_inicial ?? 0);
         rutaStock[sc.producto_id] = (rutaStock[sc.producto_id] ?? 0) + qty;
-        // Per-route breakdown
         if (!rutaBreakdown[vid]) rutaBreakdown[vid] = { vendedor: (sc.vendedores as any)?.nombre ?? '—', stockByProduct: {} };
         rutaBreakdown[vid].stockByProduct[sc.producto_id] = (rutaBreakdown[vid].stockByProduct[sc.producto_id] ?? 0) + qty;
+
+        const prod = (productos ?? []).find(p => p.id === sc.producto_id);
+        const current = scByVendedor[vid].byProduct[sc.producto_id] ?? {
+          producto_id: sc.producto_id,
+          codigo: prod?.codigo ?? '',
+          nombre: prod?.nombre ?? '',
+          cargado: 0,
+          entregado: 0,
+          devuelto: 0,
+          abordo: 0,
+          costo: prod?.costo ?? 0,
+          precio: prod?.precio_principal ?? 0,
+        };
+        current.cargado += initial;
+        current.abordo += qty;
+        scByVendedor[vid].byProduct[sc.producto_id] = current;
       }
 
-      // Add stock_camion groups as route cards (avoid duplicating cargas vendedores)
-      const cargaVendedorIds = new Set((cargas ?? []).map(c => c.vendedor_id));
       for (const [vid, group] of Object.entries(scByVendedor)) {
-        if (cargaVendedorIds.has(vid)) continue;
-        let total = 0, valCosto = 0, valVenta = 0;
-        const lineasDetalle: any[] = [];
-        for (const sc of group.items ?? []) {
-          const qty = Math.max(0, sc.cantidad_actual);
-          total += qty;
-          const prod = (productos ?? []).find(p => p.id === sc.producto_id);
-          valCosto += qty * (prod?.costo ?? 0);
-          valVenta += qty * (prod?.precio_principal ?? 0);
-          lineasDetalle.push({
-            producto_id: sc.producto_id,
-            codigo: prod?.codigo ?? '',
-            nombre: prod?.nombre ?? '',
-            cargado: sc.cantidad_inicial,
-            entregado: sc.cantidad_inicial - sc.cantidad_actual,
-            devuelto: 0,
-            abordo: qty,
-            costo: prod?.costo ?? 0,
-            precio: prod?.precio_principal ?? 0,
-          });
-        }
+        const lineasDetalle = Object.values(group.byProduct)
+          .map((linea: any) => ({
+            ...linea,
+            entregado: linea.cargado - linea.abordo,
+          }))
+          .sort((a: any, b: any) => a.nombre.localeCompare(b.nombre));
+        const total = lineasDetalle.reduce((sum: number, linea: any) => sum + linea.abordo, 0);
+        const valCosto = lineasDetalle.reduce((sum: number, linea: any) => sum + (linea.abordo * linea.costo), 0);
+        const valVenta = lineasDetalle.reduce((sum: number, linea: any) => sum + (linea.abordo * linea.precio), 0);
+        const meta = cargaMetaByVendedor[vid];
+
         cargaDetails.push({
-          id: `sc-${vid}`,
-          origen: 'entrega',
+          id: meta?.fecha ? `carga-${vid}-${meta.fecha}` : `sc-${vid}`,
+          origen: 'ruta',
           vendedor: group.vendedor,
           vendedor_id: vid,
-          repartidor: null,
-          almacen: null,
-          fecha: (group.items ?? [])[0]?.fecha,
-          status: 'cargado',
+          repartidor: meta?.repartidor ?? null,
+          almacen: meta?.almacen ?? null,
+          fecha: meta?.fecha ?? (group.items ?? [])[0]?.fecha ?? null,
+          status: meta?.status ?? 'cargado',
           totalUnidades: total,
           valorCosto: valCosto,
           valorVenta: valVenta,
@@ -492,13 +463,13 @@ export default function InventarioPage() {
       {/* Rutas view */}
       {view === 'rutas' && data && !selectedRuta && (
         <div className="space-y-3">
-          {data.cargas.filter(c => c.totalUnidades > 0 && c.origen !== 'almacen').length === 0 && (
+          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <Truck className="h-10 w-10 mx-auto mb-2 opacity-30" />
               <p>No hay rutas activas</p>
             </div>
           )}
-          {data.cargas.filter(c => c.totalUnidades > 0 && c.origen !== 'almacen').map(c => (
+          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').map(c => (
             <div
               key={c.id}
               className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:border-primary/40 transition-colors"
@@ -531,13 +502,13 @@ export default function InventarioPage() {
             </div>
           ))}
 
-          {data.cargas.filter(c => c.origen !== 'almacen').length > 0 && (
+          {data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').length > 0 && (
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
               <div className="flex justify-between items-center">
                 <p className="text-sm font-semibold text-foreground">Total en rutas</p>
                 <div className="text-right">
-                  <p className="text-sm font-bold">Costo: $ {fmt(data.cargas.filter(c => c.origen !== 'almacen').reduce((s, c) => s + c.valorCosto, 0))}</p>
-                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.filter(c => c.origen !== 'almacen').reduce((s, c) => s + c.valorVenta, 0))}</p>
+                  <p className="text-sm font-bold">Costo: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').reduce((s, c) => s + c.valorCosto, 0))}</p>
+                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen !== 'almacen').reduce((s, c) => s + c.valorVenta, 0))}</p>
                 </div>
               </div>
             </div>
