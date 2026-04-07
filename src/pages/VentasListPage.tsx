@@ -72,6 +72,7 @@ export default function VentasListPage() {
   const vendedorFilter = filters.vendedor?.length ? filters.vendedor.join(',') : 'todos';
 
   const { data: ventasData, isLoading } = useVentasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
+  const { data: lineasData, isLoading: isLoadingLineas } = useVentaLineasPaginated(search, statusFilter, tipoFilter, page, numericPageSize, condicionFilter, vendedorFilter, dateFrom || undefined, dateTo || undefined);
   const { data: clientesList } = useClientes();
   const { data: vendedoresList } = useVendedoresForFilter();
 
@@ -88,7 +89,13 @@ export default function VentasListPage() {
     return ventasRaw.filter(v => clienteFilter.includes(v.cliente_id ?? ''));
   }, [ventasRaw, clienteFilter]);
 
-  const total = (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
+  // Active dataset depending on view mode
+  const isProductView = viewMode === 'productos';
+  const productRows = lineasData?.rows ?? [];
+
+  const total = isProductView
+    ? (lineasData?.total ?? 0)
+    : (clienteFilter && clienteFilter.length > 0) ? ventas.length : (ventasData?.total ?? 0);
   const from = total === 0 ? 0 : Math.min((page - 1) * numericPageSize + 1, total);
   const to = Math.min(page * numericPageSize, total);
   const totalPages = numericPageSize > 0 ? Math.max(1, Math.ceil(total / numericPageSize)) : 1;
@@ -99,9 +106,13 @@ export default function VentasListPage() {
   const toggleAll = () => { allSelected ? setSelected(new Set()) : setSelected(new Set(pageData.map(v => v.id))); };
   const toggleOne = (id: string) => { const next = new Set(selected); next.has(id) ? next.delete(id) : next.add(id); setSelected(next); };
 
+  const activeLoading = isProductView ? isLoadingLineas : isLoading;
+
   const fmt = (v: number | null | undefined) => v != null ? fmtCurrency(v) : '—';
   const totalVentas = ventas.reduce((s, v) => s + (v.total ?? 0), 0);
   const totalSaldo = ventas.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0);
+  const totalLineas = productRows.reduce((s, r: any) => s + (r.linea_total ?? 0), 0);
+  const totalCantidad = productRows.reduce((s, r: any) => s + (r.cantidad ?? 0), 0);
 
   const groupLabelFn = (item: any, key: string) => {
     if (key === 'status') return STATUS_LABELS[item.status] ?? item.status;
