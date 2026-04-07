@@ -256,6 +256,7 @@ export default function KardexUbicacionModal({
             </div>
           );
         })()}
+      </DialogContent>
     </Dialog>
   );
 }
