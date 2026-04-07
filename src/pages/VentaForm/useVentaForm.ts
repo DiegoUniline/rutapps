@@ -89,7 +89,7 @@ export function useVentaForm() {
     },
   });
 
-  // For venta_directa, hide products with 0 stock (unless vender_sin_stock)
+  // For venta_directa, hide products with 0 stock (unless vender_sin_stock) and enrich with stock qty
   const productosList = useMemo(() => {
     if (!productosListRaw) return productosListRaw;
     if (form.tipo !== 'venta_directa') return productosListRaw;
@@ -98,7 +98,10 @@ export function useVentaForm() {
       if (p.vender_sin_stock) return true;
       const qty = form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0);
       return qty > 0;
-    });
+    }).map((p: any) => ({
+      ...p,
+      _stock: form.almacen_id ? (stockMap.get(p.id) ?? 0) : (p.cantidad ?? 0),
+    }));
   }, [productosListRaw, form.tipo, form.almacen_id, stockAlmacenData]);
 
   const setCellRef = useCallback((row: number, col: number, el: HTMLElement | null) => {
