@@ -477,9 +477,9 @@ export function useRutaVenta() {
 
         // Update saldo_pendiente for cuentas
         for (const cuenta of cuentasPendientes) {
-          if (cuenta.montoAplicar < cuenta.saldo_pendiente) {
-            const applied = cuenta.saldo_pendiente - cuenta.montoAplicar;
-            if (applied > 0) await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: Math.max(0, cuenta.saldo_pendiente - applied) });
+          if (cuenta.montoAplicar > 0) {
+            const nuevoSaldo = Math.max(0, cuenta.saldo_pendiente - cuenta.montoAplicar);
+            await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: nuevoSaldo });
           }
         }
       } else if (condicionPago === 'contado' && totals.total === 0) {
