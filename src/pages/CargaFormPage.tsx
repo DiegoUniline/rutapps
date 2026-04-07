@@ -210,8 +210,16 @@ export default function CargaFormPage() {
               .eq('producto_id', cl.producto_id)
               .maybeSingle();
             if (sa) {
+              const nuevoStock = (sa.cantidad ?? 0) - cl.cantidad_cargada;
+              if (nuevoStock < 0) {
+                const { data: prod } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', cl.producto_id).maybeSingle();
+                if (!prod?.vender_sin_stock) {
+                  toast.error(`Stock insuficiente para "${prod?.nombre ?? cl.producto_id}". Disponible: ${sa.cantidad ?? 0}, solicitado: ${cl.cantidad_cargada}`);
+                  return;
+                }
+              }
               await supabase.from('stock_almacen').update({
-                cantidad: Math.max(0, (sa.cantidad ?? 0) - cl.cantidad_cargada),
+                cantidad: nuevoStock,
                 updated_at: new Date().toISOString(),
               } as any).eq('id', sa.id);
             }

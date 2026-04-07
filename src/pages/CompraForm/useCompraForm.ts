@@ -165,8 +165,15 @@ export function useCompraForm() {
                 .eq('producto_id', l.producto_id!)
                 .maybeSingle();
               if (sa) {
+                const nuevoStock = (sa.cantidad ?? 0) - piezas;
+                if (nuevoStock < 0) {
+                  const { data: prod } = await supabase.from('productos').select('nombre, vender_sin_stock').eq('id', l.producto_id!).maybeSingle();
+                  if (!prod?.vender_sin_stock) {
+                    throw new Error(`Stock insuficiente para "${prod?.nombre ?? l.producto_id}". Disponible: ${sa.cantidad ?? 0}, solicitado: ${piezas}`);
+                  }
+                }
                 await supabase.from('stock_almacen').update({
-                  cantidad: Math.max(0, (sa.cantidad ?? 0) - piezas),
+                  cantidad: nuevoStock,
                   updated_at: new Date().toISOString(),
                 } as any).eq('id', sa.id);
               }
