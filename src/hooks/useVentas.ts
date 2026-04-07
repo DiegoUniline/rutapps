@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { supabase } from '@/lib/supabase';
@@ -15,14 +15,15 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
   const filterOwn = !seeAll && !!profileId;
 
   useEffect(() => {
+    if (!empresa?.id) return;
     const channel = supabase
       .channel('ventas-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter: `empresa_id=eq.${empresa.id}` }, () => {
         qc.invalidateQueries({ queryKey: ['ventas'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [qc]);
+  }, [qc, empresa?.id]);
 
   return useQuery({
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter, page, pageSize, filterOwn ? profileId : 'all', condicionFilter, vendedorFilter, dateFrom, dateTo],
@@ -151,14 +152,15 @@ export function useVentas(search?: string, statusFilter?: string, tipoFilter?: s
   const { empresa } = useAuth();
 
   useEffect(() => {
+    if (!empresa?.id) return;
     const channel = supabase
       .channel('ventas-realtime-all')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ventas', filter: `empresa_id=eq.${empresa.id}` }, () => {
         qc.invalidateQueries({ queryKey: ['ventas'] });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [qc]);
+  }, [qc, empresa?.id]);
 
   return useQuery({
     queryKey: ['ventas', empresa?.id, search, statusFilter, tipoFilter],

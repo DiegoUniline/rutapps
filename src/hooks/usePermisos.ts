@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchAllPages } from '@/lib/supabasePaginate';
 
 interface Permiso {
   modulo: string;
@@ -217,12 +218,14 @@ async function fetchPermisos(userId: string): Promise<PermisosData> {
     return { hasRole: false, permisos: [] };
   }
 
-  const { data: rolePermisos } = await supabase
-    .from('role_permisos')
-    .select('modulo, accion, permitido')
-    .eq('role_id', userRole.role_id);
+  const rolePermisos = await fetchAllPages<Permiso>((from, to) =>
+    supabase.from('role_permisos')
+      .select('modulo, accion, permitido')
+      .eq('role_id', userRole.role_id)
+      .range(from, to)
+  );
 
-  return { hasRole: true, permisos: rolePermisos ?? [] };
+  return { hasRole: true, permisos: rolePermisos };
 }
 
 export function usePermisos(): UsePermisosReturn {
@@ -254,7 +257,7 @@ export function usePermisos(): UsePermisosReturn {
       return perm?.permitido ?? false;
     }
     if (hasRole === false) return true; // no role = full access
-    if (hasRole === null) return false; // loading
+    if (hasRole === null) return modulo === 'solo_movil' ? false : true; // still loading — allow access
     // Each module requires its own explicit permission — no parent fallback
     const perm = permisos.find(p => p.modulo === modulo && p.accion === accion);
     return perm?.permitido ?? false;
