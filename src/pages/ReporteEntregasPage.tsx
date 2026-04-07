@@ -19,14 +19,14 @@ function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Da
     queryKey: ['reporte-entregas', empresa?.id, vendedorId, fechaDesde.toISOString(), fechaHasta.toISOString()],
     enabled: !!empresa?.id,
     queryFn: async () => {
+      const dStr = fechaDesde.toISOString().slice(0, 10);
+      const hStr = fechaHasta.toISOString().slice(0, 10);
       let q = supabase
         .from('ventas')
         .select('*, clientes(nombre), vendedores(nombre), venta_lineas(cantidad, precio_unitario, subtotal, total, productos(id, codigo, nombre), unidades(abreviatura))')
         .eq('empresa_id', empresa!.id)
-        .eq('tipo', 'venta_directa')
-        .not('pedido_origen_id', 'is', null)
-        .gte('fecha_entrega', fechaDesde.toISOString().slice(0, 10))
-        .lte('fecha_entrega', fechaHasta.toISOString().slice(0, 10))
+        .in('status', ['confirmado', 'entregado', 'facturado'])
+        .or(`and(fecha_entrega.gte.${dStr},fecha_entrega.lte.${hStr}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${dStr},fecha.lte.${hStr})`)
         .order('fecha_entrega', { ascending: true });
 
       if (vendedorId && vendedorId !== 'todos') q = q.eq('vendedor_id', vendedorId);
