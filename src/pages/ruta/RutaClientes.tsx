@@ -41,6 +41,7 @@ export default function RutaClientes() {
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
   const [localVisited, setLocalVisited] = useState<Set<string>>(getLocalVisitedSet);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
 
   // Fetch today's visits from the database (works across devices)
