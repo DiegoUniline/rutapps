@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAlmacenes } from '@/hooks/useData';
-import { fmtDate , todayLocal } from '@/lib/utils';
+import { fmtDate, todayLocal, cn, fmtNum } from '@/lib/utils';
 import { toast } from 'sonner';
 import { generarAjusteInventarioPdf } from '@/lib/ajusteInventarioPdf';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
