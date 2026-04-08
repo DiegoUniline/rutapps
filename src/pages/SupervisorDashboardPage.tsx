@@ -811,20 +811,23 @@ function ProductPanel({ products, fmtMoney }: { products: { nombre: string; codi
   );
 }
 
-function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; height?: number }) {
+function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { markers: MarkerPoint[]; sellerLocations?: SellerLocation[]; height?: number }) {
   const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
+  const [selectedSeller, setSelectedSeller] = useState<SellerLocation | null>(null);
 
   const center = useMemo(() => {
-    if (markers.length === 0) return MAP_CENTER;
-    const lats = markers.map((m) => m.lat);
-    const lngs = markers.map((m) => m.lng);
+    const allPoints = [...markers.map(m => ({ lat: m.lat, lng: m.lng })), ...sellerLocations.map(s => ({ lat: s.lat, lng: s.lng }))];
+    if (allPoints.length === 0) return MAP_CENTER;
+    const lats = allPoints.map((p) => p.lat);
+    const lngs = allPoints.map((p) => p.lng);
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
-  }, [markers]);
+  }, [markers, sellerLocations]);
 
   // Green for visited, red for pending — matching mobile route style
   const VISITED_GREEN = '#22c55e';
   const PENDING_RED = '#ef4444';
+  const SELLER_BLUE = '#3b82f6';
 
   const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean) => {
     const color = visitado ? VISITED_GREEN : PENDING_RED;
@@ -841,8 +844,22 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
     };
   }, []);
 
+  const makeSellerIcon = useCallback((nombre: string) => {
+    const size = 36;
+    const initial = (nombre || '?')[0].toUpperCase();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${SELLER_BLUE}" stroke="#fff" stroke-width="3"/>
+      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="16" font-weight="bold" font-family="Arial,sans-serif">${initial}</text>
+    </svg>`;
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(size, size),
+      anchor: new google.maps.Point(size / 2, size / 2),
+    };
+  }, []);
+
   if (!isLoaded) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
-  if (markers.length === 0) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
+  if (markers.length === 0 && sellerLocations.length === 0) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
 
   return (
     <GoogleMap
@@ -859,8 +876,12 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
       }}
     >
       {markers.map((m) => (
-        <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => setSelected(m)}
+        <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => { setSelected(m); setSelectedSeller(null); }}
           icon={makeNumberedIcon(m.orden, m.visitado)} />
+      ))}
+      {sellerLocations.map((s) => (
+        <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }} onClick={() => { setSelectedSeller(s); setSelected(null); }}
+          icon={makeSellerIcon(s.nombre)} zIndex={1000} />
       ))}
       {selected && (
         <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
@@ -870,6 +891,14 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
             <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
             <p>{selected.visitado ? '✅ Visitado' : '⏳ Pendiente'}</p>
             {selected.diasSinComprar !== null && <p>{selected.diasSinComprar} días sin comprar</p>}
+          </div>
+        </InfoWindow>
+      )}
+      {selectedSeller && (
+        <InfoWindow position={{ lat: selectedSeller.lat, lng: selectedSeller.lng }} onCloseClick={() => setSelectedSeller(null)}>
+          <div className="space-y-1 p-1 text-xs">
+            <p className="font-bold text-sm" style={{ color: SELLER_BLUE }}>📍 {selectedSeller.nombre}</p>
+            <p style={{ color: '#6b7280' }}>Última visita: {selectedSeller.hora}</p>
           </div>
         </InfoWindow>
       )}
