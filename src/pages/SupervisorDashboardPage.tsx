@@ -92,15 +92,11 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-usuarios', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data: adminRoles } = await supabase.from('roles').select('id').eq('empresa_id', empresa!.id).eq('nombre', 'Administrador');
-      const adminRoleIds = (adminRoles ?? []).map((role) => role.id);
-      const [adminAssignmentsResult, profilesResult, vendedoresResult] = await Promise.all([
-        adminRoleIds.length > 0 ? supabase.from('user_roles').select('user_id').in('role_id', adminRoleIds) : Promise.resolve({ data: [] as { user_id: string }[] }),
+      const [profilesResult, vendedoresResult] = await Promise.all([
         supabase.from('profiles').select('id, user_id, nombre, estado').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'),
         supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id),
       ]);
-      const adminUserIds = (adminAssignmentsResult.data ?? []).map((row) => row.user_id);
-      const visibleProfiles = (profilesResult.data ?? []).filter((profile) => !adminUserIds.includes(profile.user_id));
+      const allProfiles = profilesResult.data ?? [];
       const aliasesByName = new Map<string, string[]>();
       (vendedoresResult.data ?? []).forEach((seller) => {
         const key = normalizePersonName(seller.nombre);
@@ -109,7 +105,7 @@ export default function SupervisorDashboardPage() {
         current.push(seller.id);
         aliasesByName.set(key, current);
       });
-      return visibleProfiles.map((profile) => {
+      return allProfiles.map((profile) => {
         const key = normalizePersonName(profile.nombre);
         const aliases = Array.from(new Set([profile.id, ...(aliasesByName.get(key) ?? [])]));
         return { id: profile.id, user_id: profile.user_id, nombre: profile.nombre ?? 'Sin nombre', aliases } satisfies DashboardSeller;
