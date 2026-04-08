@@ -496,7 +496,7 @@ export default function SupervisorDashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             <GoogleMapsProvider>
-              <SupervisorMap markers={mapMarkers} height={isMobile ? 300 : 480} />
+              <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} height={isMobile ? 300 : 480} />
             </GoogleMapsProvider>
             <div className="grid grid-cols-3 border-t border-border bg-muted/30">
               <MiniSummary label="Visitados" value={String(dashboardStats.clientesVisitados)} />
