@@ -660,85 +660,296 @@ export default function AjustesInventarioPage() {
           </div>
         </TabsContent>
 
-         <TabsContent value="historial" className="mt-4 space-y-2">
-          {loadingHistorial && <div className="text-center text-muted-foreground py-8">Cargando...</div>}
-          {!loadingHistorial && (historial ?? []).length === 0 && (
-            <div className="text-center text-muted-foreground py-12">
-              <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay ajustes registrados
+         <TabsContent value="historial" className="mt-4 space-y-3">
+          {/* Sub-tabs: agrupado vs detalle */}
+          <div className="flex items-center justify-between border-b border-border">
+            <div className="flex gap-1">
+              <button
+                onClick={() => setHistorialView('agrupado')}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border-b-2 transition-colors",
+                  historialView === 'agrupado' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <List className="h-3.5 w-3.5" /> Agrupado
+              </button>
+              <button
+                onClick={() => setHistorialView('detalle')}
+                className={cn(
+                  "flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border-b-2 transition-colors",
+                  historialView === 'detalle' ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Package className="h-3.5 w-3.5" /> Detalle
+              </button>
+            </div>
+          </div>
+
+          {/* ─── AGRUPADO VIEW ─── */}
+          {historialView === 'agrupado' && (
+            <div className="space-y-2">
+              {loadingHistorial && <div className="text-center text-muted-foreground py-8">Cargando...</div>}
+              {!loadingHistorial && (historial ?? []).length === 0 && (
+                <div className="text-center text-muted-foreground py-12">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-30" /> No hay ajustes registrados
+                </div>
+              )}
+              {(historial ?? []).map((group: any) => {
+                const isOpen = expandedGroup === group.key;
+                const items = group?.items ?? [];
+                const totalItems = items.length;
+                const totalDiff = items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
+                return (
+                  <div key={group.key} className="border border-border rounded-lg overflow-hidden">
+                    <button
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-card transition-colors"
+                      onClick={() => setExpandedGroup(isOpen ? null : group.key)}
+                    >
+                      {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                      <div className="flex items-center gap-4 flex-1 flex-wrap">
+                        <span className="flex items-center gap-1.5 text-sm font-medium">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          {fmtDate(group.fecha)}{' '}
+                          <span className="text-xs text-muted-foreground font-normal">
+                            {new Date(group.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <User className="h-3.5 w-3.5" />
+                          {group.userName}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {group.almacenName}
+                        </span>
+                        <span className="text-xs text-muted-foreground italic flex-1 truncate max-w-[250px]">
+                          {group.motivo || 'Sin motivo'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <Badge variant="outline" className="text-xs">{totalItems} producto{totalItems !== 1 ? 's' : ''}</Badge>
+                        <span className={`font-mono text-sm font-semibold ${totalDiff > 0 ? 'text-green-600' : totalDiff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {totalDiff > 0 ? '+' : ''}{totalDiff}
+                        </span>
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Código</TableHead>
+                              <TableHead>Producto</TableHead>
+                              <TableHead className="text-right">Anterior</TableHead>
+                              <TableHead className="text-right">Nueva</TableHead>
+                              <TableHead className="text-right">Diferencia</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {(group?.items ?? []).map((a: any) => (
+                              <TableRow key={a.id}>
+                                <TableCell className="font-mono text-xs text-muted-foreground">{a.productos?.codigo}</TableCell>
+                                <TableCell className="text-sm">{a.productos?.nombre}</TableCell>
+                                <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
+                                <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
+                                <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
+                                  {a.diferencia > 0 ? '+' : ''}{a.diferencia}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
-          {(historial ?? []).map((group: any) => {
-            const isOpen = expandedGroup === group.key;
-            const items = group?.items ?? [];
-            const totalItems = items.length;
-            const totalDiff = items.reduce((sum: number, i: any) => sum + (i.diferencia ?? 0), 0);
+
+          {/* ─── DETALLE VIEW ─── */}
+          {historialView === 'detalle' && (() => {
+            const AJUSTE_FILTER_OPTIONS = [
+              { key: 'almacen', label: 'Almacén', options: (almacenes ?? []).map((a: any) => ({ value: a.id, label: a.nombre })) },
+            ];
+            const AJUSTE_GROUP_BY_OPTIONS = [
+              { value: 'almacen', label: 'Almacén' },
+              { value: 'producto', label: 'Producto' },
+              { value: 'motivo', label: 'Motivo' },
+              { value: 'usuario', label: 'Usuario' },
+              { value: 'fecha', label: 'Fecha (día)' },
+              { value: 'fecha_anio_mes', label: 'Año-Mes' },
+            ];
+            const AJUSTE_DETALLE_COLUMNS: ExportColumn[] = [
+              { key: 'fecha', header: 'Fecha', format: 'date', width: 12 },
+              { key: 'almacen', header: 'Almacén', width: 20 },
+              { key: 'usuario', header: 'Usuario', width: 20 },
+              { key: 'codigo', header: 'Código', width: 14 },
+              { key: 'producto', header: 'Producto', width: 25 },
+              { key: 'cantidad_anterior', header: 'Anterior', format: 'number', width: 12 },
+              { key: 'cantidad_nueva', header: 'Nueva', format: 'number', width: 12 },
+              { key: 'diferencia', header: 'Diferencia', format: 'number', width: 12 },
+              { key: 'motivo', header: 'Motivo', width: 20 },
+            ];
+
+            // Flatten all historial items
+            const allItems = useMemo(() => {
+              if (!historial) return [];
+              return historial.flatMap((g: any) =>
+                (g.items ?? []).map((a: any) => ({
+                  id: a.id,
+                  fecha: a.fecha,
+                  almacen: g.almacenName,
+                  almacen_id: a.almacen_id,
+                  usuario: g.userName,
+                  codigo: a.productos?.codigo ?? '',
+                  producto: a.productos?.nombre ?? '',
+                  cantidad_anterior: a.cantidad_anterior,
+                  cantidad_nueva: a.cantidad_nueva,
+                  diferencia: a.diferencia,
+                  motivo: a.motivo ?? g.motivo ?? '',
+                }))
+              );
+            }, [historial]);
+
+            const filteredH = useMemo(() => {
+              let list = allItems;
+              const almF = filtersH.almacen;
+              if (almF && almF.length > 0) list = list.filter(l => almF.includes(l.almacen_id));
+              if (searchH) {
+                const s = searchH.toLowerCase();
+                list = list.filter(l =>
+                  l.producto.toLowerCase().includes(s) ||
+                  l.codigo.toLowerCase().includes(s) ||
+                  l.almacen.toLowerCase().includes(s) ||
+                  l.usuario.toLowerCase().includes(s) ||
+                  l.motivo.toLowerCase().includes(s)
+                );
+              }
+              if (desdeH) list = list.filter(l => (l.fecha ?? '') >= desdeH);
+              if (hastaH) list = list.filter(l => (l.fecha ?? '') <= hastaH);
+              return list;
+            }, [allItems, searchH, filtersH.almacen, desdeH, hastaH]);
+
+            const totalH = filteredH.length;
+            const fromH = Math.min((pageH - 1) * PAGE_SIZE_H + 1, totalH);
+            const toH = Math.min(pageH * PAGE_SIZE_H, totalH);
+            const pageDataH = filteredH.slice(fromH - 1, toH);
+            const totalDiffH = filteredH.reduce((s, l) => s + (l.diferencia ?? 0), 0);
+
+            const groupsH = useMemo(() => groupData(pageDataH, groupByH, (item: any, key) => {
+              if (key === 'almacen') return item.almacen;
+              if (key === 'producto') return item.producto;
+              if (key === 'motivo') return item.motivo || 'Sin motivo';
+              if (key === 'usuario') return item.usuario;
+              if (key.startsWith('fecha')) return dateGroupLabel(item.fecha, key as any);
+              return '';
+            }, groupByLevelsH), [pageDataH, groupByH, groupByLevelsH]);
+
+            const renderDetalleTable = (items: any[]) => (
+              <div className={cn(!groupByH && "bg-card border border-border rounded overflow-x-auto")}>
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-table-border text-left">
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Fecha</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Almacén</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Usuario</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Código</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Producto</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Anterior</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Nueva</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Diferencia</th>
+                      <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.length === 0 && (
+                      <tr><td colSpan={9} className="text-center py-12 text-muted-foreground">No hay ajustes.</td></tr>
+                    )}
+                    {items.map((l: any) => (
+                      <tr key={l.id} className="border-b border-table-border transition-colors hover:bg-table-hover">
+                        <td className="py-2 px-3 text-muted-foreground">{fmtDate(l.fecha)}</td>
+                        <td className="py-2 px-3">{l.almacen}</td>
+                        <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{l.usuario}</td>
+                        <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{l.codigo}</td>
+                        <td className="py-2 px-3 font-medium">{l.producto}</td>
+                        <td className="py-2 px-3 text-right font-mono">{l.cantidad_anterior}</td>
+                        <td className="py-2 px-3 text-right font-mono">{l.cantidad_nueva}</td>
+                        <td className={`py-2 px-3 text-right font-mono font-semibold ${l.diferencia > 0 ? 'text-green-600' : l.diferencia < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {l.diferencia > 0 ? '+' : ''}{l.diferencia}
+                        </td>
+                        <td className="py-2 px-3 hidden md:table-cell text-xs text-muted-foreground truncate max-w-[200px]">{l.motivo}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {items.length > 0 && (
+                    <tfoot>
+                      <tr className="bg-card border-t border-border font-semibold text-[12px]">
+                        <td colSpan={7} className="py-2 px-3 text-muted-foreground">{items.length} ajustes</td>
+                        <td className={`py-2 px-3 text-right font-mono font-bold ${items.reduce((s: number, l: any) => s + (l.diferencia ?? 0), 0) >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                          {(() => { const d = items.reduce((s: number, l: any) => s + (l.diferencia ?? 0), 0); return (d > 0 ? '+' : '') + d; })()}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            );
+
             return (
-              <div key={group.key} className="border border-border rounded-lg overflow-hidden">
-                {/* Group header */}
-                <button
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-card transition-colors"
-                  onClick={() => setExpandedGroup(isOpen ? null : group.key)}
-                >
-                  {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
-                  <div className="flex items-center gap-4 flex-1 flex-wrap">
-                    <span className="flex items-center gap-1.5 text-sm font-medium">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      {fmtDate(group.fecha)}{' '}
-                      <span className="text-xs text-muted-foreground font-normal">
-                        {new Date(group.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </span>
-                    </span>
-                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <User className="h-3.5 w-3.5" />
-                      {group.userName}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {group.almacenName}
-                    </span>
-                    <span className="text-xs text-muted-foreground italic flex-1 truncate max-w-[250px]">
-                      {group.motivo || 'Sin motivo'}
-                    </span>
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <OdooFilterBar
+                    search={searchH}
+                    onSearchChange={val => { setSearchH(val); setPageH(1); }}
+                    placeholder="Buscar por producto, almacén, usuario o motivo..."
+                    filterOptions={AJUSTE_FILTER_OPTIONS}
+                    activeFilters={filtersH}
+                    onToggleFilter={(key, val) => { toggleFilterValueH(key, val); setPageH(1); }}
+                    onSetFilter={(key, vals) => { setFilterH(key, vals); setPageH(1); }}
+                    onClearFilters={() => { clearFiltersH(); setPageH(1); }}
+                    groupByOptions={AJUSTE_GROUP_BY_OPTIONS}
+                    activeGroupBy={groupByH}
+                    onGroupByChange={setGroupByH}
+                    activeGroupByLevels={groupByLevelsH}
+                    onGroupByLevelChange={setGroupByLevelH}
+                    dateFrom={desdeH}
+                    dateTo={hastaH}
+                    onDateFromChange={setDesdeH}
+                    onDateToChange={setHastaH}
+                  />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <ExportButton
+                      onExcel={() => exportToExcel({ fileName: 'Ajustes_Inventario', title: 'Historial de Ajustes de Inventario', columns: AJUSTE_DETALLE_COLUMNS, data: filteredH, totals: { diferencia: totalDiffH } })}
+                      onPDF={() => exportToPDF({ fileName: 'Ajustes_Inventario', title: 'Historial de Ajustes de Inventario', columns: AJUSTE_DETALLE_COLUMNS, data: filteredH, totals: { diferencia: totalDiffH } })}
+                    />
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Badge variant="outline" className="text-xs">{totalItems} producto{totalItems !== 1 ? 's' : ''}</Badge>
-                    <span className={`font-mono text-sm font-semibold ${totalDiff > 0 ? 'text-green-600' : totalDiff < 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      {totalDiff > 0 ? '+' : ''}{totalDiff}
-                    </span>
+                </div>
+
+                {totalH > 0 && (
+                  <div className="flex items-center gap-6 text-xs text-muted-foreground bg-card rounded px-3 py-2">
+                    <span><strong className="text-foreground">{totalH}</strong> ajustes</span>
+                    <span>Diferencia total: <strong className={totalDiffH >= 0 ? 'text-green-600' : 'text-destructive'}>{totalDiffH > 0 ? '+' : ''}{totalDiffH}</strong></span>
                   </div>
-                </button>
-                {/* Expanded detail */}
-                {isOpen && (
-                  <div className="border-t border-border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Código</TableHead>
-                          <TableHead>Producto</TableHead>
-                          <TableHead className="text-right">Anterior</TableHead>
-                          <TableHead className="text-right">Nueva</TableHead>
-                          <TableHead className="text-right">Diferencia</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(group?.items ?? []).map((a: any) => (
-                          <TableRow key={a.id}>
-                            <TableCell className="font-mono text-xs text-muted-foreground">{a.productos?.codigo}</TableCell>
-                            <TableCell className="text-sm">{a.productos?.nombre}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{a.cantidad_anterior}</TableCell>
-                            <TableCell className="text-right font-mono text-sm">{a.cantidad_nueva}</TableCell>
-                            <TableCell className={`text-right font-mono text-sm font-semibold ${a.diferencia > 0 ? 'text-green-600' : a.diferencia < 0 ? 'text-destructive' : ''}`}>
-                              {a.diferencia > 0 ? '+' : ''}{a.diferencia}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                )}
+
+                {loadingHistorial ? (
+                  <div className="text-center text-muted-foreground py-8">Cargando...</div>
+                ) : (
+                  <>
+                    <GroupedTableWrapper groupBy={groupByH} groups={groupsH} renderTable={renderDetalleTable} />
+                    {!groupByH && totalH > 0 && (
+                      <OdooPagination from={fromH} to={toH} total={totalH}
+                        onPrev={() => setPageH(p => Math.max(1, p - 1))}
+                        onNext={() => setPageH(p => p + 1)}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             );
-          })}
+          })()}
         </TabsContent>
       </Tabs>
 
