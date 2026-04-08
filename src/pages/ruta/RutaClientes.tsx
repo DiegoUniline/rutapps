@@ -1,18 +1,17 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical, Plus } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Calendar, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
-import { cn , todayLocal } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import AlertasVendedor from '@/components/ruta/AlertasVendedor';
+import { cn, todayLocal } from '@/lib/utils';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
+import { ClienteArrivalCard } from '@/components/ruta/ClienteArrivalCard';
 import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2 } from 'lucide-react';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
@@ -42,6 +41,7 @@ export default function RutaClientes() {
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
   const [localVisited, setLocalVisited] = useState<Set<string>>(getLocalVisitedSet);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
 
   // Fetch today's visits from the database (works across devices)
@@ -183,6 +183,36 @@ export default function RutaClientes() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(nombre)}`, '_blank');
   };
 
+  const handleVender = useCallback((c: any) => {
+    markVisited(c.id);
+    setExpandedId(null);
+    navigate(`/ruta/ventas/nueva?clienteId=${c.id}`);
+  }, [markVisited, navigate]);
+
+  const handleNoCompro = useCallback(async (clienteId: string, motivo: string, notas?: string) => {
+    markVisited(clienteId);
+    setExpandedId(null);
+    if (empresa?.id && profile?.user_id) {
+      const loc = locationService.getLastKnownLocation();
+      await supabase.from('visitas').insert({
+        empresa_id: empresa.id,
+        cliente_id: clienteId,
+        user_id: profile.user_id,
+        tipo: 'sin_compra',
+        motivo_sin_compra: motivo,
+        notas: notas || null,
+        fecha: new Date().toISOString(),
+        gps_lat: loc?.lat ?? null,
+        gps_lng: loc?.lng ?? null,
+      });
+    }
+    toast.success('Visita registrada');
+  }, [markVisited, empresa, profile]);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedId(prev => prev === id ? null : id);
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-card px-4 pt-2 pb-1 space-y-2">
@@ -276,108 +306,28 @@ export default function RutaClientes() {
       <div className="flex-1 overflow-auto px-4 space-y-2 pb-4 pt-2">
         {isLoading && <p className="text-center text-muted-foreground text-sm py-8">Cargando...</p>}
 
-        {filtered.map((c: any, idx: number) => {
-          const isVisited = visited.has(c.id);
-          return (
-            <div key={c.id} className={cn(
-              "bg-card border rounded-xl px-2.5 py-2 active:bg-card transition-colors",
-              isVisited ? "border-emerald-500/40 bg-emerald-500/5" : "border-border"
-            )}>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => isVisited ? unmarkVisited(c.id) : markVisited(c.id)}
-                  className={cn(
-                    "w-7 h-7 rounded-md flex items-center justify-center transition-all active:scale-90 shrink-0",
-                    isVisited
-                      ? "bg-emerald-500 text-white"
-                      : "bg-primary/10 text-primary"
-                  )}
-                  title={isVisited ? 'Desmarcar visitado' : 'Marcar como visitado'}
-                >
-                  {isVisited
-                    ? <CheckCircle2 className="h-3.5 w-3.5" />
-                    : <span className="font-bold text-[11px]">{idx + 1}</span>
-                  }
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => setHistorialCliente({ id: c.id, nombre: c.nombre })} className={cn(
-                      "text-[13px] font-semibold truncate text-left flex-1 min-w-0",
-                      isVisited ? "text-emerald-700 dark:text-emerald-300" : "text-foreground"
-                    )}>{c.nombre}</button>
-                    {c.codigo && <span className="text-[10px] text-muted-foreground font-mono shrink-0">{c.codigo}</span>}
-                  </div>
-                  {c.direccion && (
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1 truncate leading-tight">
-                      <MapPin className="h-2.5 w-2.5 shrink-0" />{c.direccion}{c.colonia ? `, ${c.colonia}` : ''}
-                    </p>
-                  )}
-                  {modo === 'todos' && c.dia_visita && c.dia_visita.length > 0 && (
-                    <div className="flex gap-0.5 mt-0.5 flex-wrap">
-                      {c.dia_visita.map((d: string) => (
-                        <span key={d} className={cn(
-                          "text-[9px] px-1 py-px rounded-full font-medium capitalize",
-                          d === DIA_HOY ? "bg-primary/10 text-primary" : "bg-card border border-border text-muted-foreground"
-                        )}>
-                          {d.slice(0, 3)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {modo !== 'visitados' && (
-                  <div className="flex flex-col shrink-0">
-                    <button onClick={() => moveItem(idx, 'up')} disabled={idx === 0}
-                      className={cn("p-0.5", idx === 0 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => moveItem(idx, 'down')} disabled={idx === filtered.length - 1}
-                      className={cn("p-0.5", idx === filtered.length - 1 ? "opacity-20" : "text-muted-foreground active:text-primary")}>
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-
-                <button onClick={() => {
-                  markVisited(c.id);
-                  navigate(`/ruta/ventas/nueva?clienteId=${c.id}`);
-                }}
-                  className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center text-primary active:scale-90 transition-transform shrink-0">
-                  <ShoppingCart className="h-3.5 w-3.5" />
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground active:bg-muted shrink-0">
-                      <MoreVertical className="h-3.5 w-3.5" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-[160px]">
-                    <DropdownMenuItem onClick={() => captureGps(c)} disabled={capturingGpsId === c.id}>
-                      {capturingGpsId === c.id
-                        ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        : <Crosshair className="h-4 w-4 mr-2" />}
-                      {c.gps_lat ? 'Actualizar GPS' : 'Capturar GPS'}
-                    </DropdownMenuItem>
-                    {c.gps_lat && c.gps_lng && (
-                      <DropdownMenuItem onClick={() => openMaps(c.gps_lat!, c.gps_lng!, c.nombre)}>
-                        <Navigation className="h-4 w-4 mr-2" />
-                        Navegar
-                      </DropdownMenuItem>
-                    )}
-                    {c.telefono && (
-                      <DropdownMenuItem onClick={() => window.open(`tel:${c.telefono}`)}>
-                        <Phone className="h-4 w-4 mr-2" />
-                        Llamar
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          );
-        })}
+        {filtered.map((c: any, idx: number) => (
+          <ClienteArrivalCard
+            key={c.id}
+            cliente={c}
+            idx={idx}
+            totalItems={filtered.length}
+            isVisited={visited.has(c.id)}
+            isExpanded={expandedId === c.id}
+            modo={modo}
+            diaHoy={DIA_HOY}
+            capturingGpsId={capturingGpsId}
+            onToggleExpand={toggleExpand}
+            onMarkVisited={markVisited}
+            onUnmarkVisited={unmarkVisited}
+            onVender={handleVender}
+            onNoCompro={handleNoCompro}
+            onMoveItem={moveItem}
+            onCaptureGps={captureGps}
+            onOpenMaps={openMaps}
+            onHistorial={setHistorialCliente}
+          />
+        ))}
 
         {!isLoading && filtered.length === 0 && (
           <div className="text-center py-12">
@@ -385,7 +335,7 @@ export default function RutaClientes() {
               <>
                 <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                 <p className="text-muted-foreground text-base">Aún no has visitado clientes hoy</p>
-                <p className="text-muted-foreground/60 text-sm mt-1">Toca el número del cliente para marcarlo como visitado</p>
+                <p className="text-muted-foreground/60 text-sm mt-1">Toca el número del cliente para abrir las opciones</p>
               </>
             ) : (
               <>
