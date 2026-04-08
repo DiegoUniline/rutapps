@@ -54,7 +54,7 @@ const navItems: NavItem[] = [
       { label: 'Entregas', path: '/logistica/entregas' },
       { label: 'Monitor de rutas', path: '/monitor-rutas' },
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
-      { label: 'Mapa de ventas', path: '/ventas/mapa-ventas' },
+      { label: 'Mapa de entregas', path: '/ventas/mapa-ventas' },
     ],
   },
   {
@@ -258,7 +258,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   'saldos-cliente': 'Saldos por cliente', 'saldos-proveedor': 'Saldos por proveedor',
   configuracion: 'Configuración', 'configuracion-inicial': 'Config. inicial',
   descargas: 'Liquidar Ruta', usuarios: 'Usuarios y permisos', whatsapp: 'WhatsApp',
-  'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de ventas',
+  'mapa-clientes': 'Mapa de clientes', 'mapa-ventas': 'Mapa de entregas',
   logistica: 'Logística', 'pedidos-pendientes': 'Pedidos pendientes',
   asignacion: 'Asignación', quiebres: 'Quiebres', 'orden-carga': 'Orden de carga',
   'facturacion-cfdi': 'Facturación', devoluciones: 'Devoluciones',
