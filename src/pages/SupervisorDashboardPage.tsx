@@ -82,7 +82,11 @@ export default function SupervisorDashboardPage() {
   const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-  const diaHoyLabel = DIAS_SEMANA[new Date().getDay()];
+  // Derive day label from the selected 'desde' date so filter works for any chosen date
+  const diaHoyLabel = useMemo(() => {
+    const d = new Date(`${desde}T12:00:00`);
+    return DIAS_SEMANA[d.getDay()];
+  }, [desde]);
 
   const { data: vendedores } = useQuery({
     queryKey: ['supervisor-usuarios', empresa?.id],
