@@ -177,7 +177,7 @@ export default function SupervisorDashboardPage() {
     queryFn: async () => {
       const { data } = await supabase.from('visitas')
         .select('id, user_id, cliente_id, tipo, motivo, gps_lat, gps_lng, created_at, clientes(nombre, gps_lat, gps_lng)')
-        .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false });
+        .eq('empresa_id', empresa!.id).gte('fecha', `${desde}T00:00:00`).lte('fecha', `${hasta}T23:59:59`).order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
     refetchInterval: 30000,
