@@ -1,18 +1,17 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical, Plus } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Calendar, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { useDataVisibility } from '@/hooks/useDataVisibility';
-import { cn , todayLocal } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import AlertasVendedor from '@/components/ruta/AlertasVendedor';
+import { cn, todayLocal } from '@/lib/utils';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
+import { ClienteArrivalCard } from '@/components/ruta/ClienteArrivalCard';
 import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
 import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
+import { CheckCircle2 } from 'lucide-react';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
