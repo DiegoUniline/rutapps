@@ -823,7 +823,14 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
       mapContainerStyle={{ width: '100%', height: `${height}px` }}
       center={center}
       zoom={12}
-      options={{ disableDefaultUI: true, zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
+      options={{
+        disableDefaultUI: true, zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: true,
+        styles: [
+          { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+          { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+          { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+        ],
+      }}
     >
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => setSelected(m)}
