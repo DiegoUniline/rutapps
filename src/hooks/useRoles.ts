@@ -114,8 +114,10 @@ export function useRoles() {
       .upsert({ role_id: roleId, modulo, accion, permitido }, { onConflict: 'role_id,modulo,accion' })
       .select('id, role_id, modulo, accion, permitido')
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { toast.error('Error al guardar permiso'); return; }
         if (data) setPermisos(prev => prev.map(p => key(p) ? data : p));
+        toast.success('Permiso guardado', { duration: 1500 });
       });
   }, [savingPermisos, permisos]);
 
@@ -146,6 +148,9 @@ export function useRoles() {
       await Promise.all(ops);
       await reload();
       notifyPermisosChanged();
+      toast.success('Permisos del grupo guardados', { duration: 1500 });
+    } catch {
+      toast.error('Error al guardar permisos');
     } finally {
       setSavingPermisos(false);
     }
@@ -172,6 +177,9 @@ export function useRoles() {
       await Promise.all(ops);
       await reload();
       notifyPermisosChanged();
+      toast.success('Permisos del módulo guardados', { duration: 1500 });
+    } catch {
+      toast.error('Error al guardar permisos');
     } finally {
       setSavingPermisos(false);
     }
