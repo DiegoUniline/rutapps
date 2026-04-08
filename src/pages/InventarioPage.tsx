@@ -297,7 +297,7 @@ export default function InventarioPage() {
           ))}
         </div>
         {(view === 'resumen' || view === 'almacen') && data && (
-          <Button variant="outline" size="sm" className="gap-1.5 text-[13px] mb-1" onClick={handleExportExcel}>
+          <Button variant="outline" size="sm" className="gap-1.5 text-[13px] mb-1 border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900" onClick={handleExportExcel}>
             <Download className="h-3.5 w-3.5" /> Excel
           </Button>
         )}

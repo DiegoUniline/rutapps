@@ -24,7 +24,7 @@ export function ExportButton({ onExcel, onPDF, label = 'Exportar' }: ExportButto
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="btn-odoo-secondary flex items-center gap-1.5 text-[13px]"
+        className="flex items-center gap-1.5 text-[13px] px-3 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 dark:hover:bg-emerald-900 transition-colors font-medium"
       >
         <Download className="h-3.5 w-3.5" />
         {label}
