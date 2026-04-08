@@ -71,7 +71,7 @@ export default function RutasMapPage() {
 
   const filtered = useMemo(() => {
     let result = clientes ?? [];
-    if (diaFilter) result = result.filter((c: any) => c.dia_visita?.includes(diaFilter));
+    if (diaFilter) result = result.filter((c: any) => c.dia_visita?.some((d: string) => d.toLowerCase() === diaFilter.toLowerCase()));
     if (vendedorFilter) result = result.filter((c: any) => c.vendedor_id === vendedorFilter);
     return result;
   }, [clientes, diaFilter, vendedorFilter]);
