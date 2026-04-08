@@ -177,6 +177,9 @@ export function useRoles() {
       await Promise.all(ops);
       await reload();
       notifyPermisosChanged();
+      toast.success('Permisos del módulo guardados', { duration: 1500 });
+    } catch {
+      toast.error('Error al guardar permisos');
     } finally {
       setSavingPermisos(false);
     }
