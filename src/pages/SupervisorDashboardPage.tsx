@@ -800,9 +800,24 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers]);
 
-  const visitedColor = useMemo(() => getThemeColor('--primary', 'hsl(142 76% 36%)'), []);
-  const pendingColor = useMemo(() => getThemeColor('--destructive', 'hsl(0 84% 60%)'), []);
-  const strokeColor = useMemo(() => getThemeColor('--background', 'hsl(0 0% 100%)'), []);
+  // Green for visited, red for pending — matching mobile route style
+  const VISITED_GREEN = '#22c55e';
+  const PENDING_RED = '#ef4444';
+
+  const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean) => {
+    const color = visitado ? VISITED_GREEN : PENDING_RED;
+    const label = orden != null ? String(orden) : '';
+    const size = 28;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${color}" stroke="#fff" stroke-width="2.5"/>
+      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+    </svg>`;
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(size, size),
+      anchor: new google.maps.Point(size / 2, size / 2),
+    };
+  }, []);
 
   if (!isLoaded) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
   if (markers.length === 0) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
@@ -816,13 +831,14 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
     >
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => setSelected(m)}
-          icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: m.visitado ? visitedColor : pendingColor, fillOpacity: 1, strokeColor, strokeWeight: 2.5, scale: 8 }} />
+          icon={makeNumberedIcon(m.orden, m.visitado)} />
       ))}
       {selected && (
         <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
           <div className="space-y-1 p-1 text-xs">
+            {selected.orden != null && <p className="font-bold text-sm">#{selected.orden}</p>}
             <p className="font-semibold">{selected.nombre}</p>
-            <p className="text-gray-500">{selected.vendedorNombre}</p>
+            <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
             <p>{selected.visitado ? '✅ Visitado' : '⏳ Pendiente'}</p>
             {selected.diasSinComprar !== null && <p>{selected.diasSinComprar} días sin comprar</p>}
           </div>
