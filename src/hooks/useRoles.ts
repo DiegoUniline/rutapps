@@ -114,8 +114,10 @@ export function useRoles() {
       .upsert({ role_id: roleId, modulo, accion, permitido }, { onConflict: 'role_id,modulo,accion' })
       .select('id, role_id, modulo, accion, permitido')
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { toast.error('Error al guardar permiso'); return; }
         if (data) setPermisos(prev => prev.map(p => key(p) ? data : p));
+        toast.success('Permiso guardado', { duration: 1500 });
       });
   }, [savingPermisos, permisos]);
 
