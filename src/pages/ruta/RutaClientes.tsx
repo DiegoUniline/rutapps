@@ -90,19 +90,19 @@ export default function RutaClientes() {
   }, []);
 
   const markVisited = useCallback((clienteId: string) => {
-    setVisited(prev => {
+    setLocalVisited(prev => {
       const next = new Set(prev);
       next.add(clienteId);
-      saveVisitedSet(next);
+      saveLocalVisitedSet(next);
       return next;
     });
   }, []);
 
   const unmarkVisited = useCallback((clienteId: string) => {
-    setVisited(prev => {
+    setLocalVisited(prev => {
       const next = new Set(prev);
       next.delete(clienteId);
-      saveVisitedSet(next);
+      saveLocalVisitedSet(next);
       return next;
     });
   }, []);
