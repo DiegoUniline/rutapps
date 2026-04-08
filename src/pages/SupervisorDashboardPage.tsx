@@ -204,7 +204,7 @@ export default function SupervisorDashboardPage() {
   const { data: clientesAsignados } = useQuery({
     queryKey: ['supervisor-clientes-asignados', empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
-      supabase.from('clientes').select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita')
+      supabase.from('clientes').select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita, orden')
         .eq('empresa_id', empresa!.id).eq('status', 'activo').range(from, to)),
   });
 
