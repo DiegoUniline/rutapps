@@ -59,7 +59,13 @@ export default function AjustesInventarioPage() {
   const [tab, setTab] = useState('ajuste');
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [historialView, setHistorialView] = useState<'agrupado' | 'detalle'>('agrupado');
+  const [searchH, setSearchH] = useState('');
+  const [pageH, setPageH] = useState(1);
+  const { filters: filtersH, groupBy: groupByH, groupByLevels: groupByLevelsH, setFilter: setFilterH, toggleFilterValue: toggleFilterValueH, setGroupBy: setGroupByH, setGroupByLevel: setGroupByLevelH, clearFilters: clearFiltersH } = useListPreferences('ajustes-historial');
+  const [desdeH, setDesdeH] = useState('');
+  const [hastaH, setHastaH] = useState('');
+  const PAGE_SIZE_H = 80;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerarPdf = () => {
