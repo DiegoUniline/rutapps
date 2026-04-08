@@ -49,6 +49,7 @@ type MarkerPoint = {
   visitado: boolean;
   diasSinComprar: number | null;
   vendedorNombre: string;
+  orden: number | null;
 };
 
 function normalizePersonName(value?: string | null) {
