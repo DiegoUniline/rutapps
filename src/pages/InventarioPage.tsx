@@ -160,6 +160,7 @@ const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2,
 
 export default function InventarioPage() {
   const { data, isLoading } = useInventarioData();
+  const { empresa } = useAuth();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
@@ -168,6 +169,90 @@ export default function InventarioPage() {
   const filteredProducts = data?.productos.filter(p =>
     !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || p.codigo.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleExportExcel = useCallback(() => {
+    if (!data || !filteredProducts) return;
+
+    if (view === 'resumen') {
+      const columns: ExportColumn[] = [
+        { key: 'codigo', header: 'Código', width: 14 },
+        { key: 'nombre', header: 'Producto', width: 30 },
+        { key: 'unidad', header: 'Ud.', width: 6 },
+        { key: 'stockTotal', header: 'Stock Total', format: 'number', width: 12 },
+        { key: 'valorCostoTotal', header: 'Valor costo', format: 'currency', width: 16 },
+        { key: 'valorVentaTotal', header: 'Proyección', format: 'currency', width: 16 },
+      ];
+      const rows = filteredProducts.map(p => ({
+        codigo: p.codigo,
+        nombre: p.nombre,
+        unidad: (p.unidades as any)?.abreviatura ?? 'pz',
+        stockTotal: p.stockTotal,
+        valorCostoTotal: p.valorCostoTotal,
+        valorVentaTotal: p.valorVentaTotal,
+      }));
+      exportToExcel({
+        fileName: 'Inventario_Stock_Total',
+        title: 'Inventario — Stock Total',
+        empresa: empresa?.nombre,
+        columns,
+        data: rows,
+        totals: {
+          stockTotal: data.totales.stockTotal,
+          valorCostoTotal: data.totales.valorCostoTotal,
+          valorVentaTotal: data.totales.valorVentaTotal,
+        },
+      });
+    } else if (view === 'almacen') {
+      const ubicaciones = (data.almacenes ?? []).map(a => ({
+        id: a.id,
+        nombre: a.nombre,
+        tipo: ((a as any).tipo ?? 'almacen') as string,
+      }));
+      const columns: ExportColumn[] = [
+        { key: 'codigo', header: 'Código', width: 14 },
+        { key: 'nombre', header: 'Producto', width: 30 },
+        ...ubicaciones.map(u => ({
+          key: `ubic_${u.id}`,
+          header: `${u.nombre} (${u.tipo === 'ruta' ? 'Ruta' : 'Almacén'})`,
+          format: 'number' as const,
+          width: 14,
+        })),
+        { key: 'total', header: 'Total', format: 'number' as const, width: 12 },
+        { key: 'costo', header: 'Costo unit.', format: 'currency' as const, width: 14 },
+        { key: 'valorTotal', header: 'Valor total', format: 'currency' as const, width: 16 },
+      ];
+      const rows = filteredProducts.map(p => {
+        const row: Record<string, any> = { codigo: p.codigo, nombre: p.nombre };
+        let total = 0;
+        for (const u of ubicaciones) {
+          const qty = data.stockAlmacenMap[u.id]?.[p.id] ?? 0;
+          row[`ubic_${u.id}`] = qty;
+          total += qty;
+        }
+        row.total = total;
+        row.costo = p.costo ?? 0;
+        row.valorTotal = total * (p.costo ?? 0);
+        return row;
+      });
+      const totals: Record<string, number> = {};
+      for (const u of ubicaciones) {
+        totals[`ubic_${u.id}`] = filteredProducts.reduce((s, p) => s + (data.stockAlmacenMap[u.id]?.[p.id] ?? 0), 0);
+      }
+      totals.total = filteredProducts.reduce((s, p) => s + ubicaciones.reduce((ss, u) => ss + (data.stockAlmacenMap[u.id]?.[p.id] ?? 0), 0), 0);
+      totals.valorTotal = filteredProducts.reduce((s, p) => {
+        const t = ubicaciones.reduce((ss, u) => ss + (data.stockAlmacenMap[u.id]?.[p.id] ?? 0), 0);
+        return s + t * (p.costo ?? 0);
+      }, 0);
+      exportToExcel({
+        fileName: 'Inventario_Por_Ubicacion',
+        title: 'Inventario — Por Ubicación',
+        empresa: empresa?.nombre,
+        columns,
+        data: rows,
+        totals,
+      });
+    }
+  }, [data, filteredProducts, view, empresa]);
 
   const tabs: { key: ViewMode; label: string; icon: React.ElementType }[] = [
     { key: 'resumen', label: 'Stock Total', icon: Package },
@@ -194,21 +279,28 @@ export default function InventarioPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setView(t.key)}
-            className={cn(
-              "flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border-b-2 transition-colors",
-              view === t.key
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <t.icon className="h-3.5 w-3.5" /> {t.label}
-          </button>
-        ))}
+      <div className="flex items-center justify-between border-b border-border">
+        <div className="flex gap-1">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setView(t.key)}
+              className={cn(
+                "flex items-center gap-1.5 px-4 py-2 text-[13px] font-medium border-b-2 transition-colors",
+                view === t.key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <t.icon className="h-3.5 w-3.5" /> {t.label}
+            </button>
+          ))}
+        </div>
+        {(view === 'resumen' || view === 'almacen') && data && (
+          <Button variant="outline" size="sm" className="gap-1.5 text-[13px] mb-1" onClick={handleExportExcel}>
+            <Download className="h-3.5 w-3.5" /> Excel
+          </Button>
+        )}
       </div>
 
       {/* Search */}
