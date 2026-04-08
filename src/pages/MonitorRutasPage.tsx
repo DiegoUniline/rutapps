@@ -531,7 +531,11 @@ function MonitorContent() {
                     disableDefaultUI: true,
                     zoomControl: true,
                     gestureHandling: 'greedy',
-                    styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+                    styles: [
+                      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+                      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+                      { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+                    ],
                   }}
                 >
                   {withGps.map(c => {

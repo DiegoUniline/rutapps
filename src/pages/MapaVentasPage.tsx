@@ -361,7 +361,11 @@ export default function MapaVentasPage() {
             onLoad={onMapLoad}
             onClick={handleMapClick}
             options={{
-              styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }],
+              styles: [
+                { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+                { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+                { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+              ],
               mapTypeControl: false,
               streetViewControl: false,
               fullscreenControl: true,
