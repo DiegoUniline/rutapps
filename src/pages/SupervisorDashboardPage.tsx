@@ -309,6 +309,24 @@ export default function SupervisorDashboardPage() {
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, orden: c.orden })), [clienteActivity]);
 
+  // Compute last known location per seller from their most recent visit today
+  const sellerLocations = useMemo<SellerLocation[]>(() => {
+    const latest = new Map<string, { lat: number; lng: number; hora: string; nombre: string }>();
+    (visitasHoy ?? []).forEach((v: any) => {
+      if (!v.gps_lat || !v.gps_lng || !v.user_id) return;
+      const sellerId = (vendedores ?? []).find((s) => s.user_id === v.user_id)?.id;
+      if (!sellerId) return;
+      if (selectedAliases && !selectedAliases.includes(sellerId)) return;
+      const existing = latest.get(sellerId);
+      if (!existing || v.created_at > existing.hora) {
+        const nombre = sellerNameMap.get(sellerId) ?? 'Vendedor';
+        const hora = new Date(v.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        latest.set(sellerId, { lat: v.gps_lat, lng: v.gps_lng, hora, nombre });
+      }
+    });
+    return Array.from(latest.entries()).map(([id, data]) => ({ id, ...data }));
+  }, [visitasHoy, vendedores, selectedAliases, sellerNameMap]);
+
   const dashboardStats = useMemo(() => {
     const totalVentas = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
     const totalCobros = filteredCobros.reduce((s, c) => s + (c.monto ?? 0), 0);
