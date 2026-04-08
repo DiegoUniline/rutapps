@@ -49,6 +49,7 @@ type MarkerPoint = {
   visitado: boolean;
   diasSinComprar: number | null;
   vendedorNombre: string;
+  orden: number | null;
 };
 
 function normalizePersonName(value?: string | null) {
@@ -81,7 +82,11 @@ export default function SupervisorDashboardPage() {
   const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-  const diaHoyLabel = DIAS_SEMANA[new Date().getDay()];
+  // Derive day label from the selected 'desde' date so filter works for any chosen date
+  const diaHoyLabel = useMemo(() => {
+    const d = new Date(`${desde}T12:00:00`);
+    return DIAS_SEMANA[d.getDay()];
+  }, [desde]);
 
   const { data: vendedores } = useQuery({
     queryKey: ['supervisor-usuarios', empresa?.id],
@@ -199,7 +204,7 @@ export default function SupervisorDashboardPage() {
   const { data: clientesAsignados } = useQuery({
     queryKey: ['supervisor-clientes-asignados', empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => fetchAllPages<any>((from, to) =>
-      supabase.from('clientes').select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita')
+      supabase.from('clientes').select('id, nombre, vendedor_id, gps_lat, gps_lng, dia_visita, orden')
         .eq('empresa_id', empresa!.id).eq('status', 'activo').range(from, to)),
   });
 
@@ -286,7 +291,7 @@ export default function SupervisorDashboardPage() {
         const ls = lastSaleByClient[c.id];
         const dias = ls ? Math.floor((todayDate.getTime() - new Date(`${ls.ultima}T12:00:00`).getTime()) / 86400000) : null;
         const dv: string[] = (c.dia_visita ?? []).map((d: string) => d.toLowerCase());
-        return { id: c.id, nombre: c.nombre, vendedor_id: sid, vendedorNombre: sellerNameMap.get(sid) ?? 'Sin asignar', visitado: visitedIds.has(c.id), visitaHoy: dv.some((d) => d === diaHoyLabel), gps_lat: c.gps_lat, gps_lng: c.gps_lng, ultimaVisitaFecha: ls?.ultima ?? null, ultimaVisitaValor: ls?.total ?? 0, diasSinComprar: dias };
+        return { id: c.id, nombre: c.nombre, vendedor_id: sid, vendedorNombre: sellerNameMap.get(sid) ?? 'Sin asignar', visitado: visitedIds.has(c.id), visitaHoy: dv.some((d) => d === diaHoyLabel), gps_lat: c.gps_lat, gps_lng: c.gps_lng, ultimaVisitaFecha: ls?.ultima ?? null, ultimaVisitaValor: ls?.total ?? 0, diasSinComprar: dias, orden: c.orden ?? null };
       })
       .filter((c) => {
         if (selectedVendedor && c.vendedor_id !== selectedVendedor) return false;
@@ -298,7 +303,7 @@ export default function SupervisorDashboardPage() {
       .sort((a, b) => { if (a.visitado !== b.visitado) return a.visitado ? 1 : -1; return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999); });
   }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedVendedor, soloHoy, visitFilter, diaHoyLabel]);
 
-  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre })), [clienteActivity]);
+  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, orden: c.orden })), [clienteActivity]);
 
   const dashboardStats = useMemo(() => {
     const totalVentas = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
@@ -795,9 +800,24 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers]);
 
-  const visitedColor = useMemo(() => getThemeColor('--primary', 'hsl(142 76% 36%)'), []);
-  const pendingColor = useMemo(() => getThemeColor('--destructive', 'hsl(0 84% 60%)'), []);
-  const strokeColor = useMemo(() => getThemeColor('--background', 'hsl(0 0% 100%)'), []);
+  // Green for visited, red for pending — matching mobile route style
+  const VISITED_GREEN = '#22c55e';
+  const PENDING_RED = '#ef4444';
+
+  const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean) => {
+    const color = visitado ? VISITED_GREEN : PENDING_RED;
+    const label = orden != null ? String(orden) : '';
+    const size = 28;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${color}" stroke="#fff" stroke-width="2.5"/>
+      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+    </svg>`;
+    return {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+      scaledSize: new google.maps.Size(size, size),
+      anchor: new google.maps.Point(size / 2, size / 2),
+    };
+  }, []);
 
   if (!isLoaded) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
   if (markers.length === 0) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
@@ -811,13 +831,14 @@ function SupervisorMap({ markers, height = 480 }: { markers: MarkerPoint[]; heig
     >
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => setSelected(m)}
-          icon={{ path: google.maps.SymbolPath.CIRCLE, fillColor: m.visitado ? visitedColor : pendingColor, fillOpacity: 1, strokeColor, strokeWeight: 2.5, scale: 8 }} />
+          icon={makeNumberedIcon(m.orden, m.visitado)} />
       ))}
       {selected && (
         <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
           <div className="space-y-1 p-1 text-xs">
+            {selected.orden != null && <p className="font-bold text-sm">#{selected.orden}</p>}
             <p className="font-semibold">{selected.nombre}</p>
-            <p className="text-gray-500">{selected.vendedorNombre}</p>
+            <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
             <p>{selected.visitado ? '✅ Visitado' : '⏳ Pendiente'}</p>
             {selected.diasSinComprar !== null && <p>{selected.diasSinComprar} días sin comprar</p>}
           </div>
