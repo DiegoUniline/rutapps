@@ -52,6 +52,14 @@ type MarkerPoint = {
   orden: number | null;
 };
 
+type SellerLocation = {
+  id: string;
+  nombre: string;
+  lat: number;
+  lng: number;
+  hora: string;
+};
+
 function normalizePersonName(value?: string | null) {
   return (value ?? '')
     .normalize('NFD')
