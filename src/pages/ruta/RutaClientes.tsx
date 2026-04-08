@@ -183,6 +183,36 @@ export default function RutaClientes() {
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${encodeURIComponent(nombre)}`, '_blank');
   };
 
+  const handleVender = useCallback((c: any) => {
+    markVisited(c.id);
+    setExpandedId(null);
+    navigate(`/ruta/ventas/nueva?clienteId=${c.id}`);
+  }, [markVisited, navigate]);
+
+  const handleNoCompro = useCallback(async (clienteId: string, motivo: string, notas?: string) => {
+    markVisited(clienteId);
+    setExpandedId(null);
+    if (empresa?.id && profile?.user_id) {
+      const loc = locationService.getLastKnownLocation();
+      await supabase.from('visitas').insert({
+        empresa_id: empresa.id,
+        cliente_id: clienteId,
+        user_id: profile.user_id,
+        tipo: 'sin_compra',
+        motivo_sin_compra: motivo,
+        notas: notas || null,
+        fecha: new Date().toISOString(),
+        gps_lat: loc?.lat ?? null,
+        gps_lng: loc?.lng ?? null,
+      });
+    }
+    toast.success('Visita registrada');
+  }, [markVisited, empresa, profile]);
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedId(prev => prev === id ? null : id);
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10 bg-card px-4 pt-2 pb-1 space-y-2">
