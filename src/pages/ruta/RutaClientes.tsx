@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, Phone, MapPin, ChevronUp, ChevronDown, Calendar, Navigation, ShoppingCart, Crosshair, Loader2, CheckCircle2, MoreVertical, Plus } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -11,21 +11,23 @@ import AlertasVendedor from '@/components/ruta/AlertasVendedor';
 import ClienteHistorial from '@/components/ruta/ClienteHistorial';
 import { toast } from 'sonner';
 import { locationService } from '@/lib/locationService';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 const DIA_HOY = DIAS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 
-// Persist visited clients per day in localStorage
+// localStorage as offline fallback
 const VISITED_KEY = () => `rutapp_visited_${todayLocal()}`;
 
-function getVisitedSet(): Set<string> {
+function getLocalVisitedSet(): Set<string> {
   try {
     const raw = localStorage.getItem(VISITED_KEY());
     return raw ? new Set(JSON.parse(raw)) : new Set();
   } catch { return new Set(); }
 }
 
-function saveVisitedSet(set: Set<string>) {
+function saveLocalVisitedSet(set: Set<string>) {
   localStorage.setItem(VISITED_KEY(), JSON.stringify([...set]));
 }
 
@@ -39,19 +41,46 @@ export default function RutaClientes() {
   const [modo, setModo] = useState<'visitas' | 'visitados' | 'todos'>('visitas');
   const [historialCliente, setHistorialCliente] = useState<{ id: string; nombre: string } | null>(null);
   const [capturingGpsId, setCapturingGpsId] = useState<string | null>(null);
-  const [visited, setVisited] = useState<Set<string>>(getVisitedSet);
+  const [localVisited, setLocalVisited] = useState<Set<string>>(getLocalVisitedSet);
   const { mutate: offlineMutate } = useOfflineMutation();
 
-  // Sync visited set from localStorage on mount, navigation back, and focus
+  // Fetch today's visits from the database (works across devices)
+  const todayStr = todayLocal();
+  const { data: dbVisitas } = useQuery({
+    queryKey: ['ruta-visitas-hoy', empresa?.id, todayStr],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const startOfDay = `${todayStr}T00:00:00`;
+      const endOfDay = `${todayStr}T23:59:59`;
+      const { data } = await supabase
+        .from('visitas')
+        .select('cliente_id')
+        .eq('empresa_id', empresa!.id)
+        .gte('fecha', startOfDay)
+        .lte('fecha', endOfDay);
+      return data ?? [];
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  // Merge DB visits + local (offline) visits
+  const visited = useMemo(() => {
+    const merged = new Set(localVisited);
+    dbVisitas?.forEach((v: any) => { if (v.cliente_id) merged.add(v.cliente_id); });
+    return merged;
+  }, [localVisited, dbVisitas]);
+
+  // Sync localStorage on mount, navigation back, and focus
   useEffect(() => {
-    setVisited(getVisitedSet());
+    setLocalVisited(getLocalVisitedSet());
   }, [location.key]);
 
   useEffect(() => {
-    const onFocus = () => setVisited(getVisitedSet());
+    const onFocus = () => setLocalVisited(getLocalVisitedSet());
     window.addEventListener('focus', onFocus);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') setVisited(getVisitedSet());
+      if (document.visibilityState === 'visible') setLocalVisited(getLocalVisitedSet());
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -61,19 +90,19 @@ export default function RutaClientes() {
   }, []);
 
   const markVisited = useCallback((clienteId: string) => {
-    setVisited(prev => {
+    setLocalVisited(prev => {
       const next = new Set(prev);
       next.add(clienteId);
-      saveVisitedSet(next);
+      saveLocalVisitedSet(next);
       return next;
     });
   }, []);
 
   const unmarkVisited = useCallback((clienteId: string) => {
-    setVisited(prev => {
+    setLocalVisited(prev => {
       const next = new Set(prev);
       next.delete(clienteId);
-      saveVisitedSet(next);
+      saveLocalVisitedSet(next);
       return next;
     });
   }, []);
