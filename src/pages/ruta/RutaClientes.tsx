@@ -335,7 +335,7 @@ export default function RutaClientes() {
               <>
                 <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                 <p className="text-muted-foreground text-base">Aún no has visitado clientes hoy</p>
-                <p className="text-muted-foreground/60 text-sm mt-1">Toca el número del cliente para marcarlo como visitado</p>
+                <p className="text-muted-foreground/60 text-sm mt-1">Toca el número del cliente para abrir las opciones</p>
               </>
             ) : (
               <>
