@@ -43,7 +43,7 @@ const EntregaCamionPage = lazy(() => import("@/pages/EntregaCamionPage"));
 // EntregasPage removed — functionality consolidated into EntregaListPage under /logistica/entregas
 const ReporteEntregasPage = lazy(() => import("@/pages/ReporteEntregasPage"));
 const CobranzaPage = lazy(() => import("@/pages/CobranzaPage"));
-const RutasMapPage = lazy(() => import("@/pages/RutasMapPage"));
+
 const MapaClientesPage = lazy(() => import("@/pages/MapaClientesPage"));
 const MapaVentasPage = lazy(() => import("@/pages/MapaVentasPage"));
 const InventarioPage = lazy(() => import("@/pages/InventarioPage"));
@@ -409,7 +409,7 @@ function desktopRoutes() {
       <Route path="/ventas/reporte-entregas" element={<Navigate to="/reportes/entregas" replace />} />
       <Route path="/reportes/entregas" element={<ReporteEntregasPage />} />
       <Route path="/ventas/cobranza" element={<CobranzaPage />} />
-      <Route path="/ventas/rutas" element={<GoogleMapsProvider blocking><RutasMapPage /></GoogleMapsProvider>} />
+      <Route path="/ventas/rutas" element={<GoogleMapsProvider blocking><MapaClientesPage /></GoogleMapsProvider>} />
       <Route path="/ventas/mapa-clientes" element={<GoogleMapsProvider blocking><MapaClientesPage /></GoogleMapsProvider>} />
       <Route path="/ventas/mapa-ventas" element={<GoogleMapsProvider blocking><MapaVentasPage /></GoogleMapsProvider>} />
       <Route path="/ventas/promociones" element={<PromocionesPage />} />
