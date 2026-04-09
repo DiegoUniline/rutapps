@@ -558,9 +558,25 @@ export default function SupervisorDashboardPage() {
       .sort((a, b) => b.ventas - a.ventas),
     [weeklyPerSeller]);
 
+  const [detailClientId, setDetailClientId] = useState<string | null>(null);
+
   const handleSelectClient = useCallback((id: string) => {
     setSelectedClientId(id);
+    setDetailClientId(id);
   }, []);
+
+  // Data for client detail sheet
+  const clientDetail = useMemo(() => {
+    if (!detailClientId) return null;
+    const cliente = clienteActivity.find(c => c.id === detailClientId);
+    if (!cliente) return null;
+    const ventas = (ventasHoy ?? []).filter((v: any) => v.cliente_id === detailClientId);
+    const cobros = (cobrosHoy ?? []).filter((c: any) => c.cliente_id === detailClientId);
+    const devoluciones = (devolucionesHoy ?? []).filter((d: any) => d.cliente_id === detailClientId);
+    const totalVentas = ventas.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const totalCobros = cobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+    return { cliente, ventas, cobros, devoluciones, totalVentas, totalCobros };
+  }, [detailClientId, clienteActivity, ventasHoy, cobrosHoy, devolucionesHoy]);
 
   // ═══════════════════════════════════════════════════════
   // RENDER — 3 ZONES
