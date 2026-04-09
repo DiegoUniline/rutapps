@@ -397,7 +397,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <Button variant="outline" size="sm" className="text-xs gap-1" onClick={async () => {
               try {
                 const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
-                const blob = generarLiquidacionPdf({
+                const blob = await generarLiquidacionPdf({
                   empresa: {
                     nombre: empresa?.nombre ?? '', razon_social: empresa?.razon_social, rfc: empresa?.rfc,
                     direccion: empresa?.direccion, colonia: empresa?.colonia, ciudad: empresa?.ciudad,

@@ -199,7 +199,7 @@ export default function EntregaFormPage() {
   };
 
   const handleGenerarEntregaPdf = () => {
-    const blob = generarEntregaPdf({
+    const blob = await generarEntregaPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',
         razon_social: empresa?.razon_social,

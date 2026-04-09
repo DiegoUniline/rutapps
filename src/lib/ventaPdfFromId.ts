@@ -29,7 +29,7 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
 
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
 
-  const blob = generarPedidoPdf({
+  const blob = await generarPedidoPdf({
     empresa: {
       nombre: empresa?.nombre ?? '',
       razon_social: empresa?.razon_social,

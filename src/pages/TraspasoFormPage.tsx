@@ -66,7 +66,7 @@ export default function TraspasoFormPage() {
   const { requestPin, PinDialog } = usePinAuth();
 
   const handleGenerarPdf = () => {
-    const blob = generarTraspasoPdf({
+    const blob = await generarTraspasoPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',
         razon_social: empresa?.razon_social,
