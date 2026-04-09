@@ -396,7 +396,8 @@ export default function SupervisorDashboardPage() {
   }, [vendedores, vendedorStats, sellerClientStats]);
 
   const clienteActivity = useMemo(() => {
-    const visitedIds = new Set([...filteredVisitas.map((v) => v.cliente_id).filter(Boolean), ...filteredVentas.map((v) => v.cliente_id).filter(Boolean)]);
+    // Use ALL ventas/visitas (not filtered by vendedor) to determine visit status
+    const visitedIds = new Set([...(visitasHoy ?? []).map((v: any) => v.cliente_id).filter(Boolean), ...(ventasHoy ?? []).map((v: any) => v.cliente_id).filter(Boolean)]);
     const lastSaleByClient: Record<string, { ultima: string; total: number }> = {};
     (ventasRecientes ?? []).forEach((v) => { if (!v.cliente_id) return; if (!lastSaleByClient[v.cliente_id] || v.fecha > lastSaleByClient[v.cliente_id].ultima) lastSaleByClient[v.cliente_id] = { ultima: v.fecha, total: v.total ?? 0 }; });
     const todayDate = new Date(`${today}T12:00:00`);
@@ -416,7 +417,7 @@ export default function SupervisorDashboardPage() {
         return true;
       })
       .sort((a, b) => { if (a.visitado !== b.visitado) return a.visitado ? 1 : -1; return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999); });
-  }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedAliases, soloHoy, visitFilter, diaHoyLabel]);
+  }, [visitasHoy, ventasHoy, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedAliases, soloHoy, visitFilter, diaHoyLabel]);
 
   // Comparisons vs yesterday / last week
   const comparisons = useMemo(() => {
