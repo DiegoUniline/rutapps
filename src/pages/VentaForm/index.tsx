@@ -28,19 +28,63 @@ export default function VentaFormPage() {
   const { hasPermiso } = usePermisos();
   const canDeleteCancelada = hasPermiso('ventas', 'eliminar');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [checkoutSaving, setCheckoutSaving] = useState(false);
   const h = useVentaForm();
   const {
     id, isNew, form, lineas, setLineas, readOnly, isLoading,
-    profile, user, empresa, navigate,
+    profile, user, empresa, navigate, queryClient,
     clientesList, productosList, tarifasList, almacenesList,
     entregasExistentes, entregasActivas, hayEntregas, remaining, fullyDelivered, canCreateEntrega, lineDeliverySummary,
     pagosData, totalPagado, saldoPendiente, totals, promoResults,
     pdfBlob, setPdfBlob, showPdfModal, setShowPdfModal, showFacturaDrawer, setShowFacturaDrawer,
     sinImpuestos, setSinImpuestos,
     saveVenta, crearEntrega, PinDialog,
-    set, handleProductSelect, handleSave, handleDelete, handleStatusChange, handleAddPago,
+    set, handleProductSelect, handleSave: baseSave, handleDelete, handleStatusChange, handleAddPago,
     addLine, updateLine, removeLine, setCellRef, handleCellKeyDown, navigateCell,
   } = h;
+
+  // Wrap handleSave: for venta_directa, open checkout modal after save+confirm
+  const handleSave = useCallback(async (autoConfirm = false) => {
+    if (form.tipo === 'venta_directa' && isNew) {
+      // Save + auto-confirm, then open checkout
+      const ventaId = await baseSave(true);
+      if (ventaId) {
+        setShowCheckout(true);
+      }
+    } else {
+      await baseSave(autoConfirm);
+    }
+  }, [form.tipo, isNew, baseSave]);
+
+  const handleCheckoutConfirm = useCallback(async (
+    pagos: { metodo: string; monto: number; referencia: string }[],
+    condicion: 'contado' | 'credito'
+  ) => {
+    setCheckoutSaving(true);
+    try {
+      if (condicion === 'credito') {
+        // Update condicion_pago to credito
+        await saveVenta.mutateAsync({ id: form.id, condicion_pago: 'credito' } as any);
+      } else {
+        await saveVenta.mutateAsync({ id: form.id, condicion_pago: 'contado' } as any);
+        // Register each pago
+        for (const pago of pagos) {
+          await handleAddPago(pago.monto, pago.metodo, pago.referencia);
+        }
+      }
+      setShowCheckout(false);
+      toast.success('Venta cobrada exitosamente');
+      if (queryClient) {
+        queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
+        queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Error al registrar cobro');
+    } finally {
+      setCheckoutSaving(false);
+    }
+  }, [form.id, saveVenta, handleAddPago, queryClient]);
 
   if (!isNew && isLoading) return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
 
