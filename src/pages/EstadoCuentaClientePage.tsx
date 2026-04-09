@@ -114,7 +114,7 @@ export default function EstadoCuentaClientePage() {
   const ventasPendientes = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) > 0.01) ?? [];
   const ventasPagadas = detalle?.ventas.filter(v => (v.saldo_pendiente ?? 0) <= 0.01) ?? [];
 
-  const handleDescargarPdf = () => {
+  const handleDescargarPdf = async () => {
     if (!selected || !detalle || !empresa) return;
     const blob = await generarEstadoCuentaPdf({
       empresa: {

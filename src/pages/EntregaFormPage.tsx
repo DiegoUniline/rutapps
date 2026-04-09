@@ -198,7 +198,7 @@ export default function EntregaFormPage() {
     });
   };
 
-  const handleGenerarEntregaPdf = () => {
+  const handleGenerarEntregaPdf = async () => {
     const blob = await generarEntregaPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',

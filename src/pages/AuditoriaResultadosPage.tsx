@@ -53,7 +53,7 @@ export default function AuditoriaResultadosPage() {
     try { return format(new Date(d), "dd/MM/yyyy HH:mm", { locale: es }); } catch { return '—'; }
   };
 
-  const handleGenerarPdf = () => {
+  const handleGenerarPdf = async () => {
     if (!auditoria || !lineas) return;
     const blob = await generarAuditoriaPdf({
       empresa: {
