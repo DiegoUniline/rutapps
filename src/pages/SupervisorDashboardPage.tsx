@@ -825,17 +825,29 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers, sellerLocations]);
 
-  // Green for visited, red for pending — matching mobile route style
-  const VISITED_GREEN = '#22c55e';
-  const PENDING_RED = '#ef4444';
+  // Distinct route colors per seller
+  const ROUTE_COLORS = [
+    '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
+    '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+    '#e11d48', '#0ea5e9', '#84cc16', '#d946ef', '#78716c',
+  ];
+
+  const sellerColorMap = useMemo(() => {
+    const uniqueSellers = [...new Set(markers.map((m) => m.vendedorId))];
+    const map = new Map<string, string>();
+    uniqueSellers.forEach((sid, i) => map.set(sid, ROUTE_COLORS[i % ROUTE_COLORS.length]));
+    return map;
+  }, [markers]);
+
+  const VISITED_CHECK = '#22c55e';
   const SELLER_BLUE = '#3b82f6';
 
-  const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean) => {
-    const color = visitado ? VISITED_GREEN : PENDING_RED;
+  const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean, color: string) => {
+    const fillColor = visitado ? VISITED_CHECK : color;
     const label = orden != null ? String(orden) : '';
     const size = 28;
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${color}" stroke="#fff" stroke-width="2.5"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${fillColor}" stroke="#fff" stroke-width="2.5"/>
       <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
     </svg>`;
     return {
