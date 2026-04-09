@@ -23,6 +23,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
+const ROUTE_COLORS = [
+  '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+  '#e11d48', '#0ea5e9', '#84cc16', '#d946ef', '#78716c',
+];
+
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered' | 'en_ruta';
@@ -538,32 +544,41 @@ function MonitorContent() {
                     ],
                   }}
                 >
-                  {withGps.map(c => {
-                    const markerText = c.ordenEntrega && c.ordenEntrega > 0
-                      ? String(c.ordenEntrega)
-                      : c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•';
-                    return (
-                      <MarkerF
-                        key={c.id + c.status}
-                        position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
-                        icon={{
-                          path: google.maps.SymbolPath.CIRCLE,
-                          fillColor: statusColor(c.status),
-                          fillOpacity: 1,
-                          strokeColor: '#fff',
-                          strokeWeight: 2,
-                          scale: c.ordenEntrega && c.ordenEntrega > 0 ? 14 : 10,
-                        }}
-                        label={{
-                          text: markerText,
-                          color: '#fff',
-                          fontSize: c.ordenEntrega && c.ordenEntrega > 0 ? '11px' : '10px',
-                          fontWeight: '700',
-                        }}
-                        onClick={() => setSelectedClient(c)}
-                      />
-                    );
-                  })}
+                  {(() => {
+                    // Build seller color map
+                    const uniqueSellers = [...new Set(withGps.map(c => c.vendedor_id).filter(Boolean))];
+                    const sellerColorMap = new Map<string, string>();
+                    uniqueSellers.forEach((sid, i) => sellerColorMap.set(sid!, ROUTE_COLORS[i % ROUTE_COLORS.length]));
+
+                    const makeIcon = (orden: number | undefined, isVisited: boolean, vendedorId?: string) => {
+                      const fillColor = sellerColorMap.get(vendedorId ?? '') ?? '#94a3b8';
+                      const borderColor = isVisited ? '#22c55e' : '#ef4444';
+                      const label = orden && orden > 0 ? String(orden) : '';
+                      const size = 30;
+                      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+                        <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${fillColor}" stroke="${borderColor}" stroke-width="3.5"/>
+                        <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+                      </svg>`;
+                      return {
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                        scaledSize: new google.maps.Size(size, size),
+                        anchor: new google.maps.Point(size / 2, size / 2),
+                      };
+                    };
+
+                    return withGps.map((c, idx) => {
+                      const isVisited = c.status === 'sold' || c.status === 'delivered';
+                      const orden = c.ordenEntrega && c.ordenEntrega > 0 ? c.ordenEntrega : idx + 1;
+                      return (
+                        <MarkerF
+                          key={c.id + c.status}
+                          position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
+                          icon={makeIcon(orden, isVisited, c.vendedor_id)}
+                          onClick={() => setSelectedClient(c)}
+                        />
+                      );
+                    });
+                  })()}
 
                   {selectedClient && selectedClient.gps_lat && (
                     <InfoWindow
@@ -606,11 +621,25 @@ function MonitorContent() {
 
               {/* Map legend */}
               <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2.5 shadow-lg">
-                <div className="flex items-center gap-4 text-[11px]">
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Vendido</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Entregado</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> En ruta</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-destructive" /> Pendiente</span>
+                <div className="flex flex-wrap items-center gap-3 text-[11px]">
+                  {(() => {
+                    const uniqueSellers = [...new Set(withGps.map(c => c.vendedor_id).filter(Boolean))];
+                    const sellerNames = new Map(withGps.map(c => [c.vendedor_id, c.vendedorNombre]));
+                    return uniqueSellers.map((sid, i) => (
+                      <span key={sid} className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLORS[i % ROUTE_COLORS.length] }} />
+                        {sellerNames.get(sid) ?? '—'}
+                      </span>
+                    ));
+                  })()}
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
+                    Visitado
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
+                    Pendiente
+                  </span>
                 </div>
               </div>
             </div>
