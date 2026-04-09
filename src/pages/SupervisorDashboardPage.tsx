@@ -1,5 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from 'react';
-import { MonitorContent } from '@/pages/MonitorRutasPage';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -10,8 +9,6 @@ import {
   Banknote,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Clock,
   Eye,
   Filter,
@@ -23,84 +20,57 @@ import {
   Truck,
   Users,
   XCircle,
-  Wallet,
+  Activity,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
-import { useIsMobile } from '@/hooks/use-mobile';
 
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
 
-type DashboardSeller = {
-  id: string;
-  user_id: string;
-  nombre: string;
-  aliases: string[];
-};
+const ROUTE_COLORS = [
+  '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+  '#e11d48', '#0ea5e9', '#84cc16', '#d946ef', '#78716c',
+];
 
-type MarkerPoint = {
-  id: string;
-  nombre: string;
-  lat: number;
-  lng: number;
-  visitado: boolean;
-  diasSinComprar: number | null;
-  vendedorNombre: string;
-  vendedorId: string;
-  orden: number | null;
-};
-
-type SellerLocation = {
-  id: string;
-  nombre: string;
-  lat: number;
-  lng: number;
-  hora: string;
-};
+type DashboardSeller = { id: string; user_id: string; nombre: string; aliases: string[] };
+type MarkerPoint = { id: string; nombre: string; lat: number; lng: number; visitado: boolean; diasSinComprar: number | null; vendedorNombre: string; vendedorId: string; orden: number | null };
+type SellerLocation = { id: string; nombre: string; lat: number; lng: number; hora: string };
 
 function normalizePersonName(value?: string | null) {
-  return (value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getThemeColor(variable: string, fallback: string) {
-  if (typeof window === 'undefined') return fallback;
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
-  return raw ? `hsl(${raw})` : fallback;
+  return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
   const { fmt: fmtMoney } = useCurrency();
-  const isMobile = useIsMobile();
   const today = todayInTimezone(empresa?.zona_horaria);
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
   const [selectedVendedor, setSelectedVendedor] = useState<string | null>(null);
   const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
   const [soloHoy, setSoloHoy] = useState(true);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showSellers, setShowSellers] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-  // Derive day label from the selected 'desde' date so filter works for any chosen date
   const diaHoyLabel = useMemo(() => {
     const d = new Date(`${desde}T12:00:00`);
     return DIAS_SEMANA[d.getDay()];
   }, [desde]);
 
+  // ═══════════════════════════════════════════════════════
+  // DATA QUERIES (same as before)
+  // ═══════════════════════════════════════════════════════
+
   const { data: vendedores } = useQuery({
-    queryKey: ['supervisor-usuarios', empresa?.id],
-    enabled: !!empresa?.id,
+    queryKey: ['supervisor-usuarios', empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => {
       const [profilesResult, vendedoresResult] = await Promise.all([
         supabase.from('profiles').select('id, user_id, nombre, estado').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'),
@@ -137,7 +107,6 @@ export default function SupervisorDashboardPage() {
 
   const selectedSeller = useMemo(() => (vendedores ?? []).find((s) => s.id === selectedVendedor) ?? null, [selectedVendedor, vendedores]);
   const selectedAliases = selectedSeller?.aliases ?? null;
-  const allDashboardSellerIds = useMemo(() => Array.from(new Set((vendedores ?? []).flatMap((s) => s.aliases))), [vendedores]);
 
   const { data: ventasHoy } = useQuery({
     queryKey: ['supervisor-ventas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
@@ -235,6 +204,10 @@ export default function SupervisorDashboardPage() {
     refetchInterval: 60000,
   });
 
+  // ═══════════════════════════════════════════════════════
+  // COMPUTED DATA
+  // ═══════════════════════════════════════════════════════
+
   const filteredVentas = useMemo(() => (ventasHoy ?? []).filter((v) => !selectedAliases || selectedAliases.includes(v.vendedor_id)), [ventasHoy, selectedAliases]);
   const filteredCobros = useMemo(() => (cobrosHoy ?? []).filter((c) => !selectedSeller || c.user_id === selectedSeller.user_id), [cobrosHoy, selectedSeller]);
   const filteredGastos = useMemo(() => (gastosHoy ?? []).filter((g) => !selectedAliases || selectedAliases.includes(g.vendedor_id)), [gastosHoy, selectedAliases]);
@@ -244,30 +217,14 @@ export default function SupervisorDashboardPage() {
 
   const devolucionesStats = useMemo(() => {
     let totalUnidades = 0, totalCredito = 0;
-    const porMotivo: Record<string, number> = {};
     filteredDevoluciones.forEach((d: any) => {
       (d.devolucion_lineas ?? []).forEach((l: any) => {
-        const qty = Number(l.cantidad) || 0;
-        totalUnidades += qty; totalCredito += Number(l.monto_credito) || 0;
-        porMotivo[l.motivo || 'otro'] = (porMotivo[l.motivo || 'otro'] || 0) + qty;
+        totalUnidades += Number(l.cantidad) || 0;
+        totalCredito += Number(l.monto_credito) || 0;
       });
     });
-    return { totalUnidades, totalCredito, porMotivo, count: filteredDevoluciones.length };
+    return { totalUnidades, totalCredito, count: filteredDevoluciones.length };
   }, [filteredDevoluciones]);
-
-  const productosSummary = useMemo(() => {
-    const summary: Record<string, { nombre: string; codigo: string; cantidad: number; total: number }> = {};
-    filteredVentas.forEach((v) => {
-      (v.venta_lineas ?? []).forEach((l: any) => {
-        if (!l.producto_id) return;
-        const p = l.productos as any;
-        if (!summary[l.producto_id]) summary[l.producto_id] = { nombre: p?.nombre ?? '—', codigo: p?.codigo ?? '', cantidad: 0, total: 0 };
-        summary[l.producto_id].cantidad += l.cantidad ?? 0;
-        summary[l.producto_id].total += l.total ?? 0;
-      });
-    });
-    return Object.values(summary).sort((a, b) => b.total - a.total);
-  }, [filteredVentas]);
 
   const vendedorStats = useMemo(() => {
     const stats: Record<string, { ventas: number; totalVentas: number; cobros: number; totalCobros: number; gastos: number; totalGastos: number; cargaActiva: boolean; entregas: number; entregasHecho: number; visitas: number }> = {};
@@ -311,7 +268,6 @@ export default function SupervisorDashboardPage() {
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden })), [clienteActivity]);
 
-  // Compute last known location per seller from their most recent visit today
   const sellerLocations = useMemo<SellerLocation[]>(() => {
     const latest = new Map<string, { lat: number; lng: number; hora: string; nombre: string }>();
     (visitasHoy ?? []).forEach((v: any) => {
@@ -332,342 +288,383 @@ export default function SupervisorDashboardPage() {
   const dashboardStats = useMemo(() => {
     const totalVentas = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
     const totalCobros = filteredCobros.reduce((s, c) => s + (c.monto ?? 0), 0);
-    const totalGastos = filteredGastos.reduce((s, g) => s + (g.monto ?? 0), 0);
     const clientesVisitados = clienteActivity.filter((c) => c.visitado).length;
     const clientesPorVisitar = Math.max(clienteActivity.length - clientesVisitados, 0);
-    const productosVendidos = productosSummary.reduce((s, p) => s + p.cantidad, 0);
     const entregasHechas = filteredEntregas.filter((e) => e.status === 'hecho').length;
     const ticketPromedio = filteredVentas.length > 0 ? totalVentas / filteredVentas.length : 0;
-    const sellersWithActivity = sellerRows.filter((s) => selectedVendedor ? s.id === selectedVendedor : s.ventas > 0 || s.cobros > 0 || s.visitas > 0 || s.cargaActiva).length;
-    return { totalVentas, totalCobros, totalGastos, numVentas: filteredVentas.length, numCobros: filteredCobros.length, numVisitas: filteredVisitas.length, visitasConCompra: filteredVisitas.filter((v) => v.tipo === 'venta').length, clientesVisitados, clientesPorVisitar, productosVendidos, totalProductos: productosSummary.length, entregasHechas, entregasTotal: filteredEntregas.length, ticketPromedio, sellersWithActivity, sinGeo: Math.max(clienteActivity.length - mapMarkers.length, 0) };
-  }, [filteredVentas, filteredCobros, filteredGastos, filteredVisitas, filteredEntregas, clienteActivity, mapMarkers.length, productosSummary, sellerRows, selectedVendedor]);
+    const efectividad = clienteActivity.length > 0 ? Math.round((clientesVisitados / clienteActivity.length) * 100) : 0;
+    return { totalVentas, totalCobros, numVentas: filteredVentas.length, numCobros: filteredCobros.length, clientesVisitados, clientesPorVisitar, entregasHechas, entregasTotal: filteredEntregas.length, ticketPromedio, efectividad };
+  }, [filteredVentas, filteredCobros, filteredEntregas, clienteActivity]);
 
-  const alertClients = useMemo(() => clienteActivity.filter((c) => !c.visitado || (c.diasSinComprar ?? 0) >= 7).slice(0, 8), [clienteActivity]);
+  const handleSelectClient = useCallback((id: string) => {
+    setSelectedClientId(id);
+  }, []);
+
+  // ═══════════════════════════════════════════════════════
+  // RENDER — 3 ZONES
+  // ═══════════════════════════════════════════════════════
 
   return (
-    <div className="space-y-3 sm:space-y-4 pb-6 px-2 sm:px-0">
-      {/* ═══ STICKY HEADER ═══ */}
-      <section className="sticky top-0 z-20 -mx-2 sm:mx-0 rounded-none sm:rounded-2xl border-b sm:border border-border bg-card/95 backdrop-blur-md p-3 sm:p-4 shadow-sm">
-        {/* Row 1: Title + live badge + filter toggle */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {!isRangeMode && (
-              <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />EN VIVO
-              </span>
-            )}
-            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">Centro de control</h1>
+    <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col overflow-hidden">
+      {/* ═══ ZONE 1 — HEADER + FILTERS ═══ */}
+      <div className="bg-card border-b border-border px-4 py-3 shrink-0">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Title */}
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-bold text-foreground">Centro de control</h1>
           </div>
-          <div className="flex items-center gap-1.5">
-            {selectedSeller && (
-              <Badge variant="secondary" className="text-[10px] max-w-[120px] truncate">{selectedSeller.nombre}</Badge>
-            )}
-            <button onClick={() => setShowFilters(!showFilters)}
-              className={cn("flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors",
-                showFilters ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground")}>
-              <Filter className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtros</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Row 2: Date + quick filters (always visible) */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
-          <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-            className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
-          <span className="text-[10px] text-muted-foreground">—</span>
-          <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-            className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
-          {isRangeMode && (
-            <button onClick={() => { setDesde(today); setHasta(today); }}
-              className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">Hoy</button>
+          {!isRangeMode && (
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />EN VIVO
+            </span>
           )}
+          <Badge variant="secondary" className="text-[11px]">{diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1)}</Badge>
 
-          <div className="hidden sm:flex items-center gap-1 ml-auto">
-            {(['todos', 'visitados', 'pendientes'] as const).map((k) => (
-              <button key={k} onClick={() => setVisitFilter(k)}
-                className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
-                  visitFilter === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-                {k}
-              </button>
-            ))}
-            <button onClick={() => setSoloHoy(!soloHoy)}
-              className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
-                soloHoy ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-              📅 {diaHoyLabel.slice(0, 3)}
-            </button>
+          {/* Dates */}
+          <div className="flex items-center gap-1.5 ml-auto">
+            <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
+            <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
+              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
+            <span className="text-[10px] text-muted-foreground">—</span>
+            <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
+              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
+            {isRangeMode && (
+              <button onClick={() => { setDesde(today); setHasta(today); }}
+                className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">Hoy</button>
+            )}
           </div>
         </div>
 
-        {/* Mobile visit filters */}
-        <div className="flex sm:hidden flex-wrap items-center gap-1 mt-1.5">
+        {/* Filters row */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-2">
+          {/* Vendedor pills */}
+          <button onClick={() => setSelectedVendedor(null)}
+            className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+              !selectedVendedor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+            Todos
+          </button>
+          {sellerRows.map((s) => (
+            <button key={s.id} onClick={() => setSelectedVendedor(selectedVendedor === s.id ? null : s.id)}
+              className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                selectedVendedor === s.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+              {s.nombre}
+              {s.cargaActiva && <span className="ml-1 text-[8px]">🟢</span>}
+            </button>
+          ))}
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Visit filters */}
           {(['todos', 'visitados', 'pendientes'] as const).map((k) => (
             <button key={k} onClick={() => setVisitFilter(k)}
-              className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors capitalize",
+              className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
                 visitFilter === k ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
               {k}
             </button>
           ))}
           <button onClick={() => setSoloHoy(!soloHoy)}
-            className={cn("rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
+            className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
               soloHoy ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
             📅 {diaHoyLabel.slice(0, 3)}
           </button>
         </div>
+      </div>
 
-        {/* Expandable filters: Seller selector */}
-        {showFilters && (
-          <div className="mt-2 pt-2 border-t border-border">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Vendedor</p>
-            <div className="flex flex-wrap gap-1.5">
-              <button onClick={() => setSelectedVendedor(null)}
-                className={cn("rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                  !selectedVendedor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-                Todos
-              </button>
-              {sellerRows.map((s) => (
-                <button key={s.id} onClick={() => setSelectedVendedor(selectedVendedor === s.id ? null : s.id)}
-                  className={cn("rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-                    selectedVendedor === s.id ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
-                  {s.nombre}
-                  {s.cargaActiva && <span className="ml-1 text-[8px]">🟢</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ═══ KPI GRID ═══ */}
-      <section className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-9 gap-2 sm:gap-3">
-        <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
-        <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros}`} />
-        <KpiCard icon={TrendingUp} label="Ticket" value={fmtMoney(dashboardStats.ticketPromedio)} sub="promedio" />
-        <KpiCard icon={Package} label="Productos" value={String(dashboardStats.productosVendidos)} sub={`${dashboardStats.totalProductos} SKUs`} />
-        <KpiCard icon={Eye} label="Visitas" value={String(dashboardStats.numVisitas)} sub={`${dashboardStats.visitasConCompra} compra`} />
-        <KpiCard icon={MapPin} label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} sub={`${dashboardStats.clientesVisitados} ok`} tone="warning" />
-        <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="hechas" />
-        <KpiCard icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} reg`} tone="warning" />
-        <KpiCard icon={Users} label="Activos" value={String(dashboardStats.sellersWithActivity)} sub={`de ${sellerRows.length}`} />
-      </section>
-
-      {/* ═══ TEAM PULSE - Horizontal scroll on mobile ═══ */}
-      <section>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <Users className="h-4 w-4 text-primary" />Pulso del equipo
-          </h2>
-          <span className="text-[10px] text-muted-foreground">{sellerRows.length} vendedores</span>
+      {/* ═══ ZONE 2 — KPIs ═══ */}
+      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0">
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
+          <KpiChip icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
+          <KpiChip icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros}`} />
+          <KpiChip icon={TrendingUp} label="Ticket" value={fmtMoney(dashboardStats.ticketPromedio)} sub="promedio" />
+          <KpiChip icon={CheckCircle2} label="Visitados" value={`${dashboardStats.clientesVisitados}/${dashboardStats.clientesVisitados + dashboardStats.clientesPorVisitar}`} sub={`${dashboardStats.efectividad}%`} color="text-emerald-600" />
+          <KpiChip icon={Clock} label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} color="text-destructive" />
+          <KpiChip icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="hechas" />
+          <KpiChip icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
+          <KpiChip icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} reg`} color="text-destructive" />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 snap-x snap-mandatory scrollbar-thin">
-          {sellerRows.map((seller) => {
-            const active = selectedVendedor === seller.id;
+      </div>
+
+      {/* ═══ ZONE 3 — MAP + TABS ═══ */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Map (60%) */}
+        <div className="flex-[3] flex flex-col min-w-0">
+          <GoogleMapsProvider>
+            <SupervisorMap
+              markers={mapMarkers}
+              sellerLocations={sellerLocations}
+              selectedClientId={selectedClientId}
+              onSelectClient={handleSelectClient}
+            />
+          </GoogleMapsProvider>
+          {/* Route color legend */}
+          {(() => {
+            const uniqueSellers = [...new Set(mapMarkers.map(m => m.vendedorId))];
+            const sellerNames = new Map(mapMarkers.map(m => [m.vendedorId, m.vendedorNombre]));
+            if (uniqueSellers.length <= 1) return null;
             return (
-              <button key={seller.id} onClick={() => setSelectedVendedor(active ? null : seller.id)}
-                className={cn("snap-start shrink-0 w-[200px] sm:w-[220px] rounded-xl border p-3 text-left transition-all",
-                  active ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 bg-card")}>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <p className="text-[12px] font-semibold text-foreground truncate">{seller.nombre}</p>
-                  {seller.cargaActiva && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">EN RUTA</span>}
-                </div>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <MiniStat label="Ventas" value={String(seller.ventas)} sub={fmtMoney(seller.totalVentas)} />
-                  <MiniStat label="Cobros" value={String(seller.cobros)} sub={fmtMoney(seller.totalCobros)} />
-                  <MiniStat label="Visitas" value={String(seller.visitas)} />
-                  <MiniStat label="Entregas" value={`${seller.entregasHecho}/${seller.entregas}`} />
-                </div>
-              </button>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
+                {uniqueSellers.map((sid, i) => (
+                  <span key={sid} className="inline-flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLORS[i % ROUTE_COLORS.length] }} />
+                    <span className="text-[10px] text-muted-foreground">{sellerNames.get(sid)}</span>
+                  </span>
+                ))}
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
+                  <span className="text-[10px] text-muted-foreground">Visitado</span>
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
+                  <span className="text-[10px] text-muted-foreground">Pendiente</span>
+                </span>
+              </div>
             );
-          })}
+          })()}
         </div>
-      </section>
 
-      {/* ═══ MAP + ALERTS ═══ */}
-      <section className="grid gap-3 lg:grid-cols-[1.5fr_1fr] items-stretch">
-        <Card className="overflow-hidden flex flex-col">
-          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-            <div className="flex-1 min-h-[500px]">
-              <GoogleMapsProvider blocking>
-                <MonitorContent />
-              </GoogleMapsProvider>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Right: Tabs (40%) */}
+        <div className="flex-[2] border-l border-border bg-card flex flex-col min-w-0">
+          <Tabs defaultValue="equipo" className="flex flex-col h-full">
+            <TabsList className="w-full rounded-none border-b border-border bg-card h-10 shrink-0 px-1">
+              <TabsTrigger value="equipo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
+                <Users className="h-3.5 w-3.5" /> Equipo
+              </TabsTrigger>
+              <TabsTrigger value="clientes" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
+                <MapPin className="h-3.5 w-3.5" /> Clientes
+                <Badge variant="secondary" className="text-[8px] ml-0.5 px-1">{clienteActivity.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="actividad" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
+                <ShoppingCart className="h-3.5 w-3.5" /> Actividad
+              </TabsTrigger>
+              <TabsTrigger value="riesgo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
+                <AlertCircle className="h-3.5 w-3.5" /> Riesgo
+              </TabsTrigger>
+            </TabsList>
 
-        <div className="space-y-3">
-          {/* Clientes en riesgo compact */}
-          {clienteActivity.filter(c => !c.visitado).length > 0 && (
-            <Card>
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                  <AlertCircle className="h-4 w-4 text-destructive" />Ingreso en riesgo
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 px-4 pb-3">
-                <ClientesEnRiesgoWidget
-                  clientes={clienteActivity.filter(c => !c.visitado).map(c => ({
-                    id: c.id, nombre: c.nombre, vendedor: c.vendedorNombre,
-                    ultimaCompraFecha: c.ultimaVisitaFecha, ultimaCompraValor: c.ultimaVisitaValor,
-                    diasSinComprar: c.diasSinComprar, visitadoHoy: false,
-                  }))}
-                  fmtMoney={fmtMoney} maxItems={6}
-                />
-              </CardContent>
-            </Card>
-          )}
+            {/* Equipo Tab */}
+            <TabsContent value="equipo" className="flex-1 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-2">
+                  {sellerRows.map((seller) => {
+                    const active = selectedVendedor === seller.id;
+                    return (
+                      <button key={seller.id} onClick={() => setSelectedVendedor(active ? null : seller.id)}
+                        className={cn("w-full rounded-xl border p-3 text-left transition-all",
+                          active ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 bg-card")}>
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <p className="text-[12px] font-semibold text-foreground truncate">{seller.nombre}</p>
+                          {seller.cargaActiva && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">EN RUTA</span>}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <MiniStat label="Ventas" value={String(seller.ventas)} sub={fmtMoney(seller.totalVentas)} />
+                          <MiniStat label="Cobros" value={String(seller.cobros)} sub={fmtMoney(seller.totalCobros)} />
+                          <MiniStat label="Visitas" value={String(seller.visitas)} />
+                          <MiniStat label="Entregas" value={`${seller.entregasHecho}/${seller.entregas}`} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </TabsContent>
 
-          {/* Alerts */}
-          <Card>
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                <Clock className="h-4 w-4 text-primary" />Alertas y foco
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 px-3 pb-3 space-y-1.5 max-h-[300px] overflow-auto">
-              {alertClients.length === 0 ? (
-                <EmptyBlock text="Sin alertas." />
-              ) : (
-                alertClients.map((c) => (
-                  <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
-                    {c.visitado ? <Clock className="h-3.5 w-3.5 text-primary shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-foreground truncate">{c.nombre}</p>
-                      <p className="text-[9px] text-muted-foreground truncate">{c.vendedorNombre}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[11px] font-bold text-foreground">{c.diasSinComprar !== null ? `${c.diasSinComprar}d` : '—'}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* ═══ ACTIVITY LISTS ═══ */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ActivityList title="Ventas" icon={ShoppingCart}
-          items={filteredVentas.slice(0, 10).map((v) => ({
-            id: v.id, primary: v.clientes?.nombre || 'Público general',
-            secondary: `${sellerNameMap.get(v.vendedor_id) ?? '—'} · ${v.tipo === 'pedido' ? 'Pedido' : 'Directa'}`,
-            value: fmtMoney(v.total ?? 0),
-          }))}
-          emptyText="Sin ventas." />
-
-        <ActivityList title="Cobros" icon={Banknote}
-          items={filteredCobros.slice(0, 10).map((c) => ({
-            id: c.id, primary: c.clientes?.nombre || '—',
-            secondary: `${c.metodo_pago ?? '—'}`,
-            value: fmtMoney(c.monto ?? 0),
-          }))}
-          emptyText="Sin cobros." />
-
-        <ActivityList title="Devoluciones" icon={RotateCcw}
-          items={filteredDevoluciones.slice(0, 10).map((dev: any) => {
-            const lineas = dev.devolucion_lineas ?? [];
-            const uds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
-            const motivos = [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
-            return { id: dev.id, primary: dev.clientes?.nombre || '—', secondary: `${sellerNameMap.get(dev.vendedor_id) ?? '—'} · ${motivos}`, value: `${uds} uds` };
-          })}
-          emptyText="Sin devoluciones." />
-
-        <ProductPanel products={productosSummary.slice(0, 10)} fmtMoney={fmtMoney} />
-      </section>
-
-      {/* ═══ CLIENT TABLE ═══ */}
-      <Card className="overflow-hidden">
-        <CardHeader className="py-3 px-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold">Clientes en ruta</CardTitle>
-            <Badge variant="secondary" className="text-[10px]">{clienteActivity.length}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {clienteActivity.length === 0 ? (
-            <div className="px-4 pb-4"><EmptyBlock text="No hay clientes asignados." /></div>
-          ) : (
-            <>
-              {/* Desktop table */}
-              <div className="hidden md:block max-h-[420px] overflow-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 z-10 bg-card">
-                    <tr className="border-y border-border text-left text-[10px] uppercase tracking-wider text-muted-foreground">
-                      <th className="px-3 py-2">Estado</th>
-                      <th className="px-3 py-2">Cliente</th>
-                      <th className="px-3 py-2">Vendedor</th>
-                      <th className="px-3 py-2 text-right">Última</th>
-                      <th className="px-3 py-2 text-right">Valor</th>
-                      <th className="px-3 py-2 text-right">Días</th>
+            {/* Clientes Tab */}
+            <TabsContent value="clientes" className="flex-1 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-card z-[1]">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
+                      <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
+                      <th className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Días</th>
+                      <th className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Valor</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border">
+                  <tbody>
                     {clienteActivity.map((c) => (
-                      <tr key={c.id} className={cn('transition-colors hover:bg-accent/30', !c.visitado && 'bg-destructive/5')}>
-                        <td className="px-3 py-2"><StatusPill visitado={c.visitado} compact /></td>
-                        <td className="px-3 py-2 text-[12px] font-medium text-foreground truncate max-w-[180px]">{c.nombre}</td>
-                        <td className="px-3 py-2 text-[11px] text-muted-foreground">{c.vendedorNombre}</td>
-                        <td className="px-3 py-2 text-right text-[11px] tabular-nums text-muted-foreground">{c.ultimaVisitaFecha ?? '—'}</td>
-                        <td className="px-3 py-2 text-right text-[11px] tabular-nums text-foreground">{c.ultimaVisitaValor ? fmtMoney(c.ultimaVisitaValor) : '—'}</td>
-                        <td className="px-3 py-2 text-right">
+                      <tr key={c.id}
+                        className={cn("border-t border-border/30 hover:bg-accent/30 cursor-pointer transition-colors",
+                          selectedClientId === c.id && "bg-primary/5",
+                          !c.visitado && "bg-destructive/5")}
+                        onClick={() => handleSelectClient(c.id)}>
+                        <td className="px-3 py-2">
+                          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                            c.visitado ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive")}>
+                            {c.visitado ? <CheckCircle2 className="h-2.5 w-2.5" /> : <XCircle className="h-2.5 w-2.5" />}
+                            {c.visitado ? 'OK' : 'Pend.'}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2">
+                          <p className="text-[11px] font-medium text-foreground truncate max-w-[140px]">{c.nombre}</p>
+                          <p className="text-[9px] text-muted-foreground truncate">{c.vendedorNombre}</p>
+                        </td>
+                        <td className="text-right px-2 py-2">
                           {c.diasSinComprar !== null ? (
                             <span className={cn("text-[11px] font-semibold tabular-nums",
                               c.diasSinComprar > 14 ? "text-destructive" : c.diasSinComprar > 7 ? "text-primary" : "text-muted-foreground")}>
                               {c.diasSinComprar}d
                             </span>
-                          ) : <span className="text-muted-foreground text-[11px]">—</span>}
+                          ) : <span className="text-muted-foreground text-[10px]">—</span>}
+                        </td>
+                        <td className="text-right px-3 py-2 text-[11px] tabular-nums text-foreground">
+                          {c.ultimaVisitaValor ? fmtMoney(c.ultimaVisitaValor) : '—'}
                         </td>
                       </tr>
                     ))}
+                    {clienteActivity.length === 0 && (
+                      <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-xs">Sin clientes en ruta</td></tr>
+                    )}
                   </tbody>
                 </table>
-              </div>
+              </ScrollArea>
+            </TabsContent>
 
-              {/* Mobile card list */}
-              <div className="md:hidden max-h-[400px] overflow-auto divide-y divide-border">
-                {clienteActivity.map((c) => (
-                  <div key={c.id} className={cn("px-3 py-2.5 flex items-center gap-2", !c.visitado && "bg-destructive/5")}>
-                    <div className={cn("w-2 h-2 rounded-full shrink-0", c.visitado ? "bg-primary" : "bg-destructive")} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-medium text-foreground truncate">{c.nombre}</p>
-                      <p className="text-[10px] text-muted-foreground">{c.vendedorNombre}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {c.diasSinComprar !== null ? (
-                        <p className={cn("text-[11px] font-bold",
-                          c.diasSinComprar > 14 ? "text-destructive" : c.diasSinComprar > 7 ? "text-primary" : "text-muted-foreground")}>
-                          {c.diasSinComprar}d
-                        </p>
-                      ) : <p className="text-[10px] text-muted-foreground">—</p>}
-                      {c.ultimaVisitaValor > 0 && <p className="text-[9px] text-muted-foreground">{fmtMoney(c.ultimaVisitaValor)}</p>}
-                    </div>
+            {/* Actividad Tab */}
+            <TabsContent value="actividad" className="flex-1 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-3">
+                  {/* Ventas */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Ventas ({filteredVentas.length})
+                    </h3>
+                    {filteredVentas.length === 0 ? <EmptyBlock text="Sin ventas." /> : (
+                      <div className="space-y-1">
+                        {filteredVentas.slice(0, 10).map((v) => (
+                          <div key={v.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium text-foreground truncate">{v.clientes?.nombre || 'Público general'}</p>
+                              <p className="text-[9px] text-muted-foreground truncate">{sellerNameMap.get(v.vendedor_id) ?? '—'} · {v.tipo === 'pedido' ? 'Pedido' : 'Directa'}</p>
+                            </div>
+                            <span className="text-[11px] font-semibold tabular-nums text-foreground shrink-0">{fmtMoney(v.total ?? 0)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+
+                  {/* Cobros */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Banknote className="h-3.5 w-3.5 text-primary" /> Cobros ({filteredCobros.length})
+                    </h3>
+                    {filteredCobros.length === 0 ? <EmptyBlock text="Sin cobros." /> : (
+                      <div className="space-y-1">
+                        {filteredCobros.slice(0, 10).map((c) => (
+                          <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium text-foreground truncate">{c.clientes?.nombre || '—'}</p>
+                              <p className="text-[9px] text-muted-foreground">{c.metodo_pago ?? '—'}</p>
+                            </div>
+                            <span className="text-[11px] font-semibold tabular-nums text-foreground shrink-0">{fmtMoney(c.monto ?? 0)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Devoluciones */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <RotateCcw className="h-3.5 w-3.5 text-destructive" /> Devoluciones ({filteredDevoluciones.length})
+                    </h3>
+                    {filteredDevoluciones.length === 0 ? <EmptyBlock text="Sin devoluciones." /> : (
+                      <div className="space-y-1">
+                        {filteredDevoluciones.slice(0, 10).map((dev: any) => {
+                          const lineas = dev.devolucion_lineas ?? [];
+                          const uds = lineas.reduce((s: number, l: any) => s + (Number(l.cantidad) || 0), 0);
+                          const motivos = [...new Set(lineas.map((l: any) => MOTIVO_LABELS[l.motivo] ?? l.motivo))].join(', ');
+                          return (
+                            <div key={dev.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-medium text-foreground truncate">{dev.clientes?.nombre || '—'}</p>
+                                <p className="text-[9px] text-muted-foreground truncate">{sellerNameMap.get(dev.vendedor_id) ?? '—'} · {motivos}</p>
+                              </div>
+                              <span className="text-[11px] font-semibold tabular-nums text-destructive shrink-0">{uds} uds</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Riesgo Tab */}
+            <TabsContent value="riesgo" className="flex-1 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-3">
+                  {/* Ingreso en riesgo */}
+                  {clienteActivity.filter(c => !c.visitado).length > 0 && (
+                    <div>
+                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-destructive" /> Ingreso en riesgo
+                      </h3>
+                      <ClientesEnRiesgoWidget
+                        clientes={clienteActivity.filter(c => !c.visitado).map(c => ({
+                          id: c.id, nombre: c.nombre, vendedor: c.vendedorNombre,
+                          ultimaCompraFecha: c.ultimaVisitaFecha, ultimaCompraValor: c.ultimaVisitaValor,
+                          diasSinComprar: c.diasSinComprar, visitadoHoy: false,
+                        }))}
+                        fmtMoney={fmtMoney} maxItems={10}
+                      />
+                    </div>
+                  )}
+
+                  {/* Alertas */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-primary" /> Alertas y foco
+                    </h3>
+                    {clienteActivity.filter((c) => !c.visitado || (c.diasSinComprar ?? 0) >= 7).length === 0 ? (
+                      <EmptyBlock text="Sin alertas." />
+                    ) : (
+                      <div className="space-y-1">
+                        {clienteActivity.filter((c) => !c.visitado || (c.diasSinComprar ?? 0) >= 7).slice(0, 12).map((c) => (
+                          <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2 cursor-pointer hover:bg-accent/30"
+                            onClick={() => handleSelectClient(c.id)}>
+                            {c.visitado ? <Clock className="h-3.5 w-3.5 text-primary shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium text-foreground truncate">{c.nombre}</p>
+                              <p className="text-[9px] text-muted-foreground truncate">{c.vendedorNombre}</p>
+                            </div>
+                            <p className="text-[11px] font-bold text-foreground shrink-0">{c.diasSinComprar !== null ? `${c.diasSinComprar}d` : '—'}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }
 
-function KpiCard({ icon: Icon, label, value, sub, tone = 'default' }: {
-  icon: any; label: string; value: string; sub: string; tone?: 'default' | 'warning';
+// ═══════════════════════════════════════════════════════
+// SUB-COMPONENTS
+// ═══════════════════════════════════════════════════════
+
+function KpiChip({ icon: Icon, label, value, sub, color }: {
+  icon: any; label: string; value: string; sub?: string; color?: string;
 }) {
   return (
-    <div className={cn("rounded-xl border p-2.5 sm:p-3 bg-card",
-      tone === 'warning' ? "border-destructive/20" : "border-border")}>
-      <div className="flex items-center gap-1.5 mb-1">
-        <div className={cn("w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center shrink-0",
-          tone === 'warning' ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary")}>
-          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-        </div>
-        <span className="text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">{label}</span>
+    <div className="flex items-center gap-2 rounded-lg border border-border bg-background/50 px-2.5 py-1.5">
+      <div className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        <Icon className="h-3 w-3" />
       </div>
-      <p className="text-base sm:text-lg font-bold text-foreground leading-tight tabular-nums truncate">{value}</p>
-      <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>
+      <div className="min-w-0">
+        <p className="text-[9px] uppercase tracking-wider text-muted-foreground leading-none">{label}</p>
+        <div className="flex items-baseline gap-1">
+          <p className={cn("text-sm font-bold tabular-nums leading-tight", color ?? "text-foreground")}>{value}</p>
+          {sub && <span className="text-[9px] text-muted-foreground">{sub}</span>}
+        </div>
+      </div>
     </div>
   );
 }
@@ -682,128 +679,20 @@ function MiniStat({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-function MiniSummary({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="px-3 py-2 text-center">
-      <p className="text-lg font-bold tabular-nums text-foreground">{value}</p>
-      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function LegendDot({ className, label }: { className: string; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <span className={cn('h-2 w-2 rounded-full', className)} />
-      <span className="text-[10px]">{label}</span>
-    </span>
-  );
-}
-
-function StatusPill({ visitado, compact }: { visitado: boolean; compact?: boolean }) {
-  if (compact) {
-    return (
-      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
-        visitado ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive")}>
-        {visitado ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-        {visitado ? 'OK' : 'Pend.'}
-      </span>
-    );
-  }
-  return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-      visitado ? "border-primary/20 bg-primary/10 text-primary" : "border-destructive/20 bg-destructive/10 text-destructive")}>
-      {visitado ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
-      {visitado ? 'Visitado' : 'Pendiente'}
-    </span>
-  );
-}
-
 function EmptyBlock({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-border bg-card/50 p-4 text-[12px] text-muted-foreground text-center">{text}</div>;
 }
 
-function ActivityList({ title, icon: Icon, items, emptyText }: {
-  title: string; icon: any;
-  items: { id: string; primary: string; secondary: string; badge?: string; value: string }[];
-  emptyText: string;
+function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient }: {
+  markers: MarkerPoint[];
+  sellerLocations?: SellerLocation[];
+  selectedClientId?: string | null;
+  onSelectClient?: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? items : items.slice(0, 5);
-
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader className="py-3 px-4">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <Icon className="h-3.5 w-3.5" />
-          </div>
-          <CardTitle className="text-sm font-semibold">{title}</CardTitle>
-          {items.length > 0 && <Badge variant="secondary" className="ml-auto text-[9px]">{items.length}</Badge>}
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0 px-3 pb-3">
-        {items.length === 0 ? <EmptyBlock text={emptyText} /> : (
-          <div className="space-y-1">
-            {shown.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-foreground truncate">{item.primary}</p>
-                  <p className="text-[9px] text-muted-foreground truncate">{item.secondary}</p>
-                </div>
-                <span className="text-[11px] font-semibold tabular-nums text-foreground shrink-0">{item.value}</span>
-              </div>
-            ))}
-            {items.length > 5 && (
-              <button onClick={() => setExpanded(!expanded)}
-                className="w-full text-center text-[10px] text-primary font-medium py-1 hover:underline">
-                {expanded ? 'Ver menos' : `Ver ${items.length - 5} más`}
-              </button>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ProductPanel({ products, fmtMoney }: { products: { nombre: string; codigo: string; cantidad: number; total: number }[]; fmtMoney: (v: number) => string }) {
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader className="py-3 px-4">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-            <Package className="h-3.5 w-3.5" />
-          </div>
-          <CardTitle className="text-sm font-semibold">Top productos</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0 px-3 pb-3">
-        {products.length === 0 ? <EmptyBlock text="Sin productos." /> : (
-          <div className="space-y-1">
-            {products.map((p, i) => (
-              <div key={`${p.codigo}-${i}`} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
-                <span className="text-[10px] font-bold text-muted-foreground w-4 text-center shrink-0">{i + 1}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-foreground truncate">{p.nombre}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[11px] font-semibold tabular-nums text-foreground">{p.cantidad}</p>
-                  <p className="text-[8px] text-muted-foreground">{fmtMoney(p.total)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { markers: MarkerPoint[]; sellerLocations?: SellerLocation[]; height?: number | string }) {
   const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
-  const [selectedSeller, setSelectedSeller] = useState<SellerLocation | null>(null);
+  const [selectedSellerLoc, setSelectedSellerLoc] = useState<SellerLocation | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   const center = useMemo(() => {
     const allPoints = [...markers.map(m => ({ lat: m.lat, lng: m.lng })), ...sellerLocations.map(s => ({ lat: s.lat, lng: s.lng }))];
@@ -813,22 +702,12 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers, sellerLocations]);
 
-  // Distinct route colors per seller
-  const ROUTE_COLORS = [
-    '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
-    '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
-    '#e11d48', '#0ea5e9', '#84cc16', '#d946ef', '#78716c',
-  ];
-
   const sellerColorMap = useMemo(() => {
     const uniqueSellers = [...new Set(markers.map((m) => m.vendedorId))];
     const map = new Map<string, string>();
     uniqueSellers.forEach((sid, i) => map.set(sid, ROUTE_COLORS[i % ROUTE_COLORS.length]));
     return map;
   }, [markers]);
-
-  const VISITED_CHECK = '#22c55e';
-  const SELLER_BLUE = '#3b82f6';
 
   const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean, color: string) => {
     const label = orden != null ? String(orden) : '';
@@ -849,7 +728,7 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
     const size = 36;
     const initial = (nombre || '?')[0].toUpperCase();
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${SELLER_BLUE}" stroke="#fff" stroke-width="3"/>
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="#3b82f6" stroke="#fff" stroke-width="3"/>
       <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="16" font-weight="bold" font-family="Arial,sans-serif">${initial}</text>
     </svg>`;
     return {
@@ -859,16 +738,46 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
     };
   }, []);
 
-  const heightStyle = typeof height === 'number' ? `${height}px` : height;
+  // Fit bounds on load
+  const fitBounds = useCallback(() => {
+    if (mapRef.current && markers.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      markers.forEach(m => bounds.extend({ lat: m.lat, lng: m.lng }));
+      sellerLocations.forEach(s => bounds.extend({ lat: s.lat, lng: s.lng }));
+      mapRef.current.fitBounds(bounds, 60);
+    }
+  }, [markers, sellerLocations]);
 
-  if (!isLoaded) return <div style={{ height: heightStyle }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
-  if (markers.length === 0 && sellerLocations.length === 0) return <div style={{ height: heightStyle }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
+  const onMapLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+    fitBounds();
+  }, [fitBounds]);
+
+  // Center on selected client from list
+  useEffect(() => {
+    if (!selectedClientId || !mapRef.current) return;
+    const marker = markers.find(m => m.id === selectedClientId);
+    if (marker) {
+      mapRef.current.panTo({ lat: marker.lat, lng: marker.lng });
+      mapRef.current.setZoom(16);
+      setSelected(marker);
+    }
+  }, [selectedClientId, markers]);
+
+  // Re-fit when markers change
+  useEffect(() => {
+    fitBounds();
+  }, [fitBounds]);
+
+  if (!isLoaded) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
+  if (markers.length === 0 && sellerLocations.length === 0) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
 
   return (
     <GoogleMap
-      mapContainerStyle={{ width: '100%', height: heightStyle }}
+      mapContainerStyle={{ width: '100%', height: '100%' }}
       center={center}
       zoom={12}
+      onLoad={onMapLoad}
       options={{
         disableDefaultUI: true, zoomControl: true, streetViewControl: false, mapTypeControl: false, fullscreenControl: true,
         styles: [
@@ -879,11 +788,13 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
       }}
     >
       {markers.map((m) => (
-        <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }} onClick={() => { setSelected(m); setSelectedSeller(null); }}
+        <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
+          onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
           icon={makeNumberedIcon(m.orden, m.visitado, sellerColorMap.get(m.vendedorId) ?? '#ef4444')} />
       ))}
       {sellerLocations.map((s) => (
-        <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }} onClick={() => { setSelectedSeller(s); setSelected(null); }}
+        <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
+          onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
           icon={makeSellerIcon(s.nombre)} zIndex={1000} />
       ))}
       {selected && (
@@ -897,11 +808,11 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
           </div>
         </InfoWindow>
       )}
-      {selectedSeller && (
-        <InfoWindow position={{ lat: selectedSeller.lat, lng: selectedSeller.lng }} onCloseClick={() => setSelectedSeller(null)}>
+      {selectedSellerLoc && (
+        <InfoWindow position={{ lat: selectedSellerLoc.lat, lng: selectedSellerLoc.lng }} onCloseClick={() => setSelectedSellerLoc(null)}>
           <div className="space-y-1 p-1 text-xs">
-            <p className="font-bold text-sm" style={{ color: SELLER_BLUE }}>📍 {selectedSeller.nombre}</p>
-            <p style={{ color: '#6b7280' }}>Última visita: {selectedSeller.hora}</p>
+            <p className="font-bold text-sm" style={{ color: '#3b82f6' }}>📍 {selectedSellerLoc.nombre}</p>
+            <p style={{ color: '#6b7280' }}>Última visita: {selectedSellerLoc.hora}</p>
           </div>
         </InfoWindow>
       )}
