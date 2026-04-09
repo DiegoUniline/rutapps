@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
+import { MonitorContent } from '@/pages/MonitorRutasPage';
 import { ClientesEnRiesgoWidget } from '@/components/reportes/ClientesEnRiesgoWidget';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
