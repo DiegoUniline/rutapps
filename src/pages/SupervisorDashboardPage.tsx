@@ -49,6 +49,7 @@ type MarkerPoint = {
   visitado: boolean;
   diasSinComprar: number | null;
   vendedorNombre: string;
+  vendedorId: string;
   orden: number | null;
 };
 
