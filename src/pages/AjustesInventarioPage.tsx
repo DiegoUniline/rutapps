@@ -69,7 +69,7 @@ export default function AjustesInventarioPage() {
   const PAGE_SIZE_H = 80;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleGenerarPdf = () => {
+  const handleGenerarPdf = async () => {
     if (changedRows.length === 0 && rows.length === 0) return;
     const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre;
     const dataRows = changedRows.length > 0 ? changedRows : rows;
