@@ -266,6 +266,14 @@ export function MonitorContent() {
     fitBounds();
   }, [fitBounds]);
 
+  // Center map when a client is selected from the list
+  useEffect(() => {
+    if (selectedClient?.gps_lat && selectedClient?.gps_lng && mapRef.current) {
+      mapRef.current.panTo({ lat: selectedClient.gps_lat, lng: selectedClient.gps_lng });
+      mapRef.current.setZoom(16);
+    }
+  }, [selectedClient]);
+
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     fitBounds();
