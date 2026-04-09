@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { toast } from 'sonner';
 
 export function useDevoluciones(search?: string) {
   const { empresa } = useAuth();
@@ -123,6 +124,9 @@ export function useSaveDevolucion() {
       qc.invalidateQueries({ queryKey: ['cargas'] });
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['stock_almacen'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -263,6 +264,9 @@ export function useSaveVenta() {
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['venta'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -283,6 +287,9 @@ export function useSaveVentaLinea() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['venta'] }),
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -294,6 +301,9 @@ export function useDeleteVentaLinea() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['venta'] }),
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 

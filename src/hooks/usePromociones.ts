@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export interface Promocion {
   id: string;
@@ -87,6 +88,9 @@ export function useSavePromocion() {
       qc.invalidateQueries({ queryKey: ['promociones'] });
       qc.invalidateQueries({ queryKey: ['promociones-activas'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -100,6 +104,9 @@ export function useDeletePromocion() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['promociones'] });
       qc.invalidateQueries({ queryKey: ['promociones-activas'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }
