@@ -535,29 +535,16 @@ export default function SupervisorDashboardPage() {
           <GoogleMapsProvider>
             <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} selectedClientId={selectedClientId} onSelectClient={handleSelectClient} />
           </GoogleMapsProvider>
-          {(() => {
-            const uniqueSellers = [...new Set(mapMarkers.map(m => m.vendedorId))];
-            const sellerNames = new Map(mapMarkers.map(m => [m.vendedorId, m.vendedorNombre]));
-            if (uniqueSellers.length <= 1) return null;
-            return (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
-                {uniqueSellers.map((sid, i) => (
-                  <span key={sid} className="inline-flex items-center gap-1">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLORS[i % ROUTE_COLORS.length] }} />
-                    <span className="text-[10px] text-muted-foreground">{sellerNames.get(sid)}</span>
-                  </span>
-                ))}
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
-                  <span className="text-[10px] text-muted-foreground">Visitado</span>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
-                  <span className="text-[10px] text-muted-foreground">Pendiente</span>
-                </span>
-              </div>
-            );
-          })()}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
+            <span className="inline-flex items-center gap-1.5">
+              <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#22c55e" stroke="#fff" strokeWidth="1.5"/><polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-[10px] text-muted-foreground">Visitado</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#ef4444" stroke="#fff" strokeWidth="1.5"/><line x1="10" y1="15" x2="18" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/></svg>
+              <span className="text-[10px] text-muted-foreground">Pendiente</span>
+            </span>
+          </div>
         </div>
 
         {/* Right: Tabs (40%) */}
