@@ -484,8 +484,8 @@ export default function SupervisorDashboardPage() {
 
       {/* ═══ MAP + ALERTS ═══ */}
       <section className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
-        <Card className="overflow-hidden">
-          <CardHeader className="py-3 px-4">
+        <Card className="overflow-hidden flex flex-col">
+          <CardHeader className="py-3 px-4 shrink-0">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold">Mapa operativo</CardTitle>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -495,10 +495,12 @@ export default function SupervisorDashboardPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <GoogleMapsProvider>
-              <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} height={isMobile ? 300 : 480} />
-            </GoogleMapsProvider>
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            <div className="flex-1 min-h-[300px]">
+              <GoogleMapsProvider>
+                <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} height="100%" />
+              </GoogleMapsProvider>
+            </div>
             {/* Route color legend */}
             {(() => {
               const ROUTE_COLORS = ['#ef4444','#3b82f6','#f59e0b','#10b981','#8b5cf6','#ec4899','#06b6d4','#f97316','#14b8a6','#6366f1','#e11d48','#0ea5e9','#84cc16','#d946ef','#78716c'];
