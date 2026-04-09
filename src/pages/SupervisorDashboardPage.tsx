@@ -839,7 +839,7 @@ function ProductPanel({ products, fmtMoney }: { products: { nombre: string; codi
   );
 }
 
-function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { markers: MarkerPoint[]; sellerLocations?: SellerLocation[]; height?: number }) {
+function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { markers: MarkerPoint[]; sellerLocations?: SellerLocation[]; height?: number | string }) {
   const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
   const [selectedSeller, setSelectedSeller] = useState<SellerLocation | null>(null);
