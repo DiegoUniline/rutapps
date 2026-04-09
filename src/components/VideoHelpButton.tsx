@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+
 
 function extractVideoId(url: string): string {
   const m1 = url.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
