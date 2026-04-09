@@ -118,7 +118,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
   if (!tarifaId) {
     return (
       <p className="text-[12px] text-muted-foreground text-center py-8 border border-dashed border-border rounded-md">
-        Selecciona una tarifa en la pestaña Comercial para ver los precios que aplican a este cliente.
+        Selecciona una lista de precios en la pestaña Comercial para ver los precios que aplican a este cliente.
       </p>
     );
   }
