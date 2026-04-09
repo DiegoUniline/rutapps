@@ -26,6 +26,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+
 import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
@@ -193,7 +195,7 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-devoluciones-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await (supabase as any).from('devoluciones')
-        .select('id, vendedor_id, tipo, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
+        .select('id, vendedor_id, tipo, cliente_id, clientes(nombre), created_at, devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre))')
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
@@ -556,9 +558,25 @@ export default function SupervisorDashboardPage() {
       .sort((a, b) => b.ventas - a.ventas),
     [weeklyPerSeller]);
 
+  const [detailClientId, setDetailClientId] = useState<string | null>(null);
+
   const handleSelectClient = useCallback((id: string) => {
     setSelectedClientId(id);
+    setDetailClientId(id);
   }, []);
+
+  // Data for client detail sheet
+  const clientDetail = useMemo(() => {
+    if (!detailClientId) return null;
+    const cliente = clienteActivity.find(c => c.id === detailClientId);
+    if (!cliente) return null;
+    const ventas = (ventasHoy ?? []).filter((v: any) => v.cliente_id === detailClientId);
+    const cobros = (cobrosHoy ?? []).filter((c: any) => c.cliente_id === detailClientId);
+    const devoluciones = (devolucionesHoy ?? []).filter((d: any) => d.cliente_id === detailClientId);
+    const totalVentas = ventas.reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const totalCobros = cobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0);
+    return { cliente, ventas, cobros, devoluciones, totalVentas, totalCobros };
+  }, [detailClientId, clienteActivity, ventasHoy, cobrosHoy, devolucionesHoy]);
 
   // ═══════════════════════════════════════════════════════
   // RENDER — 3 ZONES
@@ -1114,6 +1132,152 @@ export default function SupervisorDashboardPage() {
           </Tabs>
         </div>
       </div>
+
+      {/* Client Detail Sheet */}
+      <Sheet open={!!detailClientId} onOpenChange={(open) => { if (!open) setDetailClientId(null); }}>
+        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col">
+          {clientDetail && (
+            <>
+              <SheetHeader className="px-5 pt-5 pb-3 border-b border-border shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className={cn("inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold",
+                    clientDetail.cliente.visitado ? "bg-emerald-100 text-emerald-700" : "bg-destructive/10 text-destructive")}>
+                    {clientDetail.cliente.visitado ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <SheetTitle className="text-[15px] truncate">{clientDetail.cliente.nombre}</SheetTitle>
+                    <p className="text-[11px] text-muted-foreground">{clientDetail.cliente.vendedorNombre}</p>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-4">
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 text-center">
+                      <ShoppingCart className="h-4 w-4 mx-auto mb-1 text-primary" />
+                      <p className="text-[14px] font-bold tabular-nums text-foreground">{fmtMoney(clientDetail.totalVentas)}</p>
+                      <p className="text-[9px] text-muted-foreground">{clientDetail.ventas.length} ventas</p>
+                    </div>
+                    <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-3 text-center">
+                      <Banknote className="h-4 w-4 mx-auto mb-1 text-emerald-600" />
+                      <p className="text-[14px] font-bold tabular-nums text-foreground">{fmtMoney(clientDetail.totalCobros)}</p>
+                      <p className="text-[9px] text-muted-foreground">{clientDetail.cobros.length} cobros</p>
+                    </div>
+                    <div className="rounded-xl bg-destructive/5 border border-destructive/20 p-3 text-center">
+                      <RotateCcw className="h-4 w-4 mx-auto mb-1 text-destructive" />
+                      <p className="text-[14px] font-bold tabular-nums text-foreground">{clientDetail.devoluciones.length}</p>
+                      <p className="text-[9px] text-muted-foreground">devoluciones</p>
+                    </div>
+                  </div>
+
+                  {/* Info row */}
+                  {clientDetail.cliente.diasSinComprar !== null && (
+                    <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-[11px] text-muted-foreground">Última compra hace</span>
+                      <span className={cn("text-[12px] font-bold tabular-nums",
+                        clientDetail.cliente.diasSinComprar > 14 ? "text-destructive" : clientDetail.cliente.diasSinComprar > 7 ? "text-primary" : "text-foreground")}>
+                        {clientDetail.cliente.diasSinComprar} días
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Ventas detail */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Ventas del día
+                    </h3>
+                    {clientDetail.ventas.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground py-2">Sin ventas registradas</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {clientDetail.ventas.map((v: any) => (
+                          <div key={v.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-[9px]">{v.tipo === 'pedido' ? 'Pedido' : 'Directa'}</Badge>
+                                <span className="text-[9px] text-muted-foreground">{v.condicion_pago === 'credito' ? 'Crédito' : 'Contado'}</span>
+                              </div>
+                              <span className="text-[13px] font-bold tabular-nums text-foreground">{fmtMoney(v.total ?? 0)}</span>
+                            </div>
+                            {(v.venta_lineas ?? []).length > 0 && (
+                              <div className="space-y-0.5">
+                                {(v.venta_lineas ?? []).map((l: any, i: number) => (
+                                  <div key={i} className="flex items-center justify-between text-[10px]">
+                                    <span className="text-foreground truncate max-w-[200px]">
+                                      {l.productos?.nombre ?? 'Producto'} <span className="text-muted-foreground">×{l.cantidad}</span>
+                                    </span>
+                                    <span className="tabular-nums text-muted-foreground shrink-0">{fmtMoney(l.total ?? 0)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cobros detail */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Banknote className="h-3.5 w-3.5 text-emerald-600" /> Cobros del día
+                    </h3>
+                    {clientDetail.cobros.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground py-2">Sin cobros registrados</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {clientDetail.cobros.map((c: any) => (
+                          <div key={c.id} className="flex items-center justify-between rounded-lg border border-border bg-card p-2.5">
+                            <div>
+                              <p className="text-[11px] font-medium text-foreground">{c.metodo_pago ?? 'Efectivo'}</p>
+                              <p className="text-[9px] text-muted-foreground">{new Date(c.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <span className="text-[13px] font-bold tabular-nums text-emerald-600">{fmtMoney(c.monto ?? 0)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Devoluciones detail */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <RotateCcw className="h-3.5 w-3.5 text-destructive" /> Devoluciones del día
+                    </h3>
+                    {clientDetail.devoluciones.length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground py-2">Sin devoluciones</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {clientDetail.devoluciones.map((d: any) => {
+                          const lineas = d.devolucion_lineas ?? [];
+                          return (
+                            <div key={d.id} className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 space-y-1">
+                              {lineas.map((l: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-[10px]">
+                                  <span className="text-foreground truncate max-w-[200px]">
+                                    {l.productos?.nombre ?? 'Producto'} <span className="text-muted-foreground">×{l.cantidad}</span>
+                                  </span>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <Badge variant="outline" className="text-[8px] px-1">{l.motivo ?? '—'}</Badge>
+                                    {l.monto_credito > 0 && <span className="text-[10px] tabular-nums text-destructive">{fmtMoney(l.monto_credito)}</span>}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
