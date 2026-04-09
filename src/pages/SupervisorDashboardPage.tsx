@@ -483,7 +483,7 @@ export default function SupervisorDashboardPage() {
       </section>
 
       {/* ═══ MAP + ALERTS ═══ */}
-      <section className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+      <section className="grid gap-3 lg:grid-cols-[1.5fr_1fr] items-stretch">
         <Card className="overflow-hidden flex flex-col">
           <CardHeader className="py-3 px-4 shrink-0">
             <div className="flex items-center justify-between">
