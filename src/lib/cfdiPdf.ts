@@ -2,8 +2,7 @@
  * CFDI PDF generator — Clean Odoo-style layout matching the HTML template exactly
  * No HTML canvas — 100% jsPDF code
  */
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import {
   ML, MR, fmtCurrency,
@@ -170,6 +169,10 @@ function drawPair(doc: jsPDF, x: number, y: number, label: string, value: string
 
 export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const { empresa, logoBase64, cfdi, receiver, lineas, formasPagoLabel, metodoPagoLabel, usoCfdiLabel, regimenEmisorLabel, regimenReceptorLabel } = params;
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter', compress: false, putOnlyUsedFonts: true });
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
