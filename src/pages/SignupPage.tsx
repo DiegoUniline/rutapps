@@ -250,6 +250,16 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
+      // Check blacklist before anything else
+      const { data: blacklisted } = await supabase.rpc('is_email_blacklisted', {
+        p_email: form.email.trim().toLowerCase(),
+      });
+      if (blacklisted) {
+        toast.error('Este correo no es elegible para prueba gratuita. Contacta a ventas para adquirir un plan.');
+        setLoading(false);
+        return;
+      }
+
       const { data: existingEmail } = await supabase
         .from('empresas')
         .select('id')

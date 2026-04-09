@@ -16,8 +16,9 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Building2, CreditCard, Receipt, Stamp, Users, Calendar,
   Mail, Phone, MapPin, Edit2, Save, X, ExternalLink, Download, FileText,
-  ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2
+  ShoppingCart, History, Percent, KeyRound, ShieldAlert, Loader2, Trash2
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format, differenceInDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { es } from 'date-fns/locale';
@@ -72,6 +73,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
   const [resetDialog, setResetDialog] = useState<{ userId: string; email: string; nombre: string } | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resetForceChange, setResetForceChange] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [resettingPw, setResettingPw] = useState(false);
   const [forcingAll, setForcingAll] = useState(false);
 
@@ -296,8 +299,26 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     } catch (e: any) {
       toast.error(e.message);
     } finally {
-      setForcingAll(false);
+    setForcingAll(false);
+  }
+
+  async function handleDeleteEmpresa() {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase.rpc('delete_empresa_cascade', {
+        p_empresa_id: empresaId,
+        p_deleted_by: user.id,
+      });
+      if (error) throw error;
+      toast.success(`Empresa "${empresa?.nombre}" eliminada permanentemente`);
+      onBack();
+    } catch (e: any) {
+      toast.error(e.message || 'Error al eliminar empresa');
+    } finally {
+      setDeleting(false);
     }
+  }
   }
 
   if (loading) {
@@ -345,11 +366,56 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
             </p>
           </div>
         </div>
-        {subscription && (
-          <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="ml-auto text-xs">
-            {STATUS_MAP[subscription.status]?.l || subscription.status}
-          </Badge>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {subscription && (
+            <Badge variant={STATUS_MAP[subscription.status]?.v || 'outline'} className="text-xs">
+              {STATUS_MAP[subscription.status]?.l || subscription.status}
+            </Badge>
+          )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" className="gap-1.5">
+                <Trash2 className="h-3.5 w-3.5" /> Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                  <Trash2 className="h-5 w-5" /> Eliminar empresa permanentemente
+                </AlertDialogTitle>
+                <AlertDialogDescription className="space-y-3">
+                  <p>
+                    Esta acción es <strong>irreversible</strong>. Se eliminarán <strong>todos los datos</strong> de "{empresa.nombre}":
+                    productos, clientes, ventas, cobros, inventario, facturas, usuarios, etc.
+                  </p>
+                  <p>
+                    Los correos de los usuarios serán bloqueados para que no puedan volver a obtener un trial gratuito.
+                  </p>
+                  <div className="pt-2">
+                    <Label className="text-xs text-foreground">Escribe <strong>{empresa.nombre}</strong> para confirmar:</Label>
+                    <Input
+                      className="mt-1"
+                      value={deleteConfirmName}
+                      onChange={e => setDeleteConfirmName(e.target.value)}
+                      placeholder={empresa.nombre}
+                    />
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDeleteConfirmName('')}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={deleteConfirmName !== empresa.nombre || deleting}
+                  onClick={handleDeleteEmpresa}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Trash2 className="h-4 w-4 mr-1" />}
+                  Eliminar permanentemente
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {/* Tabs */}
