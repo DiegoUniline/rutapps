@@ -535,29 +535,16 @@ export default function SupervisorDashboardPage() {
           <GoogleMapsProvider>
             <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} selectedClientId={selectedClientId} onSelectClient={handleSelectClient} />
           </GoogleMapsProvider>
-          {(() => {
-            const uniqueSellers = [...new Set(mapMarkers.map(m => m.vendedorId))];
-            const sellerNames = new Map(mapMarkers.map(m => [m.vendedorId, m.vendedorNombre]));
-            if (uniqueSellers.length <= 1) return null;
-            return (
-              <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
-                {uniqueSellers.map((sid, i) => (
-                  <span key={sid} className="inline-flex items-center gap-1">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLORS[i % ROUTE_COLORS.length] }} />
-                    <span className="text-[10px] text-muted-foreground">{sellerNames.get(sid)}</span>
-                  </span>
-                ))}
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
-                  <span className="text-[10px] text-muted-foreground">Visitado</span>
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
-                  <span className="text-[10px] text-muted-foreground">Pendiente</span>
-                </span>
-              </div>
-            );
-          })()}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
+            <span className="inline-flex items-center gap-1.5">
+              <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#22c55e" stroke="#fff" strokeWidth="1.5"/><polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="text-[10px] text-muted-foreground">Visitado</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#ef4444" stroke="#fff" strokeWidth="1.5"/><line x1="10" y1="15" x2="18" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/></svg>
+              <span className="text-[10px] text-muted-foreground">Pendiente</span>
+            </span>
+          </div>
         </div>
 
         {/* Right: Tabs (40%) */}
@@ -988,25 +975,32 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers, sellerLocations]);
 
-  const sellerColorMap = useMemo(() => {
-    const uniqueSellers = [...new Set(markers.map((m) => m.vendedorId))];
-    const map = new Map<string, string>();
-    uniqueSellers.forEach((sid, i) => map.set(sid, ROUTE_COLORS[i % ROUTE_COLORS.length]));
-    return map;
-  }, [markers]);
-
-  const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean, color: string) => {
-    const label = orden != null ? String(orden) : '';
-    const size = 30;
-    const borderColor = visitado ? '#22c55e' : '#ef4444';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="${borderColor}" stroke-width="3.5"/>
-      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+  const makePinIcon = useCallback((orden: number | null, visitado: boolean) => {
+    const w = 28, h = 40;
+    const color = visitado ? '#22c55e' : '#ef4444';
+    const icon = visitado
+      ? `<polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
+      : `<line x1="10" y1="15" x2="18" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>`;
+    const label = orden != null ? `<text x="14" y="14" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>` : '';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+      <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+      ${orden != null ? label : icon}
+      ${orden != null ? icon.replace(/stroke-width="2.5"/g, 'stroke-width="0"') : ''}
     </svg>`;
+    // If we have orden, show the number on top and a small check/x at bottom
+    const svgFinal = orden != null
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+          <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+          <text x="14" y="16" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="11" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>
+        </svg>`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+          <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+          ${icon}
+        </svg>`;
     return {
-      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(size, size),
-      anchor: new google.maps.Point(size / 2, size / 2),
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgFinal),
+      scaledSize: new google.maps.Size(w, h),
+      anchor: new google.maps.Point(w / 2, h),
     };
   }, []);
 
@@ -1071,7 +1065,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
           onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          icon={makeNumberedIcon(m.orden, m.visitado, sellerColorMap.get(m.vendedorId) ?? '#ef4444')} />
+          icon={makePinIcon(m.orden, m.visitado)} />
       ))}
       {sellerLocations.map((s) => (
         <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
