@@ -13,6 +13,7 @@ import { VentaHistorialTab } from '@/components/venta/VentaHistorialTab';
 import { CfdiHistory } from '@/components/facturacion/CfdiHistory';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import DocumentPreviewModal from '@/components/DocumentPreviewModal';
+import { VentaCheckoutModal } from '@/components/venta/VentaCheckoutModal';
 import { toast } from 'sonner';
 import type { StatusVenta } from '@/types';
 import { useVentaForm, VENTA_STEPS_FULL, VENTA_STEPS_INMEDIATA } from './useVentaForm';
