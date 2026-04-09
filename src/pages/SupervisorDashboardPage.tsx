@@ -256,8 +256,133 @@ export default function SupervisorDashboardPage() {
     },
   });
 
-  // ═══════════════════════════════════════════════════════
-  // COMPUTED DATA
+  // Cartera vencida (all unpaid credit sales)
+  const { data: carteraData } = useQuery({
+    queryKey: ['supervisor-cartera', empresa?.id], enabled: !!empresa?.id,
+    staleTime: 3 * 60 * 1000,
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('ventas').select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), vendedor_id')
+        .eq('empresa_id', empresa!.id).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0)
+        .neq('status', 'cancelado' as any).range(from, to)),
+  });
+
+  // Yesterday data for comparisons
+  const yesterday = useMemo(() => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
+
+  const lastWeekSameDay = useMemo(() => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
+
+  const { data: ventasAyer } = useQuery({
+    queryKey: ['supervisor-ventas-ayer', yesterday, empresa?.id], enabled: !!empresa?.id && desde === today,
+    queryFn: async () => {
+      const { data } = await supabase.from('ventas').select('id, total')
+        .eq('empresa_id', empresa!.id).eq('fecha', yesterday).neq('status', 'cancelado');
+      return data ?? [];
+    },
+  });
+
+  const { data: ventasSemPasada } = useQuery({
+    queryKey: ['supervisor-ventas-sem-pasada', lastWeekSameDay, empresa?.id], enabled: !!empresa?.id && desde === today,
+    queryFn: async () => {
+      const { data } = await supabase.from('ventas').select('id, total')
+        .eq('empresa_id', empresa!.id).eq('fecha', lastWeekSameDay).neq('status', 'cancelado');
+      return data ?? [];
+    },
+  });
+
+  // Top productos del día
+  const topProductosHoy = useMemo(() => {
+    const map = new Map<string, { nombre: string; codigo: string; qty: number; total: number }>();
+    (ventasHoy ?? []).forEach((v: any) => {
+      (v.venta_lineas ?? []).forEach((l: any) => {
+        const pid = l.producto_id;
+        const existing = map.get(pid) ?? { nombre: l.productos?.nombre ?? 'N/A', codigo: l.productos?.codigo ?? '', qty: 0, total: 0 };
+        existing.qty += Number(l.cantidad) || 0;
+        existing.total += Number(l.total) || 0;
+        map.set(pid, existing);
+      });
+    });
+    return [...map.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.total - a.total);
+  }, [ventasHoy]);
+
+  // Cartera aging buckets
+  const carteraAging = useMemo(() => {
+    const buckets = { '1-7': 0, '8-15': 0, '16-30': 0, '30+': 0, total: 0 };
+    const todayMs = new Date(`${today}T12:00:00`).getTime();
+    (carteraData ?? []).forEach((v: any) => {
+      const dias = Math.floor((todayMs - new Date(`${v.fecha}T12:00:00`).getTime()) / 86400000);
+      const saldo = Number(v.saldo_pendiente) || 0;
+      buckets.total += saldo;
+      if (dias <= 7) buckets['1-7'] += saldo;
+      else if (dias <= 15) buckets['8-15'] += saldo;
+      else if (dias <= 30) buckets['16-30'] += saldo;
+      else buckets['30+'] += saldo;
+    });
+    return buckets;
+  }, [carteraData, today]);
+
+  // Comparisons
+  const comparisons = useMemo(() => {
+    if (desde !== today) return null;
+    const totalHoy = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalAyer = (ventasAyer ?? []).reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const totalSemPas = (ventasSemPasada ?? []).reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const diffAyer = totalAyer > 0 ? Math.round(((totalHoy - totalAyer) / totalAyer) * 100) : null;
+    const diffSem = totalSemPas > 0 ? Math.round(((totalHoy - totalSemPas) / totalSemPas) * 100) : null;
+    return { totalAyer, totalSemPas, diffAyer, diffSem };
+  }, [desde, today, filteredVentas, ventasAyer, ventasSemPasada]);
+
+  // Smart alerts
+  const smartAlerts = useMemo(() => {
+    const alerts: { type: 'warning' | 'danger' | 'info'; icon: string; text: string }[] = [];
+
+    // Vendedor sin actividad (2+ hours since last action while on route)
+    const now = Date.now();
+    (vendedores ?? []).forEach(s => {
+      const stats = vendedorStats[s.id];
+      if (!stats?.cargaActiva) return;
+      if (stats.ultimaVisita) {
+        const hoursSince = (now - new Date(stats.ultimaVisita).getTime()) / 3600000;
+        if (hoursSince >= 2) {
+          alerts.push({ type: 'warning', icon: '⏰', text: `${s.nombre} lleva ${Math.floor(hoursSince)}h sin actividad estando en ruta` });
+        }
+      } else {
+        alerts.push({ type: 'warning', icon: '⏰', text: `${s.nombre} está en ruta pero sin visitas registradas` });
+      }
+    });
+
+    // Gastos altos (>20% de ventas)
+    const totalVentasHoy = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalGastosHoy = filteredGastos.reduce((s, g) => s + (g.monto ?? 0), 0);
+    if (totalVentasHoy > 0 && totalGastosHoy > 0) {
+      const pctGastos = Math.round((totalGastosHoy / totalVentasHoy) * 100);
+      if (pctGastos > 20) {
+        alerts.push({ type: 'danger', icon: '💸', text: `Gastos representan ${pctGastos}% de ventas (${fmtMoney(totalGastosHoy)} / ${fmtMoney(totalVentasHoy)})` });
+      }
+    }
+
+    // Clientes importantes sin visitar (top by last sale value, not visited today)
+    const importantUnvisited = clienteActivity
+      .filter(c => !c.visitado && c.ultimaVisitaValor > 0)
+      .sort((a, b) => b.ultimaVisitaValor - a.ultimaVisitaValor)
+      .slice(0, 3);
+    importantUnvisited.forEach(c => {
+      if ((c.diasSinComprar ?? 0) >= 14) {
+        alerts.push({ type: 'danger', icon: '🔴', text: `${c.nombre} (${fmtMoney(c.ultimaVisitaValor)}) — ${c.diasSinComprar}d sin comprar` });
+      }
+    });
+
+    return alerts;
+  }, [vendedores, vendedorStats, filteredVentas, filteredGastos, clienteActivity, fmtMoney]);
+
+
   // ═══════════════════════════════════════════════════════
 
   const filteredVentas = useMemo(() => (ventasHoy ?? []).filter((v) => !selectedAliases || selectedAliases.includes(v.vendedor_id)), [ventasHoy, selectedAliases]);
