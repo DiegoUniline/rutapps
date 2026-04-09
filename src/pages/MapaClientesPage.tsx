@@ -103,7 +103,7 @@ export default function MapaClientesPage() {
     duration: string;
   } | null>(null);
   const [showRoutePanel, setShowRoutePanel] = useState(true);
-  const [colorMode, setColorMode] = useState<'dia' | 'status' | 'visitado'>('dia');
+  const [colorMode, setColorMode] = useState<'dia' | 'status' | 'visitado'>('visitado');
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { data: isAdmin } = useQuery({
