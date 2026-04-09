@@ -124,13 +124,17 @@ export default function MapaClientesPage() {
 
   // Today's ventas to determine "visited" clients
   const { data: ventasHoy } = useQuery({
-    queryKey: ['ventas-hoy'],
+    queryKey: ['ventas-hoy', empresa?.id],
+    enabled: !!empresa?.id,
+    refetchInterval: 15000,
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
         .from('ventas')
         .select('cliente_id')
+        .eq('empresa_id', empresa!.id)
         .eq('fecha', today)
+        .neq('status', 'cancelado')
         .not('cliente_id', 'is', null);
       return new Set((data ?? []).map((v: any) => v.cliente_id));
     },
