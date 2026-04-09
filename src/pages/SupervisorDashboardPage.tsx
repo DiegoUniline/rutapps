@@ -901,12 +901,14 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
     };
   }, []);
 
-  if (!isLoaded) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
-  if (markers.length === 0 && sellerLocations.length === 0) return <div style={{ height }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
+  const heightStyle = typeof height === 'number' ? `${height}px` : height;
+
+  if (!isLoaded) return <div style={{ height: heightStyle }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
+  if (markers.length === 0 && sellerLocations.length === 0) return <div style={{ height: heightStyle }} className="flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
 
   return (
     <GoogleMap
-      mapContainerStyle={{ width: '100%', height: `${height}px` }}
+      mapContainerStyle={{ width: '100%', height: heightStyle }}
       center={center}
       zoom={12}
       options={{
