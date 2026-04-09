@@ -514,8 +514,12 @@ export default function SupervisorDashboardPage() {
                     </span>
                   ))}
                   <span className="inline-flex items-center gap-1">
-                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: '#22c55e' }} />
+                    <span>😀</span>
                     <span className="text-[10px] text-muted-foreground">Visitado</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span>😞</span>
+                    <span className="text-[10px] text-muted-foreground">Pendiente</span>
                   </span>
                 </div>
               );
