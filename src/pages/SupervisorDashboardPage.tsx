@@ -416,7 +416,44 @@ export default function SupervisorDashboardPage() {
       .sort((a, b) => { if (a.visitado !== b.visitado) return a.visitado ? 1 : -1; return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999); });
   }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedAliases, soloHoy, visitFilter, diaHoyLabel]);
 
-  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden })), [clienteActivity]);
+  // Comparisons vs yesterday / last week
+  const comparisons = useMemo(() => {
+    if (desde !== today) return null;
+    const totalHoy = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalAyer = (ventasAyer ?? []).reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const totalSemPas = (ventasSemPasada ?? []).reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const diffAyer = totalAyer > 0 ? Math.round(((totalHoy - totalAyer) / totalAyer) * 100) : null;
+    const diffSem = totalSemPas > 0 ? Math.round(((totalHoy - totalSemPas) / totalSemPas) * 100) : null;
+    return { totalAyer, totalSemPas, diffAyer, diffSem };
+  }, [desde, today, filteredVentas, ventasAyer, ventasSemPasada]);
+
+  // Smart alerts
+  const smartAlerts = useMemo(() => {
+    const alerts: { type: 'warning' | 'danger' | 'info'; icon: string; text: string }[] = [];
+    const now = Date.now();
+    (vendedores ?? []).forEach(s => {
+      const stats = vendedorStats[s.id];
+      if (!stats?.cargaActiva) return;
+      if (stats.ultimaVisita) {
+        const hoursSince = (now - new Date(stats.ultimaVisita).getTime()) / 3600000;
+        if (hoursSince >= 2) alerts.push({ type: 'warning', icon: '⏰', text: `${s.nombre} lleva ${Math.floor(hoursSince)}h sin actividad estando en ruta` });
+      } else {
+        alerts.push({ type: 'warning', icon: '⏰', text: `${s.nombre} está en ruta pero sin visitas registradas` });
+      }
+    });
+    const totalVentasHoy = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalGastosHoy = filteredGastos.reduce((s, g) => s + (g.monto ?? 0), 0);
+    if (totalVentasHoy > 0 && totalGastosHoy > 0) {
+      const pctGastos = Math.round((totalGastosHoy / totalVentasHoy) * 100);
+      if (pctGastos > 20) alerts.push({ type: 'danger', icon: '💸', text: `Gastos representan ${pctGastos}% de ventas (${fmtMoney(totalGastosHoy)} / ${fmtMoney(totalVentasHoy)})` });
+    }
+    clienteActivity.filter(c => !c.visitado && c.ultimaVisitaValor > 0 && (c.diasSinComprar ?? 0) >= 14)
+      .sort((a, b) => b.ultimaVisitaValor - a.ultimaVisitaValor).slice(0, 3)
+      .forEach(c => alerts.push({ type: 'danger', icon: '🔴', text: `${c.nombre} (${fmtMoney(c.ultimaVisitaValor)}) — ${c.diasSinComprar}d sin comprar` }));
+    return alerts;
+  }, [vendedores, vendedorStats, filteredVentas, filteredGastos, clienteActivity, fmtMoney]);
+
+
 
   const sellerLocations = useMemo<SellerLocation[]>(() => {
     const latest = new Map<string, { lat: number; lng: number; hora: string; nombre: string }>();
