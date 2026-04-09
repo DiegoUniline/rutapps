@@ -466,7 +466,8 @@ export function useVentaForm() {
       loadedVentaIdRef.current = null; // allow reload
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
-    } catch (e: any) { toast.error(e.message); }
+      return ventaId;
+    } catch (e: any) { toast.error(e.message); return undefined; }
   };
 
   const handleDelete = async () => { if (!form.id) return; await deleteVenta.mutateAsync(form.id); toast.success('Venta eliminada'); navigate('/ventas'); };
