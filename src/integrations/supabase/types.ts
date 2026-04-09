@@ -4534,7 +4534,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
-          empresa_id: string
+          empresa_id: string | null
           id: string
           module: string | null
           sort_order: number
@@ -4544,7 +4544,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
-          empresa_id: string
+          empresa_id?: string | null
           id?: string
           module?: string | null
           sort_order?: number
@@ -4554,7 +4554,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
-          empresa_id?: string
+          empresa_id?: string | null
           id?: string
           module?: string | null
           sort_order?: number

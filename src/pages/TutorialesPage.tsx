@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@RutAppMx';
+const SUPER_ADMIN_EMAIL = 'diego.leon@uniline.mx';
 
 const MODULES: { value: string; label: string }[] = [
   { value: 'dashboard', label: 'Dashboard' },
@@ -81,9 +82,9 @@ interface VideoRow {
 }
 
 export default function TutorialesPage() {
-  const { profile } = useAuth();
+  const { user } = useAuth();
   const qc = useQueryClient();
-  const empresaId = profile?.empresa_id;
+  const isAdmin = user?.email === SUPER_ADMIN_EMAIL;
 
   const [selected, setSelected] = useState<VideoRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -91,13 +92,11 @@ export default function TutorialesPage() {
   const [form, setForm] = useState({ url: '', title: '', description: '', module: '' });
 
   const { data: videos = [], isLoading } = useQuery({
-    queryKey: ['tutorial_videos', empresaId],
-    enabled: !!empresaId,
+    queryKey: ['tutorial_videos'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tutorial_videos' as any)
         .select('*')
-        .eq('empresa_id', empresaId!)
         .order('sort_order', { ascending: true })
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -108,7 +107,6 @@ export default function TutorialesPage() {
   const addMut = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from('tutorial_videos' as any).insert({
-        empresa_id: empresaId!,
         url: form.url.trim(),
         title: form.title.trim(),
         description: form.description.trim() || null,
@@ -185,10 +183,12 @@ export default function TutorialesPage() {
               Ver canal
             </a>
           </Button>
-          <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1">
-            <Plus className="h-4 w-4" />
-            Agregar video
-          </Button>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setShowAdd(true)} className="gap-1">
+              <Plus className="h-4 w-4" />
+              Agregar video
+            </Button>
+          )}
         </div>
       </div>
 
@@ -197,8 +197,7 @@ export default function TutorialesPage() {
       ) : videos.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <PlayCircle className="h-12 w-12 mx-auto mb-3 opacity-40" />
-          <p className="font-medium">No hay videos agregados aún</p>
-          <p className="text-xs mt-1">Haz clic en "Agregar video" para empezar</p>
+          <p className="font-medium">No hay videos disponibles aún</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -228,24 +227,26 @@ export default function TutorialesPage() {
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{video.description}</p>
                   )}
                 </div>
-                <div className="flex gap-0.5 shrink-0">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-primary"
-                    onClick={(e) => openEdit(video, e)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={(e) => { e.stopPropagation(); deleteMut.mutate(video.id); }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {isAdmin && (
+                  <div className="flex gap-0.5 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-primary"
+                      onClick={(e) => openEdit(video, e)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); deleteMut.mutate(video.id); }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -276,118 +277,118 @@ export default function TutorialesPage() {
       </Dialog>
 
       {/* Add video dialog */}
-      <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Agregar Video Tutorial</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label>URL de YouTube *</Label>
-              <Input
-                placeholder="https://www.youtube.com/watch?v=..."
-                value={form.url}
-                onChange={(e) => setForm({ ...form, url: e.target.value })}
-              />
-              {form.url && extractVideoId(form.url).length === 11 && (
-                <img src={thumbUrl(form.url)} alt="Preview" className="rounded mt-2 w-full max-w-[200px]" />
-              )}
+      {isAdmin && (
+        <Dialog open={showAdd} onOpenChange={setShowAdd}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Agregar Video Tutorial</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <Label>URL de YouTube *</Label>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={form.url}
+                  onChange={(e) => setForm({ ...form, url: e.target.value })}
+                />
+                {form.url && extractVideoId(form.url).length === 11 && (
+                  <img src={thumbUrl(form.url)} alt="Preview" className="rounded mt-2 w-full max-w-[200px]" />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Título *</Label>
+                <Input
+                  placeholder="Ej: Cómo crear una venta"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Descripción (opcional)</Label>
+                <Input
+                  placeholder="Breve descripción del video"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Módulo (opcional)</Label>
+                <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona módulo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODULES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full"
+                disabled={!form.url.trim() || !form.title.trim() || addMut.isPending}
+                onClick={() => addMut.mutate()}
+              >
+                {addMut.isPending ? 'Guardando...' : 'Agregar video'}
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label>Título *</Label>
-              <Input
-                placeholder="Ej: Cómo crear una venta"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Descripción (opcional)</Label>
-              <Input
-                placeholder="Breve descripción del video"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Módulo (opcional)</Label>
-              <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona módulo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODULES.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              className="w-full"
-              disabled={!form.url.trim() || !form.title.trim() || addMut.isPending}
-              onClick={() => addMut.mutate()}
-            >
-              {addMut.isPending ? 'Guardando...' : 'Agregar video'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit video dialog */}
-      <Dialog open={!!editingVideo} onOpenChange={(open) => { if (!open) { setEditingVideo(null); setForm({ url: '', title: '', description: '', module: '' }); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Video Tutorial</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <div className="space-y-1.5">
-              <Label>URL de YouTube *</Label>
-              <Input
-                placeholder="https://www.youtube.com/watch?v=..."
-                value={form.url}
-                onChange={(e) => setForm({ ...form, url: e.target.value })}
-              />
-              {form.url && extractVideoId(form.url).length === 11 && (
-                <img src={thumbUrl(form.url)} alt="Preview" className="rounded mt-2 w-full max-w-[200px]" />
-              )}
+      {isAdmin && (
+        <Dialog open={!!editingVideo} onOpenChange={(open) => { if (!open) { setEditingVideo(null); setForm({ url: '', title: '', description: '', module: '' }); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Video Tutorial</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div className="space-y-1.5">
+                <Label>URL de YouTube *</Label>
+                <Input
+                  value={form.url}
+                  onChange={(e) => setForm({ ...form, url: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Título *</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Descripción (opcional)</Label>
+                <Input
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Módulo (opcional)</Label>
+                <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona módulo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODULES.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="w-full"
+                disabled={!form.url.trim() || !form.title.trim() || updateMut.isPending}
+                onClick={() => updateMut.mutate()}
+              >
+                {updateMut.isPending ? 'Guardando...' : 'Guardar cambios'}
+              </Button>
             </div>
-            <div className="space-y-1.5">
-              <Label>Título *</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Descripción (opcional)</Label>
-              <Input
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Módulo (opcional)</Label>
-              <Select value={form.module} onValueChange={(v) => setForm({ ...form, module: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona módulo..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {MODULES.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              className="w-full"
-              disabled={!form.url.trim() || !form.title.trim() || updateMut.isPending}
-              onClick={() => updateMut.mutate()}
-            >
-              {updateMut.isPending ? 'Guardando...' : 'Guardar cambios'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
