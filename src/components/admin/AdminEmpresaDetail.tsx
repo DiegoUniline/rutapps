@@ -299,7 +299,8 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     } catch (e: any) {
       toast.error(e.message);
     } finally {
-    setForcingAll(false);
+      setForcingAll(false);
+    }
   }
 
   async function handleDeleteEmpresa() {
@@ -318,7 +319,6 @@ export default function AdminEmpresaDetail({ empresaId, onBack }: Props) {
     } finally {
       setDeleting(false);
     }
-  }
   }
 
   if (loading) {

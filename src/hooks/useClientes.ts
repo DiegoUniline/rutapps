@@ -147,7 +147,11 @@ export function useDeleteCliente() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['clientes'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['clientes'] });
+      qc.invalidateQueries({ queryKey: ['clientes-page'] });
+      qc.invalidateQueries({ queryKey: ['cliente'] });
+    },
   });
 }
 
@@ -194,7 +198,7 @@ export function useSavePedidoSugerido() {
         if (error) throw error;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['pedido-sugerido'] }),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['pedido-sugerido'] }),
     onError: (error: any) => {
       toast.error(error?.message || 'Error inesperado');
     },

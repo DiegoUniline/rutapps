@@ -144,7 +144,15 @@ export function useSaveProducto() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['productos'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['productos-page'] });
+      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['pos-productos'] });
+      qc.invalidateQueries({ queryKey: ['producto'] });
+      qc.invalidateQueries({ queryKey: ['marcas'] });
+      qc.invalidateQueries({ queryKey: ['clasificaciones'] });
+    },
   });
 }
 
@@ -166,7 +174,15 @@ export function useDeleteProducto() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) ctx.prev.forEach(([key, data]) => qc.setQueryData(key, data));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['productos'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['productos'] });
+      qc.invalidateQueries({ queryKey: ['productos-page'] });
+      qc.invalidateQueries({ queryKey: ['productos-select'] });
+      qc.invalidateQueries({ queryKey: ['pos-productos'] });
+      qc.invalidateQueries({ queryKey: ['producto'] });
+      qc.invalidateQueries({ queryKey: ['marcas'] });
+      qc.invalidateQueries({ queryKey: ['clasificaciones'] });
+    },
   });
 }
 
@@ -220,7 +236,11 @@ export function useSaveTarifa() {
         return data;
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tarifas'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
+      qc.invalidateQueries({ queryKey: ['tarifa'] });
+      qc.invalidateQueries({ queryKey: ['tarifas-select'] });
+    },
   });
 }
 
@@ -240,8 +260,9 @@ export function useSaveTarifaLinea() {
         return data;
       }
     },
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['tarifa'] });
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
       qc.invalidateQueries({ queryKey: ['tarifa-lineas-producto'] });
     },
   });
@@ -254,8 +275,9 @@ export function useDeleteTarifaLinea() {
       const { error } = await supabase.from('tarifa_lineas').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['tarifa'] });
+      qc.invalidateQueries({ queryKey: ['tarifas'] });
       qc.invalidateQueries({ queryKey: ['tarifa-lineas-producto'] });
     },
   });
@@ -381,7 +403,7 @@ export function useSaveProductoProveedor() {
         if (error) throw error;
       }
     },
-    onSuccess: (_d, v) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', v.producto_id] }); },
+    onSettled: (_d, _e, v) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', v.producto_id] }); },
   });
 }
 
@@ -393,7 +415,7 @@ export function useDeleteProductoProveedor() {
       if (error) throw error;
       return producto_id;
     },
-    onSuccess: (productoId) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', productoId] }); },
+    onSettled: (_d, _e, v) => { qc.invalidateQueries({ queryKey: ['producto_proveedores', v.producto_id] }); },
   });
 }
 
@@ -505,7 +527,7 @@ export function useSaveListaPrecio() {
         return data;
       }
     },
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['lista_precios'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_select'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
@@ -520,9 +542,10 @@ export function useDeleteListaPrecio() {
       const { error } = await supabase.from('lista_precios').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['lista_precios'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_select'] });
+      qc.invalidateQueries({ queryKey: ['lista_precios_all'] });
     },
   });
 }
@@ -571,7 +594,7 @@ export function useSaveListaPrecioLinea() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['lista_precios_lineas'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_lineas_producto'] });
     },
@@ -585,7 +608,7 @@ export function useDeleteListaPrecioLinea() {
       const { error } = await supabase.from('lista_precios_lineas').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['lista_precios_lineas'] });
       qc.invalidateQueries({ queryKey: ['lista_precios_lineas_producto'] });
     },
