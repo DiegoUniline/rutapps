@@ -499,6 +499,27 @@ export default function SupervisorDashboardPage() {
             <GoogleMapsProvider>
               <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} height={isMobile ? 300 : 480} />
             </GoogleMapsProvider>
+            {/* Route color legend */}
+            {(() => {
+              const ROUTE_COLORS = ['#ef4444','#3b82f6','#f59e0b','#10b981','#8b5cf6','#ec4899','#06b6d4','#f97316','#14b8a6','#6366f1','#e11d48','#0ea5e9','#84cc16','#d946ef','#78716c'];
+              const uniqueSellers = [...new Set(mapMarkers.map(m => m.vendedorId))];
+              const sellerNames = new Map(mapMarkers.map(m => [m.vendedorId, m.vendedorNombre]));
+              if (uniqueSellers.length <= 1) return null;
+              return (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-2 border-t border-border bg-muted/20">
+                  {uniqueSellers.map((sid, i) => (
+                    <span key={sid} className="inline-flex items-center gap-1">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLORS[i % ROUTE_COLORS.length] }} />
+                      <span className="text-[10px] text-muted-foreground">{sellerNames.get(sid)}</span>
+                    </span>
+                  ))}
+                  <span className="inline-flex items-center gap-1">
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: '#22c55e' }} />
+                    <span className="text-[10px] text-muted-foreground">Visitado</span>
+                  </span>
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-3 border-t border-border bg-muted/30">
               <MiniSummary label="Visitados" value={String(dashboardStats.clientesVisitados)} />
               <MiniSummary label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} />
