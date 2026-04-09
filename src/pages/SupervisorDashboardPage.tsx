@@ -375,45 +375,78 @@ export default function SupervisorDashboardPage() {
     return { totalVentas, totalCobros, numVentas: filteredVentas.length, numCobros: filteredCobros.length, clientesVisitados, clientesPorVisitar, entregasHechas, entregasTotal: filteredEntregas.length, ticketPromedio, efectividad };
   }, [filteredVentas, filteredCobros, filteredEntregas, clienteActivity]);
 
-  // Weekly chart data
+  // Weekly chart data — per seller breakdown
+  const weeklyPerSeller = useMemo(() => {
+    const sellers = vendedores ?? [];
+    const result: Record<string, { nombre: string; ventas: number; numVentas: number; cobros: number; visitas: number; perDay: Record<string, { ventas: number; numVentas: number; cobros: number; visitas: number }> }> = {};
+    sellers.forEach(s => {
+      result[s.id] = { nombre: s.nombre, ventas: 0, numVentas: 0, cobros: 0, visitas: 0, perDay: {} };
+      week.days.forEach(({ date }) => { result[s.id].perDay[date] = { ventas: 0, numVentas: 0, cobros: 0, visitas: 0 }; });
+    });
+    (ventasSemana ?? []).forEach((v: any) => {
+      const sid = sellerIdMap.get(v.vendedor_id);
+      if (sid && result[sid]) {
+        result[sid].ventas += v.total ?? 0;
+        result[sid].numVentas++;
+        if (result[sid].perDay[v.fecha]) { result[sid].perDay[v.fecha].ventas += v.total ?? 0; result[sid].perDay[v.fecha].numVentas++; }
+      }
+    });
+    (cobrosSemana ?? []).forEach((c: any) => {
+      const s = sellers.find(i => i.user_id === c.user_id);
+      if (s && result[s.id]) {
+        result[s.id].cobros += c.monto ?? 0;
+        if (result[s.id].perDay[c.fecha]) result[s.id].perDay[c.fecha].cobros += c.monto ?? 0;
+      }
+    });
+    (visitasSemana ?? []).forEach((v: any) => {
+      const s = sellers.find(i => i.user_id === v.user_id);
+      const vDate = typeof v.fecha === 'string' ? v.fecha.slice(0, 10) : '';
+      if (s && result[s.id]) {
+        result[s.id].visitas++;
+        if (result[s.id].perDay[vDate]) result[s.id].perDay[vDate].visitas++;
+      }
+    });
+    return result;
+  }, [vendedores, ventasSemana, cobrosSemana, visitasSemana, week.days, sellerIdMap]);
+
   const weeklyChartData = useMemo(() => {
     return week.days.map(({ date, label }) => {
-      const dayVentas = (ventasSemana ?? []).filter((v) => v.fecha === date);
-      const dayCobros = (cobrosSemana ?? []).filter((c) => c.fecha === date);
-      const dayVisitas = (visitasSemana ?? []).filter((v) => {
-        const vDate = typeof v.fecha === 'string' ? v.fecha.slice(0, 10) : '';
-        return vDate === date;
-      });
       const isToday = date === today;
-      return {
-        dia: label + (isToday ? ' ★' : ''),
-        ventas: dayVentas.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
-        numVentas: dayVentas.length,
-        cobros: dayCobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
-        visitas: dayVisitas.length,
-      };
+      const entry: any = { dia: label + (isToday ? ' ★' : ''), ventas: 0, numVentas: 0, cobros: 0, visitas: 0 };
+      Object.values(weeklyPerSeller).forEach(s => {
+        const d = s.perDay[date];
+        if (d) { entry.ventas += d.ventas; entry.numVentas += d.numVentas; entry.cobros += d.cobros; entry.visitas += d.visitas; }
+      });
+      // Add per-seller ventas for stacked chart
+      Object.entries(weeklyPerSeller).forEach(([sid, s]) => {
+        entry[`v_${sid}`] = s.perDay[date]?.ventas ?? 0;
+      });
+      return entry;
     });
-  }, [week.days, ventasSemana, cobrosSemana, visitasSemana, today]);
+  }, [week.days, weeklyPerSeller, today]);
 
-  const weeklyTotals = useMemo(() => {
-    return {
-      ventas: weeklyChartData.reduce((s, d) => s + d.ventas, 0),
-      numVentas: weeklyChartData.reduce((s, d) => s + d.numVentas, 0),
-      cobros: weeklyChartData.reduce((s, d) => s + d.cobros, 0),
-      visitas: weeklyChartData.reduce((s, d) => s + d.visitas, 0),
-    };
-  }, [weeklyChartData]);
+  const weeklyTotals = useMemo(() => ({
+    ventas: weeklyChartData.reduce((s, d) => s + d.ventas, 0),
+    numVentas: weeklyChartData.reduce((s, d) => s + d.numVentas, 0),
+    cobros: weeklyChartData.reduce((s, d) => s + d.cobros, 0),
+    visitas: weeklyChartData.reduce((s, d) => s + d.visitas, 0),
+  }), [weeklyChartData]);
 
-  // Accumulated chart data
   const weeklyAccumData = useMemo(() => {
-    let accumVentas = 0, accumCobros = 0, accumVisitas = 0;
+    let accumVentas = 0, accumCobros = 0;
     return weeklyChartData.map((d) => {
       accumVentas += d.ventas;
       accumCobros += d.cobros;
-      accumVisitas += d.visitas;
-      return { ...d, accumVentas, accumCobros, accumVisitas };
+      return { ...d, accumVentas, accumCobros };
     });
   }, [weeklyChartData]);
+
+  const weeklySellerRanking = useMemo(() =>
+    Object.entries(weeklyPerSeller)
+      .map(([id, s]) => ({ id, ...s, ticket: s.numVentas > 0 ? s.ventas / s.numVentas : 0 }))
+      .filter(s => s.ventas > 0 || s.visitas > 0)
+      .sort((a, b) => b.ventas - a.ventas),
+    [weeklyPerSeller]);
 
   const handleSelectClient = useCallback((id: string) => {
     setSelectedClientId(id);
