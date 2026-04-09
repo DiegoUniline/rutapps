@@ -394,7 +394,7 @@ export function useVentaForm() {
   };
   const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
 
-  const handleSave = async (autoConfirm = false) => {
+  const handleSave = async (autoConfirm = false): Promise<string | undefined> => {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
