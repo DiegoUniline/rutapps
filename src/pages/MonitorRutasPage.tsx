@@ -621,11 +621,25 @@ function MonitorContent() {
 
               {/* Map legend */}
               <div className="absolute bottom-4 left-4 bg-card/90 backdrop-blur-md border border-border rounded-xl px-3 py-2.5 shadow-lg">
-                <div className="flex items-center gap-4 text-[11px]">
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Vendido</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Entregado</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> En ruta</span>
-                  <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-destructive" /> Pendiente</span>
+                <div className="flex flex-wrap items-center gap-3 text-[11px]">
+                  {(() => {
+                    const uniqueSellers = [...new Set(withGps.map(c => c.vendedor_id).filter(Boolean))];
+                    const sellerNames = new Map(withGps.map(c => [c.vendedor_id, c.vendedorNombre]));
+                    return uniqueSellers.map((sid, i) => (
+                      <span key={sid} className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLORS[i % ROUTE_COLORS.length] }} />
+                        {sellerNames.get(sid) ?? '—'}
+                      </span>
+                    ));
+                  })()}
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
+                    Visitado
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
+                    Pendiente
+                  </span>
                 </div>
               </div>
             </div>
