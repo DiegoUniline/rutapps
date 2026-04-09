@@ -4530,6 +4530,36 @@ export type Database = {
           },
         ]
       }
+      trial_blacklist: {
+        Row: {
+          bloqueado_por: string | null
+          created_at: string
+          email: string | null
+          empresa_nombre: string | null
+          id: string
+          motivo: string | null
+          telefono: string | null
+        }
+        Insert: {
+          bloqueado_por?: string | null
+          created_at?: string
+          email?: string | null
+          empresa_nombre?: string | null
+          id?: string
+          motivo?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          bloqueado_por?: string | null
+          created_at?: string
+          email?: string | null
+          empresa_nombre?: string | null
+          id?: string
+          motivo?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
       tutorial_videos: {
         Row: {
           created_at: string
@@ -5416,6 +5446,10 @@ export type Database = {
         Args: { p_cfdi_id: string; p_empresa_id: string; p_user_id: string }
         Returns: boolean
       }
+      delete_empresa_cascade: {
+        Args: { p_deleted_by: string; p_empresa_id: string }
+        Returns: undefined
+      }
       generate_folio: {
         Args: { p_empresa_id: string; p_tipo: string }
         Returns: string
@@ -5428,6 +5462,7 @@ export type Database = {
         }[]
       }
       get_my_empresa_id: { Args: never; Returns: string }
+      is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
         Args: { p_empresa_id: string; prefix: string }
