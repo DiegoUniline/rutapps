@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Clock,
   Eye,
-  Filter,
   MapPin,
   Package,
   RotateCcw,
@@ -21,6 +20,7 @@ import {
   Users,
   XCircle,
   Activity,
+  BarChart3,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +30,7 @@ import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
 
@@ -45,6 +46,27 @@ type SellerLocation = { id: string; nombre: string; lat: number; lng: number; ho
 
 function normalizePersonName(value?: string | null) {
   return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+const DIAS_CORTOS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+function getWeekRange(todayStr: string) {
+  const d = new Date(`${todayStr}T12:00:00`);
+  const day = d.getDay();
+  const diffToMon = day === 0 ? -6 : 1 - day;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMon);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  return {
+    desde: monday.toISOString().slice(0, 10),
+    hasta: sunday.toISOString().slice(0, 10),
+    days: Array.from({ length: 7 }, (_, i) => {
+      const dd = new Date(monday);
+      dd.setDate(monday.getDate() + i);
+      return { date: dd.toISOString().slice(0, 10), label: DIAS_CORTOS[dd.getDay()] };
+    }),
+  };
 }
 
 export default function SupervisorDashboardPage() {
@@ -65,8 +87,10 @@ export default function SupervisorDashboardPage() {
     return DIAS_SEMANA[d.getDay()];
   }, [desde]);
 
+  const week = useMemo(() => getWeekRange(today), [today]);
+
   // ═══════════════════════════════════════════════════════
-  // DATA QUERIES (same as before)
+  // DATA QUERIES
   // ═══════════════════════════════════════════════════════
 
   const { data: vendedores } = useQuery({
@@ -204,6 +228,34 @@ export default function SupervisorDashboardPage() {
     refetchInterval: 60000,
   });
 
+  // Weekly data for charts
+  const { data: ventasSemana } = useQuery({
+    queryKey: ['supervisor-ventas-semana', week.desde, week.hasta, empresa?.id], enabled: !!empresa?.id,
+    queryFn: async () => {
+      return fetchAllPages<any>((from, to) =>
+        supabase.from('ventas').select('id, vendedor_id, total, fecha')
+          .eq('empresa_id', empresa!.id).gte('fecha', week.desde).lte('fecha', week.hasta).neq('status', 'cancelado').range(from, to));
+    },
+  });
+
+  const { data: cobrosSemana } = useQuery({
+    queryKey: ['supervisor-cobros-semana', week.desde, week.hasta, empresa?.id], enabled: !!empresa?.id,
+    queryFn: async () => {
+      return fetchAllPages<any>((from, to) =>
+        supabase.from('cobros').select('id, monto, fecha, user_id')
+          .eq('empresa_id', empresa!.id).gte('fecha', week.desde).lte('fecha', week.hasta).neq('status', 'cancelado').range(from, to));
+    },
+  });
+
+  const { data: visitasSemana } = useQuery({
+    queryKey: ['supervisor-visitas-semana', week.desde, week.hasta, empresa?.id], enabled: !!empresa?.id,
+    queryFn: async () => {
+      return fetchAllPages<any>((from, to) =>
+        supabase.from('visitas').select('id, user_id, fecha')
+          .eq('empresa_id', empresa!.id).gte('fecha', `${week.desde}T00:00:00`).lte('fecha', `${week.hasta}T23:59:59`).range(from, to));
+    },
+  });
+
   // ═══════════════════════════════════════════════════════
   // COMPUTED DATA
   // ═══════════════════════════════════════════════════════
@@ -216,32 +268,59 @@ export default function SupervisorDashboardPage() {
   const filteredDevoluciones = useMemo(() => (devolucionesHoy ?? []).filter((d: any) => !selectedAliases || selectedAliases.includes(d.vendedor_id)), [devolucionesHoy, selectedAliases]);
 
   const devolucionesStats = useMemo(() => {
-    let totalUnidades = 0, totalCredito = 0;
+    let totalUnidades = 0;
     filteredDevoluciones.forEach((d: any) => {
-      (d.devolucion_lineas ?? []).forEach((l: any) => {
-        totalUnidades += Number(l.cantidad) || 0;
-        totalCredito += Number(l.monto_credito) || 0;
-      });
+      (d.devolucion_lineas ?? []).forEach((l: any) => { totalUnidades += Number(l.cantidad) || 0; });
     });
-    return { totalUnidades, totalCredito, count: filteredDevoluciones.length };
+    return { totalUnidades, count: filteredDevoluciones.length };
   }, [filteredDevoluciones]);
 
   const vendedorStats = useMemo(() => {
-    const stats: Record<string, { ventas: number; totalVentas: number; cobros: number; totalCobros: number; gastos: number; totalGastos: number; cargaActiva: boolean; entregas: number; entregasHecho: number; visitas: number }> = {};
-    (vendedores ?? []).forEach((s) => { stats[s.id] = { ventas: 0, totalVentas: 0, cobros: 0, totalCobros: 0, gastos: 0, totalGastos: 0, cargaActiva: false, entregas: 0, entregasHecho: 0, visitas: 0 }; });
+    const stats: Record<string, { ventas: number; totalVentas: number; cobros: number; totalCobros: number; gastos: number; totalGastos: number; cargaActiva: boolean; entregas: number; entregasHecho: number; visitas: number; ultimaVisita: string | null; clientesAsignados: number; clientesVisitados: number }> = {};
+    (vendedores ?? []).forEach((s) => { stats[s.id] = { ventas: 0, totalVentas: 0, cobros: 0, totalCobros: 0, gastos: 0, totalGastos: 0, cargaActiva: false, entregas: 0, entregasHecho: 0, visitas: 0, ultimaVisita: null, clientesAsignados: 0, clientesVisitados: 0 }; });
     (ventasHoy ?? []).forEach((v) => { const sid = sellerIdMap.get(v.vendedor_id); if (sid && stats[sid]) { stats[sid].ventas++; stats[sid].totalVentas += v.total ?? 0; } });
     (cobrosHoy ?? []).forEach((c) => { const s = (vendedores ?? []).find((i) => i.user_id === c.user_id); if (s && stats[s.id]) { stats[s.id].cobros++; stats[s.id].totalCobros += c.monto ?? 0; } });
     (gastosHoy ?? []).forEach((g) => { const sid = sellerIdMap.get(g.vendedor_id); if (sid && stats[sid]) { stats[sid].gastos++; stats[sid].totalGastos += g.monto ?? 0; } });
     (cargasActivas ?? []).forEach((c) => { const sid = sellerIdMap.get(c.vendedor_id); if (sid && stats[sid]) stats[sid].cargaActiva = true; });
     (entregasHoy ?? []).forEach((e) => { const sid = sellerIdMap.get(e.vendedor_ruta_id || e.vendedor_id); if (sid && stats[sid]) { stats[sid].entregas++; if (e.status === 'hecho') stats[sid].entregasHecho++; } });
-    (visitasHoy ?? []).forEach((v) => { const s = (vendedores ?? []).find((i) => i.user_id === v.user_id); if (s && stats[s.id]) stats[s.id].visitas++; });
+    (visitasHoy ?? []).forEach((v) => {
+      const s = (vendedores ?? []).find((i) => i.user_id === v.user_id);
+      if (s && stats[s.id]) {
+        stats[s.id].visitas++;
+        if (!stats[s.id].ultimaVisita || v.created_at > stats[s.id].ultimaVisita!) stats[s.id].ultimaVisita = v.created_at;
+      }
+    });
     return stats;
   }, [vendedores, ventasHoy, cobrosHoy, gastosHoy, cargasActivas, entregasHoy, visitasHoy, sellerIdMap]);
 
+  // Count clients assigned + visited per seller
+  const sellerClientStats = useMemo(() => {
+    const visitedIds = new Set([
+      ...(filteredVisitas ?? []).map((v) => v.cliente_id).filter(Boolean),
+      ...(filteredVentas ?? []).map((v) => v.cliente_id).filter(Boolean),
+    ]);
+    const assignedPerSeller: Record<string, { total: number; visited: number }> = {};
+    (clientesAsignados ?? []).forEach((c) => {
+      const sid = sellerIdMap.get(c.vendedor_id) ?? c.vendedor_id;
+      if (!assignedPerSeller[sid]) assignedPerSeller[sid] = { total: 0, visited: 0 };
+      // check if client is scheduled for today
+      const dv: string[] = (c.dia_visita ?? []).map((d: string) => d.toLowerCase());
+      if (soloHoy && !dv.some((d) => d === diaHoyLabel)) return;
+      assignedPerSeller[sid].total++;
+      if (visitedIds.has(c.id)) assignedPerSeller[sid].visited++;
+    });
+    return assignedPerSeller;
+  }, [clientesAsignados, filteredVisitas, filteredVentas, sellerIdMap, soloHoy, diaHoyLabel]);
+
   const sellerRows = useMemo(() => {
-    return (vendedores ?? []).map((s) => ({ ...s, ...(vendedorStats[s.id] ?? { ventas: 0, totalVentas: 0, cobros: 0, totalCobros: 0, gastos: 0, totalGastos: 0, cargaActiva: false, entregas: 0, entregasHecho: 0, visitas: 0 }) }))
+    return (vendedores ?? []).map((s) => ({
+      ...s,
+      ...(vendedorStats[s.id] ?? { ventas: 0, totalVentas: 0, cobros: 0, totalCobros: 0, gastos: 0, totalGastos: 0, cargaActiva: false, entregas: 0, entregasHecho: 0, visitas: 0, ultimaVisita: null }),
+      clientesAsignados: sellerClientStats[s.id]?.total ?? 0,
+      clientesVisitados: sellerClientStats[s.id]?.visited ?? 0,
+    }))
       .sort((a, b) => b.totalVentas - a.totalVentas || b.visitas - a.visitas || a.nombre.localeCompare(b.nombre));
-  }, [vendedores, vendedorStats]);
+  }, [vendedores, vendedorStats, sellerClientStats]);
 
   const clienteActivity = useMemo(() => {
     const visitedIds = new Set([...filteredVisitas.map((v) => v.cliente_id).filter(Boolean), ...filteredVentas.map((v) => v.cliente_id).filter(Boolean)]);
@@ -296,6 +375,46 @@ export default function SupervisorDashboardPage() {
     return { totalVentas, totalCobros, numVentas: filteredVentas.length, numCobros: filteredCobros.length, clientesVisitados, clientesPorVisitar, entregasHechas, entregasTotal: filteredEntregas.length, ticketPromedio, efectividad };
   }, [filteredVentas, filteredCobros, filteredEntregas, clienteActivity]);
 
+  // Weekly chart data
+  const weeklyChartData = useMemo(() => {
+    return week.days.map(({ date, label }) => {
+      const dayVentas = (ventasSemana ?? []).filter((v) => v.fecha === date);
+      const dayCobros = (cobrosSemana ?? []).filter((c) => c.fecha === date);
+      const dayVisitas = (visitasSemana ?? []).filter((v) => {
+        const vDate = typeof v.fecha === 'string' ? v.fecha.slice(0, 10) : '';
+        return vDate === date;
+      });
+      const isToday = date === today;
+      return {
+        dia: label + (isToday ? ' ★' : ''),
+        ventas: dayVentas.reduce((s: number, v: any) => s + (v.total ?? 0), 0),
+        numVentas: dayVentas.length,
+        cobros: dayCobros.reduce((s: number, c: any) => s + (c.monto ?? 0), 0),
+        visitas: dayVisitas.length,
+      };
+    });
+  }, [week.days, ventasSemana, cobrosSemana, visitasSemana, today]);
+
+  const weeklyTotals = useMemo(() => {
+    return {
+      ventas: weeklyChartData.reduce((s, d) => s + d.ventas, 0),
+      numVentas: weeklyChartData.reduce((s, d) => s + d.numVentas, 0),
+      cobros: weeklyChartData.reduce((s, d) => s + d.cobros, 0),
+      visitas: weeklyChartData.reduce((s, d) => s + d.visitas, 0),
+    };
+  }, [weeklyChartData]);
+
+  // Accumulated chart data
+  const weeklyAccumData = useMemo(() => {
+    let accumVentas = 0, accumCobros = 0, accumVisitas = 0;
+    return weeklyChartData.map((d) => {
+      accumVentas += d.ventas;
+      accumCobros += d.cobros;
+      accumVisitas += d.visitas;
+      return { ...d, accumVentas, accumCobros, accumVisitas };
+    });
+  }, [weeklyChartData]);
+
   const handleSelectClient = useCallback((id: string) => {
     setSelectedClientId(id);
   }, []);
@@ -307,9 +426,8 @@ export default function SupervisorDashboardPage() {
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col overflow-hidden">
       {/* ═══ ZONE 1 — HEADER + FILTERS ═══ */}
-      <div className="bg-card border-b border-border px-4 py-3 shrink-0">
+      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0">
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Title */}
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-bold text-foreground">Centro de control</h1>
@@ -320,8 +438,6 @@ export default function SupervisorDashboardPage() {
             </span>
           )}
           <Badge variant="secondary" className="text-[11px]">{diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1)}</Badge>
-
-          {/* Dates */}
           <div className="flex items-center gap-1.5 ml-auto">
             <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
             <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
@@ -335,10 +451,7 @@ export default function SupervisorDashboardPage() {
             )}
           </div>
         </div>
-
-        {/* Filters row */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-          {/* Vendedor pills */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
           <button onClick={() => setSelectedVendedor(null)}
             className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
               !selectedVendedor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
@@ -352,10 +465,7 @@ export default function SupervisorDashboardPage() {
               {s.cargaActiva && <span className="ml-1 text-[8px]">🟢</span>}
             </button>
           ))}
-
           <div className="w-px h-5 bg-border mx-1" />
-
-          {/* Visit filters */}
           {(['todos', 'visitados', 'pendientes'] as const).map((k) => (
             <button key={k} onClick={() => setVisitFilter(k)}
               className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors capitalize",
@@ -371,17 +481,17 @@ export default function SupervisorDashboardPage() {
         </div>
       </div>
 
-      {/* ═══ ZONE 2 — KPIs ═══ */}
-      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0">
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
-          <KpiChip icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
-          <KpiChip icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros}`} />
-          <KpiChip icon={TrendingUp} label="Ticket" value={fmtMoney(dashboardStats.ticketPromedio)} sub="promedio" />
-          <KpiChip icon={CheckCircle2} label="Visitados" value={`${dashboardStats.clientesVisitados}/${dashboardStats.clientesVisitados + dashboardStats.clientesPorVisitar}`} sub={`${dashboardStats.efectividad}%`} color="text-emerald-600" />
-          <KpiChip icon={Clock} label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} color="text-destructive" />
-          <KpiChip icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="hechas" />
-          <KpiChip icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
-          <KpiChip icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} reg`} color="text-destructive" />
+      {/* ═══ ZONE 2 — KPIs (bigger) ═══ */}
+      <div className="bg-card border-b border-border px-4 py-3 shrink-0">
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
+          <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} operaciones`} />
+          <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros} cobros`} />
+          <KpiCard icon={TrendingUp} label="Ticket prom." value={fmtMoney(dashboardStats.ticketPromedio)} sub="por venta" />
+          <KpiCard icon={CheckCircle2} label="Visitados" value={`${dashboardStats.clientesVisitados}/${dashboardStats.clientesVisitados + dashboardStats.clientesPorVisitar}`} sub={`${dashboardStats.efectividad}% cobertura`} color="text-emerald-600" />
+          <KpiCard icon={Clock} label="Pendientes" value={String(dashboardStats.clientesPorVisitar)} sub="sin visitar" color="text-destructive" />
+          <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="completadas" />
+          <KpiCard icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} sub="del día" color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
+          <KpiCard icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} registros`} color="text-destructive" />
         </div>
       </div>
 
@@ -390,14 +500,8 @@ export default function SupervisorDashboardPage() {
         {/* Left: Map (60%) */}
         <div className="flex-[3] flex flex-col min-w-0">
           <GoogleMapsProvider>
-            <SupervisorMap
-              markers={mapMarkers}
-              sellerLocations={sellerLocations}
-              selectedClientId={selectedClientId}
-              onSelectClient={handleSelectClient}
-            />
+            <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} selectedClientId={selectedClientId} onSelectClient={handleSelectClient} />
           </GoogleMapsProvider>
-          {/* Route color legend */}
           {(() => {
             const uniqueSellers = [...new Set(mapMarkers.map(m => m.vendedorId))];
             const sellerNames = new Map(mapMarkers.map(m => [m.vendedorId, m.vendedorNombre]));
@@ -434,6 +538,9 @@ export default function SupervisorDashboardPage() {
                 <MapPin className="h-3.5 w-3.5" /> Clientes
                 <Badge variant="secondary" className="text-[8px] ml-0.5 px-1">{clienteActivity.length}</Badge>
               </TabsTrigger>
+              <TabsTrigger value="graficos" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
+                <BarChart3 className="h-3.5 w-3.5" /> Semana
+              </TabsTrigger>
               <TabsTrigger value="actividad" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
                 <ShoppingCart className="h-3.5 w-3.5" /> Actividad
               </TabsTrigger>
@@ -442,24 +549,45 @@ export default function SupervisorDashboardPage() {
               </TabsTrigger>
             </TabsList>
 
-            {/* Equipo Tab */}
+            {/* Equipo Tab — with last visit & coverage */}
             <TabsContent value="equipo" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-3 space-y-2">
                   {sellerRows.map((seller) => {
                     const active = selectedVendedor === seller.id;
+                    const ultimaHora = seller.ultimaVisita ? new Date(seller.ultimaVisita).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : null;
+                    const cobertura = seller.clientesAsignados > 0 ? Math.round((seller.clientesVisitados / seller.clientesAsignados) * 100) : 0;
                     return (
                       <button key={seller.id} onClick={() => setSelectedVendedor(active ? null : seller.id)}
                         className={cn("w-full rounded-xl border p-3 text-left transition-all",
                           active ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30 bg-card")}>
                         <div className="flex items-center justify-between gap-2 mb-2">
                           <p className="text-[12px] font-semibold text-foreground truncate">{seller.nombre}</p>
-                          {seller.cargaActiva && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">EN RUTA</span>}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {seller.cargaActiva && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">EN RUTA</span>}
+                            {ultimaHora && (
+                              <span className="text-[9px] text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
+                                🕐 {ultimaHora}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-1.5">
+
+                        {/* Coverage bar */}
+                        <div className="mb-2">
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[9px] text-muted-foreground">Cobertura {seller.clientesVisitados}/{seller.clientesAsignados}</span>
+                            <span className={cn("text-[10px] font-bold", cobertura >= 80 ? "text-emerald-600" : cobertura >= 50 ? "text-primary" : "text-destructive")}>{cobertura}%</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div className={cn("h-full rounded-full transition-all", cobertura >= 80 ? "bg-emerald-500" : cobertura >= 50 ? "bg-primary" : "bg-destructive")}
+                              style={{ width: `${Math.min(cobertura, 100)}%` }} />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-1.5">
                           <MiniStat label="Ventas" value={String(seller.ventas)} sub={fmtMoney(seller.totalVentas)} />
                           <MiniStat label="Cobros" value={String(seller.cobros)} sub={fmtMoney(seller.totalCobros)} />
-                          <MiniStat label="Visitas" value={String(seller.visitas)} />
                           <MiniStat label="Entregas" value={`${seller.entregasHecho}/${seller.entregas}`} />
                         </div>
                       </button>
@@ -477,6 +605,7 @@ export default function SupervisorDashboardPage() {
                     <tr>
                       <th className="text-left px-3 py-2 text-[10px] font-semibold text-muted-foreground">Estado</th>
                       <th className="text-left px-2 py-2 text-[10px] font-semibold text-muted-foreground">Cliente</th>
+                      <th className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Últ. visita</th>
                       <th className="text-right px-2 py-2 text-[10px] font-semibold text-muted-foreground">Días</th>
                       <th className="text-right px-3 py-2 text-[10px] font-semibold text-muted-foreground">Valor</th>
                     </tr>
@@ -496,8 +625,11 @@ export default function SupervisorDashboardPage() {
                           </span>
                         </td>
                         <td className="px-2 py-2">
-                          <p className="text-[11px] font-medium text-foreground truncate max-w-[140px]">{c.nombre}</p>
+                          <p className="text-[11px] font-medium text-foreground truncate max-w-[120px]">{c.nombre}</p>
                           <p className="text-[9px] text-muted-foreground truncate">{c.vendedorNombre}</p>
+                        </td>
+                        <td className="text-right px-2 py-2 text-[10px] tabular-nums text-muted-foreground">
+                          {c.ultimaVisitaFecha ?? '—'}
                         </td>
                         <td className="text-right px-2 py-2">
                           {c.diasSinComprar !== null ? (
@@ -513,10 +645,88 @@ export default function SupervisorDashboardPage() {
                       </tr>
                     ))}
                     {clienteActivity.length === 0 && (
-                      <tr><td colSpan={4} className="text-center py-8 text-muted-foreground text-xs">Sin clientes en ruta</td></tr>
+                      <tr><td colSpan={5} className="text-center py-8 text-muted-foreground text-xs">Sin clientes en ruta</td></tr>
                     )}
                   </tbody>
                 </table>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Gráficos Semana Tab */}
+            <TabsContent value="graficos" className="flex-1 m-0 overflow-hidden">
+              <ScrollArea className="h-full">
+                <div className="p-3 space-y-4">
+                  {/* Weekly summary */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                      <p className="text-sm font-bold tabular-nums text-foreground">{fmtMoney(weeklyTotals.ventas)}</p>
+                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Ventas sem.</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                      <p className="text-sm font-bold tabular-nums text-foreground">{weeklyTotals.numVentas}</p>
+                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Operaciones</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                      <p className="text-sm font-bold tabular-nums text-foreground">{fmtMoney(weeklyTotals.cobros)}</p>
+                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Cobros sem.</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                      <p className="text-sm font-bold tabular-nums text-foreground">{weeklyTotals.visitas}</p>
+                      <p className="text-[8px] uppercase tracking-wider text-muted-foreground">Visitas sem.</p>
+                    </div>
+                  </div>
+
+                  {/* Ventas diarias bar chart */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ventas diarias</h3>
+                    <div className="h-[140px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weeklyChartData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                          <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
+                          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
+                          <Tooltip formatter={(v: number) => [`$${v.toLocaleString('es-MX')}`, 'Ventas']} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                          <Bar dataKey="ventas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Acumulado semanal line chart */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Acumulado semanal</h3>
+                    <div className="h-[140px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={weeklyAccumData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                          <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
+                          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
+                          <Tooltip formatter={(v: number, name: string) => [`$${v.toLocaleString('es-MX')}`, name === 'accumVentas' ? 'Ventas' : 'Cobros']} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                          <Line type="monotone" dataKey="accumVentas" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} name="Ventas" />
+                          <Line type="monotone" dataKey="accumCobros" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} name="Cobros" />
+                          <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Visitas por día bar chart */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Visitas por día</h3>
+                    <div className="h-[120px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={weeklyChartData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                          <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
+                          <YAxis tick={{ fontSize: 9 }} width={25} />
+                          <Tooltip labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                          <Bar dataKey="visitas" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Visitas" />
+                          <Bar dataKey="numVentas" fill="#22c55e" radius={[4, 4, 0, 0]} name="Con venta" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
               </ScrollArea>
             </TabsContent>
 
@@ -524,7 +734,6 @@ export default function SupervisorDashboardPage() {
             <TabsContent value="actividad" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-3 space-y-3">
-                  {/* Ventas */}
                   <div>
                     <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                       <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Ventas ({filteredVentas.length})
@@ -543,8 +752,6 @@ export default function SupervisorDashboardPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Cobros */}
                   <div>
                     <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                       <Banknote className="h-3.5 w-3.5 text-primary" /> Cobros ({filteredCobros.length})
@@ -563,8 +770,6 @@ export default function SupervisorDashboardPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Devoluciones */}
                   <div>
                     <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                       <RotateCcw className="h-3.5 w-3.5 text-destructive" /> Devoluciones ({filteredDevoluciones.length})
@@ -596,7 +801,6 @@ export default function SupervisorDashboardPage() {
             <TabsContent value="riesgo" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-3 space-y-3">
-                  {/* Ingreso en riesgo */}
                   {clienteActivity.filter(c => !c.visitado).length > 0 && (
                     <div>
                       <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
@@ -612,8 +816,6 @@ export default function SupervisorDashboardPage() {
                       />
                     </div>
                   )}
-
-                  {/* Alertas */}
                   <div>
                     <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5 text-primary" /> Alertas y foco
@@ -650,21 +852,19 @@ export default function SupervisorDashboardPage() {
 // SUB-COMPONENTS
 // ═══════════════════════════════════════════════════════
 
-function KpiChip({ icon: Icon, label, value, sub, color }: {
+function KpiCard({ icon: Icon, label, value, sub, color }: {
   icon: any; label: string; value: string; sub?: string; color?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-border bg-background/50 px-2.5 py-1.5">
-      <div className="w-6 h-6 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
-        <Icon className="h-3 w-3" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[9px] uppercase tracking-wider text-muted-foreground leading-none">{label}</p>
-        <div className="flex items-baseline gap-1">
-          <p className={cn("text-sm font-bold tabular-nums leading-tight", color ?? "text-foreground")}>{value}</p>
-          {sub && <span className="text-[9px] text-muted-foreground">{sub}</span>}
+    <div className="rounded-xl border border-border bg-background/50 p-3">
+      <div className="flex items-center gap-1.5 mb-1">
+        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <Icon className="h-3.5 w-3.5" />
         </div>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">{label}</span>
       </div>
+      <p className={cn("text-lg font-bold tabular-nums leading-tight truncate", color ?? "text-foreground")}>{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
     </div>
   );
 }
@@ -738,7 +938,6 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     };
   }, []);
 
-  // Fit bounds on load
   const fitBounds = useCallback(() => {
     if (mapRef.current && markers.length > 0) {
       const bounds = new google.maps.LatLngBounds();
@@ -753,7 +952,6 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     fitBounds();
   }, [fitBounds]);
 
-  // Center on selected client from list
   useEffect(() => {
     if (!selectedClientId || !mapRef.current) return;
     const marker = markers.find(m => m.id === selectedClientId);
@@ -764,10 +962,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     }
   }, [selectedClientId, markers]);
 
-  // Re-fit when markers change
-  useEffect(() => {
-    fitBounds();
-  }, [fitBounds]);
+  useEffect(() => { fitBounds(); }, [fitBounds]);
 
   if (!isLoaded) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Cargando mapa...</div>;
   if (markers.length === 0 && sellerLocations.length === 0) return <div className="flex-1 flex items-center justify-center bg-muted/30 text-sm text-muted-foreground">Sin clientes geolocalizados.</div>;
