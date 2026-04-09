@@ -41,9 +41,9 @@ const STATUS_LABELS: Record<string, string> = {
   cargado: 'Cargado', en_ruta: 'En ruta', hecho: 'Entregado', cancelado: 'Cancelado',
 };
 
-export function generarEntregaPdf(params: EntregaPdfParams): Blob {
+export async function generarEntregaPdf(params: EntregaPdfParams): Promise<Blob> {
   const { empresa, logoBase64, entrega, cliente, vendedor, repartidor, almacen, pedidoFolio, lineas } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
 
   let y = drawDocHeader(doc, empresa, 'ENTREGA', entrega.folio, logoBase64);
 
@@ -64,7 +64,7 @@ export function generarEntregaPdf(params: EntregaPdfParams): Blob {
     ],
   );
 
-  y = drawCleanTable(doc, y,
+  y = await drawCleanTable(doc, y,
     ['Código', 'Producto', 'Unidad', 'Almacén', 'Pedida', 'Surtida', 'Estado'],
     lineas.map(l => [
       l.codigo,

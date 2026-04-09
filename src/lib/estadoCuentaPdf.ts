@@ -38,9 +38,9 @@ interface EstadoCuentaParams {
   }[];
 }
 
-export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
+export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promise<Blob> {
   const { empresa, logoBase64, cliente, ventas, cobros } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
   const s = getCurrencyConfig(empresa.moneda).symbol;
@@ -75,7 +75,7 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
   const ventasSaldadas = ventas.filter(v => v.saldo_pendiente <= 0);
 
   if (ventasConSaldo.length > 0) {
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Folio', 'Fecha', 'Condición', 'Estado', 'Total', 'Pagado', 'Pendiente'],
       ventasConSaldo.map(v => [
         { content: v.folio || '—', styles: { fontStyle: 'bold' } },
@@ -104,7 +104,7 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
   // Ventas saldadas
   if (ventasSaldadas.length > 0) {
     y = checkPageBreak(doc, y);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Folio', 'Fecha', 'Total', 'Estado'],
       ventasSaldadas.slice(0, 20).map(v => [
         { content: v.folio || '—', styles: { fontStyle: 'bold' } },
@@ -119,7 +119,7 @@ export function generarEstadoCuentaPdf(params: EstadoCuentaParams): Blob {
   // Cobros
   y = checkPageBreak(doc, y);
   if (cobros.length > 0) {
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Fecha', 'Método', 'Referencia', 'Monto'],
       cobros.map(c => [
         fmtDate(c.fecha),

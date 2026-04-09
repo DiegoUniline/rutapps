@@ -66,9 +66,9 @@ const STATUS_MAP: Record<string, { label: string; color: 'green' | 'red' | 'neut
   pagado: { label: 'Pagada', color: 'green' },
 };
 
-export function generarVentaPdf(params: VentaPdfParams): Blob {
+export async function generarVentaPdf(params: VentaPdfParams): Promise<Blob> {
   const { empresa, logoBase64, venta, cliente, vendedor, almacen, lineas, pagos } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
   const cc = getCurrencyConfig(empresa.moneda);
@@ -101,7 +101,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
   y = drawInfoGrid(doc, y, 'Cliente', leftRows, 'Información de la venta', rightRows);
 
   // ── PRODUCTS TABLE ──
-  y = drawCleanTable(doc, y,
+  y = await drawCleanTable(doc, y,
     ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
     lineas.map(l => [
       { content: l.codigo, styles: { textColor: C.sublabel, fontStyle: 'normal', fontSize: 7 } },
@@ -163,7 +163,7 @@ export function generarVentaPdf(params: VentaPdfParams): Blob {
     y = checkPageBreak(doc, y);
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
 
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Fecha', 'Método', 'Referencia', 'Monto'],
       pagos.map(p => [
         fmtDate(p.fecha),

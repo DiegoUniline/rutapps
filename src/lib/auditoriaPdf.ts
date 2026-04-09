@@ -38,9 +38,9 @@ const STATUS_LABELS: Record<string, string> = {
   aprobada: 'Aprobada', cancelada: 'Cancelada',
 };
 
-export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
+export async function generarAuditoriaPdf(params: AuditoriaPdfParams): Promise<Blob> {
   const { empresa, logoBase64, auditoria, almacen, responsable, aprobador, lineas } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
 
   const faltantes = lineas.filter(l => l.diferencia < 0).length;
   const excedentes = lineas.filter(l => l.diferencia > 0).length;
@@ -68,7 +68,7 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
   );
 
   // Main table
-  y = drawCleanTable(doc, y,
+  y = await drawCleanTable(doc, y,
     ['Código', 'Producto', 'Esperada', 'Real', 'Diferencia', 'Ajust.', 'Notas'],
     lineas.map(l => [
       l.codigo,
@@ -108,7 +108,7 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
   // Faltantes detail
   if (faltantes > 0) {
     y = checkPageBreak(doc, y);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Código', 'Producto', 'Esperada', 'Real', 'Faltante'],
       lineas.filter(l => l.diferencia < 0).map(l => [
         l.codigo,
@@ -129,7 +129,7 @@ export function generarAuditoriaPdf(params: AuditoriaPdfParams): Blob {
   // Excedentes detail
   if (excedentes > 0) {
     y = checkPageBreak(doc, y);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Código', 'Producto', 'Esperada', 'Real', 'Excedente'],
       lineas.filter(l => l.diferencia > 0).map(l => [
         l.codigo,
