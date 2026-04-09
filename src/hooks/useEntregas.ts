@@ -2,6 +2,7 @@ import { todayLocal } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 
 export type StatusEntrega = 'borrador' | 'surtido' | 'asignado' | 'cargado' | 'en_ruta' | 'hecho' | 'cancelado';
@@ -123,6 +124,9 @@ export function useSurtirLinea() {
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -170,6 +174,9 @@ export function useSurtirTodo() {
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -188,6 +195,9 @@ export function useAsignarEntrega() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entrega'] });
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }
@@ -258,6 +268,9 @@ export function useCargarEntrega() {
       qc.invalidateQueries({ queryKey: ['stock-almacen'] });
       qc.invalidateQueries({ queryKey: ['movimientos'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -274,6 +287,9 @@ export function useAsignarYCargar() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entrega'] });
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }
@@ -336,6 +352,9 @@ export function useCrearEntrega() {
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
       qc.invalidateQueries({ queryKey: ['ventas'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -377,6 +396,9 @@ export function useValidarEntrega() {
       qc.invalidateQueries({ queryKey: ['entrega'] });
       qc.invalidateQueries({ queryKey: ['entregas-by-pedido'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -409,6 +431,9 @@ export function useCancelarEntrega() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['entregas-list'] });
       qc.invalidateQueries({ queryKey: ['entrega'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }

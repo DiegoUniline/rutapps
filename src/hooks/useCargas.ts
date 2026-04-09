@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchAllPages } from '@/lib/supabasePaginate';
 import { pickColumns, CARGA_COLUMNS } from '@/lib/allowlist';
+import { toast } from 'sonner';
 
 export function useCargas(search?: string, statusFilter?: string) {
   const { empresa } = useAuth();
@@ -89,6 +90,9 @@ export function useSaveCarga() {
       qc.invalidateQueries({ queryKey: ['carga'] });
       qc.invalidateQueries({ queryKey: ['carga-activa'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -108,6 +112,9 @@ export function useSaveCargaLineas() {
       qc.invalidateQueries({ queryKey: ['cargas'] });
       qc.invalidateQueries({ queryKey: ['carga'] });
       qc.invalidateQueries({ queryKey: ['carga-activa'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }

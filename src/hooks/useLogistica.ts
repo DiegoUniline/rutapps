@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 // Pedidos pendientes del día (tipo=pedido, status confirmado or borrador)
 export function usePedidosPendientes(fecha: string, statusFilter?: string, vendedorFilter?: string) {
@@ -84,6 +85,9 @@ export function useAsignarPedidos() {
       qc.invalidateQueries({ queryKey: ['asignaciones-fecha'] });
       qc.invalidateQueries({ queryKey: ['logistica-pedidos'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -98,6 +102,9 @@ export function useDesasignarPedido() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['carga-pedidos'] });
       qc.invalidateQueries({ queryKey: ['asignaciones-fecha'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
     },
   });
 }

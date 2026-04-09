@@ -264,6 +264,9 @@ export function useSaveVenta() {
       qc.invalidateQueries({ queryKey: ['ventas'] });
       qc.invalidateQueries({ queryKey: ['venta'] });
     },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -284,6 +287,9 @@ export function useSaveVentaLinea() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['venta'] }),
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 
@@ -295,6 +301,9 @@ export function useDeleteVentaLinea() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['venta'] }),
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAllPages } from '@/lib/supabasePaginate';
+import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { CATALOG_STALE_TIME } from '@/hooks/useBootstrapPrefetch';
@@ -194,5 +195,8 @@ export function useSavePedidoSugerido() {
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pedido-sugerido'] }),
+    onError: (error: any) => {
+      toast.error(error?.message || 'Error inesperado');
+    },
   });
 }
