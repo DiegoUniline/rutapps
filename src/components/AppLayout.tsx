@@ -30,6 +30,8 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
   { label: 'Supervisor', icon: BarChart3, path: '/supervisor' },
   { label: 'Usuarios y permisos', icon: Users, path: '/configuracion/usuarios' },
+  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos' },
+  { label: 'App Móvil', icon: Smartphone, path: '/ruta' },
   {
     label: 'Ventas',
     icon: ShoppingCart,
@@ -38,7 +40,6 @@ const navItems: NavItem[] = [
       { label: 'Todas las ventas', path: '/ventas' },
       { label: 'Cobranza', path: '/ventas/cobranza' },
       { label: 'Promociones', path: '/ventas/promociones' },
-      { label: 'Punto de venta', path: '/pos' },
       { label: 'Reporte diario', path: '/ventas/reporte-diario' },
       { label: 'Devoluciones', path: '/ventas/devoluciones' },
       { label: 'Liquidar Ruta', path: '/almacen/descargas' },
