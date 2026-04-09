@@ -1078,7 +1078,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
           onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          icon={makeNumberedIcon(m.orden, m.visitado, sellerColorMap.get(m.vendedorId) ?? '#ef4444')} />
+          icon={makePinIcon(m.orden, m.visitado)} />
       ))}
       {sellerLocations.map((s) => (
         <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
