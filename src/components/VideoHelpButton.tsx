@@ -33,14 +33,13 @@ export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
   const [current, setCurrent] = useState<VideoRow | null>(null);
 
   const { data: videos } = useQuery({
-    queryKey: ['tutorial-videos-module', empresa?.id, module],
-    enabled: !!empresa?.id && !!module,
+    queryKey: ['tutorial-videos-module', module],
+    enabled: !!module,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await supabase
         .from('tutorial_videos')
         .select('id, url, title, module')
-        .eq('empresa_id', empresa!.id)
         .eq('module', module)
         .order('sort_order');
       return (data ?? []) as VideoRow[];
