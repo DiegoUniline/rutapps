@@ -866,15 +866,18 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
   const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean, color: string) => {
     const fillColor = visitado ? VISITED_CHECK : color;
     const label = orden != null ? String(orden) : '';
-    const size = 28;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 1}" fill="${fillColor}" stroke="#fff" stroke-width="2.5"/>
-      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+    const w = 36;
+    const h = 40;
+    const face = visitado ? '😀' : '😞';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+      <circle cx="18" cy="16" r="13" fill="${fillColor}" stroke="#fff" stroke-width="2.5"/>
+      <text x="18" y="17" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+      <text x="30" y="36" text-anchor="middle" dominant-baseline="central" font-size="13">${face}</text>
     </svg>`;
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(size, size),
-      anchor: new google.maps.Point(size / 2, size / 2),
+      scaledSize: new google.maps.Size(w, h),
+      anchor: new google.maps.Point(18, 16),
     };
   }, []);
 
