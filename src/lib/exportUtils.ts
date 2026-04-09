@@ -2,8 +2,6 @@
  * Professional export utilities — Odoo-style clean Excel & PDF
  */
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 // ─── Types ──────────────────────────────────────────────────────
 export interface ExportColumn {
@@ -129,8 +127,13 @@ export function exportToExcel(options: ExportOptions) {
 }
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
-export function exportToPDF(options: ExportOptions) {
+export async function exportToPDF(options: ExportOptions) {
   const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
+
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
 
   const doc = new jsPDF({
     orientation: data.length > 0 && columns.length > 6 ? 'landscape' : 'portrait',

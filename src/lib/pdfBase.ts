@@ -2,7 +2,7 @@
  * Shared PDF document utilities — Clean Odoo-style professional layout
  * No colored bars, neutral palette, logo support, clean tables
  */
-import jsPDF from 'jspdf';
+import type jsPDF from 'jspdf';
 
 // ── Neutral color palette (no vivid colors) ──
 export const PDF = {

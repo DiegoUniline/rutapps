@@ -76,14 +76,14 @@ export interface LiquidacionPdfParams {
   };
 }
 
-export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
+export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promise<Blob> {
   const {
     empresa, logoBase64, vendedorNombre, fecha, fechaInicio, fechaFin,
     status, efectivoEntregado, notas, notasSupervisor,
     ventas, ventasCanceladas, productos, cobros, gastos, devoluciones, cuadre,
   } = params;
 
-  const doc = createDoc();
+  const doc = await createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
 
@@ -177,7 +177,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   // ═══ VENTAS ═══
   if (ventas.length > 0) {
     y = checkPageBreak(doc, y, 30);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Folio', 'Cliente', 'Condición', 'Estado', 'Total'],
       ventas.map(v => [
         v.folio,
@@ -228,7 +228,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   // ═══ PRODUCTOS VENDIDOS ═══
   if (productos.length > 0) {
     y = checkPageBreak(doc, y, 30);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Código', 'Producto', 'Cantidad', 'Total'],
       productos.map(p => [
         p.codigo,
@@ -247,7 +247,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   // ═══ COBROS ═══
   if (cobros.length > 0) {
     y = checkPageBreak(doc, y, 30);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Cliente', 'Método', 'Referencia', 'Monto'],
       cobros.map(c => [
         c.cliente,
@@ -272,7 +272,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   // ═══ GASTOS ═══
   if (gastos.length > 0) {
     y = checkPageBreak(doc, y, 30);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Concepto', 'Notas', 'Monto'],
       gastos.map(g => [
         g.concepto,
@@ -294,7 +294,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   // ═══ DEVOLUCIONES ═══
   if (devoluciones.length > 0) {
     y = checkPageBreak(doc, y, 30);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Código', 'Producto', 'Motivo', 'Cantidad'],
       devoluciones.map(d => [
         d.codigo,
@@ -313,7 +313,7 @@ export function generarLiquidacionPdf(params: LiquidacionPdfParams): Blob {
   // ═══ STOCK ALMACÉN ═══
   if (params.stockAlmacen && params.stockAlmacen.lineas.length > 0) {
     y = checkPageBreak(doc, y, 30);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Código', `Producto — ${params.stockAlmacen.almacenNombre}`, 'Existencia'],
       params.stockAlmacen.lineas.map(s => [
         s.codigo,

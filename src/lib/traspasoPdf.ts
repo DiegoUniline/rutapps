@@ -41,9 +41,9 @@ const TIPO_LABELS: Record<string, string> = {
   ruta_almacen: 'Ruta → Almacén',
 };
 
-export function generarTraspasoPdf(params: TraspasoPdfParams): Blob {
+export async function generarTraspasoPdf(params: TraspasoPdfParams): Promise<Blob> {
   const { empresa, logoBase64, traspaso, origen, destino, responsable, lineas } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
 
   let y = drawDocHeader(doc, empresa, 'TRASPASO', traspaso.folio, logoBase64);
 
@@ -64,7 +64,7 @@ export function generarTraspasoPdf(params: TraspasoPdfParams): Blob {
 
   const totalUnidades = lineas.reduce((s, l) => s + l.cantidad, 0);
 
-  y = drawCleanTable(doc, y,
+  y = await drawCleanTable(doc, y,
     ['#', 'Código', 'Producto', 'Unidad', 'Cantidad'],
     lineas.map((l, i) => [
       { content: String(i + 1), styles: { halign: 'center' } },

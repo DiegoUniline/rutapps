@@ -73,7 +73,7 @@ export default function AjustesInventarioPage() {
     if (changedRows.length === 0 && rows.length === 0) return;
     const almacenNombre = (almacenes ?? []).find((a: any) => a.id === almacenId)?.nombre;
     const dataRows = changedRows.length > 0 ? changedRows : rows;
-    const blob = generarAjusteInventarioPdf({
+    const blob = await generarAjusteInventarioPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',
         razon_social: empresa?.razon_social,

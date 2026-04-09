@@ -27,9 +27,9 @@ interface AjusteInventarioPdfParams {
   }[];
 }
 
-export function generarAjusteInventarioPdf(params: AjusteInventarioPdfParams): Blob {
+export async function generarAjusteInventarioPdf(params: AjusteInventarioPdfParams): Promise<Blob> {
   const { empresa, logoBase64, ajuste, lineas } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
 
   const aumentos = lineas.filter(l => l.diferencia > 0).length;
   const reducciones = lineas.filter(l => l.diferencia < 0).length;
@@ -52,7 +52,7 @@ export function generarAjusteInventarioPdf(params: AjusteInventarioPdfParams): B
     ],
   );
 
-  y = drawCleanTable(doc, y,
+  y = await drawCleanTable(doc, y,
     ['Código', 'Producto', 'Anterior', 'Nueva', 'Diferencia'],
     lineas.map(l => [
       l.codigo,

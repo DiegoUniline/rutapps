@@ -86,9 +86,9 @@ const ENTREGA_STATUS: Record<string, string> = {
   cargado: 'Cargado', en_ruta: 'En ruta', hecho: 'Entregado', cancelado: 'Cancelado',
 };
 
-export function generarPedidoPdf(params: PedidoPdfParams): Blob {
+export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   const { empresa, logoBase64, pedido, cliente, vendedor, almacen, lineas, entregas, pagos, promociones } = params;
-  const doc = createDoc();
+  const doc = await createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
   const cc = getCurrencyConfig(empresa.moneda);
@@ -147,7 +147,7 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
       ]);
     }
   }
-  y = drawCleanTable(doc, y,
+  y = await drawCleanTable(doc, y,
     ['Código', 'Producto', 'Cant.', 'Unidad', 'P. Unit.', 'Desc.', 'IVA', 'IEPS', 'Importe'],
     tableRows,
     {
@@ -209,7 +209,7 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
   // ── ENTREGAS ──
   if (entregas.length > 0) {
     y = checkPageBreak(doc, y);
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Folio', 'Estado', 'Repartidor', 'Productos'],
       entregas.map(e => [
         { content: e.folio, styles: { fontStyle: 'bold' } },
@@ -230,7 +230,7 @@ export function generarPedidoPdf(params: PedidoPdfParams): Blob {
     y = checkPageBreak(doc, y);
     const totalPagado = pagos.reduce((s, p) => s + p.monto, 0);
 
-    y = drawCleanTable(doc, y,
+    y = await drawCleanTable(doc, y,
       ['Fecha', 'Método', 'Referencia', 'Monto'],
       pagos.map(p => [
         fmtDate(p.fecha),

@@ -55,7 +55,7 @@ export default function AuditoriaResultadosPage() {
 
   const handleGenerarPdf = () => {
     if (!auditoria || !lineas) return;
-    const blob = generarAuditoriaPdf({
+    const blob = await generarAuditoriaPdf({
       empresa: {
         nombre: empresa?.nombre ?? '',
         razon_social: empresa?.razon_social,

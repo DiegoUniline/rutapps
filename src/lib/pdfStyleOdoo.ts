@@ -3,8 +3,7 @@
  * Colors, spacing, and typography replicate the HTML template
  * Font sizes calibrated for professional A4/Letter output
  */
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import type jsPDF from 'jspdf';
 
 export const ML = 14;
 export const MR = 14;
@@ -45,7 +44,8 @@ export interface EmpresaInfo {
   moneda?: string | null;
 }
 
-export function createDoc(): jsPDF {
+export async function createDoc(): Promise<jsPDF> {
+  const { default: jsPDF } = await import('jspdf');
   return new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -266,14 +266,15 @@ export function drawInfoGrid(
 // ══════════════════════════════════════════════════════════
 // TABLE — Clean table matching HTML exactly
 // ══════════════════════════════════════════════════════════
-export function drawCleanTable(
+export async function drawCleanTable(
   doc: jsPDF,
   y: number,
   head: string[],
   body: any[][],
   columnStyles?: Record<number, any>,
   didParseCell?: (data: any) => void,
-): number {
+): Promise<number> {
+  const { default: autoTable } = await import('jspdf-autotable');
   autoTable(doc, {
     startY: y,
     margin: { left: ML, right: MR },

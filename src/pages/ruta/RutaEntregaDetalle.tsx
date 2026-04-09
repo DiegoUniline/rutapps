@@ -256,7 +256,7 @@ export default function RutaEntregaDetalle() {
         supabase.from('ventas').select('id, folio, fecha, total, saldo_pendiente, status, condicion_pago').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).neq('status', 'cancelado').order('fecha', { ascending: false }).limit(200),
         supabase.from('cobros').select('id, fecha, monto, metodo_pago, referencia').eq('cliente_id', clienteId!).eq('empresa_id', empresa.id).order('fecha', { ascending: false }).limit(200),
       ]);
-      const blob = generarEstadoCuentaPdf({
+      const blob = await generarEstadoCuentaPdf({
         empresa: { nombre: empresa.nombre, razon_social: empresa.razon_social ?? undefined, rfc: empresa.rfc ?? undefined, direccion: empresa.direccion ?? undefined, telefono: empresa.telefono ?? undefined, email: empresa.email ?? undefined, logo_url: empresa.logo_url ?? undefined },
         cliente: { nombre: cliente.nombre, telefono: cliente.telefono ?? undefined, credito: cliente.credito ?? false, limite_credito: cliente.limite_credito ?? 0, dias_credito: cliente.dias_credito ?? 0 },
         ventas: (ventasRes.data ?? []).map(v => ({ folio: v.folio ?? '—', fecha: v.fecha, total: v.total ?? 0, saldo_pendiente: v.saldo_pendiente ?? 0, status: v.status, condicion_pago: v.condicion_pago })),

@@ -116,7 +116,7 @@ export default function EstadoCuentaClientePage() {
 
   const handleDescargarPdf = () => {
     if (!selected || !detalle || !empresa) return;
-    const blob = generarEstadoCuentaPdf({
+    const blob = await generarEstadoCuentaPdf({
       empresa: {
         nombre: empresa.nombre ?? '',
         telefono: empresa.telefono ?? '',
