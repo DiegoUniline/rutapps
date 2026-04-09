@@ -256,9 +256,80 @@ export default function SupervisorDashboardPage() {
     },
   });
 
-  // ═══════════════════════════════════════════════════════
-  // COMPUTED DATA
-  // ═══════════════════════════════════════════════════════
+  // Cartera vencida (all unpaid credit sales)
+  const { data: carteraData } = useQuery({
+    queryKey: ['supervisor-cartera', empresa?.id], enabled: !!empresa?.id,
+    staleTime: 3 * 60 * 1000,
+    queryFn: async () => fetchAllPages<any>((from, to) =>
+      supabase.from('ventas').select('id, fecha, total, saldo_pendiente, cliente_id, clientes(nombre), vendedor_id')
+        .eq('empresa_id', empresa!.id).eq('condicion_pago', 'credito').gt('saldo_pendiente', 0)
+        .neq('status', 'cancelado' as any).range(from, to)),
+  });
+
+  // Yesterday data for comparisons
+  const yesterday = useMemo(() => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
+
+  const lastWeekSameDay = useMemo(() => {
+    const d = new Date(`${today}T12:00:00`);
+    d.setDate(d.getDate() - 7);
+    return d.toISOString().slice(0, 10);
+  }, [today]);
+
+  const { data: ventasAyer } = useQuery({
+    queryKey: ['supervisor-ventas-ayer', yesterday, empresa?.id], enabled: !!empresa?.id && desde === today,
+    queryFn: async () => {
+      const { data } = await supabase.from('ventas').select('id, total')
+        .eq('empresa_id', empresa!.id).eq('fecha', yesterday).neq('status', 'cancelado');
+      return data ?? [];
+    },
+  });
+
+  const { data: ventasSemPasada } = useQuery({
+    queryKey: ['supervisor-ventas-sem-pasada', lastWeekSameDay, empresa?.id], enabled: !!empresa?.id && desde === today,
+    queryFn: async () => {
+      const { data } = await supabase.from('ventas').select('id, total')
+        .eq('empresa_id', empresa!.id).eq('fecha', lastWeekSameDay).neq('status', 'cancelado');
+      return data ?? [];
+    },
+  });
+
+  // Top productos del día
+  const topProductosHoy = useMemo(() => {
+    const map = new Map<string, { nombre: string; codigo: string; qty: number; total: number }>();
+    (ventasHoy ?? []).forEach((v: any) => {
+      (v.venta_lineas ?? []).forEach((l: any) => {
+        const pid = l.producto_id;
+        const existing = map.get(pid) ?? { nombre: l.productos?.nombre ?? 'N/A', codigo: l.productos?.codigo ?? '', qty: 0, total: 0 };
+        existing.qty += Number(l.cantidad) || 0;
+        existing.total += Number(l.total) || 0;
+        map.set(pid, existing);
+      });
+    });
+    return [...map.entries()].map(([id, v]) => ({ id, ...v })).sort((a, b) => b.total - a.total);
+  }, [ventasHoy]);
+
+  // Cartera aging buckets
+  const carteraAging = useMemo(() => {
+    const buckets = { '1-7': 0, '8-15': 0, '16-30': 0, '30+': 0, total: 0 };
+    const todayMs = new Date(`${today}T12:00:00`).getTime();
+    (carteraData ?? []).forEach((v: any) => {
+      const dias = Math.floor((todayMs - new Date(`${v.fecha}T12:00:00`).getTime()) / 86400000);
+      const saldo = Number(v.saldo_pendiente) || 0;
+      buckets.total += saldo;
+      if (dias <= 7) buckets['1-7'] += saldo;
+      else if (dias <= 15) buckets['8-15'] += saldo;
+      else if (dias <= 30) buckets['16-30'] += saldo;
+      else buckets['30+'] += saldo;
+    });
+    return buckets;
+  }, [carteraData, today]);
+
+
+
 
   const filteredVentas = useMemo(() => (ventasHoy ?? []).filter((v) => !selectedAliases || selectedAliases.includes(v.vendedor_id)), [ventasHoy, selectedAliases]);
   const filteredCobros = useMemo(() => (cobrosHoy ?? []).filter((c) => !selectedSeller || c.user_id === selectedSeller.user_id), [cobrosHoy, selectedSeller]);
@@ -345,7 +416,44 @@ export default function SupervisorDashboardPage() {
       .sort((a, b) => { if (a.visitado !== b.visitado) return a.visitado ? 1 : -1; return (b.diasSinComprar ?? 999) - (a.diasSinComprar ?? 999); });
   }, [filteredVisitas, filteredVentas, ventasRecientes, clientesAsignados, sellerIdMap, sellerNameMap, today, selectedAliases, soloHoy, visitFilter, diaHoyLabel]);
 
+  // Comparisons vs yesterday / last week
+  const comparisons = useMemo(() => {
+    if (desde !== today) return null;
+    const totalHoy = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalAyer = (ventasAyer ?? []).reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const totalSemPas = (ventasSemPasada ?? []).reduce((s: number, v: any) => s + (v.total ?? 0), 0);
+    const diffAyer = totalAyer > 0 ? Math.round(((totalHoy - totalAyer) / totalAyer) * 100) : null;
+    const diffSem = totalSemPas > 0 ? Math.round(((totalHoy - totalSemPas) / totalSemPas) * 100) : null;
+    return { totalAyer, totalSemPas, diffAyer, diffSem };
+  }, [desde, today, filteredVentas, ventasAyer, ventasSemPasada]);
+
+  // Smart alerts
+  const smartAlerts = useMemo(() => {
+    const alerts: { type: 'warning' | 'danger' | 'info'; icon: string; text: string }[] = [];
+    const now = Date.now();
+    (vendedores ?? []).forEach(s => {
+      const stats = vendedorStats[s.id];
+      if (!stats?.cargaActiva) return;
+      if (stats.ultimaVisita) {
+        const hoursSince = (now - new Date(stats.ultimaVisita).getTime()) / 3600000;
+        if (hoursSince >= 2) alerts.push({ type: 'warning', icon: '⏰', text: `${s.nombre} lleva ${Math.floor(hoursSince)}h sin actividad estando en ruta` });
+      } else {
+        alerts.push({ type: 'warning', icon: '⏰', text: `${s.nombre} está en ruta pero sin visitas registradas` });
+      }
+    });
+    const totalVentasHoy = filteredVentas.reduce((s, v) => s + (v.total ?? 0), 0);
+    const totalGastosHoy = filteredGastos.reduce((s, g) => s + (g.monto ?? 0), 0);
+    if (totalVentasHoy > 0 && totalGastosHoy > 0) {
+      const pctGastos = Math.round((totalGastosHoy / totalVentasHoy) * 100);
+      if (pctGastos > 20) alerts.push({ type: 'danger', icon: '💸', text: `Gastos representan ${pctGastos}% de ventas (${fmtMoney(totalGastosHoy)} / ${fmtMoney(totalVentasHoy)})` });
+    }
+    clienteActivity.filter(c => !c.visitado && c.ultimaVisitaValor > 0 && (c.diasSinComprar ?? 0) >= 14)
+      .sort((a, b) => b.ultimaVisitaValor - a.ultimaVisitaValor).slice(0, 3)
+      .forEach(c => alerts.push({ type: 'danger', icon: '🔴', text: `${c.nombre} (${fmtMoney(c.ultimaVisitaValor)}) — ${c.diasSinComprar}d sin comprar` }));
+    return alerts;
+  }, [vendedores, vendedorStats, filteredVentas, filteredGastos, clienteActivity, fmtMoney]);
   const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden })), [clienteActivity]);
+
 
   const sellerLocations = useMemo<SellerLocation[]>(() => {
     const latest = new Map<string, { lat: number; lng: number; hora: string; nombre: string }>();
@@ -514,10 +622,11 @@ export default function SupervisorDashboardPage() {
         </div>
       </div>
 
-      {/* ═══ ZONE 2 — KPIs (bigger) ═══ */}
-      <div className="bg-card border-b border-border px-4 py-3 shrink-0">
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
-          <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} operaciones`} />
+      {/* ═══ ZONE 2 — KPIs + comparisons + cartera + alerts ═══ */}
+      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0 space-y-2">
+        {/* KPIs row */}
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2.5">
+          <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
           <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros} cobros`} />
           <KpiCard icon={TrendingUp} label="Ticket prom." value={fmtMoney(dashboardStats.ticketPromedio)} sub="por venta" />
           <KpiCard icon={CheckCircle2} label="Visitados" value={`${dashboardStats.clientesVisitados}/${dashboardStats.clientesVisitados + dashboardStats.clientesPorVisitar}`} sub={`${dashboardStats.efectividad}% cobertura`} color="text-emerald-600" />
@@ -525,6 +634,58 @@ export default function SupervisorDashboardPage() {
           <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="completadas" />
           <KpiCard icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} sub="del día" color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
           <KpiCard icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} registros`} color="text-destructive" />
+        </div>
+
+        {/* Row 2: Comparisons + Cartera + Alerts */}
+        <div className="flex flex-wrap gap-2.5 items-stretch">
+          {/* Comparisons */}
+          {comparisons && (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+              <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">vs</span>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Ayer</p>
+                {comparisons.diffAyer !== null ? (
+                  <p className={cn("text-[11px] font-bold tabular-nums", comparisons.diffAyer >= 0 ? "text-emerald-600" : "text-destructive")}>
+                    {comparisons.diffAyer >= 0 ? '↑' : '↓'}{Math.abs(comparisons.diffAyer)}%
+                  </p>
+                ) : <p className="text-[10px] text-muted-foreground">—</p>}
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Sem. pas.</p>
+                {comparisons.diffSem !== null ? (
+                  <p className={cn("text-[11px] font-bold tabular-nums", comparisons.diffSem >= 0 ? "text-emerald-600" : "text-destructive")}>
+                    {comparisons.diffSem >= 0 ? '↑' : '↓'}{Math.abs(comparisons.diffSem)}%
+                  </p>
+                ) : <p className="text-[10px] text-muted-foreground">—</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Cartera vencida mini */}
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Cartera</span>
+            <span className="text-[12px] font-bold tabular-nums text-foreground">{fmtMoney(carteraAging.total)}</span>
+            <div className="flex gap-1.5">
+              {[['1-7', 'text-emerald-600'], ['8-15', 'text-primary'], ['16-30', 'text-amber-500'], ['30+', 'text-destructive']] .map(([k, color]) => (
+                <div key={k} className="text-center">
+                  <p className="text-[8px] text-muted-foreground">{k}d</p>
+                  <p className={cn("text-[10px] font-semibold tabular-nums", color as string)}>{fmtMoney(carteraAging[k as keyof typeof carteraAging] as number)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Smart alerts inline */}
+          {smartAlerts.length > 0 && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-1.5 overflow-x-auto max-w-[500px]">
+              <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <div className="flex gap-2 overflow-x-auto">
+                {smartAlerts.slice(0, 3).map((a, i) => (
+                  <span key={i} className="text-[10px] text-foreground whitespace-nowrap">{a.icon} {a.text}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -874,10 +1035,68 @@ export default function SupervisorDashboardPage() {
             <TabsContent value="riesgo" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-3 space-y-3">
+                  {/* Smart Alerts */}
+                  {smartAlerts.length > 0 && (
+                    <div>
+                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 text-destructive" /> Alertas inteligentes
+                      </h3>
+                      <div className="space-y-1">
+                        {smartAlerts.map((a, i) => (
+                          <div key={i} className={cn("flex items-center gap-2 rounded-lg border p-2",
+                            a.type === 'danger' ? "border-destructive/30 bg-destructive/5" : "border-amber-500/30 bg-amber-500/5")}>
+                            <span className="text-sm shrink-0">{a.icon}</span>
+                            <p className="text-[11px] text-foreground">{a.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Productos */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-primary" /> Top productos del día
+                    </h3>
+                    {topProductosHoy.length === 0 ? <EmptyBlock text="Sin productos vendidos." /> : (
+                      <div className="space-y-1">
+                        {topProductosHoy.slice(0, 8).map((p, i) => (
+                          <div key={p.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2">
+                            <span className={cn("inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold shrink-0",
+                              i === 0 ? "bg-yellow-100 text-yellow-700" : i === 1 ? "bg-gray-100 text-gray-600" : i === 2 ? "bg-orange-100 text-orange-600" : "bg-muted text-muted-foreground")}>
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[11px] font-medium text-foreground truncate">{p.nombre}</p>
+                              <p className="text-[9px] text-muted-foreground">{p.codigo} · {p.qty} uds</p>
+                            </div>
+                            <span className="text-[11px] font-semibold tabular-nums text-foreground shrink-0">{fmtMoney(p.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cartera detalle */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <Banknote className="h-3.5 w-3.5 text-destructive" /> Cartera vencida
+                    </h3>
+                    <div className="grid grid-cols-4 gap-1.5 mb-2">
+                      {[{ label: '1-7 días', k: '1-7', color: 'text-emerald-600' }, { label: '8-15 días', k: '8-15', color: 'text-primary' }, { label: '16-30 días', k: '16-30', color: 'text-amber-500' }, { label: '+30 días', k: '30+', color: 'text-destructive' }].map(({ label, k, color }) => (
+                        <div key={k} className="rounded-lg bg-muted/40 px-2 py-2 text-center">
+                          <p className={cn("text-[11px] font-bold tabular-nums", color)}>{fmtMoney(carteraAging[k as keyof typeof carteraAging] as number)}</p>
+                          <p className="text-[8px] text-muted-foreground">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ingreso en riesgo */}
                   {clienteActivity.filter(c => !c.visitado).length > 0 && (
                     <div>
                       <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                        <AlertCircle className="h-3.5 w-3.5 text-destructive" /> Ingreso en riesgo
+                        <Clock className="h-3.5 w-3.5 text-primary" /> Clientes sin visitar
                       </h3>
                       <ClientesEnRiesgoWidget
                         clientes={clienteActivity.filter(c => !c.visitado).map(c => ({
@@ -889,28 +1108,6 @@ export default function SupervisorDashboardPage() {
                       />
                     </div>
                   )}
-                  <div>
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5 text-primary" /> Alertas y foco
-                    </h3>
-                    {clienteActivity.filter((c) => !c.visitado || (c.diasSinComprar ?? 0) >= 7).length === 0 ? (
-                      <EmptyBlock text="Sin alertas." />
-                    ) : (
-                      <div className="space-y-1">
-                        {clienteActivity.filter((c) => !c.visitado || (c.diasSinComprar ?? 0) >= 7).slice(0, 12).map((c) => (
-                          <div key={c.id} className="flex items-center gap-2 rounded-lg border border-border bg-card/50 p-2 cursor-pointer hover:bg-accent/30"
-                            onClick={() => handleSelectClient(c.id)}>
-                            {c.visitado ? <Clock className="h-3.5 w-3.5 text-primary shrink-0" /> : <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />}
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[11px] font-medium text-foreground truncate">{c.nombre}</p>
-                              <p className="text-[9px] text-muted-foreground truncate">{c.vendedorNombre}</p>
-                            </div>
-                            <p className="text-[11px] font-bold text-foreground shrink-0">{c.diasSinComprar !== null ? `${c.diasSinComprar}d` : '—'}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                 </div>
               </ScrollArea>
             </TabsContent>
