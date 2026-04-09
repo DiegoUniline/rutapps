@@ -50,7 +50,7 @@ interface ClientVisit {
   ordenEntrega?: number;
 }
 
-function MonitorContent() {
+export function MonitorContent() {
   const { empresa } = useAuth();
   const { fmt: fmtMoney } = useCurrency();
   const { isLoaded } = useGoogleMaps();
