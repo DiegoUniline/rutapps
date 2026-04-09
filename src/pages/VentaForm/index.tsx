@@ -193,6 +193,24 @@ export default function VentaFormPage() {
       {showFacturaDrawer && form.id && form.cliente_id && <FacturaDrawer open={showFacturaDrawer} onClose={() => setShowFacturaDrawer(false)} ventaId={form.id} cliente={clientesList?.find(c => c.id === form.cliente_id) as any} lineas={lineas as any} productosList={productosList ?? []} />}
       <PinDialog />
 
+      {/* Checkout modal for Venta Directa */}
+      {(() => {
+        const cliente = clientesList?.find(c => c.id === form.cliente_id);
+        return (
+          <VentaCheckoutModal
+            open={showCheckout}
+            total={totals.total}
+            clienteNombre={cliente?.nombre ?? 'Sin cliente'}
+            clienteCredito={!!cliente?.credito}
+            clienteDiasCredito={(cliente as any)?.dias_credito ?? 0}
+            clienteLimiteCredito={(cliente as any)?.limite_credito ?? 0}
+            saving={checkoutSaving}
+            onConfirm={handleCheckoutConfirm}
+            onClose={() => setShowCheckout(false)}
+          />
+        );
+      })()}
+
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
