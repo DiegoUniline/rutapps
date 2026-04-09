@@ -23,6 +23,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
 
+const ROUTE_COLORS = [
+  '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#8b5cf6',
+  '#ec4899', '#06b6d4', '#f97316', '#14b8a6', '#6366f1',
+  '#e11d48', '#0ea5e9', '#84cc16', '#d946ef', '#78716c',
+];
+
 const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 type VisitStatus = 'visited' | 'sold' | 'pending' | 'delivered' | 'en_ruta';
