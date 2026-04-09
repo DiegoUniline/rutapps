@@ -544,32 +544,41 @@ function MonitorContent() {
                     ],
                   }}
                 >
-                  {withGps.map(c => {
-                    const markerText = c.ordenEntrega && c.ordenEntrega > 0
-                      ? String(c.ordenEntrega)
-                      : c.status === 'sold' ? '$' : c.status === 'delivered' ? '✓' : '•';
-                    return (
-                      <MarkerF
-                        key={c.id + c.status}
-                        position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
-                        icon={{
-                          path: google.maps.SymbolPath.CIRCLE,
-                          fillColor: statusColor(c.status),
-                          fillOpacity: 1,
-                          strokeColor: '#fff',
-                          strokeWeight: 2,
-                          scale: c.ordenEntrega && c.ordenEntrega > 0 ? 14 : 10,
-                        }}
-                        label={{
-                          text: markerText,
-                          color: '#fff',
-                          fontSize: c.ordenEntrega && c.ordenEntrega > 0 ? '11px' : '10px',
-                          fontWeight: '700',
-                        }}
-                        onClick={() => setSelectedClient(c)}
-                      />
-                    );
-                  })}
+                  {(() => {
+                    // Build seller color map
+                    const uniqueSellers = [...new Set(withGps.map(c => c.vendedor_id).filter(Boolean))];
+                    const sellerColorMap = new Map<string, string>();
+                    uniqueSellers.forEach((sid, i) => sellerColorMap.set(sid!, ROUTE_COLORS[i % ROUTE_COLORS.length]));
+
+                    const makeIcon = (orden: number | undefined, isVisited: boolean, vendedorId?: string) => {
+                      const fillColor = sellerColorMap.get(vendedorId ?? '') ?? '#94a3b8';
+                      const borderColor = isVisited ? '#22c55e' : '#ef4444';
+                      const label = orden && orden > 0 ? String(orden) : '';
+                      const size = 30;
+                      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+                        <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${fillColor}" stroke="${borderColor}" stroke-width="3.5"/>
+                        <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
+                      </svg>`;
+                      return {
+                        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                        scaledSize: new google.maps.Size(size, size),
+                        anchor: new google.maps.Point(size / 2, size / 2),
+                      };
+                    };
+
+                    return withGps.map((c, idx) => {
+                      const isVisited = c.status === 'sold' || c.status === 'delivered';
+                      const orden = c.ordenEntrega && c.ordenEntrega > 0 ? c.ordenEntrega : idx + 1;
+                      return (
+                        <MarkerF
+                          key={c.id + c.status}
+                          position={{ lat: c.gps_lat!, lng: c.gps_lng! }}
+                          icon={makeIcon(orden, isVisited, c.vendedor_id)}
+                          onClick={() => setSelectedClient(c)}
+                        />
+                      );
+                    });
+                  })()}
 
                   {selectedClient && selectedClient.gps_lat && (
                     <InfoWindow
