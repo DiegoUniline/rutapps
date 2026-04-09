@@ -685,7 +685,6 @@ export default function SupervisorDashboardPage() {
               </ScrollArea>
             </TabsContent>
 
-            {/* Gráficos Semana Tab */}
             <TabsContent value="graficos" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full">
                 <div className="p-3 space-y-4">
@@ -709,17 +708,71 @@ export default function SupervisorDashboardPage() {
                     </div>
                   </div>
 
-                  {/* Ventas diarias bar chart */}
+                  {/* Ranking por vendedor */}
                   <div>
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ventas diarias</h3>
-                    <div className="h-[140px]">
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" /> Ranking semanal por vendedor
+                    </h3>
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">#</th>
+                          <th className="text-left px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Vendedor</th>
+                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ventas $</th>
+                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ops</th>
+                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Ticket</th>
+                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Cobros</th>
+                          <th className="text-right px-2 py-1.5 text-[9px] font-semibold text-muted-foreground">Visitas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {weeklySellerRanking.map((s, i) => (
+                          <tr key={s.id} className={cn("border-b border-border/30 hover:bg-accent/30 transition-colors",
+                            selectedVendedor === s.id && "bg-primary/5")}
+                            onClick={() => setSelectedVendedor(selectedVendedor === s.id ? null : s.id)}
+                            style={{ cursor: 'pointer' }}>
+                            <td className="px-2 py-1.5">
+                              <span className={cn("inline-flex items-center justify-center w-5 h-5 rounded-full text-[9px] font-bold",
+                                i === 0 ? "bg-yellow-100 text-yellow-700" : i === 1 ? "bg-gray-100 text-gray-600" : i === 2 ? "bg-orange-100 text-orange-600" : "bg-muted text-muted-foreground")}>
+                                {i + 1}
+                              </span>
+                            </td>
+                            <td className="px-2 py-1.5 text-[11px] font-medium text-foreground truncate max-w-[100px]">{s.nombre}</td>
+                            <td className="text-right px-2 py-1.5 text-[11px] font-semibold tabular-nums text-foreground">{fmtMoney(s.ventas)}</td>
+                            <td className="text-right px-2 py-1.5 text-[10px] tabular-nums text-muted-foreground">{s.numVentas}</td>
+                            <td className="text-right px-2 py-1.5 text-[10px] tabular-nums text-muted-foreground">{fmtMoney(s.ticket)}</td>
+                            <td className="text-right px-2 py-1.5 text-[10px] tabular-nums text-foreground">{fmtMoney(s.cobros)}</td>
+                            <td className="text-right px-2 py-1.5 text-[10px] tabular-nums text-muted-foreground">{s.visitas}</td>
+                          </tr>
+                        ))}
+                        {weeklySellerRanking.length === 0 && (
+                          <tr><td colSpan={7} className="text-center py-4 text-muted-foreground text-[11px]">Sin datos esta semana</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Ventas diarias por vendedor (stacked) */}
+                  <div>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ventas diarias por vendedor</h3>
+                    <div className="h-[160px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={weeklyChartData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                           <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
                           <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
-                          <Tooltip formatter={(v: number) => [`$${v.toLocaleString('es-MX')}`, 'Ventas']} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                          <Bar dataKey="ventas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Tooltip formatter={(v: number, name: string) => {
+                            const sellerId = name.replace('v_', '');
+                            const sellerName = sellerNameMap.get(sellerId) ?? name;
+                            return [`$${v.toLocaleString('es-MX')}`, sellerName];
+                          }} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                          {weeklySellerRanking.map((s, i) => (
+                            <Bar key={s.id} dataKey={`v_${s.id}`} stackId="ventas" fill={ROUTE_COLORS[i % ROUTE_COLORS.length]} radius={i === weeklySellerRanking.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
+                          ))}
+                          <Legend iconSize={8} wrapperStyle={{ fontSize: 9 }} formatter={(value) => {
+                            const sellerId = value.replace('v_', '');
+                            return sellerNameMap.get(sellerId) ?? value;
+                          }} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -743,9 +796,9 @@ export default function SupervisorDashboardPage() {
                     </div>
                   </div>
 
-                  {/* Visitas por día bar chart */}
+                  {/* Visitas por día */}
                   <div>
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Visitas por día</h3>
+                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Visitas vs Ventas por día</h3>
                     <div className="h-[120px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={weeklyChartData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
