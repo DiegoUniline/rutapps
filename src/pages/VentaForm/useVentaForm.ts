@@ -394,7 +394,7 @@ export function useVentaForm() {
   };
   const removeLine = async (idx: number) => { if (readOnly) return; const line = lineas[idx]; if (line.id) await deleteLinea.mutateAsync(line.id); const newLineas = lineas.filter((_, i) => i !== idx); setLineas(newLineas.length === 0 ? [emptyLine()] : newLineas); setDirty(true); };
 
-  const handleSave = async (autoConfirm = false) => {
+  const handleSave = async (autoConfirm = false): Promise<string | undefined> => {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
@@ -466,7 +466,8 @@ export function useVentaForm() {
       loadedVentaIdRef.current = null; // allow reload
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
-    } catch (e: any) { toast.error(e.message); }
+      return ventaId;
+    } catch (e: any) { toast.error(e.message); return undefined; }
   };
 
   const handleDelete = async () => { if (!form.id) return; await deleteVenta.mutateAsync(form.id); toast.success('Venta eliminada'); navigate('/ventas'); };
