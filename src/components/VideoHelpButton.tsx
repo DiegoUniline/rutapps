@@ -28,7 +28,7 @@ interface VideoHelpButtonProps {
 }
 
 export default function VideoHelpButton({ module }: VideoHelpButtonProps) {
-  const { empresa } = useAuth();
+  const [open, setOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState<VideoRow | null>(null);
 
