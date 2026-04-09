@@ -622,10 +622,11 @@ export default function SupervisorDashboardPage() {
         </div>
       </div>
 
-      {/* ═══ ZONE 2 — KPIs (bigger) ═══ */}
-      <div className="bg-card border-b border-border px-4 py-3 shrink-0">
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
-          <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} operaciones`} />
+      {/* ═══ ZONE 2 — KPIs + comparisons + cartera + alerts ═══ */}
+      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0 space-y-2">
+        {/* KPIs row */}
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2.5">
+          <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
           <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros} cobros`} />
           <KpiCard icon={TrendingUp} label="Ticket prom." value={fmtMoney(dashboardStats.ticketPromedio)} sub="por venta" />
           <KpiCard icon={CheckCircle2} label="Visitados" value={`${dashboardStats.clientesVisitados}/${dashboardStats.clientesVisitados + dashboardStats.clientesPorVisitar}`} sub={`${dashboardStats.efectividad}% cobertura`} color="text-emerald-600" />
@@ -633,6 +634,58 @@ export default function SupervisorDashboardPage() {
           <KpiCard icon={Truck} label="Entregas" value={`${dashboardStats.entregasHechas}/${dashboardStats.entregasTotal}`} sub="completadas" />
           <KpiCard icon={Activity} label="Efectividad" value={`${dashboardStats.efectividad}%`} sub="del día" color={dashboardStats.efectividad >= 80 ? 'text-emerald-600' : 'text-destructive'} />
           <KpiCard icon={RotateCcw} label="Devol." value={`${devolucionesStats.totalUnidades}`} sub={`${devolucionesStats.count} registros`} color="text-destructive" />
+        </div>
+
+        {/* Row 2: Comparisons + Cartera + Alerts */}
+        <div className="flex flex-wrap gap-2.5 items-stretch">
+          {/* Comparisons */}
+          {comparisons && (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+              <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">vs</span>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Ayer</p>
+                {comparisons.diffAyer !== null ? (
+                  <p className={cn("text-[11px] font-bold tabular-nums", comparisons.diffAyer >= 0 ? "text-emerald-600" : "text-destructive")}>
+                    {comparisons.diffAyer >= 0 ? '↑' : '↓'}{Math.abs(comparisons.diffAyer)}%
+                  </p>
+                ) : <p className="text-[10px] text-muted-foreground">—</p>}
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] text-muted-foreground">Sem. pas.</p>
+                {comparisons.diffSem !== null ? (
+                  <p className={cn("text-[11px] font-bold tabular-nums", comparisons.diffSem >= 0 ? "text-emerald-600" : "text-destructive")}>
+                    {comparisons.diffSem >= 0 ? '↑' : '↓'}{Math.abs(comparisons.diffSem)}%
+                  </p>
+                ) : <p className="text-[10px] text-muted-foreground">—</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Cartera vencida mini */}
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5">
+            <span className="text-[9px] uppercase tracking-wider font-semibold text-muted-foreground">Cartera</span>
+            <span className="text-[12px] font-bold tabular-nums text-foreground">{fmtMoney(carteraAging.total)}</span>
+            <div className="flex gap-1.5">
+              {[['1-7', 'text-emerald-600'], ['8-15', 'text-primary'], ['16-30', 'text-amber-500'], ['30+', 'text-destructive']] .map(([k, color]) => (
+                <div key={k} className="text-center">
+                  <p className="text-[8px] text-muted-foreground">{k}d</p>
+                  <p className={cn("text-[10px] font-semibold tabular-nums", color as string)}>{fmtMoney(carteraAging[k as keyof typeof carteraAging] as number)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Smart alerts inline */}
+          {smartAlerts.length > 0 && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-1.5 overflow-x-auto max-w-[500px]">
+              <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <div className="flex gap-2 overflow-x-auto">
+                {smartAlerts.slice(0, 3).map((a, i) => (
+                  <span key={i} className="text-[10px] text-foreground whitespace-nowrap">{a.icon} {a.text}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
