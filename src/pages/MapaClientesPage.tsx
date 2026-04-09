@@ -84,7 +84,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
 }
 
 export default function MapaClientesPage() {
-  const { user } = useAuth();
+  const { user, empresa } = useAuth();
   const { isLoaded } = useGoogleMaps();
   const [search, setSearch] = useState('');
   const [zonaFilter, setZonaFilter] = useState('');
