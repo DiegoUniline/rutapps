@@ -386,17 +386,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const applySwUpdate = async () => {
     try {
+      // Unregister all service workers
       if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg?.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        } else if (reg) {
-          await reg.update();
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+          await reg.unregister();
         }
       }
+      // Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
       setSwUpdateAvailable(false);
+      window.location.reload();
     } catch {
-      // silent
+      window.location.reload();
     }
   };
 
