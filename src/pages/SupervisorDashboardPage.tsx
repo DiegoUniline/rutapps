@@ -516,11 +516,11 @@ export default function SupervisorDashboardPage() {
                     </span>
                   ))}
                   <span className="inline-flex items-center gap-1">
-                    <span>😀</span>
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
                     <span className="text-[10px] text-muted-foreground">Visitado</span>
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span>😞</span>
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
                     <span className="text-[10px] text-muted-foreground">Pendiente</span>
                   </span>
                 </div>
@@ -870,20 +870,17 @@ function SupervisorMap({ markers, sellerLocations = [], height = 480 }: { marker
   const SELLER_BLUE = '#3b82f6';
 
   const makeNumberedIcon = useCallback((orden: number | null, visitado: boolean, color: string) => {
-    const fillColor = visitado ? VISITED_CHECK : color;
     const label = orden != null ? String(orden) : '';
-    const w = 36;
-    const h = 40;
-    const face = visitado ? '😀' : '😞';
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
-      <circle cx="18" cy="16" r="13" fill="${fillColor}" stroke="#fff" stroke-width="2.5"/>
-      <text x="18" y="17" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
-      <text x="30" y="36" text-anchor="middle" dominant-baseline="central" font-size="13">${face}</text>
+    const size = 30;
+    const borderColor = visitado ? '#22c55e' : '#ef4444';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="${borderColor}" stroke-width="3.5"/>
+      <text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="12" font-weight="bold" font-family="Arial,sans-serif">${label}</text>
     </svg>`;
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
-      scaledSize: new google.maps.Size(w, h),
-      anchor: new google.maps.Point(18, 16),
+      scaledSize: new google.maps.Size(size, size),
+      anchor: new google.maps.Point(size / 2, size / 2),
     };
   }, []);
 
