@@ -516,11 +516,11 @@ export default function SupervisorDashboardPage() {
                     </span>
                   ))}
                   <span className="inline-flex items-center gap-1">
-                    <span>😀</span>
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#22c55e] bg-muted" />
                     <span className="text-[10px] text-muted-foreground">Visitado</span>
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span>😞</span>
+                    <span className="h-2.5 w-2.5 rounded-full shrink-0 border-2 border-[#ef4444] bg-muted" />
                     <span className="text-[10px] text-muted-foreground">Pendiente</span>
                   </span>
                 </div>
