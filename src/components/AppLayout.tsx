@@ -46,6 +46,8 @@ const navItems: NavItem[] = [
     ],
   },
   { label: 'Clientes', icon: Users, path: '/clientes' },
+  { label: 'Productos', icon: Package, path: '/productos' },
+  { label: 'Listas de Precios', icon: DollarSign, path: '/listas-precio' },
   {
     label: 'Logística',
     icon: MapPin,
@@ -64,8 +66,6 @@ const navItems: NavItem[] = [
     icon: Package,
     path: '/productos',
     children: [
-      { label: 'Productos', path: '/productos' },
-      { label: 'Listas de Precios', path: '/listas-precio' },
       { label: 'Categorías', path: '/catalogos/clasificaciones' },
       { label: 'Marcas', path: '/catalogos/marcas' },
       { label: 'Proveedores', path: '/proveedores' },
