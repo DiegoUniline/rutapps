@@ -239,6 +239,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   ln(`Folio: ${clean(data.folio).slice(0, W - 7)}`);
   ln(`Fecha: ${clean(data.fecha).slice(0, W - 7)}`);
   ln(`Cliente: ${clean(data.clienteNombre).slice(0, W - 9)}`);
+  if (data.vendedorNombre) ln(`Vendedor: ${clean(data.vendedorNombre).slice(0, W - 10)}`);
   const pagoLabel = data.condicionPago === 'credito' ? 'Credito' : 'Contado';
   ln(`Pago: ${pagoLabel}`);
   ln(divider(W));
@@ -301,6 +302,18 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     add(BOLD_ON);
     ln(row('Saldo', fmt(data.saldoNuevo ?? 0), W));
     add(BOLD_OFF);
+  }
+
+  // ── PAGOS RECIBIDOS ──
+  if (data.pagos && data.pagos.length > 0) {
+    ln(divider(W));
+    add(BOLD_ON);
+    ln('PAGOS RECIBIDOS');
+    add(BOLD_OFF);
+    for (const p of data.pagos) {
+      const label = clean(p.metodo) + (p.referencia ? ` (${clean(p.referencia)})` : '');
+      ln(row(label.slice(0, W - 14), fmt(p.monto), W));
+    }
   }
 
   // ── FOOTER ──
