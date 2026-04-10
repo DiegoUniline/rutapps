@@ -139,21 +139,24 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
                 <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Pagos recibidos</h4>
                 {pagos.length > 0 ? (
                   <div className="space-y-1.5">
-                    {pagos.map((p: any) => (
-                      <div key={p.id} className="bg-card border border-border/50 rounded px-3 py-2 text-[12px]">
-                        <div className="flex justify-between">
-                          <span className="font-medium capitalize">{p.metodo_pago}</span>
-                          <span className="font-bold tabular-nums">{fmt(p.monto)}</span>
+                    {pagos.map((p: any) => {
+                      const cobro = p.cobros as any;
+                      return (
+                        <div key={p.id} className="bg-card border border-border/50 rounded px-3 py-2 text-[12px]">
+                          <div className="flex justify-between">
+                            <span className="font-medium capitalize">{cobro?.metodo_pago ?? '—'}</span>
+                            <span className="font-bold tabular-nums">{fmt(p.monto_aplicado)}</span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground text-[11px]">
+                            <span>{cobro?.referencia || '—'}</span>
+                            <span>{fmtDate(cobro?.fecha)}</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-muted-foreground text-[11px]">
-                          <span>{p.referencia || '—'}</span>
-                          <span>{fmtDate(p.fecha)}</span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div className="flex justify-between text-[12px] font-semibold pt-1 border-t border-border/50">
                       <span>Total pagado</span>
-                      <span className="text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (p.monto ?? 0), 0))}</span>
+                      <span className="text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0))}</span>
                     </div>
                   </div>
                 ) : (
