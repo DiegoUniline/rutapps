@@ -58,6 +58,8 @@ export default function PuntoVentaPage() {
   const scanRef = useRef<HTMLInputElement>(null);
 
   const [cart, setCart] = useState<PosItem[]>([]);
+  const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
+  const [filterMarca, setFilterMarca] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNombre, setClienteNombre] = useState('Público general');
@@ -127,7 +129,7 @@ export default function PuntoVentaPage() {
     enabled: !!empresa?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from('productos')
-        .select('id, codigo, nombre, precio_principal, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, vender_sin_stock, es_granel, unidad_granel')
+        .select('id, codigo, nombre, precio_principal, costo, cantidad, imagen_url, tiene_iva, iva_pct, tiene_ieps, ieps_pct, ieps_tipo, clave_alterna, unidad_venta_id, se_puede_vender, status, clasificacion_id, marca_id, vender_sin_stock, es_granel, unidad_granel')
         .eq('empresa_id', empresa!.id)
         .eq('se_puede_vender', true)
         .eq('status', 'activo')
@@ -135,6 +137,16 @@ export default function PuntoVentaPage() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  // Clasificaciones & Marcas for filters
+  const { data: clasificaciones } = useQuery({
+    queryKey: ['pos-clasificaciones', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id,
+    queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data ?? []; },
+  });
+  const { data: marcas } = useQuery({
+    queryKey: ['pos-marcas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id,
+    queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data ?? []; },
   });
 
   // Stock by warehouse (user's assigned warehouse)
@@ -401,7 +413,9 @@ export default function PuntoVentaPage() {
   const filteredProducts = useMemo(() => {
     if (!productos) return [];
     // Filter out products with no stock unless vender_sin_stock is enabled
-    const available = productos.filter(p => p.vender_sin_stock || (p.cantidad ?? 0) > 0);
+    let available = productos.filter(p => p.vender_sin_stock || (p.cantidad ?? 0) > 0);
+    if (filterClasificacion) available = available.filter(p => p.clasificacion_id === filterClasificacion);
+    if (filterMarca) available = available.filter(p => (p as any).marca_id === filterMarca);
     if (!search) return available;
     const s = search.toLowerCase();
     return available.filter(p =>
@@ -409,7 +423,7 @@ export default function PuntoVentaPage() {
       p.codigo.toLowerCase().includes(s) ||
       (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
     );
-  }, [productos, search]);
+  }, [productos, search, filterClasificacion, filterMarca]);
 
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
@@ -942,9 +956,40 @@ export default function PuntoVentaPage() {
             </div>
           )}
 
+          {/* Category / Brand filter chips */}
+          {((clasificaciones && clasificaciones.length > 0) || (marcas && marcas.length > 0)) && (
+            <div className="px-3 sm:px-4 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
+              {clasificaciones && clasificaciones.length > 0 && (
+                <select
+                  value={filterClasificacion ?? ''}
+                  onChange={e => setFilterClasificacion(e.target.value || null)}
+                  className="shrink-0 text-[11px] bg-accent/50 border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+                >
+                  <option value="">Todas las categorías</option>
+                  {clasificaciones.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              )}
+              {marcas && marcas.length > 0 && (
+                <select
+                  value={filterMarca ?? ''}
+                  onChange={e => setFilterMarca(e.target.value || null)}
+                  className="shrink-0 text-[11px] bg-accent/50 border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+                >
+                  <option value="">Todas las marcas</option>
+                  {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
+                </select>
+              )}
+              {(filterClasificacion || filterMarca) && (
+                <button onClick={() => { setFilterClasificacion(null); setFilterMarca(null); }} className="shrink-0 text-[10px] text-primary font-medium px-2 py-1.5 hover:underline">
+                  Limpiar
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Product grid */}
           <div className={`flex-1 overflow-auto px-3 sm:px-4 ${isMobile ? 'pb-24' : 'pb-4'}`}>
-            <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'} gap-2`}>
+            <div className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6'} gap-1.5`}>
               {filteredProducts.map(p => {
                 const inCart = cart.find(c => c.producto_id === p.id);
                 const stock = p.cantidad ?? 0;
@@ -952,29 +997,27 @@ export default function PuntoVentaPage() {
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    className={`relative rounded-xl border p-2.5 sm:p-3 text-left transition-all active:scale-[0.97] hover:shadow-md ${
+                    className={`relative rounded-lg border p-2 text-left transition-all active:scale-[0.97] hover:shadow-sm ${
                       inCart
                         ? 'border-primary/40 bg-primary/[0.04] ring-1 ring-primary/20'
                         : 'border-border bg-card hover:border-primary/20'
                     }`}
                   >
                     {inCart && (
-                      <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[11px] font-bold shadow-sm">
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shadow-sm">
                         {inCart.cantidad}
                       </div>
                     )}
-                    <div className="w-full aspect-square rounded-lg bg-accent/50 mb-1.5 sm:mb-2 flex items-center justify-center overflow-hidden">
-                      {p.imagen_url ? (
+                    {p.imagen_url ? (
+                      <div className="w-full aspect-[4/3] rounded bg-accent/50 mb-1 flex items-center justify-center overflow-hidden">
                         <img src={p.imagen_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <Package className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground/30" />
-                      )}
-                    </div>
-                    <p className="text-[10px] sm:text-[11px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
-                    <p className="text-[9px] sm:text-[10px] text-muted-foreground font-mono mt-0.5">{p.codigo}</p>
-                    <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-[12px] sm:text-[14px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[8px] sm:text-[9px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
-                      <span className={`text-[8px] sm:text-[9px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      </div>
+                    ) : null}
+                    <p className="text-[10px] font-medium text-foreground truncate leading-tight">{p.nombre}</p>
+                    <p className="text-[8px] text-muted-foreground font-mono">{p.codigo}</p>
+                    <div className="flex items-baseline justify-between mt-0.5">
+                      <span className="text-[11px] font-bold text-primary">{fmtM(getProductPricing(p).displayPrice)}<span className="text-[7px] font-normal text-muted-foreground ml-0.5">/{(p as any).es_granel ? (p as any).unidad_granel : 'pz'}</span></span>
+                      <span className={`text-[8px] font-medium ${stock > 0 ? 'text-green-600' : 'text-destructive'}`}>
                         {fmtNum(stock)}
                       </span>
                     </div>
