@@ -29,6 +29,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
   const lineTotal = r2(base + ieps + iva);
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
+  // Fallback to embedded product data from the DB join (venta_lineas → productos)
+  const embeddedProd = (l as any).productos;
+  const prodDisplay = prod || embeddedProd;
   const isEmpty = !l.producto_id;
   const lineData = l as any;
   const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
