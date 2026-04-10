@@ -81,7 +81,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           {loading ? (
             <p className="text-xs text-muted-foreground py-2">Cargando detalles...</p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {/* Líneas */}
               <div className="lg:col-span-2">
                 <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Productos</h4>
