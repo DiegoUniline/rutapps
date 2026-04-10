@@ -31,10 +31,10 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           .eq('venta_id', venta.id)
           .order('created_at'),
         supabase
-          .from('venta_pagos')
-          .select('id, metodo_pago, monto, referencia, fecha')
+          .from('cobro_aplicaciones')
+          .select('id, monto_aplicado, cobros(fecha, metodo_pago, referencia)')
           .eq('venta_id', venta.id)
-          .order('fecha'),
+          .order('created_at'),
       ]);
       if (!cancelled) {
         setLineas(lRes.data ?? []);
