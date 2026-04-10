@@ -58,6 +58,8 @@ export default function PuntoVentaPage() {
   const scanRef = useRef<HTMLInputElement>(null);
 
   const [cart, setCart] = useState<PosItem[]>([]);
+  const [filterClasificacion, setFilterClasificacion] = useState<string | null>(null);
+  const [filterMarca, setFilterMarca] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [clienteId, setClienteId] = useState<string | null>(null);
   const [clienteNombre, setClienteNombre] = useState('Público general');
