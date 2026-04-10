@@ -15,12 +15,13 @@ interface PdfParams {
   entregasExistentes: any[];
   pagosData: any[];
   promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
+  vendedorNombre?: string;
 }
 
 export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
-  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData, promociones } = params;
+  const { form, empresa, profile, userEmail, clienteData, almacenName, lineas, productosList, entregasExistentes, pagosData, promociones, vendedorNombre } = params;
   const logo = empresa?.logo_url ? await loadLogoBase64(empresa.logo_url) : null;
-  const vendedorName = profile?.nombre || userEmail || '';
+  const vendedorName = vendedorNombre || profile?.nombre || userEmail || '';
 
   return generarPedidoPdf({
     empresa: {
