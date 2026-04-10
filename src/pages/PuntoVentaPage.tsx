@@ -413,7 +413,9 @@ export default function PuntoVentaPage() {
   const filteredProducts = useMemo(() => {
     if (!productos) return [];
     // Filter out products with no stock unless vender_sin_stock is enabled
-    const available = productos.filter(p => p.vender_sin_stock || (p.cantidad ?? 0) > 0);
+    let available = productos.filter(p => p.vender_sin_stock || (p.cantidad ?? 0) > 0);
+    if (filterClasificacion) available = available.filter(p => p.clasificacion_id === filterClasificacion);
+    if (filterMarca) available = available.filter(p => (p as any).marca_id === filterMarca);
     if (!search) return available;
     const s = search.toLowerCase();
     return available.filter(p =>
@@ -421,7 +423,7 @@ export default function PuntoVentaPage() {
       p.codigo.toLowerCase().includes(s) ||
       (p.clave_alterna && p.clave_alterna.toLowerCase().includes(s))
     );
-  }, [productos, search]);
+  }, [productos, search, filterClasificacion, filterMarca]);
 
   const filteredClientes = useMemo(() => {
     if (!clientes) return [];
