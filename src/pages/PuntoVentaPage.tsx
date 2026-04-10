@@ -1539,6 +1539,7 @@ export default function PuntoVentaPage() {
                       metodo_pago: lastVentaData.metodoPago,
                     },
                     clienteNombre: lastVentaData.clienteNombre,
+                    vendedorNombre: profile?.nombre ?? '',
                     lineas: lastVentaData.lineas.map((l: any) => ({
                       nombre: l.nombre,
                       cantidad: l.cantidad,
@@ -1553,6 +1554,7 @@ export default function PuntoVentaPage() {
                     promociones: promoTicket,
                     saldoAnterior: lastVentaData.saldoAnterior,
                     saldoNuevo: lastVentaData.saldoNuevoCalc,
+                    pagos: lastVentaData.pagos,
                   });
                   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
                   printTicket(td, { ticketAncho });
@@ -1572,10 +1574,12 @@ export default function PuntoVentaPage() {
                     empresa,
                     venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
                     clienteNombre: lastVentaData.clienteNombre,
+                    vendedorNombre: profile?.nombre ?? '',
                     lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
                     montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
                     saldoAnterior: lastVentaData.saldoAnterior,
                     saldoNuevo: lastVentaData.saldoNuevoCalc,
+                    pagos: lastVentaData.pagos,
                   });
                   printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
                 }}
