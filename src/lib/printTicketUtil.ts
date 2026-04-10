@@ -37,7 +37,6 @@ export async function printTicket(td: TicketData, opts: PrintOptions = {}) {
 
   // ── 2) Fallback: browser print dialog ──
   const html = buildTicketHTML(td, { ticketAncho, forPrint: true });
-  const html = buildTicketHTML(tdForPrint, { ticketAncho, forPrint: true });
 
   // Use an iframe + window.print() — much more reliable than toPng on desktop
   const iframe = document.createElement('iframe');
