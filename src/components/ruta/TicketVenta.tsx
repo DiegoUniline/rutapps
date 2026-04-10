@@ -11,7 +11,7 @@ interface DevolucionTicketItem {
 }
 
 interface TicketVentaProps {
-  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null };
+  empresa: { nombre: string; telefono?: string | null; direccion?: string | null; logo_url?: string | null; rfc?: string | null; moneda?: string | null; razon_social?: string | null; colonia?: string | null; ciudad?: string | null; estado?: string | null; cp?: string | null; email?: string | null; notas_ticket?: string | null };
   folio: string;
   fecha: string;
   clienteNombre: string;
@@ -184,9 +184,12 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 <img src={empresa.logo_url} alt={empresa.nombre} className="tk-logo h-8 max-w-[120px] object-contain mx-auto mb-1" />
               )}
               <p className="tk-empresa text-[12px] font-bold text-foreground">{empresa.nombre}</p>
+              {empresa.razon_social && <p className="tk-sub text-[9px] text-muted-foreground">{empresa.razon_social}</p>}
               {empresa.rfc && <p className="tk-sub text-[9px] text-muted-foreground">RFC: {empresa.rfc}</p>}
-              {empresa.direccion && <p className="tk-sub text-[8px] text-muted-foreground mt-px">{empresa.direccion}</p>}
+              {(() => { const dir1 = [empresa.direccion, empresa.colonia].filter(Boolean).join(', '); return dir1 ? <p className="tk-sub text-[8px] text-muted-foreground mt-px">{dir1}</p> : null; })()}
+              {(() => { const dir2 = [empresa.ciudad, empresa.estado, empresa.cp ? `CP ${empresa.cp}` : ''].filter(Boolean).join(', '); return dir2 ? <p className="tk-sub text-[8px] text-muted-foreground">{dir2}</p> : null; })()}
               {empresa.telefono && <p className="tk-sub text-[8px] text-muted-foreground">Tel: {empresa.telefono}</p>}
+              {empresa.email && <p className="tk-sub text-[8px] text-muted-foreground">{empresa.email}</p>}
             </div>
 
             <div className="tk-dash mx-5 border-t border-dashed border-border" />
@@ -359,7 +362,9 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
 
             {/* Footer */}
             <div className="tk-footer px-5 py-2.5 border-t border-dashed border-border text-center">
-              <p className="text-[8px] text-muted-foreground">Elaborado por Uniline — Innovación en la nube</p>
+              <p className="text-[8px] text-muted-foreground">Gracias por su compra</p>
+              {empresa.notas_ticket && <p className="text-[8px] text-muted-foreground">{empresa.notas_ticket}</p>}
+              <p className="text-[8px] text-muted-foreground">Elaborado por Uniline</p>
             </div>
           </div>
         </div>
