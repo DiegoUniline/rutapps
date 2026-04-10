@@ -325,7 +325,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     wrap(data.empresa.notas_ticket, W).forEach(l => ln(l.trim()));
   }
   ln('');
-  ln('Elaborado por Uniline');
+  ln('rutapp.mx');
   add(LF); add(LF); add(LF);
   add(CUT);
 
