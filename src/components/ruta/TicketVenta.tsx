@@ -15,6 +15,7 @@ interface TicketVentaProps {
   folio: string;
   fecha: string;
   clienteNombre: string;
+  vendedorNombre?: string;
   lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean; producto_id?: string }[];
   subtotal: number;
   iva: number;
@@ -30,6 +31,7 @@ interface TicketVentaProps {
   pagoAplicado?: number;
   saldoNuevo?: number;
   promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
+  pagos?: { metodo: string; monto: number; referencia?: string | null }[];
   onPrintTicket?: () => void;
   onClose: () => void;
 }
