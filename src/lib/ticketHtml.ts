@@ -102,7 +102,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones } = data;
+  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -137,6 +137,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(`Folio: ${folio}`);
   add(`Fecha: ${fecha}`);
   add(`Cliente: ${clienteNombre}`.substring(0, COLS));
+  if (vendedorNombre) add(`Vendedor: ${vendedorNombre}`.substring(0, COLS));
   const pagoLabel = condicionPago === 'credito' ? 'Credito' : condicionPago === 'contado' ? 'Contado' : 'P/definir';
   add(`Pago: ${pagoLabel}${metodoPago ? ` (${metodoPago})` : ''}`);
   add(div);
