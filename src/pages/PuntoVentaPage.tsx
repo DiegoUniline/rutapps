@@ -139,6 +139,16 @@ export default function PuntoVentaPage() {
     },
   });
 
+  // Clasificaciones & Marcas for filters
+  const { data: clasificaciones } = useQuery({
+    queryKey: ['pos-clasificaciones', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id,
+    queryFn: async () => { const { data } = await supabase.from('clasificaciones').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data ?? []; },
+  });
+  const { data: marcas } = useQuery({
+    queryKey: ['pos-marcas', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id,
+    queryFn: async () => { const { data } = await supabase.from('marcas').select('id, nombre').eq('empresa_id', empresa!.id).eq('activo', true).order('nombre'); return data ?? []; },
+  });
+
   // Stock by warehouse (user's assigned warehouse)
   const { data: stockAlmacen } = useQuery({
     queryKey: ['pos-stock-almacen', empresa?.id, almacenId],
