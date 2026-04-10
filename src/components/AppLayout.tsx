@@ -25,14 +25,19 @@ interface NavItem {
   icon: React.ElementType;
   path: string;
   children?: NavChild[];
+  accent?: boolean; // highlight key items with accent color
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
-  { label: 'Supervisor', icon: BarChart3, path: '/supervisor' },
-  { label: 'Usuarios y permisos', icon: Users, path: '/configuracion/usuarios' },
-  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos' },
-  { label: 'App Móvil', icon: Smartphone, path: '/ruta' },
+  // ── Operación diaria ──
+  { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
+  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', accent: true },
+  { label: 'App Móvil', icon: Smartphone, path: '/ruta', accent: true },
+  // ── Datos clave ──
+  { label: 'Clientes', icon: Users, path: '/clientes', accent: true },
+  { label: 'Productos', icon: Package, path: '/productos', accent: true },
+  { label: 'Listas de Precios', icon: Tag, path: '/listas-precio' },
+  // ── Ventas ──
   {
     label: 'Ventas',
     icon: ShoppingCart,
@@ -46,9 +51,7 @@ const navItems: NavItem[] = [
       { label: 'Liquidar Ruta', path: '/almacen/descargas' },
     ],
   },
-  { label: 'Clientes', icon: Users, path: '/clientes' },
-  { label: 'Productos', icon: Package, path: '/productos' },
-  { label: 'Listas de Precios', icon: DollarSign, path: '/listas-precio' },
+  // ── Logística ──
   {
     label: 'Logística',
     icon: MapPin,
@@ -57,23 +60,11 @@ const navItems: NavItem[] = [
       { label: 'Dashboard', path: '/logistica/dashboard' },
       { label: 'Pedidos pendientes', path: '/logistica/pedidos' },
       { label: 'Entregas', path: '/logistica/entregas' },
-      
       { label: 'Mapa de clientes', path: '/ventas/mapa-clientes' },
       { label: 'Mapa de entregas', path: '/ventas/mapa-ventas' },
     ],
   },
-  {
-    label: 'Catálogo',
-    icon: Package,
-    path: '/productos',
-    children: [
-      { label: 'Categorías', path: '/catalogos/clasificaciones' },
-      { label: 'Marcas', path: '/catalogos/marcas' },
-      { label: 'Proveedores', path: '/proveedores' },
-      { label: 'Unidades', path: '/catalogos/unidades' },
-      { label: 'Zonas', path: '/catalogos/zonas' },
-    ],
-  },
+  // ── Almacén ──
   {
     label: 'Almacén',
     icon: Warehouse,
@@ -82,13 +73,26 @@ const navItems: NavItem[] = [
       { label: 'Inventario', path: '/almacen/inventario' },
       { label: 'Traspasos', path: '/almacen/traspasos' },
       { label: 'Ajustes', path: '/almacen/ajustes' },
-      
       { label: 'Auditorías', path: '/almacen/auditorias' },
       { label: 'Conteos físicos', path: '/almacen/conteos' },
       { label: 'Compras', path: '/almacen/compras' },
       { label: 'Almacenes', path: '/almacen/almacenes' },
     ],
   },
+  // ── Catálogo ──
+  {
+    label: 'Catálogo',
+    icon: ClipboardList,
+    path: '/catalogos',
+    children: [
+      { label: 'Categorías', path: '/catalogos/clasificaciones' },
+      { label: 'Marcas', path: '/catalogos/marcas' },
+      { label: 'Proveedores', path: '/proveedores' },
+      { label: 'Unidades', path: '/catalogos/unidades' },
+      { label: 'Zonas', path: '/catalogos/zonas' },
+    ],
+  },
+  // ── Finanzas ──
   {
     label: 'Finanzas',
     icon: DollarSign,
@@ -104,6 +108,7 @@ const navItems: NavItem[] = [
       { label: 'Comisiones', path: '/finanzas/comisiones' },
     ],
   },
+  // ── Reportes & Facturación ──
   {
     label: 'Reportes',
     icon: BarChart3,
@@ -114,11 +119,6 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'Control',
-    icon: ShieldAlert,
-    path: '/control',
-  },
-  {
     label: 'Facturación',
     icon: FileText,
     path: '/facturacion-cfdi',
@@ -127,6 +127,10 @@ const navItems: NavItem[] = [
       { label: 'Catálogos SAT', path: '/facturacion-cfdi/catalogos' },
     ],
   },
+  // ── Admin & Config ──
+  { label: 'Supervisor', icon: BarChart3, path: '/supervisor' },
+  { label: 'Control', icon: ShieldAlert, path: '/control' },
+  { label: 'Usuarios y permisos', icon: Users, path: '/configuracion/usuarios' },
   { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
   {
     label: 'Configuración',
