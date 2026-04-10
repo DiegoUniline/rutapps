@@ -77,7 +77,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
           value={form.precio_principal}
           type="number"
           teal
-          help={(form as any).usa_listas_precio ? 'Precio base de referencia. Las listas de precio pueden sobreescribirlo por cliente.' : undefined}
+          help
           onChange={v => set('precio_principal', +v)}
           format={v => `${symbol} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
         />
