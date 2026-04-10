@@ -194,6 +194,16 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     add(pad('Saldo', fmt(saldoNuevo ?? 0)));
   }
 
+  // ── Pagos recibidos ──
+  if (pagos && pagos.length > 0) {
+    add(div);
+    add('PAGOS RECIBIDOS');
+    for (const p of pagos) {
+      const label = p.metodo + (p.referencia ? ` (${p.referencia})` : '');
+      add(pad(label.substring(0, COLS - 12), fmt(p.monto)));
+    }
+  }
+
   add('');
   add(centerText('Gracias por su compra'));
   if (empresa.notas_ticket) add(centerText(empresa.notas_ticket));
