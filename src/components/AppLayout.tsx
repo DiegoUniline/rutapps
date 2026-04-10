@@ -190,11 +190,13 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
           collapsed ? "justify-center px-2" : "",
           isActive
             ? "bg-primary/10 text-primary font-semibold"
-            : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
+            : item.accent
+              ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
+              : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
       >
-        <item.icon className="h-4 w-4 shrink-0" />
+        <item.icon className={cn("h-4 w-4 shrink-0", item.accent && !isActive && "text-primary/70")} />
         {!collapsed && <span>{item.label}</span>}
       </Link>
     );
