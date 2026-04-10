@@ -956,34 +956,39 @@ export default function PuntoVentaPage() {
             </div>
           )}
 
-          {/* Category / Brand filter chips */}
-          {((clasificaciones && clasificaciones.length > 0) || (marcas && marcas.length > 0)) && (
-            <div className="px-3 sm:px-4 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
-              {clasificaciones && clasificaciones.length > 0 && (
-                <select
-                  value={filterClasificacion ?? ''}
-                  onChange={e => setFilterClasificacion(e.target.value || null)}
-                  className="shrink-0 text-[11px] bg-accent/50 border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
-                >
-                  <option value="">Todas las categorías</option>
-                  {clasificaciones.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-              )}
-              {marcas && marcas.length > 0 && (
-                <select
-                  value={filterMarca ?? ''}
-                  onChange={e => setFilterMarca(e.target.value || null)}
-                  className="shrink-0 text-[11px] bg-accent/50 border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
-                >
-                  <option value="">Todas las marcas</option>
-                  {marcas.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-                </select>
-              )}
-              {(filterClasificacion || filterMarca) && (
-                <button onClick={() => { setFilterClasificacion(null); setFilterMarca(null); }} className="shrink-0 text-[10px] text-primary font-medium px-2 py-1.5 hover:underline">
-                  Limpiar
-                </button>
-              )}
+          {/* Category cards */}
+          {clasificaciones && clasificaciones.length > 0 && (
+            <div className="px-3 sm:px-4 pb-2 flex gap-1.5 overflow-x-auto scrollbar-none">
+              <button
+                onClick={() => { setFilterClasificacion(null); setFilterMarca(null); }}
+                className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all border ${
+                  !filterClasificacion
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'bg-card text-foreground border-border hover:border-primary/30 hover:bg-accent/50'
+                }`}
+              >
+                Todos
+              </button>
+              {clasificaciones.map(c => {
+                const isActive = filterClasificacion === c.id;
+                const count = productos?.filter(p => p.clasificacion_id === c.id && (p.vender_sin_stock || (p.cantidad ?? 0) > 0)).length ?? 0;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setFilterClasificacion(isActive ? null : c.id)}
+                    className={`shrink-0 rounded-lg px-3 py-2 text-[11px] font-semibold transition-all border ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                        : 'bg-card text-foreground border-border hover:border-primary/30 hover:bg-accent/50'
+                    }`}
+                  >
+                    {c.nombre}
+                    <span className={`ml-1.5 text-[9px] font-medium ${isActive ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
 
