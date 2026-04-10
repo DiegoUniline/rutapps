@@ -185,7 +185,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if ((cambio ?? 0) > 0) add(pad('Cambio', fmt(cambio!)));
   }
 
-  if ((saldoAnterior != null && saldoAnterior > 0) || (saldoNuevo != null && (saldoNuevo ?? 0) > 0)) {
+  {
     add(div);
     add('EDO. CUENTA');
     if (saldoAnterior != null && saldoAnterior > 0) add(pad('Saldo ant', fmt(saldoAnterior)));

@@ -290,7 +290,7 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   }
 
   // ── SALDO ──
-  if ((data.saldoAnterior != null && data.saldoAnterior > 0) || (data.saldoNuevo != null && (data.saldoNuevo ?? 0) > 0)) {
+  {
     ln(divider(W));
     add(BOLD_ON);
     ln('EDO. CUENTA');
