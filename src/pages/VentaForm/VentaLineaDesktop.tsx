@@ -29,6 +29,9 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
   const iva = r2((base + ieps) * ((Number(l.iva_pct) || 0) / 100));
   const lineTotal = r2(base + ieps + iva);
   const prod = productosList?.find((p: any) => p.id === l.producto_id);
+  // Fallback to embedded product data from the DB join (venta_lineas → productos)
+  const embeddedProd = (l as any).productos;
+  const prodDisplay = prod || embeddedProd;
   const isEmpty = !l.producto_id;
   const lineData = l as any;
   const displayPrice = Number(lineData.display_unit_price ?? price) || 0;
@@ -67,10 +70,10 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
     <tr className={cn("border-b border-table-border transition-colors group", isEmpty ? "bg-transparent" : "hover:bg-table-hover")}>
       <td className="py-1.5 px-2 text-muted-foreground text-xs">{isEmpty ? '' : idx + 1}</td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px]">{prod ? `${prod.codigo} · ${prod.nombre}` : '—'}{prod?._stock != null && <span className="ml-1.5 text-[10px] text-muted-foreground font-medium">(Stock: {prod._stock})</span>}</span> : (
+        {readOnly ? <span className="text-[12px]">{prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}`.replace(/^ · /, '') : (l.descripcion || '—')}{prod?._stock != null && <span className="ml-1.5 text-[10px] text-muted-foreground font-medium">(Stock: {prod._stock})</span>}</span> : (
           <ProductSearchInput
             products={(productosList ?? []).filter((p: any) => !lineas.filter((_, j) => j !== idx).map(ll => ll.producto_id).filter(Boolean).includes(p.id)).map((p: any) => ({ id: p.id, codigo: p.codigo, nombre: p.nombre, precio_principal: p.precio_principal, _stock: p._stock }))}
-            value={l.producto_id ?? ''} displayText={prod ? `${prod.codigo} · ${prod.nombre}${prod._stock != null ? ` (Stock: ${prod._stock})` : ''}` : undefined}
+            value={l.producto_id ?? ''} displayText={prodDisplay ? `${prodDisplay.codigo ?? ''} · ${prodDisplay.nombre}${prod?._stock != null ? ` (Stock: ${prod._stock})` : ''}`.replace(/^ · /, '') : (l.descripcion || undefined)}
             onSelect={pid => onProductSelect(idx, pid)} onNavigate={dir => navigateCell(idx, 0, dir)} readOnly={readOnly}
             registerRef={el => setCellRef(idx, 0, el)}
           />
@@ -83,7 +86,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
         )}
       </td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">{l.cantidad}{prod?.es_granel && <span className="text-muted-foreground ml-0.5 text-[10px]">{prod.unidad_granel}</span>}<span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span></span> : (
+        {readOnly ? <span className="text-[12px] block text-right">{l.cantidad}{(prod ?? prodDisplay)?.es_granel && <span className="text-muted-foreground ml-0.5 text-[10px]">{(prod ?? prodDisplay).unidad_granel}</span>}<span className="md:hidden text-muted-foreground ml-1">{unidadLabel}</span></span> : (
           <div className="flex items-center gap-1 justify-end">
             <input ref={el => setCellRef(idx, 1, el)} type="number" inputMode={prod?.es_granel ? "decimal" : "numeric"} className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.cantidad ?? ''} onChange={e => onUpdateLine(idx, 'cantidad', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 1)} onFocus={e => e.target.select()} min="0" step={prod?.es_granel ? "0.001" : "1"} />
             {prod?.es_granel && <span className="text-[10px] text-muted-foreground shrink-0">{prod.unidad_granel}</span>}
