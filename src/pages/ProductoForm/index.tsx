@@ -34,8 +34,8 @@ export default function ProductoFormPage() {
           }] : []),
           { key: 'fiscal', label: 'Fiscal', content: <ProductoFiscalTab form={h.form} set={h.set} unidadesSat={h.unidadesSat} /> },
           { key: 'comisiones', label: 'Comisiones', content: <ProductoComisionesTab form={h.form} set={h.set} tarifaLineas={h.tarifaLineas} /> },
-          { key: 'almacenes', label: 'Almacenes', content: <AlmacenesTabContent form={h.form} set={h.set} almacenes={h.almacenes} /> },
           { key: 'inventario', label: 'Inventario', content: <InventarioTabContent form={h.form} set={h.set} /> },
+          { key: 'proveedores', label: 'Proveedores', content: <ProveedoresTabWrapper productoId={h.id} isNew={h.isNew} proveedores={h.proveedores ?? []} prodProveedores={h.prodProveedores ?? []} saveProvMut={h.saveProvMut} deleteProvMut={h.deleteProvMut} createProveedor={h.createProveedor} /> },
           { key: 'proveedores', label: 'Proveedores', content: <ProveedoresTabWrapper productoId={h.id} isNew={h.isNew} proveedores={h.proveedores ?? []} prodProveedores={h.prodProveedores ?? []} saveProvMut={h.saveProvMut} deleteProvMut={h.deleteProvMut} createProveedor={h.createProveedor} /> },
           { key: 'kardex', label: 'Kardex', content: <KardexTabWrapper productoId={h.id} isNew={h.isNew} /> },
         ]} />
