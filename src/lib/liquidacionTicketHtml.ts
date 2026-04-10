@@ -206,6 +206,6 @@ export function buildLiquidacionTicketHTML(data: LiquidacionTicketData): string 
       </div>
     </div>
 
-    <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">Elaborado por Uniline — Innovación en la nube</div>
+    <div style="border-top:1px dashed #ccc;margin-top:6px;padding-top:4px;text-align:center;font-size:7px;color:#999">rutapp.mx</div>
   </div>`;
 }
