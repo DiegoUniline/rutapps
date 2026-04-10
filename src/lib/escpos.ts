@@ -290,12 +290,12 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
   }
 
   // ── SALDO ──
-  if ((data.saldoAnterior != null && data.saldoAnterior > 0) || (data.saldoNuevo != null && (data.saldoNuevo ?? 0) > 0)) {
+  {
     ln(divider(W));
     add(BOLD_ON);
     ln('EDO. CUENTA');
     add(BOLD_OFF);
-    if (data.saldoAnterior != null && data.saldoAnterior > 0) ln(row('Saldo ant', fmt(data.saldoAnterior), W));
+    ln(row('Saldo ant', fmt(data.saldoAnterior ?? 0), W));
     if (data.pagoAplicado != null && data.pagoAplicado > 0) ln(row('Pago', `-${fmt(data.pagoAplicado)}`, W));
     if (data.condicionPago === 'credito') ln(row('+Venta', fmt(data.total), W));
     ln(divider(W));

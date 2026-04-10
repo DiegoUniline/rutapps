@@ -337,17 +337,15 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
             </div>
 
             {/* Balance / Saldo */}
-            {(saldoAnterior != null && saldoAnterior > 0) || (saldoNuevo != null && saldoNuevo > 0) ? (
+            {true ? (
               <>
                 <div className="tk-dash mx-5 border-t border-dashed border-border" />
                 <div className="px-5 py-2 space-y-0.5">
                   <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Estado de cuenta</p>
-                  {saldoAnterior != null && saldoAnterior > 0 && (
-                    <div className="flex justify-between text-[10px]">
-                      <span className="text-muted-foreground">Saldo anterior</span>
-                      <span className="text-foreground tabular-nums">{fmt(saldoAnterior)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-muted-foreground">Saldo anterior</span>
+                    <span className="text-foreground tabular-nums">{fmt(saldoAnterior ?? 0)}</span>
+                  </div>
                   {pagoAplicado != null && pagoAplicado > 0 && (
                     <div className="flex justify-between text-[10px]">
                       <span className="text-muted-foreground">Pago aplicado</span>
