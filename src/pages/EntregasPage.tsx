@@ -199,7 +199,7 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
         )}
 
         <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#bbb' }}>
-          Elaborado por Uniline — Innovación en la nube
+          rutapp.mx
         </div>
       </div>
     </div>

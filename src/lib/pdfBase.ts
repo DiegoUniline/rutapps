@@ -243,7 +243,7 @@ export const TABLE_ALT_STYLE = {
 /**
  * Footer on all pages — clean line + pagination
  */
-export function drawFooter(doc: jsPDF, footerText = 'Elaborado por Uniline — uniline.app') {
+export function drawFooter(doc: jsPDF, footerText = 'rutapp.mx') {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const totalPages = doc.getNumberOfPages();

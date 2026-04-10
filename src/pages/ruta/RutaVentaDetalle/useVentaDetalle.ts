@@ -389,7 +389,7 @@ export function useVentaDetalle() {
       td.iva > 0 ? `IVA: ${fmtM(td.iva)}` : '',
       (td.ieps ?? 0) > 0 ? `IEPS: ${fmtM(td.ieps!)}` : '',
       `TOTAL: ${fmtM(td.total)}`,
-      '', 'Elaborado por Uniline — Innovación en la nube',
+      '', 'rutapp.mx',
     ].filter(Boolean).join('\n');
     if (navigator.share) {
       try { await navigator.share({ title: `Ticket ${td.folio}`, text }); } catch { /* cancelled */ }
