@@ -98,10 +98,11 @@ export default function VentaFormPage() {
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
     const almacenName = almacenesList?.find((a: any) => a.id === form.almacen_id)?.nombre;
     const promos = (promoResults ?? []).filter((r: any) => r.descuento > 0).map((r: any) => ({ descripcion: r.descripcion, descuento: r.descuento }));
+    const vendedorNombre = (form as any).vendedores?.nombre;
     const blob = await generarVentaPdf({
       form, empresa, profile, userEmail: user?.email, clienteData, almacenName,
       lineas, productosList: productosList ?? [], entregasExistentes: entregasExistentes ?? [], pagosData: pagosData ?? [],
-      promociones: promos,
+      promociones: promos, vendedorNombre,
     });
     setPdfBlob(blob);
     setShowPdfModal(true);
