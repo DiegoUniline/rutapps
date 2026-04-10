@@ -36,7 +36,7 @@ export default function RutaNuevaVenta() {
       saldoAnterior: h.saldoPendienteTotal, pagoAplicado: h.totalAplicarCuentas,
       saldoNuevo: h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0),
       promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
-      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto) })),
+      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: h.ticketInfo.fecha })),
     };
     await printTicket(td, { ticketAncho });
   }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, ticketAncho]);
@@ -55,7 +55,7 @@ export default function RutaNuevaVenta() {
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
         promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
-        pagos={h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto) }))}
+        pagos={h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto), fecha: h.ticketInfo.fecha }))}
         onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />

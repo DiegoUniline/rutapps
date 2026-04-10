@@ -45,6 +45,7 @@ export interface TicketPromo {
 export interface TicketPago {
   metodo: string;
   monto: number;
+  fecha?: string | null;
   referencia?: string | null;
 }
 
@@ -199,7 +200,8 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     add(div);
     add('PAGOS RECIBIDOS');
     for (const p of pagos) {
-      const label = p.metodo + (p.referencia ? ` (${p.referencia})` : '');
+      const fechaPart = p.fecha ? `${p.fecha} ` : '';
+      const label = fechaPart + p.metodo + (p.referencia ? ` (${p.referencia})` : '');
       add(pad(label.substring(0, COLS - 12), fmt(p.monto)));
     }
   }

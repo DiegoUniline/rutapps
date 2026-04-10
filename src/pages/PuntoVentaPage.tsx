@@ -792,7 +792,7 @@ export default function PuntoVentaPage() {
         saldoPendiente: condicion === 'credito' ? totals.total : 0,
         saldoAnterior: saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined,
         saldoNuevoCalc: condicion === 'credito' ? saldoAnteriorCliente + totals.total : (saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined),
-        pagos: (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo', monto: totals.total }]).map(s => ({ metodo: s.metodo, monto: (s as any).monto ?? totals.total })),
+        pagos: (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo', monto: totals.total }]).map(s => ({ metodo: s.metodo, monto: (s as any).monto ?? totals.total, fecha: fmtDate(todayInTimezone()) })),
       });
 
       toast.success('¡Venta registrada!');

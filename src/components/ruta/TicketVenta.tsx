@@ -1,6 +1,7 @@
 import { Check, Printer, Share2, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
+import { fmtDate } from '@/lib/utils';
 
 interface DevolucionTicketItem {
   nombre: string;
@@ -31,7 +32,7 @@ interface TicketVentaProps {
   pagoAplicado?: number;
   saldoNuevo?: number;
   promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
-  pagos?: { metodo: string; monto: number; referencia?: string | null }[];
+  pagos?: { metodo: string; monto: number; fecha?: string | null; referencia?: string | null }[];
   onPrintTicket?: () => void;
   onClose: () => void;
 }
@@ -375,7 +376,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Pagos recibidos</p>
                   {pagos.map((p, i) => (
                     <div key={i} className="flex justify-between text-[10px]">
-                      <span className="text-muted-foreground capitalize">{p.metodo}{p.referencia ? ` (${p.referencia})` : ''}</span>
+                      <span className="text-muted-foreground capitalize">{p.fecha ? `${fmtDate(p.fecha)} ` : ''}{p.metodo}{p.referencia ? ` (${p.referencia})` : ''}</span>
                       <span className="text-foreground tabular-nums font-medium">{fmt(p.monto)}</span>
                     </div>
                   ))}
