@@ -138,27 +138,35 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
               <div>
                 <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Pagos recibidos</h4>
                 {pagos.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {pagos.map((p: any) => {
-                      const cobro = p.cobros as any;
-                      return (
-                        <div key={p.id} className="bg-background border border-border rounded px-3 py-2 text-[12px]">
-                          <div className="flex justify-between">
-                            <span className="font-medium capitalize">{cobro?.metodo_pago ?? '—'}</span>
-                            <span className="font-bold tabular-nums">{fmt(p.monto_aplicado)}</span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground text-[11px]">
-                            <span>{cobro?.referencia || '—'}</span>
-                            <span>{fmtDate(cobro?.fecha)}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <div className="flex justify-between text-[12px] font-semibold pt-1 border-t border-border">
-                      <span>Total pagado</span>
-                      <span className="text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0))}</span>
-                    </div>
-                  </div>
+                  <table className="w-full text-[12px]">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground">
+                        <th className="text-left py-1 font-medium">Método</th>
+                        <th className="text-left py-1 font-medium">Referencia</th>
+                        <th className="text-left py-1 font-medium">Fecha</th>
+                        <th className="text-right py-1 font-medium">Monto</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pagos.map((p: any) => {
+                        const cobro = p.cobros as any;
+                        return (
+                          <tr key={p.id} className="border-b border-border/40">
+                            <td className="py-1.5 capitalize">{cobro?.metodo_pago ?? '—'}</td>
+                            <td className="py-1.5 text-muted-foreground">{cobro?.referencia || '—'}</td>
+                            <td className="py-1.5 text-muted-foreground">{fmtDate(cobro?.fecha)}</td>
+                            <td className="py-1.5 text-right font-medium tabular-nums">{fmt(p.monto_aplicado)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-border font-semibold">
+                        <td colSpan={3} className="py-1.5">Total pagado</td>
+                        <td className="py-1.5 text-right text-success tabular-nums">{fmt(pagos.reduce((s: number, p: any) => s + (p.monto_aplicado ?? 0), 0))}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 ) : (
                   <p className="text-xs text-muted-foreground py-2">Sin pagos registrados</p>
                 )}
