@@ -83,7 +83,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
           ) : (
             <div className="space-y-4">
               {/* Líneas */}
-              <div className="lg:col-span-2">
+              <div>
                 <h4 className="text-[11px] font-semibold text-muted-foreground uppercase mb-1">Productos</h4>
                 <table className="w-full text-[12px]">
                   <thead>
