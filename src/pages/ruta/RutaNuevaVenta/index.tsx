@@ -27,7 +27,7 @@ export default function RutaNuevaVenta() {
       return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, total: lineSub + lineIva + lineIeps, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, esCambio: item.es_cambio, producto_id: item.producto_id };
     });
     const td: TicketData = {
-      empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, moneda: (h.empresa as any)?.moneda },
+      empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, moneda: (h.empresa as any)?.moneda, notas_ticket: (h.empresa as any)?.notas_ticket, ticket_campos: (h.empresa as any)?.ticket_campos },
       folio: h.ticketInfo.folio, fecha: h.ticketInfo.fecha, clienteNombre: h.clienteNombre,
       lineas, subtotal: h.totals.subtotal, iva: h.totals.iva, ieps: h.totals.ieps, total: h.totals.total,
       condicionPago: h.condicionPago, metodoPago: h.pagos.map(p => p.metodo_pago).join(', '),
