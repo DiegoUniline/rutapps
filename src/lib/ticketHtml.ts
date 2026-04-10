@@ -42,11 +42,18 @@ export interface TicketPromo {
   producto_id?: string;
 }
 
+export interface TicketPago {
+  metodo: string;
+  monto: number;
+  referencia?: string | null;
+}
+
 export interface TicketData {
   empresa: TicketEmpresa;
   folio: string;
   fecha: string;
   clienteNombre: string;
+  vendedorNombre?: string;
   lineas: TicketLinea[];
   subtotal: number;
   iva: number;
@@ -60,6 +67,7 @@ export interface TicketData {
   pagoAplicado?: number;
   saldoNuevo?: number;
   promociones?: TicketPromo[];
+  pagos?: TicketPago[];
 }
 
 const COLS = 32;
