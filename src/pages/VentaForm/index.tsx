@@ -110,6 +110,7 @@ export default function VentaFormPage() {
 
   const handlePrintTicket = () => {
     const clienteData = clientesList?.find(c => c.id === form.cliente_id);
+    const vendedorNombreTicket = (form as any).vendedores?.nombre ?? profile?.nombre ?? '';
     const td = buildTicketDataFromVenta({
       empresa,
       venta: {
@@ -123,6 +124,7 @@ export default function VentaFormPage() {
         condicion_pago: form.condicion_pago,
       },
       clienteNombre: clienteData?.nombre ?? 'Sin cliente',
+      vendedorNombre: vendedorNombreTicket,
       lineas: lineas.filter(l => l.producto_id).map(l => ({
         nombre: productosList?.find(p => p.id === l.producto_id)?.nombre ?? l.descripcion ?? '—',
         cantidad: Number(l.cantidad),

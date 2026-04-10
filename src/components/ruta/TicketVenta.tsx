@@ -15,6 +15,7 @@ interface TicketVentaProps {
   folio: string;
   fecha: string;
   clienteNombre: string;
+  vendedorNombre?: string;
   lineas: { nombre: string; cantidad: number; precio: number; subtotal?: number; iva_pct?: number; iva_monto?: number; ieps_pct?: number; ieps_monto?: number; descuento_pct?: number; total: number; esCambio?: boolean; producto_id?: string }[];
   subtotal: number;
   iva: number;
@@ -30,6 +31,7 @@ interface TicketVentaProps {
   pagoAplicado?: number;
   saldoNuevo?: number;
   promociones?: { descripcion: string; descuento: number; producto_id?: string }[];
+  pagos?: { metodo: string; monto: number; referencia?: string | null }[];
   onPrintTicket?: () => void;
   onClose: () => void;
 }
@@ -47,10 +49,10 @@ const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits:
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
-    empresa, folio, fecha, clienteNombre, lineas,
+    empresa, folio, fecha, clienteNombre, vendedorNombre, lineas,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
-    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], onPrintTicket, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], onPrintTicket, onClose,
   } = props;
 
   const { symbol: cs } = useCurrency();
@@ -203,6 +205,11 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
               <div>
                 <span className="font-bold text-foreground">Cliente </span><span className="text-muted-foreground">{clienteNombre}</span>
               </div>
+              {vendedorNombre && (
+                <div>
+                  <span className="font-bold text-foreground">Vendedor </span><span className="text-muted-foreground">{vendedorNombre}</span>
+                </div>
+              )}
               <div className="flex gap-4">
                 <span><span className="font-bold text-foreground">Pago </span><span className="text-muted-foreground">{pagoLabel}</span></span>
                 {metodoPago && (
@@ -359,6 +366,22 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                 </div>
               </>
             ) : null}
+
+            {/* Pagos recibidos */}
+            {pagos.length > 0 && (
+              <>
+                <div className="tk-dash mx-5 border-t border-dashed border-border" />
+                <div className="px-5 py-2 space-y-0.5">
+                  <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Pagos recibidos</p>
+                  {pagos.map((p, i) => (
+                    <div key={i} className="flex justify-between text-[10px]">
+                      <span className="text-muted-foreground capitalize">{p.metodo}{p.referencia ? ` (${p.referencia})` : ''}</span>
+                      <span className="text-foreground tabular-nums font-medium">{fmt(p.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Footer */}
             <div className="tk-footer px-5 py-2.5 border-t border-dashed border-border text-center">

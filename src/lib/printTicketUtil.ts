@@ -100,6 +100,7 @@ export function buildTicketDataFromVenta(params: {
     metodo_pago?: string;
   };
   clienteNombre: string;
+  vendedorNombre?: string;
   lineas: Array<{
     nombre: string;
     cantidad: number;
@@ -116,6 +117,7 @@ export function buildTicketDataFromVenta(params: {
   saldoAnterior?: number;
   pagoAplicado?: number;
   saldoNuevo?: number;
+  pagos?: { metodo: string; monto: number; referencia?: string | null }[];
 }): TicketData {
   const { empresa, venta, clienteNombre, lineas } = params;
   return {
@@ -138,6 +140,7 @@ export function buildTicketDataFromVenta(params: {
     folio: venta.folio ?? 'Sin folio',
     fecha: venta.fecha,
     clienteNombre,
+    vendedorNombre: params.vendedorNombre,
     lineas: lineas.map(l => ({
       nombre: l.nombre,
       cantidad: l.cantidad,
@@ -160,5 +163,6 @@ export function buildTicketDataFromVenta(params: {
     pagoAplicado: params.pagoAplicado,
     saldoNuevo: params.saldoNuevo ?? ((venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined),
     promociones: params.promociones,
+    pagos: params.pagos,
   };
 }

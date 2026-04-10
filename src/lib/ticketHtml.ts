@@ -42,11 +42,18 @@ export interface TicketPromo {
   producto_id?: string;
 }
 
+export interface TicketPago {
+  metodo: string;
+  monto: number;
+  referencia?: string | null;
+}
+
 export interface TicketData {
   empresa: TicketEmpresa;
   folio: string;
   fecha: string;
   clienteNombre: string;
+  vendedorNombre?: string;
   lineas: TicketLinea[];
   subtotal: number;
   iva: number;
@@ -60,6 +67,7 @@ export interface TicketData {
   pagoAplicado?: number;
   saldoNuevo?: number;
   promociones?: TicketPromo[];
+  pagos?: TicketPago[];
 }
 
 const COLS = 32;
@@ -94,7 +102,7 @@ function wrapText(s: string, cols = COLS): string[] {
 const div = '-'.repeat(COLS);
 
 export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string; forPrint?: boolean; showTax?: boolean }): string {
-  const { empresa, folio, fecha, clienteNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones } = data;
+  const { empresa, folio, fecha, clienteNombre, vendedorNombre, lineas, subtotal, iva, ieps = 0, total, condicionPago, metodoPago, montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones, pagos } = data;
   const showTax = opts?.showTax ?? (empresa.ticket_campos?.impuestos !== false);
 
   const sym = getCurrencyConfig(empresa.moneda).symbol;
@@ -129,6 +137,7 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
   add(`Folio: ${folio}`);
   add(`Fecha: ${fecha}`);
   add(`Cliente: ${clienteNombre}`.substring(0, COLS));
+  if (vendedorNombre) add(`Vendedor: ${vendedorNombre}`.substring(0, COLS));
   const pagoLabel = condicionPago === 'credito' ? 'Credito' : condicionPago === 'contado' ? 'Contado' : 'P/definir';
   add(`Pago: ${pagoLabel}${metodoPago ? ` (${metodoPago})` : ''}`);
   add(div);
@@ -183,6 +192,16 @@ export function buildTicketHTML(data: TicketData, opts?: { ticketAncho?: string;
     if (condicionPago === 'credito') add(pad('+Venta', fmt(total)));
     add(div);
     add(pad('Saldo', fmt(saldoNuevo ?? 0)));
+  }
+
+  // ── Pagos recibidos ──
+  if (pagos && pagos.length > 0) {
+    add(div);
+    add('PAGOS RECIBIDOS');
+    for (const p of pagos) {
+      const label = p.metodo + (p.referencia ? ` (${p.referencia})` : '');
+      add(pad(label.substring(0, COLS - 12), fmt(p.monto)));
+    }
   }
 
   add('');

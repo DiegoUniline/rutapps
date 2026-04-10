@@ -598,10 +598,12 @@ export default function PuntoVentaPage() {
         empresa,
         venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, saldo_pendiente: lastVentaData.saldoPendiente, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
         clienteNombre: lastVentaData.clienteNombre,
+        vendedorNombre: profile?.nombre ?? '',
         lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
         montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
         saldoAnterior: lastVentaData.saldoAnterior,
         saldoNuevo: lastVentaData.saldoNuevoCalc,
+        pagos: lastVentaData.pagos,
       });
       printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
     }, 400);
@@ -790,6 +792,7 @@ export default function PuntoVentaPage() {
         saldoPendiente: condicion === 'credito' ? totals.total : 0,
         saldoAnterior: saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined,
         saldoNuevoCalc: condicion === 'credito' ? saldoAnteriorCliente + totals.total : (saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined),
+        pagos: (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo', monto: totals.total }]).map(s => ({ metodo: s.metodo, monto: (s as any).monto ?? totals.total })),
       });
 
       toast.success('¡Venta registrada!');
@@ -1510,6 +1513,7 @@ export default function PuntoVentaPage() {
                 folio={lastVentaData.folio}
                 fecha={lastVentaData.fecha}
                 clienteNombre={lastVentaData.clienteNombre}
+                vendedorNombre={profile?.nombre ?? ''}
                 lineas={lastVentaData.lineas}
                 subtotal={lastVentaData.subtotal}
                 iva={lastVentaData.iva}
@@ -1522,6 +1526,7 @@ export default function PuntoVentaPage() {
                 saldoAnterior={lastVentaData.saldoAnterior}
                 saldoNuevo={lastVentaData.saldoNuevoCalc}
                 promociones={lastVentaData.promoDetails ?? []}
+                pagos={lastVentaData.pagos ?? []}
                 onPrintTicket={() => {
                   const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
                   const td = buildTicketDataFromVenta({
@@ -1537,6 +1542,7 @@ export default function PuntoVentaPage() {
                       metodo_pago: lastVentaData.metodoPago,
                     },
                     clienteNombre: lastVentaData.clienteNombre,
+                    vendedorNombre: profile?.nombre ?? '',
                     lineas: lastVentaData.lineas.map((l: any) => ({
                       nombre: l.nombre,
                       cantidad: l.cantidad,
@@ -1551,6 +1557,7 @@ export default function PuntoVentaPage() {
                     promociones: promoTicket,
                     saldoAnterior: lastVentaData.saldoAnterior,
                     saldoNuevo: lastVentaData.saldoNuevoCalc,
+                    pagos: lastVentaData.pagos,
                   });
                   const ticketAncho = (empresa as any)?.ticket_ancho ?? '58';
                   printTicket(td, { ticketAncho });
@@ -1570,10 +1577,12 @@ export default function PuntoVentaPage() {
                     empresa,
                     venta: { folio: lastVentaData.folio, fecha: lastVentaData.fecha, subtotal: lastVentaData.subtotal, iva_total: lastVentaData.iva, ieps_total: lastVentaData.ieps, total: lastVentaData.total, condicion_pago: lastVentaData.condicionPago, metodo_pago: lastVentaData.metodoPago },
                     clienteNombre: lastVentaData.clienteNombre,
+                    vendedorNombre: profile?.nombre ?? '',
                     lineas: lastVentaData.lineas.map((l: any) => ({ nombre: l.nombre, cantidad: l.cantidad, precio_unitario: l.precio, total: l.total, iva_monto: l.iva_monto, ieps_monto: l.ieps_monto, producto_id: l.producto_id })),
                     montoRecibido: lastVentaData.montoRecibido, cambio: lastVentaData.cambio, promociones: promoTicket,
                     saldoAnterior: lastVentaData.saldoAnterior,
                     saldoNuevo: lastVentaData.saldoNuevoCalc,
+                    pagos: lastVentaData.pagos,
                   });
                   printTicket(td, { ticketAncho: (empresa as any)?.ticket_ancho ?? '58' });
                 }}
