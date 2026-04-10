@@ -49,10 +49,10 @@ const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits:
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
-    empresa, folio, fecha, clienteNombre, lineas,
+    empresa, folio, fecha, clienteNombre, vendedorNombre, lineas,
     subtotal, iva, ieps = 0, descuentoDevolucion = 0, devoluciones = [],
     total, condicionPago, metodoPago,
-    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], onPrintTicket, onClose,
+    montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], onPrintTicket, onClose,
   } = props;
 
   const { symbol: cs } = useCurrency();
