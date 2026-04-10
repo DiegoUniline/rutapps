@@ -29,12 +29,14 @@ export default function RutaNuevaVenta() {
     const td: TicketData = {
       empresa: { nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, moneda: (h.empresa as any)?.moneda, notas_ticket: (h.empresa as any)?.notas_ticket, ticket_campos: (h.empresa as any)?.ticket_campos },
       folio: h.ticketInfo.folio, fecha: h.ticketInfo.fecha, clienteNombre: h.clienteNombre,
+      vendedorNombre: h.profile?.nombre ?? '',
       lineas, subtotal: h.totals.subtotal, iva: h.totals.iva, ieps: h.totals.ieps, total: h.totals.total,
       condicionPago: h.condicionPago, metodoPago: h.pagos.map(p => p.metodo_pago).join(', '),
       montoRecibido: h.montoRecibidoNum, cambio: h.cambio,
       saldoAnterior: h.saldoPendienteTotal, pagoAplicado: h.totalAplicarCuentas,
       saldoNuevo: h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0),
       promociones: h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id })),
+      pagos: h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto) })),
     };
     await printTicket(td, { ticketAncho });
   }, [h.ticketInfo, h.cart, h.empresa, h.clienteNombre, h.totals, h.condicionPago, h.pagos, h.montoRecibidoNum, h.cambio, h.saldoPendienteTotal, h.totalAplicarCuentas, h.promoResults, ticketAncho]);
@@ -44,6 +46,7 @@ export default function RutaNuevaVenta() {
       <TicketVenta
         empresa={{ nombre: h.empresa?.nombre ?? '', telefono: h.empresa?.telefono, direccion: h.empresa?.direccion, logo_url: h.empresa?.logo_url, rfc: h.empresa?.rfc, moneda: (h.empresa as any)?.moneda, razon_social: (h.empresa as any)?.razon_social, colonia: (h.empresa as any)?.colonia, ciudad: (h.empresa as any)?.ciudad, estado: (h.empresa as any)?.estado, cp: (h.empresa as any)?.cp, email: (h.empresa as any)?.email, notas_ticket: (h.empresa as any)?.notas_ticket }}
         folio={h.ticketInfo.folio} fecha={h.ticketInfo.fecha} clienteNombre={h.clienteNombre}
+        vendedorNombre={h.profile?.nombre ?? ''}
         lineas={h.cart.map(item => { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = item.tiene_ieps ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = item.tiene_iva ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; return { nombre: item.nombre, cantidad: item.cantidad, precio: item.precio_unitario, subtotal: lineSub, iva_monto: lineIva, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, esCambio: item.es_cambio, producto_id: item.producto_id }; })}
         subtotal={h.totals.subtotal} iva={h.totals.iva} ieps={h.totals.ieps} total={h.totals.total}
         descuentoDevolucion={h.totals.descuentoDevolucion ?? 0}
@@ -52,6 +55,7 @@ export default function RutaNuevaVenta() {
         saldoAnterior={h.saldoPendienteTotal} pagoAplicado={h.totalAplicarCuentas}
         saldoNuevo={h.saldoPendienteTotal - h.totalAplicarCuentas + (h.condicionPago === 'credito' ? h.totals.total : 0)}
         promociones={h.promoResults.filter(r => r.descuento > 0).map(r => ({ descripcion: r.descripcion, descuento: r.descuento, producto_id: r.producto_id }))}
+        pagos={h.pagos.map(p => ({ metodo: p.metodo_pago, monto: Number(p.monto) }))}
         onPrintTicket={handlePrintTicket}
         onClose={() => h.navigate('/ruta')}
       />
