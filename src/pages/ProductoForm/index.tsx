@@ -5,7 +5,7 @@ import { ProductoHeader } from './ProductoHeader';
 import { ProductoGeneralFields } from './ProductoGeneralFields';
 import { ProductoFiscalTab } from './ProductoFiscalTab';
 import { ProductoComisionesTab } from './ProductoComisionesTab';
-import { AlmacenesTabContent, InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
+import { InventarioTabContent, ProveedoresTabWrapper, KardexTabWrapper } from './ProductoExtraTabs';
 
 export default function ProductoFormPage() {
   const h = useProductoForm();
