@@ -375,7 +375,7 @@ body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;width:80mm;pad
                   <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Pagos recibidos</p>
                   {pagos.map((p, i) => (
                     <div key={i} className="flex justify-between text-[10px]">
-                      <span className="text-muted-foreground capitalize">{p.metodo}{p.referencia ? ` (${p.referencia})` : ''}</span>
+                      <span className="text-muted-foreground capitalize">{p.fecha ? `${fmtDate(p.fecha)} ` : ''}{p.metodo}{p.referencia ? ` (${p.referencia})` : ''}</span>
                       <span className="text-foreground tabular-nums font-medium">{fmt(p.monto)}</span>
                     </div>
                   ))}
