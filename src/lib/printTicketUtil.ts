@@ -163,5 +163,6 @@ export function buildTicketDataFromVenta(params: {
     pagoAplicado: params.pagoAplicado,
     saldoNuevo: params.saldoNuevo ?? ((venta.saldo_pendiente ?? 0) > 0 ? venta.saldo_pendiente : undefined),
     promociones: params.promociones,
+    pagos: params.pagos,
   };
 }
