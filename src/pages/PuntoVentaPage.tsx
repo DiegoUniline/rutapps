@@ -1512,6 +1512,7 @@ export default function PuntoVentaPage() {
                 folio={lastVentaData.folio}
                 fecha={lastVentaData.fecha}
                 clienteNombre={lastVentaData.clienteNombre}
+                vendedorNombre={profile?.nombre ?? ''}
                 lineas={lastVentaData.lineas}
                 subtotal={lastVentaData.subtotal}
                 iva={lastVentaData.iva}
@@ -1524,6 +1525,7 @@ export default function PuntoVentaPage() {
                 saldoAnterior={lastVentaData.saldoAnterior}
                 saldoNuevo={lastVentaData.saldoNuevoCalc}
                 promociones={lastVentaData.promoDetails ?? []}
+                pagos={lastVentaData.pagos ?? []}
                 onPrintTicket={() => {
                   const promoTicket = (lastVentaData.promoDetails ?? []) as { descripcion: string; descuento: number; producto_id?: string }[];
                   const td = buildTicketDataFromVenta({
