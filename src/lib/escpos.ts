@@ -311,7 +311,8 @@ export async function buildEscPosBytes(data: TicketData, opts?: { ticketAncho?: 
     ln('PAGOS RECIBIDOS');
     add(BOLD_OFF);
     for (const p of data.pagos) {
-      const label = clean(p.metodo) + (p.referencia ? ` (${clean(p.referencia)})` : '');
+      const fechaPart = p.fecha ? `${clean(p.fecha)} ` : '';
+      const label = fechaPart + clean(p.metodo) + (p.referencia ? ` (${clean(p.referencia)})` : '');
       ln(row(label.slice(0, W - 14), fmt(p.monto), W));
     }
   }
