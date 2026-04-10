@@ -45,6 +45,7 @@ export interface TicketPromo {
 export interface TicketPago {
   metodo: string;
   monto: number;
+  fecha?: string | null;
   referencia?: string | null;
 }
 

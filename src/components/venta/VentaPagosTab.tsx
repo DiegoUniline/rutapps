@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Banknote, Check } from 'lucide-react';
-import { cn , todayLocal } from '@/lib/utils';
+import { cn , todayLocal, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface Pago {
@@ -58,7 +58,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
             <div key={p.id} className="border border-border rounded-lg p-3 bg-card flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium capitalize">{(p.cobros as Record<string, string> | null)?.metodo_pago ?? '—'}</div>
-                <div className="text-xs text-muted-foreground">{(p.cobros as Record<string, string> | null)?.fecha ?? ''} {(p.cobros as Record<string, string> | null)?.referencia ? `· ${(p.cobros as Record<string, string> | null)?.referencia}` : ''}</div>
+                <div className="text-xs text-muted-foreground">{fmtDate((p.cobros as Record<string, string> | null)?.fecha ?? '')} {(p.cobros as Record<string, string> | null)?.referencia ? `· ${(p.cobros as Record<string, string> | null)?.referencia}` : ''}</div>
               </div>
               <span className="font-semibold text-sm">{fmt(Number(p.monto_aplicado))}</span>
             </div>
@@ -78,7 +78,7 @@ export function VentaPagosTab({ pagos, totalPagado, saldoPendiente, isMobile, on
           <tbody>
             {pagos.map(p => (
               <tr key={p.id} className="border-b border-table-border">
-                <td className="py-2 px-2">{(p.cobros as Record<string, string> | null)?.fecha ?? ''}</td>
+                <td className="py-2 px-2">{fmtDate((p.cobros as Record<string, string> | null)?.fecha ?? '')}</td>
                 <td className="py-2 px-2 capitalize">{(p.cobros as Record<string, string> | null)?.metodo_pago ?? '—'}</td>
                 <td className="py-2 px-2 text-muted-foreground">{(p.cobros as Record<string, string> | null)?.referencia || '—'}</td>
                 <td className="py-2 px-2 text-right font-medium">{fmt(Number(p.monto_aplicado))}</td>
