@@ -12,9 +12,11 @@ import { StepDevoluciones } from './StepDevoluciones';
 import { StepProductos } from './StepProductos';
 import { StepResumen } from './StepResumen';
 import { StepPago } from './StepPago';
+import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 
 export default function RutaNuevaVenta() {
-  const h = useRutaVenta();
+  const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
+  const h = useRutaVenta({ onAlmacenMissing: () => checkAlmacen() });
 
   const ticketAncho = (h.empresa as any)?.ticket_ancho ?? '80';
 
