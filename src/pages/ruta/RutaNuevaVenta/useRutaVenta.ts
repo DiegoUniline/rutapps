@@ -16,7 +16,7 @@ import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
 
-export function useRutaVenta() {
+export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlClienteId = searchParams.get('clienteId');
@@ -364,7 +364,7 @@ export function useRutaVenta() {
   const handleSave = async () => {
     if (!empresa || !user) return;
      if (!profile?.almacen_id) {
-      _openAlmacenDialog?.();
+      opts?.onAlmacenMissing?.();
       return;
     }
     setSaving(true);
