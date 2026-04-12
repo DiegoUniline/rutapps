@@ -668,7 +668,7 @@ export default function PuntoVentaPage() {
               nombre: 'Público general',
               status: 'activo',
               credito: false,
-              vendedor_id: profile.vendedor_id,
+              vendedor_id: vendedorId,
             })
             .select('id')
             .single();
@@ -686,7 +686,7 @@ export default function PuntoVentaPage() {
         empresa_id: empresa.id,
         cliente_id: ventaClienteId,
         tipo: 'venta_directa',
-        vendedor_id: profile.vendedor_id,
+        vendedor_id: vendedorId,
         condicion_pago: condicion,
         entrega_inmediata: true,
         status: 'confirmado',
