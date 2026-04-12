@@ -436,7 +436,7 @@ export function useVentaForm() {
         }
       }
 
-      const payload = { ...form, ...finalTotals, vendedor_id: profile.vendedor_id };
+      const payload = { ...form, ...finalTotals, vendedor_id: vendedorId };
       const saved = await saveVenta.mutateAsync(payload as any);
       const ventaId = saved.id || form.id;
       const linePromises: Promise<any>[] = [];
