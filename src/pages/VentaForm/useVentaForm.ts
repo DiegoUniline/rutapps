@@ -398,9 +398,10 @@ export function useVentaForm() {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
-    if (!profile?.vendedor_id) {
-      toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador para sincronizar tu cuenta.');
-      return;
+    let vendedorId = profile?.vendedor_id;
+    if (!vendedorId) {
+      vendedorId = profile!.id;
+      await supabase.from('profiles').update({ vendedor_id: profile!.id }).eq('id', profile!.id);
     }
     try {
       // Validate stock for ALL venta_directa (immediate or not — you shouldn't sell what you don't have)
