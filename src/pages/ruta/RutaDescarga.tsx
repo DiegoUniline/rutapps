@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 
 const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
@@ -17,6 +18,7 @@ export default function RutaDescarga() {
   const { user, empresa } = useAuth();
   const { symbol: s } = useCurrency();
   const fmt = fmtNum;
+  const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const BILLETES = BILLETES_VALUES.map(v => ({ label: `${s}${v.toLocaleString()}`, value: v }));
   const MONEDAS = MONEDAS_VALUES.map(v => ({ label: `${s}${v}`, value: v }));
   const qc = useQueryClient();
@@ -251,6 +253,7 @@ export default function RutaDescarga() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      {AlmacenDialog}
       {/* Header */}
       <header className="sticky top-0 z-20 bg-card/95 backdrop-blur-md border-b border-border pt-[max(0px,env(safe-area-inset-top))]">
         <div className="flex items-center gap-2 px-3 h-12">
@@ -417,7 +420,7 @@ export default function RutaDescarga() {
       {/* Submit */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <button
-          onClick={() => submitMutation.mutate()}
+          onClick={() => { if (!checkAlmacen()) return; submitMutation.mutate(); }}
           disabled={!hasConteo || submitMutation.isPending}
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >

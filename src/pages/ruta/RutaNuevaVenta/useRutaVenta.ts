@@ -16,7 +16,7 @@ import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
 import { STEPS } from './types';
 
-export function useRutaVenta() {
+export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const urlClienteId = searchParams.get('clienteId');
@@ -363,8 +363,8 @@ export function useRutaVenta() {
 
   const handleSave = async () => {
     if (!empresa || !user) return;
-    if (!profile?.almacen_id) {
-      toast.error('No puedes vender sin un almacén asignado a tu perfil. Contacta al administrador.');
+     if (!profile?.almacen_id) {
+      opts?.onAlmacenMissing?.();
       return;
     }
     setSaving(true);
