@@ -419,7 +419,7 @@ export default function RutaDescarga() {
       {/* Submit */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-3 pb-3 pt-1 bg-gradient-to-t from-background via-background to-transparent safe-area-bottom">
         <button
-          onClick={() => submitMutation.mutate()}
+          onClick={() => { if (!checkAlmacen()) return; submitMutation.mutate(); }}
           disabled={!hasConteo || submitMutation.isPending}
           className="w-full bg-primary text-primary-foreground rounded-xl py-3.5 text-[14px] font-bold disabled:opacity-40 active:scale-[0.98] transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-1.5"
         >
