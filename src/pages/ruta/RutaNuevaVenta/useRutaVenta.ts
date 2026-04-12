@@ -363,8 +363,8 @@ export function useRutaVenta() {
 
   const handleSave = async () => {
     if (!empresa || !user) return;
-    if (!profile?.almacen_id) {
-      toast.error('No puedes vender sin un almacén asignado a tu perfil. Contacta al administrador.');
+     if (!profile?.almacen_id) {
+      _openAlmacenDialog?.();
       return;
     }
     setSaving(true);
