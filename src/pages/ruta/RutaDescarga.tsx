@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Send, CheckCircle, Banknote, Minus, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 
 const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
@@ -17,6 +18,7 @@ export default function RutaDescarga() {
   const { user, empresa } = useAuth();
   const { symbol: s } = useCurrency();
   const fmt = fmtNum;
+  const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const BILLETES = BILLETES_VALUES.map(v => ({ label: `${s}${v.toLocaleString()}`, value: v }));
   const MONEDAS = MONEDAS_VALUES.map(v => ({ label: `${s}${v}`, value: v }));
   const qc = useQueryClient();
