@@ -625,9 +625,11 @@ export default function PuntoVentaPage() {
       }
       const today = todayInTimezone(empresa?.zona_horaria);
 
-      if (!profile?.vendedor_id) {
-        toast.error('Tu perfil no tiene un vendedor asignado. Contacta al administrador.');
-        return;
+      let vendedorId = profile?.vendedor_id;
+      if (!vendedorId) {
+        // Auto-fix: assign profile.id as vendedor_id
+        vendedorId = profile!.id;
+        await supabase.from('profiles').update({ vendedor_id: profile!.id }).eq('id', profile!.id);
       }
 
       // Fetch client's previous balance (sum of saldo_pendiente on all their ventas)
@@ -666,7 +668,7 @@ export default function PuntoVentaPage() {
               nombre: 'Público general',
               status: 'activo',
               credito: false,
-              vendedor_id: profile.vendedor_id,
+              vendedor_id: vendedorId,
             })
             .select('id')
             .single();
@@ -684,7 +686,7 @@ export default function PuntoVentaPage() {
         empresa_id: empresa.id,
         cliente_id: ventaClienteId,
         tipo: 'venta_directa',
-        vendedor_id: profile.vendedor_id,
+        vendedor_id: vendedorId,
         condicion_pago: condicion,
         entrega_inmediata: true,
         status: 'confirmado',
