@@ -92,13 +92,15 @@ async function fetchSubscription(userId: string, empresaId?: string): Promise<Om
 export function useSubscription(): SubscriptionState {
   const { user, empresa } = useAuth();
 
-  const { data, isLoading } = useQuery({
+  const cached = readCache(user?.id);
+
+  const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey: ['subscription-state', user?.id, empresa?.id],
     queryFn: () => fetchSubscription(user!.id, empresa?.id),
     enabled: !!user?.id,
     staleTime: 60_000, // 1 min
     gcTime: 5 * 60_000,
-    placeholderData: () => readCache(user?.id) ?? undefined,
+    placeholderData: () => cached ?? undefined,
   });
 
   if (!user) {
@@ -106,6 +108,13 @@ export function useSubscription(): SubscriptionState {
   }
 
   if (data) {
+    // If we only have cached/placeholder data (fresh query still in-flight),
+    // don't trust isBlocked:false from the cache — a user may have been
+    // suspended since the cache was written.  Report loading:true so the
+    // app shows the loader until fresh data arrives.
+    if (isPlaceholderData && !data.isBlocked) {
+      return { loading: true, ...data };
+    }
     return { loading: false, ...data };
   }
 
