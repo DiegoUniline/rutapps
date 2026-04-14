@@ -166,7 +166,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
     return (producto: any): number => {
       if (!rules.length) return producto.precio_principal ?? 0;
-      return resolveProductPrice(rules, { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo }, clienteListaPrecioId);
+      return resolveProductPrice(rules, { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio }, clienteListaPrecioId);
     };
   }, [tarifaLineasOffline, clienteListaPrecioId]);
 
@@ -174,7 +174,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const resolvePricingFull = useMemo(() => {
     const rules = (tarifaLineasOffline ?? []) as TarifaLineaRule[];
     return (producto: any) => {
-      const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo };
+      const pf: ProductForPricing = { id: producto.id, precio_principal: producto.precio_principal ?? 0, costo: producto.costo ?? 0, clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: producto.iva_pct ?? 16, tiene_ieps: producto.tiene_ieps, ieps_pct: producto.ieps_pct ?? 0, ieps_tipo: producto.ieps_tipo, usa_listas_precio: producto.usa_listas_precio };
       if (!rules.length) {
         const fallback = pf.precio_principal;
         return { unitPrice: fallback, rawUnitPrice: fallback, rawDisplayPrice: fallback, basePrecio: 'sin_impuestos' as string, redondeo: 'ninguno' };

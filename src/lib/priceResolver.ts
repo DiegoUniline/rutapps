@@ -29,6 +29,7 @@ export interface ProductForPricing {
   tiene_ieps?: boolean;
   ieps_pct?: number;
   ieps_tipo?: string;
+  usa_listas_precio?: boolean;
 }
 
 export interface ResolvedProductPricing {
@@ -146,6 +147,20 @@ export function resolveProductPricing(
   producto: ProductForPricing,
   listaPrecioId?: string | null
 ): ResolvedProductPricing {
+  // Short-circuit: if product uses precio_directo, skip all tarifa rules
+  if (producto.usa_listas_precio === false) {
+    const fallback = round2(producto.precio_principal);
+    const fallbackDisplay = round2(fallback * getTaxMultiplier(producto));
+    return {
+      unitPrice: fallback,
+      displayPrice: fallbackDisplay,
+      rawUnitPrice: fallback,
+      rawDisplayPrice: fallback * getTaxMultiplier(producto),
+      basePrecio: 'sin_impuestos',
+      appliedRule: null,
+    };
+  }
+
   const rule = findMatchingRule(rules, producto, listaPrecioId);
 
   if (!rule) {

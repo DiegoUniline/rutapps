@@ -11,6 +11,7 @@ export const productoBasico = {
   ieps_tipo: 'porcentaje' as const,
   clasificacion_id: 'cat-001',
   cantidad: 100,
+  usa_listas_precio: true,
 };
 
 export const productoConIeps = {
@@ -43,4 +44,14 @@ export const productoCuota = {
   tiene_ieps: true,
   ieps_pct: 3.5,
   ieps_tipo: 'cuota' as const,
+};
+
+export const productoDirecto = {
+  ...productoBasico,
+  id: 'prod-005',
+  codigo: 'P005',
+  nombre: 'Producto precio directo',
+  costo: 5,
+  precio_principal: 20,
+  usa_listas_precio: false,
 };
