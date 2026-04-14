@@ -29,6 +29,7 @@ interface Prod {
   iva_pct: number;
   tiene_ieps: boolean;
   ieps_pct: number;
+  usa_listas_precio: boolean;
 }
 
 function applyRedondeo(p: number, r: string): number {
@@ -39,6 +40,9 @@ function applyRedondeo(p: number, r: string): number {
 }
 
 function resolvePrice(rules: Rule[], prod: Prod, listaId: string): number {
+  // Short-circuit: if product uses precio_directo, skip rules
+  if (prod.usa_listas_precio === false) return prod.precio_principal;
+
   const filtered = rules.filter((r) => r.lista_precio_id === listaId);
 
   // Priority: producto > categoria > todos
@@ -127,7 +131,7 @@ Deno.serve(async (req) => {
     // 5. Fetch products
     let query = supabase
       .from("productos")
-      .select("id, nombre, codigo, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, status, tiene_iva, iva_pct, tiene_ieps, ieps_pct")
+      .select("id, nombre, codigo, costo, precio_principal, clasificacion_id, marca_id, imagen_url, unidad_venta_id, status, tiene_iva, iva_pct, tiene_ieps, ieps_pct, usa_listas_precio")
       .eq("empresa_id", lista.empresa_id)
       .eq("status", "activo")
       .eq("se_puede_vender", true);
