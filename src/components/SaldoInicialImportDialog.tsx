@@ -12,10 +12,7 @@ import * as XLSX from 'xlsx';
 
 const SALDO_COLUMNS: ImportColumn[] = [
   { key: 'codigo_cliente', header: 'Codigo Cliente', required: true },
-  { key: 'nombre_cliente', header: 'Nombre Cliente', required: false },
   { key: 'monto', header: 'Monto', required: true },
-  { key: 'fecha', header: 'Fecha', required: false },
-  { key: 'concepto', header: 'Concepto', required: false },
 ];
 
 interface Props {
@@ -150,10 +147,10 @@ export default function SaldoInicialImportDialog({ open, onOpenChange }: Props) 
                   .eq('empresa_id', empresa!.id)
                   .order('codigo');
                 const wb = XLSX.utils.book_new();
-                const headers = SALDO_COLUMNS.map(c => c.header);
-                const rows = (clientes ?? []).map(c => [c.codigo ?? '', c.nombre ?? '', '', '', '']);
+                const headers = ['Codigo Cliente', 'Monto'];
+                const rows = (clientes ?? []).map(c => [c.codigo ?? '', '']);
                 const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-                ws['!cols'] = [{ wch: 18 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 20 }];
+                ws['!cols'] = [{ wch: 18 }, { wch: 14 }];
                 XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
                 XLSX.writeFile(wb, 'plantilla_saldos_iniciales.xlsx');
               }}>
