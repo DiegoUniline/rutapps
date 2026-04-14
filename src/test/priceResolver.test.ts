@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveProductPrice, resolveProductPricing, calculatePrice, toDisplayPrice, type TarifaLineaRule } from '@/lib/priceResolver';
-import { productoBasico, productoConIeps } from './fixtures/productos';
+import { productoBasico, productoConIeps, productoDirecto } from './fixtures/productos';
 import { reglaPrecioFijo, reglaMargenCosto, reglaDescuento } from './fixtures/tarifas';
 
 describe('resolveProductPrice', () => {
@@ -109,5 +109,29 @@ describe('resolveProductPricing – display price is always Precio Final (gross 
     // precio_principal = 10, displayPrice = 10 * 1.16 = 11.6
     expect(pricing.unitPrice).toBe(10);
     expect(pricing.displayPrice).toBe(11.6);
+  });
+});
+
+describe('usa_listas_precio = false – always uses precio_principal', () => {
+  it('ignores precio_fijo rule when usa_listas_precio is false', () => {
+    expect(resolveProductPrice([reglaPrecioFijo], { ...productoBasico, usa_listas_precio: false })).toBe(10);
+  });
+
+  it('ignores margen_costo rule when usa_listas_precio is false', () => {
+    expect(resolveProductPrice([reglaMargenCosto], { ...productoBasico, usa_listas_precio: false })).toBe(10);
+  });
+
+  it('ignores descuento rule when usa_listas_precio is false', () => {
+    expect(resolveProductPrice([reglaDescuento], { ...productoBasico, usa_listas_precio: false })).toBe(10);
+  });
+
+  it('resolveProductPricing returns precio_principal with no appliedRule', () => {
+    const pricing = resolveProductPricing([reglaPrecioFijo, reglaDescuento], productoDirecto);
+    expect(pricing.unitPrice).toBe(20);
+    expect(pricing.appliedRule).toBeNull();
+  });
+
+  it('usa_listas_precio = true still applies rules normally', () => {
+    expect(resolveProductPrice([reglaPrecioFijo], productoBasico)).toBe(12);
   });
 });
