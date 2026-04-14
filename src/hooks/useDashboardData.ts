@@ -23,6 +23,7 @@ export function useDashboardVentas(range: DateRange, vendedorId?: string) {
           .from('ventas')
           .select('id, fecha, total, subtotal, iva_total, tipo, status, condicion_pago, vendedor_id, saldo_pendiente, cliente_id, clientes(nombre)')
           .eq('empresa_id', empresa!.id)
+          .eq('es_saldo_inicial', false)
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
           .neq('status', 'cancelado' as any)

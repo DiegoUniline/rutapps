@@ -17,7 +17,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
 
       // --- All queries paginated to avoid 1000-row cap ---
       const ventas = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses).range(from, to);
+        let q = supabase.from('ventas').select('id, folio, fecha, fecha_entrega, total, saldo_pendiente, status, tipo, condicion_pago, cliente_id, vendedor_id, subtotal, iva_total, ieps_total, descuento_total, clientes(nombre), vendedores(nombre)').eq('empresa_id', eid).eq('es_saldo_inicial', false).gte('fecha', desde).lte('fecha', hasta).in('status', activeStatuses).range(from, to);
         if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
         return q;
       });
