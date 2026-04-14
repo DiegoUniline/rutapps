@@ -7,10 +7,12 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Upload, Download, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
-import { parseFile, downloadTemplate, type ImportColumn } from '@/lib/importUtils';
+import { parseFile, type ImportColumn } from '@/lib/importUtils';
+import * as XLSX from 'xlsx';
 
 const SALDO_COLUMNS: ImportColumn[] = [
   { key: 'codigo_cliente', header: 'Codigo Cliente', required: true },
+  { key: 'nombre_cliente', header: 'Nombre Cliente', required: false },
   { key: 'monto', header: 'Monto', required: true },
   { key: 'fecha', header: 'Fecha', required: false },
   { key: 'concepto', header: 'Concepto', required: false },
