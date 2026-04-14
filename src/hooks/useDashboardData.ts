@@ -190,12 +190,13 @@ export function useDashboardVentasPorDia(range: DateRange, vendedorId?: string) 
       const data = await fetchAllPages((from, to) => {
         let q = supabase
           .from('ventas')
-          .select('fecha, total')
-          .eq('empresa_id', empresa!.id)
-          .gte('fecha', fmt(range.from))
-          .lte('fecha', fmt(range.to))
-          .neq('status', 'cancelado')
-          .range(from, to);
+           .select('fecha, total')
+           .eq('empresa_id', empresa!.id)
+           .eq('es_saldo_inicial', false)
+           .gte('fecha', fmt(range.from))
+           .lte('fecha', fmt(range.to))
+           .neq('status', 'cancelado')
+           .range(from, to);
         if (vendedorId) q = q.eq('vendedor_id', vendedorId);
         return q;
       });
@@ -228,6 +229,7 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
           .from('ventas')
           .select('vendedor_id, total, vendedores(nombre)')
           .eq('empresa_id', empresa!.id)
+          .eq('es_saldo_inicial', false)
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
           .neq('status', 'cancelado')
