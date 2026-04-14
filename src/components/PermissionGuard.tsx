@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { usePermisos, PATH_MODULE_MAP } from '@/hooks/usePermisos';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
  * Guards a route by checking if the user has 'ver' permission for the
@@ -8,10 +9,13 @@ import { useSubscription } from '@/hooks/useSubscription';
  */
 export function PermissionGuard({ path, children }: { path: string; children: React.ReactNode }) {
   const { hasModulo, loading } = usePermisos();
-  const { isSuperAdmin } = useSubscription();
+  const { isSuperAdmin, isBlocked } = useSubscription();
+  const { overrideEmpresaId } = useAuth();
 
   if (loading) return null;
-  if (isSuperAdmin) return <>{children}</>;
+
+  // Super admin bypass — but NOT when overriding to a blocked empresa
+  if (isSuperAdmin && !(overrideEmpresaId && isBlocked)) return <>{children}</>;
 
   // Find the most specific matching path (longest prefix first)
   const matchingKey = Object.keys(PATH_MODULE_MAP)
