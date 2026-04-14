@@ -4,14 +4,27 @@ import HelpButton from '@/components/HelpButton';
 import { HELP } from '@/lib/helpContent';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useQuery } from '@tanstack/react-query';
-import { CreditCard, Search, Banknote } from 'lucide-react';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { CreditCard, Search, Banknote, Plus, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn, fmtDate } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { toast } from 'sonner';
+import SaldoInicialModal from '@/components/SaldoInicialModal';
+import SaldoInicialImportDialog from '@/components/SaldoInicialImportDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 function useCuentasCobrar(search: string) {
   const { empresa } = useAuth();
@@ -21,7 +34,7 @@ function useCuentasCobrar(search: string) {
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, clientes(nombre, codigo), vendedores(nombre)')
+        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, clientes(nombre, codigo), vendedores(nombre)')
         .eq('empresa_id', empresa!.id)
         .gt('saldo_pendiente', 0)
         .order('fecha', { ascending: true });
@@ -43,13 +56,30 @@ function useCuentasCobrar(search: string) {
 export default function CuentasCobrarPage() {
   const { fmt } = useCurrency();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const { data: cuentas, isLoading } = useCuentasCobrar(search);
+  const [showModal, setShowModal] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('ventas').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Saldo inicial eliminado');
+      qc.invalidateQueries({ queryKey: ['cuentas-cobrar'] });
+      qc.invalidateQueries({ queryKey: ['saldos-iniciales'] });
+      setDeleteId(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   const totalPendiente = cuentas?.reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0) ?? 0;
   const totalVentas = cuentas?.reduce((s, v) => s + (v.total ?? 0), 0) ?? 0;
 
-  // Aging: group by days overdue
   const today = new Date();
   const aging = { corriente: 0, d30: 0, d60: 0, d90: 0, masD90: 0 };
   cuentas?.forEach(v => {
@@ -64,14 +94,22 @@ export default function CuentasCobrarPage() {
 
   return (
     <div className="p-4 space-y-4 min-h-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <CreditCard className="h-5 w-5" /> Cuentas por cobrar
           <HelpButton title={HELP.cuentasCobrar.title} sections={HELP.cuentasCobrar.sections} />
         </h1>
-        <Button onClick={() => navigate('/finanzas/aplicar-pagos')} className="gap-2">
-          <Banknote className="h-4 w-4" /> Aplicar pagos
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setShowImport(true)} className="gap-1.5">
+            <Upload className="h-3.5 w-3.5" /> Importar saldos
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowModal(true)} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" /> Saldo inicial
+          </Button>
+          <Button onClick={() => navigate('/finanzas/aplicar-pagos')} className="gap-2" size="sm">
+            <Banknote className="h-4 w-4" /> Aplicar pagos
+          </Button>
+        </div>
       </div>
 
       {/* Summary */}
@@ -130,31 +168,74 @@ export default function CuentasCobrarPage() {
               <TableHead className="text-[11px] text-right">Total</TableHead>
               <TableHead className="text-[11px] text-right">Pagado</TableHead>
               <TableHead className="text-[11px] text-right">Pendiente</TableHead>
+              <TableHead className="text-[11px] w-10"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {cuentas?.map(v => {
               const pagado = (v.total ?? 0) - (v.saldo_pendiente ?? 0);
+              const esSaldo = v.es_saldo_inicial === true;
+              const canDelete = esSaldo && (v.saldo_pendiente ?? 0) === (v.total ?? 0);
               return (
                 <TableRow key={v.id}>
-                  <TableCell className="font-mono text-[11px]">{v.folio ?? v.id.slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-[11px]">
+                    {v.folio ?? v.id.slice(0, 8)}
+                    {esSaldo && (
+                      <Badge variant="secondary" className="ml-1.5 text-[9px] px-1 py-0">Saldo Inicial</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium text-[12px]">{(v.clientes as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px] text-muted-foreground">{(v.vendedores as any)?.nombre ?? '—'}</TableCell>
                   <TableCell className="text-[12px]">{fmtDate(v.fecha)}</TableCell>
-                  <TableCell><Badge variant="outline" className="text-[10px]">{v.condicion_pago}</Badge></TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px]">
+                      {esSaldo ? (v.concepto || 'Saldo anterior') : v.condicion_pago}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right text-[12px]">{fmt(v.total ?? 0)}</TableCell>
                   <TableCell className="text-right text-[12px] text-success">{fmt(pagado)}</TableCell>
                   <TableCell className="text-right font-bold text-destructive">{fmt(v.saldo_pendiente ?? 0)}</TableCell>
+                  <TableCell>
+                    {canDelete && (
+                      <button
+                        onClick={() => setDeleteId(v.id)}
+                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Eliminar saldo inicial"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}
-            {isLoading && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Cargando...</TableCell></TableRow>}
             {!isLoading && cuentas?.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Sin cuentas pendientes 🎉</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Sin cuentas pendientes 🎉</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+
+      <SaldoInicialModal open={showModal} onOpenChange={setShowModal} />
+      <SaldoInicialImportDialog open={showImport} onOpenChange={setShowImport} />
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar saldo inicial?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Solo se puede eliminar si no tiene abonos aplicados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteId && deleteMut.mutate(deleteId)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
