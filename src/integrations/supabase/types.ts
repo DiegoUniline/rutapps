@@ -4961,6 +4961,7 @@ export type Database = {
           es_saldo_inicial: boolean
           fecha: string
           fecha_entrega: string | null
+          fecha_vencimiento: string | null
           folio: string | null
           id: string
           ieps_total: number | null
@@ -4990,6 +4991,7 @@ export type Database = {
           es_saldo_inicial?: boolean
           fecha?: string
           fecha_entrega?: string | null
+          fecha_vencimiento?: string | null
           folio?: string | null
           id?: string
           ieps_total?: number | null
@@ -5019,6 +5021,7 @@ export type Database = {
           es_saldo_inicial?: boolean
           fecha?: string
           fecha_entrega?: string | null
+          fecha_vencimiento?: string | null
           folio?: string | null
           id?: string
           ieps_total?: number | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.ventas ADD COLUMN IF NOT EXISTS fecha_vencimiento date;
