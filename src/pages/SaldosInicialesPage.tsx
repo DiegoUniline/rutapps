@@ -323,7 +323,7 @@ export default function SaldosInicialesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredBulk.map((row) => {
+                    {filteredBulk.map((row, visibleIdx) => {
                       const realIdx = bulkRows.findIndex(r => r.clienteId === row.clienteId);
                       const hasMonto = row.monto && parseFloat(row.monto) > 0;
                       return (
@@ -337,6 +337,7 @@ export default function SaldosInicialesPage() {
                               step="0.01"
                               placeholder="0.00"
                               className="h-8 text-[12px]"
+                              tabIndex={visibleIdx + 1}
                               value={row.monto}
                               onChange={e => updateBulkRow(realIdx, 'monto', e.target.value)}
                             />
@@ -345,6 +346,7 @@ export default function SaldosInicialesPage() {
                             <Input
                               type="date"
                               className="h-8 text-[12px]"
+                              tabIndex={-1}
                               value={row.fecha}
                               onChange={e => updateBulkRow(realIdx, 'fecha', e.target.value)}
                             />
@@ -353,6 +355,7 @@ export default function SaldosInicialesPage() {
                             <Input
                               type="date"
                               className="h-8 text-[12px]"
+                              tabIndex={-1}
                               value={row.fechaVencimiento}
                               onChange={e => updateBulkRow(realIdx, 'fechaVencimiento', e.target.value)}
                             />
