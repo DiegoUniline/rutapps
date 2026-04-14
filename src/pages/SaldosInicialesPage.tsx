@@ -364,6 +364,7 @@ export default function SaldosInicialesPage() {
                             <Input
                               className="h-8 text-[12px]"
                               placeholder="Saldo anterior"
+                              tabIndex={-1}
                               value={row.concepto}
                               onChange={e => updateBulkRow(realIdx, 'concepto', e.target.value)}
                             />
