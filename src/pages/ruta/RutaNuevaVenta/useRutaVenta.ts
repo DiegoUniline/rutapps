@@ -352,7 +352,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     const updated = cuentasPendientes.map(c => {
       const apply = Math.min(remaining, c.saldo_pendiente);
       remaining -= apply;
-      return { ...c, montoAplicar: r2(apply) };
+      return { ...c, montoAplicar: Math.round(apply * 100) / 100 };
     });
     // Only update if values actually changed to avoid infinite loop
     const changed = updated.some((u, i) => u.montoAplicar !== cuentasPendientes[i].montoAplicar);
