@@ -32,8 +32,9 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)', { count: 'exact' })
+        .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, es_saldo_inicial, clientes(nombre), vendedores(nombre)', { count: 'exact' })
         .eq('empresa_id', empresa!.id)
+        .eq('es_saldo_inicial', false)
         .order('created_at', { ascending: false })
         .range((page - 1) * pageSize, page * pageSize - 1);
       if (filterOwn) q = q.eq('vendedor_id', profileId!);
