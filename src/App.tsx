@@ -58,6 +58,7 @@ const SaldosProveedorPage = lazy(() => import("@/pages/SaldosProveedorPage"));
 const GastosDesktopPage = lazy(() => import("@/pages/GastosDesktopPage"));
 const ReportesPage = lazy(() => import("@/pages/ReportesPage"));
 const ConfiguracionPage = lazy(() => import("@/pages/ConfiguracionPage"));
+const SaldosInicialesPage = lazy(() => import("@/pages/SaldosInicialesPage"));
 const UsuariosPage = lazy(() => import("@/pages/UsuariosPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const DescargasPage = lazy(() => import("@/pages/DescargasPage"));
@@ -487,6 +488,7 @@ function desktopRoutes() {
       <Route path="/configuracion" element={<ConfiguracionPage />} />
       <Route path="/configuracion-inicial" element={<ConfiguracionInicialPage />} />
       <Route path="/configuracion/whatsapp" element={<WhatsAppConfigPage />} />
+      <Route path="/configuracion/saldos-iniciales" element={<SaldosInicialesPage />} />
       <Route path="/configuracion/usuarios" element={<UsuariosPage />} />
       <Route path="/facturacion" element={<FacturacionPage />} />
       <Route path="/mi-suscripcion" element={<MiSuscripcionPage />} />
