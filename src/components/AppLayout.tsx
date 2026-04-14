@@ -139,6 +139,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'General', path: '/configuracion' },
       { label: 'Usuarios y permisos', path: '/configuracion/usuarios' },
+      { label: 'Saldos iniciales', path: '/configuracion/saldos-iniciales' },
       { label: 'WhatsApp', path: '/configuracion/whatsapp' },
       { label: 'Mi suscripción', path: '/mi-suscripcion' },
     ],
