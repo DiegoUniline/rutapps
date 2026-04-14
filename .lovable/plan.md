@@ -1,72 +1,38 @@
 
-Problema identificado con claridad:
 
-- El sistema sí detecta correctamente que la empresa override está suspendida.
-- La evidencia está en la request de suscripción para esa empresa, que regresa `status: "suspended"`.
-- El banner rojo también confirma que el estado suspendido ya llegó al frontend.
-- El fallo real está en el flujo de render de `src/App.tsx`.
+## Problem
 
-Causa raíz:
+When the user pays more than the current sale amount, the excess is returned as **change** instead of being automatically applied to pending accounts. In the screenshots, the user paid $18,500 for a $20.88 sale, expecting $18,000 to go to SAL-0001 — but got $18,479.12 as change because the pending account had `montoAplicar = 0`.
 
-- En `AppRoutes()` existe este orden:
-  1. `if (subscription.isSuperAdmin) { ...render completo... }`
-  2. `if (subscription.isBlocked) { ...shell bloqueado... }`
-- Como el super admin sigue teniendo `isSuperAdmin = true` incluso durante override, entra primero al bloque de super admin y nunca alcanza el bloque de `isBlocked`.
-- O sea: el cálculo de bloqueo ya funciona, pero la prioridad de condiciones lo anula visualmente.
+## Solution
 
-Qué corregir:
+Auto-distribute excess payment across pending accounts using FIFO logic when the total payment exceeds the current sale amount.
 
-1. Ajustar la condición de acceso en `src/App.tsx`
-- Cambiar la prioridad para que el shell bloqueado se muestre cuando:
-  - `subscription.isBlocked === true`
-  - incluso si `subscription.isSuperAdmin === true`
-  - siempre que exista `overrideEmpresaId`
-- En práctica, el branch de bloqueo debe evaluarse antes del branch “super admin always has access”, o bien el branch de super admin debe excluir explícitamente el caso `override + blocked`.
+## Changes
 
-2. Mantener comportamiento especial para super admin sin override
-- Si el super admin está en su Panel Master normal, debe conservar acceso total.
-- Solo debe ver el bloqueo real cuando está “viendo como empresa” mediante override.
+### 1. `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`
 
-3. Endurecer consistencia en guards secundarios
-- Revisar `PermissionGuard.tsx` para que no dé bypass general por `isSuperAdmin` cuando exista override a empresa suspendida.
-- Probablemente no es el origen principal, pero conviene alinearlo para evitar accesos residuales por navegación interna o rutas montadas después.
+**Add auto-distribution logic**: When `totalPagosLineas` exceeds `totals.total` (current sale) and there are pending accounts with `montoAplicar = 0`, automatically distribute the surplus FIFO across `cuentasPendientes`.
 
-4. Validar navegación bloqueada
-- El estado esperado en override suspendido debe permitir solo:
-  - `/mi-suscripcion`
-  - `/facturacion`
-  - salir del override / volver al panel master
-- Cualquier otra ruta debe redirigir al shell bloqueado o a `/mi-suscripcion`.
+Add a `useEffect` that watches `pagos` (payment lines total) and auto-assigns excess to pending accounts:
 
-5. Verificación manual posterior
-- Probar con “Huevos el Buen Precio”:
-  - cambiar desde selector superior
-  - confirmar que ya no se vea `/clientes`, botones “Nuevo”, tablas ni layout completo
-  - confirmar que solo aparezca la vista restringida
-  - confirmar que el botón “Volver a Panel Master” siga funcionando
+- Calculate `surplus = totalPagosLineas - totals.total` (only when `condicionPago === 'contado'`)
+- If surplus > 0 and there are unassigned cuentas pendientes, distribute FIFO:
+  - For each pending account (sorted by date), assign `min(surplus_remaining, cuenta.saldo_pendiente)`
+  - Update `cuentasPendientes` with the new `montoAplicar` values
+- Recalculate `totalACobrar` and `cambio` accordingly
 
-Archivos a tocar:
-- `src/App.tsx` — corrección principal del orden/prioridad de render
-- `src/components/PermissionGuard.tsx` — alineación defensiva del bypass de super admin
-- Opcionalmente revisar `src/components/AppLayout.tsx` si hubiera algún render residual dependiente de `isSuperAdmin`
+**Update `cambio` calculation** (line 343): Change so that cambio = `max(0, totalPagosLineas - totalACobrar)` — this already works correctly since `totalACobrar` includes `totalAplicarCuentas`. The auto-distribution effect will increase `totalAplicarCuentas`, which increases `totalACobrar`, which reduces `cambio`.
 
-Resultado esperado:
-- Si una empresa está suspendida, el super admin en override verá exactamente la misma restricción que un usuario normal.
-- El banner ya no coexistirá con todo el sistema habilitado.
-- Se elimina la falsa sensación de bloqueo parcial.
+### 2. Also fix `ventasPendientes` filter (line 153)
 
-Detalle técnico breve:
-```text
-Estado actual:
-isSuperAdmin = true
-isBlocked = true
-overrideEmpresaId = empresa suspendida
+Currently filters only `condicion_pago === 'credito'`. Saldo inicial records have `condicion_pago = 'credito'` so they're already included, but we should also include any sale with `saldo_pendiente > 0` regardless of `condicion_pago` to catch edge cases. Change filter to remove the `condicion_pago === 'credito'` restriction and just use `saldo_pendiente > 0`.
 
-Bug:
-App.tsx evalúa primero isSuperAdmin -> render completo
-nunca llega a isBlocked
+## Behavior
 
-Corrección:
-priorizar isBlocked cuando hay override activo
-o excluir override+blocked del branch super admin
-```
+- User adds payment of $18,500
+- System sees current sale = $20.88, surplus = $18,479.12
+- Auto-fills SAL-0001 with min($18,479.12, $18,000) = $18,000
+- Remaining surplus = $479.12 → shown as change
+- User can still manually adjust amounts before saving
+
