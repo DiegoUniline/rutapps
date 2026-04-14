@@ -153,7 +153,7 @@ function PageLoader() {
 const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPage"));
 
 function AppRoutes() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
   const subscription = useSubscription();
   
   const { hasPermiso, loading: permisosLoading } = usePermisos();
@@ -237,7 +237,9 @@ function AppRoutes() {
   }
 
   // Blocked users — only billing access + sign-out header
+  // Also applies to super admin when overriding to a suspended empresa
   if (subscription.isBlocked) {
+    const isSuperAdminOverride = subscription.isSuperAdmin && !!overrideEmpresaId;
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <SubscriptionBanner />
@@ -247,12 +249,20 @@ function AppRoutes() {
             <Badge variant="destructive" className="text-xs">Suspendida</Badge>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/mi-suscripcion">Mi Suscripción</Link>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => signOut()}>
-              Cerrar sesión
-            </Button>
+            {isSuperAdminOverride ? (
+              <Button variant="default" size="sm" onClick={() => { setOverrideEmpresaId(null); window.location.href = '/super-admin'; }}>
+                ← Volver a Panel Master
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/mi-suscripcion">Mi Suscripción</Link>
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => signOut()}>
+                  Cerrar sesión
+                </Button>
+              </>
+            )}
           </div>
         </header>
         <div className="flex-1">
