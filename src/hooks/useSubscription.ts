@@ -92,21 +92,28 @@ async function fetchSubscription(userId: string, empresaId?: string): Promise<Om
 export function useSubscription(): SubscriptionState {
   const { user, empresa } = useAuth();
 
-  const { data, isLoading } = useQuery({
+  const cached = readCache(user?.id);
+
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['subscription-state', user?.id, empresa?.id],
     queryFn: () => fetchSubscription(user!.id, empresa?.id),
     enabled: !!user?.id,
     staleTime: 60_000, // 1 min
     gcTime: 5 * 60_000,
-    placeholderData: () => readCache(user?.id) ?? undefined,
+    placeholderData: () => cached ?? undefined,
   });
 
   if (!user) {
     return { loading: false, status: null, daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
   }
 
+  // If we only have placeholder (cached) data and the fresh fetch is still in flight,
+  // treat isBlocked as true (safe default) to prevent suspended users from accessing
+  // the app via stale localStorage cache. Only trust isBlocked:false from fresh data.
   if (data) {
-    return { loading: false, ...data };
+    const onlyHaveCachedData = isFetching && cached && data === cached;
+    const safeIsBlocked = onlyHaveCachedData ? (data.isBlocked || true) : data.isBlocked;
+    return { loading: false, ...data, isBlocked: safeIsBlocked };
   }
 
   return { loading: isLoading, status: null, daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
