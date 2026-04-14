@@ -1,60 +1,72 @@
 
+Problema identificado con claridad:
 
-## Diagnóstico
+- El sistema sí detecta correctamente que la empresa override está suspendida.
+- La evidencia está en la request de suscripción para esa empresa, que regresa `status: "suspended"`.
+- El banner rojo también confirma que el estado suspendido ya llegó al frontend.
+- El fallo real está en el flujo de render de `src/App.tsx`.
 
-El campo `usa_listas_precio` (boolean) existe en la tabla `productos` y se configura en el formulario de producto (toggle "Precio directo" / "Listas de precio"), pero **ningún módulo de resolución de precios lo consulta**. El resolver siempre aplica las reglas de tarifa si existen, ignorando la preferencia del producto.
+Causa raíz:
 
-Esto causa que productos configurados como "Precio directo" (`usa_listas_precio = false`) reciban precios calculados por reglas de tarifa (ej. margen sobre costo = 0% → precio = costo).
+- En `AppRoutes()` existe este orden:
+  1. `if (subscription.isSuperAdmin) { ...render completo... }`
+  2. `if (subscription.isBlocked) { ...shell bloqueado... }`
+- Como el super admin sigue teniendo `isSuperAdmin = true` incluso durante override, entra primero al bloque de super admin y nunca alcanza el bloque de `isBlocked`.
+- O sea: el cálculo de bloqueo ya funciona, pero la prioridad de condiciones lo anula visualmente.
 
-## Solución
+Qué corregir:
 
-### 1. Agregar `usa_listas_precio` a `ProductForPricing` (priceResolver.ts)
+1. Ajustar la condición de acceso en `src/App.tsx`
+- Cambiar la prioridad para que el shell bloqueado se muestre cuando:
+  - `subscription.isBlocked === true`
+  - incluso si `subscription.isSuperAdmin === true`
+  - siempre que exista `overrideEmpresaId`
+- En práctica, el branch de bloqueo debe evaluarse antes del branch “super admin always has access”, o bien el branch de super admin debe excluir explícitamente el caso `override + blocked`.
 
-Agregar el campo opcional al interface y hacer que `resolveProductPricing` y `resolveProductPrice` lo evalúen **antes** de buscar reglas:
+2. Mantener comportamiento especial para super admin sin override
+- Si el super admin está en su Panel Master normal, debe conservar acceso total.
+- Solo debe ver el bloqueo real cuando está “viendo como empresa” mediante override.
 
-```typescript
-// Si usa_listas_precio es false → skip reglas, usar precio_principal directo
-if (producto.usa_listas_precio === false) {
-  // retornar fallback a precio_principal
-}
+3. Endurecer consistencia en guards secundarios
+- Revisar `PermissionGuard.tsx` para que no dé bypass general por `isSuperAdmin` cuando exista override a empresa suspendida.
+- Probablemente no es el origen principal, pero conviene alinearlo para evitar accesos residuales por navegación interna o rutas montadas después.
+
+4. Validar navegación bloqueada
+- El estado esperado en override suspendido debe permitir solo:
+  - `/mi-suscripcion`
+  - `/facturacion`
+  - salir del override / volver al panel master
+- Cualquier otra ruta debe redirigir al shell bloqueado o a `/mi-suscripcion`.
+
+5. Verificación manual posterior
+- Probar con “Huevos el Buen Precio”:
+  - cambiar desde selector superior
+  - confirmar que ya no se vea `/clientes`, botones “Nuevo”, tablas ni layout completo
+  - confirmar que solo aparezca la vista restringida
+  - confirmar que el botón “Volver a Panel Master” siga funcionando
+
+Archivos a tocar:
+- `src/App.tsx` — corrección principal del orden/prioridad de render
+- `src/components/PermissionGuard.tsx` — alineación defensiva del bypass de super admin
+- Opcionalmente revisar `src/components/AppLayout.tsx` si hubiera algún render residual dependiente de `isSuperAdmin`
+
+Resultado esperado:
+- Si una empresa está suspendida, el super admin en override verá exactamente la misma restricción que un usuario normal.
+- El banner ya no coexistirá con todo el sistema habilitado.
+- Se elimina la falsa sensación de bloqueo parcial.
+
+Detalle técnico breve:
+```text
+Estado actual:
+isSuperAdmin = true
+isBlocked = true
+overrideEmpresaId = empresa suspendida
+
+Bug:
+App.tsx evalúa primero isSuperAdmin -> render completo
+nunca llega a isBlocked
+
+Corrección:
+priorizar isBlocked cuando hay override activo
+o excluir override+blocked del branch super admin
 ```
-
-### 2. Pasar `usa_listas_precio` en los callers
-
-Tres puntos donde se construye el objeto `ProductForPricing`:
-
-- **`useVentaForm.ts`** — Ventas escritorio (2 lugares donde construye `pf`)
-- **`useRutaVenta.ts`** — Venta móvil (función `getPrice` y `handleSave`)
-- **`PuntoVentaPage.tsx`** — POS (si aplica)
-
-En cada uno, agregar `usa_listas_precio: prod.usa_listas_precio` al objeto.
-
-### 3. Actualizar edge function `public-catalog`
-
-En `supabase/functions/public-catalog/index.ts`, el resolver duplicado también debe respetar el campo. Agregar la misma lógica de cortocircuito.
-
-### 4. Tests
-
-Agregar casos en `priceResolver.test.ts`:
-- Producto con `usa_listas_precio: false` + reglas existentes → debe usar `precio_principal`
-- Producto con `usa_listas_precio: true` + reglas → debe aplicar reglas normalmente
-
-### Archivos a modificar
-
-| Archivo | Cambio |
-|---------|--------|
-| `src/lib/priceResolver.ts` | Agregar campo al interface, cortocircuito en `resolveProductPricing` |
-| `src/pages/VentaForm/useVentaForm.ts` | Pasar `usa_listas_precio` al construir `ProductForPricing` |
-| `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts` | Pasar `usa_listas_precio` al construir `ProductForPricing` |
-| `src/pages/PuntoVentaPage.tsx` | Pasar `usa_listas_precio` (si no lo hace ya) |
-| `src/lib/salePricing.ts` | Sin cambios (opera post-resolución) |
-| `supabase/functions/public-catalog/index.ts` | Agregar cortocircuito en `resolvePrice` |
-| `src/test/priceResolver.test.ts` | Nuevos test cases |
-| `src/test/fixtures/productos.ts` | Agregar `usa_listas_precio` a fixtures |
-
-### Resultado
-
-- Productos con "Precio directo" → siempre usan `precio_principal`, sin importar qué reglas de tarifa existan
-- Productos con "Listas de precio" → comportamiento actual sin cambios
-- Consistencia total entre Ventas, Venta Móvil y POS
-
