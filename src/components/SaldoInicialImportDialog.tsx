@@ -147,10 +147,10 @@ export default function SaldoInicialImportDialog({ open, onOpenChange }: Props) 
                   .eq('empresa_id', empresa!.id)
                   .order('codigo');
                 const wb = XLSX.utils.book_new();
-                const headers = ['Codigo Cliente', 'Monto'];
-                const rows = (clientes ?? []).map(c => [c.codigo ?? '', '']);
+                const headers = ['Codigo Cliente', 'Nombre Cliente', 'Monto'];
+                const rows = (clientes ?? []).map(c => [c.codigo ?? '', c.nombre ?? '', '']);
                 const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-                ws['!cols'] = [{ wch: 18 }, { wch: 14 }];
+                ws['!cols'] = [{ wch: 18 }, { wch: 30 }, { wch: 14 }];
                 XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
                 XLSX.writeFile(wb, 'plantilla_saldos_iniciales.xlsx');
               }}>
