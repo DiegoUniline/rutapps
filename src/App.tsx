@@ -153,7 +153,7 @@ function PageLoader() {
 const ForceChangePasswordPage = lazy(() => import("@/pages/ForceChangePasswordPage"));
 
 function AppRoutes() {
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, signOut, overrideEmpresaId, setOverrideEmpresaId } = useAuth();
   const subscription = useSubscription();
   
   const { hasPermiso, loading: permisosLoading } = usePermisos();
