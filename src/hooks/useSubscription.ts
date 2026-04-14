@@ -26,7 +26,7 @@ function writeCache(userId: string, state: Omit<SubscriptionState, 'loading'>) {
   try { localStorage.setItem(`${CACHE_KEY}:${userId}`, JSON.stringify(state)); } catch {}
 }
 
-async function fetchSubscription(userId: string, empresaId?: string): Promise<Omit<SubscriptionState, 'loading'>> {
+async function fetchSubscription(userId: string, empresaId?: string, isOverride?: boolean): Promise<Omit<SubscriptionState, 'loading'>> {
   let isSuperAdmin = false;
 
   try {
@@ -65,7 +65,11 @@ async function fetchSubscription(userId: string, empresaId?: string): Promise<Om
       ? (sub.trial_ends_at ?? sub.current_period_end)
       : (sub.current_period_end ?? sub.trial_ends_at);
     const daysLeft = endDate ? differenceInDays(new Date(endDate), new Date()) : null;
-    const isBlocked = !isSuperAdmin && (
+
+    // When super admin overrides to another empresa, evaluate isBlocked
+    // as if they were a regular user so they see the real experience.
+    const skipBlockBypass = isSuperAdmin && isOverride;
+    const isBlocked = (skipBlockBypass || !isSuperAdmin) && (
       sub.status === 'suspended' ||
       sub.status === 'cancelada' ||
       (sub.status === 'past_due' && daysLeft !== null && daysLeft < -3) ||
@@ -90,13 +94,14 @@ async function fetchSubscription(userId: string, empresaId?: string): Promise<Om
 }
 
 export function useSubscription(): SubscriptionState {
-  const { user, empresa } = useAuth();
+  const { user, empresa, overrideEmpresaId } = useAuth();
 
   const cached = readCache(user?.id);
+  const isOverride = !!overrideEmpresaId;
 
   const { data, isLoading, isPlaceholderData } = useQuery({
-    queryKey: ['subscription-state', user?.id, empresa?.id],
-    queryFn: () => fetchSubscription(user!.id, empresa?.id),
+    queryKey: ['subscription-state', user?.id, empresa?.id, isOverride],
+    queryFn: () => fetchSubscription(user!.id, empresa?.id, isOverride),
     enabled: !!user?.id,
     staleTime: 60_000, // 1 min
     gcTime: 5 * 60_000,
