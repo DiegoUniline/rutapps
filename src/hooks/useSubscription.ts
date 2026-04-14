@@ -94,7 +94,7 @@ export function useSubscription(): SubscriptionState {
 
   const cached = readCache(user?.id);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey: ['subscription-state', user?.id, empresa?.id],
     queryFn: () => fetchSubscription(user!.id, empresa?.id),
     enabled: !!user?.id,
@@ -107,13 +107,15 @@ export function useSubscription(): SubscriptionState {
     return { loading: false, status: null, daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
   }
 
-  // If we only have placeholder (cached) data and the fresh fetch is still in flight,
-  // treat isBlocked as true (safe default) to prevent suspended users from accessing
-  // the app via stale localStorage cache. Only trust isBlocked:false from fresh data.
   if (data) {
-    const onlyHaveCachedData = isFetching && cached && data === cached;
-    const safeIsBlocked = onlyHaveCachedData ? (data.isBlocked || true) : data.isBlocked;
-    return { loading: false, ...data, isBlocked: safeIsBlocked };
+    // If we only have cached/placeholder data (fresh query still in-flight),
+    // don't trust isBlocked:false from the cache — a user may have been
+    // suspended since the cache was written.  Report loading:true so the
+    // app shows the loader until fresh data arrives.
+    if (isPlaceholderData && !data.isBlocked) {
+      return { loading: true, ...data };
+    }
+    return { loading: false, ...data };
   }
 
   return { loading: isLoading, status: null, daysLeft: null, isBlocked: false, isSuperAdmin: false, maxUsuarios: 3 };
