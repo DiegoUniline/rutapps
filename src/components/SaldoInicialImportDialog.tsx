@@ -137,7 +137,7 @@ export default function SaldoInicialImportDialog({ open, onOpenChange }: Props) 
         {step === 'upload' && (
           <div className="space-y-4 pt-2">
             <p className="text-sm text-muted-foreground">
-              Sube un archivo Excel (.xlsx) o CSV con las columnas: <strong>Codigo Cliente</strong>, <strong>Monto</strong>, Fecha (opcional), Concepto (opcional).
+              Sube un archivo Excel (.xlsx) o CSV con las columnas: <strong>Codigo Cliente</strong> y <strong>Monto</strong>.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" className="gap-2" onClick={async () => {
