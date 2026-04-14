@@ -202,7 +202,7 @@ export function useVentaForm() {
       if (!l.producto_id || m.has(l.producto_id)) return;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return;
-      const pf: ProductForPricing = { id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0, clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16), tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo };
+      const pf: ProductForPricing = { id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0, clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16), tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo, usa_listas_precio: prod.usa_listas_precio };
       const r = resolveProductPricing(tarifaRules, pf, listaPrecioId);
       m.set(l.producto_id, { rawUnitPrice: r.rawUnitPrice, rawDisplayPrice: r.rawDisplayPrice, basePrecio: r.basePrecio, redondeo: r.appliedRule?.redondeo ?? 'ninguno' });
     });
@@ -302,6 +302,7 @@ export function useVentaForm() {
         id: l.producto_id, precio_principal: Number(prod.precio_principal) || 0, costo: Number(prod.costo) || 0,
         clasificacion_id: prod.clasificacion_id, tiene_iva: prod.tiene_iva, iva_pct: Number(prod.iva_pct ?? 16),
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
+        usa_listas_precio: prod.usa_listas_precio,
       };
       const pricing = resolveProductPricing(tarifaRules, prodForPricing, listaPrecioId);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
@@ -329,6 +330,7 @@ export function useVentaForm() {
       id: productoId, precio_principal: Number(producto.precio_principal) || 0, costo: Number(producto.costo) || 0,
       clasificacion_id: producto.clasificacion_id, tiene_iva: producto.tiene_iva, iva_pct: Number(producto.iva_pct ?? 16),
       tiene_ieps: producto.tiene_ieps, ieps_pct: Number(producto.ieps_pct ?? 0), ieps_tipo: producto.ieps_tipo,
+      usa_listas_precio: producto.usa_listas_precio,
     };
     const pricing = tarifaRules?.length ? resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id) : null;
     const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
@@ -376,6 +378,7 @@ export function useVentaForm() {
             tiene_iva: newIvaPct > 0, iva_pct: newIvaPct > 0 ? newIvaPct : Number(prod.iva_pct ?? 16),
             tiene_ieps: newIepsPct > 0, ieps_pct: newIepsPct > 0 ? newIepsPct : Number(prod.ieps_pct ?? 0),
             ieps_tipo: prod.ieps_tipo,
+            usa_listas_precio: prod.usa_listas_precio,
           };
           const pricing = resolveProductPricing(tarifaRules, prodForPricing, (form as any).lista_precio_id);
           const snap = buildSalePricingSnapshot(prodForPricing, pricing);

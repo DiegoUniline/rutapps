@@ -230,6 +230,7 @@ export default function PuntoVentaPage() {
               tiene_ieps: p.tiene_ieps,
               ieps_pct: p.ieps_pct ?? 0,
               ieps_tipo: p.ieps_tipo,
+              usa_listas_precio: p.usa_listas_precio,
             },
             clienteListaPrecioId,
           )
