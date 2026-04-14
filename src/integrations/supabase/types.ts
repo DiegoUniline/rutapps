@@ -4950,6 +4950,7 @@ export type Database = {
         Row: {
           almacen_id: string | null
           cliente_id: string | null
+          concepto: string | null
           condicion_pago: Database["public"]["Enums"]["condicion_pago"]
           created_at: string
           descuento_extra: number
@@ -4957,6 +4958,7 @@ export type Database = {
           descuento_total: number | null
           empresa_id: string
           entrega_inmediata: boolean | null
+          es_saldo_inicial: boolean
           fecha: string
           fecha_entrega: string | null
           folio: string | null
@@ -4977,6 +4979,7 @@ export type Database = {
         Insert: {
           almacen_id?: string | null
           cliente_id?: string | null
+          concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
           descuento_extra?: number
@@ -4984,6 +4987,7 @@ export type Database = {
           descuento_total?: number | null
           empresa_id: string
           entrega_inmediata?: boolean | null
+          es_saldo_inicial?: boolean
           fecha?: string
           fecha_entrega?: string | null
           folio?: string | null
@@ -5004,6 +5008,7 @@ export type Database = {
         Update: {
           almacen_id?: string | null
           cliente_id?: string | null
+          concepto?: string | null
           condicion_pago?: Database["public"]["Enums"]["condicion_pago"]
           created_at?: string
           descuento_extra?: number
@@ -5011,6 +5016,7 @@ export type Database = {
           descuento_total?: number | null
           empresa_id?: string
           entrega_inmediata?: boolean | null
+          es_saldo_inicial?: boolean
           fecha?: string
           fecha_entrega?: string | null
           folio?: string | null
@@ -5484,6 +5490,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      registrar_saldo_inicial: {
+        Args: {
+          p_cliente_id: string
+          p_concepto?: string
+          p_empresa_id: string
+          p_fecha?: string
+          p_monto: number
+          p_user_id?: string
+        }
+        Returns: string
+      }
       surtir_linea_entrega: {
         Args: {
           p_almacen_origen_id: string
@@ -5580,7 +5597,7 @@ export type Database = {
         | "volumen"
       tipo_tarifa: "general" | "por_cliente" | "por_ruta"
       tipo_traspaso: "almacen_almacen" | "almacen_ruta" | "ruta_almacen"
-      tipo_venta: "pedido" | "venta_directa"
+      tipo_venta: "pedido" | "venta_directa" | "saldo_inicial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5794,7 +5811,7 @@ export const Constants = {
       ],
       tipo_tarifa: ["general", "por_cliente", "por_ruta"],
       tipo_traspaso: ["almacen_almacen", "almacen_ruta", "ruta_almacen"],
-      tipo_venta: ["pedido", "venta_directa"],
+      tipo_venta: ["pedido", "venta_directa", "saldo_inicial"],
     },
   },
 } as const
