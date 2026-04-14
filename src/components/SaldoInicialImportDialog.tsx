@@ -7,10 +7,12 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Upload, Download, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
-import { parseFile, downloadTemplate, type ImportColumn } from '@/lib/importUtils';
+import { parseFile, type ImportColumn } from '@/lib/importUtils';
+import * as XLSX from 'xlsx';
 
 const SALDO_COLUMNS: ImportColumn[] = [
   { key: 'codigo_cliente', header: 'Codigo Cliente', required: true },
+  { key: 'nombre_cliente', header: 'Nombre Cliente', required: false },
   { key: 'monto', header: 'Monto', required: true },
   { key: 'fecha', header: 'Fecha', required: false },
   { key: 'concepto', header: 'Concepto', required: false },
@@ -141,7 +143,20 @@ export default function SaldoInicialImportDialog({ open, onOpenChange }: Props) 
               Sube un archivo Excel (.xlsx) o CSV con las columnas: <strong>Codigo Cliente</strong>, <strong>Monto</strong>, Fecha (opcional), Concepto (opcional).
             </p>
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2" onClick={() => downloadTemplate(SALDO_COLUMNS, 'plantilla_saldos_iniciales')}>
+              <Button variant="outline" className="gap-2" onClick={async () => {
+                const { data: clientes } = await supabase
+                  .from('clientes')
+                  .select('codigo, nombre')
+                  .eq('empresa_id', empresa!.id)
+                  .order('codigo');
+                const wb = XLSX.utils.book_new();
+                const headers = SALDO_COLUMNS.map(c => c.header);
+                const rows = (clientes ?? []).map(c => [c.codigo ?? '', c.nombre ?? '', '', '', '']);
+                const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+                ws['!cols'] = [{ wch: 18 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 20 }];
+                XLSX.utils.book_append_sheet(wb, ws, 'Plantilla');
+                XLSX.writeFile(wb, 'plantilla_saldos_iniciales.xlsx');
+              }}>
                 <Download className="h-4 w-4" /> Descargar plantilla
               </Button>
             </div>
