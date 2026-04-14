@@ -5493,17 +5493,30 @@ export type Database = {
         }
         Returns: undefined
       }
-      registrar_saldo_inicial: {
-        Args: {
-          p_cliente_id: string
-          p_concepto?: string
-          p_empresa_id: string
-          p_fecha?: string
-          p_monto: number
-          p_user_id?: string
-        }
-        Returns: string
-      }
+      registrar_saldo_inicial:
+        | {
+            Args: {
+              p_cliente_id: string
+              p_concepto?: string
+              p_empresa_id: string
+              p_fecha?: string
+              p_monto: number
+              p_user_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_cliente_id: string
+              p_concepto?: string
+              p_empresa_id: string
+              p_fecha?: string
+              p_fecha_vencimiento?: string
+              p_monto: number
+              p_user_id?: string
+            }
+            Returns: string
+          }
       surtir_linea_entrega: {
         Args: {
           p_almacen_origen_id: string
