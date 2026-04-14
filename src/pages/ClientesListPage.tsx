@@ -38,6 +38,8 @@ const CLIENTES_COLUMNS: ExportColumn[] = [
   { key: 'credito', header: 'Crédito', width: 8 },
   { key: 'limite_credito', header: 'Límite crédito', format: 'currency', width: 14 },
   { key: 'status', header: 'Estado', width: 10 },
+  { key: 'gps_lat', header: 'Latitud', format: 'number', width: 14 },
+  { key: 'gps_lng', header: 'Longitud', format: 'number', width: 14 },
 ];
 
 const STATIC_FILTER_OPTIONS = [
