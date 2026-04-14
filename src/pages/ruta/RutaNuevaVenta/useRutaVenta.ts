@@ -150,7 +150,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const { data: allVentas } = useOfflineQuery('ventas', { empresa_id: empresa?.id }, { enabled: !!empresa?.id });
   const ventasPendientes = useMemo(() => {
     if (!allVentas || !clienteId) return [];
-    return (allVentas as any[]).filter(v => v.cliente_id === clienteId && v.condicion_pago === 'credito' && (v.saldo_pendiente ?? 0) > 0 && ['confirmado', 'entregado', 'facturado'].includes(v.status)).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+    return (allVentas as any[]).filter(v => v.cliente_id === clienteId && (v.saldo_pendiente ?? 0) > 0 && ['confirmado', 'entregado', 'facturado'].includes(v.status)).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
   }, [allVentas, clienteId]);
 
   const saldoPendienteTotal = useMemo(() => (ventasPendientes ?? []).reduce((s, v) => s + (v.saldo_pendiente ?? 0), 0), [ventasPendientes]);
@@ -336,9 +336,31 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
   const creditoDisponible = clienteCredito ? clienteCredito.limite - saldoPendienteTotal : 0;
   const excedeCredito = condicionPago === 'credito' && totals.total > creditoDisponible;
+  const totalPagosLineas = pagos.reduce((s, p) => s + p.monto, 0);
+
+  // Auto-distribute surplus payment to pending accounts (FIFO)
+  useEffect(() => {
+    if (condicionPago !== 'contado' || cuentasPendientes.length === 0) return;
+    const surplus = totalPagosLineas - totals.total;
+    if (surplus <= 0) {
+      // Reset any auto-assigned amounts when payment doesn't cover current sale
+      const hasAny = cuentasPendientes.some(c => c.montoAplicar > 0);
+      if (hasAny) setCuentasPendientes(prev => prev.map(c => ({ ...c, montoAplicar: 0 })));
+      return;
+    }
+    let remaining = surplus;
+    const updated = cuentasPendientes.map(c => {
+      const apply = Math.min(remaining, c.saldo_pendiente);
+      remaining -= apply;
+      return { ...c, montoAplicar: r2(apply) };
+    });
+    // Only update if values actually changed to avoid infinite loop
+    const changed = updated.some((u, i) => u.montoAplicar !== cuentasPendientes[i].montoAplicar);
+    if (changed) setCuentasPendientes(updated);
+  }, [totalPagosLineas, totals.total, condicionPago, cuentasPendientes.length]);
+
   const totalAplicarCuentas = cuentasPendientes.reduce((s, c) => s + c.montoAplicar, 0);
   const totalACobrar = (condicionPago === 'contado' ? totals.total : 0) + totalAplicarCuentas;
-  const totalPagosLineas = pagos.reduce((s, p) => s + p.monto, 0);
   const montoRecibidoNum = totalPagosLineas;
   const cambio = pagos.some(p => p.metodo_pago === 'efectivo') ? Math.max(0, totalPagosLineas - totalACobrar) : 0;
 
