@@ -241,7 +241,7 @@ export default function SearchableSelect({
             )}
           </div>
         </div>,
-        document.body
+        triggerRef.current?.closest('[role="dialog"]') ?? document.body
       )}
     </>
   );
