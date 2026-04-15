@@ -76,7 +76,7 @@ export default function MapaVentasPage() {
     queryFn: async () => {
       let q = supabase
         .from('entregas')
-        .select('id, folio, fecha, status, orden_entrega, notas, cliente_id, vendedor_id, vendedor_ruta_id, clientes(id, nombre, codigo, gps_lat, gps_lng, direccion, colonia), vendedores!entregas_vendedor_id_fkey(nombre), vendedor_ruta:vendedores!entregas_vendedor_ruta_id_fkey(nombre)')
+        .select('id, folio, fecha, status, orden_entrega, notas, cliente_id, vendedor_id, vendedor_ruta_id, clientes(id, nombre, codigo, gps_lat, gps_lng, direccion, colonia), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), vendedor_ruta:profiles!entregas_vendedor_ruta_id_profiles_fkey(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('fecha', fechaEntregas)
         .in('status', ['surtido', 'asignado', 'cargado', 'en_ruta'])
