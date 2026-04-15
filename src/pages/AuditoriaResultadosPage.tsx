@@ -248,7 +248,7 @@ export default function AuditoriaResultadosPage() {
 
       await supabase.from('auditorias').update({
         status: 'aprobada',
-        aprobado_por: user?.id,
+        aprobado_por: profile?.id,
         fecha_aprobacion: new Date().toISOString(),
         notas_supervisor: motivoGlobal || null,
       } as any).eq('id', id!);
