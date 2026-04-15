@@ -26,13 +26,13 @@ export default function RutaDescarga() {
   const [conteo, setConteo] = useState<Record<number, number>>({});
   const [notas, setNotas] = useState('');
 
-  // Get user's profile to find vendedor_id
+  // Get user's profile id (profile.id IS the vendedor_id now)
   const { data: myProfile } = useQuery({
     queryKey: ['mi-profile-vendedor', user?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
-        .select('vendedor_id')
+        .select('id')
         .eq('user_id', user!.id)
         .maybeSingle();
       return data;

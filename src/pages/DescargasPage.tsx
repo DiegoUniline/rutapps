@@ -117,12 +117,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Cobros recibidos — filter by user_id (auth uuid from profile)
+  // Cobros recibidos — vendedor_id now IS profiles.id, so look up user_id directly
   const { data: vendedorProfile } = useQuery({
     queryKey: ['vendedor-profile', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('user_id').eq('vendedor_id', descarga.vendedor_id).maybeSingle();
+      const { data } = await supabase.from('profiles').select('user_id').eq('id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
