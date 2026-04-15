@@ -2,7 +2,7 @@
  * Professional export utilities — Odoo-style clean Excel & PDF
  */
 import * as XLSX from 'xlsx';
-
+import { getCurrencyConfig } from '@/lib/currency';
 // ─── Types ──────────────────────────────────────────────────────
 export interface ExportColumn {
   key: string;
