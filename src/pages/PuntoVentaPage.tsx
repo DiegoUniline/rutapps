@@ -72,6 +72,7 @@ export default function PuntoVentaPage() {
   const [refTransferencia, setRefTransferencia] = useState('');
   const [refTarjeta, setRefTarjeta] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [showTicket, setShowTicket] = useState(false);
   const [lastVentaData, setLastVentaData] = useState<any>(null);
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
@@ -615,6 +616,8 @@ export default function PuntoVentaPage() {
   // Save sale
   const handleCobrar = async () => {
     if (!empresa || !user || cart.length === 0) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const ventaId = crypto.randomUUID();
@@ -844,6 +847,7 @@ export default function PuntoVentaPage() {
       toast.error(err.message || 'Error al guardar');
     } finally {
       setSaving(false);
+      savingRef.current = false;
     }
   };
 

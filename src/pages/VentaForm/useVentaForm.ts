@@ -65,6 +65,7 @@ export function useVentaForm() {
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
   const loadedVentaIdRef = useRef<string | null>(null);
+  const savingRef = useRef(false);
   const { requestPin, PinDialog } = usePinAuth();
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -399,11 +400,14 @@ export function useVentaForm() {
 
   const handleSave = async (autoConfirm = false): Promise<string | undefined> => {
     if (readOnly) return;
-    if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
-    if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
+    if (savingRef.current) return;
+    savingRef.current = true;
+    if (!form.cliente_id) { toast.error('Selecciona un cliente'); savingRef.current = false; return; }
+    if (!form.almacen_id) { toast.error('Selecciona un almacén'); savingRef.current = false; return; }
     const vendedorId = profile?.id;
     if (!vendedorId) {
       toast.error('No se pudo determinar el vendedor');
+      savingRef.current = false;
       return;
     }
     try {
@@ -471,7 +475,7 @@ export function useVentaForm() {
       if (isNew) navigate(`/ventas/${ventaId}`, { replace: true });
       setDirty(false);
       return ventaId;
-    } catch (e: any) { toast.error(e.message); return undefined; }
+    } catch (e: any) { toast.error(e.message); return undefined; } finally { savingRef.current = false; }
   };
 
   const handleDelete = async () => { if (!form.id) return; await deleteVenta.mutateAsync(form.id); toast.success('Venta eliminada'); navigate('/ventas'); };
