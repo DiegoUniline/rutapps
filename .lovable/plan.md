@@ -1,52 +1,58 @@
 
-Problema confirmado
+# Plan: Refactor FK constraints from `vendedores`/`cobradores` to `profiles`
 
-- El PDF subido `VTA-0011_2.pdf` sigue saliendo en MXN: muestra `Moneda: MXN - Peso mexicano`, importes con `$` y `VEINTE PESOS 88/100 MXN`.
-- La causa principal en la ruta actual `/ventas/:id` está en `src/pages/VentaForm/VentaPdfHandler.ts`: al construir `empresa` para `generarPedidoPdf`, no envía `moneda`, así el documento cae al fallback MXN.
-- Además hay endurecimientos globales en PDFs:
-  1. `src/lib/pdfStyleOdoo.ts` sigue formateando montos con lógica fija y `numberToWords()` devuelve siempre `PESOS ... MXN`.
-  2. `src/lib/cfdiPdf.ts` todavía trae fijo `Peso Mexicano` y el importe con letra en MXN.
+## Summary
+Single SQL migration that redirects all foreign keys currently pointing to `vendedores(id)` or `cobradores(id)` to point to `profiles(id)` instead, drops the sync trigger, and removes `profiles.vendedor_id`.
 
-Plan
+## Tables and columns affected
 
-1. Corregir la fuente del PDF de ventas
-- En `src/pages/VentaForm/VentaPdfHandler.ts`, pasar `empresa.moneda` al payload del PDF.
-- Revisar los demás puntos de entrada de PDFs para confirmar que todos transmiten la moneda de la empresa y no dependen del fallback.
+Based on the actual database schema:
 
-2. Unificar el formateo monetario de PDFs
-- Hacer que la capa compartida de PDF use `getCurrencyConfig()` para símbolo, código y formato.
-- Aplicar esa misma fuente de verdad a ventas, pedidos, estado de cuenta, liquidaciones, entregas, traspasos y ajustes.
+### FKs currently referencing `vendedores(id)`:
+| Table | Column |
+|---|---|
+| ventas | vendedor_id |
+| gastos | vendedor_id |
+| devoluciones | vendedor_id |
+| cargas | vendedor_id |
+| cargas | repartidor_id |
+| entregas | vendedor_id |
+| entregas | vendedor_ruta_id |
+| descarga_ruta | vendedor_id |
+| stock_camion | vendedor_id |
+| venta_comisiones | vendedor_id |
+| pago_comisiones | vendedor_id |
+| traspasos | vendedor_origen_id |
+| traspasos | vendedor_destino_id |
+| movimientos_inventario | vendedor_destino_id |
+| clientes | vendedor_id |
 
-3. Corregir el “importe con letra”
-- Volver `numberToWords()` sensible a la moneda configurada.
-- Para PEN, debe dejar de decir `PESOS ... MXN` y usar la moneda/código correctos.
-- Aplicar la misma corrección en `src/lib/cfdiPdf.ts`.
+### FKs currently referencing `cobradores(id)`:
+| Table | Column |
+|---|---|
+| clientes | cobrador_id |
 
-4. Corregir etiquetas internas del documento
-- Cambiar en CFDI y PDFs cualquier texto fijo como `MXN - Peso Mexicano` por el nombre real de la moneda configurada.
-- Verificar subtotales, totales, pagos, saldos y captions para que usen la misma moneda.
+### Other columns to re-point to `profiles(id)`:
+| Table | Column |
+|---|---|
+| descarga_ruta | aprobado_por |
+| auditorias | aprobado_por |
 
-5. Validación
-- Regenerar el PDF de la venta actual y confirmar visualmente:
-  - `Moneda: PEN - Sol peruano`
-  - importes con `S/`
-  - importe con letra sin `MXN/PESOS`
-  - pagos, subtotal, total y saldo consistentes
-- Hacer una revisión rápida adicional en otros PDFs clave: estado de cuenta, liquidación y CFDI.
+**Not affected** (confirmed no vendedor_id column): `cobros`, `visitas`, `conteos_fisicos`, `comisiones` (table doesn't exist).
 
-Detalles técnicos
+## Migration steps
 
-- Archivos principales:
-  - `src/pages/VentaForm/VentaPdfHandler.ts`
-  - `src/lib/pdfStyleOdoo.ts`
-  - `src/lib/pedidoPdf.ts`
-  - `src/lib/ventaPdf.ts`
-  - `src/lib/cfdiPdf.ts`
-- Archivos a auditar para cierre completo:
-  - `src/lib/estadoCuentaPdf.ts`
-  - `src/lib/liquidacionPdf.ts`
-  - `src/lib/entregaPdf.ts`
-  - `src/lib/traspasoPdf.ts`
-  - `src/lib/ajusteInventarioPdf.ts`
-- No se requieren cambios de base de datos.
-- El objetivo será corregir no solo el símbolo, sino también nombre de moneda, código y texto en letra para eliminar cualquier fallback a MXN.
+1. **Drop** trigger `trg_sync_profile_vendedor` and function `sync_profile_to_vendedor_cobrador()`
+2. **For each table/column above**: use a dynamic PL/pgSQL block to find and drop the existing FK constraint by name (querying `information_schema.table_constraints`), then `ADD CONSTRAINT ... REFERENCES profiles(id) ON DELETE SET NULL`
+3. **Drop column** `profiles.vendedor_id`
+4. **Leave** tables `vendedores` and `cobradores` intact (no DROP TABLE)
+
+## Technical details
+- The migration uses `DO $$ ... $$` blocks with `EXECUTE` to dynamically find constraint names, since we don't have them hardcoded
+- All new FKs use `ON DELETE SET NULL` to prevent cascade issues
+- No frontend changes in this migration
+
+## What this does NOT change
+- The `vendedores` and `cobradores` tables remain (empty/unused) for a future cleanup step
+- No frontend code changes yet - that will be a separate step
+- Database trigger functions that reference `vendedor_id` columns on other tables (like `apply_descarga_ruta_aprobada`) continue to work since those columns still exist, they just reference `profiles` now
