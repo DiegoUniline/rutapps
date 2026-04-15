@@ -576,9 +576,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const currentStepIdx = STEPS.indexOf(step);
   const goBack = () => { if (currentStepIdx === 0) navigate('/ruta/ventas'); else setStep(STEPS[currentStepIdx - 1]); };
   const goToPayment = () => { initCuentasPendientes(); setStep('pago'); };
-  const { symbol: currSym } = useCurrency();
-  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  const fmtM = (n: number) => `${currSym}${fmt(n)}`;
+  const { symbol: currSym, fmt } = useCurrency();
   const cambioItems = cart.filter(c => c.es_cambio);
   const chargedItems = cart.filter(c => !c.es_cambio);
 

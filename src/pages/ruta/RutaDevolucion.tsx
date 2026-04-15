@@ -6,6 +6,7 @@ import { useCargaActiva } from '@/hooks/useCargas';
 import { useSaveDevolucion } from '@/hooks/useDevoluciones';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface DevItem {
   producto_id: string;
@@ -141,7 +142,7 @@ export default function RutaDevolucion() {
     else setStep('items');
   };
 
-  const fmt = (n: number) => n.toLocaleString('es-MX');
+  const { fmt } = useCurrency();
 
   return (
     <div className="flex flex-col h-screen bg-background">

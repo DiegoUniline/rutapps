@@ -11,13 +11,10 @@ import { useAlmacenGuard } from '@/hooks/useAlmacenGuard';
 const BILLETES_VALUES = [1000, 500, 200, 100, 50, 20];
 const MONEDAS_VALUES = [10, 5, 2, 1, 0.5];
 
-const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-
 export default function RutaDescarga() {
   const nav = useNavigate();
   const { user, empresa } = useAuth();
-  const { symbol: s } = useCurrency();
-  const fmt = fmtNum;
+  const { symbol: s, fmt } = useCurrency();
   const { checkAlmacen, AlmacenDialog } = useAlmacenGuard();
   const BILLETES = BILLETES_VALUES.map(v => ({ label: `${s}${v.toLocaleString()}`, value: v }));
   const MONEDAS = MONEDAS_VALUES.map(v => ({ label: `${s}${v}`, value: v }));
