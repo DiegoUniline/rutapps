@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
 import { getCurrencyConfig } from '@/lib/currency';
-import { loadLogoBase64 } from '@/lib/pdfBase';
 
 export async function generateVentaPdfById(ventaId: string, empresaId?: string): Promise<{ blob: Blob; fileName: string; caption: string }> {
   // Fetch venta with relations
