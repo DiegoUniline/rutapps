@@ -269,7 +269,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .from('descarga_ruta')
         .update({
           status: accion,
-          aprobado_por: user!.id,
+          aprobado_por: profile!.id,
           fecha_aprobacion: new Date().toISOString(),
           notas_supervisor: notasSupervisor || null,
         } as any)
