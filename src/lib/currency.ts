@@ -8,6 +8,8 @@ export interface CurrencyConfig {
   symbol: string;
   locale: string;
   name: string;
+  /** Nombre de la unidad monetaria en plural para "importe con letra" */
+  wordPlural: string;
 }
 
 export const CURRENCIES: CurrencyConfig[] = [
