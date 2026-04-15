@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import type { VentaLinea } from '@/types';
 import { VentaLineaMobile } from './VentaLineaMobile';
 import { VentaLineaDesktop } from './VentaLineaDesktop';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   lineas: Partial<VentaLinea>[];
@@ -30,6 +31,7 @@ interface Props {
 
 export function VentaLineasTab(props: Props) {
   const isMobile = useIsMobile();
+  const { symbol } = useCurrency();
   const { lineas, readOnly, totals, onAddLine, sinImpuestos, setSinImpuestos, readOnlyForm, saldoPendiente, promoResults } = props;
 
   return (
@@ -37,7 +39,7 @@ export function VentaLineasTab(props: Props) {
       {isMobile ? (
         <div className="space-y-2">
           {lineas.map((l, idx) => (
-            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} />
+            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} currencySymbol={symbol} />
           ))}
         </div>
       ) : (
@@ -58,7 +60,7 @@ export function VentaLineasTab(props: Props) {
             </thead>
             <tbody>
               {lineas.map((l, idx) => (
-                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} />
+                <VentaLineaDesktop key={idx} idx={idx} line={l} isLast={idx === lineas.length - 1} {...props} currencySymbol={symbol} />
               ))}
             </tbody>
           </table>
