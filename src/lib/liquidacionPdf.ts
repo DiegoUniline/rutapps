@@ -7,6 +7,7 @@ import {
   drawNotes, drawSignatures, drawFooter, checkPageBreak,
   type EmpresaInfo,
 } from './pdfStyleOdoo';
+import { getCurrencyConfig } from '@/lib/currency';
 
 const STATUS_LABELS: Record<string, string> = {
   pendiente: 'Pendiente',
@@ -86,6 +87,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
   const doc = await createDoc();
   const pageW = doc.internal.pageSize.getWidth();
   const rightX = pageW - MR;
+  const sym = getCurrencyConfig(empresa.moneda).symbol;
 
   const statusColor = status === 'aprobada' ? 'green' : status === 'rechazada' ? 'red' : 'neutral';
 
