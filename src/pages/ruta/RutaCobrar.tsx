@@ -204,8 +204,7 @@ export default function RutaCobrar() {
     return Math.floor(diff / (1000 * 60 * 60 * 24));
   };
 
-  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
-  const fmtM = (n: number) => `${s}${fmt(n)}`;
+  const { fmt } = useCurrency();
 
   return (
     <div className="flex flex-col h-screen bg-background">
