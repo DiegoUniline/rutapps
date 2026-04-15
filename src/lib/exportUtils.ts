@@ -261,7 +261,8 @@ export async function exportToPDF(options: ExportOptions) {
 
   // ─── RESUMEN GENERAL ───────────────────────────────────────────
   if (resumenGeneral) {
-    const fmtCur = (n: number) => `$ ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const sym = getCurrencyConfig(currencyCode).symbol;
+    const fmtCur = (n: number) => `${sym} ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
 
     // Get current Y position after main table
