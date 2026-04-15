@@ -14,9 +14,12 @@ interface Props {
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   onDeleteTarget: (id: string) => void;
+  empresaId?: string;
+  empresa?: any;
+  clientesList?: any[];
 }
 
-export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget }: Props) {
+export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, empresaId, empresa, clientesList }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
@@ -108,6 +111,9 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                   canDelete={canDelete}
                   onDeleteTarget={onDeleteTarget}
                   onCollapse={() => setExpandedId(null)}
+                  empresaId={empresaId}
+                  empresa={empresa}
+                  clientesList={clientesList}
                 />
               )}
             </>
