@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { TableSkeleton } from '@/components/TableSkeleton';
 import { useNavigate } from 'react-router-dom';
 import { Star } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
 
 /**
  * Shows all tarifa_lineas that have comision_pct > 0,
@@ -11,6 +12,7 @@ import { Star } from 'lucide-react';
  */
 export default function ComisionesReglasTab() {
   const navigate = useNavigate();
+  const { symbol: cs, fmt } = useCurrency();
 
   const { data: reglas, isLoading } = useQuery({
     queryKey: ['comision-reglas'],
@@ -103,7 +105,7 @@ export default function ComisionesReglasTab() {
   };
 
   const tipoLabel = (r: any) => {
-    if (r.tipo_calculo === 'precio_fijo') return `Fijo $${r.precio?.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    if (r.tipo_calculo === 'precio_fijo') return `Fijo ${cs}${r.precio?.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     if (r.tipo_calculo === 'margen_costo') return `Margen ${r.margen_pct}%`;
     if (r.tipo_calculo === 'descuento_precio') return `Desc. ${r.descuento_pct}%`;
     return r.tipo_calculo;
@@ -129,7 +131,7 @@ export default function ComisionesReglasTab() {
                   <th className="th-odoo text-left">Lista</th>
                   <th className="th-odoo text-left">Tipo precio</th>
                   <th className="th-odoo text-right">% Comisión</th>
-                  <th className="th-odoo text-right">Ej. Venta $100</th>
+                  <th className="th-odoo text-right">Ej. Venta {cs}100</th>
                   <th className="th-odoo text-right">Comisión ganada</th>
                 </tr>
               </thead>
@@ -156,8 +158,8 @@ export default function ComisionesReglasTab() {
                       </td>
                       <td className="py-1.5 px-3 text-xs text-muted-foreground">{tipoLabel(r)}</td>
                       <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{r.comision_pct}%</td>
-                      <td className="py-1.5 px-3 text-right font-mono text-xs text-muted-foreground">$ {exVenta.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">$ {comisionEj.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-xs text-muted-foreground">{cs} {exVenta.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className="py-1.5 px-3 text-right font-mono font-semibold text-odoo-teal">{cs} {comisionEj.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                   );
                 })}

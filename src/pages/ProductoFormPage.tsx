@@ -357,10 +357,10 @@ export default function ProductoFormPage() {
             </div>
             {!(form as any).usa_listas_precio && (
               <OdooField label="Precio de venta" value={form.precio_principal} type="number" teal help
-                onChange={v => set('precio_principal', +v)} format={v => `$ ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+                onChange={v => set('precio_principal', +v)} format={v => `${(useCurrencyRef.current?.symbol ?? '$')} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
             )}
             <OdooField label="Costo" value={form.costo} type="number" teal help
-              onChange={v => set('costo', +v)} format={v => `$ ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+              onChange={v => set('costo', +v)} format={v => `${(useCurrencyRef.current?.symbol ?? '$')} ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
             <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
               options={[
                 { value: 'manual', label: 'Manual' },
