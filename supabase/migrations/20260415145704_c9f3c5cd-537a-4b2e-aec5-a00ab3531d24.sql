@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.registrar_saldo_inicial(uuid, uuid, numeric, date, text, uuid);
