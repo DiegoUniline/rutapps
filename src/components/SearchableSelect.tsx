@@ -243,7 +243,6 @@ export default function SearchableSelect({
         </div>,
         triggerRef.current?.closest('[role="dialog"]') ?? document.body
       )}
-      )}
     </>
   );
 }
