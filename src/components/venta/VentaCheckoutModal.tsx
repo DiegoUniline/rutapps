@@ -1,9 +1,18 @@
-import { useState, useMemo } from 'react';
-import { Wallet, Banknote, CreditCard, Package, Check, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Wallet, Banknote, CreditCard, Package, Check, X, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
+import { autoDistributeSurplus, type PendingAccountInput } from '@/lib/paymentDistribution';
 
 type PayMode = 'efectivo' | 'transferencia' | 'tarjeta' | 'mixto';
+
+export interface CheckoutCuentaPendiente {
+  id: string;
+  folio: string | null;
+  fecha: string;
+  total: number;
+  saldo_pendiente: number;
+}
 
 interface Props {
   open: boolean;
@@ -13,13 +22,18 @@ interface Props {
   clienteDiasCredito?: number;
   clienteLimiteCredito?: number;
   saving?: boolean;
-  onConfirm: (pagos: { metodo: string; monto: number; referencia: string }[], condicion: 'contado' | 'credito') => void;
+  cuentasPendientes?: CheckoutCuentaPendiente[];
+  onConfirm: (
+    pagos: { metodo: string; monto: number; referencia: string }[],
+    condicion: 'contado' | 'credito',
+    cuentasAplicadas?: { id: string; monto: number }[],
+  ) => void;
   onClose: () => void;
 }
 
 export function VentaCheckoutModal({
   open, total, clienteNombre, clienteCredito, clienteDiasCredito = 0, clienteLimiteCredito = 0,
-  saving, onConfirm, onClose,
+  saving, cuentasPendientes = [], onConfirm, onClose,
 }: Props) {
   const { fmt } = useCurrency();
   const [condicion, setCondicion] = useState<'contado' | 'credito'>('contado');
@@ -35,22 +49,39 @@ export function VentaCheckoutModal({
     return (parseFloat(payEfectivo) || 0) + (parseFloat(payTransferencia) || 0) + (parseFloat(payTarjeta) || 0);
   }, [payEfectivo, payTransferencia, payTarjeta, condicion]);
 
-  const faltante = Math.max(0, total - totalPagado);
-  const cambio = payMode === 'efectivo' && condicion === 'contado' ? Math.max(0, totalPagado - total) : 0;
+  // Auto-distribute surplus to pending accounts
+  const distributed = useMemo(() => {
+    if (condicion === 'credito' || cuentasPendientes.length === 0) return [];
+    const inputs: PendingAccountInput[] = cuentasPendientes.map(c => ({
+      id: c.id,
+      saldo_pendiente: c.saldo_pendiente,
+      montoAplicar: 0,
+    }));
+    return autoDistributeSurplus(total, totalPagado, inputs);
+  }, [total, totalPagado, condicion, cuentasPendientes]);
+
+  const totalAplicarCuentas = distributed.reduce((s, c) => s + c.montoAplicar, 0);
+  const totalACobrar = (condicion === 'contado' ? total : 0) + totalAplicarCuentas;
+  const faltante = condicion === 'contado' ? Math.max(0, total - totalPagado) : 0;
+  const cambio = payMode === 'efectivo' && condicion === 'contado'
+    ? Math.max(0, totalPagado - totalACobrar)
+    : 0;
 
   const quickAmounts = useMemo(() => {
+    const target = total + cuentasPendientes.reduce((s, c) => s + c.saldo_pendiente, 0);
     const amounts: number[] = [];
     const rounded = [
       Math.ceil(total / 10) * 10,
       Math.ceil(total / 20) * 20,
       Math.ceil(total / 50) * 50,
       Math.ceil(total / 100) * 100,
-      Math.ceil(total / 200) * 200,
-      Math.ceil(total / 500) * 500,
+      Math.ceil(target / 100) * 100,
+      Math.ceil(target / 200) * 200,
+      Math.ceil(target / 500) * 500,
     ];
-    const unique = [...new Set(rounded)].filter(a => a >= total && a > 0).slice(0, 4);
+    const unique = [...new Set(rounded)].filter(a => a >= total && a > 0).sort((a, b) => a - b).slice(0, 4);
     return unique;
-  }, [total]);
+  }, [total, cuentasPendientes]);
 
   const handleConfirm = () => {
     if (condicion === 'credito') {
@@ -61,11 +92,16 @@ export function VentaCheckoutModal({
     const ef = parseFloat(payEfectivo) || 0;
     const tr = parseFloat(payTransferencia) || 0;
     const ta = parseFloat(payTarjeta) || 0;
-    // For efectivo, cap at total (don't register change as payment)
-    if (ef > 0) pagos.push({ metodo: 'efectivo', monto: Math.min(ef, total), referencia: '' });
+    // For efectivo, cap at totalACobrar (don't register change as payment)
+    if (ef > 0) pagos.push({ metodo: 'efectivo', monto: Math.min(ef, totalACobrar), referencia: '' });
     if (tr > 0) pagos.push({ metodo: 'transferencia', monto: tr, referencia: refTransferencia });
     if (ta > 0) pagos.push({ metodo: 'tarjeta', monto: ta, referencia: refTarjeta });
-    onConfirm(pagos, 'contado');
+
+    const cuentasAplicadas = distributed
+      .filter(c => c.montoAplicar > 0)
+      .map(c => ({ id: c.id, monto: c.montoAplicar }));
+
+    onConfirm(pagos, 'contado', cuentasAplicadas.length > 0 ? cuentasAplicadas : undefined);
   };
 
   if (!open) return null;
@@ -230,6 +266,29 @@ export function VentaCheckoutModal({
                 </div>
               )}
 
+              {/* Pending accounts auto-applied */}
+              {totalAplicarCuentas > 0 && (
+                <div className="rounded-xl border border-primary/20 bg-primary/[0.03] p-3 space-y-1.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="text-[12px] font-semibold text-foreground">Liquidación de adeudos</span>
+                  </div>
+                  {distributed.filter(c => c.montoAplicar > 0).map(c => {
+                    const original = cuentasPendientes.find(cp => cp.id === c.id);
+                    return (
+                      <div key={c.id} className="flex items-center justify-between text-[11px]">
+                        <span className="text-muted-foreground">{original?.folio ?? 'Saldo inicial'}</span>
+                        <span className="font-semibold text-primary tabular-nums">{fmt(c.montoAplicar)}</span>
+                      </div>
+                    );
+                  })}
+                  <div className="flex items-center justify-between text-[12px] pt-1 border-t border-border/50">
+                    <span className="text-muted-foreground font-medium">Total a deudas</span>
+                    <span className="font-bold text-primary tabular-nums">{fmt(totalAplicarCuentas)}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Summary */}
               <div className="rounded-lg bg-accent/40 px-4 py-2.5 flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -241,6 +300,12 @@ export function VentaCheckoutModal({
                     <div className="flex items-center gap-3 text-[12px]">
                       <span className="text-destructive font-medium">Faltante:</span>
                       <span className="font-bold text-destructive tabular-nums">{fmt(faltante)}</span>
+                    </div>
+                  )}
+                  {totalAplicarCuentas > 0 && (
+                    <div className="flex items-center gap-3 text-[12px]">
+                      <span className="text-primary font-medium">Aplicado a deudas:</span>
+                      <span className="font-bold text-primary tabular-nums">{fmt(totalAplicarCuentas)}</span>
                     </div>
                   )}
                 </div>

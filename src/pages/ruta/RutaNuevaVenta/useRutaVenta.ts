@@ -495,10 +495,13 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       for (const item of cart) { const lineSub = item.precio_unitario * item.cantidad; const lineIeps = (!sinImpuestos && item.tiene_ieps) ? lineSub * (item.ieps_pct / 100) : 0; const lineIva = (!sinImpuestos && item.tiene_iva) ? (lineSub + lineIeps) * (item.iva_pct / 100) : 0; const savedIvaPct = sinImpuestos ? 0 : item.iva_pct; const savedIepsPct = sinImpuestos ? 0 : item.ieps_pct; await queueOperation('venta_lineas', 'insert', { id: crypto.randomUUID(), venta_id: ventaId, producto_id: item.producto_id, descripcion: item.nombre, cantidad: item.cantidad, precio_unitario: item.precio_unitario, unidad_id: item.unidad_id || null, subtotal: lineSub, iva_pct: savedIvaPct, iva_monto: lineIva, ieps_pct: savedIepsPct, ieps_monto: lineIeps, descuento_pct: 0, total: lineSub + lineIeps + lineIva, notas: item.es_cambio ? 'CAMBIO - Sin cargo' : null, created_at: new Date().toISOString() }); }
 
       if (applyPayment && clienteId && pagos.length > 0) {
-        // Track how much of the sale and cuentas have been applied
+        // Snapshot pending accounts to avoid mutating React state
+        const cuentasSnapshot = cuentasPendientes
+          .filter(c => c.montoAplicar > 0)
+          .map(c => ({ id: c.id, montoAplicar: c.montoAplicar, saldo_pendiente: c.saldo_pendiente }));
         let saleRemaining = condicionPago === 'contado' ? totals.total : 0;
-        const cuentasToApply = cuentasPendientes.filter(c => c.montoAplicar > 0);
         let cuentaIdx = 0;
+        const accountApplied = new Map<string, number>();
 
         for (const pago of pagos) {
           if (pago.monto <= 0) continue;
@@ -515,14 +518,17 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
             remaining -= apply;
           }
 
-          // Then apply to pending accounts
-          while (remaining > 0.01 && cuentaIdx < cuentasToApply.length) {
-            const cuenta = cuentasToApply[cuentaIdx];
-            const apply = Math.min(remaining, cuenta.montoAplicar);
+          // Then apply to pending accounts using snapshot (no state mutation)
+          while (remaining > 0.01 && cuentaIdx < cuentasSnapshot.length) {
+            const cuenta = cuentasSnapshot[cuentaIdx];
+            const alreadyApplied = accountApplied.get(cuenta.id) ?? 0;
+            const cuentaRemaining = cuenta.montoAplicar - alreadyApplied;
+            if (cuentaRemaining <= 0.01) { cuentaIdx++; continue; }
+            const apply = Math.min(remaining, cuentaRemaining);
             await queueOperation('cobro_aplicaciones', 'insert', { id: crypto.randomUUID(), cobro_id: cobroId, venta_id: cuenta.id, monto_aplicado: apply, created_at: new Date().toISOString() });
-            cuenta.montoAplicar -= apply;
+            accountApplied.set(cuenta.id, alreadyApplied + apply);
             remaining -= apply;
-            if (cuenta.montoAplicar <= 0.01) cuentaIdx++;
+            if (alreadyApplied + apply >= cuenta.montoAplicar - 0.01) cuentaIdx++;
           }
         }
 
@@ -532,11 +538,22 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
           await queueOperation('ventas', 'update', { id: ventaId, saldo_pendiente: Math.max(0, totals.total - appliedToSale) });
         }
 
-        // Update saldo_pendiente for cuentas
-        for (const cuenta of cuentasPendientes) {
-          if (cuenta.montoAplicar > 0) {
-            const nuevoSaldo = Math.max(0, cuenta.saldo_pendiente - cuenta.montoAplicar);
+        // Update saldo_pendiente for pending accounts using tracked amounts
+        for (const cuenta of cuentasSnapshot) {
+          const applied = accountApplied.get(cuenta.id) ?? 0;
+          if (applied > 0) {
+            const nuevoSaldo = Math.max(0, cuenta.saldo_pendiente - applied);
             await queueOperation('ventas', 'update', { id: cuenta.id, saldo_pendiente: nuevoSaldo });
+            // Update local offline cache immediately
+            try {
+              const ventasTable = getOfflineTable('ventas');
+              if (ventasTable) {
+                const localVenta = await ventasTable.get(cuenta.id);
+                if (localVenta) {
+                  await ventasTable.put({ ...localVenta, saldo_pendiente: nuevoSaldo });
+                }
+              }
+            } catch {}
           }
         }
       } else if (condicionPago === 'contado' && totals.total === 0) {
