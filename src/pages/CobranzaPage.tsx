@@ -58,14 +58,14 @@ function useVendedores() {
   });
 }
 
-function buildCobroMessage(cobro: any, currSymbol = '$') {
+function buildCobroMessage(cobro: any, fmtMoney: (n: number) => string) {
   const clienteNombre = (cobro.clientes as any)?.nombre ?? '—';
   return `✅ *Recibo de Cobro*\n\n` +
     `Cliente: ${clienteNombre}\n` +
     `Fecha: ${fmtDate(cobro.fecha)}\n` +
     `Método: ${cobro.metodo_pago}\n` +
     (cobro.referencia ? `Referencia: ${cobro.referencia}\n` : '') +
-    `\n💰 *Monto: ${currSymbol}${fmtNum(cobro.monto)}*\n\n` +
+    `\n💰 *Monto: ${fmtMoney(cobro.monto)}*\n\n` +
     `Gracias por su pago.`;
 }
 
