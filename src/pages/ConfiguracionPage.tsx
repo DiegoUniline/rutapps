@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const DEFAULT_CAMPOS: Record<string, boolean> = {
   logo: true, nombre: true, razon_social: true, rfc: true,
@@ -87,7 +88,7 @@ function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: Previe
           <div key={i} className="flex justify-between text-[10px]">
             <span className="flex-1 truncate">{p.nombre}</span>
             <span className="w-8 text-center">{p.qty}</span>
-            <span className="w-16 text-right">$ {p.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            <span className="w-16 text-right">{fmt(p.total)}</span>
           </div>
         ))}
       </div>
@@ -173,8 +174,8 @@ function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
               <td className="py-1 px-2 font-mono text-[9px] text-gray-500">{p.cod}</td>
               <td className="py-1 px-2 font-medium">{p.nombre}</td>
               <td className="py-1 px-2 text-center">{p.qty}</td>
-              <td className="py-1 px-2 text-right">$ {p.pu.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-              <td className="py-1 px-3 text-right font-medium">$ {p.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+              <td className="py-1 px-2 text-right">{fmt(p.pu)}</td>
+              <td className="py-1 px-3 text-right font-medium">{fmt(p.total)}</td>
             </tr>
           ))}
         </tbody>
@@ -290,6 +291,7 @@ function ChangePasswordCard() {
 /* ─── Main Page ─── */
 
 export default function ConfiguracionPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const qc = useQueryClient();
   const { data: config, isLoading } = useEmpresaConfig();

@@ -356,7 +356,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   const conImp = filtered.filter(p => p.base_precio === 'con_impuestos');
   const sinImp = filtered.filter(p => p.base_precio !== 'con_impuestos');
 
-  const fmt = (v: number) => `${currencySymbol} ${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmt = (v: number) => `${currencySymbol} {fmt(v)}`;
 
   const renderGroup = (items: typeof filtered, isConImp: boolean) => {
     if (items.length === 0) return null;
@@ -486,6 +486,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 }
 
 export default function TarifaFormPage() {
+  const { fmt } = useCurrency();
   const { id, productoId } = useParams();
   const [searchParams] = useSearchParams();
   const listaDisplayName = searchParams.get('lista');
@@ -728,7 +729,7 @@ export default function TarifaFormPage() {
   const getCalculoDisplay = (l: TarifaLinea) => {
     if (l.tipo_calculo === 'margen_costo') return `+${l.margen_pct}% s/costo`;
     if (l.tipo_calculo === 'descuento_precio') return `-${l.descuento_pct}% s/precio`;
-    return `$ ${l.precio.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    return `$ {fmt(l.precio)}`;
   };
 
   const getAplicaBadge = (aplica: AplicaATarifa) => {
@@ -946,7 +947,7 @@ export default function TarifaFormPage() {
                             <td className="py-1.5 px-3 text-right cursor-pointer" onClick={cellClick('precio_min')}>
                               {ec('precio_min') ? (
                                 <input autoFocus type="number" className="input-odoo text-right text-xs w-full" value={editLinea.precio_minimo || ''} onBlur={blurSave} onChange={e => setEditLinea(p => ({ ...p, precio_minimo: +e.target.value }))} />
-                              ) : <span className="font-mono text-xs">$ {l.precio_minimo.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>}
+                              ) : <span className="font-mono text-xs">{fmt(l.precio_minimo)}</span>}
                             </td>
                             {/* Redondeo */}
                             <td className="py-1.5 px-3 cursor-pointer" onClick={cellClick('redondeo')}>
