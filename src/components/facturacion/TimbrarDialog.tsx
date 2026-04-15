@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Loader2, Search, FileCheck, ShoppingCart } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
 import { fmtDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
   open: boolean;
@@ -21,6 +22,7 @@ interface Props {
 
 export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
   const { empresa, user } = useAuth();
+  const { fmt: fmtC } = useCurrency();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<'select' | 'review'>('select');
   const [selectedVentaId, setSelectedVentaId] = useState<string | null>(null);
@@ -294,7 +296,7 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                           <Badge variant="secondary" className="text-[10px]">{v.status}</Badge>
                         </div>
                         <span className="font-medium text-sm">
-                          ${Number(v.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                          {fmtC(Number(v.total || 0))}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -376,9 +378,9 @@ export function TimbrarDialog({ open, onOpenChange, onSuccess }: Props) {
                         <tr key={l.id} className="border-t border-border">
                           <td className="p-2 truncate max-w-[200px]">{l.descripcion || (l.productos as any)?.nombre}</td>
                           <td className="text-right p-2">{l.cantidad}</td>
-                          <td className="text-right p-2">${Number(l.precio_unitario).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                          <td className="text-right p-2">{fmtC(Number(l.precio_unitario))}</td>
                           <td className="text-right p-2">{l.iva_pct || 0}%</td>
-                          <td className="text-right p-2 font-medium">${Number(l.total || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                          <td className="text-right p-2 font-medium">{fmtC(Number(l.total || 0))}</td>
                         </tr>
                       ))}
                     </tbody>

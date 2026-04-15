@@ -30,7 +30,7 @@ export function ProductoComisionesTab({ form, set, tarifaLineas }: Props) {
               <OdooField label="Tipo comisión" value={form.tipo_comision} type="select"
                 options={[{ value: 'porcentaje', label: 'Porcentaje' }, { value: 'monto_fijo', label: 'Monto Fijo' }]}
                 onChange={v => set('tipo_comision', v)} format={() => comisionLabels[form.tipo_comision ?? 'porcentaje'] ?? ''} />
-              <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : '$'})`}
+              <OdooField label={`Valor (${form.tipo_comision === 'porcentaje' ? '%' : s})`}
                 value={form.pct_comision} type="number" teal onChange={v => set('pct_comision', +v)} format={v => (v ?? 0).toString()} />
             </div>
           </div>
@@ -56,7 +56,7 @@ function ComisionFromListas({ form, tarifaLineas }: { form: Partial<Producto>; t
         <table className="w-full text-sm">
           <thead><tr className="border-b border-table-border">
             <th className="th-odoo text-left">Lista</th><th className="th-odoo text-left">Tipo precio</th>
-            <th className="th-odoo text-right">Precio</th><th className="th-odoo text-right">% Comisión</th><th className="th-odoo text-right">Comisión $</th>
+            <th className="th-odoo text-right">Precio</th><th className="th-odoo text-right">% Comisión</th><th className="th-odoo text-right">Comisión {s}</th>
           </tr></thead>
           <tbody>
             {lineasConComision.map((l: any) => {

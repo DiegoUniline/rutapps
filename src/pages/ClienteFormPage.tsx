@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import type { Cliente, StatusCliente, FrecuenciaVisita } from '@/types';
 import { locationService } from '@/lib/locationService';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const defaultCliente: Partial<Cliente> = {
   codigo: '', nombre: '', contacto: '', telefono: '', email: '', direccion: '',
@@ -48,6 +49,7 @@ const applyRedondeo = (precio: number, redondeo: string) => {
 /* ── Precios tab component ─────────────────────── */
 function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; listaPrecioId?: string }) {
   const [search, setSearch] = useState('');
+  const { fmt: currFmt } = useCurrency();
 
   const { data: productos } = useQuery({
     queryKey: ['productos_precios_cliente', tarifaId, listaPrecioId],
@@ -176,7 +178,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
                       {p.base_precio === 'con_impuestos' ? 'Con imp.' : 'Sin imp.'}
                     </span>
                   </td>
-                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>$ {ganancia.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className={`py-1.5 px-3 text-right font-mono font-semibold ${ganancia >= 0 ? 'text-green-600' : 'text-destructive'}`}>{currFmt(ganancia)}</td>
                   <td className={`py-1.5 px-3 text-right font-mono font-semibold ${margen >= 0 ? 'text-green-600' : 'text-destructive'}`}>{margen.toFixed(1)}%</td>
                   <td className="py-1.5 px-3 text-right font-mono text-primary">{p.comision_pct ? `${p.comision_pct}%` : '—'}</td>
                 </tr>
@@ -203,6 +205,7 @@ export default function ClienteFormPage() {
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const { empresa } = useAuth();
+  const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
   const isNew = id === 'nuevo';
   const { data: existing } = useCliente(isNew ? undefined : id);
@@ -707,7 +710,7 @@ export default function ClienteFormPage() {
                   {form.credito && (
                     <>
                       <OdooField label="Límite de Crédito" value={form.limite_credito} onChange={v => set('limite_credito', +v)} type="number"
-                        format={(v: number) => `$ ${(v ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} />
+                        format={(v: number) => currFmt(v ?? 0)} />
                       <OdooField label="Días de Crédito" value={form.dias_credito} onChange={v => set('dias_credito', +v)} type="number" />
                     </>
                   )}
