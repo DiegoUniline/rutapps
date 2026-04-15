@@ -66,6 +66,7 @@ const statusSteps = [
 
 export default function ProductoFormPage() {
   const { empresa } = useAuth();
+  const { symbol: currSym } = useCurrency();
   const qc = useQueryClient();
   const { id } = useParams();
   const navigate = useNavigate();
