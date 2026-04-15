@@ -34,7 +34,7 @@ export function useUsuarios() {
   const [profiles, setProfiles] = useState<ProfileUser[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
-  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  // vendedores state removed — profiles IS vendedores now
   const [authUsers, setAuthUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -178,7 +178,7 @@ export function useUsuarios() {
   }, [quickAlmacenName, empresa?.id, loadUsuarios]);
 
   return {
-    profiles, userRoles, almacenes, vendedores, authUsers, loading, setLoading,
+    profiles, userRoles, almacenes, vendedores: profiles.map(p => ({ id: p.id, nombre: p.nombre ?? '' })), authUsers, loading, setLoading,
     editingUser, setEditingUser, editForm, setEditForm, savingUser,
     showNewUser, setShowNewUser, newUser, setNewUser, creatingUser,
     quickCreateRole, setQuickCreateRole, quickRoleName, setQuickRoleName,
