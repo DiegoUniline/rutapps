@@ -284,6 +284,7 @@ export default function VentaFormPage() {
             clienteCredito={!!cliente?.credito}
             clienteDiasCredito={(cliente as any)?.dias_credito ?? 0}
             clienteLimiteCredito={(cliente as any)?.limite_credito ?? 0}
+            cuentasPendientes={checkoutCuentasPendientes}
             saving={checkoutSaving}
             onConfirm={handleCheckoutConfirm}
             onClose={() => setShowCheckout(false)}
