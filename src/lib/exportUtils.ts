@@ -30,22 +30,27 @@ export interface ExportOptions {
   dateRange?: { from: string; to: string };
   totals?: Record<string, number>; // key → total value for footer row
   resumenGeneral?: ResumenGeneralExport;
+  /** Currency code of the empresa (e.g. 'MXN','USD'). Used for symbol in formatted output. */
+  currencyCode?: string | null;
 }
 
 // ─── Format Helpers ─────────────────────────────────────────────
-const fmt = (value: any, format?: ExportColumn['format']): string => {
-  if (value === null || value === undefined) return '';
-  switch (format) {
-    case 'currency': return `$ ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    case 'number': return Number(value).toLocaleString('es-MX');
-    case 'percent': return `${Number(value).toFixed(1)}%`;
-    case 'date': {
-      if (!value) return '';
-      const d = new Date(value);
-      return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+const makeFmt = (currencyCode?: string | null) => {
+  const sym = getCurrencyConfig(currencyCode).symbol;
+  return (value: any, format?: ExportColumn['format']): string => {
+    if (value === null || value === undefined) return '';
+    switch (format) {
+      case 'currency': return `${sym} ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      case 'number': return Number(value).toLocaleString('es-MX');
+      case 'percent': return `${Number(value).toFixed(1)}%`;
+      case 'date': {
+        if (!value) return '';
+        const d = new Date(value);
+        return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      default: return String(value);
     }
-    default: return String(value);
-  }
+  };
 };
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
