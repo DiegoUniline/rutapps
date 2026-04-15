@@ -163,7 +163,7 @@ export default function PedidoPendienteDetailPage() {
             </div>
             <div>
               <span className="text-muted-foreground text-[11px]">Total</span>
-              <p className="font-bold text-foreground">{fmt((pedido.total ?? 0))}</p>
+              <p className="font-bold text-foreground">{fmtC((pedido.total ?? 0))}</p>
             </div>
             <div>
               <span className="text-muted-foreground text-[11px]">Estado</span>
