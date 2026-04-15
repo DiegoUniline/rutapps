@@ -162,11 +162,11 @@ export function useZonas() {
 }
 export function useVendedores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['vendedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre'); return data as Vendedor[]; }});
+  return useQuery({ queryKey: ['vendedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'); return data as Vendedor[]; }});
 }
 export function useCobradores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre'); return data as Cobrador[]; }});
+  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'); return data as Cobrador[]; }});
 }
 
 // Pedido sugerido per client
