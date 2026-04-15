@@ -6,7 +6,7 @@ export function ReporteUtilidad({ data }: { data: any }) {
   const margenBruto = totalVentas > 0 ? Math.round((utilidadBruta / totalVentas) * 100) : 0;
   const margenNeto = totalVentas > 0 ? Math.round((utilidadNeta / totalVentas) * 100) : 0;
 
-  const fmt2 = (n: number) => `${n < 0 ? '-' : ''} $ ${Math.abs(n).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+  const fmt2 = (n: number) => `${n < 0 ? '-' : ''} ${fmt(Math.abs(n))}`;
 
   return (
     <div className="space-y-4">

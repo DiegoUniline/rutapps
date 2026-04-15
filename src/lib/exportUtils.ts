@@ -2,7 +2,7 @@
  * Professional export utilities — Odoo-style clean Excel & PDF
  */
 import * as XLSX from 'xlsx';
-
+import { getCurrencyConfig } from '@/lib/currency';
 // ─── Types ──────────────────────────────────────────────────────
 export interface ExportColumn {
   key: string;
@@ -30,27 +30,33 @@ export interface ExportOptions {
   dateRange?: { from: string; to: string };
   totals?: Record<string, number>; // key → total value for footer row
   resumenGeneral?: ResumenGeneralExport;
+  /** Currency code of the empresa (e.g. 'MXN','USD'). Used for symbol in formatted output. */
+  currencyCode?: string | null;
 }
 
 // ─── Format Helpers ─────────────────────────────────────────────
-const fmt = (value: any, format?: ExportColumn['format']): string => {
-  if (value === null || value === undefined) return '';
-  switch (format) {
-    case 'currency': return `$ ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    case 'number': return Number(value).toLocaleString('es-MX');
-    case 'percent': return `${Number(value).toFixed(1)}%`;
-    case 'date': {
-      if (!value) return '';
-      const d = new Date(value);
-      return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+const makeFmt = (currencyCode?: string | null) => {
+  const sym = getCurrencyConfig(currencyCode).symbol;
+  return (value: any, format?: ExportColumn['format']): string => {
+    if (value === null || value === undefined) return '';
+    switch (format) {
+      case 'currency': return `${sym} ${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      case 'number': return Number(value).toLocaleString('es-MX');
+      case 'percent': return `${Number(value).toFixed(1)}%`;
+      case 'date': {
+        if (!value) return '';
+        const d = new Date(value);
+        return d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+      }
+      default: return String(value);
     }
-    default: return String(value);
-  }
+  };
 };
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
 export function exportToExcel(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode } = options;
+  const fmt = makeFmt(currencyCode);
 
   const wb = XLSX.utils.book_new();
   const rows: any[][] = [];
@@ -128,7 +134,8 @@ export function exportToExcel(options: ExportOptions) {
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
 export async function exportToPDF(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode } = options;
+  const fmt = makeFmt(currencyCode);
 
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
@@ -254,7 +261,8 @@ export async function exportToPDF(options: ExportOptions) {
 
   // ─── RESUMEN GENERAL ───────────────────────────────────────────
   if (resumenGeneral) {
-    const fmtCur = (n: number) => `$ ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const sym = getCurrencyConfig(currencyCode).symbol;
+    const fmtCur = (n: number) => `${sym} ${n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const metodoPagoLabels: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia', tarjeta: 'Tarjeta', cheque: 'Cheque', deposito: 'Depósito' };
 
     // Get current Y position after main table

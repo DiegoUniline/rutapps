@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useCurrency } from '@/hooks/useCurrency';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
@@ -204,7 +205,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 /* ── Precios Preview Tab ─────────────────────────── */
 function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
   const [search, setSearch] = useState('');
-  
+  const { symbol: currencySymbol } = useCurrency();
 
 
   const { data: productos } = useQuery({
@@ -355,7 +356,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   const conImp = filtered.filter(p => p.base_precio === 'con_impuestos');
   const sinImp = filtered.filter(p => p.base_precio !== 'con_impuestos');
 
-  const fmt = (v: number) => `$ ${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmt = (v: number) => `${currencySymbol} ${v.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const renderGroup = (items: typeof filtered, isConImp: boolean) => {
     if (items.length === 0) return null;

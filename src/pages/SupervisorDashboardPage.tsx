@@ -73,7 +73,7 @@ function getWeekRange(todayStr: string) {
 
 export default function SupervisorDashboardPage() {
   const { empresa } = useAuth();
-  const { fmt: fmtMoney } = useCurrency();
+  const { fmt: fmtMoney, symbol: cs } = useCurrency();
   const today = todayInTimezone(empresa?.zona_horaria);
   const [desde, setDesde] = useState(today);
   const [hasta, setHasta] = useState(today);
@@ -927,11 +927,11 @@ export default function SupervisorDashboardPage() {
                         <BarChart data={weeklyChartData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                           <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
-                          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
+                          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `${cs}${(v / 1000).toFixed(0)}k`} width={40} />
                           <Tooltip formatter={(v: number, name: string) => {
                             const sellerId = name.replace('v_', '');
                             const sellerName = sellerNameMap.get(sellerId) ?? name;
-                            return [`$${v.toLocaleString('es-MX')}`, sellerName];
+                            return [`${cs}${v.toLocaleString('es-MX')}`, sellerName];
                           }} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
                           {weeklySellerRanking.map((s, i) => (
                             <Bar key={s.id} dataKey={`v_${s.id}`} stackId="ventas" fill={ROUTE_COLORS[i % ROUTE_COLORS.length]} radius={i === weeklySellerRanking.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
@@ -953,8 +953,8 @@ export default function SupervisorDashboardPage() {
                         <LineChart data={weeklyAccumData} margin={{ top: 5, right: 5, bottom: 0, left: 5 }}>
                           <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                           <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
-                          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={40} />
-                          <Tooltip formatter={(v: number, name: string) => [`$${v.toLocaleString('es-MX')}`, name === 'accumVentas' ? 'Ventas' : 'Cobros']} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                          <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `${cs}${(v / 1000).toFixed(0)}k`} width={40} />
+                          <Tooltip formatter={(v: number, name: string) => [`${cs}${v.toLocaleString('es-MX')}`, name === 'accumVentas' ? 'Ventas' : 'Cobros']} labelStyle={{ fontSize: 11 }} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
                           <Line type="monotone" dataKey="accumVentas" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} name="Ventas" />
                           <Line type="monotone" dataKey="accumCobros" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} name="Cobros" />
                           <Legend iconSize={8} wrapperStyle={{ fontSize: 10 }} />

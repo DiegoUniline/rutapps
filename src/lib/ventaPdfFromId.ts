@@ -5,6 +5,7 @@
 import { supabase } from '@/lib/supabase';
 import { generarPedidoPdf } from '@/lib/pedidoPdf';
 import { loadLogoBase64 } from '@/lib/pdfBase';
+import { getCurrencyConfig } from '@/lib/currency';
 
 export async function generateVentaPdfById(ventaId: string, empresaId?: string): Promise<{ blob: Blob; fileName: string; caption: string }> {
   // Fetch venta with relations
@@ -42,6 +43,7 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
       telefono: empresa?.telefono,
       email: empresa?.email,
       logo_url: empresa?.logo_url,
+      moneda: empresa?.moneda,
     },
     logoBase64: logo,
     pedido: {
@@ -92,11 +94,12 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
   const folio = venta.folio || ventaId.slice(0, 8);
   const tipoLabel = venta.tipo === 'pedido' ? 'Pedido' : 'Venta';
   const clienteNombre = (venta as any).clientes?.nombre ?? '';
+  const sym = getCurrencyConfig(empresa?.moneda).symbol;
   const total = (venta.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
   return {
     blob,
     fileName: `${folio}.pdf`,
-    caption: `📄 *${tipoLabel} ${folio}*\nCliente: ${clienteNombre}\n💰 Total: $${total}`,
+    caption: `📄 *${tipoLabel} ${folio}*\nCliente: ${clienteNombre}\n💰 Total: ${sym}${total}`,
   };
 }

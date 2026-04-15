@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Download, Mail, FileText } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
 import { fmtDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface CfdiHistoryProps {
   ventaId: string;
@@ -13,6 +14,7 @@ interface CfdiHistoryProps {
 
 export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps) {
   const navigate = useNavigate();
+  const { fmt: fmtCur } = useCurrency();
   // Get unique cfdi_ids from facturado lines
   const cfdiIds = [...new Set(lineas.filter(l => l.facturado && l.factura_cfdi_id).map(l => l.factura_cfdi_id))];
 
@@ -33,8 +35,6 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
   });
 
   if (!cfdis || cfdis.length === 0) return null;
-
-  const fmt = (v: number) => `$${(v ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
 
   return (
     <div className="space-y-3">
@@ -69,7 +69,7 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
                   </div>
                 </td>
                 <td className="py-1.5 px-2 text-[11px] text-muted-foreground max-w-[200px] truncate">{lineasDesc || `${cfdiLineas.length} líneas`}</td>
-                <td className="py-1.5 px-2 text-right font-medium">{fmt(cfdi.total)}</td>
+                <td className="py-1.5 px-2 text-right font-medium">{fmtCur(cfdi.total)}</td>
                 <td className="py-1.5 px-2 text-muted-foreground text-[12px]">{fmtDate(cfdi.created_at)}</td>
                 <td className="py-1.5 px-2">
                   <StatusChip status={cfdi.status === 'timbrado' ? 'confirmado' : cfdi.status === 'cancelado' ? 'cancelado' : 'borrador'} />
