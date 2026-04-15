@@ -65,7 +65,7 @@ function buildCobroMessage(cobro: any) {
     `Fecha: ${fmtDate(cobro.fecha)}\n` +
     `Método: ${cobro.metodo_pago}\n` +
     (cobro.referencia ? `Referencia: ${cobro.referencia}\n` : '') +
-    `\n💰 *Monto: $${fmtNum(cobro.monto)}*\n\n` +
+    `\n💰 *Monto: ${symbol}${fmtNum(cobro.monto)}*\n\n` +
     `Gracias por su pago.`;
 }
 

@@ -8,6 +8,7 @@ interface SendReceiptParams {
   phone: string;
   referencia_id?: string;
   tipo?: string;
+  currencySymbol?: string;
 }
 
 /**
@@ -15,7 +16,7 @@ interface SendReceiptParams {
  * upload to Storage, send via WhatsApp, and cleanup.
  */
 export async function sendReceiptWhatsApp(params: SendReceiptParams): Promise<{ success: boolean; error?: string }> {
-  const { data, empresaId, phone, referencia_id, tipo = 'pedido_confirmado' } = params;
+  const { data, empresaId, phone, referencia_id, tipo = 'pedido_confirmado', currencySymbol: cs = '$' } = params;
 
   // 1. Build HTML element off-screen
   const container = document.createElement('div');
@@ -63,7 +64,7 @@ export async function sendReceiptWhatsApp(params: SendReceiptParams): Promise<{ 
         empresa_id: empresaId,
         phone,
         url: publicUrl,
-        caption: `✓ Comprobante\nFolio: ${data.folio}\nTotal: $${fmt2(data.total)}`,
+        caption: `✓ Comprobante\nFolio: ${data.folio}\nTotal: ${cs}${fmt2(data.total)}`,
         tipo,
         referencia_id,
       },
@@ -79,8 +80,8 @@ export async function sendReceiptWhatsApp(params: SendReceiptParams): Promise<{ 
       const fmt2 = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const textMsg = `✓ Comprobante\n` +
         `Folio: ${data.folio}\nCliente: ${data.clienteNombre}\n` +
-        data.lineas.map(l => `${l.cantidad}x ${l.nombre} $${fmt2(l.total)}`).join('\n') +
-        `\n─────────\nTOTAL: $${fmt2(data.total)}`;
+        data.lineas.map(l => `${l.cantidad}x ${l.nombre} ${cs}${fmt2(l.total)}`).join('\n') +
+        `\n─────────\nTOTAL: ${cs}${fmt2(data.total)}`;
 
       await supabase.functions.invoke('whatsapp-sender', {
         body: { action: 'send-text', empresa_id: empresaId, phone, message: textMsg, tipo, referencia_id },
