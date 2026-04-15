@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 
 export default function RutaGastos() {
