@@ -106,10 +106,10 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
     ],
     'Resumen',
     [
-      ['Ventas contado:', `$${fmtCurrency(cuadre.totalContado)}`],
-      ['Ventas crédito:', `$${fmtCurrency(cuadre.totalCredito)}`],
-      ['Total cobros:', `$${fmtCurrency(cobros.reduce((s, c) => s + c.monto, 0))}`],
-      ['Total gastos:', `-$${fmtCurrency(cuadre.totalGastos)}`],
+      ['Ventas contado:', `${sym}${fmtCurrency(cuadre.totalContado)}`],
+      ['Ventas crédito:', `${sym}${fmtCurrency(cuadre.totalCredito)}`],
+      ['Total cobros:', `${sym}${fmtCurrency(cobros.reduce((s, c) => s + c.monto, 0))}`],
+      ['Total gastos:', `-${sym}${fmtCurrency(cuadre.totalGastos)}`],
     ],
   );
 
@@ -122,15 +122,15 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
   y += 6;
 
   const cuadreRows: [string, string][] = [
-    ['+ Cobros en efectivo:', `$${fmtCurrency(cuadre.cobrosEfectivo)}`],
+    ['+ Cobros en efectivo:', `${sym}${fmtCurrency(cuadre.cobrosEfectivo)}`],
   ];
   if ((cuadre.cobrosTransferencia ?? 0) > 0) {
-    cuadreRows.push(['Cobros transferencia:', `$${fmtCurrency(cuadre.cobrosTransferencia)}`]);
+    cuadreRows.push(['Cobros transferencia:', `${sym}${fmtCurrency(cuadre.cobrosTransferencia)}`]);
   }
   if ((cuadre.cobrosTarjeta ?? 0) > 0) {
-    cuadreRows.push(['Cobros tarjeta:', `$${fmtCurrency(cuadre.cobrosTarjeta)}`]);
+    cuadreRows.push(['Cobros tarjeta:', `${sym}${fmtCurrency(cuadre.cobrosTarjeta)}`]);
   }
-  cuadreRows.push(['− Gastos:', `-$${fmtCurrency(cuadre.totalGastos)}`]);
+  cuadreRows.push(['− Gastos:', `-${sym}${fmtCurrency(cuadre.totalGastos)}`]);
 
   doc.setFontSize(9.5);
   for (const [lbl, val] of cuadreRows) {
@@ -153,11 +153,11 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...C.text);
   doc.text('Efectivo esperado:', ML + 4, y);
-  doc.text(`$${fmtCurrency(cuadre.efectivoEsperado)}`, ML + 70, y);
+  doc.text(`${sym}${fmtCurrency(cuadre.efectivoEsperado)}`, ML + 70, y);
   y += 6;
 
   doc.text('Efectivo entregado:', ML + 4, y);
-  doc.text(`$${fmtCurrency(efectivoEntregado)}`, ML + 70, y);
+  doc.text(`${sym}${fmtCurrency(efectivoEntregado)}`, ML + 70, y);
   y += 6;
 
   // Diferencia
@@ -186,7 +186,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
         v.cliente,
         v.condicion === 'contado' ? 'Contado' : 'Crédito',
         v.status,
-        { content: `$${fmtCurrency(v.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `${sym}${fmtCurrency(v.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
       {
         0: { cellWidth: 24 },
@@ -220,7 +220,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
       doc.text(`${v.folio} — ${v.cliente}`, ML + 4, y);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...C.red);
-      doc.text(`$${fmtCurrency(v.total)}`, rightX, y, { align: 'right' });
+      doc.text(`${sym}${fmtCurrency(v.total)}`, rightX, y, { align: 'right' });
       y += 4.5;
       y = checkPageBreak(doc, y, 10);
     }
@@ -236,7 +236,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
         p.codigo,
         p.nombre,
         { content: String(p.cantidad), styles: { halign: 'right' } },
-        { content: `$${fmtCurrency(p.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `${sym}${fmtCurrency(p.total)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
       {
         0: { cellWidth: 28 },
@@ -255,7 +255,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
         c.cliente,
         c.metodo,
         c.referencia || '—',
-        { content: `$${fmtCurrency(c.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `${sym}${fmtCurrency(c.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
       {
         1: { cellWidth: 26 },
@@ -279,7 +279,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
       gastos.map(g => [
         g.concepto,
         g.notas || '—',
-        { content: `-$${fmtCurrency(g.monto)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.red } },
+        { content: `-${sym}${fmtCurrency(g.monto)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.red } },
       ]),
       {
         2: { cellWidth: 28, halign: 'right' },
