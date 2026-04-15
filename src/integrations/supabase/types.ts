@@ -314,6 +314,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "auditorias_aprobado_por_profiles_fkey"
+            columns: ["aprobado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "auditorias_empresa_id_fkey"
             columns: ["empresa_id"]
             isOneToOne: false
@@ -588,17 +595,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cargas_repartidor_id_fkey"
+            foreignKeyName: "cargas_repartidor_id_profiles_fkey"
             columns: ["repartidor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cargas_vendedor_id_fkey"
+            foreignKeyName: "cargas_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1161,10 +1168,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "clientes_cobrador_id_fkey"
+            foreignKeyName: "clientes_cobrador_id_profiles_fkey"
             columns: ["cobrador_id"]
             isOneToOne: false
-            referencedRelation: "cobradores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1196,10 +1203,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "clientes_vendedor_id_fkey"
+            foreignKeyName: "clientes_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1812,6 +1819,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "descarga_ruta_aprobado_por_profiles_fkey"
+            columns: ["aprobado_por"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "descarga_ruta_carga_id_fkey"
             columns: ["carga_id"]
             isOneToOne: false
@@ -1826,10 +1840,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "descarga_ruta_vendedor_id_fkey"
+            foreignKeyName: "descarga_ruta_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2009,10 +2023,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "devoluciones_vendedor_id_fkey"
+            foreignKeyName: "devoluciones_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2252,17 +2266,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "entregas_vendedor_id_fkey"
+            foreignKeyName: "entregas_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "entregas_vendedor_ruta_id_fkey"
+            foreignKeyName: "entregas_vendedor_ruta_id_profiles_fkey"
             columns: ["vendedor_ruta_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2394,10 +2408,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "gastos_vendedor_id_fkey"
+            foreignKeyName: "gastos_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2645,10 +2659,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "movimientos_inventario_vendedor_destino_id_fkey"
+            foreignKeyName: "movimientos_inventario_vendedor_destino_id_profiles_fkey"
             columns: ["vendedor_destino_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2858,10 +2872,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "pago_comisiones_vendedor_id_fkey"
+            foreignKeyName: "pago_comisiones_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -3425,7 +3439,6 @@ export type Database = {
           pin_code: string | null
           telefono: string | null
           user_id: string
-          vendedor_id: string | null
         }
         Insert: {
           almacen_id?: string | null
@@ -3439,7 +3452,6 @@ export type Database = {
           pin_code?: string | null
           telefono?: string | null
           user_id: string
-          vendedor_id?: string | null
         }
         Update: {
           almacen_id?: string | null
@@ -3453,7 +3465,6 @@ export type Database = {
           pin_code?: string | null
           telefono?: string | null
           user_id?: string
-          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -3468,13 +3479,6 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_vendedor_id_fkey"
-            columns: ["vendedor_id"]
-            isOneToOne: false
-            referencedRelation: "vendedores"
             referencedColumns: ["id"]
           },
         ]
@@ -3947,10 +3951,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "stock_camion_vendedor_id_fkey"
+            foreignKeyName: "stock_camion_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4515,17 +4519,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "traspasos_vendedor_destino_id_fkey"
+            foreignKeyName: "traspasos_vendedor_destino_id_profiles_fkey"
             columns: ["vendedor_destino_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "traspasos_vendedor_origen_id_fkey"
+            foreignKeyName: "traspasos_vendedor_origen_id_profiles_fkey"
             columns: ["vendedor_origen_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -4784,10 +4788,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "venta_comisiones_vendedor_id_fkey"
+            foreignKeyName: "venta_comisiones_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -5074,10 +5078,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "ventas_vendedor_id_fkey"
+            foreignKeyName: "ventas_vendedor_id_profiles_fkey"
             columns: ["vendedor_id"]
             isOneToOne: false
-            referencedRelation: "vendedores"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
