@@ -36,7 +36,7 @@ export default function EntregaCamionPage() {
       if (error) throw error;
 
       // Vendedor name
-      const { data: vend } = await supabase.from('vendedores').select('nombre').eq('id', vendedorId!).single();
+      const { data: vend } = await supabase.from('profiles').select('nombre').eq('id', vendedorId!).single();
 
       return { entregas: entregas ?? [], vendedorNombre: vend?.nombre ?? '—' };
     },
