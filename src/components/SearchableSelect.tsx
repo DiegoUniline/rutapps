@@ -36,7 +36,7 @@ export default function SearchableSelect({
   const triggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; width: number; strategy: 'fixed' | 'absolute' } | null>(null);
 
   const selectedLabel = options.find(o => o.value === value)?.label ?? '';
 
@@ -46,14 +46,36 @@ export default function SearchableSelect({
     return options.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q));
   }, [search, options]);
 
+  const portalTarget = (triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) ?? document.body;
+
   // Reset highlight on filter change
   useEffect(() => { setHighlightIdx(0); }, [filtered.length, search]);
 
   // Position dropdown
   const updatePos = useCallback(() => {
-    if (!triggerRef.current) return;
-    const r = triggerRef.current.getBoundingClientRect();
-    setPos({ top: r.bottom + 2, left: r.left, width: Math.max(r.width, 220) });
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const dialogContainer = trigger.closest('[role="dialog"]') as HTMLElement | null;
+
+    if (dialogContainer) {
+      const containerRect = dialogContainer.getBoundingClientRect();
+      setPos({
+        top: triggerRect.bottom - containerRect.top + dialogContainer.scrollTop - dialogContainer.clientTop + 2,
+        left: triggerRect.left - containerRect.left + dialogContainer.scrollLeft - dialogContainer.clientLeft,
+        width: Math.max(triggerRect.width, 220),
+        strategy: 'absolute',
+      });
+      return;
+    }
+
+    setPos({
+      top: triggerRect.bottom + 2,
+      left: triggerRect.left,
+      width: Math.max(triggerRect.width, 220),
+      strategy: 'fixed',
+    });
   }, []);
 
   useEffect(() => {
@@ -165,7 +187,7 @@ export default function SearchableSelect({
           onMouseDown={e => e.stopPropagation()}
           onPointerUp={e => e.stopPropagation()}
           style={{
-            position: 'fixed',
+            position: pos.strategy,
             top: pos.top,
             left: pos.left,
             width: pos.width,
@@ -173,7 +195,6 @@ export default function SearchableSelect({
           }}
           className="bg-popover border border-border rounded-md shadow-xl flex flex-col max-h-[280px]"
         >
-          {/* Search input */}
           <div className="flex items-center gap-2 px-2.5 py-2 border-b border-border">
             <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <input
@@ -188,7 +209,6 @@ export default function SearchableSelect({
             />
           </div>
 
-          {/* Options list */}
           <div className="overflow-y-auto flex-1">
             {filtered.length === 0 && !onCreateNew ? (
               <div className="px-3 py-3 text-[12px] text-muted-foreground text-center">Sin resultados</div>
@@ -211,7 +231,6 @@ export default function SearchableSelect({
                     {highlightMatch(o.label, search)}
                   </div>
                 ))}
-                {/* Quick-create option */}
                 {onCreateNew && search.trim() && !filtered.some(o => o.label.toLowerCase() === search.trim().toLowerCase()) && (
                   <div
                     onMouseDown={e => { e.preventDefault(); e.stopPropagation(); }}
@@ -241,7 +260,7 @@ export default function SearchableSelect({
             )}
           </div>
         </div>,
-        triggerRef.current?.closest('[role="dialog"]') ?? document.body
+        portalTarget
       )}
     </>
   );
