@@ -633,17 +633,22 @@ export default function PuntoVentaPage() {
         await supabase.from('profiles').update({ vendedor_id: profile!.id }).eq('id', profile!.id);
       }
 
-      // Fetch client's previous balance (sum of saldo_pendiente on all their ventas)
+      // Fetch client's previous balance and individual pending ventas
       let saldoAnteriorCliente = 0;
+      let pendingVentas: { id: string; saldo_pendiente: number; fecha: string }[] = [];
       if (clienteId) {
         const { data: saldoRows } = await supabase
           .from('ventas')
-          .select('saldo_pendiente')
+          .select('id, saldo_pendiente, fecha')
           .eq('empresa_id', empresa.id)
           .eq('cliente_id', clienteId)
-          .gt('saldo_pendiente', 0);
+          .gt('saldo_pendiente', 0)
+          .in('status', ['confirmado', 'entregado', 'facturado'])
+          .order('fecha');
         saldoAnteriorCliente = (saldoRows ?? []).reduce((s: number, r: any) => s + (r.saldo_pendiente ?? 0), 0);
+        pendingVentas = (saldoRows ?? []).map((r: any) => ({ id: r.id, saldo_pendiente: r.saldo_pendiente ?? 0, fecha: r.fecha }));
       }
+      let totalAppliedToAccountsPOS = 0;
 
       // Resolve a valid client for "Público general" so contado sales can always register cobros
       let clientePublicoId: string | null = null;
@@ -727,17 +732,21 @@ export default function PuntoVentaPage() {
 
       // 3. Stock deduction + movement logging handled by DB trigger (apply_immediate_sale_inventory)
 
-      // 4. Insert cobros if contado (one per method with amount)
+      // 4. Insert cobros if contado — distribute across sale + pending accounts FIFO
       if (condicion === 'contado' && totals.total > 0) {
         const clienteCobroId = clienteId ?? clientePublicoId;
         if (!clienteCobroId) {
           throw new Error('No se pudo asignar un cliente para registrar el cobro.');
         }
 
-        // Fallback: if no payment splits entered, create a single efectivo cobro for the full amount
         const splitsToUse = paySplitsComputed.length > 0
           ? paySplitsComputed
           : [{ metodo: 'efectivo' as PayMethod, monto: totals.total, referencia: '' }];
+
+        let saleRemainingPOS = totals.total;
+        let pendingIdx = 0;
+        const accountAppliedPOS = new Map<string, number>();
+
         for (const split of splitsToUse) {
           if (split.monto <= 0) continue;
           const cobroId = crypto.randomUUID();
@@ -746,19 +755,41 @@ export default function PuntoVentaPage() {
             empresa_id: empresa.id,
             cliente_id: clienteCobroId,
             user_id: user.id,
-            monto: Math.min(split.monto, totals.total),
+            monto: split.monto,
             metodo_pago: split.metodo,
             referencia: split.referencia || null,
             fecha: today,
           });
-          if (!cobErr) {
+          if (cobErr) continue;
+
+          let remaining = split.monto;
+
+          // First apply to current sale
+          if (saleRemainingPOS > 0 && remaining > 0) {
+            const apply = Math.min(remaining, saleRemainingPOS);
             await supabase.from('cobro_aplicaciones').insert({
-              cobro_id: cobroId,
-              venta_id: ventaId,
-              monto_aplicado: Math.min(split.monto, totals.total),
+              cobro_id: cobroId, venta_id: ventaId, monto_aplicado: apply,
             });
+            saleRemainingPOS -= apply;
+            remaining -= apply;
+          }
+
+          // Then distribute excess to pending accounts FIFO
+          while (remaining > 0.01 && pendingIdx < pendingVentas.length) {
+            const pv = pendingVentas[pendingIdx];
+            const alreadyApplied = accountAppliedPOS.get(pv.id) ?? 0;
+            const pvRemaining = pv.saldo_pendiente - alreadyApplied;
+            if (pvRemaining <= 0.01) { pendingIdx++; continue; }
+            const apply = Math.min(remaining, pvRemaining);
+            await supabase.from('cobro_aplicaciones').insert({
+              cobro_id: cobroId, venta_id: pv.id, monto_aplicado: apply,
+            });
+            accountAppliedPOS.set(pv.id, alreadyApplied + apply);
+            remaining -= apply;
+            if (alreadyApplied + apply >= pv.saldo_pendiente - 0.01) pendingIdx++;
           }
         }
+        totalAppliedToAccountsPOS = [...accountAppliedPOS.values()].reduce((s, v) => s + v, 0);
       }
 
       // Save ticket data for display
