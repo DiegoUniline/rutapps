@@ -31,7 +31,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
+          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha / Hora</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Descuento</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
