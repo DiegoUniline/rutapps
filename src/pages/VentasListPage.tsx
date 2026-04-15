@@ -132,6 +132,7 @@ export default function VentasListPage() {
       <VentasDesktopTable
         items={items} selected={selected} allSelected={allSelected} canDelete={canDelete}
         fmt={fmt} onToggleAll={toggleAll} onToggleOne={toggleOne} onDeleteTarget={setDeleteTarget}
+        empresaId={empresa?.id} empresa={empresa} clientesList={clientesList}
       />
     </div>
   );

@@ -14,6 +14,9 @@ interface Props {
   onToggleAll: () => void;
   onToggleOne: (id: string) => void;
   onDeleteTarget: (id: string) => void;
+  empresaId?: string;
+  empresa?: any;
+  clientesList?: any[];
 }
 
 export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget }: Props) {
