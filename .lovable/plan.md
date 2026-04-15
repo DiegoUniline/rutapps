@@ -1,68 +1,71 @@
-<final-text>Problema confirmado
 
-- En móvil sí se calcula el excedente, pero al guardar se rompe por una mutación de estado en `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`.
-- `cuentasToApply` reutiliza referencias de `cuentasPendientes` y luego `cuenta.montoAplicar -= apply` va dejando esos montos en 0.
-- Eso provoca dos fallas:
-  1. el ticket termina calculando `pagoAplicado`, `saldoNuevo` y `cambio` como si no se hubiera abonado nada a deudas viejas;
-  2. en móvil/offline no se actualizan de inmediato los `saldo_pendiente` locales de esas cuentas.
-- Además, en escritorio todavía no existe esta lógica completa: `VentaCheckoutModal` y `PuntoVentaPage` siguen topando el pago al total de la venta actual, por eso el sobrante se trata como cambio y no como liquidación de adeudos.
 
-Plan
+# Propagación completa de moneda configurada por empresa
 
-1. Corregir la lógica base de distribución
-- Extraer una función pura compartida para distribuir pagos:
-  - primero a la venta actual,
-  - después a cuentas pendientes en FIFO,
-  - y al final calcular cambio real.
-- Esa función devolverá un snapshot inmutable de aplicaciones por cobro y por venta, sin mutar estado React.
+## Problema
+La empresa tiene configurado "Sol peruano" (PEN, símbolo `S/`) pero muchos componentes y documentos siguen mostrando `$` hardcodeado. La captura muestra que en el detalle de venta los precios unitarios, subtotales de línea y el cuadro de saldo muestran `$`, mientras que el cuadro de totales (que ya usa `useCurrency`) muestra correctamente `S/`.
 
-2. Reparar la venta móvil de ruta
-- Reemplazar la mutación `cuenta.montoAplicar -= apply` por estructuras clonadas/snapshots.
-- Guardar el resumen final de cobro antes de persistir (`saldoAnterior`, `pagoAplicado`, `saldoNuevo`, `montoRecibido`, `cambio`).
-- Hacer que el ticket use ese resumen congelado y no los valores derivados de un estado ya mutado.
-- Actualizar inmediatamente los saldos locales de cuentas viejas con los montos realmente aplicados, para que funcione bien también offline.
+## Alcance
+28+ archivos con `$` hardcodeado en contextos de moneda. Se deben actualizar todos para usar `useCurrency()` (en componentes React) o `getCurrencyConfig(empresa.moneda).symbol` (en utilidades/PDFs).
 
-3. Llevar la misma lógica a ventas en escritorio
-- `src/components/venta/VentaCheckoutModal.tsx`:
-  - mostrar cuentas pendientes del cliente,
-  - autoaplicar el excedente a deudas viejas,
-  - recalcular total a cobrar, falta y cambio igual que en móvil.
-- `src/pages/VentaForm/index.tsx`:
-  - cambiar `handleCheckoutConfirm` para registrar cobros/aplicaciones repartidos entre venta actual y cuentas viejas, en lugar de usar solo `handleAddPago`.
-- `src/pages/PuntoVentaPage.tsx`:
-  - dejar de limitar el cobro a `totals.total`,
-  - aplicar excedentes a adeudos del cliente,
-  - corregir ticket y resumen de estado de cuenta.
+## Archivos a modificar
 
-4. Unificar el resumen de ticket/estado de cuenta
-- Hacer que móvil y escritorio calculen:
-  - saldo anterior,
-  - pago aplicado a cuentas viejas,
-  - nuevo saldo,
-  - cambio
-  desde el mismo resultado de distribución.
-- Así el ticket ya no mostrará “todo como cambio” cuando sí hubo liquidación de deudas.
+### Grupo 1 — Formulario de Venta (lo que se ve en la captura)
+- **`src/pages/VentaForm/VentaFormFields.tsx`** — Cuadro Total/Pagado/Saldo: reemplazar `${}` por `fmt()`
+- **`src/pages/VentaForm/VentaLineaDesktop.tsx`** — Precio y subtotal por línea: reemplazar `${}` por símbolo dinámico
+- **`src/pages/VentaForm/VentaLineaMobile.tsx`** — Precio y total por línea en móvil
 
-5. Validación
-- Probar en móvil ruta:
-  - venta pequeña + pago grande + saldo inicial pendiente,
-  - múltiples cuentas pendientes,
-  - pago mixto,
-  - sin cuentas pendientes.
-- Probar en escritorio:
-  - checkout de venta directa,
-  - POS,
-  - caso con pago exacto,
-  - caso con sobrante que liquida parcialmente una deuda,
-  - caso con sobrante que liquida toda la deuda y deja cambio real.
+### Grupo 2 — Componentes de productos y catálogos
+- **`src/components/ProductoDropdown.tsx`** — Precio en dropdown de búsqueda
+- **`src/components/producto/PreciosTab.tsx`** — Tab de precios en producto
+- **`src/components/comisiones/ComisionesReglasTab.tsx`** — Reglas de comisiones
+- **`src/pages/ProductoFormPage.tsx`** — Formulario de producto (tabla de tarifas)
+- **`src/pages/ProductoForm/ProductoGeneralFields.tsx`** — Campos generales producto
+- **`src/pages/ProductoForm/ProductoComisionesTab.tsx`** — Tab comisiones en producto
+- **`src/pages/TarifaFormPage.tsx`** — Formulario de tarifas/listas de precios
 
-Detalles técnicos
+### Grupo 3 — Páginas operativas
+- **`src/pages/DescargasPage.tsx`** — Liquidaciones: tarjetas de contado/crédito/cobros/gastos
+- **`src/pages/ClienteFormPage.tsx`** — Formulario de cliente (límite crédito, etc.)
+- **`src/pages/PedidoPendienteDetailPage.tsx`** — Detalle de pedido pendiente
+- **`src/pages/ruta/RutaDescarga.tsx`** — Descarga de ruta móvil
+- **`src/pages/ruta/RutaSincronizarPage.tsx`** — Sincronización de ruta
+- **`src/components/reportes/ReporteDiarioRuta.tsx`** — Reporte diario
 
-- Archivos principales:
-  - `src/pages/ruta/RutaNuevaVenta/useRutaVenta.ts`
-  - `src/pages/ruta/RutaNuevaVenta/index.tsx`
-  - `src/components/venta/VentaCheckoutModal.tsx`
-  - `src/pages/VentaForm/index.tsx`
-  - `src/pages/PuntoVentaPage.tsx`
-  - posiblemente un helper nuevo compartido en `src/lib/` o `src/pages/...` para la distribución.
-- No espero cambios de base de datos; el backend ya tiene el recálculo de saldos por aplicaciones. El problema principal está en frontend y en la falta de paridad entre móvil y escritorio.</final-text>
+### Grupo 4 — Facturación y CFDI
+- **`src/components/facturacion/TimbrarDialog.tsx`** — Diálogo de timbrado
+
+### Grupo 5 — WhatsApp y mensajes
+- **`src/lib/whatsappReceipt.ts`** — Comprobante WhatsApp: `$${fmt2(...)}` → símbolo dinámico
+- **`src/pages/CobranzaPage.tsx`** — Mensaje WhatsApp de cobro
+
+### Grupo 6 — Admin (estos usan MXN fijo intencionalmente, se excluyen)
+Los archivos de admin (`AdminEmpresaDetail`, `AdminStatsTab`, `MiSuscripcionPage`, `PagarPage`, `SubscriptionCard`, `AdminNotificationsTab`) manejan precios de suscripción que siempre son en MXN — se dejan con `$` hardcodeado.
+
+## Estrategia de implementación
+
+1. En cada componente React: importar `useCurrency` y usar `fmt()` o `symbol` en lugar de `$`
+2. En `VentaLineaDesktop` y `VentaLineaMobile`: recibir `currencySymbol` como prop desde el padre (ya que son componentes de presentación sin acceso directo al contexto de auth)
+3. En `whatsappReceipt.ts` y `CobranzaPage.tsx`: recibir/usar el símbolo dinámico desde el contexto de empresa
+4. No se requieren cambios de base de datos
+
+## Detalles técnicos
+
+Patrón de reemplazo en componentes:
+```tsx
+// Antes:
+<span>${value.toLocaleString('es-MX', ...)}</span>
+
+// Después:
+const { fmt, symbol } = useCurrency();
+<span>{fmt(value)}</span>
+// o para inline:
+<span>{symbol}{value.toLocaleString(...)}</span>
+```
+
+Para los componentes de línea de venta que reciben props:
+```tsx
+// VentaLineasTab pasa currencySymbol a Desktop/Mobile
+<VentaLineaDesktop ... currencySymbol={symbol} />
+```
+
