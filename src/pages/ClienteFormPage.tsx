@@ -204,6 +204,7 @@ export default function ClienteFormPage() {
   const { isLoaded: mapsLoaded } = useGoogleMaps();
   const navigate = useNavigate();
   const { empresa } = useAuth();
+  const { fmt: currFmt } = useCurrency();
   const qc = useQueryClient();
   const isNew = id === 'nuevo';
   const { data: existing } = useCliente(isNew ? undefined : id);
