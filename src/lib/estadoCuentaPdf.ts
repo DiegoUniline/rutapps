@@ -63,10 +63,10 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
     ],
     'Resumen financiero',
     [
-      ['Total vendido:', `$${fmtCurrency(totalVendido)}`],
-      ['Total cobrado:', `$${fmtCurrency(totalCobrado)}`],
-      ['Saldo pendiente:', `$${fmtCurrency(totalPendiente)}`],
-      ...(cliente.credito ? [['Crédito:', `${cliente.dias_credito ?? 0} días · Límite: $${fmtCurrency(cliente.limite_credito ?? 0)}`] as [string, string]] : []),
+      ['Total vendido:', `${s}${fmtCurrency(totalVendido)}`],
+      ['Total cobrado:', `${s}${fmtCurrency(totalCobrado)}`],
+      ['Saldo pendiente:', `${s}${fmtCurrency(totalPendiente)}`],
+      ...(cliente.credito ? [['Crédito:', `${cliente.dias_credito ?? 0} días · Límite: ${s}${fmtCurrency(cliente.limite_credito ?? 0)}`] as [string, string]] : []),
     ],
   );
 
@@ -82,9 +82,9 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
         fmtDate(v.fecha),
         v.condicion_pago === 'credito' ? 'Crédito' : v.condicion_pago === 'contado' ? 'Contado' : 'Por definir',
         v.status.charAt(0).toUpperCase() + v.status.slice(1),
-        { content: `$${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
-        { content: `$${fmtCurrency(v.total - v.saldo_pendiente)}`, styles: { halign: 'right' } },
-        { content: `$${fmtCurrency(v.saldo_pendiente)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
+        { content: `${s}${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
+        { content: `${s}${fmtCurrency(v.total - v.saldo_pendiente)}`, styles: { halign: 'right' } },
+        { content: `${s}${fmtCurrency(v.saldo_pendiente)}`, styles: { halign: 'right', fontStyle: 'bold', textColor: C.danger } },
       ]),
       {
         0: { cellWidth: 24 },
@@ -97,7 +97,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total pendiente: $${fmtCurrency(totalPendiente)}`, rightX, y - 3, { align: 'right' });
+    doc.text(`Total pendiente: ${s}${fmtCurrency(totalPendiente)}`, rightX, y - 3, { align: 'right' });
     y += 7;
   }
 
@@ -109,7 +109,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
       ventasSaldadas.slice(0, 20).map(v => [
         { content: v.folio || '—', styles: { fontStyle: 'bold' } },
         fmtDate(v.fecha),
-        { content: `$${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
+        { content: `${s}${fmtCurrency(v.total)}`, styles: { halign: 'right' } },
         v.status.charAt(0).toUpperCase() + v.status.slice(1),
       ]),
       { 0: { cellWidth: 24 }, 2: { halign: 'right' } },
@@ -125,7 +125,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
         fmtDate(c.fecha),
         c.metodo_pago === 'efectivo' ? 'Efectivo' : c.metodo_pago === 'transferencia' ? 'Transferencia' : c.metodo_pago === 'tarjeta' ? 'Tarjeta' : c.metodo_pago,
         c.referencia || '—',
-        { content: `$${fmtCurrency(c.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
+        { content: `${s}${fmtCurrency(c.monto)}`, styles: { halign: 'right', fontStyle: 'bold' } },
       ]),
       { 3: { halign: 'right' } },
     );
@@ -133,7 +133,7 @@ export async function generarEstadoCuentaPdf(params: EstadoCuentaParams): Promis
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total cobrado: $${fmtCurrency(totalCobrado)}`, rightX, y - 3, { align: 'right' });
+    doc.text(`Total cobrado: ${s}${fmtCurrency(totalCobrado)}`, rightX, y - 3, { align: 'right' });
   } else {
     doc.setTextColor(...C.text);
     doc.setFontSize(8.5);
