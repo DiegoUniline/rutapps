@@ -134,7 +134,8 @@ export function exportToExcel(options: ExportOptions) {
 
 // ─── PDF EXPORT ─────────────────────────────────────────────────
 export async function exportToPDF(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode } = options;
+  const fmt = makeFmt(currencyCode);
 
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
