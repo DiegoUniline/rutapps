@@ -32,7 +32,7 @@ export function useVentasPaginated(search?: string, statusFilter?: string, tipoF
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, es_saldo_inicial, clientes(nombre), vendedores:profiles!vendedor_id(nombre)', { count: 'exact' })
+        .select('id, folio, fecha, created_at, total, subtotal, iva_total, descuento_total, descuento_extra, descuento_extra_tipo, saldo_pendiente, status, tipo, condicion_pago, vendedor_id, cliente_id, es_saldo_inicial, clientes(nombre), vendedores:profiles!vendedor_id(nombre)', { count: 'exact' })
         .eq('empresa_id', empresa!.id)
         .eq('es_saldo_inicial', false)
         .order('created_at', { ascending: false })
@@ -87,7 +87,7 @@ export function useVentaLineasPaginated(
     queryFn: async () => {
       let q = supabase
         .from('venta_lineas')
-        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))', { count: 'exact' })
+        .select('id, venta_id, producto_id, cantidad, precio_unitario, total, productos(codigo, nombre), ventas!inner(id, folio, fecha, created_at, status, tipo, condicion_pago, vendedor_id, cliente_id, empresa_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre))', { count: 'exact' })
         .eq('ventas.empresa_id', empresa!.id)
         .order('created_at', { ascending: false, referencedTable: undefined })
         .range((page - 1) * pageSize, page * pageSize - 1);
