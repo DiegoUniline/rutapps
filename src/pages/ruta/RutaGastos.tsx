@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 export default function RutaGastos() {
   const { empresa, user, profile } = useAuth();
+  const { fmt } = useCurrency();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
