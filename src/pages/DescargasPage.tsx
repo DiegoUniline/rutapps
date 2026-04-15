@@ -72,7 +72,7 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
 /* ─── Detail / Approve panel — Full activity breakdown ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
-  const { user, empresa } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const { symbol: cs, fmt } = useCurrency();
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
