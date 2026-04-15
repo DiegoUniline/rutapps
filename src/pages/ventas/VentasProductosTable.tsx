@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { StatusChip } from '@/components/StatusChip';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 
 interface Props {
@@ -51,7 +51,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
             </td>
             <td className="py-2 px-3 max-w-[160px] truncate">{row.cliente_nombre || 'Público en general'}</td>
             <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{row.vendedor_nombre ?? '—'}</td>
-            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(row.fecha)}</td>
+            <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(row.created_at)}</td>
             <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{row.producto_codigo ?? ''}</td>
             <td className="py-2 px-3 max-w-[180px] truncate">{row.producto_nombre ?? ''}</td>
             <td className="py-2 px-3 text-right font-semibold tabular-nums">{row.cantidad}</td>

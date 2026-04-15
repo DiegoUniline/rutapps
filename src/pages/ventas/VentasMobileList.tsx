@@ -6,7 +6,7 @@ import { MobileListCard } from '@/components/MobileListCard';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import WhatsAppPreviewDialog from '@/components/WhatsAppPreviewDialog';
 import { generateVentaPdfById } from '@/lib/ventaPdfFromId';
-import { fmtDate } from '@/lib/utils';
+import { fmtDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 
@@ -91,7 +91,7 @@ export function VentasMobileList({ items, clientesList, empresaId, canDelete, fm
             }
             onClick={() => navigate(`/ventas/${v.id}`)}
             fields={[
-              { label: 'Fecha', value: fmtDate(v.fecha) },
+              { label: 'Fecha', value: fmtDateTime(v.created_at) },
               { label: 'Total', value: fmtCurrency(v.total) },
               { label: 'Condición', value: CONDICION_LABELS[v.condicion_pago] || v.condicion_pago },
               ...(v.saldo_pendiente > 0 ? [{ label: 'Saldo', value: <span className="text-warning">{fmtCurrency(v.saldo_pendiente)}</span> }] : []),
