@@ -171,7 +171,7 @@ function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; lis
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{currFmt(p.costo)}</td>
                   <td className="py-1.5 px-3 text-right font-mono text-muted-foreground">{currFmt(p.precio_principal)}</td>
                   <td className="py-1.5 px-3 text-right font-mono font-semibold text-primary">{currFmt(p.precio_lista)}</td>
-                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">$ {(p.precio_con_imp ?? p.precio_lista).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 px-3 text-right font-mono font-semibold text-foreground">{currFmt((p.precio_con_imp ?? p.precio_lista))}</td>
                   <td className="py-1.5 px-3 text-muted-foreground">{p.regla ?? '—'}</td>
                   <td className="py-1.5 px-3 text-center">
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${p.base_precio === 'con_impuestos' ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground'}`}>
