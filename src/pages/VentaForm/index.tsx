@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePermisos } from '@/hooks/usePermisos';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OdooStatusbar } from '@/components/OdooStatusbar';
-import { OdooTabs } from '@/components/OdooTabs';
 import { VentaFormHeader } from '@/components/venta/VentaFormHeader';
 import { VentaPagosTab } from '@/components/venta/VentaPagosTab';
 import { VentaEntregasTab } from '@/components/venta/VentaEntregasTab';
