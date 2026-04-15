@@ -105,7 +105,7 @@ export default function DemandaPage() {
     queryKey: ['vendedores-list', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
       return data ?? [];
     },
   });

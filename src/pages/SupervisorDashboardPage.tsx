@@ -100,7 +100,7 @@ export default function SupervisorDashboardPage() {
     queryFn: async () => {
       const [profilesResult, vendedoresResult] = await Promise.all([
         supabase.from('profiles').select('id, user_id, nombre, estado').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'),
-        supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id),
+        supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id),
       ]);
       const allProfiles = profilesResult.data ?? [];
       const aliasesByName = new Map<string, string[]>();

@@ -47,7 +47,7 @@ export function useBootstrapPrefetch() {
         queryKey: ['vendedores', eid],
         staleTime: CATALOG_STALE_TIME,
         queryFn: async () => {
-          const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', eid).order('nombre');
+          const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', eid).order('nombre');
           return data ?? [];
         },
       }),
