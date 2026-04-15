@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn, fmtDate, fmtNum } from '@/lib/utils';
 import { exportToExcel, type ExportColumn } from '@/lib/exportUtils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 type ViewMode = 'resumen' | 'almacen' | 'rutas';
 
@@ -156,11 +157,10 @@ function useInventarioData() {
   });
 }
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export default function InventarioPage() {
   const { data, isLoading } = useInventarioData();
   const { empresa } = useAuth();
+  const { fmt } = useCurrency();
   const [view, setView] = useState<ViewMode>('resumen');
   const [search, setSearch] = useState('');
   const [selectedRuta, setSelectedRuta] = useState<any>(null);
