@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { Plus, X, Receipt } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 
 export default function RutaGastos() {
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
+  const { fmt } = useCurrency();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');
@@ -29,6 +31,7 @@ export default function RutaGastos() {
       await offlineMutate('gastos', 'insert', {
         empresa_id: empresa.id,
         user_id: user.id,
+        vendedor_id: profile?.vendedor_id ?? null,
         concepto,
         monto: +monto,
         fecha: today,
@@ -64,7 +67,7 @@ export default function RutaGastos() {
         <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-center justify-between">
           <span className="text-[13px] text-muted-foreground">Total hoy</span>
           <span className="text-[18px] font-bold text-destructive">
-            $ {totalHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            {fmt(totalHoy)}
           </span>
         </div>
       </div>
@@ -84,7 +87,7 @@ export default function RutaGastos() {
               </p>
             </div>
             <span className="text-[15px] font-bold text-foreground shrink-0">
-              $ {(g.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              {fmt(g.monto ?? 0)}
             </span>
           </div>
         ))}
