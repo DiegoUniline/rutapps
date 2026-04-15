@@ -176,18 +176,47 @@ function AppRoutes() {
 
   if (loading || subscription.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <div className="text-muted-foreground text-sm">Cargando...</div>
-          {loadingTooLong && user && (
-            <button
-              onClick={() => signOut()}
-              className="text-xs text-destructive underline hover:text-destructive/80"
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6">
+        <div className="relative flex flex-col items-center gap-5">
+          <img
+            src="https://res.cloudinary.com/dstcnsu6a/image/upload/v1774544059/Imagen_p4jkid.png"
+            alt="Rutapp"
+            className="h-14 w-14 rounded-2xl object-contain shadow-lg"
+          />
+          <div className="flex flex-col items-center gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 80 50"
+              className="w-20 h-auto text-primary opacity-80 animate-bounce"
+              style={{ animationDuration: '2s' }}
+              fill="currentColor"
             >
-              Cerrar sesión
-            </button>
-          )}
+              <path d="M64 20c-1 0-2 .1-3 .3C59.5 14.3 53.3 10 46 10c-6.1 0-11.4 3.2-14.4 8C30.4 17.4 29 17 27.5 17 21.7 17 17 21.7 17 27.5S21.7 38 27.5 38h36.5C70.3 38 76 32.3 76 25.5S70.3 20 64 20z"/>
+            </svg>
+            <div className="flex gap-1.5">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-primary"
+                  style={{
+                    animation: 'pulse 1.2s ease-in-out infinite',
+                    animationDelay: `${i * 0.2}s`,
+                    opacity: 0.4,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+          <p className="text-sm font-medium text-muted-foreground tracking-wide">Cargando Rutapp...</p>
         </div>
+        {loadingTooLong && user && (
+          <button
+            onClick={() => signOut()}
+            className="text-xs text-destructive underline hover:text-destructive/80 mt-2"
+          >
+            Cerrar sesión
+          </button>
+        )}
       </div>
     );
   }
