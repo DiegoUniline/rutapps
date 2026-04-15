@@ -198,7 +198,7 @@ export async function generarPedidoPdf(params: PedidoPdfParams): Promise<Blob> {
   y = drawTotalsBlock(doc, y, totalRows);
 
   // ── IMPORTE CON LETRA ──
-  const words = numberToWords(pedido.total);
+  const words = numberToWords(pedido.total, cc.wordPlural, cc.code);
   y = drawImporteConLetra(doc, y, words);
 
   // ── NOTAS ──
