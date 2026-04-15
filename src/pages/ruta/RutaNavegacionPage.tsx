@@ -112,7 +112,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const mapRef = useRef<google.maps.Map | null>(null);
   const { mutate: offlineMutate } = useOfflineMutation();
-  const vendedorId = profile?.vendedor_id;
+  const vendedorId = profile?.id;
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const lastSpokenStepRef = useRef(-1);
   const followUserRef = useRef(true); // true = camera follows user

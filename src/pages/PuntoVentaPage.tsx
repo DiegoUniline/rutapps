@@ -626,7 +626,7 @@ export default function PuntoVentaPage() {
       }
       const today = todayInTimezone(empresa?.zona_horaria);
 
-      let vendedorId = profile?.vendedor_id;
+      let vendedorId = profile?.id;
       if (!vendedorId) {
         // Auto-fix: assign profile.id as vendedor_id
         vendedorId = profile!.id;

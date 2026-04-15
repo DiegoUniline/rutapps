@@ -59,8 +59,8 @@ export default function RutaNuevoCliente() {
   // Auto-assign vendedor
   useEffect(() => {
     if (vendedorIdParam) set('vendedor_id', vendedorIdParam);
-    else if (profile?.vendedor_id) set('vendedor_id', profile.vendedor_id);
-  }, [vendedorIdParam, profile?.vendedor_id]);
+    else if (profile?.id) set('vendedor_id', profile.id);
+  }, [vendedorIdParam, profile?.id]);
 
   // Auto-assign default lista de precios
   useEffect(() => {

@@ -57,7 +57,7 @@ export default function RutaDescarga() {
     enabled: !!empresa?.id,
   });
 
-  const vendedorId = cargaActiva?.vendedor_id || myProfile?.vendedor_id;
+  const vendedorId = cargaActiva?.vendedor_id || myProfile?.id;
 
   // Calculate efectivo esperado: (ventas contado + cobros efectivo) - gastos
   const today = useMemo(() => {
@@ -190,7 +190,7 @@ export default function RutaDescarga() {
 
       const diferencia = totalEfectivo - efectivoEsperado;
 
-      const vId = cargaActiva?.vendedor_id || myProfile?.vendedor_id || null;
+      const vId = cargaActiva?.vendedor_id || myProfile?.id || null;
 
       const insertData: any = {
         empresa_id: empresa!.id,

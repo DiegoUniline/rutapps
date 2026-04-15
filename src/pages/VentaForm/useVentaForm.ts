@@ -167,7 +167,7 @@ export function useVentaForm() {
         const defaultTarifa = tarifasList?.find((t: any) => t.tipo === 'general')?.id;
         setForm(prev => ({
           ...prev,
-          vendedor_id: profile?.vendedor_id ?? profile?.id,
+          vendedor_id: profile?.id ?? profile?.id,
           ...(defaultTarifa ? { tarifa_id: defaultTarifa } : {}),
           ...(profile?.almacen_id ? { almacen_id: profile.almacen_id } : {}),
         }));
@@ -401,7 +401,7 @@ export function useVentaForm() {
     if (readOnly) return;
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
-    let vendedorId = profile?.vendedor_id;
+    let vendedorId = profile?.id;
     if (!vendedorId) {
       vendedorId = profile!.id;
       await supabase.from('profiles').update({ vendedor_id: profile!.id }).eq('id', profile!.id);

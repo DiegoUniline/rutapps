@@ -14,7 +14,7 @@ export default function RutaVentas() {
   const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const { desde, hasta, setDesde, setHasta, filterByDate } = useDateFilter();
-  const vendedorId = profile?.vendedor_id || profile?.id;
+  const vendedorId = profile?.id || profile?.id;
 
   const { data: ventas, isLoading } = useOfflineQuery('ventas', {
     empresa_id: empresa?.id,
