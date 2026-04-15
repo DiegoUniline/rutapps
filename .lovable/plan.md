@@ -1,71 +1,52 @@
 
+Problema confirmado
 
-# Propagación completa de moneda configurada por empresa
+- El PDF subido `VTA-0011_2.pdf` sigue saliendo en MXN: muestra `Moneda: MXN - Peso mexicano`, importes con `$` y `VEINTE PESOS 88/100 MXN`.
+- La causa principal en la ruta actual `/ventas/:id` está en `src/pages/VentaForm/VentaPdfHandler.ts`: al construir `empresa` para `generarPedidoPdf`, no envía `moneda`, así el documento cae al fallback MXN.
+- Además hay endurecimientos globales en PDFs:
+  1. `src/lib/pdfStyleOdoo.ts` sigue formateando montos con lógica fija y `numberToWords()` devuelve siempre `PESOS ... MXN`.
+  2. `src/lib/cfdiPdf.ts` todavía trae fijo `Peso Mexicano` y el importe con letra en MXN.
 
-## Problema
-La empresa tiene configurado "Sol peruano" (PEN, símbolo `S/`) pero muchos componentes y documentos siguen mostrando `$` hardcodeado. La captura muestra que en el detalle de venta los precios unitarios, subtotales de línea y el cuadro de saldo muestran `$`, mientras que el cuadro de totales (que ya usa `useCurrency`) muestra correctamente `S/`.
+Plan
 
-## Alcance
-28+ archivos con `$` hardcodeado en contextos de moneda. Se deben actualizar todos para usar `useCurrency()` (en componentes React) o `getCurrencyConfig(empresa.moneda).symbol` (en utilidades/PDFs).
+1. Corregir la fuente del PDF de ventas
+- En `src/pages/VentaForm/VentaPdfHandler.ts`, pasar `empresa.moneda` al payload del PDF.
+- Revisar los demás puntos de entrada de PDFs para confirmar que todos transmiten la moneda de la empresa y no dependen del fallback.
 
-## Archivos a modificar
+2. Unificar el formateo monetario de PDFs
+- Hacer que la capa compartida de PDF use `getCurrencyConfig()` para símbolo, código y formato.
+- Aplicar esa misma fuente de verdad a ventas, pedidos, estado de cuenta, liquidaciones, entregas, traspasos y ajustes.
 
-### Grupo 1 — Formulario de Venta (lo que se ve en la captura)
-- **`src/pages/VentaForm/VentaFormFields.tsx`** — Cuadro Total/Pagado/Saldo: reemplazar `${}` por `fmt()`
-- **`src/pages/VentaForm/VentaLineaDesktop.tsx`** — Precio y subtotal por línea: reemplazar `${}` por símbolo dinámico
-- **`src/pages/VentaForm/VentaLineaMobile.tsx`** — Precio y total por línea en móvil
+3. Corregir el “importe con letra”
+- Volver `numberToWords()` sensible a la moneda configurada.
+- Para PEN, debe dejar de decir `PESOS ... MXN` y usar la moneda/código correctos.
+- Aplicar la misma corrección en `src/lib/cfdiPdf.ts`.
 
-### Grupo 2 — Componentes de productos y catálogos
-- **`src/components/ProductoDropdown.tsx`** — Precio en dropdown de búsqueda
-- **`src/components/producto/PreciosTab.tsx`** — Tab de precios en producto
-- **`src/components/comisiones/ComisionesReglasTab.tsx`** — Reglas de comisiones
-- **`src/pages/ProductoFormPage.tsx`** — Formulario de producto (tabla de tarifas)
-- **`src/pages/ProductoForm/ProductoGeneralFields.tsx`** — Campos generales producto
-- **`src/pages/ProductoForm/ProductoComisionesTab.tsx`** — Tab comisiones en producto
-- **`src/pages/TarifaFormPage.tsx`** — Formulario de tarifas/listas de precios
+4. Corregir etiquetas internas del documento
+- Cambiar en CFDI y PDFs cualquier texto fijo como `MXN - Peso Mexicano` por el nombre real de la moneda configurada.
+- Verificar subtotales, totales, pagos, saldos y captions para que usen la misma moneda.
 
-### Grupo 3 — Páginas operativas
-- **`src/pages/DescargasPage.tsx`** — Liquidaciones: tarjetas de contado/crédito/cobros/gastos
-- **`src/pages/ClienteFormPage.tsx`** — Formulario de cliente (límite crédito, etc.)
-- **`src/pages/PedidoPendienteDetailPage.tsx`** — Detalle de pedido pendiente
-- **`src/pages/ruta/RutaDescarga.tsx`** — Descarga de ruta móvil
-- **`src/pages/ruta/RutaSincronizarPage.tsx`** — Sincronización de ruta
-- **`src/components/reportes/ReporteDiarioRuta.tsx`** — Reporte diario
+5. Validación
+- Regenerar el PDF de la venta actual y confirmar visualmente:
+  - `Moneda: PEN - Sol peruano`
+  - importes con `S/`
+  - importe con letra sin `MXN/PESOS`
+  - pagos, subtotal, total y saldo consistentes
+- Hacer una revisión rápida adicional en otros PDFs clave: estado de cuenta, liquidación y CFDI.
 
-### Grupo 4 — Facturación y CFDI
-- **`src/components/facturacion/TimbrarDialog.tsx`** — Diálogo de timbrado
+Detalles técnicos
 
-### Grupo 5 — WhatsApp y mensajes
-- **`src/lib/whatsappReceipt.ts`** — Comprobante WhatsApp: `$${fmt2(...)}` → símbolo dinámico
-- **`src/pages/CobranzaPage.tsx`** — Mensaje WhatsApp de cobro
-
-### Grupo 6 — Admin (estos usan MXN fijo intencionalmente, se excluyen)
-Los archivos de admin (`AdminEmpresaDetail`, `AdminStatsTab`, `MiSuscripcionPage`, `PagarPage`, `SubscriptionCard`, `AdminNotificationsTab`) manejan precios de suscripción que siempre son en MXN — se dejan con `$` hardcodeado.
-
-## Estrategia de implementación
-
-1. En cada componente React: importar `useCurrency` y usar `fmt()` o `symbol` en lugar de `$`
-2. En `VentaLineaDesktop` y `VentaLineaMobile`: recibir `currencySymbol` como prop desde el padre (ya que son componentes de presentación sin acceso directo al contexto de auth)
-3. En `whatsappReceipt.ts` y `CobranzaPage.tsx`: recibir/usar el símbolo dinámico desde el contexto de empresa
-4. No se requieren cambios de base de datos
-
-## Detalles técnicos
-
-Patrón de reemplazo en componentes:
-```tsx
-// Antes:
-<span>${value.toLocaleString('es-MX', ...)}</span>
-
-// Después:
-const { fmt, symbol } = useCurrency();
-<span>{fmt(value)}</span>
-// o para inline:
-<span>{symbol}{value.toLocaleString(...)}</span>
-```
-
-Para los componentes de línea de venta que reciben props:
-```tsx
-// VentaLineasTab pasa currencySymbol a Desktop/Mobile
-<VentaLineaDesktop ... currencySymbol={symbol} />
-```
-
+- Archivos principales:
+  - `src/pages/VentaForm/VentaPdfHandler.ts`
+  - `src/lib/pdfStyleOdoo.ts`
+  - `src/lib/pedidoPdf.ts`
+  - `src/lib/ventaPdf.ts`
+  - `src/lib/cfdiPdf.ts`
+- Archivos a auditar para cierre completo:
+  - `src/lib/estadoCuentaPdf.ts`
+  - `src/lib/liquidacionPdf.ts`
+  - `src/lib/entregaPdf.ts`
+  - `src/lib/traspasoPdf.ts`
+  - `src/lib/ajusteInventarioPdf.ts`
+- No se requieren cambios de base de datos.
+- El objetivo será corregir no solo el símbolo, sino también nombre de moneda, código y texto en letra para eliminar cualquier fallback a MXN.
