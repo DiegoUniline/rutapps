@@ -402,12 +402,12 @@ export function useVentaForm() {
     if (readOnly) return;
     if (savingRef.current) return;
     savingRef.current = true;
-    try {
-    if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
-    if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
+    if (!form.cliente_id) { toast.error('Selecciona un cliente'); savingRef.current = false; return; }
+    if (!form.almacen_id) { toast.error('Selecciona un almacén'); savingRef.current = false; return; }
     const vendedorId = profile?.id;
     if (!vendedorId) {
       toast.error('No se pudo determinar el vendedor');
+      savingRef.current = false;
       return;
     }
     try {
