@@ -114,6 +114,7 @@ function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: Previe
 }
 
 function NotaVentaPreview({ form, logoPreview, campos }: PreviewProps) {
+  const { fmt } = useCurrency();
   const nombre = form.nombre || 'Mi Empresa';
   const dir = [form.direccion, form.colonia, form.ciudad, form.estado].filter(Boolean).join(', ');
 
