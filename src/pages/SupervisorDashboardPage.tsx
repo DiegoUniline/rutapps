@@ -98,23 +98,9 @@ export default function SupervisorDashboardPage() {
   const { data: vendedores } = useQuery({
     queryKey: ['supervisor-usuarios', empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => {
-      const [profilesResult, vendedoresResult] = await Promise.all([
-        supabase.from('profiles').select('id, user_id, nombre, estado').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'),
-        supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id),
-      ]);
-      const allProfiles = profilesResult.data ?? [];
-      const aliasesByName = new Map<string, string[]>();
-      (vendedoresResult.data ?? []).forEach((seller) => {
-        const key = normalizePersonName(seller.nombre);
-        if (!key) return;
-        const current = aliasesByName.get(key) ?? [];
-        current.push(seller.id);
-        aliasesByName.set(key, current);
-      });
-      return allProfiles.map((profile) => {
-        const key = normalizePersonName(profile.nombre);
-        const aliases = Array.from(new Set([profile.id, ...(aliasesByName.get(key) ?? [])]));
-        return { id: profile.id, user_id: profile.user_id, nombre: profile.nombre ?? 'Sin nombre', aliases } satisfies DashboardSeller;
+      const { data: allProfiles } = await supabase.from('profiles').select('id, user_id, nombre, estado').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre');
+      return (allProfiles ?? []).map((profile) => {
+        return { id: profile.id, user_id: profile.user_id, nombre: profile.nombre ?? 'Sin nombre', aliases: [profile.id] } satisfies DashboardSeller;
       });
     },
   });
