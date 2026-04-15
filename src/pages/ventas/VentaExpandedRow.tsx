@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { Pencil, Trash2, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusChip } from '@/components/StatusChip';
-import { fmtDate } from '@/lib/utils';
+import { fmtDate, fmtDateTime } from '@/lib/utils';
 import { CONDICION_LABELS } from './ventasConstants';
 
 interface Props {
@@ -59,7 +59,7 @@ export function VentaExpandedRow({ venta, fmt, canDelete, onDeleteTarget, onColl
               <StatusChip status={venta.status} />
               <span className="text-muted-foreground text-xs">{clienteNombre}</span>
               <span className="text-muted-foreground text-xs">•</span>
-              <span className="text-muted-foreground text-xs">{fmtDate(venta.fecha)}</span>
+              <span className="text-muted-foreground text-xs">{fmtDateTime(venta.created_at)}</span>
               <span className="text-muted-foreground text-xs">•</span>
               <span className="text-muted-foreground text-xs">{CONDICION_LABELS[venta.condicion_pago] || venta.condicion_pago}</span>
             </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Trash2, Gift, ChevronDown } from 'lucide-react';
 import { StatusChip } from '@/components/StatusChip';
-import { cn, fmtDate } from '@/lib/utils';
+import { cn, fmtDateTime } from '@/lib/utils';
 import { TIPO_LABELS, CONDICION_LABELS } from './ventasConstants';
 import { VentaExpandedRow } from './VentaExpandedRow';
 
@@ -31,7 +31,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px]">Cliente</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden md:table-cell">Vendedor</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Condición</th>
-          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha</th>
+          <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] hidden lg:table-cell">Fecha / Hora</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden md:table-cell">Subtotal</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right hidden lg:table-cell">Descuento</th>
           <th className="py-2 px-3 text-muted-foreground font-medium text-[11px] text-right">Total</th>
@@ -73,7 +73,7 @@ export function VentasDesktopTable({ items, selected, allSelected, canDelete, fm
                 <td className="py-2 px-3 max-w-[180px] truncate">{v.clientes?.nombre || (v.cliente_id ? '—' : 'Público en general')}</td>
                 <td className="py-2 px-3 hidden md:table-cell text-muted-foreground">{v.vendedores?.nombre ?? '—'}</td>
                 <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{CONDICION_LABELS[v.condicion_pago] || v.condicion_pago}</td>
-                <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDate(v.fecha)}</td>
+                <td className="py-2 px-3 hidden lg:table-cell text-muted-foreground">{fmtDateTime(v.created_at)}</td>
                 <td className="py-2 px-3 text-right hidden md:table-cell text-muted-foreground tabular-nums">{fmt(v.subtotal)}</td>
                 <td className="py-2 px-3 text-right hidden lg:table-cell tabular-nums">
                   {(v.descuento_total ?? 0) > 0 ? (
