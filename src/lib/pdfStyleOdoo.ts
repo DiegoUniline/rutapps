@@ -553,9 +553,14 @@ export function drawFooter(doc: jsPDF, empresa?: EmpresaInfo) {
 }
 
 // ══════════════════════════════════════════════════════════
-// NUMBER TO WORDS (Spanish)
+// NUMBER TO WORDS (Spanish) — currency-aware
 // ══════════════════════════════════════════════════════════
-export function numberToWords(n: number): string {
+export function numberToWords(n: number, currencyCode?: string | null): string {
+  const { getCurrencyConfig } = require('@/lib/currency');
+  const cc = getCurrencyConfig(currencyCode);
+  const wordPlural = cc.wordPlural || 'PESOS';
+  const code = cc.code || 'MXN';
+
   const units = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
   const teens = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
   const tens = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
@@ -564,7 +569,7 @@ export function numberToWords(n: number): string {
   const int = Math.floor(n);
   const cents = Math.round((n - int) * 100);
 
-  if (int === 0) return `CERO PESOS ${String(cents).padStart(2, '0')}/100 MXN`;
+  if (int === 0) return `CERO ${wordPlural} ${String(cents).padStart(2, '0')}/100 ${code}`;
 
   function convert(num: number): string {
     if (num === 0) return '';
@@ -591,7 +596,7 @@ export function numberToWords(n: number): string {
     return String(num);
   }
 
-  return `${convert(int)} PESOS ${String(cents).padStart(2, '0')}/100 MXN`;
+  return `${convert(int)} ${wordPlural} ${String(cents).padStart(2, '0')}/100 ${code}`;
 }
 
 // ══════════════════════════════════════════════════════════

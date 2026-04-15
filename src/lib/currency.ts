@@ -14,24 +14,24 @@ export interface CurrencyConfig {
 
 export const CURRENCIES: CurrencyConfig[] = [
   // América
-  { code: 'MXN', symbol: '$',  locale: 'es-MX', name: 'Peso mexicano' },
-  { code: 'USD', symbol: '$',  locale: 'en-US', name: 'Dólar estadounidense' },
-  { code: 'COP', symbol: '$',  locale: 'es-CO', name: 'Peso colombiano' },
-  { code: 'ARS', symbol: '$',  locale: 'es-AR', name: 'Peso argentino' },
-  { code: 'CLP', symbol: '$',  locale: 'es-CL', name: 'Peso chileno' },
-  { code: 'PEN', symbol: 'S/', locale: 'es-PE', name: 'Sol peruano' },
-  { code: 'BOB', symbol: 'Bs', locale: 'es-BO', name: 'Boliviano' },
-  { code: 'UYU', symbol: '$U', locale: 'es-UY', name: 'Peso uruguayo' },
-  { code: 'PYG', symbol: '₲',  locale: 'es-PY', name: 'Guaraní paraguayo' },
-  { code: 'CRC', symbol: '₡',  locale: 'es-CR', name: 'Colón costarricense' },
-  { code: 'GTQ', symbol: 'Q',  locale: 'es-GT', name: 'Quetzal guatemalteco' },
-  { code: 'HNL', symbol: 'L',  locale: 'es-HN', name: 'Lempira hondureño' },
-  { code: 'NIO', symbol: 'C$', locale: 'es-NI', name: 'Córdoba nicaragüense' },
-  { code: 'PAB', symbol: 'B/', locale: 'es-PA', name: 'Balboa panameño' },
-  { code: 'DOP', symbol: 'RD$',locale: 'es-DO', name: 'Peso dominicano' },
-  { code: 'VES', symbol: 'Bs', locale: 'es-VE', name: 'Bolívar venezolano' },
+  { code: 'MXN', symbol: '$',  locale: 'es-MX', name: 'Peso mexicano', wordPlural: 'PESOS' },
+  { code: 'USD', symbol: '$',  locale: 'en-US', name: 'Dólar estadounidense', wordPlural: 'DÓLARES' },
+  { code: 'COP', symbol: '$',  locale: 'es-CO', name: 'Peso colombiano', wordPlural: 'PESOS' },
+  { code: 'ARS', symbol: '$',  locale: 'es-AR', name: 'Peso argentino', wordPlural: 'PESOS' },
+  { code: 'CLP', symbol: '$',  locale: 'es-CL', name: 'Peso chileno', wordPlural: 'PESOS' },
+  { code: 'PEN', symbol: 'S/', locale: 'es-PE', name: 'Sol peruano', wordPlural: 'SOLES' },
+  { code: 'BOB', symbol: 'Bs', locale: 'es-BO', name: 'Boliviano', wordPlural: 'BOLIVIANOS' },
+  { code: 'UYU', symbol: '$U', locale: 'es-UY', name: 'Peso uruguayo', wordPlural: 'PESOS' },
+  { code: 'PYG', symbol: '₲',  locale: 'es-PY', name: 'Guaraní paraguayo', wordPlural: 'GUARANÍES' },
+  { code: 'CRC', symbol: '₡',  locale: 'es-CR', name: 'Colón costarricense', wordPlural: 'COLONES' },
+  { code: 'GTQ', symbol: 'Q',  locale: 'es-GT', name: 'Quetzal guatemalteco', wordPlural: 'QUETZALES' },
+  { code: 'HNL', symbol: 'L',  locale: 'es-HN', name: 'Lempira hondureño', wordPlural: 'LEMPIRAS' },
+  { code: 'NIO', symbol: 'C$', locale: 'es-NI', name: 'Córdoba nicaragüense', wordPlural: 'CÓRDOBAS' },
+  { code: 'PAB', symbol: 'B/', locale: 'es-PA', name: 'Balboa panameño', wordPlural: 'BALBOAS' },
+  { code: 'DOP', symbol: 'RD$',locale: 'es-DO', name: 'Peso dominicano', wordPlural: 'PESOS' },
+  { code: 'VES', symbol: 'Bs', locale: 'es-VE', name: 'Bolívar venezolano', wordPlural: 'BOLÍVARES' },
   // Europa
-  { code: 'EUR', symbol: '€',  locale: 'es-ES', name: 'Euro' },
+  { code: 'EUR', symbol: '€',  locale: 'es-ES', name: 'Euro', wordPlural: 'EUROS' },
 ];
 
 const currencyMap = new Map(CURRENCIES.map(c => [c.code, c]));
