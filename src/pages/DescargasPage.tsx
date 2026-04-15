@@ -16,6 +16,7 @@ import { generarLiquidacionPdf, type LiquidacionPdfParams } from '@/lib/liquidac
 import { loadLogoBase64 } from '@/lib/pdfStyleOdoo';
 import { buildLiquidacionTicketHTML } from '@/lib/liquidacionTicketHtml';
 import { toPng } from 'html-to-image';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   pendiente: { label: 'Pendiente', icon: Clock, color: 'bg-amber-100 text-amber-700' },
@@ -72,6 +73,7 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
   const { user, empresa } = useAuth();
+  const { symbol: cs } = useCurrency();
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
   const [notasSupervisor, setNotasSupervisor] = useState('');
@@ -863,6 +865,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
 function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const { user, empresa } = useAuth();
+  const { symbol: cs2 } = useCurrency();
   const qc = useQueryClient();
   const [vendedorId, setVendedorId] = useState<string>('');
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
