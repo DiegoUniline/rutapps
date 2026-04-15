@@ -564,7 +564,7 @@ export default function PuntoVentaPage() {
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [showPago, showTicket, cart.length, condicion, totals.total, faltante]);
 
-  const fmt = (n: number) => fmtCur(n);
+  const fmt = (n: number) => fmtC(n);
   const fmtM = fmt;
 
   const clearAll = () => {
