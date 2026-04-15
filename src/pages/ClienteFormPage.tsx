@@ -49,6 +49,7 @@ const applyRedondeo = (precio: number, redondeo: string) => {
 /* ── Precios tab component ─────────────────────── */
 function ClientePreciosTab({ tarifaId, listaPrecioId }: { tarifaId?: string; listaPrecioId?: string }) {
   const [search, setSearch] = useState('');
+  const { fmt: currFmt } = useCurrency();
 
   const { data: productos } = useQuery({
     queryKey: ['productos_precios_cliente', tarifaId, listaPrecioId],
