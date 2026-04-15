@@ -880,19 +880,19 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('profiles')
-        .select('id, user_id, nombre, vendedor_id')
+        .select('id, user_id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('estado', 'activo')
         .order('nombre');
-      return (data ?? []) as { id: string; user_id: string; nombre: string; vendedor_id: string | null }[];
+      return (data ?? []) as { id: string; user_id: string; nombre: string }[];
     },
   });
 
   const usuarioOpts = (usuarios || []).map(u => ({ value: u.id, label: u.nombre }));
   const selectedProfile = (usuarios || []).find(u => u.id === vendedorId);
   const selectedUserId = selectedProfile?.user_id ?? vendedorId;
-  // ventas.vendedor_id references vendedores.id, NOT profiles.id
-  const vendedorRealId = selectedProfile?.vendedor_id ?? vendedorId;
+  // Now vendedor_id in ventas directly references profiles.id
+  const vendedorRealId = vendedorId;
 
   // Calculate expected cash for the period
   const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;
