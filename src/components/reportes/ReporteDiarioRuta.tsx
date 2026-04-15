@@ -223,11 +223,11 @@ export default function ReporteDiarioRuta() {
       `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div>${sub ? `<div class="kpi-sub">${sub}</div>` : ''}</div>`;
 
     const summaryHtml = `<div class="kpi-grid">
-      ${kpi('Ventas totales', `$ ${fmt(totalVentas)}`, `${ventasActivas.length} ventas`)}
-      ${kpi('Contado', `$ ${fmt(totalContado)}`, `${ventasContado.length}`)}
-      ${kpi('Crédito', `$ ${fmt(totalCredito)}`, `${ventasCredito.length}`)}
-      ${kpi('Cobros', `$ ${fmt(totalCobros)}`, `${(cobros || []).length}`)}
-      ${kpi('Gastos', `- $ ${fmt(totalGastos)}`, `${(gastos || []).length}`)}
+      ${kpi('Ventas totales', `${cs}${fmt(totalVentas)}`, `${ventasActivas.length} ventas`)}
+      ${kpi('Contado', `${cs}${fmt(totalContado)}`, `${ventasContado.length}`)}
+      ${kpi('Crédito', `${cs}${fmt(totalCredito)}`, `${ventasCredito.length}`)}
+      ${kpi('Cobros', `${cs}${fmt(totalCobros)}`, `${(cobros || []).length}`)}
+      ${kpi('Gastos', `- ${cs}${fmt(totalGastos)}`, `${(gastos || []).length}`)}
       ${kpi('Devoluciones', `${totalDevUnidades} uds`, `${(devoluciones || []).length} registros`)}
       ${kpi('Clientes visitados', `${clientesVisitados.size}`)}
     </div>`;
@@ -244,8 +244,8 @@ export default function ReporteDiarioRuta() {
     const ventasHtml = ventasActivas.length > 0
       ? sec(`Ventas (${ventasActivas.length})`, makeTable(
           ['Folio', 'Cliente', 'Pago', 'Total'],
-          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', v.condicion_pago, `$ ${fmt(Number(v.total))}`]),
-          ['', '', 'Total', `$ ${fmt(totalVentas)}`]
+          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', v.condicion_pago, `${cs}${fmt(Number(v.total))}`]),
+          ['', '', 'Total', `${cs}${fmt(totalVentas)}`]
         ))
       : '';
 
@@ -253,8 +253,8 @@ export default function ReporteDiarioRuta() {
     const cancelHtml = ventasCanceladas.length > 0
       ? sec(`Canceladas (${ventasCanceladas.length})`, makeTable(
           ['Folio', 'Cliente', 'Total'],
-          ventasCanceladas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', `$ ${fmt(Number(v.total))}`]),
-          ['', 'Total cancelado', `$ ${fmt(totalCancelado)}`]
+          ventasCanceladas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', `${cs}${fmt(Number(v.total))}`]),
+          ['', 'Total cancelado', `${cs}${fmt(totalCancelado)}`]
         ))
       : '';
 
@@ -262,17 +262,17 @@ export default function ReporteDiarioRuta() {
     const prodsHtml = productosArr.length > 0
       ? sec(`Productos vendidos (${productosArr.length})`, makeTable(
           ['Código', 'Producto', 'Cantidad', 'Total'],
-          productosArr.map(p => [p.codigo, p.nombre, String(p.cantidad), `$ ${fmt(p.total)}`])
+          productosArr.map(p => [p.codigo, p.nombre, String(p.cantidad), `${cs}${fmt(p.total)}`])
         ))
       : '';
 
     // Cobros
-    const cobrosMetodoHtml = Object.entries(cobrosPorMetodo).map(([m, t]) => `<span class="chip">${m}: $ ${fmt(t)}</span>`).join(' ');
+    const cobrosMetodoHtml = Object.entries(cobrosPorMetodo).map(([m, t]) => `<span class="chip">${m}: ${cs}${fmt(t)}</span>`).join(' ');
     const cobrosHtml = (cobros || []).length > 0
       ? sec(`Cobros (${(cobros || []).length})`, `<div class="chips">${cobrosMetodoHtml}</div>` + makeTable(
           ['Cliente', 'Método', 'Referencia', 'Monto'],
-          (cobros || []).map((c: any) => [c.clientes?.nombre ?? '—', c.metodo_pago, c.referencia || '—', `$ ${fmt(Number(c.monto))}`]),
-          ['', '', 'Total cobros', `$ ${fmt(totalCobros)}`]
+          (cobros || []).map((c: any) => [c.clientes?.nombre ?? '—', c.metodo_pago, c.referencia || '—', `${cs}${fmt(Number(c.monto))}`]),
+          ['', '', 'Total cobros', `${cs}${fmt(totalCobros)}`]
         ))
       : '';
 
@@ -280,8 +280,8 @@ export default function ReporteDiarioRuta() {
     const gastosHtml = (gastos || []).length > 0
       ? sec(`Gastos (${(gastos || []).length})`, makeTable(
           ['Concepto', 'Notas', 'Monto'],
-          (gastos || []).map((g: any) => [g.concepto, g.notas || '—', `- $ ${fmt(Number(g.monto))}`]),
-          ['', 'Total gastos', `- $ ${fmt(totalGastos)}`]
+          (gastos || []).map((g: any) => [g.concepto, g.notas || '—', `- ${cs}${fmt(Number(g.monto))}`]),
+          ['', 'Total gastos', `- ${cs}${fmt(totalGastos)}`]
         ))
       : '';
 
@@ -290,7 +290,7 @@ export default function ReporteDiarioRuta() {
       ? sec(`Devoluciones (${totalDevUnidades} uds — ${(devoluciones || []).length} registros)`, makeTable(
           ['Producto', 'Cliente', 'Motivo', 'Acción', 'Cant.'],
           devLineas.map(d => [`${d.nombre} ${d.codigo}`, d.cliente, d.motivo.replace(/_/g, ' '), ACCION_LABELS[d.accion] || d.accion, String(d.cantidad)]),
-          totalDevCredito > 0 ? ['', '', '', 'Total crédito', `$ ${fmt(totalDevCredito)}`] : undefined
+          totalDevCredito > 0 ? ['', '', '', 'Total crédito', `${cs}${fmt(totalDevCredito)}`] : undefined
         ))
       : '';
 
@@ -305,16 +305,16 @@ export default function ReporteDiarioRuta() {
     // Resumen final
     const resumenRow = (label: string, value: string) => `<tr><td class="res-label">${label}</td><td class="res-value">${value}</td></tr>`;
     const resumenHtml = `<div class="section"><h2>Resumen del período</h2><table class="resumen">
-      ${resumenRow('Ventas (contado)', `$ ${fmt(totalContado)}`)}
-      ${resumenRow('Ventas (crédito)', `$ ${fmt(totalCredito)}`)}
-      ${resumenRow('Cobros recibidos', `$ ${fmt(totalCobros)}`)}
-      ${resumenRow('Gastos', `- $ ${fmt(totalGastos)}`)}
-      ${resumenRow('Canceladas', `$ ${fmt(totalCancelado)}`)}
+      ${resumenRow('Ventas (contado)', `${cs}${fmt(totalContado)}`)}
+      ${resumenRow('Ventas (crédito)', `${cs}${fmt(totalCredito)}`)}
+      ${resumenRow('Cobros recibidos', `${cs}${fmt(totalCobros)}`)}
+      ${resumenRow('Gastos', `- ${cs}${fmt(totalGastos)}`)}
+      ${resumenRow('Canceladas', `${cs}${fmt(totalCancelado)}`)}
       ${resumenRow('Clientes visitados', `${clientesVisitados.size}`)}
       ${resumenRow('Visitas sin compra', `${visitasSinCompra.length}`)}
       ${resumenRow('Devoluciones', `${totalDevUnidades} uds`)}
-      ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- $ ${fmt(totalDevCredito)}`) : ''}
-      <tr class="res-total"><td>Efectivo esperado</td><td>$ ${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
+      ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- ${cs}${fmt(totalDevCredito)}`) : ''}
+      <tr class="res-total"><td>Efectivo esperado</td><td>${cs}${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
     </table></div>`;
 
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte - ${usuarioNombre} - ${fechaLabel}</title>
