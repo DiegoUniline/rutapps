@@ -11,9 +11,10 @@ interface Props {
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
+  currencySymbol?: string;
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, currencySymbol: cs = '$' }: Props) {
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
@@ -68,13 +69,13 @@ export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Precio</label>
-            {readOnly ? <span className="text-sm">${price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span> : (
+            {readOnly ? <span className="text-sm">{cs}{price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span> : (
               <input type="number" inputMode="decimal" className="inline-edit-input text-sm text-right !py-1 w-full" value={l.precio_unitario ?? ''} onChange={e => onUpdateLine(idx, 'precio_unitario', e.target.value)} min="0" step="0.01" onFocus={e => e.target.select()} />
             )}
           </div>
           <div>
             <label className="text-[10px] text-muted-foreground block">Total</label>
-            <span className="text-sm font-semibold">${lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
+            <span className="text-sm font-semibold">{cs}{lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
       )}

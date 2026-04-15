@@ -17,9 +17,10 @@ interface Props {
   onCellKeyDown: (e: React.KeyboardEvent, row: number, col: number) => void;
   navigateCell: (row: number, col: number, dir: 'next' | 'prev') => void;
   setLineas: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
+  currencySymbol?: string;
 }
 
-export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas }: Props) {
+export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setCellRef, onCellKeyDown, navigateCell, setLineas, currencySymbol: cs = '$' }: Props) {
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
   const price = Number(l.precio_unitario) || 0;
@@ -96,7 +97,7 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       </td>
       <td className="py-1.5 px-2 text-center text-muted-foreground text-[12px] hidden md:table-cell">{isEmpty ? '' : (unidadLabel || '—')}</td>
       <td className="py-1 px-2">
-        {readOnly ? <span className="text-[12px] block text-right">${price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        {readOnly ? <span className="text-[12px] block text-right">{cs}{price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
         : isEmpty ? <span></span>
         : <input ref={el => setCellRef(idx, 2, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.precio_unitario ?? ''} onChange={e => onUpdateLine(idx, 'precio_unitario', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 2)} onFocus={e => e.target.select()} min="0" step="0.01" />}
       </td>
@@ -125,8 +126,8 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1.5 px-2 text-right font-medium">
         {isEmpty ? '' : (
           <div>
-            <span>${lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            {(iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">sin imp: ${base.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+            <span>{cs}{lineTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            {(iva > 0 || ieps > 0) && <span className="block text-[10px] text-muted-foreground font-normal">sin imp: {cs}{base.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
           </div>
         )}
       </td>
