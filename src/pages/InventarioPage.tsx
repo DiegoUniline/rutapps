@@ -525,6 +525,7 @@ export default function InventarioPage() {
 }
 
 function RutaDetail({ ruta, onBack }: { ruta: any; onBack: () => void }) {
+  const { fmt } = useCurrency();
   const lineas: any[] = ruta.lineas ?? [];
   const totalCargado = lineas.reduce((s: number, l: any) => s + l.cargado, 0);
   const totalEntregado = lineas.reduce((s: number, l: any) => s + l.entregado, 0);
