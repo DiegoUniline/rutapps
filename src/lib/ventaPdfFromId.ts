@@ -11,7 +11,7 @@ export async function generateVentaPdfById(ventaId: string, empresaId?: string):
   // Fetch venta with relations
   const { data: venta, error } = await supabase
     .from('ventas')
-    .select('*, clientes(nombre, codigo, telefono, direccion, rfc, email, facturama_cp, colonia), vendedores(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre))')
+    .select('*, clientes(nombre, codigo, telefono, direccion, rfc, email, facturama_cp, colonia), vendedores:profiles!vendedor_id(nombre), almacenes(nombre), venta_lineas(*, productos(id, codigo, nombre))')
     .eq('id', ventaId)
     .single();
 

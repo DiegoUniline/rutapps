@@ -28,7 +28,7 @@ export default function PedidoPendienteDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
-        .select('*, clientes(nombre, direccion, colonia), vendedores(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('*, clientes(nombre, direccion, colonia), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('id', id!)
         .single();
       if (error) throw error;

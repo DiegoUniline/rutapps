@@ -37,7 +37,7 @@ export function ReporteClientesNoVisitados({ desde, hasta, vendedorIds }: Props)
       // 1) Get all active clients
       let clientesQ = supabase
         .from('clientes')
-        .select('id, codigo, nombre, vendedor_id, dia_visita, telefono, direccion, vendedores(nombre)')
+        .select('id, codigo, nombre, vendedor_id, dia_visita, telefono, direccion, vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', eid)
         .eq('status', 'activo');
       if (vendedorIds && vendedorIds.length > 0) {

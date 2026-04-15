@@ -16,7 +16,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre)')
+        .select('id, folio, fecha, total, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresaId!)
         .eq('status', 'cancelado')
         .gte('fecha', from)
@@ -34,7 +34,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, descuento_porcentaje, descuento_monto, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre)')
+        .select('id, folio, fecha, total, descuento_porcentaje, descuento_monto, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresaId!)
         .gte('fecha', from)
         .lte('fecha', to)
@@ -53,7 +53,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryFn: async () => {
       const { data: ventas } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total)')
+        .select('id, folio, fecha, total, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(producto_id, cantidad, precio_unitario, total)')
         .eq('empresa_id', empresaId!)
         .gte('fecha', from)
         .lte('fecha', to)
@@ -104,7 +104,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     enabled: !!empresaId,
     queryFn: async () => {
       const { data } = await (supabase.from as any)('descargas_ruta')
-        .select('id, fecha, status, vendedor_id, diferencia_efectivo, efectivo_esperado, efectivo_entregado, vendedores(nombre), descarga_ruta_lineas(producto_id, cantidad_esperada, cantidad_real, diferencia, productos(nombre))')
+        .select('id, fecha, status, vendedor_id, diferencia_efectivo, efectivo_esperado, efectivo_entregado, vendedores:profiles!vendedor_id(nombre), descarga_ruta_lineas(producto_id, cantidad_esperada, cantidad_real, diferencia, productos(nombre))')
         .eq('empresa_id', empresaId!)
         .gte('fecha', from)
         .lte('fecha', to)
@@ -146,7 +146,7 @@ export function useControlData(dateRange: { from: Date; to: Date }) {
     queryFn: async () => {
       const { data } = await supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, dias_credito, cliente_id, vendedor_id, clientes(nombre), vendedores(nombre)')
+        .select('id, folio, fecha, total, saldo_pendiente, dias_credito, cliente_id, vendedor_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresaId!)
         .eq('condicion_pago', 'credito')
         .gt('saldo_pendiente', 0)

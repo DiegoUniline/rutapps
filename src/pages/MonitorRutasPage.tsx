@@ -83,7 +83,7 @@ export function MonitorContent() {
     queryFn: async () => {
       const { data } = await supabase
         .from('clientes')
-        .select('id, codigo, nombre, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, dia_visita, vendedores(nombre)')
+        .select('id, codigo, nombre, direccion, colonia, telefono, gps_lat, gps_lng, vendedor_id, dia_visita, vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .eq('status', 'activo')
         .order('orden', { ascending: true });
@@ -113,7 +113,7 @@ export function MonitorContent() {
     queryFn: async () => {
       const { data } = await supabase
         .from('entregas')
-        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, orden_entrega, clientes(id, nombre, codigo, direccion, colonia, gps_lat, gps_lng, vendedor_id, vendedores(nombre))')
+        .select('id, cliente_id, vendedor_id, vendedor_ruta_id, status, folio, orden_entrega, clientes(id, nombre, codigo, direccion, colonia, gps_lat, gps_lng, vendedor_id, vendedores:profiles!vendedor_id(nombre))')
         .eq('fecha', dateStr);
       return data ?? [];
     },

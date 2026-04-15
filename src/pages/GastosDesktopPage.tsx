@@ -22,7 +22,7 @@ function useGastos(search: string) {
     queryFn: async () => {
       let q = supabase
         .from('gastos')
-        .select('*, vendedores(nombre)')
+        .select('*, vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       if (search) q = q.ilike('concepto', `%${search}%`);

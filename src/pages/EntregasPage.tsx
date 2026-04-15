@@ -22,7 +22,7 @@ function useEntregas(search?: string, vendedorFilter?: string, statusFilter?: st
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('*, clientes(nombre, direccion, colonia, telefono, rfc), vendedores(nombre), venta_lineas(id, cantidad, precio_unitario, descuento_pct, subtotal, total, iva_monto, ieps_monto, productos(codigo, nombre), unidades(abreviatura))')
+        .select('*, clientes(nombre, direccion, colonia, telefono, rfc), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad, precio_unitario, descuento_pct, subtotal, total, iva_monto, ieps_monto, productos(codigo, nombre), unidades(abreviatura))')
         .eq('empresa_id', empresa!.id)
         .eq('tipo', 'venta_directa')
         .not('pedido_origen_id', 'is', null)

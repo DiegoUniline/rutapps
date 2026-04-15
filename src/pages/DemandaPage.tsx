@@ -27,7 +27,7 @@ function usePedidosPendientes() {
     queryFn: async () => {
       const { data: pedidos, error } = await supabase
         .from('ventas')
-        .select('*, clientes(nombre), vendedores(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('empresa_id', empresa!.id)
         .eq('tipo', 'pedido')
         .in('status', ['confirmado', 'entregado'])
