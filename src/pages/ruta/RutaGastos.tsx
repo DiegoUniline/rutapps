@@ -67,7 +67,7 @@ export default function RutaGastos() {
         <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-3 flex items-center justify-between">
           <span className="text-[13px] text-muted-foreground">Total hoy</span>
           <span className="text-[18px] font-bold text-destructive">
-            $ {totalHoy.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+            {fmt(totalHoy)}
           </span>
         </div>
       </div>
@@ -87,7 +87,7 @@ export default function RutaGastos() {
               </p>
             </div>
             <span className="text-[15px] font-bold text-foreground shrink-0">
-              $ {(g.monto ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              {fmt(g.monto ?? 0)}
             </span>
           </div>
         ))}
