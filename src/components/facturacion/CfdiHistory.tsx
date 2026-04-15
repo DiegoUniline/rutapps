@@ -69,7 +69,7 @@ export function CfdiHistory({ ventaId, lineas, productosList }: CfdiHistoryProps
                   </div>
                 </td>
                 <td className="py-1.5 px-2 text-[11px] text-muted-foreground max-w-[200px] truncate">{lineasDesc || `${cfdiLineas.length} líneas`}</td>
-                <td className="py-1.5 px-2 text-right font-medium">{fmt(cfdi.total)}</td>
+                <td className="py-1.5 px-2 text-right font-medium">{fmtCur(cfdi.total)}</td>
                 <td className="py-1.5 px-2 text-muted-foreground text-[12px]">{fmtDate(cfdi.created_at)}</td>
                 <td className="py-1.5 px-2">
                   <StatusChip status={cfdi.status === 'timbrado' ? 'confirmado' : cfdi.status === 'cancelado' ? 'cancelado' : 'borrador'} />
