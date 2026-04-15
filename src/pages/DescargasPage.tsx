@@ -1279,6 +1279,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
 /* ─── Main Page ─── */
 
 export default function DescargasPage() {
+  const { symbol: cs } = useCurrency();
   const { data: descargas, isLoading } = useDescargasListDesktop();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
