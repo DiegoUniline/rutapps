@@ -555,12 +555,7 @@ export function drawFooter(doc: jsPDF, empresa?: EmpresaInfo) {
 // ══════════════════════════════════════════════════════════
 // NUMBER TO WORDS (Spanish) — currency-aware
 // ══════════════════════════════════════════════════════════
-export function numberToWords(n: number, currencyCode?: string | null): string {
-  const { getCurrencyConfig } = require('@/lib/currency');
-  const cc = getCurrencyConfig(currencyCode);
-  const wordPlural = cc.wordPlural || 'PESOS';
-  const code = cc.code || 'MXN';
-
+export function numberToWords(n: number, wordPlural: string = 'PESOS', code: string = 'MXN'): string {
   const units = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
   const teens = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
   const tens = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
