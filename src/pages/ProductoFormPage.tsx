@@ -451,19 +451,19 @@ export default function ProductoFormPage() {
                                 : 'border-border text-muted-foreground hover:border-primary/50'
                             }`}
                           >
-                            {t === 'porcentaje' ? '% Porcentaje' : '$ Cuota fija'}
+                            {t === 'porcentaje' ? '% Porcentaje' : `${currSym} Cuota fija`}
                           </button>
                         ))}
                       </div>
                     </div>
 
                     <OdooField
-                      label={(form.ieps_tipo || 'porcentaje') === 'cuota' ? 'IEPS cuota $' : 'IEPS %'}
+                      label={(form.ieps_tipo || 'porcentaje') === 'cuota' ? `IEPS cuota ${currSym}` : 'IEPS %'}
                       value={form.ieps_pct ?? 0}
                       type="number"
                       teal
                       onChange={v => set('ieps_pct', +v)}
-                      format={v => (form.ieps_tipo || 'porcentaje') === 'cuota' ? `$ ${v ?? 0}` : `${v ?? 0}%`}
+                      format={v => (form.ieps_tipo || 'porcentaje') === 'cuota' ? `${currSym} ${v ?? 0}` : `${v ?? 0}%`}
                     />
                     {(form.ieps_tipo || 'porcentaje') === 'porcentaje' && (
                       <div className="ml-[140px] -mt-1 mb-2 flex gap-2">
@@ -494,7 +494,7 @@ export default function ProductoFormPage() {
                       <div className="ml-[140px] text-xs text-muted-foreground bg-secondary/50 rounded p-2 mb-2">
                         {(() => {
                           const t = calcTax({ precio: form.costo ?? 0, iva_pct: form.iva_pct ?? 16, ieps_pct: form.ieps_pct ?? 0, ieps_tipo: (form.ieps_tipo as any) || 'porcentaje', incluye_impuestos: true });
-                          return <>Costo neto: <strong>$ {t.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong> + IEPS: $ {t.ieps_monto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + IVA: $ {t.iva_monto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</>;
+                          return <>Costo neto: <strong>{currSym} {t.precio_neto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong> + IEPS: {currSym} {t.ieps_monto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})} + IVA: {currSym} {t.iva_monto.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</>;
                         })()}
                       </div>
                     )}
