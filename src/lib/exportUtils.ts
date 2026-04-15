@@ -55,7 +55,8 @@ const makeFmt = (currencyCode?: string | null) => {
 
 // ─── EXCEL EXPORT ───────────────────────────────────────────────
 export function exportToExcel(options: ExportOptions) {
-  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral } = options;
+  const { fileName, title, subtitle, columns, data, empresa, dateRange, totals, resumenGeneral, currencyCode } = options;
+  const fmt = makeFmt(currencyCode);
 
   const wb = XLSX.utils.book_new();
   const rows: any[][] = [];
