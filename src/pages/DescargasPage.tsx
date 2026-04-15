@@ -466,28 +466,28 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Ventas contado</div>
-              <div className="text-lg font-bold text-foreground">${totalContado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-bold text-foreground">{cs}{totalContado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               <div className="text-[10px] text-muted-foreground">{ventasContado.length} ventas</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Ventas crédito</div>
-              <div className="text-lg font-bold text-foreground">${totalCredito.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-bold text-foreground">{cs}{totalCredito.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               <div className="text-[10px] text-muted-foreground">{ventasCredito.length} ventas</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Cobros recibidos</div>
-              <div className="text-lg font-bold text-foreground">${totalCobros.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-bold text-foreground">{cs}{totalCobros.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               <div className="text-[10px] text-muted-foreground">{(cobros || []).length} cobros</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[10px] text-muted-foreground uppercase">Gastos</div>
-              <div className="text-lg font-bold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="text-lg font-bold text-destructive">-{cs}{totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               <div className="text-[10px] text-muted-foreground">{(gastos || []).length} gastos</div>
             </div>
             {ventasCanceladas.length > 0 && (
               <div className="bg-destructive/5 rounded-lg p-3 text-center border border-destructive/20">
                 <div className="text-[10px] text-muted-foreground uppercase">Canceladas</div>
-                <div className="text-lg font-bold text-destructive">${totalCancelado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div className="text-lg font-bold text-destructive">{cs}{totalCancelado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                 <div className="text-[10px] text-muted-foreground">{ventasCanceladas.length} ventas</div>
               </div>
             )}
@@ -507,7 +507,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Declarado por vendedor</div>
               <div className="bg-card rounded-md p-3">
                 <div className="text-[10px] text-muted-foreground">Efectivo entregado</div>
-                <div className="text-xl font-bold text-foreground">${Number(descarga.efectivo_entregado).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div className="text-xl font-bold text-foreground">{cs}{Number(descarga.efectivo_entregado).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               </div>
               {descarga.notas && (
                 <div className="bg-card rounded-md p-3">
@@ -520,23 +520,23 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
             <div className="space-y-2">
               <div className="text-[11px] font-semibold text-muted-foreground uppercase">Cuadre de efectivo</div>
               <div className="bg-card rounded-md p-3 space-y-1.5 text-[12px]">
-                <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold">${(cobrosPorMetodo['efectivo'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-                {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold">${(cobrosPorMetodo['transferencia'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
-                {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold">${(cobrosPorMetodo['tarjeta'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
-                <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">+ Cobros en efectivo</span><span className="font-semibold">{cs}{(cobrosPorMetodo['efectivo'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+                {(cobrosPorMetodo['transferencia'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros transferencia</span><span className="font-semibold">{cs}{(cobrosPorMetodo['transferencia'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
+                {(cobrosPorMetodo['tarjeta'] || 0) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Cobros tarjeta</span><span className="font-semibold">{cs}{(cobrosPorMetodo['tarjeta'] || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
+                <div className="flex justify-between"><span className="text-muted-foreground">− Gastos</span><span className="font-semibold text-destructive">-{cs}{totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
                 {(gastos || []).length > 0 && (
                   <div className="pl-3 space-y-0.5 border-l-2 border-destructive/20 ml-1">
                     {(gastos || []).map((g: any) => (
                       <div key={g.id} className="flex justify-between text-[11px]">
                         <span className="text-muted-foreground/80">{g.concepto}</span>
-                        <span className="text-destructive/80">-${(Number(g.monto) || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                        <span className="text-destructive/80">-{cs}{(Number(g.monto) || 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 <div className="border-t border-border pt-1.5 flex justify-between font-bold">
                   <span>Efectivo esperado</span>
-                  <span>${efectivoSistema.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                  <span>{cs}{efectivoSistema.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
               </div>
               {/* Difference */}
@@ -584,14 +584,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       )}>{v.condicion_pago}</span>
                     </td>
                     <td className="py-1.5 text-[10px] text-muted-foreground">{v.status}</td>
-                    <td className="py-1.5 text-right font-semibold">${Number(v.total).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 text-right font-semibold">{cs}{Number(v.total).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t border-border font-bold text-[12px]">
                   <td colSpan={4} className="py-2 text-right text-muted-foreground">Total ventas activas:</td>
-                  <td className="py-2 text-right">${totalVentasGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-2 text-right">{cs}{totalVentasGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
               </tfoot>
             </table>
@@ -606,7 +606,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   <div key={v.id} className="flex items-center justify-between bg-destructive/5 rounded px-3 py-1.5 text-[12px]">
                     <span className="font-mono">{v.folio ?? '—'}</span>
                     <span>{v.clientes?.nombre ?? '—'}</span>
-                    <span className="font-semibold text-destructive line-through">${Number(v.total).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <span className="font-semibold text-destructive line-through">{cs}{Number(v.total).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
                 ))}
               </div>
@@ -632,7 +632,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                     <td className="py-1.5 font-medium">{p.nombre}</td>
                     <td className="py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
                     <td className="py-1.5 text-right">{p.cantidad}</td>
-                    <td className="py-1.5 text-right font-semibold">${p.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 text-right font-semibold">{cs}{p.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 ))}
               </tbody>
@@ -648,7 +648,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                 {Object.entries(cobrosPorMetodo).map(([metodo, total]) => (
                   <div key={metodo} className="bg-card rounded-md px-3 py-2 text-[12px]">
                     <span className="text-muted-foreground capitalize">{metodo}:</span>{' '}
-                    <span className="font-bold">${total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <span className="font-bold">{cs}{total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                   </div>
                 ))}
               </div>
@@ -667,14 +667,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                       <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
                       <td className="py-1.5 capitalize">{c.metodo_pago}</td>
                       <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
-                      <td className="py-1.5 text-right font-semibold">${Number(c.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                      <td className="py-1.5 text-right font-semibold">{cs}{Number(c.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
-                    <td className="py-2 text-right">${totalCobros.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-2 text-right">{cs}{totalCobros.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -698,14 +698,14 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   <tr key={g.id} className="border-b border-border/50">
                     <td className="py-1.5 font-medium">{g.concepto}</td>
                     <td className="py-1.5 text-muted-foreground">{g.notas || '—'}</td>
-                    <td className="py-1.5 text-right font-semibold text-destructive">-${Number(g.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 text-right font-semibold text-destructive">-{cs}{Number(g.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t border-border font-bold">
                   <td colSpan={2} className="py-2 text-right text-muted-foreground">Total gastos:</td>
-                  <td className="py-2 text-right text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-2 text-right text-destructive">-{cs}{totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
               </tfoot>
             </table>
@@ -754,7 +754,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                         </span>
                       </td>
                       <td className="py-1.5 text-right font-semibold">
-                        {d.monto_credito > 0 ? <span className="text-destructive">${d.monto_credito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span> : '—'}
+                        {d.monto_credito > 0 ? <span className="text-destructive">{cs}{d.monto_credito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</span> : '—'}
                       </td>
                     </tr>
                   ))}
@@ -763,7 +763,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
                   <tfoot>
                     <tr className="border-t border-border font-bold text-[12px]">
                       <td colSpan={5} className="py-2 text-right text-muted-foreground">Total crédito:</td>
-                      <td className="py-2 text-right text-destructive">${totalDevCredito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-2 text-right text-destructive">{cs}{totalDevCredito.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -865,7 +865,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
 
 function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
   const { user, empresa } = useAuth();
-  const { symbol: cs2 } = useCurrency();
+  const { symbol: cs } = useCurrency();
   const qc = useQueryClient();
   const [vendedorId, setVendedorId] = useState<string>('');
   const [efectivoEntregado, setEfectivoEntregado] = useState('');
@@ -1080,31 +1080,31 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
             <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Ventas contado</div>
-              <div className="font-bold text-foreground">${totalContado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="font-bold text-foreground">{cs}{totalContado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
             <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Cobros efectivo</div>
-              <div className="font-bold text-foreground">${cobrosEfectivoTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="font-bold text-foreground">{cs}{cobrosEfectivoTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
             {cobrosTransferenciaTotal > 0 && (
               <div className="bg-card rounded-md p-3 text-center">
                 <div className="text-muted-foreground">Cobros transferencia</div>
-                <div className="font-bold text-foreground">${cobrosTransferenciaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div className="font-bold text-foreground">{cs}{cobrosTransferenciaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               </div>
             )}
             {cobrosTarjetaTotal > 0 && (
               <div className="bg-card rounded-md p-3 text-center">
                 <div className="text-muted-foreground">Cobros tarjeta</div>
-                <div className="font-bold text-foreground">${cobrosTarjetaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div className="font-bold text-foreground">{cs}{cobrosTarjetaTotal.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
               </div>
             )}
             <div className="bg-card rounded-md p-3 text-center">
               <div className="text-muted-foreground">Gastos</div>
-              <div className="font-bold text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="font-bold text-destructive">-{cs}{totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
             <div className="bg-primary/5 rounded-md p-3 text-center">
               <div className="text-muted-foreground">Efectivo esperado</div>
-              <div className="font-bold text-primary">${efectivoEsperado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+              <div className="font-bold text-primary">{cs}{efectivoEsperado.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
             </div>
           </div>
           <div className="max-w-xs">
@@ -1152,7 +1152,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
                         v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                       )}>{v.condicion_pago}</span>
                     </td>
-                    <td className="py-1.5 text-right font-semibold">${Number(v.total).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 text-right font-semibold">{cs}{Number(v.total).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1179,7 +1179,7 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
                   <td className="py-1.5 font-medium">{p.nombre}</td>
                   <td className="py-1.5 font-mono text-muted-foreground">{p.codigo}</td>
                   <td className="py-1.5 text-right">{p.cantidad}</td>
-                  <td className="py-1.5 text-right font-semibold">${p.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-1.5 text-right font-semibold">{cs}{p.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
               ))}
             </tbody>
@@ -1206,14 +1206,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
                     <td className="py-1.5">{c.clientes?.nombre ?? '—'}</td>
                     <td className="py-1.5 capitalize">{c.metodo_pago}</td>
                     <td className="py-1.5 text-muted-foreground font-mono">{c.referencia || '—'}</td>
-                    <td className="py-1.5 text-right font-semibold">${Number(c.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 text-right font-semibold">{cs}{Number(c.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t border-border font-bold">
                   <td colSpan={3} className="py-2 text-right text-muted-foreground">Total cobros:</td>
-                  <td className="py-2 text-right">${totalCobros.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-2 text-right">{cs}{totalCobros.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
               </tfoot>
             </table>
@@ -1238,14 +1238,14 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
                   <tr key={g.id} className="border-b border-border/50">
                     <td className="py-1.5 font-medium">{g.concepto}</td>
                     <td className="py-1.5 text-muted-foreground">{g.notas || '—'}</td>
-                    <td className="py-1.5 text-right font-semibold text-destructive">-${Number(g.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 text-right font-semibold text-destructive">-{cs}{Number(g.monto).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t border-border font-bold">
                   <td colSpan={2} className="py-2 text-right text-muted-foreground">Total gastos:</td>
-                  <td className="py-2 text-right text-destructive">-${totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                  <td className="py-2 text-right text-destructive">-{cs}{totalGastos.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 </tr>
               </tfoot>
             </table>
@@ -1367,8 +1367,8 @@ export default function DescargasPage() {
                     <td className="py-2.5 px-4">
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-card border border-border font-medium">{tipoLabel}</span>
                     </td>
-                    <td className="py-2.5 px-4 text-right">${Number(d.efectivo_esperado).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                    <td className="py-2.5 px-4 text-right font-semibold">${Number(d.efectivo_entregado).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-4 text-right">{cs}{Number(d.efectivo_esperado).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-2.5 px-4 text-right font-semibold">{cs}{Number(d.efectivo_entregado).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                     <td className={cn(
                       "py-2.5 px-4 text-right font-bold",
                       dif > 0 ? "text-green-600" : dif < 0 ? "text-destructive" : ""
