@@ -33,6 +33,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
   const [searchProducto, setSearchProducto] = useState('');
   const [searchDevProducto, setSearchDevProducto] = useState('');
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [tipoVenta, setTipoVenta] = useState<'venta_directa' | 'pedido'>('venta_directa');
   const [condicionPago, setCondicionPago] = useState<'contado' | 'credito' | 'por_definir'>('contado');
   const [notas, setNotas] = useState('');
@@ -389,6 +390,8 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       opts?.onAlmacenMissing?.();
       return;
     }
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const ventaId = crypto.randomUUID();
@@ -570,7 +573,7 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
       queryClient.invalidateQueries({ queryKey: ['ruta-cuentas-pendientes'] });
       queryClient.invalidateQueries({ queryKey: ['ruta-carga'] });
       setTicketInfo({ folio: localFolio, fecha: new Date().toLocaleDateString('es-MX') });
-    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); }
+    } catch (err: any) { toast.error(err.message); } finally { setSaving(false); savingRef.current = false; }
   };
 
   const currentStepIdx = STEPS.indexOf(step);
