@@ -495,7 +495,7 @@ export default function InventarioPage() {
                 <p className="text-sm font-semibold text-foreground">Total en rutas</p>
                 <div className="text-right">
                   <p className="text-sm font-bold">Costo: {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').reduce((s, c) => s + c.valorCosto, 0))}</p>
-                  <p className="text-sm text-success font-bold">Proyección: $ {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').reduce((s, c) => s + c.valorVenta, 0))}</p>
+                  <p className="text-sm text-success font-bold">Proyección: {fmt(data.cargas.filter(c => c.totalUnidades !== 0 && c.origen === 'ruta').reduce((s, c) => s + c.valorVenta, 0))}</p>
                 </div>
               </div>
             </div>
