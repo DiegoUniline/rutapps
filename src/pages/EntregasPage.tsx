@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn, fmtDate } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 
 /* ─── Data ──────────────────────────────────────────── */
@@ -54,6 +55,7 @@ function useVendedoresList() {
 /* ─── Print document ────────────────────────────────── */
 
 function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
+  const { fmt } = useCurrency();
   const printRef = useRef<HTMLDivElement>(null);
   const { data: empresaConfig } = useQuery({
     queryKey: ['empresa-config', empresa?.id],
@@ -171,8 +173,8 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
                 <td style={{ fontFamily: 'monospace', fontSize: '11px' }}>{l.productos?.codigo ?? '—'}</td>
                 <td style={{ fontWeight: 500 }}>{l.productos?.nombre ?? '—'}</td>
                 <td className="text-center">{l.cantidad} {l.unidades?.abreviatura ?? ''}</td>
-                <td className="text-right">{(l.precio_unitario ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                <td className="text-right">{((l.cantidad ?? 0) * (l.precio_unitario ?? 0)).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td className="text-right">{fmt((l.precio_unitario ?? 0))}</td>
+                <td className="text-right">{fmt(((l.cantidad ?? 0) * (l.precio_unitario ?? 0)))}</td>
               </tr>
             ))}
           </tbody>
@@ -180,10 +182,10 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
 
         <div className="totals">
           <div className="totals-box">
-            <div className="total-row"><span>Subtotal</span><span>{(entrega.subtotal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
-            {(entrega.iva_total ?? 0) > 0 && <div className="total-row"><span>IVA</span><span>{(entrega.iva_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
-            {(entrega.ieps_total ?? 0) > 0 && <div className="total-row"><span>IEPS</span><span>{(entrega.ieps_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>}
-            <div className="total-row grand"><span>Total</span><span>{(entrega.total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>
+            <div className="total-row"><span>Subtotal</span><span>{fmt((entrega.subtotal ?? 0))}</span></div>
+            {(entrega.iva_total ?? 0) > 0 && <div className="total-row"><span>IVA</span><span>{fmt((entrega.iva_total ?? 0))}</span></div>}
+            {(entrega.ieps_total ?? 0) > 0 && <div className="total-row"><span>IEPS</span><span>{fmt((entrega.ieps_total ?? 0))}</span></div>}
+            <div className="total-row grand"><span>Total</span><span>{fmt((entrega.total ?? 0))}</span></div>
           </div>
         </div>
 
@@ -209,6 +211,7 @@ function PrintDocument({ entrega, empresa }: { entrega: any; empresa: any }) {
 /* ─── Main page ─────────────────────────────────────── */
 
 export default function EntregasPage() {
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
@@ -376,7 +379,7 @@ export default function EntregasPage() {
                         {e.venta_lineas?.length ?? 0}
                       </TableCell>
                       <TableCell className="text-right text-[12px] font-medium py-2">
-                        {(e.total ?? 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                        {fmt((e.total ?? 0))}
                       </TableCell>
                       <TableCell className="py-2" onClick={ev => ev.stopPropagation()}>
                         <div className="flex items-center gap-1 justify-end">
@@ -447,8 +450,8 @@ export default function EntregasPage() {
                                     <TableCell className="text-[11px] font-mono text-muted-foreground py-1.5">{l.productos?.codigo ?? '—'}</TableCell>
                                     <TableCell className="text-[12px] font-medium py-1.5">{l.productos?.nombre ?? '—'}</TableCell>
                                     <TableCell className="text-center text-[12px] py-1.5">{l.cantidad} {l.unidades?.abreviatura ?? ''}</TableCell>
-                                    <TableCell className="text-right text-[12px] py-1.5">{(l.precio_unitario ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
-                                    <TableCell className="text-right text-[12px] font-medium py-1.5">{((l.cantidad ?? 0) * (l.precio_unitario ?? 0)).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</TableCell>
+                                    <TableCell className="text-right text-[12px] py-1.5">{fmt((l.precio_unitario ?? 0))}</TableCell>
+                                    <TableCell className="text-right text-[12px] font-medium py-1.5">{fmt(((l.cantidad ?? 0) * (l.precio_unitario ?? 0)))}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -459,23 +462,23 @@ export default function EntregasPage() {
                               <div className="w-64 space-y-1">
                                 <div className="flex justify-between text-[12px] text-muted-foreground">
                                   <span>Subtotal</span>
-                                  <span>{(e.subtotal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                  <span>{fmt((e.subtotal ?? 0))}</span>
                                 </div>
                                 {(e.iva_total ?? 0) > 0 && (
                                   <div className="flex justify-between text-[12px] text-muted-foreground">
                                     <span>IVA</span>
-                                    <span>{(e.iva_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    <span>{fmt((e.iva_total ?? 0))}</span>
                                   </div>
                                 )}
                                 {(e.ieps_total ?? 0) > 0 && (
                                   <div className="flex justify-between text-[12px] text-muted-foreground">
                                     <span>IEPS</span>
-                                    <span>{(e.ieps_total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                    <span>{fmt((e.ieps_total ?? 0))}</span>
                                   </div>
                                 )}
                                 <div className="flex justify-between text-[14px] font-bold text-foreground border-t border-border pt-1.5">
                                   <span>Total</span>
-                                  <span>{(e.total ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                                  <span>{fmt((e.total ?? 0))}</span>
                                 </div>
                               </div>
                             </div>
