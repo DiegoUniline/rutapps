@@ -72,7 +72,7 @@ function SectionCard({ title, icon: Icon, children, className }: { title: string
 /* ─── Detail / Approve panel — Full activity breakdown ─── */
 
 function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => void }) {
-  const { user, empresa } = useAuth();
+  const { user, empresa, profile } = useAuth();
   const { symbol: cs, fmt } = useCurrency();
   const qc = useQueryClient();
   const { data: lineas } = useDescargaLineas(descarga.id);
@@ -269,7 +269,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
         .from('descarga_ruta')
         .update({
           status: accion,
-          aprobado_por: user!.id,
+          aprobado_por: profile!.id,
           fecha_aprobacion: new Date().toISOString(),
           notas_supervisor: notasSupervisor || null,
         } as any)
