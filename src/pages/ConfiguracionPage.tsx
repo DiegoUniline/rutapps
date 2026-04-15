@@ -50,6 +50,7 @@ interface PreviewProps {
 }
 
 function TicketPreview({ form, logoPreview, campos, ticketAncho = '80' }: PreviewProps) {
+  const { fmt } = useCurrency();
   const nombre = form.nombre || 'Mi Empresa';
   const dir = [form.direccion, form.colonia, form.ciudad].filter(Boolean).join(', ');
   const width = ticketAncho === '58' ? '210px' : '280px';
