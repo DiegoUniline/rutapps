@@ -28,6 +28,7 @@ export async function generarVentaPdf(params: PdfParams): Promise<Blob> {
       nombre: empresa?.nombre ?? '', razon_social: empresa?.razon_social, rfc: empresa?.rfc,
       direccion: empresa?.direccion, colonia: empresa?.colonia, ciudad: empresa?.ciudad,
       estado: empresa?.estado, cp: empresa?.cp, telefono: empresa?.telefono, email: empresa?.email, logo_url: empresa?.logo_url,
+      moneda: empresa?.moneda,
     },
     logoBase64: logo,
     pedido: {

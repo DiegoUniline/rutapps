@@ -150,7 +150,7 @@ export async function generarVentaPdf(params: VentaPdfParams): Promise<Blob> {
   y = drawTotalsBlock(doc, y, totalRows);
 
   // ── IMPORTE CON LETRA ──
-  const words = numberToWords(venta.total);
+  const words = numberToWords(venta.total, cc.wordPlural, cc.code);
   y = drawImporteConLetra(doc, y, words);
 
   // ── NOTAS ──

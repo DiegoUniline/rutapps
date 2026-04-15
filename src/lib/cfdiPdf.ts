@@ -87,8 +87,8 @@ const C = {
   cfdiVal: [26, 26, 26] as [number, number, number],
 };
 
-// ── Number to spanish words ──
-function numberToWords(n: number): string {
+// ── Number to spanish words (currency-aware) ──
+function numberToWords(n: number, wordPlural: string = 'PESOS', code: string = 'MXN'): string {
   const units = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
   const teens = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
   const tens = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
@@ -97,7 +97,7 @@ function numberToWords(n: number): string {
   const int = Math.floor(n);
   const cents = Math.round((n - int) * 100);
 
-  if (int === 0) return `CERO PESOS ${String(cents).padStart(2, '0')}/100 MXN`;
+  if (int === 0) return `CERO ${wordPlural} ${String(cents).padStart(2, '0')}/100 ${code}`;
 
   function convert(num: number): string {
     if (num === 0) return '';
@@ -124,7 +124,7 @@ function numberToWords(n: number): string {
     return String(num);
   }
 
-  return `${convert(int)} PESOS ${String(cents).padStart(2, '0')}/100 MXN`;
+  return `${convert(int)} ${wordPlural} ${String(cents).padStart(2, '0')}/100 ${code}`;
 }
 
 async function generateQrDataUrl(text: string): Promise<string | null> {
@@ -178,7 +178,8 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   const rightX = pageW - MR;
   const midX = pageW / 2;
   const contentW = pageW - ML - MR;
-  const s = getCurrencyConfig(empresa.moneda).symbol;
+  const cc = getCurrencyConfig(empresa.moneda);
+  const s = cc.symbol;
 
   let y = 16;
 
@@ -318,7 +319,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
     ['Forma de pago:', formasPagoLabel || cfdi.payment_form || '—'],
     ['Método de pago:', metodoPagoLabel || cfdi.payment_method || '—'],
     ['Uso del CFDI:', usoCfdiLabel || receiver.cfdi_use || '—'],
-    ['Moneda:', `${cfdi.currency || 'MXN'} - Peso Mexicano`],
+    ['Moneda:', `${cc.code} - ${cc.name}`],
     ['Régimen receptor:', regimenReceptorLabel || receiver.fiscal_regime || '—'],
   ];
 
@@ -503,7 +504,7 @@ export async function generarCfdiPdf(params: CfdiPdfParams): Promise<Blob> {
   // ═══════════════════════════════════════════════════════
   // IMPORTE CON LETRA (centered, uppercase, bordered)
   // ═══════════════════════════════════════════════════════
-  const words = numberToWords(cfdi.total);
+  const words = numberToWords(cfdi.total, cc.wordPlural, cc.code);
 
   // Top border
   doc.setDrawColor(...C.border);
