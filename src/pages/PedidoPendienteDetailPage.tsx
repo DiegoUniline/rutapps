@@ -11,6 +11,7 @@ import { TableSkeleton } from '@/components/TableSkeleton';
 import { toast } from 'sonner';
 import { cn, fmtDate } from '@/lib/utils';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function PedidoPendienteDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ export default function PedidoPendienteDetailPage() {
   const { empresa } = useAuth();
   const qc = useQueryClient();
   const crearEntrega = useCrearEntrega();
+  const { fmt: fmtC } = useCurrency();
 
   // Load pedido with lines
   const { data: pedido, isLoading } = useQuery({
@@ -202,9 +204,9 @@ export default function PedidoPendienteDetailPage() {
                     <td className={cn("py-1.5 px-4 text-right text-[12px] font-bold", faltante > 0 ? "text-destructive" : "text-muted-foreground")}>
                       {faltante > 0 ? faltante : <Check className="h-3.5 w-3.5 inline text-primary" />}
                     </td>
-                    <td className="py-1.5 px-4 text-right text-[12px] text-muted-foreground">$ {Number(l.precio_unitario).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td className="py-1.5 px-4 text-right text-[12px] text-muted-foreground">{fmtC(Number(l.precio_unitario))}</td>
                     <td className="py-1.5 px-4 text-right text-[12px] font-medium">
-                      {faltante > 0 ? `$ ${(faltante * Number(l.precio_unitario)).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}
+                      {faltante > 0 ? fmtC(faltante * Number(l.precio_unitario)) : '—'}
                     </td>
                   </tr>
                 );
