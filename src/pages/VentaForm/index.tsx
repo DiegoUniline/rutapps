@@ -59,20 +59,93 @@ export default function VentaFormPage() {
     }
   }, [form.tipo, isNew, baseSave]);
 
+  // Fetch pending accounts for the selected client (for checkout distribution)
+  const { data: clientePendingVentas } = useQuery({
+    queryKey: ['checkout-pending-ventas', empresa?.id, form.cliente_id],
+    enabled: !!empresa?.id && !!form.cliente_id && showCheckout,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ventas')
+        .select('id, folio, fecha, total, saldo_pendiente')
+        .eq('empresa_id', empresa!.id)
+        .eq('cliente_id', form.cliente_id!)
+        .gt('saldo_pendiente', 0)
+        .neq('id', form.id ?? '')
+        .in('status', ['confirmado', 'entregado', 'facturado'])
+        .order('fecha');
+      return data ?? [];
+    },
+  });
+
+  const checkoutCuentasPendientes = useMemo(() =>
+    (clientePendingVentas ?? []).map((v: any) => ({
+      id: v.id,
+      folio: v.folio,
+      fecha: v.fecha,
+      total: v.total ?? 0,
+      saldo_pendiente: v.saldo_pendiente ?? 0,
+    })),
+    [clientePendingVentas]
+  );
+
   const handleCheckoutConfirm = useCallback(async (
     pagos: { metodo: string; monto: number; referencia: string }[],
-    condicion: 'contado' | 'credito'
+    condicion: 'contado' | 'credito',
+    cuentasAplicadas?: { id: string; monto: number }[],
   ) => {
     setCheckoutSaving(true);
     try {
       if (condicion === 'credito') {
-        // Update condicion_pago to credito
         await saveVenta.mutateAsync({ id: form.id, condicion_pago: 'credito' } as any);
       } else {
         await saveVenta.mutateAsync({ id: form.id, condicion_pago: 'contado' } as any);
-        // Register each pago
+
+        // Distribute payments: first to current sale, then to pending accounts
+        let saleRemaining = totals.total;
+        const accountApplied = new Map<string, number>();
+        const cuentas = cuentasAplicadas ?? [];
+
         for (const pago of pagos) {
-          await handleAddPago(pago.monto, pago.metodo, pago.referencia);
+          let remaining = pago.monto;
+
+          // Apply to current sale first
+          if (saleRemaining > 0 && remaining > 0) {
+            const apply = Math.min(remaining, saleRemaining);
+            await handleAddPago(apply, pago.metodo, pago.referencia);
+            saleRemaining -= apply;
+            remaining -= apply;
+          }
+
+          // Apply excess to pending accounts
+          for (const cuenta of cuentas) {
+            if (remaining <= 0.01) break;
+            const alreadyApplied = accountApplied.get(cuenta.id) ?? 0;
+            const cuentaRemaining = cuenta.monto - alreadyApplied;
+            if (cuentaRemaining <= 0.01) continue;
+            const apply = Math.min(remaining, cuentaRemaining);
+
+            // Create cobro + aplicación for the pending account
+            const { data: cobroData } = await supabase.from('cobros').insert({
+              empresa_id: empresa!.id,
+              cliente_id: form.cliente_id!,
+              user_id: user!.id,
+              monto: apply,
+              metodo_pago: pago.metodo,
+              referencia: pago.referencia || null,
+              fecha: new Date().toISOString().slice(0, 10),
+            }).select('id').single();
+
+            if (cobroData) {
+              await supabase.from('cobro_aplicaciones').insert({
+                cobro_id: cobroData.id,
+                venta_id: cuenta.id,
+                monto_aplicado: apply,
+              });
+            }
+
+            accountApplied.set(cuenta.id, alreadyApplied + apply);
+            remaining -= apply;
+          }
         }
       }
       setShowCheckout(false);
@@ -80,13 +153,14 @@ export default function VentaFormPage() {
       if (queryClient) {
         queryClient.invalidateQueries({ queryKey: ['venta', form.id] });
         queryClient.invalidateQueries({ queryKey: ['venta-pagos', form.id] });
+        queryClient.invalidateQueries({ queryKey: ['checkout-pending-ventas'] });
       }
     } catch (e: any) {
       toast.error(e.message || 'Error al registrar cobro');
     } finally {
       setCheckoutSaving(false);
     }
-  }, [form.id, saveVenta, handleAddPago, queryClient]);
+  }, [form.id, form.cliente_id, totals.total, empresa, user, saveVenta, handleAddPago, queryClient]);
 
   if (!isNew && isLoading) return <div className="p-4 min-h-full"><TableSkeleton rows={6} cols={4} /></div>;
 
