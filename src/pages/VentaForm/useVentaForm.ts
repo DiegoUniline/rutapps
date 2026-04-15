@@ -65,6 +65,7 @@ export function useVentaForm() {
   const [lineas, setLineas] = useState<Partial<VentaLinea>[]>([emptyLine()]);
   const [dirty, setDirty] = useState(false);
   const loadedVentaIdRef = useRef<string | null>(null);
+  const savingRef = useRef(false);
   const { requestPin, PinDialog } = usePinAuth();
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
@@ -399,6 +400,9 @@ export function useVentaForm() {
 
   const handleSave = async (autoConfirm = false): Promise<string | undefined> => {
     if (readOnly) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
+    try {
     if (!form.cliente_id) { toast.error('Selecciona un cliente'); return; }
     if (!form.almacen_id) { toast.error('Selecciona un almacén'); return; }
     const vendedorId = profile?.id;
