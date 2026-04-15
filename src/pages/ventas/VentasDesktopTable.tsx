@@ -19,7 +19,7 @@ interface Props {
   clientesList?: any[];
 }
 
-export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget }: Props) {
+export function VentasDesktopTable({ items, selected, allSelected, canDelete, fmt, onToggleAll, onToggleOne, onDeleteTarget, empresaId, empresa, clientesList }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
