@@ -33,8 +33,7 @@ export default function RutaEntregaDetalle() {
   const navigate = useNavigate();
   const { empresa, user } = useAuth();
   const queryClient = useQueryClient();
-  const { symbol: s } = useCurrency();
-  const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const { symbol: s, fmt } = useCurrency();
 
   const [saving, setSaving] = useState(false);
   const [showWADialog, setShowWADialog] = useState(false);

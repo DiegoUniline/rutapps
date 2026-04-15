@@ -11,10 +11,9 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { cn , todayLocal } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ReporteDiarioRuta() {
-  const { symbol: cs } = useCurrency();
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const today = todayLocal();
   const [fechaInicio, setFechaInicio] = useState(today);
@@ -223,11 +222,11 @@ export default function ReporteDiarioRuta() {
       `<div class="kpi"><div class="kpi-label">${label}</div><div class="kpi-value">${value}</div>${sub ? `<div class="kpi-sub">${sub}</div>` : ''}</div>`;
 
     const summaryHtml = `<div class="kpi-grid">
-      ${kpi('Ventas totales', `${cs}${fmt(totalVentas)}`, `${ventasActivas.length} ventas`)}
-      ${kpi('Contado', `${cs}${fmt(totalContado)}`, `${ventasContado.length}`)}
-      ${kpi('Crédito', `${cs}${fmt(totalCredito)}`, `${ventasCredito.length}`)}
-      ${kpi('Cobros', `${cs}${fmt(totalCobros)}`, `${(cobros || []).length}`)}
-      ${kpi('Gastos', `- ${cs}${fmt(totalGastos)}`, `${(gastos || []).length}`)}
+      ${kpi('Ventas totales', `${fmt(totalVentas)}`, `${ventasActivas.length} ventas`)}
+      ${kpi('Contado', `${fmt(totalContado)}`, `${ventasContado.length}`)}
+      ${kpi('Crédito', `${fmt(totalCredito)}`, `${ventasCredito.length}`)}
+      ${kpi('Cobros', `${fmt(totalCobros)}`, `${(cobros || []).length}`)}
+      ${kpi('Gastos', `- ${fmt(totalGastos)}`, `${(gastos || []).length}`)}
       ${kpi('Devoluciones', `${totalDevUnidades} uds`, `${(devoluciones || []).length} registros`)}
       ${kpi('Clientes visitados', `${clientesVisitados.size}`)}
     </div>`;
@@ -244,8 +243,8 @@ export default function ReporteDiarioRuta() {
     const ventasHtml = ventasActivas.length > 0
       ? sec(`Ventas (${ventasActivas.length})`, makeTable(
           ['Folio', 'Cliente', 'Pago', 'Total'],
-          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', v.condicion_pago, `${cs}${fmt(Number(v.total))}`]),
-          ['', '', 'Total', `${cs}${fmt(totalVentas)}`]
+          ventasActivas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', v.condicion_pago, `${fmt(Number(v.total))}`]),
+          ['', '', 'Total', `${fmt(totalVentas)}`]
         ))
       : '';
 
@@ -253,8 +252,8 @@ export default function ReporteDiarioRuta() {
     const cancelHtml = ventasCanceladas.length > 0
       ? sec(`Canceladas (${ventasCanceladas.length})`, makeTable(
           ['Folio', 'Cliente', 'Total'],
-          ventasCanceladas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', `${cs}${fmt(Number(v.total))}`]),
-          ['', 'Total cancelado', `${cs}${fmt(totalCancelado)}`]
+          ventasCanceladas.map((v: any) => [v.folio ?? '—', v.clientes?.nombre ?? '—', `${fmt(Number(v.total))}`]),
+          ['', 'Total cancelado', `${fmt(totalCancelado)}`]
         ))
       : '';
 
@@ -262,17 +261,17 @@ export default function ReporteDiarioRuta() {
     const prodsHtml = productosArr.length > 0
       ? sec(`Productos vendidos (${productosArr.length})`, makeTable(
           ['Código', 'Producto', 'Cantidad', 'Total'],
-          productosArr.map(p => [p.codigo, p.nombre, String(p.cantidad), `${cs}${fmt(p.total)}`])
+          productosArr.map(p => [p.codigo, p.nombre, String(p.cantidad), `${fmt(p.total)}`])
         ))
       : '';
 
     // Cobros
-    const cobrosMetodoHtml = Object.entries(cobrosPorMetodo).map(([m, t]) => `<span class="chip">${m}: ${cs}${fmt(t)}</span>`).join(' ');
+    const cobrosMetodoHtml = Object.entries(cobrosPorMetodo).map(([m, t]) => `<span class="chip">${m}: ${fmt(t)}</span>`).join(' ');
     const cobrosHtml = (cobros || []).length > 0
       ? sec(`Cobros (${(cobros || []).length})`, `<div class="chips">${cobrosMetodoHtml}</div>` + makeTable(
           ['Cliente', 'Método', 'Referencia', 'Monto'],
-          (cobros || []).map((c: any) => [c.clientes?.nombre ?? '—', c.metodo_pago, c.referencia || '—', `${cs}${fmt(Number(c.monto))}`]),
-          ['', '', 'Total cobros', `${cs}${fmt(totalCobros)}`]
+          (cobros || []).map((c: any) => [c.clientes?.nombre ?? '—', c.metodo_pago, c.referencia || '—', `${fmt(Number(c.monto))}`]),
+          ['', '', 'Total cobros', `${fmt(totalCobros)}`]
         ))
       : '';
 
@@ -280,8 +279,8 @@ export default function ReporteDiarioRuta() {
     const gastosHtml = (gastos || []).length > 0
       ? sec(`Gastos (${(gastos || []).length})`, makeTable(
           ['Concepto', 'Notas', 'Monto'],
-          (gastos || []).map((g: any) => [g.concepto, g.notas || '—', `- ${cs}${fmt(Number(g.monto))}`]),
-          ['', 'Total gastos', `- ${cs}${fmt(totalGastos)}`]
+          (gastos || []).map((g: any) => [g.concepto, g.notas || '—', `- ${fmt(Number(g.monto))}`]),
+          ['', 'Total gastos', `- ${fmt(totalGastos)}`]
         ))
       : '';
 
@@ -290,7 +289,7 @@ export default function ReporteDiarioRuta() {
       ? sec(`Devoluciones (${totalDevUnidades} uds — ${(devoluciones || []).length} registros)`, makeTable(
           ['Producto', 'Cliente', 'Motivo', 'Acción', 'Cant.'],
           devLineas.map(d => [`${d.nombre} ${d.codigo}`, d.cliente, d.motivo.replace(/_/g, ' '), ACCION_LABELS[d.accion] || d.accion, String(d.cantidad)]),
-          totalDevCredito > 0 ? ['', '', '', 'Total crédito', `${cs}${fmt(totalDevCredito)}`] : undefined
+          totalDevCredito > 0 ? ['', '', '', 'Total crédito', `${fmt(totalDevCredito)}`] : undefined
         ))
       : '';
 
@@ -305,16 +304,16 @@ export default function ReporteDiarioRuta() {
     // Resumen final
     const resumenRow = (label: string, value: string) => `<tr><td class="res-label">${label}</td><td class="res-value">${value}</td></tr>`;
     const resumenHtml = `<div class="section"><h2>Resumen del período</h2><table class="resumen">
-      ${resumenRow('Ventas (contado)', `${cs}${fmt(totalContado)}`)}
-      ${resumenRow('Ventas (crédito)', `${cs}${fmt(totalCredito)}`)}
-      ${resumenRow('Cobros recibidos', `${cs}${fmt(totalCobros)}`)}
-      ${resumenRow('Gastos', `- ${cs}${fmt(totalGastos)}`)}
-      ${resumenRow('Canceladas', `${cs}${fmt(totalCancelado)}`)}
+      ${resumenRow('Ventas (contado)', `${fmt(totalContado)}`)}
+      ${resumenRow('Ventas (crédito)', `${fmt(totalCredito)}`)}
+      ${resumenRow('Cobros recibidos', `${fmt(totalCobros)}`)}
+      ${resumenRow('Gastos', `- ${fmt(totalGastos)}`)}
+      ${resumenRow('Canceladas', `${fmt(totalCancelado)}`)}
       ${resumenRow('Clientes visitados', `${clientesVisitados.size}`)}
       ${resumenRow('Visitas sin compra', `${visitasSinCompra.length}`)}
       ${resumenRow('Devoluciones', `${totalDevUnidades} uds`)}
-      ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- ${cs}${fmt(totalDevCredito)}`) : ''}
-      <tr class="res-total"><td>Efectivo esperado</td><td>${cs}${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
+      ${totalDevCredito > 0 ? resumenRow('Crédito por devol.', `- ${fmt(totalDevCredito)}`) : ''}
+      <tr class="res-total"><td>Efectivo esperado</td><td>${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</td></tr>
     </table></div>`;
 
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte - ${usuarioNombre} - ${fechaLabel}</title>
@@ -444,27 +443,27 @@ export default function ReporteDiarioRuta() {
           <div className="summary-grid grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Ventas totales</div>
-              <div className="text-lg font-bold text-foreground">{cs}{fmt(totalVentas)}</div>
+              <div className="text-lg font-bold text-foreground">{fmt(totalVentas)}</div>
               <div className="text-[9px] text-muted-foreground">{ventasActivas.length} ventas</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Contado</div>
-              <div className="text-lg font-bold text-foreground">{cs}{fmt(totalContado)}</div>
+              <div className="text-lg font-bold text-foreground">{fmt(totalContado)}</div>
               <div className="text-[9px] text-muted-foreground">{ventasContado.length}</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Crédito</div>
-              <div className="text-lg font-bold text-foreground">{cs}{fmt(totalCredito)}</div>
+              <div className="text-lg font-bold text-foreground">{fmt(totalCredito)}</div>
               <div className="text-[9px] text-muted-foreground">{ventasCredito.length}</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Cobros</div>
-              <div className="text-lg font-bold text-foreground">{cs}{fmt(totalCobros)}</div>
+              <div className="text-lg font-bold text-foreground">{fmt(totalCobros)}</div>
               <div className="text-[9px] text-muted-foreground">{(cobros || []).length}</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
               <div className="text-[9px] text-muted-foreground uppercase">Gastos</div>
-              <div className="text-lg font-bold text-destructive">-{cs}{fmt(totalGastos)}</div>
+              <div className="text-lg font-bold text-destructive">-{fmt(totalGastos)}</div>
               <div className="text-[9px] text-muted-foreground">{(gastos || []).length}</div>
             </div>
             <div className="bg-card rounded-lg p-3 text-center">
@@ -536,14 +535,14 @@ export default function ReporteDiarioRuta() {
                           v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                         )}>{v.condicion_pago}</span>
                       </td>
-                      <td className="py-1 text-right font-semibold">{cs}{fmt(Number(v.total))}</td>
+                      <td className="py-1 text-right font-semibold">{fmt(Number(v.total))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={3} className="py-1.5 text-right text-muted-foreground text-[10px]">Total:</td>
-                    <td className="py-1.5 text-right">{cs}{fmt(totalVentas)}</td>
+                    <td className="py-1.5 text-right">{fmt(totalVentas)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -569,14 +568,14 @@ export default function ReporteDiarioRuta() {
                     <tr key={v.id} className="border-b border-border/50">
                       <td className="py-1 font-mono">{v.folio ?? '—'}</td>
                       <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
-                      <td className="py-1 text-right font-semibold text-destructive line-through">{cs}{fmt(Number(v.total))}</td>
+                      <td className="py-1 text-right font-semibold text-destructive line-through">{fmt(Number(v.total))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={2} className="py-1.5 text-right text-muted-foreground text-[10px]">Total cancelado:</td>
-                    <td className="py-1.5 text-right text-destructive">{cs}{fmt(totalCancelado)}</td>
+                    <td className="py-1.5 text-right text-destructive">{fmt(totalCancelado)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -604,7 +603,7 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
                       <td className="py-1 text-right">{p.cantidad}</td>
-                      <td className="py-1 text-right font-semibold">{cs}{fmt(p.total)}</td>
+                      <td className="py-1 text-right font-semibold">{fmt(p.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -621,7 +620,7 @@ export default function ReporteDiarioRuta() {
               <div className="flex flex-wrap gap-2 mb-2">
                 {Object.entries(cobrosPorMetodo).map(([m, t]) => (
                   <span key={m} className="text-[10px] bg-card rounded px-2 py-1">
-                    <span className="text-muted-foreground capitalize">{m}:</span> <span className="font-bold">{cs}{fmt(t)}</span>
+                    <span className="text-muted-foreground capitalize">{m}:</span> <span className="font-bold">{fmt(t)}</span>
                   </span>
                 ))}
               </div>
@@ -640,14 +639,14 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1">{c.clientes?.nombre ?? '—'}</td>
                       <td className="py-1 capitalize">{c.metodo_pago}</td>
                       <td className="py-1 text-muted-foreground font-mono">{c.referencia || '—'}</td>
-                      <td className="py-1 text-right font-semibold">{cs}{fmt(Number(c.monto))}</td>
+                      <td className="py-1 text-right font-semibold">{fmt(Number(c.monto))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={3} className="py-1.5 text-right text-muted-foreground text-[10px]">Total cobros:</td>
-                    <td className="py-1.5 text-right">{cs}{fmt(totalCobros)}</td>
+                    <td className="py-1.5 text-right">{fmt(totalCobros)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -673,14 +672,14 @@ export default function ReporteDiarioRuta() {
                     <tr key={g.id} className="border-b border-border/50">
                       <td className="py-1">{g.concepto}</td>
                       <td className="py-1 text-muted-foreground">{g.notas || '—'}</td>
-                      <td className="py-1 text-right font-semibold text-destructive">-{cs}{fmt(Number(g.monto))}</td>
+                      <td className="py-1 text-right font-semibold text-destructive">-{fmt(Number(g.monto))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={2} className="py-1.5 text-right text-muted-foreground text-[10px]">Total gastos:</td>
-                    <td className="py-1.5 text-right text-destructive">-{cs}{fmt(totalGastos)}</td>
+                    <td className="py-1.5 text-right text-destructive">-{fmt(totalGastos)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -722,7 +721,7 @@ export default function ReporteDiarioRuta() {
                   <tfoot>
                     <tr className="border-t border-border font-bold">
                       <td colSpan={4} className="py-1.5 text-right text-muted-foreground text-[10px]">Total crédito/descuento:</td>
-                      <td className="py-1.5 text-right text-destructive">{cs}{fmt(totalDevCredito)}</td>
+                      <td className="py-1.5 text-right text-destructive">{fmt(totalDevCredito)}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -761,20 +760,20 @@ export default function ReporteDiarioRuta() {
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del período</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] max-w-md">
-              <span className="text-muted-foreground">Ventas (contado):</span><span className="text-right font-semibold">{cs}{fmt(totalContado)}</span>
-              <span className="text-muted-foreground">Ventas (crédito):</span><span className="text-right font-semibold">{cs}{fmt(totalCredito)}</span>
-              <span className="text-muted-foreground">Cobros recibidos:</span><span className="text-right font-semibold">{cs}{fmt(totalCobros)}</span>
-              <span className="text-muted-foreground">Gastos:</span><span className="text-right font-semibold text-destructive">-{cs}{fmt(totalGastos)}</span>
-              <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">{cs}{fmt(totalCancelado)}</span>
+              <span className="text-muted-foreground">Ventas (contado):</span><span className="text-right font-semibold">{fmt(totalContado)}</span>
+              <span className="text-muted-foreground">Ventas (crédito):</span><span className="text-right font-semibold">{fmt(totalCredito)}</span>
+              <span className="text-muted-foreground">Cobros recibidos:</span><span className="text-right font-semibold">{fmt(totalCobros)}</span>
+              <span className="text-muted-foreground">Gastos:</span><span className="text-right font-semibold text-destructive">-{fmt(totalGastos)}</span>
+              <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">{fmt(totalCancelado)}</span>
               <span className="text-muted-foreground">Clientes visitados:</span><span className="text-right font-semibold">{clientesVisitados.size}</span>
               <span className="text-muted-foreground">Visitas sin compra:</span><span className="text-right font-semibold">{visitasSinCompra.length}</span>
               <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{totalDevUnidades} uds</span>
               {totalDevCredito > 0 && (
-                <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-{cs}{fmt(totalDevCredito)}</span></>
+                <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-{fmt(totalDevCredito)}</span></>
               )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
-                <span>{cs}{fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
+                <span>{fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
               </div>
             </div>
           </div>

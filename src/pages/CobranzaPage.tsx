@@ -24,7 +24,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { printTicket } from '@/lib/printTicketUtil';
 import { buildCobroTicketData } from '@/lib/cobroTicket';
 
-const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
 
 function useCobros() {
   const { empresa } = useAuth();
@@ -58,14 +58,14 @@ function useVendedores() {
   });
 }
 
-function buildCobroMessage(cobro: any, currSymbol = '$') {
+function buildCobroMessage(cobro: any, fmtMoney: (n: number) => string) {
   const clienteNombre = (cobro.clientes as any)?.nombre ?? '—';
   return `✅ *Recibo de Cobro*\n\n` +
     `Cliente: ${clienteNombre}\n` +
     `Fecha: ${fmtDate(cobro.fecha)}\n` +
     `Método: ${cobro.metodo_pago}\n` +
     (cobro.referencia ? `Referencia: ${cobro.referencia}\n` : '') +
-    `\n💰 *Monto: ${currSymbol}${fmtNum(cobro.monto)}*\n\n` +
+    `\n💰 *Monto: ${fmtMoney(cobro.monto)}*\n\n` +
     `Gracias por su pago.`;
 }
 
@@ -115,7 +115,7 @@ export default function CobranzaPage() {
   const [waRefId, setWaRefId] = useState<string | undefined>();
 
   const openWaCobro = (cobro: any) => {
-    setWaMessage(buildCobroMessage(cobro));
+    setWaMessage(buildCobroMessage(cobro, fmtC));
     setWaPhone((cobro.clientes as any)?.telefono ?? '');
     setWaRefId(cobro.id);
     setWaOpen(true);

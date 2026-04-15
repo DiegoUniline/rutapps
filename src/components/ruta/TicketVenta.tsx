@@ -46,7 +46,6 @@ const ACCION_LABELS: Record<string, string> = {
   devolucion_dinero: 'Dev. dinero', descuento_venta: 'Desc. venta',
 };
 
-const fmtNum = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
 export default function TicketVenta(props: TicketVentaProps) {
   const {
@@ -56,8 +55,7 @@ export default function TicketVenta(props: TicketVentaProps) {
     montoRecibido, cambio, saldoAnterior, pagoAplicado, saldoNuevo, promociones = [], pagos = [], onPrintTicket, onClose,
   } = props;
 
-  const { symbol: cs } = useCurrency();
-  const fmt = (n: number) => `${cs}${fmtNum(n)}`;
+  const { fmt } = useCurrency();
 
   const ticketRef = useRef<HTMLDivElement>(null);
   // 'ambos' = producto + totales, 'totales' = solo totales, 'ninguno' = sin impuestos

@@ -42,9 +42,8 @@ export function useVentaDetalle() {
   const [searchProducto, setSearchProducto] = useState('');
 
   const clienteId = (venta as any)?.cliente_id;
-  const { symbol: currSym } = useCurrency();
-  const fmt = (n: number) => roundMoney(n).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmtM = (n: number) => `${currSym}${fmt(n)}`;
+  const { symbol: currSym, fmt } = useCurrency();
+  const fmtM = fmt;
 
   const { data: clienteData } = useQuery({
     queryKey: ['ruta-cliente-detalle', clienteId], enabled: !!clienteId,

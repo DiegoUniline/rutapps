@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { RotateCcw } from 'lucide-react';
+import { useCurrency } from '@/hooks/useCurrency';
 
 const MOTIVO_LABELS: Record<string, string> = {
   no_vendido: 'No vendido', dañado: 'Dañado', caducado: 'Caducado', error_pedido: 'Error pedido', otro: 'Otro',
@@ -9,11 +10,10 @@ const ACCION_LABELS: Record<string, string> = {
   reposicion: 'Reposición', nota_credito: 'Nota crédito', descuento_venta: 'Desc. venta', devolucion_dinero: 'Dev. dinero',
 };
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 interface Props { ventaId: string; }
 
 export function VentaDevolucionesTab({ ventaId }: Props) {
+  const { fmt } = useCurrency();
   const { data, isLoading } = useQuery({
     queryKey: ['venta-devoluciones', ventaId],
     enabled: !!ventaId,
