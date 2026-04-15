@@ -11,10 +11,9 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { cn , todayLocal } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 
-const fmt = (n: number) => n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ReporteDiarioRuta() {
-  const { symbol: cs } = useCurrency();
+  const { fmt } = useCurrency();
   const { empresa } = useAuth();
   const today = todayLocal();
   const [fechaInicio, setFechaInicio] = useState(today);
