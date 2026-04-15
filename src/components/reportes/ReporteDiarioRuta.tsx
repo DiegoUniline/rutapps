@@ -536,14 +536,14 @@ export default function ReporteDiarioRuta() {
                           v.condicion_pago === 'contado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                         )}>{v.condicion_pago}</span>
                       </td>
-                      <td className="py-1 text-right font-semibold">${fmt(Number(v.total))}</td>
+                      <td className="py-1 text-right font-semibold">{cs}{fmt(Number(v.total))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={3} className="py-1.5 text-right text-muted-foreground text-[10px]">Total:</td>
-                    <td className="py-1.5 text-right">${fmt(totalVentas)}</td>
+                    <td className="py-1.5 text-right">{cs}{fmt(totalVentas)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -569,14 +569,14 @@ export default function ReporteDiarioRuta() {
                     <tr key={v.id} className="border-b border-border/50">
                       <td className="py-1 font-mono">{v.folio ?? '—'}</td>
                       <td className="py-1">{v.clientes?.nombre ?? '—'}</td>
-                      <td className="py-1 text-right font-semibold text-destructive line-through">${fmt(Number(v.total))}</td>
+                      <td className="py-1 text-right font-semibold text-destructive line-through">{cs}{fmt(Number(v.total))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={2} className="py-1.5 text-right text-muted-foreground text-[10px]">Total cancelado:</td>
-                    <td className="py-1.5 text-right text-destructive">${fmt(totalCancelado)}</td>
+                    <td className="py-1.5 text-right text-destructive">{cs}{fmt(totalCancelado)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -604,7 +604,7 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1 font-mono text-muted-foreground">{p.codigo}</td>
                       <td className="py-1">{p.nombre}</td>
                       <td className="py-1 text-right">{p.cantidad}</td>
-                      <td className="py-1 text-right font-semibold">${fmt(p.total)}</td>
+                      <td className="py-1 text-right font-semibold">{cs}{fmt(p.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -621,7 +621,7 @@ export default function ReporteDiarioRuta() {
               <div className="flex flex-wrap gap-2 mb-2">
                 {Object.entries(cobrosPorMetodo).map(([m, t]) => (
                   <span key={m} className="text-[10px] bg-card rounded px-2 py-1">
-                    <span className="text-muted-foreground capitalize">{m}:</span> <span className="font-bold">${fmt(t)}</span>
+                    <span className="text-muted-foreground capitalize">{m}:</span> <span className="font-bold">{cs}{fmt(t)}</span>
                   </span>
                 ))}
               </div>
@@ -640,14 +640,14 @@ export default function ReporteDiarioRuta() {
                       <td className="py-1">{c.clientes?.nombre ?? '—'}</td>
                       <td className="py-1 capitalize">{c.metodo_pago}</td>
                       <td className="py-1 text-muted-foreground font-mono">{c.referencia || '—'}</td>
-                      <td className="py-1 text-right font-semibold">${fmt(Number(c.monto))}</td>
+                      <td className="py-1 text-right font-semibold">{cs}{fmt(Number(c.monto))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={3} className="py-1.5 text-right text-muted-foreground text-[10px]">Total cobros:</td>
-                    <td className="py-1.5 text-right">${fmt(totalCobros)}</td>
+                    <td className="py-1.5 text-right">{cs}{fmt(totalCobros)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -673,14 +673,14 @@ export default function ReporteDiarioRuta() {
                     <tr key={g.id} className="border-b border-border/50">
                       <td className="py-1">{g.concepto}</td>
                       <td className="py-1 text-muted-foreground">{g.notas || '—'}</td>
-                      <td className="py-1 text-right font-semibold text-destructive">-${fmt(Number(g.monto))}</td>
+                      <td className="py-1 text-right font-semibold text-destructive">-{cs}{fmt(Number(g.monto))}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-bold">
                     <td colSpan={2} className="py-1.5 text-right text-muted-foreground text-[10px]">Total gastos:</td>
-                    <td className="py-1.5 text-right text-destructive">-${fmt(totalGastos)}</td>
+                    <td className="py-1.5 text-right text-destructive">-{cs}{fmt(totalGastos)}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -722,7 +722,7 @@ export default function ReporteDiarioRuta() {
                   <tfoot>
                     <tr className="border-t border-border font-bold">
                       <td colSpan={4} className="py-1.5 text-right text-muted-foreground text-[10px]">Total crédito/descuento:</td>
-                      <td className="py-1.5 text-right text-destructive">${fmt(totalDevCredito)}</td>
+                      <td className="py-1.5 text-right text-destructive">{cs}{fmt(totalDevCredito)}</td>
                     </tr>
                   </tfoot>
                 )}
@@ -761,20 +761,20 @@ export default function ReporteDiarioRuta() {
           <div className="border-t border-border pt-3 mt-4">
             <h2 className="text-xs font-bold text-muted-foreground uppercase mb-2">Resumen del período</h2>
             <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-[12px] max-w-md">
-              <span className="text-muted-foreground">Ventas (contado):</span><span className="text-right font-semibold">${fmt(totalContado)}</span>
-              <span className="text-muted-foreground">Ventas (crédito):</span><span className="text-right font-semibold">${fmt(totalCredito)}</span>
-              <span className="text-muted-foreground">Cobros recibidos:</span><span className="text-right font-semibold">${fmt(totalCobros)}</span>
-              <span className="text-muted-foreground">Gastos:</span><span className="text-right font-semibold text-destructive">-${fmt(totalGastos)}</span>
-              <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">${fmt(totalCancelado)}</span>
+              <span className="text-muted-foreground">Ventas (contado):</span><span className="text-right font-semibold">{cs}{fmt(totalContado)}</span>
+              <span className="text-muted-foreground">Ventas (crédito):</span><span className="text-right font-semibold">{cs}{fmt(totalCredito)}</span>
+              <span className="text-muted-foreground">Cobros recibidos:</span><span className="text-right font-semibold">{cs}{fmt(totalCobros)}</span>
+              <span className="text-muted-foreground">Gastos:</span><span className="text-right font-semibold text-destructive">-{cs}{fmt(totalGastos)}</span>
+              <span className="text-muted-foreground">Canceladas:</span><span className="text-right font-semibold text-destructive">{cs}{fmt(totalCancelado)}</span>
               <span className="text-muted-foreground">Clientes visitados:</span><span className="text-right font-semibold">{clientesVisitados.size}</span>
               <span className="text-muted-foreground">Visitas sin compra:</span><span className="text-right font-semibold">{visitasSinCompra.length}</span>
               <span className="text-muted-foreground">Devoluciones:</span><span className="text-right font-semibold">{totalDevUnidades} uds</span>
               {totalDevCredito > 0 && (
-                <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-${fmt(totalDevCredito)}</span></>
+                <><span className="text-muted-foreground">Crédito por devol.:</span><span className="text-right font-semibold text-destructive">-{cs}{fmt(totalDevCredito)}</span></>
               )}
               <div className="col-span-2 border-t border-border mt-1 pt-1 flex justify-between font-bold">
                 <span>Efectivo esperado:</span>
-                <span>${fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
+                <span>{cs}{fmt(totalContado + (cobrosPorMetodo['efectivo'] || 0) - totalGastos)}</span>
               </div>
             </div>
           </div>
