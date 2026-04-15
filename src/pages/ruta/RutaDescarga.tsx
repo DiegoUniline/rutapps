@@ -84,6 +84,7 @@ export default function RutaDescarga() {
           .from('cobros')
           .select('monto, metodo_pago')
           .eq('empresa_id', empresa!.id)
+          .eq('user_id', user!.id)
           .eq('fecha', today)
           .neq('status', 'cancelado'),
         supabase
