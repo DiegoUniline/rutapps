@@ -51,6 +51,7 @@ export default function GastosDesktopPage() {
       const { error } = await supabase.from('gastos').insert({
         empresa_id: empresa!.id,
         user_id: user!.id,
+        vendedor_id: profile?.vendedor_id ?? null,
         concepto,
         monto: parseFloat(monto),
         fecha,
