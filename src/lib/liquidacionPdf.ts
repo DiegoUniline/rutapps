@@ -166,13 +166,13 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
   doc.setFont('helvetica', 'bold');
   if (dif > 0) {
     doc.setTextColor(...C.green);
-    doc.text(`Diferencia: +$${fmtCurrency(dif)} (Sobra)`, ML + 4, y);
+    doc.text(`Diferencia: +${sym}${fmtCurrency(dif)} (Sobra)`, ML + 4, y);
   } else if (dif < 0) {
     doc.setTextColor(...C.red);
-    doc.text(`Diferencia: -$${fmtCurrency(Math.abs(dif))} (Falta)`, ML + 4, y);
+    doc.text(`Diferencia: -${sym}${fmtCurrency(Math.abs(dif))} (Falta)`, ML + 4, y);
   } else {
     doc.setTextColor(...C.green);
-    doc.text('Diferencia: $0.00 (Cuadra)', ML + 4, y);
+    doc.text(`Diferencia: ${sym}0.00 (Cuadra)`, ML + 4, y);
   }
   y += 10;
 
@@ -201,7 +201,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total ventas: $${fmtCurrency(totalVentas)}`, rightX, y - 3, { align: 'right' });
+    doc.text(`Total ventas: ${sym}${fmtCurrency(totalVentas)}`, rightX, y - 3, { align: 'right' });
     y += 4;
   }
 
@@ -267,7 +267,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.text);
-    doc.text(`Total cobros: $${fmtCurrency(totalCobros)}`, rightX, y - 3, { align: 'right' });
+    doc.text(`Total cobros: ${sym}${fmtCurrency(totalCobros)}`, rightX, y - 3, { align: 'right' });
     y += 4;
   }
 
@@ -289,7 +289,7 @@ export async function generarLiquidacionPdf(params: LiquidacionPdfParams): Promi
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...C.red);
-    doc.text(`Total gastos: -$${fmtCurrency(totalG)}`, rightX, y - 3, { align: 'right' });
+    doc.text(`Total gastos: -${sym}${fmtCurrency(totalG)}`, rightX, y - 3, { align: 'right' });
     y += 4;
   }
 
