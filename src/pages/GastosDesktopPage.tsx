@@ -22,7 +22,7 @@ function useGastos(search: string) {
     queryFn: async () => {
       let q = supabase
         .from('gastos')
-        .select('*, vendedores(nombre)')
+        .select('*, vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('fecha', { ascending: false });
       if (search) q = q.ilike('concepto', `%${search}%`);
@@ -51,7 +51,7 @@ export default function GastosDesktopPage() {
       const { error } = await supabase.from('gastos').insert({
         empresa_id: empresa!.id,
         user_id: user!.id,
-        vendedor_id: profile?.vendedor_id ?? null,
+        vendedor_id: profile?.id ?? null,
         concepto,
         monto: parseFloat(monto),
         fecha,

@@ -34,7 +34,7 @@ function useCuentasCobrar(search: string) {
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, clientes(nombre, codigo), vendedores(nombre)')
+        .select('id, folio, fecha, total, saldo_pendiente, condicion_pago, status, es_saldo_inicial, concepto, clientes(nombre, codigo), vendedores:profiles!vendedor_id(nombre)')
         .eq('empresa_id', empresa!.id)
         .gt('saldo_pendiente', 0)
         .order('fecha', { ascending: true });

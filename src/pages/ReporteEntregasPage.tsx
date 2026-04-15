@@ -23,7 +23,7 @@ function useReporteEntregas(vendedorId: string, fechaDesde: Date, fechaHasta: Da
       const hStr = fechaHasta.toISOString().slice(0, 10);
       let q = supabase
         .from('ventas')
-        .select('*, clientes(nombre), vendedores(nombre), venta_lineas(cantidad, precio_unitario, subtotal, total, productos(id, codigo, nombre), unidades(abreviatura))')
+        .select('*, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(cantidad, precio_unitario, subtotal, total, productos(id, codigo, nombre), unidades(abreviatura))')
         .eq('empresa_id', empresa!.id)
         .in('status', ['confirmado', 'entregado', 'facturado'])
         .or(`and(fecha_entrega.gte.${dStr},fecha_entrega.lte.${hStr}),and(fecha_entrega.is.null,entrega_inmediata.eq.true,fecha.gte.${dStr},fecha.lte.${hStr})`)
@@ -44,7 +44,7 @@ function useVendedoresList() {
     queryKey: ['vendedores-reporte', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
       return data ?? [];
     },
   });

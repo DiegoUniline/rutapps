@@ -28,7 +28,7 @@ export default function PedidoPendienteDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ventas')
-        .select('*, clientes(nombre, direccion, colonia), vendedores(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
+        .select('*, clientes(nombre, direccion, colonia), vendedores:profiles!vendedor_id(nombre), venta_lineas(*, productos(id, codigo, nombre, cantidad, unidades:unidad_venta_id(abreviatura)))')
         .eq('id', id!)
         .single();
       if (error) throw error;
@@ -53,7 +53,7 @@ export default function PedidoPendienteDetailPage() {
     queryKey: ['vendedores-list', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
+      const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre');
       return data ?? [];
     },
   });

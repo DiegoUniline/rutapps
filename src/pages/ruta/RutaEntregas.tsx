@@ -56,7 +56,7 @@ function EntregaCard({ e, navigate, delivered }: { e: any; navigate: (path: stri
 export default function RutaEntregas() {
   const navigate = useNavigate();
   const { empresa, profile } = useAuth();
-  const vendedorId = profile?.vendedor_id;
+  const vendedorId = profile?.id;
 
   const { data: allEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,

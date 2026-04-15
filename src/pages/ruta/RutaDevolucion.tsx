@@ -42,7 +42,7 @@ export default function RutaDevolucion() {
 
   const saveDevolucion = useSaveDevolucion();
 
-  const vendedorId = profile?.vendedor_id || profile?.id;
+  const vendedorId = profile?.id || profile?.id;
   const { data: carga } = useCargaActiva(vendedorId);
 
   const { data: clientes } = useOfflineQuery('clientes', {

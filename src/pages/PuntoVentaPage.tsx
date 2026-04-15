@@ -626,11 +626,10 @@ export default function PuntoVentaPage() {
       }
       const today = todayInTimezone(empresa?.zona_horaria);
 
-      let vendedorId = profile?.vendedor_id;
+      const vendedorId = profile?.id;
       if (!vendedorId) {
-        // Auto-fix: assign profile.id as vendedor_id
-        vendedorId = profile!.id;
-        await supabase.from('profiles').update({ vendedor_id: profile!.id }).eq('id', profile!.id);
+        toast.error('No se pudo determinar el vendedor');
+        return;
       }
 
       // Fetch client's previous balance and individual pending ventas

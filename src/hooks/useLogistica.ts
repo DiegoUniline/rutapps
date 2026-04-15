@@ -9,7 +9,7 @@ export function usePedidosPendientes(fecha: string, statusFilter?: string, vende
     queryFn: async () => {
       let q = supabase
         .from('ventas')
-        .select('id, folio, fecha, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores(nombre), venta_lineas(id, cantidad)')
+        .select('id, folio, fecha, total, status, tipo, vendedor_id, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad)')
         .eq('tipo', 'pedido')
         .eq('fecha', fecha)
         .order('created_at', { ascending: false });
@@ -31,7 +31,7 @@ export function useCargaPedidos(cargaId?: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('carga_pedidos')
-        .select('id, carga_id, venta_id, ventas(id, folio, total, status, cliente_id, clientes(nombre), vendedores(nombre), venta_lineas(id, cantidad, producto_id, precio_unitario, productos(codigo, nombre)))')
+        .select('id, carga_id, venta_id, ventas(id, folio, total, status, cliente_id, clientes(nombre), vendedores:profiles!vendedor_id(nombre), venta_lineas(id, cantidad, producto_id, precio_unitario, productos(codigo, nombre)))')
         .eq('carga_id', cargaId!);
       if (error) throw error;
       return data ?? [];

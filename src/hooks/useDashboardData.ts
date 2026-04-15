@@ -227,7 +227,7 @@ export function useDashboardVentasPorVendedor(range: DateRange) {
       const data = await fetchAllPages((from, to) =>
         supabase
           .from('ventas')
-          .select('vendedor_id, total, vendedores(nombre)')
+          .select('vendedor_id, total, vendedores:profiles!vendedor_id(nombre)')
           .eq('empresa_id', empresa!.id)
           .eq('es_saldo_inicial', false)
           .gte('fecha', fmt(range.from))
@@ -262,7 +262,7 @@ export function useDashboardDevoluciones(range: DateRange, vendedorId?: string) 
       return fetchAllPages((from, to) => {
         let q = (supabase as any)
           .from('devoluciones')
-          .select('id, fecha, tipo, vendedor_id, vendedores(nombre), clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
+          .select('id, fecha, tipo, vendedor_id, vendedores:profiles!vendedor_id(nombre), clientes(nombre), devolucion_lineas(cantidad, motivo, accion, monto_credito, productos!devolucion_lineas_producto_id_fkey(nombre, codigo))')
           .eq('empresa_id', empresa!.id)
           .gte('fecha', fmt(range.from))
           .lte('fecha', fmt(range.to))
@@ -287,7 +287,7 @@ export function useDashboardClientesEnRiesgo(range: DateRange, vendedorId?: stri
       const clientes = await fetchAllPages((from, to) => {
         let q = supabase
           .from('clientes')
-          .select('id, nombre, vendedor_id, vendedores(nombre)')
+          .select('id, nombre, vendedor_id, vendedores:profiles!vendedor_id(nombre)')
           .eq('empresa_id', eid)
           .eq('status', 'activo')
           .range(from, to);

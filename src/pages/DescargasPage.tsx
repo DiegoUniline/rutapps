@@ -117,12 +117,12 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     },
   });
 
-  // Cobros recibidos — filter by user_id (auth uuid from profile)
+  // Cobros recibidos — vendedor_id now IS profiles.id, so look up user_id directly
   const { data: vendedorProfile } = useQuery({
     queryKey: ['vendedor-profile', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('user_id').eq('vendedor_id', descarga.vendedor_id).maybeSingle();
+      const { data } = await supabase.from('profiles').select('user_id').eq('id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
@@ -167,7 +167,7 @@ function DescargaDetalle({ descarga, onClose }: { descarga: any; onClose: () => 
     queryKey: ['vendedor-almacen', descarga.vendedor_id],
     enabled: !!descarga.vendedor_id && incluirStock,
     queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('vendedor_id', descarga.vendedor_id).maybeSingle();
+      const { data } = await supabase.from('profiles').select('almacen_id, almacenes(nombre)').eq('id', descarga.vendedor_id).maybeSingle();
       return data;
     },
   });
@@ -880,19 +880,19 @@ function NuevaDescargaForm({ onClose }: { onClose: () => void }) {
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from('profiles')
-        .select('id, user_id, nombre, vendedor_id')
+        .select('id, user_id, nombre')
         .eq('empresa_id', empresa!.id)
         .eq('estado', 'activo')
         .order('nombre');
-      return (data ?? []) as { id: string; user_id: string; nombre: string; vendedor_id: string | null }[];
+      return (data ?? []) as { id: string; user_id: string; nombre: string }[];
     },
   });
 
   const usuarioOpts = (usuarios || []).map(u => ({ value: u.id, label: u.nombre }));
   const selectedProfile = (usuarios || []).find(u => u.id === vendedorId);
   const selectedUserId = selectedProfile?.user_id ?? vendedorId;
-  // ventas.vendedor_id references vendedores.id, NOT profiles.id
-  const vendedorRealId = selectedProfile?.vendedor_id ?? vendedorId;
+  // Now vendedor_id in ventas directly references profiles.id
+  const vendedorRealId = vendedorId;
 
   // Calculate expected cash for the period
   const canCalc = !!empresa?.id && !!vendedorId && !!fechaInicio && !!fechaFin;

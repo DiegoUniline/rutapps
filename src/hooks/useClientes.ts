@@ -22,7 +22,7 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
     enabled: !!empresa?.id,
     queryFn: async () => {
       let q = supabase.from('clientes')
-        .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)', { count: 'exact' })
+        .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)', { count: 'exact' })
         .eq('empresa_id', empresa!.id)
         .order('codigo', { ascending: true })
         .range((page - 1) * pageSize, page * pageSize - 1);
@@ -63,7 +63,7 @@ export function useClientes(search?: string, statusFilter?: string) {
     queryFn: async () => {
       return fetchAllPages((from, to) => {
         let q = supabase.from('clientes')
-          .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
+          .select('id, codigo, nombre, telefono, contacto, email, direccion, colonia, vendedor_id, cobrador_id, zona_id, tarifa_id, lista_id, status, orden, credito, limite_credito, dias_credito, dia_visita, gps_lat, gps_lng, frecuencia, foto_url, foto_fachada_url, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
           .eq('empresa_id', empresa!.id)
           .order('codigo', { ascending: true })
           .range(from, to);
@@ -81,7 +81,7 @@ export function useCliente(id?: string) {
     staleTime: CATALOG_STALE,
     queryFn: async () => {
       const { data, error } = await supabase.from('clientes')
-        .select('*, zonas(nombre), listas(nombre), vendedores(nombre), cobradores(nombre), tarifas(nombre)')
+        .select('*, zonas(nombre), listas(nombre), vendedores:profiles!vendedor_id(nombre), cobradores:profiles!cobrador_id(nombre), tarifas(nombre)')
         .eq('id', id!).single();
       if (error) throw error;
       return data as Cliente;
@@ -162,11 +162,11 @@ export function useZonas() {
 }
 export function useVendedores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['vendedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre'); return data as Vendedor[]; }});
+  return useQuery({ queryKey: ['vendedores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'); return data as Vendedor[]; }});
 }
 export function useCobradores() {
   const { empresa } = useAuth();
-  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('cobradores').select('id, nombre').eq('empresa_id', empresa!.id).order('nombre'); return data as Cobrador[]; }});
+  return useQuery({ queryKey: ['cobradores', empresa?.id], staleTime: CATALOG_STALE, enabled: !!empresa?.id, queryFn: async () => { const { data } = await supabase.from('profiles').select('id, nombre').eq('empresa_id', empresa!.id).eq('estado', 'activo').order('nombre'); return data as Cobrador[]; }});
 }
 
 // Pedido sugerido per client

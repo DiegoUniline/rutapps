@@ -36,7 +36,7 @@ export default function ComisionesPage() {
     queryFn: async () => {
       let q = supabase
         .from('venta_comisiones')
-        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, ventas(folio), productos(nombre), vendedores(nombre)')
+        .select('id, venta_id, vendedor_id, producto_id, monto_venta, comision_pct, comision_monto, pagada, fecha_venta, ventas(folio), productos(nombre), vendedores:profiles!vendedor_id(nombre)')
         .order('fecha_venta', { ascending: false });
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       if (statusFilter === 'pendientes') q = q.eq('pagada', false);

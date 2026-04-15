@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data, error } = await supabase.from('profiles')
-        .select('id, user_id, nombre, empresa_id, vendedor_id, almacen_id, telefono, estado, avatar_url, must_change_password')
+        .select('id, user_id, nombre, empresa_id, almacen_id, telefono, estado, avatar_url, must_change_password')
         .eq('user_id', u.id)
         .maybeSingle();
 
@@ -86,10 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!nextProfile) {
       nextProfile = await getCachedProfile(u.id);
-    }
-
-    if (nextProfile && !nextProfile.vendedor_id) {
-      console.warn('[Auth] El perfil no tiene vendedor_id sincronizado. Esto puede causar errores en ventas y reportes.');
     }
 
     setProfile(nextProfile);

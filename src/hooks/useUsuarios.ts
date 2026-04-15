@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; vendedor_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
+interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
 interface Almacen { id: string; nombre: string; }
 interface Vendedor { id: string; nombre: string; }
@@ -34,7 +34,7 @@ export function useUsuarios() {
   const [profiles, setProfiles] = useState<ProfileUser[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
-  const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  // vendedores state removed — profiles IS vendedores now
   const [authUsers, setAuthUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,16 +70,14 @@ export function useUsuarios() {
   const loadUsuarios = useCallback(async (showLoader = true) => {
     if (!empresa?.id) return;
     if (showLoader) setLoading(true);
-    const [pr, ur, a, v] = await Promise.all([
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, vendedor_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
+    const [pr, ur, a] = await Promise.all([
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
-      supabase.from('vendedores').select('id, nombre').eq('empresa_id', empresa.id),
     ]);
     setProfiles(pr.data ?? []);
     setUserRoles(ur.data ?? []);
     setAlmacenes(a.data ?? []);
-    setVendedores(v.data ?? []);
     await loadAuthUsers();
     if (showLoader) setLoading(false);
     return { profiles: pr.data ?? [], userRoles: ur.data ?? [] };
@@ -180,7 +178,7 @@ export function useUsuarios() {
   }, [quickAlmacenName, empresa?.id, loadUsuarios]);
 
   return {
-    profiles, userRoles, almacenes, vendedores, authUsers, loading, setLoading,
+    profiles, userRoles, almacenes, vendedores: profiles.map(p => ({ id: p.id, nombre: p.nombre ?? '' })), authUsers, loading, setLoading,
     editingUser, setEditingUser, editForm, setEditForm, savingUser,
     showNewUser, setShowNewUser, newUser, setNewUser, creatingUser,
     quickCreateRole, setQuickCreateRole, quickRoleName, setQuickRoleName,
