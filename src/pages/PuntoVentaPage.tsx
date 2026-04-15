@@ -822,10 +822,15 @@ export default function PuntoVentaPage() {
         condicionPago: condicion,
         metodoPago: metodosUsados || 'efectivo',
         montoRecibido: totalPagado > 0 ? totalPagado : undefined,
-        cambio: cambio > 0 ? cambio : undefined,
+        cambio: totalAppliedToAccountsPOS > 0
+          ? Math.max(0, totalPagado - totals.total - totalAppliedToAccountsPOS)
+          : (cambio > 0 ? cambio : undefined),
         saldoPendiente: condicion === 'credito' ? totals.total : 0,
         saldoAnterior: saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined,
-        saldoNuevoCalc: condicion === 'credito' ? saldoAnteriorCliente + totals.total : (saldoAnteriorCliente > 0 ? saldoAnteriorCliente : undefined),
+        pagoAplicadoCuentas: totalAppliedToAccountsPOS > 0 ? totalAppliedToAccountsPOS : undefined,
+        saldoNuevoCalc: condicion === 'credito'
+          ? saldoAnteriorCliente + totals.total
+          : (saldoAnteriorCliente > 0 ? Math.max(0, saldoAnteriorCliente - totalAppliedToAccountsPOS) : undefined),
         pagos: (paySplitsComputed.length > 0 ? paySplitsComputed : [{ metodo: 'efectivo', monto: totals.total }]).map(s => ({ metodo: s.metodo, monto: (s as any).monto ?? totals.total, fecha: fmtDate(todayInTimezone()) })),
       });
 
