@@ -139,7 +139,7 @@ export default function RutaDescarga() {
         if (data) return data;
       }
       // Check by vendedor + date overlap
-      const vendedorId = cargaActiva?.vendedor_id || user?.id;
+      const vendedorId = cargaActiva?.vendedor_id || myProfile?.id;
       if (vendedorId) {
         const { data } = await supabase
           .from('descarga_ruta')
