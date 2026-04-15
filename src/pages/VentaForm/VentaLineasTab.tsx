@@ -39,7 +39,7 @@ export function VentaLineasTab(props: Props) {
       {isMobile ? (
         <div className="space-y-2">
           {lineas.map((l, idx) => (
-            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} />
+            <VentaLineaMobile key={idx} idx={idx} line={l} {...props} currencySymbol={symbol} />
           ))}
         </div>
       ) : (
