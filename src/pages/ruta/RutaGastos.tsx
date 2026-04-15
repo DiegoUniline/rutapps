@@ -6,7 +6,7 @@ import { useOfflineQuery, useOfflineMutation } from '@/hooks/useOfflineData';
 import { toast } from 'sonner';
 
 export default function RutaGastos() {
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const today = todayLocal();
   const [showForm, setShowForm] = useState(false);
   const [concepto, setConcepto] = useState('');

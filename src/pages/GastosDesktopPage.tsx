@@ -35,7 +35,7 @@ function useGastos(search: string) {
 
 export default function GastosDesktopPage() {
   const { fmt } = useCurrency();
-  const { empresa, user } = useAuth();
+  const { empresa, user, profile } = useAuth();
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const { data: gastos, isLoading } = useGastos(search);
