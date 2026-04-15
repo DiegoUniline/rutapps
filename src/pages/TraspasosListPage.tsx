@@ -110,7 +110,7 @@ export default function TraspasosListPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('traspasos')
-        .select('*, almacen_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacen_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre), vendedor_origen:vendedores!traspasos_vendedor_origen_id_fkey(nombre), vendedor_destino:vendedores!traspasos_vendedor_destino_id_fkey(nombre)')
+        .select('*, almacen_origen:almacenes!traspasos_almacen_origen_id_fkey(nombre), almacen_destino:almacenes!traspasos_almacen_destino_id_fkey(nombre), vendedor_origen:profiles!traspasos_vendedor_origen_id_profiles_fkey(nombre), vendedor_destino:profiles!traspasos_vendedor_destino_id_profiles_fkey(nombre)')
         .eq('empresa_id', empresa!.id)
         .order('created_at', { ascending: false });
       if (error) throw error;

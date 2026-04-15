@@ -48,7 +48,7 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
       );
 
       const cargas = await fetchAllPages<any>((from, to) => {
-        let q = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores!cargas_vendedor_id_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
+        let q = supabase.from('cargas').select('id, fecha, status, vendedor_id, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), carga_lineas(producto_id, cantidad_cargada, cantidad_vendida, cantidad_devuelta, productos(codigo, nombre))').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).order('fecha', { ascending: false }).range(from, to);
         if (hasVendorFilter) q = q.in('vendedor_id', vendedorIds);
         return q;
       });

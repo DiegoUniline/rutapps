@@ -49,7 +49,7 @@ export default function RutaEntregaDetalle() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('entregas')
-        .select(`*, clientes(id, nombre, telefono, direccion, colonia, credito, limite_credito, dias_credito), vendedores!entregas_vendedor_id_fkey(nombre), entrega_lineas(*, productos(id, codigo, nombre, precio_principal))`)
+        .select(`*, clientes(id, nombre, telefono, direccion, colonia, credito, limite_credito, dias_credito), vendedores:profiles!entregas_vendedor_id_profiles_fkey(nombre), entrega_lineas(*, productos(id, codigo, nombre, precio_principal))`)
         .eq('id', id!)
         .single();
       if (error) throw error;

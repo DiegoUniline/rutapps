@@ -62,7 +62,7 @@ export function useCargasDia(fecha: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cargas')
-        .select('id, fecha, status, vendedor_id, almacen_id, almacen_destino_id, notas, vendedores!cargas_vendedor_id_fkey(nombre), almacen_origen:almacen_id(nombre), almacen_destino:almacen_destino_id(nombre), carga_lineas(id, producto_id, cantidad_cargada, productos(codigo, nombre))')
+        .select('id, fecha, status, vendedor_id, almacen_id, almacen_destino_id, notas, vendedores:profiles!cargas_vendedor_id_profiles_fkey(nombre), almacen_origen:almacen_id(nombre), almacen_destino:almacen_destino_id(nombre), carga_lineas(id, producto_id, cantidad_cargada, productos(codigo, nombre))')
         .eq('fecha', fecha)
         .order('created_at', { ascending: false });
       if (error) throw error;
