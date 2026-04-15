@@ -115,7 +115,7 @@ export default function CobranzaPage() {
   const [waRefId, setWaRefId] = useState<string | undefined>();
 
   const openWaCobro = (cobro: any) => {
-    setWaMessage(buildCobroMessage(cobro));
+    setWaMessage(buildCobroMessage(cobro, fmtC));
     setWaPhone((cobro.clientes as any)?.telefono ?? '');
     setWaRefId(cobro.id);
     setWaOpen(true);
