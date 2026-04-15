@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react';
 import { Search, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineQuery } from '@/hooks/useOfflineData';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function RutaStock() {
   const { empresa, profile } = useAuth();
+  const { fmt } = useCurrency();
   const [search, setSearch] = useState('');
   const almacenId = profile?.almacen_id;
 
@@ -102,7 +104,7 @@ export default function RutaStock() {
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
                 <span className="text-[12px] text-muted-foreground">
-                  Precio: <span className="font-semibold text-foreground">$ {(p.precio_principal ?? 0).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                  Precio: <span className="font-semibold text-foreground">{fmt(p.precio_principal ?? 0)}</span>
                 </span>
               </div>
             </div>
