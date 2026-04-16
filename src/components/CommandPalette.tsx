@@ -29,10 +29,70 @@ interface ResultItem {
 }
 
 const GROUP_ORDER = [
-  'Ventas', 'Pedidos', 'Clientes', 'Productos', 'Proveedores',
+  'Ir a', 'Ventas', 'Pedidos', 'Clientes', 'Productos', 'Proveedores',
   'Compras', 'Traspasos', 'Ajustes', 'Gastos', 'Cobros',
   'CFDI', 'Almacenes', 'Listas de Precios', 'Empleados',
 ];
+
+// Static menu / views index — always searchable, even without backend hits
+const MENU_ITEMS: { title: string; subtitle?: string; to: string; icon: React.ElementType; keywords?: string }[] = [
+  { title: 'Dashboard', to: '/dashboard', icon: BarChart3, keywords: 'inicio home resumen' },
+  { title: 'Punto de venta', to: '/pos', icon: ShoppingCart, keywords: 'pos caja venta rapida' },
+  { title: 'App Móvil', to: '/ruta', icon: Smartphone, keywords: 'ruta movil vendedor' },
+  { title: 'Clientes', to: '/clientes', icon: Users, keywords: 'clientes cartera' },
+  { title: 'Productos', to: '/productos', icon: Package, keywords: 'productos articulos catalogo' },
+  { title: 'Listas de Precios', to: '/listas-precio', icon: Tag, keywords: 'tarifas precios' },
+  // Ventas
+  { title: 'Ventas', subtitle: 'Todas las ventas', to: '/ventas', icon: Receipt },
+  { title: 'Cobranza', subtitle: 'Ventas', to: '/ventas/cobranza', icon: Wallet },
+  { title: 'Promociones', subtitle: 'Ventas', to: '/ventas/promociones', icon: Tag },
+  { title: 'Reporte diario', subtitle: 'Ventas', to: '/ventas/reporte-diario', icon: BarChart3 },
+  { title: 'Devoluciones', subtitle: 'Ventas', to: '/ventas/devoluciones', icon: ArrowRightLeft },
+  { title: 'Liquidar Ruta', subtitle: 'Ventas', to: '/almacen/descargas', icon: Truck },
+  // Logística
+  { title: 'Logística', subtitle: 'Dashboard', to: '/logistica/dashboard', icon: MapPin },
+  { title: 'Pedidos pendientes', subtitle: 'Logística', to: '/logistica/pedidos', icon: ClipboardList },
+  { title: 'Entregas', subtitle: 'Logística', to: '/logistica/entregas', icon: Truck },
+  { title: 'Mapa de clientes', subtitle: 'Logística', to: '/ventas/mapa-clientes', icon: MapPin },
+  { title: 'Mapa de entregas', subtitle: 'Logística', to: '/ventas/mapa-ventas', icon: MapPin },
+  // Almacén
+  { title: 'Inventario', subtitle: 'Almacén', to: '/almacen/inventario', icon: Warehouse, keywords: 'almacen stock existencias' },
+  { title: 'Traspasos', subtitle: 'Almacén', to: '/almacen/traspasos', icon: ArrowRightLeft },
+  { title: 'Ajustes de inventario', subtitle: 'Almacén', to: '/almacen/ajustes', icon: Sliders },
+  { title: 'Auditorías', subtitle: 'Almacén', to: '/almacen/auditorias', icon: ShieldAlert },
+  { title: 'Conteos físicos', subtitle: 'Almacén', to: '/almacen/conteos', icon: ClipboardList },
+  { title: 'Compras', subtitle: 'Almacén', to: '/almacen/compras', icon: ShoppingCart },
+  { title: 'Almacenes', subtitle: 'Almacén', to: '/almacen/almacenes', icon: Warehouse },
+  // Catálogo
+  { title: 'Proveedores', subtitle: 'Catálogo', to: '/proveedores', icon: Truck },
+  // Finanzas
+  { title: 'Cuentas por cobrar', subtitle: 'Finanzas', to: '/finanzas/por-cobrar', icon: DollarSign, keywords: 'cxc' },
+  { title: 'Aplicar pagos clientes', subtitle: 'Finanzas', to: '/finanzas/aplicar-pagos', icon: Wallet },
+  { title: 'Cuentas por pagar', subtitle: 'Finanzas', to: '/finanzas/por-pagar', icon: DollarSign, keywords: 'cxp' },
+  { title: 'Pagos proveedores', subtitle: 'Finanzas', to: '/finanzas/pagos-proveedores', icon: Wallet },
+  { title: 'Saldos por cliente', subtitle: 'Finanzas', to: '/finanzas/saldos-cliente', icon: DollarSign },
+  { title: 'Saldos por proveedor', subtitle: 'Finanzas', to: '/finanzas/saldos-proveedor', icon: DollarSign },
+  { title: 'Gastos', subtitle: 'Finanzas', to: '/finanzas/gastos', icon: Wallet },
+  { title: 'Comisiones', subtitle: 'Finanzas', to: '/finanzas/comisiones', icon: DollarSign },
+  // Reportes & Facturación
+  { title: 'Reportes', to: '/reportes', icon: BarChart3 },
+  { title: 'Reporte de entregas', subtitle: 'Reportes', to: '/reportes/entregas', icon: BarChart3 },
+  { title: 'Facturas CFDI', subtitle: 'Facturación', to: '/facturacion-cfdi', icon: FileText },
+  { title: 'Catálogos SAT', subtitle: 'Facturación', to: '/facturacion-cfdi/catalogos', icon: FileText },
+  // Admin
+  { title: 'Supervisor', to: '/supervisor', icon: BarChart3 },
+  { title: 'Control', to: '/control', icon: ShieldAlert, keywords: 'auditoria fraude' },
+  { title: 'Usuarios y permisos', to: '/configuracion/usuarios', icon: UserCog },
+  { title: 'Tutoriales', to: '/tutoriales', icon: PlayCircle, keywords: 'videos ayuda' },
+  { title: 'Configuración general', to: '/configuracion', icon: Settings },
+  { title: 'WhatsApp', subtitle: 'Configuración', to: '/configuracion/whatsapp', icon: Settings },
+  { title: 'Saldos iniciales', subtitle: 'Configuración', to: '/configuracion/saldos-iniciales', icon: Settings },
+  { title: 'Mi suscripción', to: '/mi-suscripcion', icon: Settings },
+];
+
+function normalize(s: string) {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
 
 export default function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate();
