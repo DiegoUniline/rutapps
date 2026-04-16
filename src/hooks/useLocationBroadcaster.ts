@@ -75,6 +75,9 @@ export function useLocationBroadcaster(enabled: boolean = true) {
       inFlightRef.current = true;
       try {
         const battery = await getBatteryLevel();
+        const nowIso = new Date().toISOString();
+
+        // 1) UPSERT posición actual (una fila por vendedor)
         const { error } = await supabase
           .from('vendedor_ubicaciones' as any)
           .upsert({
@@ -83,11 +86,24 @@ export function useLocationBroadcaster(enabled: boolean = true) {
             lat: pos.lat,
             lng: pos.lng,
             battery_level: battery,
-            updated_at: new Date().toISOString(),
+            updated_at: nowIso,
           }, { onConflict: 'user_id' });
 
         if (!error) {
           lastSentRef.current = { lat: pos.lat, lng: pos.lng, ts: now };
+
+          // 2) INSERT al historial (recorrido del día) — solo si pasó el filtro
+          // de distancia/stale, así no llenamos la BD de puntos repetidos.
+          await supabase
+            .from('vendedor_ubicaciones_historial' as any)
+            .insert({
+              user_id: user.id,
+              empresa_id: empresa.id,
+              lat: pos.lat,
+              lng: pos.lng,
+              battery_level: battery,
+              recorded_at: nowIso,
+            });
         }
       } catch { /* silent */ }
       finally {
