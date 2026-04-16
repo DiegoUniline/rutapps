@@ -997,6 +997,54 @@ export type Database = {
           },
         ]
       }
+      cliente_orden_ruta: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          dia: string | null
+          empresa_id: string
+          id: string
+          orden: number
+          updated_at: string
+          vendedor_id: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          dia?: string | null
+          empresa_id: string
+          id?: string
+          orden?: number
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          dia?: string | null
+          empresa_id?: string
+          id?: string
+          orden?: number
+          updated_at?: string
+          vendedor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_orden_ruta_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_orden_ruta_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cliente_pedido_sugerido: {
         Row: {
           cantidad: number
