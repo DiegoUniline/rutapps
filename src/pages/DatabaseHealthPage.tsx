@@ -154,17 +154,19 @@ export default function DatabaseHealthPage() {
             <AlertDialogTrigger asChild>
               <Button size="sm" disabled={running}>
                 <Play className="h-4 w-4 mr-1" />
-                {running ? "Ejecutando..." : "Ejecutar VACUUM"}
+                {running ? "Ejecutando..." : "Ejecutar ANALYZE"}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>¿Ejecutar VACUUM ANALYZE?</AlertDialogTitle>
+                <AlertDialogTitle>¿Ejecutar ANALYZE?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esto ejecutará una limpieza ligera (no bloqueante) sobre las tablas
-                  principales: role_permisos, movimientos_inventario, ventas, venta_lineas,
-                  cobros, cobro_aplicaciones, stock_almacen, productos y clientes.
-                  La operación quedará registrada en el log.
+                  Esto refrescará las estadísticas del planner sobre las tablas principales
+                  (role_permisos, movimientos_inventario, ventas, venta_lineas, cobros,
+                  cobro_aplicaciones, stock_almacen, productos y clientes).
+                  El VACUUM real lo ejecuta autovacuum automáticamente (ya configurado de
+                  forma agresiva). VACUUM FULL no puede correr desde la app porque Postgres
+                  no lo permite dentro de una transacción.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
