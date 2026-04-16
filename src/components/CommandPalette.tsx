@@ -4,7 +4,8 @@ import { Command } from 'cmdk';
 import {
   ShoppingCart, Package, Users, Truck, Receipt, Wallet,
   ArrowRightLeft, Sliders, UserCog, Warehouse, Tag, FileText,
-  ArrowRight, Loader2, Search, ClipboardList,
+  ArrowRight, Loader2, Search, ClipboardList, Compass,
+  BarChart3, MapPin, Settings, Smartphone, ShieldAlert, PlayCircle, DollarSign,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
