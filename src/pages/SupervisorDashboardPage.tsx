@@ -33,6 +33,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
 import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
+import VendedorRecorridoLayer from '@/components/VendedorRecorridoLayer';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
