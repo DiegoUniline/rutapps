@@ -83,6 +83,9 @@ export default function SupervisorDashboardPage() {
   const [visitFilter, setVisitFilter] = useState<'todos' | 'visitados' | 'pendientes'>('todos');
   const [soloHoy, setSoloHoy] = useState(true);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  // Recorrido histórico de un vendedor (línea sobre el mapa)
+  const [recorridoUserId, setRecorridoUserId] = useState<string | null>(null);
+  const [recorridoFecha, setRecorridoFecha] = useState<string>(today);
   const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
