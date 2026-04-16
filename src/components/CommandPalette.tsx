@@ -417,7 +417,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
                 Escribe para buscar módulos, vistas, ventas, clientes, productos…
               </div>
             )}
-            {query.trim().length >= 2 && !loading && results.length === 0 && (
+            {query.trim().length >= 1 && !loading && results.length === 0 && (
               <div className="py-12 text-center text-xs text-muted-foreground">
                 Sin resultados para «{query}»
               </div>
