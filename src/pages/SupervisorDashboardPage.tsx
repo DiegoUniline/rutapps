@@ -1306,11 +1306,13 @@ function EmptyBlock({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-border bg-card/50 p-4 text-[12px] text-muted-foreground text-center">{text}</div>;
 }
 
-function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient }: {
+function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha }: {
   markers: MarkerPoint[];
   sellerLocations?: SellerLocation[];
   selectedClientId?: string | null;
   onSelectClient?: (id: string) => void;
+  recorridoUserId?: string | null;
+  recorridoFecha?: string;
 }) {
   const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
