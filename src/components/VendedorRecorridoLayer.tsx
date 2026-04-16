@@ -67,7 +67,7 @@ export default function VendedorRecorridoLayer({ userId, fecha, color = '#3b82f6
         .lte('recorded_at', endIso)
         .order('recorded_at', { ascending: true });
       if (error) return [];
-      return (data ?? []) as RecorridoPoint[];
+      return (data ?? []) as unknown as RecorridoPoint[];
     },
   });
 
