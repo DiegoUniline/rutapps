@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -26,13 +26,15 @@ const STALE_MINUTES = 10; // hide vendedores que no actualizan hace 10 min
  */
 export function useLiveVendedores(enabled: boolean = true) {
   const { empresa } = useAuth();
+  const qc = useQueryClient();
   const [rows, setRows] = useState<LiveVendedor[]>([]);
 
   // 1) Initial load — joins profile name once (cheap)
   const { data: initial } = useQuery({
     queryKey: ['live-vendedores', empresa?.id],
     enabled: enabled && !!empresa?.id,
-    staleTime: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 60_000, // safety net: pick up new vendedores even if realtime drops
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vendedor_ubicaciones' as any)
