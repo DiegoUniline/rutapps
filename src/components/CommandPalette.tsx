@@ -120,7 +120,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           title: v.folio ?? 'Sin folio',
           subtitle: [v.clientes?.nombre, isSaldo ? 'Saldo inicial' : null, fmtDate(v.fecha)].filter(Boolean).join(' · '),
           hint: fmtCurrency(v.total),
-          to: `/ventas?q=${encodeURIComponent(v.folio ?? '')}`,
+          to: `/ventas/${v.id}`,
         });
       });
 
@@ -131,7 +131,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           icon: Truck,
           title: e.folio ?? 'Entrega',
           subtitle: [e.clientes?.nombre, e.status, fmtDate(e.fecha)].filter(Boolean).join(' · '),
-          to: `/logistica/entregas?q=${encodeURIComponent(e.folio ?? '')}`,
+          to: `/logistica/entregas/${e.id}`,
         });
       });
 
@@ -177,7 +177,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           title: c.folio ?? 'Compra',
           subtitle: [c.proveedores?.nombre, fmtDate(c.fecha)].filter(Boolean).join(' · '),
           hint: fmtCurrency(c.total),
-          to: `/almacen/compras?q=${encodeURIComponent(c.folio ?? '')}`,
+          to: `/almacen/compras/${c.id}`,
         });
       });
 
@@ -188,7 +188,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           icon: ArrowRightLeft,
           title: t.folio ?? 'Traspaso',
           subtitle: [t.status, fmtDate(t.fecha)].filter(Boolean).join(' · '),
-          to: `/almacen/traspasos?q=${encodeURIComponent(t.folio ?? '')}`,
+          to: `/almacen/traspasos/${t.id}`,
         });
       });
 
@@ -223,7 +223,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           title: c.folio ?? 'Cobro',
           subtitle: [c.clientes?.nombre, fmtDate(c.fecha)].filter(Boolean).join(' · '),
           hint: fmtCurrency(c.monto_total),
-          to: `/ventas/cobranza?q=${encodeURIComponent(c.folio ?? '')}`,
+          to: `/ventas/cobranza?cobro=${c.id}`,
         });
       });
 
@@ -235,7 +235,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           title: c.folio ?? c.folio_fiscal?.slice(0, 8) ?? 'CFDI',
           subtitle: [c.receiver_name, fmtDate(c.fecha_timbrado)].filter(Boolean).join(' · '),
           hint: fmtCurrency(c.total),
-          to: `/facturacion-cfdi?q=${encodeURIComponent(c.folio ?? c.folio_fiscal ?? '')}`,
+          to: `/facturacion-cfdi/${c.id}`,
         });
       });
 
