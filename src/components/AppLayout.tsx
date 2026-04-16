@@ -185,17 +185,15 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
   const [open, setOpen] = useState(isActive);
 
   if (!item.children) {
-    const hl = item.highlight;
-    const hlToken = hl === 'amber' ? 'warning'
-      : hl === 'green' ? 'success'
-      : hl === 'cyan' ? 'info'
-      : hl === 'violet' ? 'violet'
-      : hl === 'teal' ? 'teal'
-      : hl === 'pink' ? 'pink'
-      : null;
-    const hlActive = hlToken ? `bg-${hlToken}/15 text-${hlToken} font-semibold` : '';
-    const hlIdle = hlToken ? `text-${hlToken}/85 hover:bg-${hlToken}/10 hover:text-${hlToken}` : '';
-    const hlIcon = hlToken ? `text-${hlToken}` : '';
+    const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
+      amber:  { active: 'bg-warning/15 text-warning font-semibold',  idle: 'text-warning/85 hover:bg-warning/10 hover:text-warning',  icon: 'text-warning' },
+      green:  { active: 'bg-success/15 text-success font-semibold',  idle: 'text-success/85 hover:bg-success/10 hover:text-success',  icon: 'text-success' },
+      cyan:   { active: 'bg-info/15 text-info font-semibold',        idle: 'text-info/85 hover:bg-info/10 hover:text-info',           icon: 'text-info' },
+      violet: { active: 'bg-violet/15 text-violet font-semibold',    idle: 'text-violet/85 hover:bg-violet/10 hover:text-violet',     icon: 'text-violet' },
+      teal:   { active: 'bg-teal/15 text-teal font-semibold',        idle: 'text-teal/85 hover:bg-teal/10 hover:text-teal',           icon: 'text-teal' },
+      pink:   { active: 'bg-pink/15 text-pink font-semibold',        idle: 'text-pink/85 hover:bg-pink/10 hover:text-pink',           icon: 'text-pink' },
+    };
+    const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
       <Link
         to={item.path}
@@ -204,11 +202,11 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? hlToken
-              ? hlActive
+            ? hl
+              ? hl.active
               : "bg-primary/10 text-primary font-semibold"
-            : hlToken
-              ? hlIdle
+            : hl
+              ? hl.idle
               : item.accent
                 ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
                 : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
@@ -218,7 +216,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
         <item.icon className={cn(
           "h-4 w-4 shrink-0",
           item.accent && !isActive && "text-primary/70",
-          hlToken && !isActive && hlIcon
+          hl && !isActive && hl.icon
         )} />
         {!collapsed && <span>{item.label}</span>}
       </Link>
