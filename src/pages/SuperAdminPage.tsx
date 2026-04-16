@@ -51,6 +51,9 @@ export default function SuperAdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/super-admin/database-health')}>
+              <Database className="h-4 w-4 mr-1.5" /> Salud de BD
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
               <ArrowLeft className="h-4 w-4 mr-1.5" /> Volver a la app
             </Button>
