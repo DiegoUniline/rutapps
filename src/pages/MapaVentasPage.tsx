@@ -375,6 +375,7 @@ export default function MapaVentasPage() {
             }}
           >
             <MyLocationMarker />
+            <LiveVendedoresLayer />
             {originPoint && (
               <Marker
                 position={originPoint}

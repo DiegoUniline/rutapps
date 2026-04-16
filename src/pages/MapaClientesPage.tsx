@@ -537,6 +537,8 @@ export default function MapaClientesPage() {
           >
             {/* My current location (blue dot) */}
             <MyLocationMarker />
+            {/* Live seller positions */}
+            <LiveVendedoresLayer />
 
             {/* Origin */}
             {originPoint && (
