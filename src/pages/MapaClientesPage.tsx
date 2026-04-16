@@ -144,6 +144,37 @@ export default function MapaClientesPage() {
   const { data: zonas } = useZonas();
   const { data: vendedores } = useVendedores();
 
+  // Load saved route order for current day/vendedor combination
+  const { data: savedOrder, refetch: refetchSavedOrder } = useQuery({
+    queryKey: ['cliente-orden-ruta', empresa?.id, diaFilter, vendedorFilter],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      let q = supabase
+        .from('cliente_orden_ruta' as any)
+        .select('cliente_id, orden')
+        .eq('empresa_id', empresa!.id)
+        .order('orden', { ascending: true });
+      q = diaFilter ? q.eq('dia', diaFilter) : q.is('dia', null);
+      q = vendedorFilter ? q.eq('vendedor_id', vendedorFilter) : q.is('vendedor_id', null);
+      const { data } = await q;
+      return (data ?? []) as { cliente_id: string; orden: number }[];
+    },
+  });
+
+  // Restore saved route automatically when filters change
+  useEffect(() => {
+    if (!savedOrder || savedOrder.length === 0) {
+      setRouteResult(null);
+      return;
+    }
+    setRouteResult({
+      orderedIds: savedOrder.map(o => o.cliente_id),
+      polyline: null,
+      distance_meters: 0,
+      duration: '',
+    });
+  }, [savedOrder]);
+
   const filtered = useMemo(() => {
     let result = clientes ?? [];
     if (zonaFilter) result = result.filter((c: any) => c.zona_id === zonaFilter);
