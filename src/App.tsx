@@ -323,6 +323,8 @@ function AppRoutes() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/super-admin" element={<SuperAdminPage />} />
+            <Route path="/super-admin/database-health" element={<DatabaseHealthPage />} />
+            <Route path="/admin/database-health" element={<DatabaseHealthPage />} />
             {renderAuthenticatedRoutes()}
           </Routes>
         </Suspense>
