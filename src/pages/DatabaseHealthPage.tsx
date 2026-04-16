@@ -109,7 +109,7 @@ export default function DatabaseHealthPage() {
       });
       if (error) throw error;
       const ms = (data as any)?.duracion_ms ?? 0;
-      toast.success(`VACUUM ANALYZE completado en ${ms} ms`);
+      toast.success(`ANALYZE completado en ${ms} ms`);
       await load();
     } catch (e: any) {
       toast.error(e?.message ?? "Error al ejecutar VACUUM");
