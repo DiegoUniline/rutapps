@@ -105,7 +105,10 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     ]).then((rows) => {
       if (cancelled) return;
       const out: ResultItem[] = [];
-      const [ventas, clientes, productos, proveedores, compras, traspasos, ajustes, gastos, cobros, cfdis, almacenes, tarifas, empleados, entregas] = rows;
+      const [ventasFolio, ventasCli, clientes, productos, proveedores, compras, traspasos, ajustes, gastos, cobros, cfdis, almacenes, tarifas, empleados, entregas] = rows;
+      const ventasMap = new Map<string, any>();
+      [...(ventasFolio.data ?? []), ...(ventasCli.data ?? [])].forEach((v: any) => ventasMap.set(v.id, v));
+      const ventas = { data: Array.from(ventasMap.values()).slice(0, 8) };
 
       (ventas.data ?? []).forEach((v: any) => {
         const isPedido = v.tipo === 'pedido';
