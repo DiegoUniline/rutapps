@@ -28,18 +28,18 @@ interface NavItem {
   path: string;
   children?: NavChild[];
   accent?: boolean; // highlight key items with accent color
-  highlight?: 'amber'; // alternate accent color (distinct from primary)
+  highlight?: 'amber' | 'green' | 'cyan' | 'violet' | 'teal' | 'pink'; // alternate accent color (distinct from primary)
 }
 
 const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
-  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', accent: true },
-  { label: 'App Móvil', icon: Smartphone, path: '/ruta', accent: true },
+  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green' },
+  { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
   // ── Datos clave ──
-  { label: 'Clientes', icon: Users, path: '/clientes', accent: true },
-  { label: 'Productos', icon: Package, path: '/productos', accent: true },
+  { label: 'Clientes', icon: Users, path: '/clientes', highlight: 'violet' },
+  { label: 'Productos', icon: Package, path: '/productos', highlight: 'teal' },
   { label: 'Listas de Precios', icon: Tag, path: '/listas-precio' },
   // ── Ventas ──
   {
@@ -185,6 +185,15 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
   const [open, setOpen] = useState(isActive);
 
   if (!item.children) {
+    const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
+      amber:  { active: 'bg-warning/15 text-warning font-semibold',  idle: 'text-warning/85 hover:bg-warning/10 hover:text-warning',  icon: 'text-warning' },
+      green:  { active: 'bg-success/15 text-success font-semibold',  idle: 'text-success/85 hover:bg-success/10 hover:text-success',  icon: 'text-success' },
+      cyan:   { active: 'bg-info/15 text-info font-semibold',        idle: 'text-info/85 hover:bg-info/10 hover:text-info',           icon: 'text-info' },
+      violet: { active: 'bg-violet/15 text-violet font-semibold',    idle: 'text-violet/85 hover:bg-violet/10 hover:text-violet',     icon: 'text-violet' },
+      teal:   { active: 'bg-teal/15 text-teal font-semibold',        idle: 'text-teal/85 hover:bg-teal/10 hover:text-teal',           icon: 'text-teal' },
+      pink:   { active: 'bg-pink/15 text-pink font-semibold',        idle: 'text-pink/85 hover:bg-pink/10 hover:text-pink',           icon: 'text-pink' },
+    };
+    const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
       <Link
         to={item.path}
@@ -193,11 +202,11 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? item.highlight === 'amber'
-              ? "bg-warning/15 text-warning font-semibold"
+            ? hl
+              ? hl.active
               : "bg-primary/10 text-primary font-semibold"
-            : item.highlight === 'amber'
-              ? "text-warning/90 hover:bg-warning/10 hover:text-warning"
+            : hl
+              ? hl.idle
               : item.accent
                 ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
                 : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
@@ -207,7 +216,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
         <item.icon className={cn(
           "h-4 w-4 shrink-0",
           item.accent && !isActive && "text-primary/70",
-          item.highlight === 'amber' && !isActive && "text-warning"
+          hl && !isActive && hl.icon
         )} />
         {!collapsed && <span>{item.label}</span>}
       </Link>
