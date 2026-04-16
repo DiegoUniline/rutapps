@@ -52,6 +52,9 @@ export function useLocationBroadcaster(enabled: boolean = true) {
     let stopped = false;
     let intervalId: number | null = null;
 
+    // Ensure GPS watch is active even if no other module on this screen requested it.
+    locationService.startWatching();
+
     const pushNow = async (force = false) => {
       if (stopped || inFlightRef.current) return;
       if (document.hidden) return; // pausa en background
