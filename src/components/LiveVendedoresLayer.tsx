@@ -51,19 +51,22 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
     <>
       {colored.map((v) => {
         const initials = (v.nombre ?? '?').trim().slice(0, 1).toUpperCase();
+        // Tiempo desde el último heartbeat: si lleva quieto >2min, marcamos como "estacionado"
+        const minsSince = (Date.now() - new Date(v.updated_at).getTime()) / 60000;
+        const idle = minsSince > 2;
         return (
           <Marker
             key={v.user_id}
             position={{ lat: v.lat, lng: v.lng }}
             zIndex={10000}
             onClick={() => setSelected(v)}
-            title={v.nombre ?? 'Vendedor'}
+            title={`${v.nombre ?? 'Vendedor'} · ${timeAgo(v.updated_at)}`}
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
               fillColor: v.color,
               fillOpacity: 1,
-              strokeColor: '#ffffff',
-              strokeWeight: 3,
+              strokeColor: idle ? '#facc15' : '#ffffff',
+              strokeWeight: idle ? 4 : 3,
               scale: 14,
             }}
             label={{ text: initials, color: '#fff', fontSize: '12px', fontWeight: '700' }}

@@ -14,9 +14,9 @@ import { locationService } from '@/lib/locationService';
  * - Reads from the shared locationService (no extra GPS subscription).
  */
 
-const HEARTBEAT_MS = 60_000;        // máx 1 push / minuto
-const MIN_DISTANCE_M = 25;          // si no se movió ≥25m, no enviamos
-const STALE_MS = 5 * 60_000;        // …salvo que ya pasaron 5 min sin avisar
+const HEARTBEAT_MS = 60_000;        // intentamos cada 60s
+const MIN_DISTANCE_M = 25;          // si no se movió ≥25m, esperamos…
+const STALE_MS = 90_000;            // …pero igual avisamos cada 90s aunque esté quieto
 const FIRST_PUSH_DELAY_MS = 4_000;  // pequeño delay al arrancar
 
 function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
