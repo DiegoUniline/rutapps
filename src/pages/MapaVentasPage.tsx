@@ -10,6 +10,7 @@ import { Filter, Truck, X, Calendar, Loader2, Navigation, Route, CheckCircle2, I
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import MapRecenterButton from '@/components/MapRecenterButton';
+import MyLocationMarker from '@/components/MyLocationMarker';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
@@ -372,6 +373,7 @@ export default function MapaVentasPage() {
               draggableCursor: settingOrigin ? 'crosshair' : undefined,
             }}
           >
+            <MyLocationMarker />
             {originPoint && (
               <Marker
                 position={originPoint}
