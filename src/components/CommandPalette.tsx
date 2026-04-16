@@ -54,10 +54,15 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     let cancelled = false;
     setLoading(true);
 
+    // Helper: search ventas by folio OR by related client name
+    const ventasByFolio = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre)')
+      .eq('empresa_id', empresaId).ilike('folio', term).limit(5);
+    const ventasByCliente = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre)')
+      .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5);
+
     Promise.all([
-      // Ventas (incluye pedidos, saldo_inicial, etc.)
-      supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre)')
-        .eq('empresa_id', empresaId).or(`folio.ilike.${term}`).limit(5),
+      ventasByFolio,
+      ventasByCliente,
       // Clientes
       supabase.from('clientes').select('id,nombre,codigo,telefono,rfc')
         .eq('empresa_id', empresaId).or(`nombre.ilike.${term},codigo.ilike.${term},telefono.ilike.${term},rfc.ilike.${term}`).limit(5),
