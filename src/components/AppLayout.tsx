@@ -185,6 +185,17 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
   const [open, setOpen] = useState(isActive);
 
   if (!item.children) {
+    const hl = item.highlight;
+    const hlToken = hl === 'amber' ? 'warning'
+      : hl === 'green' ? 'success'
+      : hl === 'cyan' ? 'info'
+      : hl === 'violet' ? 'violet'
+      : hl === 'teal' ? 'teal'
+      : hl === 'pink' ? 'pink'
+      : null;
+    const hlActive = hlToken ? `bg-${hlToken}/15 text-${hlToken} font-semibold` : '';
+    const hlIdle = hlToken ? `text-${hlToken}/85 hover:bg-${hlToken}/10 hover:text-${hlToken}` : '';
+    const hlIcon = hlToken ? `text-${hlToken}` : '';
     return (
       <Link
         to={item.path}
@@ -193,11 +204,11 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? item.highlight === 'amber'
-              ? "bg-warning/15 text-warning font-semibold"
+            ? hlToken
+              ? hlActive
               : "bg-primary/10 text-primary font-semibold"
-            : item.highlight === 'amber'
-              ? "text-warning/90 hover:bg-warning/10 hover:text-warning"
+            : hlToken
+              ? hlIdle
               : item.accent
                 ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
                 : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
@@ -207,7 +218,7 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
         <item.icon className={cn(
           "h-4 w-4 shrink-0",
           item.accent && !isActive && "text-primary/70",
-          item.highlight === 'amber' && !isActive && "text-warning"
+          hlToken && !isActive && hlIcon
         )} />
         {!collapsed && <span>{item.label}</span>}
       </Link>
