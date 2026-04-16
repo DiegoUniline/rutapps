@@ -1426,6 +1426,10 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       ))}
       {/* Vendedores en vivo (transmiten desde la app móvil) */}
       <LiveVendedoresLayer enabled />
+      {/* Recorrido histórico del vendedor seleccionado (fecha) */}
+      {recorridoUserId && recorridoFecha && (
+        <VendedorRecorridoLayer userId={recorridoUserId} fecha={recorridoFecha} />
+      )}
       {selected && (
         <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
           <div className="space-y-1 p-1 text-xs">
