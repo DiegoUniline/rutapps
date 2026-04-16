@@ -1421,6 +1421,8 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
           onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
           icon={makeSellerIcon(s.nombre)} zIndex={1000} />
       ))}
+      {/* Vendedores en vivo (transmiten desde la app móvil) */}
+      <LiveVendedoresLayer enabled />
       {selected && (
         <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
           <div className="space-y-1 p-1 text-xs">
