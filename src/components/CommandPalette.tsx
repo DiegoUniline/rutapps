@@ -405,16 +405,16 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
               autoFocus
               value={query}
               onValueChange={setQuery}
-              placeholder="Buscar en todo el sistema..."
+              placeholder="Buscar módulos, vistas o registros..."
               className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
 
           <Command.List className="max-h-[60vh] overflow-y-auto p-2">
-            {query.trim().length < 2 && (
+            {query.trim().length < 1 && (
               <div className="py-12 text-center text-xs text-muted-foreground">
-                Escribe al menos 2 caracteres para buscar
+                Escribe para buscar módulos, vistas, ventas, clientes, productos…
               </div>
             )}
             {query.trim().length >= 2 && !loading && results.length === 0 && (
