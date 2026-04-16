@@ -81,6 +81,10 @@ html, body {
     /* Accents */
     --teal: 182 60% 30%;
     --teal-foreground: 0 0% 100%;
+    --violet: 265 60% 55%;
+    --violet-foreground: 0 0% 100%;
+    --pink: 330 70% 52%;
+    --pink-foreground: 0 0% 100%;
     --notes-bg: 0 0% 99%;
     --badge-bg: 220 14% 94%;
     --badge-fg: 220 14% 28%;
@@ -149,6 +153,10 @@ html, body {
 
     --teal: 182 50% 35%;
     --teal-foreground: 0 0% 100%;
+    --violet: 265 55% 65%;
+    --violet-foreground: 0 0% 100%;
+    --pink: 330 65% 62%;
+    --pink-foreground: 0 0% 100%;
     --notes-bg: 220 14% 10%;
     --badge-bg: 220 14% 18%;
     --badge-fg: 220 10% 75%;
