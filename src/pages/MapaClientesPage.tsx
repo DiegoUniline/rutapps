@@ -534,6 +534,9 @@ export default function MapaClientesPage() {
               draggableCursor: settingOrigin ? 'crosshair' : undefined,
             }}
           >
+            {/* My current location (blue dot) */}
+            <MyLocationMarker />
+
             {/* Origin */}
             {originPoint && (
               <Marker
