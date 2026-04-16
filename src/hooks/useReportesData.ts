@@ -28,10 +28,41 @@ export function useReportesData(desde: string, hasta: string, vendedorIds?: stri
         return q;
       });
 
-      const cobros = await fetchAllPages<any>((from, to) => {
-        const q = supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre)').eq('empresa_id', eid).neq('status', 'cancelado').gte('fecha', desde).lte('fecha', hasta).range(from, to);
+      const cobrosAll = await fetchAllPages<any>((from, to) => {
+        const q = supabase.from('cobros').select('id, monto, fecha, metodo_pago, cliente_id, clientes(nombre), cobro_aplicaciones(monto_aplicado, ventas(vendedor_id, es_saldo_inicial))').eq('empresa_id', eid).neq('status', 'cancelado').gte('fecha', desde).lte('fecha', hasta).range(from, to);
         return q;
       });
+
+      // If a vendor filter is active, attribute each cobro to the vendor(s) of the sales it was applied to.
+      // Cobros without applications (anticipos) are attributed to the cliente's default vendedor via the clientes lookup below.
+      let cobros: any[] = cobrosAll;
+      if (hasVendorFilter) {
+        const vendorSet = new Set(vendedorIds);
+        // Build a map of cliente_id -> vendedor_id for unapplied cobros fallback
+        const clienteIdsUnapplied = cobrosAll.filter(c => !c.cobro_aplicaciones || c.cobro_aplicaciones.length === 0).map(c => c.cliente_id).filter(Boolean);
+        let clienteVendedorMap: Record<string, string | null> = {};
+        if (clienteIdsUnapplied.length > 0) {
+          const uniqueIds = Array.from(new Set(clienteIdsUnapplied));
+          const { data: clientesData } = await supabase.from('clientes').select('id, vendedor_id').in('id', uniqueIds);
+          for (const c of (clientesData ?? [])) clienteVendedorMap[c.id] = c.vendedor_id;
+        }
+        cobros = cobrosAll.map(c => {
+          const apps = (c.cobro_aplicaciones ?? []) as any[];
+          if (apps.length === 0) {
+            // Unapplied: attribute to cliente's default vendedor
+            const vid = clienteVendedorMap[c.cliente_id];
+            return vid && vendorSet.has(vid) ? c : null;
+          }
+          // Sum only applications whose venta belongs to filtered vendors (and is not saldo inicial)
+          const matchedTotal = apps.reduce((s, a) => {
+            const v = a.ventas;
+            if (v && vendorSet.has(v.vendedor_id)) return s + (a.monto_aplicado ?? 0);
+            return s;
+          }, 0);
+          if (matchedTotal <= 0) return null;
+          return { ...c, monto: matchedTotal };
+        }).filter(Boolean);
+      }
 
       const gastos = await fetchAllPages<any>((from, to) => {
         let q = supabase.from('gastos').select('id, monto, concepto, fecha, vendedor_id, vendedores:profiles!vendedor_id(nombre)').eq('empresa_id', eid).gte('fecha', desde).lte('fecha', hasta).range(from, to);
