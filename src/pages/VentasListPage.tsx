@@ -67,6 +67,8 @@ export default function VentasListPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
 
+  const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
+
   const numericPageSize = getNumericPageSize(pageSize);
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
   const tipoFilter = filters.tipo?.length ? filters.tipo.join(',') : 'todos';
@@ -135,6 +137,7 @@ export default function VentasListPage() {
         items={items} selected={selected} allSelected={allSelected} canDelete={canDelete}
         fmt={fmt} onToggleAll={toggleAll} onToggleOne={toggleOne} onDeleteTarget={setDeleteTarget}
         empresaId={empresa?.id} empresa={empresa} clientesList={clientesList}
+        columnVisibility={columnVisibility}
       />
     </div>
   );
@@ -180,6 +183,15 @@ export default function VentasListPage() {
                 <Package className="h-3.5 w-3.5" /> Productos
               </button>
             </div>
+          )}
+          {!isMobile && (
+            <ColumnVisibilityMenu
+              columns={VENTAS_TABLE_COLUMNS}
+              visible={columnVisibility}
+              onToggle={toggleColumn}
+              onShowAll={() => setAll(true)}
+              onReset={reset}
+            />
           )}
           {!isMobile && (
             <ExportButton
