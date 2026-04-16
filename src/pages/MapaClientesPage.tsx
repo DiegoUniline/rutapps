@@ -157,7 +157,7 @@ export default function MapaClientesPage() {
       q = diaFilter ? q.eq('dia', diaFilter) : q.is('dia', null);
       q = vendedorFilter ? q.eq('vendedor_id', vendedorFilter) : q.is('vendedor_id', null);
       const { data } = await q;
-      return (data ?? []) as { cliente_id: string; orden: number }[];
+      return ((data ?? []) as unknown) as { cliente_id: string; orden: number }[];
     },
   });
 
