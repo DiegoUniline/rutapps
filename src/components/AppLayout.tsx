@@ -28,11 +28,13 @@ interface NavItem {
   path: string;
   children?: NavChild[];
   accent?: boolean; // highlight key items with accent color
+  highlight?: 'amber'; // alternate accent color (distinct from primary)
 }
 
 const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
+  { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
   { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', accent: true },
   { label: 'App Móvil', icon: Smartphone, path: '/ruta', accent: true },
   // ── Datos clave ──
@@ -130,7 +132,6 @@ const navItems: NavItem[] = [
     ],
   },
   // ── Admin & Config ──
-  { label: 'Supervisor', icon: BarChart3, path: '/supervisor' },
   { label: 'Control', icon: ShieldAlert, path: '/control' },
   { label: 'Usuarios y permisos', icon: Users, path: '/configuracion/usuarios' },
   { label: 'Tutoriales', icon: PlayCircle, path: '/tutoriales' },
@@ -192,14 +193,22 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
           "flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all",
           collapsed ? "justify-center px-2" : "",
           isActive
-            ? "bg-primary/10 text-primary font-semibold"
-            : item.accent
-              ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
-              : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
+            ? item.highlight === 'amber'
+              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 font-semibold"
+              : "bg-primary/10 text-primary font-semibold"
+            : item.highlight === 'amber'
+              ? "text-amber-600/90 dark:text-amber-400/90 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
+              : item.accent
+                ? "text-primary/80 hover:bg-primary/5 hover:text-primary"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-hover hover:text-sidebar-foreground"
         )}
         title={collapsed ? item.label : undefined}
       >
-        <item.icon className={cn("h-4 w-4 shrink-0", item.accent && !isActive && "text-primary/70")} />
+        <item.icon className={cn(
+          "h-4 w-4 shrink-0",
+          item.accent && !isActive && "text-primary/70",
+          item.highlight === 'amber' && !isActive && "text-amber-500"
+        )} />
         {!collapsed && <span>{item.label}</span>}
       </Link>
     );
