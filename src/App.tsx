@@ -79,6 +79,7 @@ const MonitorRutasPage = lazy(() => import("@/pages/MonitorRutasPage"));
 const PuntoVentaPage = lazy(() => import("@/pages/PuntoVentaPage"));
 const ReporteDiarioPage = lazy(() => import("@/pages/ReporteDiarioPage"));
 const SuperAdminPage = lazy(() => import("@/pages/SuperAdminPage"));
+const DatabaseHealthPage = lazy(() => import("@/pages/DatabaseHealthPage"));
 const SubscriptionBlockedPage = lazy(() => import("@/pages/SubscriptionBlockedPage"));
 const FacturacionPage = lazy(() => import("@/pages/FacturacionPage"));
 const MiSuscripcionPage = lazy(() => import("@/pages/MiSuscripcionPage"));
