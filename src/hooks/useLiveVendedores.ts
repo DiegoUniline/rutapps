@@ -16,7 +16,7 @@ export interface LiveVendedor {
   avatar_url: string | null;
 }
 
-const STALE_MINUTES = 3; // hide vendedores que no actualizan hace 3 min (app cerrada)
+const STALE_MINUTES = 15; // mantener visible 15 min, pero marcar como inactivo después de 3
 
 /**
  * Subscribes to live vendedor positions for the current empresa.
