@@ -251,10 +251,20 @@ export default function MapaClientesPage() {
       });
       const result = await res.json();
       if (!res.ok) { toast.error(result.error || 'Error al optimizar'); return; }
-      const updates = result.optimized_order.map((id: string, idx: number) =>
-        supabase.from('clientes').update({ orden: idx + 1 }).eq('id', id)
-      );
-      await Promise.all(updates);
+      const updates = result.optimized_order.map((id: string, idx: number) => ({
+        empresa_id: empresa!.id,
+        cliente_id: id,
+        dia: diaFilter || null,
+        vendedor_id: vendedorFilter || null,
+        orden: idx + 1,
+      }));
+      // Delete existing order for this combination, then insert
+      let delQ = supabase.from('cliente_orden_ruta' as any).delete().eq('empresa_id', empresa!.id);
+      delQ = diaFilter ? delQ.eq('dia', diaFilter) : delQ.is('dia', null);
+      delQ = vendedorFilter ? delQ.eq('vendedor_id', vendedorFilter) : delQ.is('vendedor_id', null);
+      await delQ;
+      await supabase.from('cliente_orden_ruta' as any).insert(updates);
+      await refetchSavedOrder();
       setRouteResult({
         orderedIds: result.optimized_order,
         polyline: result.polyline,
