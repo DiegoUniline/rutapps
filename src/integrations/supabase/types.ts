@@ -2586,6 +2586,33 @@ export type Database = {
           },
         ]
       }
+      maintenance_log: {
+        Row: {
+          duracion_ms: number
+          ejecutado_en: string
+          ejecutado_por: string
+          id: string
+          notas: string | null
+          tablas_procesadas: string[]
+        }
+        Insert: {
+          duracion_ms?: number
+          ejecutado_en?: string
+          ejecutado_por: string
+          id?: string
+          notas?: string | null
+          tablas_procesadas?: string[]
+        }
+        Update: {
+          duracion_ms?: number
+          ejecutado_en?: string
+          ejecutado_por?: string
+          id?: string
+          notas?: string | null
+          tablas_procesadas?: string[]
+        }
+        Relationships: []
+      }
       marcas: {
         Row: {
           activo: boolean
@@ -5522,6 +5549,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_database_health: { Args: never; Returns: Json }
       get_my_empresa_id: { Args: never; Returns: string }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
@@ -5557,6 +5585,7 @@ export type Database = {
         }
         Returns: string
       }
+      run_maintenance_vacuum: { Args: { p_tables?: string[] }; Returns: Json }
       surtir_linea_entrega: {
         Args: {
           p_almacen_origen_id: string
