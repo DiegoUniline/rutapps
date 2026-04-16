@@ -18,6 +18,8 @@ import { cn } from '@/lib/utils';
 import NotificationRuntime from '@/components/notifications/NotificationRuntime';
 import { useProductosRealtime } from '@/hooks/useData';
 import SuperAdminEmpresaSelector from '@/components/SuperAdminEmpresaSelector';
+import CommandPalette, { CommandPaletteButton } from '@/components/CommandPalette';
+import { Search } from 'lucide-react';
 
 interface NavChild { label: string; path: string }
 interface NavItem {
@@ -371,6 +373,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [showDemoWelcome, setShowDemoWelcome] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const { empresa, profile, signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const { isSuperAdmin } = useSubscription();
@@ -486,6 +489,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <div className="flex items-center gap-1">
             <button
+              onClick={() => setPaletteOpen(true)}
+              className="p-2 rounded-md text-foreground/70 hover:text-foreground transition-colors"
+              title="Buscar (⌘K)"
+            >
+              <Search className="h-[18px] w-[18px]" />
+            </button>
+            <button
               onClick={applySwUpdate}
               className={cn(
                 "p-2 rounded-md transition-colors",
@@ -511,6 +521,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main className="flex-1 overflow-auto pb-16">
           {children}
         </main>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
 
         {/* Bottom navigation – app style */}
         <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
@@ -622,6 +633,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
         <SuperAdminEmpresaSelector />
+        <div className="h-10 flex items-center justify-end px-4 border-b border-border bg-card shrink-0">
+          <CommandPaletteButton onClick={() => setPaletteOpen(true)} />
+        </div>
         <Breadcrumb />
         <main className="flex-1">
           {children}
@@ -629,6 +643,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <UnilineFooter />
       </div>
       </div>
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <NotificationRuntime overlaysOnly />
       <Suspense fallback={null}>
         <DemoWelcomeDialog open={showDemoWelcome} onClose={() => setShowDemoWelcome(false)} />
