@@ -882,7 +882,7 @@ export default function PuntoVentaPage() {
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Top bar */}
-      <header className="bg-card border-b border-border shrink-0">
+      <header className="bg-card border-b border-border shrink-0 pt-[env(safe-area-inset-top)]">
         <div className="h-12 flex items-center px-3 sm:px-4 gap-2 sm:gap-3">
           <button onClick={() => navigate(-1)} className="p-1.5 rounded-md hover:bg-accent transition-colors" title="Volver">
             <ArrowLeft className="h-4 w-4 text-foreground" />
