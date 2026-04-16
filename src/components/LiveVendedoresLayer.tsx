@@ -39,6 +39,13 @@ interface Props {
 export default function LiveVendedoresLayer({ enabled = true }: Props) {
   const vendedores = useLiveVendedores(enabled);
   const [selected, setSelected] = useState<LiveVendedor | null>(null);
+  const [, setTick] = useState(0);
+
+  // Re-render every 20s so "hace X min" stays fresh even without realtime events
+  useEffect(() => {
+    const id = window.setInterval(() => setTick(t => t + 1), 20_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const colored = useMemo(
     () => vendedores.map((v, i) => ({ ...v, color: colorForUser(v.user_id, i) })),
