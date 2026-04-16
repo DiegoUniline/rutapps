@@ -349,9 +349,9 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         });
       });
 
-      setResults(out);
+      setResults([...menuMatches, ...out]);
       setLoading(false);
-    }).catch(() => { if (!cancelled) setLoading(false); });
+    }).catch(() => { if (!cancelled) { setResults(menuMatches); setLoading(false); } });
 
     return () => { cancelled = true; };
   }, [debounced, empresaId]);
