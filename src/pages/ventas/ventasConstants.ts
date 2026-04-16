@@ -64,6 +64,27 @@ export const STATIC_FILTER_OPTIONS = [
   },
 ];
 
+/** Toggleable columns in the desktop ventas table. `required` columns can't be hidden. */
+export const VENTAS_TABLE_COLUMNS: { key: string; label: string; required?: boolean; defaultVisible: boolean }[] = [
+  { key: 'folio', label: 'Folio', required: true, defaultVisible: true },
+  { key: 'tipo', label: 'Tipo', defaultVisible: true },
+  { key: 'cliente', label: 'Cliente', required: true, defaultVisible: true },
+  { key: 'vendedor', label: 'Vendedor', defaultVisible: true },
+  { key: 'condicion', label: 'Condición', defaultVisible: true },
+  { key: 'fecha', label: 'Fecha / Hora', defaultVisible: true },
+  { key: 'subtotal', label: 'Subtotal', defaultVisible: true },
+  { key: 'descuento', label: 'Descuento', defaultVisible: true },
+  { key: 'iva', label: 'IVA', defaultVisible: false },
+  { key: 'total', label: 'Total', required: true, defaultVisible: true },
+  { key: 'saldo', label: 'Saldo', defaultVisible: true },
+  { key: 'status', label: 'Estado', required: true, defaultVisible: true },
+];
+
+export const VENTAS_DEFAULT_COLUMN_VISIBILITY: Record<string, boolean> = VENTAS_TABLE_COLUMNS.reduce(
+  (acc, c) => { acc[c.key] = c.defaultVisible; return acc; },
+  {} as Record<string, boolean>
+);
+
 export const GROUP_BY_OPTIONS = [
   { value: 'status', label: 'Estado' },
   { value: 'tipo', label: 'Tipo' },
