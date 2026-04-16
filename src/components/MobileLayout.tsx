@@ -10,6 +10,7 @@ import { usePermisos } from '@/hooks/usePermisos';
 import { cn } from '@/lib/utils';
 import { APP_VERSION, APP_BUILD_DATE } from '@/version';
 import { locationService } from '@/lib/locationService';
+import { useLocationBroadcaster } from '@/hooks/useLocationBroadcaster';
 
 const tabs = [
   { label: 'Clientes', icon: Users, path: '/ruta' },
@@ -49,6 +50,9 @@ export default function MobileLayout() {
     locationService.startWatching();
     return () => locationService.stopWatching();
   }, []);
+
+  // Broadcast my position to vendedor_ubicaciones (throttled, battery-friendly)
+  useLocationBroadcaster(true);
 
   useEffect(() => {
     const handler = () => setSwUpdateAvailable(true);

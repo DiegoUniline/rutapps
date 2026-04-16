@@ -6,6 +6,7 @@ import { useVendedores } from '@/hooks/useClientes';
 import { useGoogleMaps, GoogleMapsProvider } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, MarkerF, InfoWindow } from '@react-google-maps/api';
 import MyLocationMarker from '@/components/MyLocationMarker';
+import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
   Activity, Users, MapPin, CheckCircle2, XCircle, Clock, Truck,
@@ -554,6 +555,7 @@ export function MonitorContent() {
                   }}
                 >
                   <MyLocationMarker />
+                  <LiveVendedoresLayer />
                   {(() => {
                     // Build seller color map
                     const uniqueSellers = [...new Set(withGps.map(c => c.vendedor_id).filter(Boolean))];

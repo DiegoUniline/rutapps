@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import MapRecenterButton from '@/components/MapRecenterButton';
 import MyLocationMarker from '@/components/MyLocationMarker';
+import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import { OdooDatePicker } from '@/components/OdooDatePicker';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { toast } from 'sonner';
@@ -374,6 +375,7 @@ export default function MapaVentasPage() {
             }}
           >
             <MyLocationMarker />
+            <LiveVendedoresLayer />
             {originPoint && (
               <Marker
                 position={originPoint}

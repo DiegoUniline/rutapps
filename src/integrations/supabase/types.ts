@@ -4765,6 +4765,50 @@ export type Database = {
           },
         ]
       }
+      vendedor_ubicaciones: {
+        Row: {
+          accuracy: number | null
+          battery_level: number | null
+          empresa_id: string
+          heading: number | null
+          lat: number
+          lng: number
+          speed: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          battery_level?: number | null
+          empresa_id: string
+          heading?: number | null
+          lat: number
+          lng: number
+          speed?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          battery_level?: number | null
+          empresa_id?: string
+          heading?: number | null
+          lat?: number
+          lng?: number
+          speed?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendedor_ubicaciones_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendedores: {
         Row: {
           created_at: string
@@ -5518,6 +5562,7 @@ export type Database = {
         Args: { p_traspaso_id: string; p_user_id: string }
         Returns: undefined
       }
+      cleanup_stale_vendedor_ubicaciones: { Args: never; Returns: undefined }
       close_audit_line: {
         Args: { p_cerrada: boolean; p_linea_id: string }
         Returns: undefined
