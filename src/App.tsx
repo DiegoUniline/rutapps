@@ -510,6 +510,11 @@ function desktopRoutes() {
       <Route path="/logistica/dashboard" element={<LogisticaDashboardPage />} />
       <Route path="/logistica/orden-carga/:camionId" element={<OrdenCargaPage />} />
       <Route path="/ventas/:id" element={<VentaFormPage />} />
+      {/* Parent menu redirects (avoid 404 when clicking parent group) */}
+      <Route path="/almacen" element={<Navigate to="/almacen/inventario" replace />} />
+      <Route path="/finanzas" element={<Navigate to="/finanzas/por-cobrar" replace />} />
+      <Route path="/logistica" element={<Navigate to="/logistica/dashboard" replace />} />
+      <Route path="/catalogos" element={<Navigate to="/proveedores" replace />} />
       <Route path="/almacen/inventario" element={<InventarioPage />} />
       <Route path="/almacen/almacenes" element={<AlmacenesPage />} />
       <Route path="/almacen/compras" element={<ComprasPage />} />
