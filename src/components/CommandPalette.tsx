@@ -108,9 +108,25 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
   }, [open]);
 
   useEffect(() => {
-    if (!empresaId) return;
     const q = debounced.trim();
-    if (q.length < 2) { setResults([]); setLoading(false); return; }
+    // Always compute menu matches (works even without empresaId / no backend hits)
+    const nq = normalize(q);
+    const menuMatches: ResultItem[] = q.length >= 1
+      ? MENU_ITEMS
+          .filter(m => normalize(m.title + ' ' + (m.subtitle ?? '') + ' ' + (m.keywords ?? '')).includes(nq))
+          .slice(0, 10)
+          .map((m, i) => ({
+            id: `menu-${i}-${m.to}`,
+            group: 'Ir a',
+            icon: m.icon,
+            title: m.title,
+            subtitle: m.subtitle,
+            to: m.to,
+          }))
+      : [];
+
+    if (!empresaId) { setResults(menuMatches); setLoading(false); return; }
+    if (q.length < 2) { setResults(menuMatches); setLoading(false); return; }
     const term = `%${q}%`;
     let cancelled = false;
     setLoading(true);
