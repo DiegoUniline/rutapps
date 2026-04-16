@@ -390,22 +390,6 @@ export default function MapaClientesPage() {
                 placeholder="Zona..."
               />
             </div>
-            <div className="min-w-[130px]">
-              <SearchableSelect
-                options={[{ value: '', label: 'Todos vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
-                value={vendedorFilter}
-                onChange={setVendedorFilter}
-                placeholder="Vendedor..."
-              />
-            </div>
-            <div className="min-w-[130px]">
-              <SearchableSelect
-                options={[{ value: '', label: 'Todos los días' }, ...DIAS.map(d => ({ value: d, label: d }))]}
-                value={diaFilter}
-                onChange={val => { setDiaFilter(val); setRouteResult(null); }}
-                placeholder="Día..."
-              />
-            </div>
             <div className="min-w-[110px]">
               <SearchableSelect
                 options={[{ value: '', label: 'Todo status' }, { value: 'activo', label: 'Activo' }, { value: 'inactivo', label: 'Inactivo' }, { value: 'suspendido', label: 'Suspendido' }]}
@@ -417,7 +401,7 @@ export default function MapaClientesPage() {
             {activeFiltersCount > 0 && (
               <button onClick={() => { setZonaFilter(''); setVendedorFilter(''); setDiaFilter(''); setStatusFilter(''); }}
                 className="flex items-center gap-1 text-[10px] text-destructive hover:underline py-1">
-                <X className="h-2.5 w-2.5" /> Limpiar
+                <X className="h-2.5 w-2.5" /> Limpiar todo
               </button>
             )}
           </div>
