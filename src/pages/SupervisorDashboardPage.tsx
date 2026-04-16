@@ -32,6 +32,7 @@ import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
+import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 const MAP_CENTER = { lat: 20.6597, lng: -103.3496 };
@@ -1420,6 +1421,8 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
           onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
           icon={makeSellerIcon(s.nombre)} zIndex={1000} />
       ))}
+      {/* Vendedores en vivo (transmiten desde la app móvil) */}
+      <LiveVendedoresLayer enabled />
       {selected && (
         <InfoWindow position={{ lat: selected.lat, lng: selected.lng }} onCloseClick={() => setSelected(null)}>
           <div className="space-y-1 p-1 text-xs">
