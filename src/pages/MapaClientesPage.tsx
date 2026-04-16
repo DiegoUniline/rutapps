@@ -308,18 +308,36 @@ export default function MapaClientesPage() {
             <h1 className="text-base font-bold text-foreground">Mapa de clientes</h1>
           </div>
 
-          <div className="flex-1 max-w-xs relative">
+          <div className="flex-1 max-w-[200px] relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input type="text" placeholder="Buscar..." value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full bg-background border border-border rounded-lg pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
           </div>
 
+          {/* Always-visible quick filters: Día + Vendedor (key for route optimization) */}
+          <div className="min-w-[150px]">
+            <SearchableSelect
+              options={[{ value: '', label: '📅 Todos los días' }, ...DIAS.map(d => ({ value: d, label: d === DIA_HOY ? `${d} (hoy)` : d }))]}
+              value={diaFilter}
+              onChange={val => { setDiaFilter(val); setRouteResult(null); }}
+              placeholder="Día visita..."
+            />
+          </div>
+          <div className="min-w-[160px]">
+            <SearchableSelect
+              options={[{ value: '', label: '👤 Todos vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
+              value={vendedorFilter}
+              onChange={val => { setVendedorFilter(val); setRouteResult(null); }}
+              placeholder="Vendedor..."
+            />
+          </div>
+
           <button onClick={() => setShowFilters(!showFilters)}
             className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-              showFilters || activeFiltersCount > 0 ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground")}>
-            <Filter className="h-3.5 w-3.5" />Filtros
-            {activeFiltersCount > 0 && <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{activeFiltersCount}</Badge>}
+              showFilters || zonaFilter || statusFilter ? "bg-primary/10 border-primary/30 text-primary" : "bg-background border-border text-muted-foreground")}>
+            <Filter className="h-3.5 w-3.5" />Más
+            {(zonaFilter || statusFilter) && <Badge className="ml-0.5 h-4 w-4 p-0 flex items-center justify-center text-[9px]">{[zonaFilter, statusFilter].filter(Boolean).length}</Badge>}
           </button>
 
           {/* Color mode toggle */}
@@ -372,22 +390,6 @@ export default function MapaClientesPage() {
                 placeholder="Zona..."
               />
             </div>
-            <div className="min-w-[130px]">
-              <SearchableSelect
-                options={[{ value: '', label: 'Todos vendedores' }, ...(vendedores ?? []).map(v => ({ value: v.id, label: v.nombre }))]}
-                value={vendedorFilter}
-                onChange={setVendedorFilter}
-                placeholder="Vendedor..."
-              />
-            </div>
-            <div className="min-w-[130px]">
-              <SearchableSelect
-                options={[{ value: '', label: 'Todos los días' }, ...DIAS.map(d => ({ value: d, label: d }))]}
-                value={diaFilter}
-                onChange={val => { setDiaFilter(val); setRouteResult(null); }}
-                placeholder="Día..."
-              />
-            </div>
             <div className="min-w-[110px]">
               <SearchableSelect
                 options={[{ value: '', label: 'Todo status' }, { value: 'activo', label: 'Activo' }, { value: 'inactivo', label: 'Inactivo' }, { value: 'suspendido', label: 'Suspendido' }]}
@@ -399,7 +401,7 @@ export default function MapaClientesPage() {
             {activeFiltersCount > 0 && (
               <button onClick={() => { setZonaFilter(''); setVendedorFilter(''); setDiaFilter(''); setStatusFilter(''); }}
                 className="flex items-center gap-1 text-[10px] text-destructive hover:underline py-1">
-                <X className="h-2.5 w-2.5" /> Limpiar
+                <X className="h-2.5 w-2.5" /> Limpiar todo
               </button>
             )}
           </div>
