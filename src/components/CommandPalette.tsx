@@ -120,7 +120,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           title: v.folio ?? 'Sin folio',
           subtitle: [v.clientes?.nombre, isSaldo ? 'Saldo inicial' : null, fmtDate(v.fecha)].filter(Boolean).join(' · '),
           hint: fmtCurrency(v.total),
-          to: `/ventas?q=${encodeURIComponent(v.folio ?? '')}`,
+          to: `/ventas/${v.id}`,
         });
       });
 
@@ -131,7 +131,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           icon: Truck,
           title: e.folio ?? 'Entrega',
           subtitle: [e.clientes?.nombre, e.status, fmtDate(e.fecha)].filter(Boolean).join(' · '),
-          to: `/logistica/entregas?q=${encodeURIComponent(e.folio ?? '')}`,
+          to: `/logistica/entregas/${e.id}`,
         });
       });
 
