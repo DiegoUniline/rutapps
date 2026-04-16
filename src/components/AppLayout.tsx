@@ -186,12 +186,12 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
 
   if (!item.children) {
     const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
-      amber:  { active: 'bg-warning/15 text-warning font-semibold',  idle: 'text-warning/85 hover:bg-warning/10 hover:text-warning',  icon: 'text-warning' },
-      green:  { active: 'bg-success/15 text-success font-semibold',  idle: 'text-success/85 hover:bg-success/10 hover:text-success',  icon: 'text-success' },
-      cyan:   { active: 'bg-info/15 text-info font-semibold',        idle: 'text-info/85 hover:bg-info/10 hover:text-info',           icon: 'text-info' },
-      violet: { active: 'bg-violet/15 text-violet font-semibold',    idle: 'text-violet/85 hover:bg-violet/10 hover:text-violet',     icon: 'text-violet' },
-      teal:   { active: 'bg-teal/15 text-teal font-semibold',        idle: 'text-teal/85 hover:bg-teal/10 hover:text-teal',           icon: 'text-teal' },
-      pink:   { active: 'bg-pink/15 text-pink font-semibold',        idle: 'text-pink/85 hover:bg-pink/10 hover:text-pink',           icon: 'text-pink' },
+      amber:  { active: 'bg-warning/20 text-warning font-semibold',  idle: 'bg-warning/10 text-warning hover:bg-warning/15',  icon: 'text-warning' },
+      green:  { active: 'bg-success/20 text-success font-semibold',  idle: 'bg-success/10 text-success hover:bg-success/15',  icon: 'text-success' },
+      cyan:   { active: 'bg-info/20 text-info font-semibold',        idle: 'bg-info/10 text-info hover:bg-info/15',           icon: 'text-info' },
+      violet: { active: 'bg-violet/20 text-violet font-semibold',    idle: 'bg-violet/10 text-violet hover:bg-violet/15',     icon: 'text-violet' },
+      teal:   { active: 'bg-teal/20 text-teal font-semibold',        idle: 'bg-teal/10 text-teal hover:bg-teal/15',           icon: 'text-teal' },
+      pink:   { active: 'bg-pink/20 text-pink font-semibold',        idle: 'bg-pink/10 text-pink hover:bg-pink/15',           icon: 'text-pink' },
     };
     const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
