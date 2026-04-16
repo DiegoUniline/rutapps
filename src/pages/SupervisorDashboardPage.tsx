@@ -703,9 +703,48 @@ export default function SupervisorDashboardPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left: Map (60%) */}
         <div className="flex-[3] flex flex-col min-w-0">
-          <GoogleMapsProvider>
-            <SupervisorMap markers={mapMarkers} sellerLocations={sellerLocations} selectedClientId={selectedClientId} onSelectClient={handleSelectClient} />
-          </GoogleMapsProvider>
+          <div className="relative flex-1">
+            <GoogleMapsProvider>
+              <SupervisorMap
+                markers={mapMarkers}
+                sellerLocations={sellerLocations}
+                selectedClientId={selectedClientId}
+                onSelectClient={handleSelectClient}
+                recorridoUserId={recorridoUserId}
+                recorridoFecha={recorridoFecha}
+              />
+            </GoogleMapsProvider>
+            {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
+            <div className="absolute top-2 left-2 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex items-center gap-2 text-xs">
+              <span className="font-semibold text-foreground">Recorrido:</span>
+              <select
+                value={recorridoUserId ?? ''}
+                onChange={(e) => setRecorridoUserId(e.target.value || null)}
+                className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="">— Seleccionar vendedor —</option>
+                {(vendedores ?? []).map((v) => (
+                  <option key={v.user_id} value={v.user_id}>{v.nombre}</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={recorridoFecha}
+                onChange={(e) => setRecorridoFecha(e.target.value)}
+                max={today}
+                className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              {recorridoUserId && (
+                <button
+                  onClick={() => setRecorridoUserId(null)}
+                  className="text-muted-foreground hover:text-foreground px-1"
+                  title="Quitar recorrido"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
             <span className="inline-flex items-center gap-1.5">
               <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#22c55e" stroke="#fff" strokeWidth="1.5"/><polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -715,6 +754,12 @@ export default function SupervisorDashboardPage() {
               <svg width="12" height="16" viewBox="0 0 28 40"><path d="M14 38 C14 38 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 38 14 38 Z" fill="#ef4444" stroke="#fff" strokeWidth="1.5"/><line x1="10" y1="15" x2="18" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/></svg>
               <span className="text-[10px] text-muted-foreground">Pendiente</span>
             </span>
+            {recorridoUserId && (
+              <span className="inline-flex items-center gap-1.5 ml-auto">
+                <span className="inline-block w-3 h-1 rounded" style={{ backgroundColor: '#3b82f6' }} />
+                <span className="text-[10px] text-muted-foreground">Recorrido del día · A=inicio · B=fin · # paradas (≥5min)</span>
+              </span>
+            )}
           </div>
         </div>
 
