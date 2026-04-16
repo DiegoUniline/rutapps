@@ -58,25 +58,30 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
     <>
       {colored.map((v) => {
         const initials = (v.nombre ?? '?').trim().slice(0, 1).toUpperCase();
-        // Tiempo desde el último heartbeat: si lleva quieto >2min, marcamos como "estacionado"
         const minsSince = (Date.now() - new Date(v.updated_at).getTime()) / 60000;
-        const idle = minsSince > 2;
+        // >3 min sin heartbeat → app cerrada/sin señal: gris
+        // entre 1.5 y 3 min → posiblemente quieto: amarillo
+        const inactive = minsSince > 3;
+        const idle = !inactive && minsSince > 1.5;
+        const fillColor = inactive ? '#9ca3af' : v.color; // gris claro si inactivo
+        const strokeColor = inactive ? '#d1d5db' : (idle ? '#facc15' : '#ffffff');
         return (
           <Marker
             key={v.user_id}
             position={{ lat: v.lat, lng: v.lng }}
-            zIndex={10000}
+            zIndex={inactive ? 5000 : 10000}
             onClick={() => setSelected(v)}
-            title={`${v.nombre ?? 'Vendedor'} · ${timeAgo(v.updated_at)}`}
+            title={`${v.nombre ?? 'Vendedor'} · ${timeAgo(v.updated_at)}${inactive ? ' (inactivo)' : ''}`}
+            opacity={inactive ? 0.55 : 1}
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
-              fillColor: v.color,
-              fillOpacity: 1,
-              strokeColor: idle ? '#facc15' : '#ffffff',
+              fillColor,
+              fillOpacity: inactive ? 0.7 : 1,
+              strokeColor,
               strokeWeight: idle ? 4 : 3,
               scale: 14,
             }}
-            label={{ text: initials, color: '#fff', fontSize: '12px', fontWeight: '700' }}
+            label={{ text: initials, color: inactive ? '#4b5563' : '#fff', fontSize: '12px', fontWeight: '700' }}
           />
         );
       })}
