@@ -28,18 +28,18 @@ interface NavItem {
   path: string;
   children?: NavChild[];
   accent?: boolean; // highlight key items with accent color
-  highlight?: 'amber'; // alternate accent color (distinct from primary)
+  highlight?: 'amber' | 'green' | 'cyan' | 'violet' | 'teal' | 'pink'; // alternate accent color (distinct from primary)
 }
 
 const navItems: NavItem[] = [
   // ── Operación diaria ──
   { label: 'Dashboard', icon: BarChart3, path: '/dashboard', accent: true },
   { label: 'Supervisor', icon: ShieldAlert, path: '/supervisor', highlight: 'amber' },
-  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', accent: true },
-  { label: 'App Móvil', icon: Smartphone, path: '/ruta', accent: true },
+  { label: 'Punto de venta', icon: ShoppingCart, path: '/pos', highlight: 'green' },
+  { label: 'App Móvil', icon: Smartphone, path: '/ruta', highlight: 'cyan' },
   // ── Datos clave ──
-  { label: 'Clientes', icon: Users, path: '/clientes', accent: true },
-  { label: 'Productos', icon: Package, path: '/productos', accent: true },
+  { label: 'Clientes', icon: Users, path: '/clientes', highlight: 'violet' },
+  { label: 'Productos', icon: Package, path: '/productos', highlight: 'teal' },
   { label: 'Listas de Precios', icon: Tag, path: '/listas-precio' },
   // ── Ventas ──
   {
