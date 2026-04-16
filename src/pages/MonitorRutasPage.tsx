@@ -553,6 +553,7 @@ export function MonitorContent() {
                     ],
                   }}
                 >
+                  <MyLocationMarker />
                   {(() => {
                     // Build seller color map
                     const uniqueSellers = [...new Set(withGps.map(c => c.vendedor_id).filter(Boolean))];
