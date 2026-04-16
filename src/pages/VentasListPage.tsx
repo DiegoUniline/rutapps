@@ -24,7 +24,9 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
 
-import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS } from './ventas/ventasConstants';
+import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import { ColumnVisibilityMenu } from '@/components/ColumnVisibilityMenu';
 import { VentasDesktopTable } from './ventas/VentasDesktopTable';
 import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
