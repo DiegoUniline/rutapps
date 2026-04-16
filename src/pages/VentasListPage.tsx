@@ -24,7 +24,9 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { toast } from 'sonner';
 import { readStoredPageSize, type PageSizeOption } from '@/hooks/useTablePagination';
 
-import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS } from './ventas/ventasConstants';
+import { VENTAS_COLUMNS, CONDICION_LABELS, TIPO_LABELS, STATUS_LABELS, STATIC_FILTER_OPTIONS, GROUP_BY_OPTIONS, VENTAS_TABLE_COLUMNS, VENTAS_DEFAULT_COLUMN_VISIBILITY } from './ventas/ventasConstants';
+import { useColumnPreferences } from '@/hooks/useColumnPreferences';
+import { ColumnVisibilityMenu } from '@/components/ColumnVisibilityMenu';
 import { VentasDesktopTable } from './ventas/VentasDesktopTable';
 import { VentasProductosTable } from './ventas/VentasProductosTable';
 import { VentasMobileList } from './ventas/VentasMobileList';
@@ -64,6 +66,8 @@ export default function VentasListPage() {
   const [dateTo, setDateTo] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const { filters, groupBy, groupByLevels, setFilter, toggleFilterValue, setGroupBy, setGroupByLevel, clearFilters } = useListPreferences('ventas');
+
+  const { visible: columnVisibility, toggleColumn, setAll, reset } = useColumnPreferences('ventas', VENTAS_DEFAULT_COLUMN_VISIBILITY);
 
   const numericPageSize = getNumericPageSize(pageSize);
   const statusFilter = filters.status?.length ? filters.status.join(',') : 'todos';
@@ -133,6 +137,7 @@ export default function VentasListPage() {
         items={items} selected={selected} allSelected={allSelected} canDelete={canDelete}
         fmt={fmt} onToggleAll={toggleAll} onToggleOne={toggleOne} onDeleteTarget={setDeleteTarget}
         empresaId={empresa?.id} empresa={empresa} clientesList={clientesList}
+        columnVisibility={columnVisibility}
       />
     </div>
   );
@@ -178,6 +183,15 @@ export default function VentasListPage() {
                 <Package className="h-3.5 w-3.5" /> Productos
               </button>
             </div>
+          )}
+          {!isMobile && (
+            <ColumnVisibilityMenu
+              columns={VENTAS_TABLE_COLUMNS}
+              visible={columnVisibility}
+              onToggle={toggleColumn}
+              onShowAll={() => setAll(true)}
+              onReset={reset}
+            />
           )}
           {!isMobile && (
             <ExportButton
