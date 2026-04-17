@@ -1,6 +1,8 @@
 import { OdooField } from '@/components/OdooFormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
+
+interface TarifaOption { id: string; nombre: string }
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
