@@ -300,14 +300,17 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         });
       });
 
+      const cobrosSeen = new Set<string>();
       (cobros.data ?? []).forEach((c: any) => {
+        if (cobrosSeen.has(c.id)) return;
+        cobrosSeen.add(c.id);
         out.push({
           id: `cb-${c.id}`,
           group: 'Cobros',
           icon: Wallet,
-          title: c.folio ?? 'Cobro',
-          subtitle: [c.clientes?.nombre, fmtDate(c.fecha)].filter(Boolean).join(' · '),
-          hint: fmtCurrency(c.monto_total),
+          title: c.metodo_pago ? c.metodo_pago.charAt(0).toUpperCase() + c.metodo_pago.slice(1) : 'Cobro',
+          subtitle: [c.clientes?.nombre, c.referencia, fmtDate(c.fecha)].filter(Boolean).join(' · '),
+          hint: fmtCurrency(c.monto),
           to: `/ventas/cobranza?cobro=${c.id}`,
         });
       });
