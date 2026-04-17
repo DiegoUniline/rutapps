@@ -580,32 +580,32 @@ export default function SupervisorDashboardPage() {
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col overflow-hidden">
       {/* ═══ ZONE 1 — HEADER + FILTERS ═══ */}
-      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0">
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="bg-card border-b border-border px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold text-foreground">Centro de control</h1>
+            <h1 className="text-[15px] sm:text-lg font-bold text-foreground">Centro de control</h1>
           </div>
           {!isRangeMode && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />EN VIVO
             </span>
           )}
           <Badge variant="secondary" className="text-[11px]">{diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1)}</Badge>
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto sm:ml-auto">
             <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
             <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
+              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 flex-1 sm:flex-initial sm:w-[120px] min-w-0" />
             <span className="text-[10px] text-muted-foreground">—</span>
             <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
+              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 flex-1 sm:flex-initial sm:w-[120px] min-w-0" />
             {isRangeMode && (
               <button onClick={() => { setDesde(today); setHasta(today); }}
-                className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">Hoy</button>
+                className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0">Hoy</button>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5 -mx-1 px-1 overflow-x-auto sm:overflow-visible scrollbar-none">
           <button onClick={() => setSelectedVendedor(null)}
             className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
               !selectedVendedor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
@@ -636,9 +636,9 @@ export default function SupervisorDashboardPage() {
       </div>
 
       {/* ═══ ZONE 2 — KPIs + comparisons + cartera + alerts ═══ */}
-      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0 space-y-2">
+      <div className="bg-card border-b border-border px-3 sm:px-4 py-2 sm:py-2.5 shrink-0 space-y-2">
         {/* KPIs row */}
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
           <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
           <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros} cobros`} />
           <KpiCard icon={TrendingUp} label="Ticket prom." value={fmtMoney(dashboardStats.ticketPromedio)} sub="por venta" />
@@ -703,10 +703,10 @@ export default function SupervisorDashboardPage() {
       </div>
 
       {/* ═══ ZONE 3 — MAP + TABS ═══ */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Map (60%) */}
-        <div className="flex-[3] flex flex-col min-w-0">
-          <div className="relative flex-1">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* Top (mobile) / Left (desktop): Map */}
+        <div className="lg:flex-[3] flex flex-col min-w-0 h-[40vh] lg:h-auto shrink-0 lg:shrink">
+          <div className="relative flex-1 min-h-0">
             <GoogleMapsProvider>
               <SupervisorMap
                 markers={mapMarkers}
@@ -718,34 +718,38 @@ export default function SupervisorDashboardPage() {
               />
             </GoogleMapsProvider>
             {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
-            <div className="absolute top-2 left-2 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex items-center gap-2 text-xs">
-              <span className="font-semibold text-foreground">Recorrido:</span>
-              <select
-                value={recorridoUserId ?? ''}
-                onChange={(e) => setRecorridoUserId(e.target.value || null)}
-                className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">— Seleccionar vendedor —</option>
-                {(vendedores ?? []).map((v) => (
-                  <option key={v.user_id} value={v.user_id}>{v.nombre}</option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={recorridoFecha}
-                onChange={(e) => setRecorridoFecha(e.target.value)}
-                max={today}
-                className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {recorridoUserId && (
-                <button
-                  onClick={() => setRecorridoUserId(null)}
-                  className="text-muted-foreground hover:text-foreground px-1"
-                  title="Quitar recorrido"
+            <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-foreground shrink-0">Recorrido:</span>
+                <select
+                  value={recorridoUserId ?? ''}
+                  onChange={(e) => setRecorridoUserId(e.target.value || null)}
+                  className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 sm:flex-initial min-w-0"
                 >
-                  ✕
-                </button>
-              )}
+                  <option value="">— Seleccionar vendedor —</option>
+                  {(vendedores ?? []).map((v) => (
+                    <option key={v.user_id} value={v.user_id}>{v.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={recorridoFecha}
+                  onChange={(e) => setRecorridoFecha(e.target.value)}
+                  max={today}
+                  className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 sm:flex-initial min-w-0"
+                />
+                {recorridoUserId && (
+                  <button
+                    onClick={() => setRecorridoUserId(null)}
+                    className="text-muted-foreground hover:text-foreground px-1 shrink-0"
+                    title="Quitar recorrido"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
@@ -760,31 +764,32 @@ export default function SupervisorDashboardPage() {
             {recorridoUserId && (
               <span className="inline-flex items-center gap-1.5 ml-auto">
                 <span className="inline-block w-3 h-1 rounded" style={{ backgroundColor: '#3b82f6' }} />
-                <span className="text-[10px] text-muted-foreground">Recorrido del día · A=inicio · B=fin · # paradas (≥5min)</span>
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">Recorrido del día · A=inicio · B=fin · # paradas (≥5min)</span>
+                <span className="text-[10px] text-muted-foreground sm:hidden">Recorrido · A→B</span>
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: Tabs (40%) */}
-        <div className="flex-[2] border-l border-border bg-card flex flex-col min-w-0">
+        {/* Bottom (mobile) / Right (desktop): Tabs */}
+        <div className="flex-1 lg:flex-[2] lg:border-l border-t lg:border-t-0 border-border bg-card flex flex-col min-w-0 min-h-0">
           <Tabs defaultValue="equipo" className="flex flex-col h-full">
             <TabsList className="w-full rounded-none border-b border-border bg-card h-10 shrink-0 px-1">
-              <TabsTrigger value="equipo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
-                <Users className="h-3.5 w-3.5" /> Equipo
+              <TabsTrigger value="equipo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
+                <Users className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Equipo</span>
               </TabsTrigger>
-              <TabsTrigger value="clientes" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
-                <MapPin className="h-3.5 w-3.5" /> Clientes
+              <TabsTrigger value="clientes" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
+                <MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Clientes</span>
                 <Badge variant="secondary" className="text-[8px] ml-0.5 px-1">{clienteActivity.length}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="graficos" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
-                <BarChart3 className="h-3.5 w-3.5" /> Semana
+              <TabsTrigger value="graficos" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
+                <BarChart3 className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Semana</span>
               </TabsTrigger>
-              <TabsTrigger value="actividad" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
-                <ShoppingCart className="h-3.5 w-3.5" /> Actividad
+              <TabsTrigger value="actividad" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
+                <ShoppingCart className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Actividad</span>
               </TabsTrigger>
-              <TabsTrigger value="riesgo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
-                <AlertCircle className="h-3.5 w-3.5" /> Riesgo
+              <TabsTrigger value="riesgo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Riesgo</span>
               </TabsTrigger>
             </TabsList>
 
@@ -1175,7 +1180,7 @@ export default function SupervisorDashboardPage() {
 
       {/* Client Detail Sheet */}
       <Sheet open={!!detailClientId} onOpenChange={(open) => { if (!open) setDetailClientId(null); }}>
-        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-full sm:w-[420px] sm:max-w-[420px] p-0 flex flex-col">
           {clientDetail && (
             <>
               <SheetHeader className="px-5 pt-5 pb-3 border-b border-border shrink-0">
@@ -1330,14 +1335,14 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
   icon: any; label: string; value: string; sub?: string; color?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-background/50 p-3">
+    <div className="rounded-xl border border-border bg-background/50 p-2.5 sm:p-3 min-w-0">
       <div className="flex items-center gap-1.5 mb-1">
-        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-          <Icon className="h-3.5 w-3.5" />
+        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </div>
         <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">{label}</span>
       </div>
-      <p className={cn("text-lg font-bold tabular-nums leading-tight truncate", color ?? "text-foreground")}>{value}</p>
+      <p className={cn("text-[15px] sm:text-lg font-bold tabular-nums leading-tight truncate", color ?? "text-foreground")}>{value}</p>
       {sub && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
     </div>
   );
