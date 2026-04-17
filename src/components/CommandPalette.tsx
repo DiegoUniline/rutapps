@@ -131,15 +131,18 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     let cancelled = false;
     setLoading(true);
 
-    // Helper: search ventas by folio OR by related client name
-    const ventasByFolio = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre)')
+    // Helper: search ventas by folio, related client name, or vendedor name
+    const ventasByFolio = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre),vendedores:profiles!vendedor_id(nombre)')
       .eq('empresa_id', empresaId).ilike('folio', term).limit(5);
-    const ventasByCliente = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre)')
+    const ventasByCliente = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre),vendedores:profiles!vendedor_id(nombre)')
       .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5);
+    const ventasByVendedor = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre),vendedores:profiles!vendedor_id(nombre)')
+      .eq('empresa_id', empresaId).ilike('vendedores.nombre', term).limit(5).not('vendedor_id', 'is', null);
 
     Promise.all([
       ventasByFolio,
       ventasByCliente,
+      ventasByVendedor,
       // Clientes
       supabase.from('clientes').select('id,nombre,codigo,telefono,rfc')
         .eq('empresa_id', empresaId).or(`nombre.ilike.${term},codigo.ilike.${term},telefono.ilike.${term},rfc.ilike.${term}`).limit(5),
@@ -161,9 +164,13 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
       // Gastos
       supabase.from('gastos').select('id,concepto,monto,fecha')
         .eq('empresa_id', empresaId).or(`concepto.ilike.${term}`).limit(5),
-      // Cobros
-      supabase.from('cobros').select('id,folio,monto_total,fecha,clientes(nombre)')
-        .eq('empresa_id', empresaId).or(`folio.ilike.${term}`).limit(5),
+      // Cobros (search by metodo_pago, referencia, notas, or cliente)
+      supabase.from('cobros').select('id,metodo_pago,monto,fecha,referencia,clientes!inner(nombre)')
+        .eq('empresa_id', empresaId)
+        .or(`metodo_pago.ilike.${term},referencia.ilike.${term},notas.ilike.${term}`)
+        .limit(5),
+      supabase.from('cobros').select('id,metodo_pago,monto,fecha,referencia,clientes!inner(nombre)')
+        .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5),
       // CFDI
       supabase.from('cfdis').select('id,folio,folio_fiscal,total,fecha_timbrado,receiver_name')
         .eq('empresa_id', empresaId).or(`folio.ilike.${term},folio_fiscal.ilike.${term},receiver_name.ilike.${term}`).limit(5),
@@ -182,10 +189,11 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     ]).then((rows) => {
       if (cancelled) return;
       const out: ResultItem[] = [];
-      const [ventasFolio, ventasCli, clientes, productos, proveedores, compras, traspasos, ajustes, gastos, cobros, cfdis, almacenes, tarifas, empleados, entregas] = rows;
+      const [ventasFolio, ventasCli, ventasVend, clientes, productos, proveedores, compras, traspasos, ajustes, gastos, cobrosByMetodo, cobrosByCliente, cfdis, almacenes, tarifas, empleados, entregas] = rows;
+      const cobros = { data: [...((cobrosByMetodo as any).data ?? []), ...((cobrosByCliente as any).data ?? [])] };
       const ventasMap = new Map<string, any>();
-      [...(ventasFolio.data ?? []), ...(ventasCli.data ?? [])].forEach((v: any) => ventasMap.set(v.id, v));
-      const ventas = { data: Array.from(ventasMap.values()).slice(0, 8) };
+      [...(ventasFolio.data ?? []), ...(ventasCli.data ?? []), ...((ventasVend as any).data ?? [])].forEach((v: any) => ventasMap.set(v.id, v));
+      const ventas = { data: Array.from(ventasMap.values()).slice(0, 10) };
 
       (ventas.data ?? []).forEach((v: any) => {
         const isPedido = v.tipo === 'pedido';
@@ -195,7 +203,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           group: isPedido ? 'Pedidos' : 'Ventas',
           icon: isPedido ? Truck : Receipt,
           title: v.folio ?? 'Sin folio',
-          subtitle: [v.clientes?.nombre, isSaldo ? 'Saldo inicial' : null, fmtDate(v.fecha)].filter(Boolean).join(' · '),
+          subtitle: [v.clientes?.nombre, v.vendedores?.nombre ? `Vend: ${v.vendedores.nombre}` : null, isSaldo ? 'Saldo inicial' : null, fmtDate(v.fecha)].filter(Boolean).join(' · '),
           hint: fmtCurrency(v.total),
           to: `/ventas/${v.id}`,
         });
@@ -292,14 +300,17 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         });
       });
 
+      const cobrosSeen = new Set<string>();
       (cobros.data ?? []).forEach((c: any) => {
+        if (cobrosSeen.has(c.id)) return;
+        cobrosSeen.add(c.id);
         out.push({
           id: `cb-${c.id}`,
           group: 'Cobros',
           icon: Wallet,
-          title: c.folio ?? 'Cobro',
-          subtitle: [c.clientes?.nombre, fmtDate(c.fecha)].filter(Boolean).join(' · '),
-          hint: fmtCurrency(c.monto_total),
+          title: c.metodo_pago ? c.metodo_pago.charAt(0).toUpperCase() + c.metodo_pago.slice(1) : 'Cobro',
+          subtitle: [c.clientes?.nombre, c.referencia, fmtDate(c.fecha)].filter(Boolean).join(' · '),
+          hint: fmtCurrency(c.monto),
           to: `/ventas/cobranza?cobro=${c.id}`,
         });
       });
