@@ -71,7 +71,7 @@ export function useUsuarios() {
     if (!empresa?.id) return;
     if (showLoader) setLoading(true);
     const [pr, ur, a] = await Promise.all([
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code, avatar_url').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
     ]);
