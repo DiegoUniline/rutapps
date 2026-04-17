@@ -28,27 +28,6 @@ export interface NewUserForm {
   almacen_id: string;
 }
 
-const mergeAuthUsers = (current: AuthUser[], incoming: Array<Partial<AuthUser> & { id: string }>) => {
-  const map = new Map<string, AuthUser>();
-
-  current.forEach((user) => {
-    if (user.id && user.email) map.set(user.id, user);
-  });
-
-  incoming.forEach((user) => {
-    const prev = map.get(user.id);
-    const email = typeof user.email === 'string' && user.email.trim()
-      ? user.email.trim()
-      : prev?.email;
-
-    if (email) {
-      map.set(user.id, { id: user.id, email });
-    }
-  });
-
-  return Array.from(map.values());
-};
-
 export function useUsuarios() {
   const { empresa } = useAuth();
 
@@ -79,41 +58,32 @@ export function useUsuarios() {
   const [settingPassword, setSettingPassword] = useState(false);
 
   const loadAuthUsers = useCallback(async () => {
-    if (empresa?.id) {
-      try {
-        const { data: emailRows } = await supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id });
-        if (emailRows?.length) {
-          setAuthUsers(prev => mergeAuthUsers(prev, emailRows.map((r: any) => ({ id: r.user_id, email: r.email }))));
-        }
-      } catch (e) { console.warn('get_empresa_user_emails failed', e); }
+    if (!empresa?.id) return;
+    const { data, error } = await supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id });
+    if (error) {
+      console.error('get_empresa_user_emails error:', error);
+      return;
     }
-
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        body: { action: 'list-users' },
-      });
-      if (error) throw error;
-      if (data?.users?.length) {
-        setAuthUsers(prev => mergeAuthUsers(prev, data.users));
-      }
-    } catch (e) { console.warn('admin-users edge function failed', e); }
+    setAuthUsers((data ?? []).map((r: any) => ({ id: r.user_id, email: r.email })));
   }, [empresa?.id]);
 
   const loadUsuarios = useCallback(async (showLoader = true) => {
     if (!empresa?.id) return;
     if (showLoader) setLoading(true);
-    const [pr, ur, a] = await Promise.all([
+    const [pr, ur, a, em] = await Promise.all([
       supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code, avatar_url').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
+      supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id }),
     ]);
+    if (em.error) console.error('get_empresa_user_emails error:', em.error);
     setProfiles(pr.data ?? []);
     setUserRoles(ur.data ?? []);
     setAlmacenes(a.data ?? []);
-    await loadAuthUsers();
+    setAuthUsers((em.data ?? []).map((r: any) => ({ id: r.user_id, email: r.email })));
     if (showLoader) setLoading(false);
     return { profiles: pr.data ?? [], userRoles: ur.data ?? [] };
-  }, [empresa?.id, loadAuthUsers]);
+  }, [empresa?.id]);
 
   const startEdit = useCallback((p: ProfileUser) => {
     const userRole = userRoles.find(ur => ur.user_id === p.user_id);
