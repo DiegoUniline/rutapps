@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PreciosTabProps {
   form: Partial<Producto>;
