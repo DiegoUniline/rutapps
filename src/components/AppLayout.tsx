@@ -186,12 +186,12 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
 
   if (!item.children) {
     const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
-      amber:  { active: 'text-warning font-semibold',  idle: 'bg-warning/10 text-warning hover:bg-warning/15',  icon: 'text-warning' },
-      green:  { active: 'text-success font-semibold',  idle: 'bg-success/10 text-success hover:bg-success/15',  icon: 'text-success' },
-      cyan:   { active: 'text-info font-semibold',     idle: 'bg-info/10 text-info hover:bg-info/15',           icon: 'text-info' },
-      violet: { active: 'text-violet font-semibold',   idle: 'bg-violet/10 text-violet hover:bg-violet/15',     icon: 'text-violet' },
-      teal:   { active: 'text-teal font-semibold',     idle: 'bg-teal/10 text-teal hover:bg-teal/15',           icon: 'text-teal' },
-      pink:   { active: 'text-pink font-semibold',     idle: 'bg-pink/10 text-pink hover:bg-pink/15',           icon: 'text-pink' },
+      amber:  { active: 'text-warning font-semibold',  idle: 'text-warning hover:bg-sidebar-hover',  icon: 'text-warning' },
+      green:  { active: 'text-success font-semibold',  idle: 'text-success hover:bg-sidebar-hover',  icon: 'text-success' },
+      cyan:   { active: 'text-info font-semibold',     idle: 'text-info hover:bg-sidebar-hover',     icon: 'text-info' },
+      violet: { active: 'text-violet font-semibold',   idle: 'text-violet hover:bg-sidebar-hover',   icon: 'text-violet' },
+      teal:   { active: 'text-teal font-semibold',     idle: 'text-teal hover:bg-sidebar-hover',     icon: 'text-teal' },
+      pink:   { active: 'text-pink font-semibold',     idle: 'text-pink hover:bg-sidebar-hover',     icon: 'text-pink' },
     };
     const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
