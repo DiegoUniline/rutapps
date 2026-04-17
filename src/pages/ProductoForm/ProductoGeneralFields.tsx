@@ -30,7 +30,7 @@ const findUnit = (list: { id: string; nombre: string; abreviatura?: string }[] |
 
 const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último costo de compra', estandar: 'Estándar', manual: 'Manual', ultimo_compra: 'Último costo (compra directa)', ultimo_proveedor: 'Último costo del proveedor principal' };
 
-export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
+export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, tarifasDisp, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
   const { fmt, symbol } = useCurrency();
   const isNew = !form.id;
   return (
