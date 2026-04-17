@@ -2,7 +2,7 @@ import { OdooField } from '@/components/OdooFormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
 
-interface TarifaOption { id: string; nombre: string }
+interface TarifaOption { id: string; nombre: string; tarifa_id?: string }
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
@@ -88,7 +88,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />
-        <OdooField label="Lista de precios" value={(form as any).tarifa_id} type="select" options={tarifasDisp?.map(t => ({ value: t.id, label: t.nombre })) ?? []} onChange={v => set('tarifa_id' as any, v || null)} format={() => findName(tarifasDisp as any, (form as any).tarifa_id ?? undefined)} />
+        <OdooField label="Lista de precios" value={(form as any).tarifa_id} type="select" options={tarifasDisp?.map(t => ({ value: t.tarifa_id ?? t.id, label: t.nombre })) ?? []} onChange={v => set('tarifa_id' as any, v || null)} format={() => findName((tarifasDisp?.map(t => ({ id: t.tarifa_id ?? t.id, nombre: t.nombre })) ?? []) as any, (form as any).tarifa_id ?? undefined)} />
         <OdooField label="Stock mínimo" value={form.min ?? 0} type="number" onChange={v => setForm(f => ({ ...f, min: Number(v) }))} placeholder="0" />
         <OdooField label="Stock máximo" value={form.max ?? 0} type="number" onChange={v => setForm(f => ({ ...f, max: Number(v) }))} placeholder="0" />
       </div>
