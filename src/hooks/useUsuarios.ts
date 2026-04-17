@@ -28,6 +28,27 @@ export interface NewUserForm {
   almacen_id: string;
 }
 
+const mergeAuthUsers = (current: AuthUser[], incoming: Array<Partial<AuthUser> & { id: string }>) => {
+  const map = new Map<string, AuthUser>();
+
+  current.forEach((user) => {
+    if (user.id && user.email) map.set(user.id, user);
+  });
+
+  incoming.forEach((user) => {
+    const prev = map.get(user.id);
+    const email = typeof user.email === 'string' && user.email.trim()
+      ? user.email.trim()
+      : prev?.email;
+
+    if (email) {
+      map.set(user.id, { id: user.id, email });
+    }
+  });
+
+  return Array.from(map.values());
+};
+
 export function useUsuarios() {
   const { empresa } = useAuth();
 
@@ -58,22 +79,23 @@ export function useUsuarios() {
   const [settingPassword, setSettingPassword] = useState(false);
 
   const loadAuthUsers = useCallback(async () => {
-    // Fallback rápido: traer emails vía RPC segura (no depende del edge function)
     if (empresa?.id) {
       try {
         const { data: emailRows } = await supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id });
-        if (emailRows && emailRows.length) {
-          setAuthUsers(emailRows.map((r: any) => ({ id: r.user_id, email: r.email })) as AuthUser[]);
+        if (emailRows?.length) {
+          setAuthUsers(prev => mergeAuthUsers(prev, emailRows.map((r: any) => ({ id: r.user_id, email: r.email }))));
         }
       } catch (e) { console.warn('get_empresa_user_emails failed', e); }
     }
-    // Intentar enriquecer con datos completos desde el edge function
+
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
         body: { action: 'list-users' },
       });
       if (error) throw error;
-      if (data?.users?.length) setAuthUsers(data.users);
+      if (data?.users?.length) {
+        setAuthUsers(prev => mergeAuthUsers(prev, data.users));
+      }
     } catch (e) { console.warn('admin-users edge function failed', e); }
   }, [empresa?.id]);
 
