@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Play, Package, Users, Warehouse, Truck, BarChart3, MapPin } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { translateError } from '@/lib/errorTranslator';
 
 const DEMO_STEPS = [
   { icon: Warehouse, label: 'Creando almacenes y zonas...' },
@@ -48,7 +49,8 @@ export default function LoginPage() {
         toast.success('Sesión iniciada');
       }
     } catch (err: any) {
-      toast.error(err.message);
+      const t = translateError(err);
+      toast.error(t.title, { description: t.suggestion });
     } finally {
       setLoading(false);
     }
@@ -71,7 +73,8 @@ export default function LoginPage() {
         toast.success('¡Bienvenido a la demo! Los datos se resetean en cada sesión.');
       }
     } catch (err: any) {
-      toast.error(err.message || 'Error al iniciar demo');
+      const t = translateError(err);
+      toast.error(t.title, { description: t.suggestion });
     } finally {
       setDemoLoading(false);
     }

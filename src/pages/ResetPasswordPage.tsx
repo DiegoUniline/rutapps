@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
+import { translateError } from '@/lib/errorTranslator';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -34,7 +35,8 @@ export default function ResetPasswordPage() {
       toast.success('Contraseña actualizada correctamente');
       navigate('/');
     } catch (err: any) {
-      toast.error(err.message);
+      const t = translateError(err);
+      toast.error(t.title, { description: t.suggestion });
     } finally {
       setLoading(false);
     }
