@@ -1,5 +1,6 @@
 import { X, Edit2, Shield, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AvatarUploader from '@/components/AvatarUploader';
 import type { ProfileUser, AuthUser, Almacen, EditForm } from '@/hooks/useUsuarios';
 import type { Role } from '@/hooks/useRoles';
 
@@ -36,6 +37,15 @@ export default function EditUserModal({ editingUser, editForm, setEditForm, savi
         <div className="p-5 space-y-4">
           <div className="text-xs text-muted-foreground bg-accent/30 rounded-lg px-3 py-2">
             {authUsers.find(au => au.id === editingUser.user_id)?.email || '—'}
+          </div>
+          <div>
+            <label className="label-odoo">Foto de perfil</label>
+            <AvatarUploader
+              userId={editingUser.user_id}
+              profileId={editingUser.id}
+              currentUrl={editingUser.avatar_url}
+              name={editForm.nombre || editingUser.nombre}
+            />
           </div>
           <div>
             <label className="label-odoo label-required">Nombre</label>

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
+interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; avatar_url: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
 interface Almacen { id: string; nombre: string; }
 interface Vendedor { id: string; nombre: string; }

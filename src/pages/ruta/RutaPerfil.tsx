@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, KeyRound, User, Loader2, Moon, Sun, Download, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, LogOut, KeyRound, Loader2, Moon, Sun, Download, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/hooks/useTheme';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import AvatarUploader from '@/components/AvatarUploader';
 
 export default function RutaPerfil() {
   const navigate = useNavigate();
@@ -48,11 +49,17 @@ export default function RutaPerfil() {
 
       <div className="flex-1 p-4 space-y-4">
         {/* User info */}
-        <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="h-6 w-6 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
+        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+          {user?.id && profile?.id && (
+            <AvatarUploader
+              userId={user.id}
+              profileId={profile.id}
+              currentUrl={(profile as any)?.avatar_url}
+              name={profile?.nombre}
+              size={72}
+            />
+          )}
+          <div className="border-t border-border pt-3">
             <p className="text-[14px] font-semibold text-foreground truncate">{profile?.nombre || 'Usuario'}</p>
             <p className="text-[12px] text-muted-foreground truncate">{user?.email}</p>
           </div>
