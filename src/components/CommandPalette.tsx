@@ -163,9 +163,13 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
       // Gastos
       supabase.from('gastos').select('id,concepto,monto,fecha')
         .eq('empresa_id', empresaId).or(`concepto.ilike.${term}`).limit(5),
-      // Cobros
-      supabase.from('cobros').select('id,folio,monto_total,fecha,clientes(nombre)')
-        .eq('empresa_id', empresaId).or(`folio.ilike.${term}`).limit(5),
+      // Cobros (search by metodo_pago, referencia, notas, or cliente)
+      supabase.from('cobros').select('id,metodo_pago,monto,fecha,referencia,clientes!inner(nombre)')
+        .eq('empresa_id', empresaId)
+        .or(`metodo_pago.ilike.${term},referencia.ilike.${term},notas.ilike.${term}`)
+        .limit(5),
+      supabase.from('cobros').select('id,metodo_pago,monto,fecha,referencia,clientes!inner(nombre)')
+        .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5),
       // CFDI
       supabase.from('cfdis').select('id,folio,folio_fiscal,total,fecha_timbrado,receiver_name')
         .eq('empresa_id', empresaId).or(`folio.ilike.${term},folio_fiscal.ilike.${term},receiver_name.ilike.${term}`).limit(5),
