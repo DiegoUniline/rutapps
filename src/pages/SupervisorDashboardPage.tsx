@@ -578,7 +578,7 @@ export default function SupervisorDashboardPage() {
   // ═══════════════════════════════════════════════════════
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col overflow-hidden">
+    <div className="lg:h-[calc(100vh-theme(spacing.9))] flex flex-col lg:overflow-hidden min-h-screen">
       {/* ═══ ZONE 1 — HEADER + FILTERS ═══ */}
       <div className="bg-card border-b border-border px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -703,9 +703,9 @@ export default function SupervisorDashboardPage() {
       </div>
 
       {/* ═══ ZONE 3 — MAP + TABS ═══ */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+      <div className="lg:flex-1 flex flex-col lg:flex-row lg:overflow-hidden lg:min-h-0">
         {/* Top (mobile) / Left (desktop): Map */}
-        <div className="lg:flex-[3] flex flex-col min-w-0 h-[40vh] lg:h-auto shrink-0 lg:shrink">
+        <div className="lg:flex-[3] flex flex-col min-w-0 h-[50vh] lg:h-auto shrink-0 lg:shrink">
           <div className="relative flex-1 min-h-0">
             <GoogleMapsProvider>
               <SupervisorMap
@@ -772,8 +772,8 @@ export default function SupervisorDashboardPage() {
         </div>
 
         {/* Bottom (mobile) / Right (desktop): Tabs */}
-        <div className="flex-1 lg:flex-[2] lg:border-l border-t lg:border-t-0 border-border bg-card flex flex-col min-w-0 min-h-0">
-          <Tabs defaultValue="equipo" className="flex flex-col h-full">
+        <div className="lg:flex-[2] lg:border-l border-t lg:border-t-0 border-border bg-card flex flex-col min-w-0 lg:min-h-0 min-h-[60vh]">
+          <Tabs defaultValue="equipo" className="flex flex-col lg:h-full">
             <TabsList className="w-full rounded-none border-b border-border bg-card h-10 shrink-0 px-1">
               <TabsTrigger value="equipo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
                 <Users className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Equipo</span>
