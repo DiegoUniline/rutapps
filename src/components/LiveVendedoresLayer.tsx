@@ -4,6 +4,36 @@ import { useLiveVendedores, type LiveVendedor } from '@/hooks/useLiveVendedores'
 import { Battery, Clock, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Cache: avatar URL → base64 data URI (so SVG markers can rasterize correctly)
+const avatarCache = new Map<string, string>();
+const inflight = new Map<string, Promise<string | null>>();
+
+async function fetchAvatarAsDataUri(url: string): Promise<string | null> {
+  if (avatarCache.has(url)) return avatarCache.get(url)!;
+  if (inflight.has(url)) return inflight.get(url)!;
+  const p = (async () => {
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const dataUri: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      avatarCache.set(url, dataUri);
+      return dataUri;
+    } catch {
+      return null;
+    } finally {
+      inflight.delete(url);
+    }
+  })();
+  inflight.set(url, p);
+  return p;
+}
+
 // 8 distinct, vivid colors for sellers (cycled by index)
 const SELLER_COLORS = [
   '#ef4444', '#3b82f6', '#10b981', '#f59e0b',
@@ -52,6 +82,21 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
     [vendedores]
   );
 
+  const [avatarDataUris, setAvatarDataUris] = useState<Record<string, string>>({});
+
+  // Pre-fetch avatar images as base64 so SVG markers rasterize them reliably
+  useEffect(() => {
+    let cancelled = false;
+    colored.forEach(v => {
+      if (!v.avatar_url || avatarDataUris[v.avatar_url]) return;
+      fetchAvatarAsDataUri(v.avatar_url).then(uri => {
+        if (cancelled || !uri) return;
+        setAvatarDataUris(prev => prev[v.avatar_url!] ? prev : { ...prev, [v.avatar_url!]: uri });
+      });
+    });
+    return () => { cancelled = true; };
+  }, [colored, avatarDataUris]);
+
   if (typeof google === 'undefined') return null;
 
   return (
@@ -67,18 +112,11 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
 
         // Si tiene avatar → usamos un marcador HTML (foto circular con borde de color).
         // Si NO tiene avatar → fallback al círculo con inicial.
-        if (v.avatar_url) {
+        const cachedAvatar = v.avatar_url ? avatarDataUris[v.avatar_url] : null;
+        if (v.avatar_url && cachedAvatar) {
           const size = 44;
           const border = idle ? 4 : 3;
-          const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-              <defs>
-                <clipPath id="c-${v.user_id}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border}" /></clipPath>
-              </defs>
-              <circle cx="${size/2}" cy="${size/2}" r="${size/2 - border/2}" fill="#fff" stroke="${ringColor}" stroke-width="${border}" />
-              <image href="${v.avatar_url}" x="${border}" y="${border}" width="${size - border*2}" height="${size - border*2}" clip-path="url(#c-${v.user_id})" preserveAspectRatio="xMidYMid slice" />
-            </svg>
-          `.trim();
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><clipPath id="c-${v.user_id}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border}" /></clipPath></defs><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border/2}" fill="#fff" stroke="${ringColor}" stroke-width="${border}" /><image href="${cachedAvatar}" x="${border}" y="${border}" width="${size - border*2}" height="${size - border*2}" clip-path="url(#c-${v.user_id})" preserveAspectRatio="xMidYMid slice" /></svg>`;
           const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
           return (
             <Marker
