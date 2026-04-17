@@ -703,10 +703,10 @@ export default function SupervisorDashboardPage() {
       </div>
 
       {/* ═══ ZONE 3 — MAP + TABS ═══ */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Map (60%) */}
-        <div className="flex-[3] flex flex-col min-w-0">
-          <div className="relative flex-1">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* Top (mobile) / Left (desktop): Map */}
+        <div className="lg:flex-[3] flex flex-col min-w-0 h-[40vh] lg:h-auto shrink-0 lg:shrink">
+          <div className="relative flex-1 min-h-0">
             <GoogleMapsProvider>
               <SupervisorMap
                 markers={mapMarkers}
@@ -718,34 +718,38 @@ export default function SupervisorDashboardPage() {
               />
             </GoogleMapsProvider>
             {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
-            <div className="absolute top-2 left-2 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex items-center gap-2 text-xs">
-              <span className="font-semibold text-foreground">Recorrido:</span>
-              <select
-                value={recorridoUserId ?? ''}
-                onChange={(e) => setRecorridoUserId(e.target.value || null)}
-                className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="">— Seleccionar vendedor —</option>
-                {(vendedores ?? []).map((v) => (
-                  <option key={v.user_id} value={v.user_id}>{v.nombre}</option>
-                ))}
-              </select>
-              <input
-                type="date"
-                value={recorridoFecha}
-                onChange={(e) => setRecorridoFecha(e.target.value)}
-                max={today}
-                className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              {recorridoUserId && (
-                <button
-                  onClick={() => setRecorridoUserId(null)}
-                  className="text-muted-foreground hover:text-foreground px-1"
-                  title="Quitar recorrido"
+            <div className="absolute top-2 left-2 right-2 sm:right-auto z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-2 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-foreground shrink-0">Recorrido:</span>
+                <select
+                  value={recorridoUserId ?? ''}
+                  onChange={(e) => setRecorridoUserId(e.target.value || null)}
+                  className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 sm:flex-initial min-w-0"
                 >
-                  ✕
-                </button>
-              )}
+                  <option value="">— Seleccionar vendedor —</option>
+                  {(vendedores ?? []).map((v) => (
+                    <option key={v.user_id} value={v.user_id}>{v.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={recorridoFecha}
+                  onChange={(e) => setRecorridoFecha(e.target.value)}
+                  max={today}
+                  className="bg-background border border-border rounded px-2 py-1 text-foreground text-xs focus:outline-none focus:ring-1 focus:ring-primary flex-1 sm:flex-initial min-w-0"
+                />
+                {recorridoUserId && (
+                  <button
+                    onClick={() => setRecorridoUserId(null)}
+                    className="text-muted-foreground hover:text-foreground px-1 shrink-0"
+                    title="Quitar recorrido"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-x-4 gap-y-1 px-3 py-1.5 border-t border-border bg-muted/20 shrink-0">
@@ -760,14 +764,15 @@ export default function SupervisorDashboardPage() {
             {recorridoUserId && (
               <span className="inline-flex items-center gap-1.5 ml-auto">
                 <span className="inline-block w-3 h-1 rounded" style={{ backgroundColor: '#3b82f6' }} />
-                <span className="text-[10px] text-muted-foreground">Recorrido del día · A=inicio · B=fin · # paradas (≥5min)</span>
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">Recorrido del día · A=inicio · B=fin · # paradas (≥5min)</span>
+                <span className="text-[10px] text-muted-foreground sm:hidden">Recorrido · A→B</span>
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: Tabs (40%) */}
-        <div className="flex-[2] border-l border-border bg-card flex flex-col min-w-0">
+        {/* Bottom (mobile) / Right (desktop): Tabs */}
+        <div className="flex-1 lg:flex-[2] lg:border-l border-t lg:border-t-0 border-border bg-card flex flex-col min-w-0 min-h-0">
           <Tabs defaultValue="equipo" className="flex flex-col h-full">
             <TabsList className="w-full rounded-none border-b border-border bg-card h-10 shrink-0 px-1">
               <TabsTrigger value="equipo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background">
