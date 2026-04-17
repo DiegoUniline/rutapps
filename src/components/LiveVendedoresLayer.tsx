@@ -63,8 +63,42 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
         // entre 1.5 y 3 min → posiblemente quieto: amarillo
         const inactive = minsSince > 3;
         const idle = !inactive && minsSince > 1.5;
-        const fillColor = inactive ? '#9ca3af' : v.color; // gris claro si inactivo
-        const strokeColor = inactive ? '#d1d5db' : (idle ? '#facc15' : '#ffffff');
+        const ringColor = inactive ? '#9ca3af' : (idle ? '#facc15' : v.color);
+
+        // Si tiene avatar → usamos un marcador HTML (foto circular con borde de color).
+        // Si NO tiene avatar → fallback al círculo con inicial.
+        if (v.avatar_url) {
+          const size = 44;
+          const border = idle ? 4 : 3;
+          const svg = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+              <defs>
+                <clipPath id="c-${v.user_id}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border}" /></clipPath>
+              </defs>
+              <circle cx="${size/2}" cy="${size/2}" r="${size/2 - border/2}" fill="#fff" stroke="${ringColor}" stroke-width="${border}" />
+              <image href="${v.avatar_url}" x="${border}" y="${border}" width="${size - border*2}" height="${size - border*2}" clip-path="url(#c-${v.user_id})" preserveAspectRatio="xMidYMid slice" />
+            </svg>
+          `.trim();
+          const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+          return (
+            <Marker
+              key={v.user_id}
+              position={{ lat: v.lat, lng: v.lng }}
+              zIndex={inactive ? 5000 : 10000}
+              onClick={() => setSelected(v)}
+              title={`${v.nombre ?? 'Vendedor'} · ${timeAgo(v.updated_at)}${inactive ? ' (inactivo)' : ''}`}
+              opacity={inactive ? 0.55 : 1}
+              icon={{
+                url,
+                scaledSize: new google.maps.Size(size, size),
+                anchor: new google.maps.Point(size / 2, size / 2),
+              }}
+            />
+          );
+        }
+
+        // Fallback sin avatar
+        const fillColor = inactive ? '#9ca3af' : v.color;
         return (
           <Marker
             key={v.user_id}
@@ -77,7 +111,7 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
               path: google.maps.SymbolPath.CIRCLE,
               fillColor,
               fillOpacity: inactive ? 0.7 : 1,
-              strokeColor,
+              strokeColor: ringColor,
               strokeWeight: idle ? 4 : 3,
               scale: 14,
             }}
