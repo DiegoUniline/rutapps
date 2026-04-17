@@ -580,32 +580,32 @@ export default function SupervisorDashboardPage() {
   return (
     <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col overflow-hidden">
       {/* ═══ ZONE 1 — HEADER + FILTERS ═══ */}
-      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0">
-        <div className="flex items-center gap-3 flex-wrap">
+      <div className="bg-card border-b border-border px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-bold text-foreground">Centro de control</h1>
+            <h1 className="text-[15px] sm:text-lg font-bold text-foreground">Centro de control</h1>
           </div>
           {!isRangeMode && (
-            <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />EN VIVO
             </span>
           )}
           <Badge variant="secondary" className="text-[11px]">{diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1)}</Badge>
-          <div className="flex items-center gap-1.5 ml-auto">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto sm:ml-auto">
             <CalendarDays className="h-3.5 w-3.5 text-primary shrink-0" />
             <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
+              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 flex-1 sm:flex-initial sm:w-[120px] min-w-0" />
             <span className="text-[10px] text-muted-foreground">—</span>
             <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 w-[120px]" />
+              className="bg-accent/60 rounded-lg px-2 py-1 text-[12px] text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary/40 flex-1 sm:flex-initial sm:w-[120px] min-w-0" />
             {isRangeMode && (
               <button onClick={() => { setDesde(today); setHasta(today); }}
-                className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground">Hoy</button>
+                className="rounded-lg border border-border bg-background px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0">Hoy</button>
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 mt-1.5 -mx-1 px-1 overflow-x-auto sm:overflow-visible scrollbar-none">
           <button onClick={() => setSelectedVendedor(null)}
             className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
               !selectedVendedor ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
