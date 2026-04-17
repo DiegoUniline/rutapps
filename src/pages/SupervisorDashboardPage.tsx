@@ -89,9 +89,11 @@ export default function SupervisorDashboardPage() {
   const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  // Normaliza día: minúsculas + sin acentos (clientes pueden tener "Viernes", "miércoles", "Miercoles", etc.)
+  const normDia = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const diaHoyLabel = useMemo(() => {
     const d = new Date(`${desde}T12:00:00`);
-    return DIAS_SEMANA[d.getDay()];
+    return normDia(DIAS_SEMANA[d.getDay()]);
   }, [desde]);
 
   const week = useMemo(() => getWeekRange(today), [today]);
