@@ -636,9 +636,9 @@ export default function SupervisorDashboardPage() {
       </div>
 
       {/* ═══ ZONE 2 — KPIs + comparisons + cartera + alerts ═══ */}
-      <div className="bg-card border-b border-border px-4 py-2.5 shrink-0 space-y-2">
+      <div className="bg-card border-b border-border px-3 sm:px-4 py-2 sm:py-2.5 shrink-0 space-y-2">
         {/* KPIs row */}
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 sm:gap-2.5">
           <KpiCard icon={ShoppingCart} label="Ventas" value={fmtMoney(dashboardStats.totalVentas)} sub={`${dashboardStats.numVentas} ops`} />
           <KpiCard icon={Banknote} label="Cobros" value={fmtMoney(dashboardStats.totalCobros)} sub={`${dashboardStats.numCobros} cobros`} />
           <KpiCard icon={TrendingUp} label="Ticket prom." value={fmtMoney(dashboardStats.ticketPromedio)} sub="por venta" />
