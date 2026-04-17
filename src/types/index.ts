@@ -21,6 +21,7 @@ export interface Producto {
   costo: number;
   clasificacion_id?: string;
   lista_id?: string;
+  tarifa_id?: string;
   imagen_url?: string;
   precio_principal: number;
   se_puede_comprar: boolean;

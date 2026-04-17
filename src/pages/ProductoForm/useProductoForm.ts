@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useTarifasForSelect, useTarifaLineasForProducto, useSaveProductoProveedor, useDeleteProductoProveedor, useProductoProveedores } from '@/hooks/useData';
+import { useProducto, useSaveProducto, useDeleteProducto, useMarcas, useProveedores, useClasificaciones, useListas, useUnidades, useTasasIva, useTasasIeps, useAlmacenes, useUnidadesSat, useAllListasPrecios, useTarifaLineasForProducto, useSaveProductoProveedor, useDeleteProductoProveedor, useProductoProveedores } from '@/hooks/useData';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { compressPhoto } from '@/lib/imageCompressor';
@@ -62,7 +62,7 @@ export function useProductoForm() {
   const { data: tasasIeps } = useTasasIeps();
   const { data: almacenes } = useAlmacenes();
   const { data: unidadesSat } = useUnidadesSat();
-  const { data: tarifasDisp } = useTarifasForSelect();
+  const { data: tarifasDisp } = useAllListasPrecios(empresa?.id);
   const { data: tarifaLineas } = useTarifaLineasForProducto(isNew ? undefined : id, undefined);
   const { data: prodProveedores } = useProductoProveedores(isNew ? undefined : id);
   const saveProvMut = useSaveProductoProveedor();

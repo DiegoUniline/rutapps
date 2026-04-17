@@ -2,7 +2,7 @@ import { OdooField } from '@/components/OdooFormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
 
-interface TarifaOption { id: string; nombre: string }
+interface TarifaOption { id: string; nombre: string; tarifa_id?: string }
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
@@ -33,6 +33,7 @@ const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Últ
 export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, tarifasDisp, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
   const { fmt, symbol } = useCurrency();
   const isNew = !form.id;
+  const selectedListaId = tarifasDisp?.find(t => t.tarifa_id === (form as any).tarifa_id)?.id ?? '';
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 mb-4 pb-4 border-b border-border">
       <div>
@@ -88,7 +89,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />
-        <OdooField label="Lista de precios" value={(form as any).tarifa_id} type="select" options={tarifasDisp?.map(t => ({ value: t.id, label: t.nombre })) ?? []} onChange={v => set('tarifa_id' as any, v || null)} format={() => findName(tarifasDisp as any, (form as any).tarifa_id ?? undefined)} />
+        <OdooField label="Lista de precios" value={selectedListaId} type="select" options={tarifasDisp?.map(t => ({ value: t.id, label: t.nombre })) ?? []} onChange={v => set('tarifa_id' as any, tarifasDisp?.find(t => t.id === v)?.tarifa_id ?? null)} format={() => findName(tarifasDisp as any, selectedListaId || undefined)} />
         <OdooField label="Stock mínimo" value={form.min ?? 0} type="number" onChange={v => setForm(f => ({ ...f, min: Number(v) }))} placeholder="0" />
         <OdooField label="Stock máximo" value={form.max ?? 0} type="number" onChange={v => setForm(f => ({ ...f, max: Number(v) }))} placeholder="0" />
       </div>
