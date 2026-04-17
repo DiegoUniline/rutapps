@@ -1335,14 +1335,14 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
   icon: any; label: string; value: string; sub?: string; color?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-background/50 p-3">
+    <div className="rounded-xl border border-border bg-background/50 p-2.5 sm:p-3 min-w-0">
       <div className="flex items-center gap-1.5 mb-1">
-        <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-          <Icon className="h-3.5 w-3.5" />
+        <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </div>
         <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground truncate">{label}</span>
       </div>
-      <p className={cn("text-lg font-bold tabular-nums leading-tight truncate", color ?? "text-foreground")}>{value}</p>
+      <p className={cn("text-[15px] sm:text-lg font-bold tabular-nums leading-tight truncate", color ?? "text-foreground")}>{value}</p>
       {sub && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
     </div>
   );
