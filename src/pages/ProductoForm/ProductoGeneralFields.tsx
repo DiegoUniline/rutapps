@@ -12,6 +12,7 @@ interface Props {
   marcas?: Marca[];
   clasificaciones?: Clasificacion[];
   listas?: Lista[];
+  tarifasDisp?: TarifaOption[];
   unidades?: Unidad[];
   unidadesSat?: UnidadSat[];
   createMarca: (n: string) => Promise<string | undefined>;
