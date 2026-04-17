@@ -142,6 +142,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     Promise.all([
       ventasByFolio,
       ventasByCliente,
+      ventasByVendedor,
       // Clientes
       supabase.from('clientes').select('id,nombre,codigo,telefono,rfc')
         .eq('empresa_id', empresaId).or(`nombre.ilike.${term},codigo.ilike.${term},telefono.ilike.${term},rfc.ilike.${term}`).limit(5),
