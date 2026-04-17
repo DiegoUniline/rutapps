@@ -58,14 +58,24 @@ export function useUsuarios() {
   const [settingPassword, setSettingPassword] = useState(false);
 
   const loadAuthUsers = useCallback(async () => {
+    // Fallback rápido: traer emails vía RPC segura (no depende del edge function)
+    if (empresa?.id) {
+      try {
+        const { data: emailRows } = await supabase.rpc('get_empresa_user_emails', { p_empresa_id: empresa.id });
+        if (emailRows && emailRows.length) {
+          setAuthUsers(emailRows.map((r: any) => ({ id: r.user_id, email: r.email })) as AuthUser[]);
+        }
+      } catch (e) { console.warn('get_empresa_user_emails failed', e); }
+    }
+    // Intentar enriquecer con datos completos desde el edge function
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
         body: { action: 'list-users' },
       });
       if (error) throw error;
-      setAuthUsers(data?.users ?? []);
-    } catch { /* ignore */ }
-  }, []);
+      if (data?.users?.length) setAuthUsers(data.users);
+    } catch (e) { console.warn('admin-users edge function failed', e); }
+  }, [empresa?.id]);
 
   const loadUsuarios = useCallback(async (showLoader = true) => {
     if (!empresa?.id) return;
