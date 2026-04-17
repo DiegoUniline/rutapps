@@ -1,6 +1,8 @@
 import { OdooField } from '@/components/OdooFormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import type { Producto, Marca, Proveedor, Clasificacion, Lista, Unidad, UnidadSat } from '@/types';
+
+interface TarifaOption { id: string; nombre: string }
 import { useCurrency } from '@/hooks/useCurrency';
 
 interface Props {
@@ -10,6 +12,7 @@ interface Props {
   marcas?: Marca[];
   clasificaciones?: Clasificacion[];
   listas?: Lista[];
+  tarifasDisp?: TarifaOption[];
   unidades?: Unidad[];
   unidadesSat?: UnidadSat[];
   createMarca: (n: string) => Promise<string | undefined>;
@@ -27,7 +30,7 @@ const findUnit = (list: { id: string; nombre: string; abreviatura?: string }[] |
 
 const costLabels: Record<string, string> = { promedio: 'Promedio', ultimo: 'Último costo de compra', estandar: 'Estándar', manual: 'Manual', ultimo_compra: 'Último costo (compra directa)', ultimo_proveedor: 'Último costo del proveedor principal' };
 
-export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
+export function ProductoGeneralFields({ form, set, setForm, marcas, clasificaciones, listas, tarifasDisp, unidades, unidadesSat, createMarca, createClasificacion, createUnidad, createLista }: Props) {
   const { fmt, symbol } = useCurrency();
   const isNew = !form.id;
   return (
@@ -85,7 +88,7 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />
-        <OdooField label="Lista de precios" value={form.lista_id} type="select" options={listas?.map(l => ({ value: l.id, label: l.nombre })) ?? []} onChange={v => set('lista_id', v || null)} format={() => findName(listas, form.lista_id ?? undefined)} onCreateNew={createLista} />
+        <OdooField label="Lista de precios" value={(form as any).tarifa_id} type="select" options={tarifasDisp?.map(t => ({ value: t.id, label: t.nombre })) ?? []} onChange={v => set('tarifa_id' as any, v || null)} format={() => findName(tarifasDisp as any, (form as any).tarifa_id ?? undefined)} />
         <OdooField label="Stock mínimo" value={form.min ?? 0} type="number" onChange={v => setForm(f => ({ ...f, min: Number(v) }))} placeholder="0" />
         <OdooField label="Stock máximo" value={form.max ?? 0} type="number" onChange={v => setForm(f => ({ ...f, max: Number(v) }))} placeholder="0" />
       </div>

@@ -23,6 +23,7 @@ export default function ProductoFormPage() {
         <ProductoGeneralFields
           form={h.form} set={h.set} setForm={h.setForm as any}
           marcas={h.marcas} clasificaciones={h.clasificaciones} listas={h.listas}
+          tarifasDisp={h.tarifasDisp as any}
           unidades={h.unidades} unidadesSat={h.unidadesSat}
           createMarca={h.createMarca} createClasificacion={h.createClasificacion}
           createUnidad={h.createUnidad} createLista={h.createLista}
