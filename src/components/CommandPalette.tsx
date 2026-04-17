@@ -131,11 +131,13 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     let cancelled = false;
     setLoading(true);
 
-    // Helper: search ventas by folio OR by related client name
-    const ventasByFolio = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre)')
+    // Helper: search ventas by folio, related client name, or vendedor name
+    const ventasByFolio = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre),vendedores:profiles!vendedor_id(nombre)')
       .eq('empresa_id', empresaId).ilike('folio', term).limit(5);
-    const ventasByCliente = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre)')
+    const ventasByCliente = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes!inner(nombre),vendedores:profiles!vendedor_id(nombre)')
       .eq('empresa_id', empresaId).ilike('clientes.nombre', term).limit(5);
+    const ventasByVendedor = supabase.from('ventas').select('id,folio,total,fecha,tipo,clientes(nombre),vendedores:profiles!vendedor_id(nombre)')
+      .eq('empresa_id', empresaId).ilike('vendedores.nombre', term).limit(5).not('vendedor_id', 'is', null);
 
     Promise.all([
       ventasByFolio,
