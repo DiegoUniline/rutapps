@@ -16,7 +16,7 @@ export interface LiveVendedor {
   avatar_url: string | null;
 }
 
-const STALE_MINUTES = 15; // mantener visible 15 min, pero marcar como inactivo después de 3
+const STALE_MINUTES = 720; // mantener visible hasta 12h; el marcador se va degradando con el tiempo
 
 /**
  * Subscribes to live vendedor positions for the current empresa.
