@@ -402,7 +402,8 @@ export default function SupervisorDashboardPage() {
       })
       .filter((c) => {
         if (selectedAliases && !selectedAliases.includes(c.vendedor_id)) return false;
-        if (soloHoy && !c.visitaHoy) return false;
+        // Mostrar siempre clientes visitados hoy aunque hoy no sea su día programado
+        if (soloHoy && !c.visitaHoy && !c.visitado) return false;
         if (visitFilter === 'visitados' && !c.visitado) return false;
         if (visitFilter === 'pendientes' && c.visitado) return false;
         return true;
