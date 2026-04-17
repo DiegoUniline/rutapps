@@ -578,7 +578,7 @@ export default function SupervisorDashboardPage() {
   // ═══════════════════════════════════════════════════════
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.9))] flex flex-col overflow-hidden">
+    <div className="lg:h-[calc(100vh-theme(spacing.9))] flex flex-col lg:overflow-hidden min-h-screen">
       {/* ═══ ZONE 1 — HEADER + FILTERS ═══ */}
       <div className="bg-card border-b border-border px-3 sm:px-4 py-2 sm:py-2.5 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
