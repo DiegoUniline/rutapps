@@ -3313,6 +3313,7 @@ export type Database = {
           se_puede_inventariar: boolean | null
           se_puede_vender: boolean | null
           status: Database["public"]["Enums"]["status_producto"] | null
+          tarifa_id: string | null
           tasa_ieps_id: string | null
           tasa_iva_id: string | null
           tiene_comision: boolean | null
@@ -3364,6 +3365,7 @@ export type Database = {
           se_puede_inventariar?: boolean | null
           se_puede_vender?: boolean | null
           status?: Database["public"]["Enums"]["status_producto"] | null
+          tarifa_id?: string | null
           tasa_ieps_id?: string | null
           tasa_iva_id?: string | null
           tiene_comision?: boolean | null
@@ -3415,6 +3417,7 @@ export type Database = {
           se_puede_inventariar?: boolean | null
           se_puede_vender?: boolean | null
           status?: Database["public"]["Enums"]["status_producto"] | null
+          tarifa_id?: string | null
           tasa_ieps_id?: string | null
           tasa_iva_id?: string | null
           tiene_comision?: boolean | null
@@ -3462,6 +3465,13 @@ export type Database = {
             columns: ["proveedor_id"]
             isOneToOne: false
             referencedRelation: "proveedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "productos_tarifa_id_fkey"
+            columns: ["tarifa_id"]
+            isOneToOne: false
+            referencedRelation: "tarifas"
             referencedColumns: ["id"]
           },
           {
