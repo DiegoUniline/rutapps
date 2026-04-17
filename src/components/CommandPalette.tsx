@@ -203,7 +203,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           group: isPedido ? 'Pedidos' : 'Ventas',
           icon: isPedido ? Truck : Receipt,
           title: v.folio ?? 'Sin folio',
-          subtitle: [v.clientes?.nombre, isSaldo ? 'Saldo inicial' : null, fmtDate(v.fecha)].filter(Boolean).join(' · '),
+          subtitle: [v.clientes?.nombre, v.vendedores?.nombre ? `Vend: ${v.vendedores.nombre}` : null, isSaldo ? 'Saldo inicial' : null, fmtDate(v.fecha)].filter(Boolean).join(' · '),
           hint: fmtCurrency(v.total),
           to: `/ventas/${v.id}`,
         });
