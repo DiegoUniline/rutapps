@@ -104,11 +104,17 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
       {colored.map((v) => {
         const initials = (v.nombre ?? '?').trim().slice(0, 1).toUpperCase();
         const minsSince = (Date.now() - new Date(v.updated_at).getTime()) / 60000;
-        // >3 min sin heartbeat → app cerrada/sin señal: gris
-        // entre 1.5 y 3 min → posiblemente quieto: amarillo
+        // Estado del marcador según tiempo desde último heartbeat:
+        // <1.5 min → activo (color completo)
+        // 1.5–3 min → idle (anillo amarillo)
+        // >3 min → inactivo (gris, opacidad gradual hasta mínima a las 2h)
         const inactive = minsSince > 3;
         const idle = !inactive && minsSince > 1.5;
         const ringColor = inactive ? '#9ca3af' : (idle ? '#facc15' : v.color);
+        // Degradado: 1.0 activo → 0.6 a los 3 min → 0.25 a 2h+
+        const fadeOpacity = inactive
+          ? Math.max(0.25, 0.6 - (minsSince - 3) / 117 * 0.35)
+          : 1;
 
         // Si tiene avatar → usamos un marcador HTML (foto circular con borde de color).
         // Si NO tiene avatar → fallback al círculo con inicial.
