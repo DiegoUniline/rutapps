@@ -259,7 +259,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         });
       });
 
-      (entregas.data ?? []).forEach((e: any) => {
+      (entregasAll.data ?? []).forEach((e: any) => {
         out.push({
           id: `e-${e.id}`,
           group: 'Pedidos',
