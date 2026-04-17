@@ -189,10 +189,11 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     ]).then((rows) => {
       if (cancelled) return;
       const out: ResultItem[] = [];
-      const [ventasFolio, ventasCli, clientes, productos, proveedores, compras, traspasos, ajustes, gastos, cobros, cfdis, almacenes, tarifas, empleados, entregas] = rows;
+      const [ventasFolio, ventasCli, ventasVend, clientes, productos, proveedores, compras, traspasos, ajustes, gastos, cobrosByMetodo, cobrosByCliente, cfdis, almacenes, tarifas, empleados, entregas] = rows;
+      const cobros = { data: [...((cobrosByMetodo as any).data ?? []), ...((cobrosByCliente as any).data ?? [])] };
       const ventasMap = new Map<string, any>();
-      [...(ventasFolio.data ?? []), ...(ventasCli.data ?? [])].forEach((v: any) => ventasMap.set(v.id, v));
-      const ventas = { data: Array.from(ventasMap.values()).slice(0, 8) };
+      [...(ventasFolio.data ?? []), ...(ventasCli.data ?? []), ...((ventasVend as any).data ?? [])].forEach((v: any) => ventasMap.set(v.id, v));
+      const ventas = { data: Array.from(ventasMap.values()).slice(0, 10) };
 
       (ventas.data ?? []).forEach((v: any) => {
         const isPedido = v.tipo === 'pedido';
