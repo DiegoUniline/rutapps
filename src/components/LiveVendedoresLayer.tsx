@@ -4,6 +4,36 @@ import { useLiveVendedores, type LiveVendedor } from '@/hooks/useLiveVendedores'
 import { Battery, Clock, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Cache: avatar URL → base64 data URI (so SVG markers can rasterize correctly)
+const avatarCache = new Map<string, string>();
+const inflight = new Map<string, Promise<string | null>>();
+
+async function fetchAvatarAsDataUri(url: string): Promise<string | null> {
+  if (avatarCache.has(url)) return avatarCache.get(url)!;
+  if (inflight.has(url)) return inflight.get(url)!;
+  const p = (async () => {
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const dataUri: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      avatarCache.set(url, dataUri);
+      return dataUri;
+    } catch {
+      return null;
+    } finally {
+      inflight.delete(url);
+    }
+  })();
+  inflight.set(url, p);
+  return p;
+}
+
 // 8 distinct, vivid colors for sellers (cycled by index)
 const SELLER_COLORS = [
   '#ef4444', '#3b82f6', '#10b981', '#f59e0b',
