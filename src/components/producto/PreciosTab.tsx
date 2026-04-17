@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import type { Producto, TipoCalculoTarifa } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PreciosTabProps {
   form: Partial<Producto>;
@@ -18,10 +19,11 @@ interface PreciosTabProps {
 
 export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, navigate }: PreciosTabProps) {
   const { symbol: cs, fmt } = useCurrency();
+  const { empresa } = useAuth();
   const saveLinea = useSaveTarifaLinea();
   const deleteLineaMut = useDeleteTarifaLinea();
   const saveTarifaMut = useSaveTarifa();
-  const { data: allListas } = useAllListasPrecios(form.empresa_id);
+  const { data: allListas } = useAllListasPrecios(form.empresa_id ?? empresa?.id);
   const { data: clasificaciones } = useClasificaciones();
   const saveListaMut = useSaveListaPrecio();
   const qc = useQueryClient();
