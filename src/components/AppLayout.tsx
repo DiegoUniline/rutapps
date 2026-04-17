@@ -186,12 +186,12 @@ function SidebarItem({ item, collapsed, onNavigate }: { item: NavItem; collapsed
 
   if (!item.children) {
     const HL_STYLES: Record<string, { active: string; idle: string; icon: string }> = {
-      amber:  { active: 'bg-warning/20 text-warning font-semibold',  idle: 'bg-warning/10 text-warning hover:bg-warning/15',  icon: 'text-warning' },
-      green:  { active: 'bg-success/20 text-success font-semibold',  idle: 'bg-success/10 text-success hover:bg-success/15',  icon: 'text-success' },
-      cyan:   { active: 'bg-info/20 text-info font-semibold',        idle: 'bg-info/10 text-info hover:bg-info/15',           icon: 'text-info' },
-      violet: { active: 'bg-violet/20 text-violet font-semibold',    idle: 'bg-violet/10 text-violet hover:bg-violet/15',     icon: 'text-violet' },
-      teal:   { active: 'bg-teal/20 text-teal font-semibold',        idle: 'bg-teal/10 text-teal hover:bg-teal/15',           icon: 'text-teal' },
-      pink:   { active: 'bg-pink/20 text-pink font-semibold',        idle: 'bg-pink/10 text-pink hover:bg-pink/15',           icon: 'text-pink' },
+      amber:  { active: 'text-warning font-semibold',  idle: 'bg-warning/10 text-warning hover:bg-warning/15',  icon: 'text-warning' },
+      green:  { active: 'text-success font-semibold',  idle: 'bg-success/10 text-success hover:bg-success/15',  icon: 'text-success' },
+      cyan:   { active: 'text-info font-semibold',     idle: 'bg-info/10 text-info hover:bg-info/15',           icon: 'text-info' },
+      violet: { active: 'text-violet font-semibold',   idle: 'bg-violet/10 text-violet hover:bg-violet/15',     icon: 'text-violet' },
+      teal:   { active: 'text-teal font-semibold',     idle: 'bg-teal/10 text-teal hover:bg-teal/15',           icon: 'text-teal' },
+      pink:   { active: 'text-pink font-semibold',     idle: 'bg-pink/10 text-pink hover:bg-pink/15',           icon: 'text-pink' },
     };
     const hl = item.highlight ? HL_STYLES[item.highlight] : null;
     return (
