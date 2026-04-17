@@ -82,6 +82,21 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
     [vendedores]
   );
 
+  const [avatarDataUris, setAvatarDataUris] = useState<Record<string, string>>({});
+
+  // Pre-fetch avatar images as base64 so SVG markers rasterize them reliably
+  useEffect(() => {
+    let cancelled = false;
+    colored.forEach(v => {
+      if (!v.avatar_url || avatarDataUris[v.avatar_url]) return;
+      fetchAvatarAsDataUri(v.avatar_url).then(uri => {
+        if (cancelled || !uri) return;
+        setAvatarDataUris(prev => prev[v.avatar_url!] ? prev : { ...prev, [v.avatar_url!]: uri });
+      });
+    });
+    return () => { cancelled = true; };
+  }, [colored, avatarDataUris]);
+
   if (typeof google === 'undefined') return null;
 
   return (
