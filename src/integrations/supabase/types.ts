@@ -5629,6 +5629,13 @@ export type Database = {
         }[]
       }
       get_database_health: { Args: never; Returns: Json }
+      get_empresa_user_emails: {
+        Args: { p_empresa_id: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       get_my_empresa_id: { Args: never; Returns: string }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
