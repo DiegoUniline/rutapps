@@ -1180,7 +1180,7 @@ export default function SupervisorDashboardPage() {
 
       {/* Client Detail Sheet */}
       <Sheet open={!!detailClientId} onOpenChange={(open) => { if (!open) setDetailClientId(null); }}>
-        <SheetContent side="right" className="w-[420px] sm:max-w-[420px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-full sm:w-[420px] sm:max-w-[420px] p-0 flex flex-col">
           {clientDetail && (
             <>
               <SheetHeader className="px-5 pt-5 pb-3 border-b border-border shrink-0">
