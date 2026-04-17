@@ -14,9 +14,9 @@ const patterns: Array<{ test: RegExp | ((msg: string) => boolean); result: Error
   {
     test: /fetch|network|failed to fetch|net::err|load failed|cors|aborted|timeout/i,
     result: {
-      title: 'Problema de conexión',
-      message: 'No se pudo conectar con el servidor. Esto puede deberse a una conexión a internet inestable o un problema temporal del servicio.',
-      suggestion: 'Verifica tu conexión a internet e intenta de nuevo en unos segundos.',
+      title: 'No pudimos conectar con el servidor',
+      message: 'Tu internet parece estar bien, pero no logramos comunicarnos con nuestro servicio. Esto puede pasar por un firewall, red corporativa, VPN, antivirus, o una caída temporal del servicio.',
+      suggestion: 'Intenta de nuevo en 30 segundos. Si sigue fallando: prueba con datos móviles, desactiva VPN/antivirus, o usa otra red. Si nada funciona, contáctanos por WhatsApp.',
       icon: 'network',
     },
   },
