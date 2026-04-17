@@ -131,12 +131,7 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
               zIndex={inactive ? 5000 : 10000}
               onClick={() => setSelected(v)}
               title={`${v.nombre ?? 'Vendedor'} · ${timeAgo(v.updated_at)}${inactive ? ' (inactivo)' : ''}`}
-              opacity={inactive ? 0.55 : 1}
-              icon={{
-                url,
-                scaledSize: new google.maps.Size(size, size),
-                anchor: new google.maps.Point(size / 2, size / 2),
-              }}
+              opacity={fadeOpacity}
             />
           );
         }
