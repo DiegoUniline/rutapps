@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; }
+interface ProfileUser { id: string; user_id: string; nombre: string | null; almacen_id: string | null; telefono: string | null; estado: string; pin_code: string | null; avatar_url: string | null; }
 interface UserRole { id: string; user_id: string; role_id: string; }
 interface Almacen { id: string; nombre: string; }
 interface Vendedor { id: string; nombre: string; }
@@ -71,7 +71,7 @@ export function useUsuarios() {
     if (!empresa?.id) return;
     if (showLoader) setLoading(true);
     const [pr, ur, a] = await Promise.all([
-      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code').eq('empresa_id', empresa.id),
+      supabase.from('profiles').select('id, user_id, nombre, almacen_id, telefono, estado, pin_code, avatar_url').eq('empresa_id', empresa.id),
       supabase.from('user_roles').select('*'),
       supabase.from('almacenes').select('id, nombre').eq('empresa_id', empresa.id),
     ]);
