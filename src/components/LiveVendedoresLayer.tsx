@@ -112,18 +112,11 @@ export default function LiveVendedoresLayer({ enabled = true }: Props) {
 
         // Si tiene avatar → usamos un marcador HTML (foto circular con borde de color).
         // Si NO tiene avatar → fallback al círculo con inicial.
-        if (v.avatar_url) {
+        const cachedAvatar = v.avatar_url ? avatarDataUris[v.avatar_url] : null;
+        if (v.avatar_url && cachedAvatar) {
           const size = 44;
           const border = idle ? 4 : 3;
-          const svg = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-              <defs>
-                <clipPath id="c-${v.user_id}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border}" /></clipPath>
-              </defs>
-              <circle cx="${size/2}" cy="${size/2}" r="${size/2 - border/2}" fill="#fff" stroke="${ringColor}" stroke-width="${border}" />
-              <image href="${v.avatar_url}" x="${border}" y="${border}" width="${size - border*2}" height="${size - border*2}" clip-path="url(#c-${v.user_id})" preserveAspectRatio="xMidYMid slice" />
-            </svg>
-          `.trim();
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><clipPath id="c-${v.user_id}"><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border}" /></clipPath></defs><circle cx="${size/2}" cy="${size/2}" r="${size/2 - border/2}" fill="#fff" stroke="${ringColor}" stroke-width="${border}" /><image href="${cachedAvatar}" x="${border}" y="${border}" width="${size - border*2}" height="${size - border*2}" clip-path="url(#c-${v.user_id})" preserveAspectRatio="xMidYMid slice" /></svg>`;
           const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
           return (
             <Marker
