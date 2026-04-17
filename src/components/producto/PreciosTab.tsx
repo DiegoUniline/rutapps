@@ -19,10 +19,11 @@ interface PreciosTabProps {
 
 export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew, navigate }: PreciosTabProps) {
   const { symbol: cs, fmt } = useCurrency();
+  const { empresa } = useAuth();
   const saveLinea = useSaveTarifaLinea();
   const deleteLineaMut = useDeleteTarifaLinea();
   const saveTarifaMut = useSaveTarifa();
-  const { data: allListas } = useAllListasPrecios(form.empresa_id);
+  const { data: allListas } = useAllListasPrecios(form.empresa_id ?? empresa?.id);
   const { data: clasificaciones } = useClasificaciones();
   const saveListaMut = useSaveListaPrecio();
   const qc = useQueryClient();
