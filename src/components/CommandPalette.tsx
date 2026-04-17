@@ -304,7 +304,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         });
       });
 
-      (compras.data ?? []).forEach((c: any) => {
+      (comprasAll.data ?? []).forEach((c: any) => {
         out.push({
           id: `co-${c.id}`,
           group: 'Compras',
