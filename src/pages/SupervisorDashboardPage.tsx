@@ -89,9 +89,11 @@ export default function SupervisorDashboardPage() {
   const isRangeMode = desde !== hasta || desde !== today;
 
   const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  // Normaliza día: minúsculas + sin acentos (clientes pueden tener "Viernes", "miércoles", "Miercoles", etc.)
+  const normDia = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const diaHoyLabel = useMemo(() => {
     const d = new Date(`${desde}T12:00:00`);
-    return DIAS_SEMANA[d.getDay()];
+    return normDia(DIAS_SEMANA[d.getDay()]);
   }, [desde]);
 
   const week = useMemo(() => getWeekRange(today), [today]);
@@ -368,7 +370,7 @@ export default function SupervisorDashboardPage() {
       const sid = sellerIdMap.get(c.vendedor_id) ?? c.vendedor_id;
       if (!assignedPerSeller[sid]) assignedPerSeller[sid] = { total: 0, visited: 0 };
       // check if client is scheduled for today
-      const dv: string[] = (c.dia_visita ?? []).map((d: string) => d.toLowerCase());
+      const dv: string[] = (c.dia_visita ?? []).map((d: string) => normDia(d));
       if (soloHoy && !dv.some((d) => d === diaHoyLabel)) return;
       assignedPerSeller[sid].total++;
       if (visitedIds.has(c.id)) assignedPerSeller[sid].visited++;
@@ -397,7 +399,7 @@ export default function SupervisorDashboardPage() {
         const sid = sellerIdMap.get(c.vendedor_id) ?? c.vendedor_id;
         const ls = lastSaleByClient[c.id];
         const dias = ls ? Math.floor((todayDate.getTime() - new Date(`${ls.ultima}T12:00:00`).getTime()) / 86400000) : null;
-        const dv: string[] = (c.dia_visita ?? []).map((d: string) => d.toLowerCase());
+        const dv: string[] = (c.dia_visita ?? []).map((d: string) => normDia(d));
         return { id: c.id, nombre: c.nombre, vendedor_id: sid, vendedorNombre: sellerNameMap.get(sid) ?? 'Sin asignar', visitado: visitedIds.has(c.id), visitaHoy: dv.some((d) => d === diaHoyLabel), gps_lat: c.gps_lat, gps_lng: c.gps_lng, ultimaVisitaFecha: ls?.ultima ?? null, ultimaVisitaValor: ls?.total ?? 0, diasSinComprar: dias, orden: c.orden ?? null };
       })
       .filter((c) => {
