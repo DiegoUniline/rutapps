@@ -772,8 +772,8 @@ export default function SupervisorDashboardPage() {
         </div>
 
         {/* Bottom (mobile) / Right (desktop): Tabs */}
-        <div className="flex-1 lg:flex-[2] lg:border-l border-t lg:border-t-0 border-border bg-card flex flex-col min-w-0 min-h-0">
-          <Tabs defaultValue="equipo" className="flex flex-col h-full">
+        <div className="lg:flex-[2] lg:border-l border-t lg:border-t-0 border-border bg-card flex flex-col min-w-0 lg:min-h-0 min-h-[60vh]">
+          <Tabs defaultValue="equipo" className="flex flex-col lg:h-full">
             <TabsList className="w-full rounded-none border-b border-border bg-card h-10 shrink-0 px-1">
               <TabsTrigger value="equipo" className="flex-1 text-[11px] gap-1 data-[state=active]:bg-background px-1 sm:px-2">
                 <Users className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Equipo</span>
