@@ -1613,6 +1613,7 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
             visitado: m.visitado, outOfRange: m.outOfRange, outOfRangeMeters: m.outOfRangeMeters,
           }]))}
           visibility={Object.fromEntries(multiRoutes.map(r => [r.vendedor_id, true]))}
+          hidePolylines
         />
       )}
       {/* Hit-area invisible para abrir InfoWindow con detalle del cliente sobre el overlay */}
