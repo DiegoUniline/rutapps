@@ -162,7 +162,7 @@ export default function MapaClientesPage() {
     queryFn: async () => {
       let q = supabase
         .from('cliente_orden_ruta' as any)
-        .select('cliente_id, orden, vendedor_id')
+        .select('cliente_id, orden, vendedor_id, origin_lat, origin_lng, origin_label')
         .eq('empresa_id', empresa!.id)
         .order('vendedor_id', { ascending: true, nullsFirst: false })
         .order('orden', { ascending: true });
@@ -170,7 +170,14 @@ export default function MapaClientesPage() {
       // If a vendedor filter is set, restrict; otherwise return ALL groups so multi-route persists
       if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       const { data } = await q;
-      return ((data ?? []) as unknown) as { cliente_id: string; orden: number; vendedor_id: string | null }[];
+      return ((data ?? []) as unknown) as {
+        cliente_id: string;
+        orden: number;
+        vendedor_id: string | null;
+        origin_lat: number | null;
+        origin_lng: number | null;
+        origin_label: string | null;
+      }[];
     },
   });
 
@@ -184,11 +191,31 @@ export default function MapaClientesPage() {
         return;
       }
       // Group by vendedor_id
-      const groups = new Map<string, { cliente_id: string; orden: number }[]>();
+      const groups = new Map<string, {
+        rows: {
+          cliente_id: string;
+          orden: number;
+          origin_lat: number | null;
+          origin_lng: number | null;
+          origin_label: string | null;
+        }[];
+        savedOrigin: OriginValue | null;
+      }>();
       for (const row of savedOrder) {
         const key = row.vendedor_id ?? '__sin_vendedor__';
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(row);
+        if (!groups.has(key)) {
+          groups.set(key, {
+            rows: [],
+            savedOrigin: row.origin_lat != null && row.origin_lng != null
+              ? { lat: Number(row.origin_lat), lng: Number(row.origin_lng), label: row.origin_label ?? 'Origen guardado' }
+              : null,
+          });
+        }
+        const group = groups.get(key)!;
+        if (!group.savedOrigin && row.origin_lat != null && row.origin_lng != null) {
+          group.savedOrigin = { lat: Number(row.origin_lat), lng: Number(row.origin_lng), label: row.origin_label ?? 'Origen guardado' };
+        }
+        group.rows.push(row);
       }
       // If real vendor groups exist alongside an inconsistent "__sin_vendedor__" residual group, drop the residual
       if (groups.size > 1 && groups.has('__sin_vendedor__')) {
@@ -208,12 +235,13 @@ export default function MapaClientesPage() {
 
       // Build initial entries (no polyline yet) so the map shows colored stops immediately
       const initialEntries: RouteResultEntry[] = groupKeys.map(vid => {
-        const rows = groups.get(vid)!.sort((a, b) => a.orden - b.orden);
+        const group = groups.get(vid)!;
+        const rows = group.rows.sort((a, b) => a.orden - b.orden);
         const vendedor = vendedores?.find((v: any) => v.id === vid);
         return {
           vendedor_id: vid,
           vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
-          origin: { lat: 0, lng: 0, label: 'Guardado' },
+          origin: group.savedOrigin ?? { lat: 0, lng: 0, label: 'Guardado' },
           optimized_order: rows.map(r => r.cliente_id),
           polyline: null,
           distance_meters: 0,
@@ -243,15 +271,17 @@ export default function MapaClientesPage() {
         }
 
         const routesPayload = await Promise.all(initialEntries.map(async (e) => {
-          let origin: { lat: number; lng: number } | null = null;
-          if (e.vendedor_id !== '__sin_vendedor__') {
+          let origin: { lat: number; lng: number } | null = e.origin?.lat && e.origin?.lng
+            ? { lat: Number(e.origin.lat), lng: Number(e.origin.lng) }
+            : null;
+          if (!origin && e.vendedor_id !== '__sin_vendedor__') {
             const { data: prof } = await (supabase.from('profiles') as any)
               .select('almacenes:almacen_id (gps_lat, gps_lng, nombre)')
               .eq('id', e.vendedor_id).maybeSingle();
             const a = prof?.almacenes;
             if (a?.gps_lat != null && a?.gps_lng != null) {
               origin = { lat: Number(a.gps_lat), lng: Number(a.gps_lng) };
-              e.origin = { ...origin, label: a.nombre ?? 'Almacén' };
+              e.origin = { ...origin, label: e.origin?.label ?? a.nombre ?? 'Almacén' };
             }
           }
           if (!origin && originPoint) origin = { lat: originPoint.lat, lng: originPoint.lng };
