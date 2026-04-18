@@ -142,21 +142,29 @@ export function MultiRouteOverlay({ results, clientesById, visibility }: {
             {r.optimized_order.map((cid, idx) => {
               const c = clientesById.get(cid);
               if (!c) return null;
+              const visited = !!c.visitado;
+              const oor = !!c.outOfRange;
+              // Si está visitado, fondo verde; si no, color de la ruta
+              const fill = visited ? '#22c55e' : color;
+              const w = 30, h = 30;
+              const warning = oor
+                ? `<g transform="translate(20,-2)"><circle cx="6" cy="6" r="6" fill="#f59e0b" stroke="#fff" stroke-width="1.2"/><text x="6" y="9" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">!</text></g>`
+                : '';
+              const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="-2 -4 ${w + 2} ${h}">
+                <circle cx="14" cy="14" r="13" fill="${fill}" stroke="#fff" stroke-width="2.5"/>
+                <text x="14" y="18" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Arial,sans-serif">${idx + 1}</text>
+                ${warning}
+              </svg>`;
               return (
                 <Marker
                   key={`${r.vendedor_id}-${cid}`}
                   position={{ lat: c.gps_lat, lng: c.gps_lng }}
                   icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: color,
-                    fillOpacity: 1,
-                    strokeColor: '#fff',
-                    strokeWeight: 2.5,
-                    scale: 14,
-                    labelOrigin: new google.maps.Point(0, 0),
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+                    scaledSize: new google.maps.Size(w, h),
+                    anchor: new google.maps.Point(w / 2, h / 2),
                   }}
-                  label={{ text: `${idx + 1}`, color: '#fff', fontSize: '10px', fontWeight: '700' }}
-                  title={`${idx + 1}. ${c.nombre} (${r.vendedor_nombre})`}
+                  title={`${idx + 1}. ${c.nombre} (${r.vendedor_nombre})${visited ? ' · ✅ Visitado' : ''}${oor ? ` · ⚠️ Fuera de rango` : ''}`}
                   zIndex={500}
                 />
               );
