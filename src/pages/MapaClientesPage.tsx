@@ -178,14 +178,49 @@ export default function MapaClientesPage() {
   useEffect(() => {
     if (!savedOrder || savedOrder.length === 0) {
       setRouteResult(null);
+      setMultiResults(null);
       return;
     }
-    setRouteResult({
-      orderedIds: savedOrder.map(o => o.cliente_id),
-      polyline: null,
-      distance_meters: 0,
-      duration: '',
+    // Group by vendedor_id
+    const groups = new Map<string, { cliente_id: string; orden: number }[]>();
+    for (const row of savedOrder) {
+      const key = row.vendedor_id ?? '__sin_vendedor__';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(row);
+    }
+    // If only one group AND a vendedor filter is active (or no groups have a vendor), use single-route view
+    const groupKeys = Array.from(groups.keys());
+    if (groupKeys.length <= 1) {
+      setMultiResults(null);
+      setRouteResult({
+        orderedIds: savedOrder.map(o => o.cliente_id),
+        polyline: null,
+        distance_meters: 0,
+        duration: '',
+      });
+      return;
+    }
+    // Multiple vendor groups → reconstruct multi-route view (no polyline, will be re-optimized if user clicks)
+    setRouteResult(null);
+    const entries: RouteResultEntry[] = groupKeys.map(vid => {
+      const rows = groups.get(vid)!.sort((a, b) => a.orden - b.orden);
+      const vendedor = vendedores?.find((v: any) => v.id === vid);
+      return {
+        vendedor_id: vid,
+        vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
+        origin: { lat: 0, lng: 0, label: 'Guardado' },
+        optimized_order: rows.map(r => r.cliente_id),
+        polyline: null,
+        distance_meters: 0,
+        duration: '0s',
+        original_distance_meters: 0,
+      };
     });
+    setMultiResults(entries);
+    const vis: Record<string, boolean> = {};
+    entries.forEach(e => { vis[e.vendedor_id] = true; });
+    setRouteVisibility(vis);
+    setApplied(true);
   }, [savedOrder]);
 
   const filtered = useMemo(() => {
