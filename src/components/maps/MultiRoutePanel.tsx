@@ -131,7 +131,7 @@ export function MultiRouteOverlay({ results, clientesById, visibility, hidePolyl
               zIndex={9000}
             />
             {/* Polylines */}
-            {polylines.map((path, pi) => (
+            {!hidePolylines && polylines.map((path, pi) => (
               <Polyline
                 key={pi}
                 path={path}
