@@ -38,8 +38,8 @@ export default function OriginPicker({ value, onChange, onPickFromMapRequest, pi
     queryKey: ['almacenes-origin', empresa?.id],
     enabled: !!empresa?.id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from('almacenes')
+      const { data } = await (supabase
+        .from('almacenes') as any)
         .select('id, nombre, gps_lat, gps_lng, direccion')
         .eq('empresa_id', empresa!.id)
         .eq('activo', true)
