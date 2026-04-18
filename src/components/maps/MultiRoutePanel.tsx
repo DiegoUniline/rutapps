@@ -95,6 +95,19 @@ export function MultiRouteOverlay({ results, clientesById, visibility }: {
           } catch {
             polylines = [decodePolyline(r.polyline)];
           }
+        } else {
+          // Fallback: straight-line polyline from origin → ordered stops (used when restoring saved routes)
+          const fallback: { lat: number; lng: number }[] = [];
+          if (r.origin && r.origin.lat !== 0 && r.origin.lng !== 0) {
+            fallback.push({ lat: r.origin.lat, lng: r.origin.lng });
+          }
+          for (const cid of r.optimized_order) {
+            const c = clientesById.get(cid);
+            if (c && c.gps_lat != null && c.gps_lng != null) {
+              fallback.push({ lat: Number(c.gps_lat), lng: Number(c.gps_lng) });
+            }
+          }
+          if (fallback.length >= 2) polylines = [fallback];
         }
 
         return (
