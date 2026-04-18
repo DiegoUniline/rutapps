@@ -160,6 +160,8 @@ interface RouteInput {
   key: string;
   origin: LatLng;
   waypoints: Waypoint[];
+  /** If true, skip NN+2-opt and use waypoints in the given order (for restoring saved routes) */
+  preserve_order?: boolean;
 }
 
 interface RouteResult {
