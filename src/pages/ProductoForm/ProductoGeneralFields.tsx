@@ -65,17 +65,6 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         </div>
       </div>
       <div>
-        <div className="odoo-field-row">
-          <span className="odoo-field-label">Modo de precio</span>
-          <div className="flex items-center gap-1">
-            {['directo', 'listas'].map(mode => (
-              <button key={mode} type="button" onClick={() => setForm(f => ({ ...f, usa_listas_precio: mode === 'listas' }))}
-                className={`text-[11px] px-2.5 py-0.5 rounded-full border transition-colors ${((form as any).usa_listas_precio ? 'listas' : 'directo') === mode ? 'bg-primary text-primary-foreground border-primary font-medium' : 'border-border text-muted-foreground hover:border-primary/40'}`}>
-                {mode === 'directo' ? 'Precio directo' : 'Listas de precio'}
-              </button>
-            ))}
-          </div>
-        </div>
         <OdooField
           label="Precio principal"
           value={form.precio_principal}
@@ -89,7 +78,6 @@ export function ProductoGeneralFields({ form, set, setForm, marcas, clasificacio
         <OdooField label="Cálculo costo" value={form.calculo_costo} type="select" help
           options={[{ value: 'manual', label: 'Manual' }, { value: 'ultimo', label: 'Último costo de compra' }, { value: 'ultimo_proveedor', label: 'Último costo del proveedor principal' }, { value: 'promedio', label: 'Promedio' }, { value: 'estandar', label: 'Estándar' }, { value: 'ultimo_compra', label: 'Último costo (compra directa)' }]}
           onChange={v => set('calculo_costo', v)} format={() => costLabels[form.calculo_costo ?? 'promedio'] ?? ''} />
-        <OdooField label="Lista de precios" value={selectedListaId} type="select" options={tarifasDisp?.map(t => ({ value: t.id, label: t.nombre })) ?? []} onChange={v => set('tarifa_id' as any, tarifasDisp?.find(t => t.id === v)?.tarifa_id ?? null)} format={() => findName(tarifasDisp as any, selectedListaId || undefined)} />
         <OdooField label="Stock mínimo" value={form.min ?? 0} type="number" onChange={v => setForm(f => ({ ...f, min: Number(v) }))} placeholder="0" />
         <OdooField label="Stock máximo" value={form.max ?? 0} type="number" onChange={v => setForm(f => ({ ...f, max: Number(v) }))} placeholder="0" />
       </div>
