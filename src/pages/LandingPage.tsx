@@ -205,12 +205,11 @@ export default function LandingPage() {
             <p className="text-xs text-gray-400 mt-4">Sin tarjeta · Configuración en 5 minutos · 14 días de prueba</p>
           </div>
 
-          {/* Hero image */}
+          {/* Hero — live dashboard mockup */}
           <div className="relative max-w-5xl mx-auto">
             <div className="absolute inset-0 rounded-2xl opacity-20 blur-3xl -z-10"
               style={{ background: 'linear-gradient(135deg, hsl(230, 55%, 52%), hsl(260, 45%, 60%))' }} />
-            <img src={heroDashboard} alt="Dashboard de Rutapp con seguimiento de vendedores en tiempo real"
-              className="w-full rounded-2xl shadow-2xl shadow-gray-900/10 border border-gray-200" />
+            <LiveDashboardMockup />
           </div>
         </div>
       </section>
