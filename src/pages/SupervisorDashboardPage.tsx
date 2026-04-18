@@ -265,8 +265,13 @@ export default function SupervisorDashboardPage() {
     const todayCap = diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1);
     const filtered = savedRoutes.filter(r => !r.dia || r.dia === todayCap || r.dia.toLowerCase() === diaHoyLabel);
     if (filtered.length === 0) return [];
-    const groups = new Map<string, { rows: typeof filtered; origin: { lat: number; lng: number; label: string } | null }>();
-    for (const row of filtered) {
+
+    // Eliminar duplicados: si un cliente aparece con vendedor asignado, descartamos la fila global (sin vendedor)
+    const clientesConVendedor = new Set(filtered.filter(r => r.vendedor_id).map(r => r.cliente_id));
+    const dedup = filtered.filter(r => r.vendedor_id || !clientesConVendedor.has(r.cliente_id));
+
+    const groups = new Map<string, { rows: typeof dedup; origin: { lat: number; lng: number; label: string } | null }>();
+    for (const row of dedup) {
       const key = row.vendedor_id ?? '__sin_vendedor__';
       if (!groups.has(key)) {
         groups.set(key, {
