@@ -869,8 +869,8 @@ export default function MapaClientesPage() {
           />
         )}
 
-        {/* Without GPS sidebar (only when no route) */}
-        {!orderedClients && withoutGps.length > 0 && (
+        {/* Without GPS sidebar (hidden when any route panel is active) */}
+        {!orderedClients && !multiResults && withoutGps.length > 0 && (
           <div className="absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-64 max-h-[50vh] flex flex-col">
             <div className="px-3 py-2 border-b border-border flex items-center gap-2">
               <MapPinOff className="h-3.5 w-3.5 text-muted-foreground" />
