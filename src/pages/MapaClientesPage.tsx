@@ -698,9 +698,18 @@ export default function MapaClientesPage() {
               />
             )}
 
-            {/* Route polyline */}
-            {polylinePoints && (
+            {/* Route polyline (single-route flow) */}
+            {polylinePoints && !multiResults && (
               <Polyline path={polylinePoints} options={{ strokeColor: 'hsl(230, 55%, 52%)', strokeWeight: 4, strokeOpacity: 0.8 }} />
+            )}
+
+            {/* Multi-route overlay (polylines + numbered stops + per-route origin) */}
+            {multiResults && (
+              <MultiRouteOverlay
+                results={multiResults}
+                clientesById={clientesById}
+                visibility={routeVisibility}
+              />
             )}
 
             {/* Markers with clustering when no route is active */}
