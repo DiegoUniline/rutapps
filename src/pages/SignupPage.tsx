@@ -446,7 +446,7 @@ export default function SignupPage() {
                     className="flex flex-col h-auto py-3 gap-1"
                   >
                     <MessageCircle className="h-5 w-5" />
-                    <span className="text-xs">WhatsApp OTP</span>
+                    <span className="text-xs">WhatsApp</span>
                   </Button>
                   <Button
                     type="button"
