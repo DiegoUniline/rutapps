@@ -834,6 +834,7 @@ export default function SupervisorDashboardPage() {
                 onSelectClient={handleSelectClient}
                 recorridoUserId={recorridoUserId}
                 recorridoFecha={recorridoFecha}
+                multiRoutes={multiRouteEntries}
               />
             </GoogleMapsProvider>
             {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
@@ -1481,13 +1482,14 @@ function EmptyBlock({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-border bg-card/50 p-4 text-[12px] text-muted-foreground text-center">{text}</div>;
 }
 
-function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha }: {
+function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha, multiRoutes = [] }: {
   markers: MarkerPoint[];
   sellerLocations?: SellerLocation[];
   selectedClientId?: string | null;
   onSelectClient?: (id: string) => void;
   recorridoUserId?: string | null;
   recorridoFecha?: string;
+  multiRoutes?: RouteResultEntry[];
 }) {
   const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
@@ -1502,13 +1504,17 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers, sellerLocations]);
 
-  const makePinIcon = useCallback((orden: number | null, visitado: boolean) => {
+  const makePinIcon = useCallback((orden: number | null, visitado: boolean, outOfRange: boolean) => {
     const w = 28, h = 40;
     const color = visitado ? '#22c55e' : '#ef4444';
     const icon = visitado
       ? `<polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
       : `<line x1="10" y1="15" x2="18" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>`;
     const label = orden != null ? `<text x="14" y="14" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>` : '';
+    // Warning badge overlay (top-right) when visited far away
+    const warning = outOfRange
+      ? `<g transform="translate(18,-2)"><circle cx="6" cy="6" r="6" fill="#f59e0b" stroke="#fff" stroke-width="1.2"/><text x="6" y="8.5" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">!</text></g>`
+      : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
       <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
       ${orden != null ? label : icon}
@@ -1519,10 +1525,12 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       ? `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
           <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
           <text x="14" y="16" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="11" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>
+          ${warning}
         </svg>`
       : `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
           <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
           ${icon}
+          ${warning}
         </svg>`;
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgFinal),
