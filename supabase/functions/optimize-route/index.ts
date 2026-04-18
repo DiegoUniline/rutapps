@@ -160,6 +160,8 @@ interface RouteInput {
   key: string;
   origin: LatLng;
   waypoints: Waypoint[];
+  /** If true, skip NN+2-opt and use waypoints in the given order (for restoring saved routes) */
+  preserve_order?: boolean;
 }
 
 interface RouteResult {
@@ -238,20 +240,23 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Quota check (each route counts as 1 toward the monthly limit)
-    const now = new Date();
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const { count: monthlyCount } = await supabase
-      .from("optimizacion_rutas_log")
-      .select("id", { count: "exact", head: true })
-      .eq("empresa_id", profile.empresa_id)
-      .gte("created_at", firstOfMonth);
+    // Quota check (each optimization counts as 1; preserve_order calls are free)
+    const optimizingCount = routesIn.filter(r => r.preserve_order !== true).length;
+    if (optimizingCount > 0) {
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { count: monthlyCount } = await supabase
+        .from("optimizacion_rutas_log")
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", profile.empresa_id)
+        .gte("created_at", firstOfMonth);
 
-    const used = monthlyCount ?? 0;
-    if (used + routesIn.length > MONTHLY_LIMIT) {
-      return new Response(JSON.stringify({
-        error: `Límite mensual alcanzado (${MONTHLY_LIMIT} optimizaciones por mes). Disponibles: ${Math.max(0, MONTHLY_LIMIT - used)}, requeridas: ${routesIn.length}.`,
-      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const used = monthlyCount ?? 0;
+      if (used + optimizingCount > MONTHLY_LIMIT) {
+        return new Response(JSON.stringify({
+          error: `Límite mensual alcanzado (${MONTHLY_LIMIT} optimizaciones por mes). Disponibles: ${Math.max(0, MONTHLY_LIMIT - used)}, requeridas: ${optimizingCount}.`,
+        }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const results: RouteResult[] = [];
@@ -259,18 +264,27 @@ Deno.serve(async (req) => {
     // Process each route independently (atomic per-route)
     for (const r of routesIn) {
       try {
-        // Log usage for this route
-        await supabase.from("optimizacion_rutas_log").insert({
-          empresa_id: profile.empresa_id,
-          user_id: userId,
-          dia_filtro: body.dia_filtro || null,
-          clientes_count: r.waypoints.length,
-        });
+        const preserveOrder = r.preserve_order === true;
+
+        // Only count toward quota if we are actually optimizing (not just drawing saved routes)
+        if (!preserveOrder) {
+          await supabase.from("optimizacion_rutas_log").insert({
+            empresa_id: profile.empresa_id,
+            user_id: userId,
+            dia_filtro: body.dia_filtro || null,
+            clientes_count: r.waypoints.length,
+          });
+        }
 
         const original = totalOriginalDistance(r.origin, r.waypoints);
-        const nn = nearestNeighborOrder(r.origin, r.waypoints);
-        const optimized = twoOptImprove(r.origin, r.waypoints, nn);
-        const orderedWp = optimized.map(idx => r.waypoints[idx]);
+        let orderedWp: Waypoint[];
+        if (preserveOrder) {
+          orderedWp = r.waypoints;
+        } else {
+          const nn = nearestNeighborOrder(r.origin, r.waypoints);
+          const optimized = twoOptImprove(r.origin, r.waypoints, nn);
+          orderedWp = optimized.map(idx => r.waypoints[idx]);
+        }
 
         let polyline: string | null = null;
         let distanceMeters = 0;
@@ -311,7 +325,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    const remaining = Math.max(0, MONTHLY_LIMIT - used - routesIn.length);
+    const remaining = Math.max(0, MONTHLY_LIMIT - (await (async () => {
+      const fm = new Date(); fm.setDate(1); fm.setHours(0,0,0,0);
+      const { count } = await supabase.from("optimizacion_rutas_log")
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", profile.empresa_id)
+        .gte("created_at", fm.toISOString());
+      return count ?? 0;
+    })()));
 
     // Backwards-compatible response: when single route, expose top-level fields too.
     const single = results.length === 1 ? results[0] : null;
