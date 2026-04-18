@@ -150,20 +150,22 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
 
       if (prodErr) throw prodErr;
 
-      // 2. Asignar a la Lista de Precios principal
+      // 2. Asignar precio a la Lista de Precios principal (vía tarifa_lineas)
       try {
         const { data: listaPrincipal } = await supabase
           .from('lista_precios')
-          .select('id')
+          .select('id, tarifa_id')
           .eq('empresa_id', empresa.id)
           .eq('es_principal', true)
           .maybeSingle();
 
-        if (listaPrincipal?.id) {
-          await supabase.from('producto_precios').insert({
-            producto_id: (prod as any).id,
+        if (listaPrincipal?.id && (listaPrincipal as any).tarifa_id) {
+          await supabase.from('tarifa_lineas').insert({
+            tarifa_id: (listaPrincipal as any).tarifa_id,
             lista_precio_id: listaPrincipal.id,
+            producto_id: (prod as any).id,
             precio,
+            tipo_calculo: 'precio_fijo',
           } as any);
         }
       } catch { /* no bloqueante */ }
