@@ -261,18 +261,27 @@ Deno.serve(async (req) => {
     // Process each route independently (atomic per-route)
     for (const r of routesIn) {
       try {
-        // Log usage for this route
-        await supabase.from("optimizacion_rutas_log").insert({
-          empresa_id: profile.empresa_id,
-          user_id: userId,
-          dia_filtro: body.dia_filtro || null,
-          clientes_count: r.waypoints.length,
-        });
+        const preserveOrder = r.preserve_order === true;
+
+        // Only count toward quota if we are actually optimizing (not just drawing saved routes)
+        if (!preserveOrder) {
+          await supabase.from("optimizacion_rutas_log").insert({
+            empresa_id: profile.empresa_id,
+            user_id: userId,
+            dia_filtro: body.dia_filtro || null,
+            clientes_count: r.waypoints.length,
+          });
+        }
 
         const original = totalOriginalDistance(r.origin, r.waypoints);
-        const nn = nearestNeighborOrder(r.origin, r.waypoints);
-        const optimized = twoOptImprove(r.origin, r.waypoints, nn);
-        const orderedWp = optimized.map(idx => r.waypoints[idx]);
+        let orderedWp: Waypoint[];
+        if (preserveOrder) {
+          orderedWp = r.waypoints;
+        } else {
+          const nn = nearestNeighborOrder(r.origin, r.waypoints);
+          const optimized = twoOptImprove(r.origin, r.waypoints, nn);
+          orderedWp = optimized.map(idx => r.waypoints[idx]);
+        }
 
         let polyline: string | null = null;
         let distanceMeters = 0;
