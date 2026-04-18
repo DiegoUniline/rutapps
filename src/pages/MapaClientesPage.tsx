@@ -17,6 +17,8 @@ import MyLocationMarker from '@/components/MyLocationMarker';
 import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import { toast } from 'sonner';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
+import OriginPicker, { type OriginValue } from '@/components/maps/OriginPicker';
+import MultiRoutePanel, { MultiRouteOverlay, getRouteColor, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = (() => {
@@ -95,7 +97,7 @@ export default function MapaClientesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
-  const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [originPoint, setOriginPoint] = useState<OriginValue | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [routeResult, setRouteResult] = useState<{
@@ -106,6 +108,13 @@ export default function MapaClientesPage() {
   } | null>(null);
   const [showRoutePanel, setShowRoutePanel] = useState(true);
   const [colorMode, setColorMode] = useState<'dia' | 'status' | 'visitado'>('visitado');
+  // Multi-route state
+  const [optimMode, setOptimMode] = useState<'common' | 'individual'>('common');
+  const [showOriginPicker, setShowOriginPicker] = useState(false);
+  const [multiResults, setMultiResults] = useState<RouteResultEntry[] | null>(null);
+  const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { data: isAdmin } = useQuery({
@@ -228,57 +237,181 @@ export default function MapaClientesPage() {
 
   const handleMapClick = useCallback((e: google.maps.MapMouseEvent) => {
     if (settingOrigin && e.latLng) {
-      setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      setOriginPoint({ lat: e.latLng.lat(), lng: e.latLng.lng(), label: 'Punto en mapa' });
       setSettingOrigin(false);
       setRouteResult(null);
+      setMultiResults(null);
       toast.success('Punto de partida establecido');
     }
   }, [settingOrigin]);
 
+  // Group clients by vendedor for multi-route mode
+  const clientsByVendedor = useMemo(() => {
+    const map = new Map<string, { vendedor_id: string; vendedor_nombre: string; clientes: any[] }>();
+    for (const c of withGps) {
+      const vid = c.vendedor_id || '__sin_vendedor__';
+      const vname = c.vendedores?.nombre || 'Sin vendedor';
+      if (!map.has(vid)) map.set(vid, { vendedor_id: vid, vendedor_nombre: vname, clientes: [] });
+      map.get(vid)!.clientes.push(c);
+    }
+    return Array.from(map.values()).filter(g => g.clientes.length > 0);
+  }, [withGps]);
+
+  const clientesById = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const c of withGps) m.set(c.id, c);
+    return m;
+  }, [withGps]);
+
+  const isMultiVendor = clientsByVendedor.length > 1 && !vendedorFilter;
+
+  /**
+   * Resolve the origin for a vendedor in INDIVIDUAL mode.
+   * Strategy: vendor's profiles.almacen_id with gps → fallback to first almacen with gps → fallback to common origin.
+   */
+  const resolveIndividualOrigin = async (vendedor_id: string): Promise<OriginValue | null> => {
+    if (vendedor_id === '__sin_vendedor__') return originPoint;
+    const { data: prof } = await (supabase
+      .from('profiles') as any)
+      .select('almacen_id, almacenes:almacen_id (id, nombre, gps_lat, gps_lng)')
+      .eq('id', vendedor_id)
+      .maybeSingle();
+    const a = prof?.almacenes;
+    if (a?.gps_lat != null && a?.gps_lng != null) {
+      return { lat: Number(a.gps_lat), lng: Number(a.gps_lng), label: a.nombre };
+    }
+    return originPoint;
+  };
+
   const handleOptimize = async () => {
     if (!originPoint) { toast.error('Primero establece un punto de partida'); return; }
-    if (withGps.length < 2) { toast.error('Se necesitan al menos 2 clientes con GPS'); return; }
+    if (withGps.length < 1) { toast.error('Se necesita al menos 1 cliente con GPS'); return; }
     setOptimizing(true);
     setRouteResult(null);
+    setMultiResults(null);
+    setApplied(false);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
       if (!token) { toast.error('Sesión no válida'); return; }
-      const waypoints = withGps.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng }));
+
+      // Build payload: one route per vendedor (or single 'default' route)
+      const groups = isMultiVendor ? clientsByVendedor : [{
+        vendedor_id: vendedorFilter || 'default',
+        vendedor_nombre: vendedorFilter
+          ? (vendedores?.find(v => v.id === vendedorFilter)?.nombre ?? 'Vendedor')
+          : 'Todos',
+        clientes: withGps,
+      }];
+
+      const routes = await Promise.all(groups.map(async (g) => {
+        const origin = optimMode === 'individual' && isMultiVendor
+          ? (await resolveIndividualOrigin(g.vendedor_id)) ?? originPoint
+          : originPoint;
+        return {
+          key: g.vendedor_id,
+          origin: { lat: origin.lat, lng: origin.lng },
+          waypoints: g.clientes.map((c: any) => ({ id: c.id, lat: c.gps_lat, lng: c.gps_lng })),
+          _origin_full: origin,
+          _vendedor_nombre: g.vendedor_nombre,
+        };
+      }));
+
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ origin: originPoint, waypoints, dia_filtro: diaFilter || null }),
+        body: JSON.stringify({
+          routes: routes.map(r => ({ key: r.key, origin: r.origin, waypoints: r.waypoints })),
+          dia_filtro: diaFilter || null,
+        }),
       });
       const result = await res.json();
       if (!res.ok) { toast.error(result.error || 'Error al optimizar'); return; }
-      const updates = result.optimized_order.map((id: string, idx: number) => ({
-        empresa_id: empresa!.id,
-        cliente_id: id,
-        dia: diaFilter || null,
-        vendedor_id: vendedorFilter || null,
-        orden: idx + 1,
-      }));
-      // Delete existing order for this combination, then insert
-      let delQ = supabase.from('cliente_orden_ruta' as any).delete().eq('empresa_id', empresa!.id);
-      delQ = diaFilter ? delQ.eq('dia', diaFilter) : delQ.is('dia', null);
-      delQ = vendedorFilter ? delQ.eq('vendedor_id', vendedorFilter) : delQ.is('vendedor_id', null);
-      await delQ;
-      await supabase.from('cliente_orden_ruta' as any).insert(updates);
-      await refetchSavedOrder();
-      setRouteResult({
-        orderedIds: result.optimized_order,
-        polyline: result.polyline,
-        distance_meters: result.distance_meters,
-        duration: result.duration,
+
+      const entries: RouteResultEntry[] = (result.routes ?? []).map((r: any) => {
+        const meta = routes.find(x => x.key === r.key)!;
+        return {
+          vendedor_id: r.key,
+          vendedor_nombre: meta._vendedor_nombre,
+          origin: meta._origin_full,
+          optimized_order: r.optimized_order ?? [],
+          polyline: r.polyline ?? null,
+          distance_meters: r.distance_meters ?? 0,
+          duration: r.duration ?? '0s',
+          original_distance_meters: r.original_distance_meters ?? 0,
+          error: r.error,
+        };
       });
-      setShowRoutePanel(true);
-      toast.success(`Ruta optimizada: ${(result.distance_meters / 1000).toFixed(1)} km`);
+
+      // Multi-route view when more than one vendor
+      if (entries.length > 1) {
+        setMultiResults(entries);
+        const vis: Record<string, boolean> = {};
+        entries.forEach(e => { vis[e.vendedor_id] = true; });
+        setRouteVisibility(vis);
+        toast.success(`${entries.length} rutas optimizadas`);
+      } else {
+        const e = entries[0];
+        if (e?.error) { toast.error(e.error); return; }
+        setRouteResult({
+          orderedIds: e.optimized_order,
+          polyline: e.polyline,
+          distance_meters: e.distance_meters,
+          duration: e.duration,
+        });
+        setShowRoutePanel(true);
+        toast.success(`Ruta optimizada: ${(e.distance_meters / 1000).toFixed(1)} km`);
+        // Persist immediately for single-route flow (matches previous behaviour)
+        await persistOrder([{ vendedor_id: vendedorFilter || null, ordered: e.optimized_order }]);
+        await refetchSavedOrder();
+      }
     } catch (err: any) {
       toast.error(err.message || 'Error al optimizar ruta');
     } finally {
       setOptimizing(false);
+    }
+  };
+
+  /** Persist the optimized order(s) into cliente_orden_ruta */
+  const persistOrder = async (groups: { vendedor_id: string | null; ordered: string[] }[]) => {
+    for (const g of groups) {
+      let delQ = (supabase.from('cliente_orden_ruta' as any) as any)
+        .delete().eq('empresa_id', empresa!.id);
+      delQ = diaFilter ? delQ.eq('dia', diaFilter) : delQ.is('dia', null);
+      delQ = g.vendedor_id ? delQ.eq('vendedor_id', g.vendedor_id) : delQ.is('vendedor_id', null);
+      await delQ;
+      const rows = g.ordered.map((id, idx) => ({
+        empresa_id: empresa!.id,
+        cliente_id: id,
+        dia: diaFilter || null,
+        vendedor_id: g.vendedor_id,
+        orden: idx + 1,
+      }));
+      if (rows.length > 0) {
+        await (supabase.from('cliente_orden_ruta' as any) as any).insert(rows);
+      }
+    }
+  };
+
+  const handleApplyMulti = async () => {
+    if (!multiResults) return;
+    setApplying(true);
+    try {
+      const groups = multiResults
+        .filter(r => !r.error && r.optimized_order.length > 0)
+        .map(r => ({
+          vendedor_id: r.vendedor_id === '__sin_vendedor__' ? null : r.vendedor_id,
+          ordered: r.optimized_order,
+        }));
+      await persistOrder(groups);
+      await refetchSavedOrder();
+      setApplied(true);
+      toast.success(`Orden guardado para ${groups.length} ${groups.length === 1 ? 'ruta' : 'rutas'}`);
+    } catch (e: any) {
+      toast.error(e?.message || 'Error al aplicar cambios');
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -395,29 +528,45 @@ export default function MapaClientesPage() {
           </div>
 
           {/* Route controls */}
-          <div className="flex items-center gap-1 ml-auto">
-            <button
-              onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Click en el mapa para el punto de partida'); }}
-              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                settingOrigin ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
-                  : originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                    : "bg-background border-border text-muted-foreground")}>
-              <Navigation className="h-3.5 w-3.5" />
-              {settingOrigin ? 'Click mapa...' : originPoint ? '✓ Origen' : 'Origen'}
-            </button>
-            {originPoint && !settingOrigin && (
-              <button onClick={() => { setOriginPoint(null); setRouteResult(null); }} className="text-destructive p-1">
-                <X className="h-3 w-3" />
-              </button>
+          <div className="flex items-center gap-1 ml-auto relative">
+            {isMultiVendor && (
+              <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden text-[10px] font-medium">
+                {(['common', 'individual'] as const).map(m => (
+                  <button key={m} onClick={() => setOptimMode(m)}
+                    className={cn("px-2 py-1.5 transition-colors",
+                      optimMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+                    title={m === 'common' ? 'Todos parten del mismo punto' : 'Cada vendedor parte de su almacén'}>
+                    {m === 'common' ? 'Origen común' : 'Individual'}
+                  </button>
+                ))}
+              </div>
             )}
-            {isAdmin && originPoint && withGps.length >= 2 && (
+            <button
+              onClick={() => setShowOriginPicker(s => !s)}
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-background border-border text-muted-foreground")}>
+              <Navigation className="h-3.5 w-3.5" />
+              {originPoint ? `✓ ${originPoint.label ?? 'Origen'}` : 'Origen'}
+            </button>
+            {showOriginPicker && (
+              <div className="absolute top-full right-0 mt-2 z-20 w-72 bg-card border border-border rounded-xl shadow-lg p-3">
+                <OriginPicker
+                  value={originPoint}
+                  onChange={(v) => { setOriginPoint(v); setRouteResult(null); setMultiResults(null); if (v) setShowOriginPicker(false); }}
+                  onPickFromMapRequest={() => { setSettingOrigin(true); setShowOriginPicker(false); toast.info('Click en el mapa'); }}
+                  pickingFromMap={settingOrigin}
+                />
+              </div>
+            )}
+            {isAdmin && originPoint && withGps.length >= 1 && (
               <button onClick={handleOptimize} disabled={optimizing}
                 className={cn("flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                  routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  (routeResult || multiResults) ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
                     : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
                   optimizing && "opacity-70")}>
-                {optimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : routeResult ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Route className="h-3.5 w-3.5" />}
-                {optimizing ? 'Optimizando...' : routeResult ? 'Optimizada' : 'Optimizar'}
+                {optimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (routeResult || multiResults) ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Route className="h-3.5 w-3.5" />}
+                {optimizing ? 'Optimizando...' : multiResults ? `${multiResults.length} rutas` : routeResult ? 'Optimizada' : isMultiVendor ? 'Optimizar todas' : 'Optimizar'}
               </button>
             )}
           </div>

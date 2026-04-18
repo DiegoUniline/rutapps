@@ -85,7 +85,10 @@ export type Database = {
         Row: {
           activo: boolean
           created_at: string
+          direccion: string | null
           empresa_id: string
+          gps_lat: number | null
+          gps_lng: number | null
           id: string
           nombre: string
           tipo: string
@@ -93,7 +96,10 @@ export type Database = {
         Insert: {
           activo?: boolean
           created_at?: string
+          direccion?: string | null
           empresa_id: string
+          gps_lat?: number | null
+          gps_lng?: number | null
           id?: string
           nombre: string
           tipo?: string
@@ -101,7 +107,10 @@ export type Database = {
         Update: {
           activo?: boolean
           created_at?: string
+          direccion?: string | null
           empresa_id?: string
+          gps_lat?: number | null
+          gps_lng?: number | null
           id?: string
           nombre?: string
           tipo?: string

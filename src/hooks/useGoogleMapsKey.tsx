@@ -47,10 +47,13 @@ export function useGoogleMaps() {
   return useContext(GoogleMapsContext);
 }
 
+const GOOGLE_MAPS_LIBRARIES: ('places')[] = ['places'];
+
 function GoogleMapsLoaderInner({ apiKey, children }: { apiKey: string; children: ReactNode }) {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: apiKey,
     id: 'google-map-shared',
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   return (
