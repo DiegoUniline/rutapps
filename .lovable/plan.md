@@ -1,21 +1,42 @@
 
-El usuario propone una solución concreta: hacer la lista de emails 100% dependiente de un RPC en la base de datos (eliminando la dependencia de la Edge Function `admin-users` que está fallando silenciosamente). Voy a implementar exactamente eso.
+Objetivo: corregir que, al recargar `/ventas/mapa-clientes`, la optimización guardada siga viéndose por ruta/color y no “todo parejo”.
 
-## Plan
+1. Hallazgo confirmado
+- El problema no es solo visual: la tabla `cliente_orden_ruta` de tu empresa demo tiene rutas por vendedor guardadas, pero también quedaron filas antiguas con `vendedor_id = null`.
+- En `MapaClientesPage.tsx`, cuando existe `multiResults`, el mapa sigue renderizando también los marcadores base (`withGps`) después del overlay multirruta. Esos marcadores genéricos tapan los marcadores por color de ruta.
+- Además, al guardar multirruta, `persistOrder()` borra por vendedor individual, así que no limpia órdenes previas “globales” y deja basura mezclada para la restauración.
 
-### 1. Migración SQL
-- Recrear `get_empresa_user_emails(p_empresa_id)` de forma idempotente con JOIN explícito a `profiles` y permitir acceso al super admin.
-- `GRANT EXECUTE ... TO authenticated`.
-- (Omitiré `get_empresa_usuarios_full` por ahora — el frontend actual no la usa y agregarla sin consumirla es ruido. Si después quieres consolidar todo en una sola llamada lo hacemos en una segunda iteración.)
+2. Cambios a implementar
+- Ajustar el render del mapa para que, si `multiResults` está activo, no se rendericen los marcadores/clusters genéricos ni los numerados base.
+- Corregir la persistencia de multirruta:
+  - antes de insertar nuevas rutas aplicadas, borrar todo el scope actual (`empresa_id + dia`) cuando el guardado sea multirruta global;
+  - evitar que queden filas viejas con `vendedor_id = null`.
+- Endurecer la restauración desde `savedOrder`:
+  - reconstruir solo la vista multirruta cuando existan varios grupos reales;
+  - ignorar/normalizar grupos residuales inconsistentes si coexistieran filas globales y por vendedor.
+- Revisar dependencias del `useEffect` que restaura la vista para que la reconstrucción sea estable también cuando `vendedores` termina de cargar después.
 
-### 2. `src/hooks/useUsuarios.ts`
-- Reemplazar `loadAuthUsers`: una sola llamada al RPC, log de error si falla, set directo (sin merge con edge function).
-- Reemplazar `loadUsuarios`: hacer las 4 consultas en paralelo (`profiles`, `user_roles`, `almacenes`, RPC de emails) y setear `authUsers` directo del RPC.
-- Quitar la llamada a la edge function `admin-users` para listar usuarios (queda solo para `create-user` y `set-password`).
+3. Archivo principal a tocar
+- `src/pages/MapaClientesPage.tsx`
 
-### Archivos a tocar
-- Nueva migración SQL (idempotente).
-- `src/hooks/useUsuarios.ts`.
+4. Resultado esperado
+- Después de “Aplicar cambios”, al recargar:
+  - seguirás viendo cada ruta con su propio color;
+  - no aparecerá la capa genérica encima;
+  - no se mezclarán rutas viejas con nuevas;
+  - la vista restaurada coincidirá con lo que guardaste.
 
-### Resultado esperado
-Al recargar `/configuracion/usuarios`, los emails se obtienen directamente de la BD vía RPC seguro. Si algo falla, queda log claro en consola en vez de columna vacía silenciosa.
+5. Verificación que haré al implementarlo
+- Optimizar varias rutas.
+- Aplicar cambios.
+- Recargar la página.
+- Confirmar que:
+  - se conserva el panel multirruta;
+  - los marcadores siguen separados por color/vendedor;
+  - no reaparece una ruta global azul/morada encima;
+  - la base de datos queda con un solo conjunto consistente de órdenes para ese día.
+
+Detalle técnico
+- Causa visual: `multiResults` y los marcadores base se renderizan al mismo tiempo.
+- Causa de datos: `persistOrder()` no limpia completamente el scope cuando se guarda una optimización multirruta.
+- En esta iteración no hace falta tocar la edge function `optimize-route`; el bug está en restauración/render/persistencia del frontend.
