@@ -188,6 +188,10 @@ export default function MapaClientesPage() {
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(row);
     }
+    // If real vendor groups exist alongside an inconsistent "__sin_vendedor__" residual group, drop the residual
+    if (groups.size > 1 && groups.has('__sin_vendedor__')) {
+      groups.delete('__sin_vendedor__');
+    }
     // If only one group AND a vendedor filter is active (or no groups have a vendor), use single-route view
     const groupKeys = Array.from(groups.keys());
     if (groupKeys.length <= 1) {
@@ -221,7 +225,7 @@ export default function MapaClientesPage() {
     entries.forEach(e => { vis[e.vendedor_id] = true; });
     setRouteVisibility(vis);
     setApplied(true);
-  }, [savedOrder]);
+  }, [savedOrder, vendedores]);
 
   const filtered = useMemo(() => {
     let result = clientes ?? [];
@@ -435,13 +439,31 @@ export default function MapaClientesPage() {
     if (!multiResults) return;
     setApplying(true);
     try {
+      // Wipe full scope (empresa + dia) so old rows with vendedor_id=null or stale vendor groups don't survive
+      let wipeQ = (supabase.from('cliente_orden_ruta' as any) as any)
+        .delete().eq('empresa_id', empresa!.id);
+      wipeQ = diaFilter ? wipeQ.eq('dia', diaFilter) : wipeQ.is('dia', null);
+      await wipeQ;
+
       const groups = multiResults
         .filter(r => !r.error && r.optimized_order.length > 0)
         .map(r => ({
           vendedor_id: r.vendedor_id === '__sin_vendedor__' ? null : r.vendedor_id,
           ordered: r.optimized_order,
         }));
-      await persistOrder(groups);
+      // Insert all rows in one go (persistOrder also deletes per-vendedor, but scope is already empty)
+      const allRows = groups.flatMap(g =>
+        g.ordered.map((id, idx) => ({
+          empresa_id: empresa!.id,
+          cliente_id: id,
+          dia: diaFilter || null,
+          vendedor_id: g.vendedor_id,
+          orden: idx + 1,
+        }))
+      );
+      if (allRows.length > 0) {
+        await (supabase.from('cliente_orden_ruta' as any) as any).insert(allRows);
+      }
       await refetchSavedOrder();
       setApplied(true);
       toast.success(`Orden guardado para ${groups.length} ${groups.length === 1 ? 'ruta' : 'rutas'}`);
@@ -760,7 +782,7 @@ export default function MapaClientesPage() {
                   onClick={() => setSelectedCliente(c)}
                 />
               ))
-            ) : (
+            ) : multiResults ? null : (
               <>
                 {/* Numbered markers (with orden) rendered outside cluster so labels always show */}
                 {withGps.filter((c: any) => typeof c.orden === 'number' && c.orden > 0).map((c: any) => (
