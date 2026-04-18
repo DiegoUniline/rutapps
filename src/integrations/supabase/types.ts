@@ -1014,6 +1014,9 @@ export type Database = {
           empresa_id: string
           id: string
           orden: number
+          origin_label: string | null
+          origin_lat: number | null
+          origin_lng: number | null
           updated_at: string
           vendedor_id: string | null
         }
@@ -1024,6 +1027,9 @@ export type Database = {
           empresa_id: string
           id?: string
           orden?: number
+          origin_label?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
           updated_at?: string
           vendedor_id?: string | null
         }
@@ -1034,6 +1040,9 @@ export type Database = {
           empresa_id?: string
           id?: string
           orden?: number
+          origin_label?: string | null
+          origin_lat?: number | null
+          origin_lng?: number | null
           updated_at?: string
           vendedor_id?: string | null
         }
