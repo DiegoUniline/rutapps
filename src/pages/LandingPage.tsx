@@ -269,32 +269,11 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Mock map */}
+            {/* LIVE animated supervisor map */}
             <div className="relative">
               <div className="absolute -inset-4 rounded-3xl opacity-30 blur-2xl"
                 style={{ background: 'linear-gradient(135deg, hsl(152, 56%, 50%), hsl(180, 56%, 50%))' }} />
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
-                <img src={routeMap} alt="Mapa de seguimiento en tiempo real" className="w-full block" />
-                {/* Live badge overlay */}
-                <div className="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-2 rounded-xl shadow-lg flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                  </span>
-                  <span className="text-xs font-bold text-gray-900">EN VIVO · 8 vendedores activos</span>
-                </div>
-                {/* Card overlays */}
-                <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur px-4 py-3 rounded-xl shadow-lg max-w-[200px]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[11px] font-bold">CR</div>
-                    <div>
-                      <div className="text-[11px] font-bold text-gray-900 leading-tight">Carlos Ramírez</div>
-                      <div className="text-[10px] text-emerald-600 leading-tight">● En cliente</div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-gray-500">12 ventas · $8,420 · 87% 🔋</div>
-                </div>
-              </div>
+              <LiveSupervisorMap />
             </div>
           </div>
         </div>
