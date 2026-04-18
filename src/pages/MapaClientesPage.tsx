@@ -188,6 +188,10 @@ export default function MapaClientesPage() {
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(row);
     }
+    // If real vendor groups exist alongside an inconsistent "__sin_vendedor__" residual group, drop the residual
+    if (groups.size > 1 && groups.has('__sin_vendedor__')) {
+      groups.delete('__sin_vendedor__');
+    }
     // If only one group AND a vendedor filter is active (or no groups have a vendor), use single-route view
     const groupKeys = Array.from(groups.keys());
     if (groupKeys.length <= 1) {
