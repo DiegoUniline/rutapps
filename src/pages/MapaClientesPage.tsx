@@ -142,12 +142,12 @@ export default function MapaClientesPage() {
       const today = new Date().toISOString().split('T')[0];
       const { data } = await supabase
         .from('ventas')
-        .select('cliente_id, gps_lat, gps_lng')
+        .select('cliente_id')
         .eq('empresa_id', empresa!.id)
         .eq('fecha', today)
         .neq('status', 'cancelado')
         .not('cliente_id', 'is', null);
-      return (data ?? []) as { cliente_id: string; gps_lat: number | null; gps_lng: number | null }[];
+      return new Set((data ?? []).map((v: any) => v.cliente_id));
     },
   });
 
