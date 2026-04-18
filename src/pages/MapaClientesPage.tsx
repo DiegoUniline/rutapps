@@ -508,7 +508,7 @@ export default function MapaClientesPage() {
         setShowRoutePanel(true);
         toast.success(`Ruta optimizada: ${(e.distance_meters / 1000).toFixed(1)} km`);
         // Persist immediately for single-route flow (matches previous behaviour)
-        await persistOrder([{ vendedor_id: vendedorFilter || null, ordered: e.optimized_order }]);
+        await persistOrder([{ vendedor_id: vendedorFilter || null, ordered: e.optimized_order, origin: e.origin }]);
         await refetchSavedOrder();
       }
     } catch (err: any) {
@@ -519,7 +519,7 @@ export default function MapaClientesPage() {
   };
 
   /** Persist the optimized order(s) into cliente_orden_ruta */
-  const persistOrder = async (groups: { vendedor_id: string | null; ordered: string[] }[]) => {
+  const persistOrder = async (groups: { vendedor_id: string | null; ordered: string[]; origin?: OriginValue | null }[]) => {
     for (const g of groups) {
       let delQ = (supabase.from('cliente_orden_ruta' as any) as any)
         .delete().eq('empresa_id', empresa!.id);
@@ -531,6 +531,9 @@ export default function MapaClientesPage() {
         cliente_id: id,
         dia: diaFilter || null,
         vendedor_id: g.vendedor_id,
+        origin_lat: g.origin?.lat ?? null,
+        origin_lng: g.origin?.lng ?? null,
+        origin_label: g.origin?.label ?? null,
         orden: idx + 1,
       }));
       if (rows.length > 0) {
@@ -553,6 +556,7 @@ export default function MapaClientesPage() {
         .filter(r => !r.error && r.optimized_order.length > 0)
         .map(r => ({
           vendedor_id: r.vendedor_id === '__sin_vendedor__' ? null : r.vendedor_id,
+          origin: r.origin,
           ordered: r.optimized_order,
         }));
       // Insert all rows in one go (persistOrder also deletes per-vendedor, but scope is already empty)
@@ -562,6 +566,9 @@ export default function MapaClientesPage() {
           cliente_id: id,
           dia: diaFilter || null,
           vendedor_id: g.vendedor_id,
+          origin_lat: g.origin?.lat ?? null,
+          origin_lng: g.origin?.lng ?? null,
+          origin_label: g.origin?.label ?? null,
           orden: idx + 1,
         }))
       );
