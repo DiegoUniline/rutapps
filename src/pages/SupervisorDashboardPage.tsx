@@ -462,7 +462,50 @@ export default function SupervisorDashboardPage() {
       .forEach(c => alerts.push({ type: 'danger', icon: '🔴', text: `${c.nombre} (${fmtMoney(c.ultimaVisitaValor)}) — ${c.diasSinComprar}d sin comprar` }));
     return alerts;
   }, [vendedores, vendedorStats, filteredVentas, filteredGastos, clienteActivity, fmtMoney]);
-  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden })), [clienteActivity]);
+  /**
+   * Mapa cliente_id → distancia mínima (m) entre la venta/visita y el GPS del cliente.
+   * Si la venta o visita NO tiene GPS, el cliente queda como "no auditable" (null).
+   * Si el mejor registro está más lejos que VISIT_RADIUS_METERS → se considera "fuera de rango".
+   */
+  const outOfRangeByClient = useMemo(() => {
+    const map = new Map<string, { meters: number | null; withinRange: boolean; hasAny: boolean }>();
+    const updateClient = (clienteId: string | undefined | null, gpsClient: { lat: number; lng: number } | null, gpsEvent: { lat: number; lng: number } | null) => {
+      if (!clienteId || !gpsClient) return;
+      const prev = map.get(clienteId) ?? { meters: null, withinRange: false, hasAny: false };
+      prev.hasAny = true;
+      if (gpsEvent) {
+        const d = haversineMeters(gpsClient, gpsEvent);
+        if (prev.meters == null || d < prev.meters) prev.meters = Math.round(d);
+        if (d <= VISIT_RADIUS_METERS) prev.withinRange = true;
+      }
+      map.set(clienteId, prev);
+    };
+    (ventasHoy ?? []).forEach((v: any) => {
+      const cli = (clientesAsignados ?? []).find((c: any) => c.id === v.cliente_id);
+      const gpsClient = cli?.gps_lat && cli?.gps_lng ? { lat: Number(cli.gps_lat), lng: Number(cli.gps_lng) } : null;
+      const gpsEvent = v.gps_lat && v.gps_lng ? { lat: Number(v.gps_lat), lng: Number(v.gps_lng) } : null;
+      updateClient(v.cliente_id, gpsClient, gpsEvent);
+    });
+    (visitasHoy ?? []).forEach((v: any) => {
+      const gpsClient = v.clientes?.gps_lat && v.clientes?.gps_lng ? { lat: Number(v.clientes.gps_lat), lng: Number(v.clientes.gps_lng) } : null;
+      const gpsEvent = v.gps_lat && v.gps_lng ? { lat: Number(v.gps_lat), lng: Number(v.gps_lng) } : null;
+      updateClient(v.cliente_id, gpsClient, gpsEvent);
+    });
+    return map;
+  }, [ventasHoy, visitasHoy, clientesAsignados]);
+
+  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => {
+    const oor = outOfRangeByClient.get(c.id);
+    // Solo marcamos "fuera de rango" si fue visitado, hubo eventos con GPS, ninguno cayó dentro del radio,
+    // y al menos uno fue medible. Si nunca tuvo GPS, no mostramos alerta para no generar ruido.
+    const measuredOutOfRange = !!(c.visitado && oor?.hasAny && oor.meters != null && !oor.withinRange);
+    return {
+      id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng,
+      visitado: c.visitado, diasSinComprar: c.diasSinComprar,
+      vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden,
+      outOfRange: measuredOutOfRange, outOfRangeMeters: measuredOutOfRange ? oor!.meters : null,
+    };
+  }), [clienteActivity, outOfRangeByClient]);
 
 
   const sellerLocations = useMemo<SellerLocation[]>(() => {
