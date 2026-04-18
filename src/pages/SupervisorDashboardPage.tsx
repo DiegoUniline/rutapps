@@ -144,7 +144,7 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-ventas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('ventas')
-        .select('id, vendedor_id, total, subtotal, status, tipo, condicion_pago, created_at, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(nombre, codigo))')
+        .select('id, vendedor_id, total, subtotal, status, tipo, condicion_pago, created_at, cliente_id, gps_lat, gps_lng, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
