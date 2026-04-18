@@ -40,8 +40,6 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
   const [margen, setMargen] = useState(MARGIN_DEFAULT);
   const [precio, setPrecio] = useState(0);
   const [precioManual, setPrecioManual] = useState(false);
-  const [modoPrecio, setModoPrecio] = useState<'directo' | 'lista'>('directo');
-  const [listaPrecioId, setListaPrecioId] = useState<string>('');
   const [tieneIva, setTieneIva] = useState(true);
   const [ivaPct, setIvaPct] = useState(16);
   const [tieneIeps, setTieneIeps] = useState(false);
@@ -100,7 +98,6 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
       setCosto(initialCosto || 0);
       setMargen(MARGIN_DEFAULT);
       setPrecioManual(false);
-      setModoPrecio('directo');
       setTieneIva(true);
       setIvaPct(16);
       setTieneIeps(false);
@@ -128,13 +125,6 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
     }
   }, [unidades, unidadVentaId]);
 
-  // Default lista principal
-  useEffect(() => {
-    if (listasPrecio.length > 0 && !listaPrecioId) {
-      const principal = listasPrecio.find(l => l.es_principal) ?? listasPrecio[0];
-      setListaPrecioId(principal.id);
-    }
-  }, [listasPrecio, listaPrecioId]);
 
   // Auto-cálculo de precio
   useEffect(() => {
@@ -153,7 +143,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
       if (!unidadVentaId) throw new Error('Selecciona una unidad de venta');
       if (!unidadCompraId) throw new Error('Selecciona una unidad de compra');
       if (costo < 0 || precio < 0) throw new Error('Los montos no pueden ser negativos');
-      if (modoPrecio === 'lista' && !listaPrecioId) throw new Error('Selecciona la lista de precios');
+      
 
       const finalCodigo = codigo.trim() || sugCodigo || `PROD-${Date.now()}`;
 
@@ -188,22 +178,6 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
         .single();
 
       if (prodErr) throw prodErr;
-
-      // 2. Asignar precio a la lista seleccionada (solo si es modo lista)
-      if (modoPrecio === 'lista' && listaPrecioId) {
-        try {
-          const lista = listasPrecio.find(l => l.id === listaPrecioId);
-          if (lista?.tarifa_id) {
-            await supabase.from('tarifa_lineas').insert({
-              tarifa_id: lista.tarifa_id,
-              lista_precio_id: lista.id,
-              producto_id: (prod as any).id,
-              precio,
-              tipo_calculo: 'precio_fijo',
-            } as any);
-          }
-        } catch { /* no bloqueante */ }
-      }
 
       return { ...(prod as any), unidad_compra_id: unidadCompraId, factor_conversion: factorConversion || 1 };
     },
@@ -325,34 +299,6 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
               </button>
             )}
 
-            {/* Modo de precio */}
-            <div className="border-t border-border pt-2 space-y-2">
-              <Label className="text-xs font-semibold">¿Cómo se asigna el precio?</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setModoPrecio('directo')}
-                  className={`text-xs rounded-md border p-2 text-left transition-colors ${modoPrecio === 'directo' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:bg-muted'}`}>
-                  <div className="font-medium">Precio directo</div>
-                  <div className="text-[10px]">Solo se guarda en el producto</div>
-                </button>
-                <button type="button" onClick={() => setModoPrecio('lista')}
-                  className={`text-xs rounded-md border p-2 text-left transition-colors ${modoPrecio === 'lista' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:bg-muted'}`}>
-                  <div className="font-medium">Lista de precios</div>
-                  <div className="text-[10px]">Se vincula a una lista</div>
-                </button>
-              </div>
-              {modoPrecio === 'lista' && (
-                <Select value={listaPrecioId} onValueChange={setListaPrecioId}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecciona lista..." /></SelectTrigger>
-                  <SelectContent>
-                    {listasPrecio.map(l => (
-                      <SelectItem key={l.id} value={l.id}>
-                        {l.nombre}{l.es_principal ? ' (Principal)' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
           </div>
 
           {/* Impuestos */}
