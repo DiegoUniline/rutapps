@@ -698,9 +698,18 @@ export default function MapaClientesPage() {
               />
             )}
 
-            {/* Route polyline */}
-            {polylinePoints && (
+            {/* Route polyline (single-route flow) */}
+            {polylinePoints && !multiResults && (
               <Polyline path={polylinePoints} options={{ strokeColor: 'hsl(230, 55%, 52%)', strokeWeight: 4, strokeOpacity: 0.8 }} />
+            )}
+
+            {/* Multi-route overlay (polylines + numbered stops + per-route origin) */}
+            {multiResults && (
+              <MultiRouteOverlay
+                results={multiResults}
+                clientesById={clientesById}
+                visibility={routeVisibility}
+              />
             )}
 
             {/* Markers with clustering when no route is active */}
@@ -844,6 +853,20 @@ export default function MapaClientesPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Multi-route panel */}
+        {multiResults && multiResults.length > 0 && (
+          <MultiRoutePanel
+            results={multiResults}
+            clientesById={clientesById}
+            visibility={routeVisibility}
+            onToggleVisibility={(vid) => setRouteVisibility(v => ({ ...v, [vid]: !v[vid] }))}
+            onApply={handleApplyMulti}
+            applying={applying}
+            applied={applied}
+            onClose={() => { setMultiResults(null); setApplied(false); }}
+          />
         )}
 
         {/* Without GPS sidebar (only when no route) */}
