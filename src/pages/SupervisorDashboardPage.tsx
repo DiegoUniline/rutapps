@@ -32,6 +32,7 @@ import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
+import { MultiRouteOverlay, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
 import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import VendedorRecorridoLayer from '@/components/VendedorRecorridoLayer';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
@@ -45,8 +46,20 @@ const ROUTE_COLORS = [
 ];
 
 type DashboardSeller = { id: string; user_id: string; nombre: string; aliases: string[] };
-type MarkerPoint = { id: string; nombre: string; lat: number; lng: number; visitado: boolean; diasSinComprar: number | null; vendedorNombre: string; vendedorId: string; orden: number | null };
+type MarkerPoint = { id: string; nombre: string; lat: number; lng: number; visitado: boolean; diasSinComprar: number | null; vendedorNombre: string; vendedorId: string; orden: number | null; outOfRange: boolean; outOfRangeMeters: number | null };
 type SellerLocation = { id: string; nombre: string; lat: number; lng: number; hora: string };
+
+/** Distancia máxima (m) para considerar que una venta/visita se hizo "en el cliente" */
+const VISIT_RADIUS_METERS = 100;
+
+function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371000;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
 
 function normalizePersonName(value?: string | null) {
   return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -222,6 +235,69 @@ export default function SupervisorDashboardPage() {
     },
     refetchInterval: 60000,
   });
+
+  // Rutas guardadas (cliente_orden_ruta) para visualizar multirruta tal como el Mapa de Clientes
+  const { data: savedRoutes } = useQuery({
+    queryKey: ['supervisor-saved-routes', empresa?.id, diaHoyLabel, selectedSeller?.id ?? null, soloHoy],
+    enabled: !!empresa?.id && soloHoy,
+    queryFn: async () => {
+      let q = supabase
+        .from('cliente_orden_ruta' as any)
+        .select('cliente_id, orden, vendedor_id, origin_lat, origin_lng, origin_label, dia')
+        .eq('empresa_id', empresa!.id)
+        .order('vendedor_id', { ascending: true, nullsFirst: false })
+        .order('orden', { ascending: true });
+      if (selectedSeller?.id) q = q.eq('vendedor_id', selectedSeller.id);
+      const { data } = await q;
+      return ((data ?? []) as unknown) as {
+        cliente_id: string; orden: number; vendedor_id: string | null;
+        origin_lat: number | null; origin_lng: number | null; origin_label: string | null;
+        dia: string | null;
+      }[];
+    },
+  });
+
+  // Build multi-route entries from saved order, restricted to today's clients with GPS
+  const multiRouteEntries = useMemo<RouteResultEntry[]>(() => {
+    if (!savedRoutes || savedRoutes.length === 0) return [];
+    // Match the day used by the supervisor view (soloHoy = day-of-week)
+    // Saved routes can have dia=null (global) or a specific day. Prefer rows that match today, otherwise globals.
+    const todayCap = diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1);
+    const filtered = savedRoutes.filter(r => !r.dia || r.dia === todayCap || r.dia.toLowerCase() === diaHoyLabel);
+    if (filtered.length === 0) return [];
+    const groups = new Map<string, { rows: typeof filtered; origin: { lat: number; lng: number; label: string } | null }>();
+    for (const row of filtered) {
+      const key = row.vendedor_id ?? '__sin_vendedor__';
+      if (!groups.has(key)) {
+        groups.set(key, {
+          rows: [],
+          origin: row.origin_lat != null && row.origin_lng != null
+            ? { lat: Number(row.origin_lat), lng: Number(row.origin_lng), label: row.origin_label ?? 'Origen' }
+            : null,
+        });
+      }
+      const g = groups.get(key)!;
+      if (!g.origin && row.origin_lat != null && row.origin_lng != null) {
+        g.origin = { lat: Number(row.origin_lat), lng: Number(row.origin_lng), label: row.origin_label ?? 'Origen' };
+      }
+      g.rows.push(row);
+    }
+    if (groups.size > 1 && groups.has('__sin_vendedor__')) groups.delete('__sin_vendedor__');
+    return Array.from(groups.entries()).map(([vid, g]) => {
+      const ordered = g.rows.sort((a, b) => a.orden - b.orden).map(r => r.cliente_id);
+      const vendedor = (vendedores ?? []).find(v => v.id === vid);
+      return {
+        vendedor_id: vid,
+        vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
+        origin: g.origin ?? { lat: 0, lng: 0, label: 'Origen' },
+        optimized_order: ordered,
+        polyline: null, // straight-line fallback in MultiRouteOverlay
+        distance_meters: 0,
+        duration: '0s',
+        original_distance_meters: 0,
+      };
+    });
+  }, [savedRoutes, vendedores, diaHoyLabel]);
 
   // Weekly data for charts
   const { data: ventasSemana } = useQuery({
@@ -449,7 +525,44 @@ export default function SupervisorDashboardPage() {
       .forEach(c => alerts.push({ type: 'danger', icon: '🔴', text: `${c.nombre} (${fmtMoney(c.ultimaVisitaValor)}) — ${c.diasSinComprar}d sin comprar` }));
     return alerts;
   }, [vendedores, vendedorStats, filteredVentas, filteredGastos, clienteActivity, fmtMoney]);
-  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => ({ id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng, visitado: c.visitado, diasSinComprar: c.diasSinComprar, vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden })), [clienteActivity]);
+  /**
+   * Mapa cliente_id → distancia mínima (m) entre la venta/visita y el GPS del cliente.
+   * Si la venta o visita NO tiene GPS, el cliente queda como "no auditable" (null).
+   * Si el mejor registro está más lejos que VISIT_RADIUS_METERS → se considera "fuera de rango".
+   */
+  const outOfRangeByClient = useMemo(() => {
+    const map = new Map<string, { meters: number | null; withinRange: boolean; hasAny: boolean }>();
+    const updateClient = (clienteId: string | undefined | null, gpsClient: { lat: number; lng: number } | null, gpsEvent: { lat: number; lng: number } | null) => {
+      if (!clienteId || !gpsClient) return;
+      const prev = map.get(clienteId) ?? { meters: null, withinRange: false, hasAny: false };
+      prev.hasAny = true;
+      if (gpsEvent) {
+        const d = haversineMeters(gpsClient, gpsEvent);
+        if (prev.meters == null || d < prev.meters) prev.meters = Math.round(d);
+        if (d <= VISIT_RADIUS_METERS) prev.withinRange = true;
+      }
+      map.set(clienteId, prev);
+    };
+    (visitasHoy ?? []).forEach((v: any) => {
+      const gpsClient = v.clientes?.gps_lat && v.clientes?.gps_lng ? { lat: Number(v.clientes.gps_lat), lng: Number(v.clientes.gps_lng) } : null;
+      const gpsEvent = v.gps_lat && v.gps_lng ? { lat: Number(v.gps_lat), lng: Number(v.gps_lng) } : null;
+      updateClient(v.cliente_id, gpsClient, gpsEvent);
+    });
+    return map;
+  }, [visitasHoy]);
+
+  const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => {
+    const oor = outOfRangeByClient.get(c.id);
+    // Solo marcamos "fuera de rango" si fue visitado, hubo eventos con GPS, ninguno cayó dentro del radio,
+    // y al menos uno fue medible. Si nunca tuvo GPS, no mostramos alerta para no generar ruido.
+    const measuredOutOfRange = !!(c.visitado && oor?.hasAny && oor.meters != null && !oor.withinRange);
+    return {
+      id: c.id, nombre: c.nombre, lat: c.gps_lat, lng: c.gps_lng,
+      visitado: c.visitado, diasSinComprar: c.diasSinComprar,
+      vendedorNombre: c.vendedorNombre, vendedorId: c.vendedor_id, orden: c.orden,
+      outOfRange: measuredOutOfRange, outOfRangeMeters: measuredOutOfRange ? oor!.meters : null,
+    };
+  }), [clienteActivity, outOfRangeByClient]);
 
 
   const sellerLocations = useMemo<SellerLocation[]>(() => {
@@ -715,6 +828,7 @@ export default function SupervisorDashboardPage() {
                 onSelectClient={handleSelectClient}
                 recorridoUserId={recorridoUserId}
                 recorridoFecha={recorridoFecha}
+                multiRoutes={multiRouteEntries}
               />
             </GoogleMapsProvider>
             {/* Selector flotante: ver recorrido de un vendedor en una fecha */}
@@ -1362,13 +1476,14 @@ function EmptyBlock({ text }: { text: string }) {
   return <div className="rounded-xl border border-dashed border-border bg-card/50 p-4 text-[12px] text-muted-foreground text-center">{text}</div>;
 }
 
-function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha }: {
+function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSelectClient, recorridoUserId, recorridoFecha, multiRoutes = [] }: {
   markers: MarkerPoint[];
   sellerLocations?: SellerLocation[];
   selectedClientId?: string | null;
   onSelectClient?: (id: string) => void;
   recorridoUserId?: string | null;
   recorridoFecha?: string;
+  multiRoutes?: RouteResultEntry[];
 }) {
   const { isLoaded } = useGoogleMaps();
   const [selected, setSelected] = useState<MarkerPoint | null>(null);
@@ -1383,13 +1498,17 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
     return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lng: (Math.min(...lngs) + Math.max(...lngs)) / 2 };
   }, [markers, sellerLocations]);
 
-  const makePinIcon = useCallback((orden: number | null, visitado: boolean) => {
+  const makePinIcon = useCallback((orden: number | null, visitado: boolean, outOfRange: boolean) => {
     const w = 28, h = 40;
     const color = visitado ? '#22c55e' : '#ef4444';
     const icon = visitado
       ? `<polyline points="9,20 13,24 20,15" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`
       : `<line x1="10" y1="15" x2="18" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><line x1="18" y1="15" x2="10" y2="23" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>`;
     const label = orden != null ? `<text x="14" y="14" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>` : '';
+    // Warning badge overlay (top-right) when visited far away
+    const warning = outOfRange
+      ? `<g transform="translate(18,-2)"><circle cx="6" cy="6" r="6" fill="#f59e0b" stroke="#fff" stroke-width="1.2"/><text x="6" y="8.5" text-anchor="middle" fill="#fff" font-size="9" font-weight="bold" font-family="Arial,sans-serif">!</text></g>`
+      : '';
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
       <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
       ${orden != null ? label : icon}
@@ -1400,10 +1519,12 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       ? `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
           <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
           <text x="14" y="16" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="11" font-weight="bold" font-family="Arial,sans-serif">${orden}</text>
+          ${warning}
         </svg>`
       : `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
           <path d="M14 ${h - 2} C14 ${h - 2} 2 24 2 14 C2 7.4 7.4 2 14 2 C20.6 2 26 7.4 26 14 C26 24 14 ${h - 2} 14 ${h - 2} Z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
           ${icon}
+          ${warning}
         </svg>`;
     return {
       url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svgFinal),
@@ -1473,8 +1594,18 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
           onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          icon={makePinIcon(m.orden, m.visitado)} />
+          icon={makePinIcon(m.orden, m.visitado, m.outOfRange)}
+          title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
+        />
       ))}
+      {/* Multi-route overlay (polilíneas guardadas + paradas numeradas por color de vendedor) */}
+      {multiRoutes.length > 0 && (
+        <MultiRouteOverlay
+          results={multiRoutes}
+          clientesById={new Map(markers.map(m => [m.id, { id: m.id, nombre: m.nombre, gps_lat: m.lat, gps_lng: m.lng }]))}
+          visibility={Object.fromEntries(multiRoutes.map(r => [r.vendedor_id, true]))}
+        />
+      )}
       {sellerLocations.map((s) => (
         <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
           onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
@@ -1493,6 +1624,11 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
             <p className="font-semibold">{selected.nombre}</p>
             <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
             <p>{selected.visitado ? '✅ Visitado' : '⏳ Pendiente'}</p>
+            {selected.outOfRange && (
+              <p style={{ color: '#b45309', fontWeight: 600 }}>
+                ⚠️ Venta registrada a {selected.outOfRangeMeters ?? '?'} m del cliente (fuera del rango de {VISIT_RADIUS_METERS} m)
+              </p>
+            )}
             {selected.diasSinComprar !== null && <p>{selected.diasSinComprar} días sin comprar</p>}
           </div>
         </InfoWindow>
