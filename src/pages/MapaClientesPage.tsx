@@ -439,13 +439,31 @@ export default function MapaClientesPage() {
     if (!multiResults) return;
     setApplying(true);
     try {
+      // Wipe full scope (empresa + dia) so old rows with vendedor_id=null or stale vendor groups don't survive
+      let wipeQ = (supabase.from('cliente_orden_ruta' as any) as any)
+        .delete().eq('empresa_id', empresa!.id);
+      wipeQ = diaFilter ? wipeQ.eq('dia', diaFilter) : wipeQ.is('dia', null);
+      await wipeQ;
+
       const groups = multiResults
         .filter(r => !r.error && r.optimized_order.length > 0)
         .map(r => ({
           vendedor_id: r.vendedor_id === '__sin_vendedor__' ? null : r.vendedor_id,
           ordered: r.optimized_order,
         }));
-      await persistOrder(groups);
+      // Insert all rows in one go (persistOrder also deletes per-vendedor, but scope is already empty)
+      const allRows = groups.flatMap(g =>
+        g.ordered.map((id, idx) => ({
+          empresa_id: empresa!.id,
+          cliente_id: id,
+          dia: diaFilter || null,
+          vendedor_id: g.vendedor_id,
+          orden: idx + 1,
+        }))
+      );
+      if (allRows.length > 0) {
+        await (supabase.from('cliente_orden_ruta' as any) as any).insert(allRows);
+      }
       await refetchSavedOrder();
       setApplied(true);
       toast.success(`Orden guardado para ${groups.length} ${groups.length === 1 ? 'ruta' : 'rutas'}`);
