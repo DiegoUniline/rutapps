@@ -204,7 +204,7 @@ export default function MapaClientesPage() {
     setRouteResult(null);
     const entries: RouteResultEntry[] = groupKeys.map(vid => {
       const rows = groups.get(vid)!.sort((a, b) => a.orden - b.orden);
-      const vendedor = vendedoresLite?.find((v: any) => v.id === vid);
+      const vendedor = vendedores?.find((v: any) => v.id === vid);
       return {
         vendedor_id: vid,
         vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
