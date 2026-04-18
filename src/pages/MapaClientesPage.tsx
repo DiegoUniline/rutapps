@@ -236,6 +236,12 @@ export default function MapaClientesPage() {
         if (!token) return;
 
         // Resolve origin per route (vendor's almacén → fallback to current originPoint or first stop)
+        // Build a quick lookup from clientes (effect doesn't depend on memoized clientesById to avoid TDZ)
+        const clientesLookup = new Map<string, any>();
+        for (const c of (clientes ?? [])) {
+          if ((c as any).gps_lat != null && (c as any).gps_lng != null) clientesLookup.set((c as any).id, c);
+        }
+
         const routesPayload = await Promise.all(initialEntries.map(async (e) => {
           let origin: { lat: number; lng: number } | null = null;
           if (e.vendedor_id !== '__sin_vendedor__') {
@@ -250,14 +256,13 @@ export default function MapaClientesPage() {
           }
           if (!origin && originPoint) origin = { lat: originPoint.lat, lng: originPoint.lng };
           if (!origin) {
-            // Fallback: use first stop as origin
-            const firstStop = clientesById.get(e.optimized_order[0]);
+            const firstStop = clientesLookup.get(e.optimized_order[0]);
             if (firstStop?.gps_lat != null) origin = { lat: Number(firstStop.gps_lat), lng: Number(firstStop.gps_lng) };
           }
           if (!origin) return null;
           const waypoints = e.optimized_order
             .map(cid => {
-              const c = clientesById.get(cid);
+              const c = clientesLookup.get(cid);
               if (!c?.gps_lat || !c?.gps_lng) return null;
               return { id: cid, lat: Number(c.gps_lat), lng: Number(c.gps_lng) };
             })
