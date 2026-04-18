@@ -176,56 +176,125 @@ export default function MapaClientesPage() {
 
   // Restore saved route automatically when filters change
   useEffect(() => {
-    if (!savedOrder || savedOrder.length === 0) {
-      setRouteResult(null);
-      setMultiResults(null);
-      return;
-    }
-    // Group by vendedor_id
-    const groups = new Map<string, { cliente_id: string; orden: number }[]>();
-    for (const row of savedOrder) {
-      const key = row.vendedor_id ?? '__sin_vendedor__';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(row);
-    }
-    // If real vendor groups exist alongside an inconsistent "__sin_vendedor__" residual group, drop the residual
-    if (groups.size > 1 && groups.has('__sin_vendedor__')) {
-      groups.delete('__sin_vendedor__');
-    }
-    // If only one group AND a vendedor filter is active (or no groups have a vendor), use single-route view
-    const groupKeys = Array.from(groups.keys());
-    if (groupKeys.length <= 1) {
-      setMultiResults(null);
-      setRouteResult({
-        orderedIds: savedOrder.map(o => o.cliente_id),
-        polyline: null,
-        distance_meters: 0,
-        duration: '',
+    let cancelled = false;
+    (async () => {
+      if (!savedOrder || savedOrder.length === 0) {
+        setRouteResult(null);
+        setMultiResults(null);
+        return;
+      }
+      // Group by vendedor_id
+      const groups = new Map<string, { cliente_id: string; orden: number }[]>();
+      for (const row of savedOrder) {
+        const key = row.vendedor_id ?? '__sin_vendedor__';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key)!.push(row);
+      }
+      // If real vendor groups exist alongside an inconsistent "__sin_vendedor__" residual group, drop the residual
+      if (groups.size > 1 && groups.has('__sin_vendedor__')) {
+        groups.delete('__sin_vendedor__');
+      }
+      const groupKeys = Array.from(groups.keys());
+      if (groupKeys.length <= 1) {
+        setMultiResults(null);
+        setRouteResult({
+          orderedIds: savedOrder.map(o => o.cliente_id),
+          polyline: null,
+          distance_meters: 0,
+          duration: '',
+        });
+        return;
+      }
+
+      // Build initial entries (no polyline yet) so the map shows colored stops immediately
+      const initialEntries: RouteResultEntry[] = groupKeys.map(vid => {
+        const rows = groups.get(vid)!.sort((a, b) => a.orden - b.orden);
+        const vendedor = vendedores?.find((v: any) => v.id === vid);
+        return {
+          vendedor_id: vid,
+          vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
+          origin: { lat: 0, lng: 0, label: 'Guardado' },
+          optimized_order: rows.map(r => r.cliente_id),
+          polyline: null,
+          distance_meters: 0,
+          duration: '0s',
+          original_distance_meters: 0,
+        };
       });
-      return;
-    }
-    // Multiple vendor groups → reconstruct multi-route view (no polyline, will be re-optimized if user clicks)
-    setRouteResult(null);
-    const entries: RouteResultEntry[] = groupKeys.map(vid => {
-      const rows = groups.get(vid)!.sort((a, b) => a.orden - b.orden);
-      const vendedor = vendedores?.find((v: any) => v.id === vid);
-      return {
-        vendedor_id: vid,
-        vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
-        origin: { lat: 0, lng: 0, label: 'Guardado' },
-        optimized_order: rows.map(r => r.cliente_id),
-        polyline: null,
-        distance_meters: 0,
-        duration: '0s',
-        original_distance_meters: 0,
-      };
-    });
-    setMultiResults(entries);
-    const vis: Record<string, boolean> = {};
-    entries.forEach(e => { vis[e.vendedor_id] = true; });
-    setRouteVisibility(vis);
-    setApplied(true);
-  }, [savedOrder, vendedores]);
+      if (cancelled) return;
+      setRouteResult(null);
+      setMultiResults(initialEntries);
+      const vis: Record<string, boolean> = {};
+      initialEntries.forEach(e => { vis[e.vendedor_id] = true; });
+      setRouteVisibility(vis);
+      setApplied(true);
+
+      // Background: fetch real polylines (per-street) via edge function with preserve_order=true
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) return;
+
+        // Resolve origin per route (vendor's almacén → fallback to current originPoint or first stop)
+        const routesPayload = await Promise.all(initialEntries.map(async (e) => {
+          let origin: { lat: number; lng: number } | null = null;
+          if (e.vendedor_id !== '__sin_vendedor__') {
+            const { data: prof } = await (supabase.from('profiles') as any)
+              .select('almacenes:almacen_id (gps_lat, gps_lng, nombre)')
+              .eq('id', e.vendedor_id).maybeSingle();
+            const a = prof?.almacenes;
+            if (a?.gps_lat != null && a?.gps_lng != null) {
+              origin = { lat: Number(a.gps_lat), lng: Number(a.gps_lng) };
+              e.origin = { ...origin, label: a.nombre ?? 'Almacén' };
+            }
+          }
+          if (!origin && originPoint) origin = { lat: originPoint.lat, lng: originPoint.lng };
+          if (!origin) {
+            // Fallback: use first stop as origin
+            const firstStop = clientesById.get(e.optimized_order[0]);
+            if (firstStop?.gps_lat != null) origin = { lat: Number(firstStop.gps_lat), lng: Number(firstStop.gps_lng) };
+          }
+          if (!origin) return null;
+          const waypoints = e.optimized_order
+            .map(cid => {
+              const c = clientesById.get(cid);
+              if (!c?.gps_lat || !c?.gps_lng) return null;
+              return { id: cid, lat: Number(c.gps_lat), lng: Number(c.gps_lng) };
+            })
+            .filter((w): w is { id: string; lat: number; lng: number } => w !== null);
+          if (waypoints.length === 0) return null;
+          return { key: e.vendedor_id, origin, waypoints, preserve_order: true };
+        }));
+
+        const validRoutes = routesPayload.filter((r): r is NonNullable<typeof r> => r !== null);
+        if (validRoutes.length === 0) return;
+
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/optimize-route`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ routes: validRoutes, dia_filtro: diaFilter || null }),
+        });
+        if (!res.ok) return;
+        const result = await res.json();
+        if (cancelled) return;
+        const enriched = initialEntries.map(e => {
+          const r = (result.routes ?? []).find((x: any) => x.key === e.vendedor_id);
+          if (!r) return e;
+          return {
+            ...e,
+            polyline: r.polyline ?? null,
+            distance_meters: r.distance_meters ?? 0,
+            duration: r.duration ?? '0s',
+          };
+        });
+        setMultiResults(enriched);
+      } catch (err) {
+        console.warn('Could not fetch street polylines for saved routes:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [savedOrder, vendedores, clientesById, originPoint, diaFilter]);
 
   const filtered = useMemo(() => {
     let result = clientes ?? [];
