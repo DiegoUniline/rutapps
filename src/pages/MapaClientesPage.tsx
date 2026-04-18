@@ -97,7 +97,7 @@ export default function MapaClientesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<any | null>(null);
-  const [originPoint, setOriginPoint] = useState<{ lat: number; lng: number } | null>(null);
+  const [originPoint, setOriginPoint] = useState<OriginValue | null>(null);
   const [settingOrigin, setSettingOrigin] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
   const [routeResult, setRouteResult] = useState<{
@@ -108,6 +108,13 @@ export default function MapaClientesPage() {
   } | null>(null);
   const [showRoutePanel, setShowRoutePanel] = useState(true);
   const [colorMode, setColorMode] = useState<'dia' | 'status' | 'visitado'>('visitado');
+  // Multi-route state
+  const [optimMode, setOptimMode] = useState<'common' | 'individual'>('common');
+  const [showOriginPicker, setShowOriginPicker] = useState(false);
+  const [multiResults, setMultiResults] = useState<RouteResultEntry[] | null>(null);
+  const [routeVisibility, setRouteVisibility] = useState<Record<string, boolean>>({});
+  const [applying, setApplying] = useState(false);
+  const [applied, setApplied] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { data: isAdmin } = useQuery({
