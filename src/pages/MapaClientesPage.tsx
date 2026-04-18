@@ -528,29 +528,45 @@ export default function MapaClientesPage() {
           </div>
 
           {/* Route controls */}
-          <div className="flex items-center gap-1 ml-auto">
-            <button
-              onClick={() => { setSettingOrigin(!settingOrigin); if (!settingOrigin) toast.info('Click en el mapa para el punto de partida'); }}
-              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-                settingOrigin ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 animate-pulse"
-                  : originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
-                    : "bg-background border-border text-muted-foreground")}>
-              <Navigation className="h-3.5 w-3.5" />
-              {settingOrigin ? 'Click mapa...' : originPoint ? '✓ Origen' : 'Origen'}
-            </button>
-            {originPoint && !settingOrigin && (
-              <button onClick={() => { setOriginPoint(null); setRouteResult(null); }} className="text-destructive p-1">
-                <X className="h-3 w-3" />
-              </button>
+          <div className="flex items-center gap-1 ml-auto relative">
+            {isMultiVendor && (
+              <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden text-[10px] font-medium">
+                {(['common', 'individual'] as const).map(m => (
+                  <button key={m} onClick={() => setOptimMode(m)}
+                    className={cn("px-2 py-1.5 transition-colors",
+                      optimMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+                    title={m === 'common' ? 'Todos parten del mismo punto' : 'Cada vendedor parte de su almacén'}>
+                    {m === 'common' ? 'Origen común' : 'Individual'}
+                  </button>
+                ))}
+              </div>
             )}
-            {isAdmin && originPoint && withGps.length >= 2 && (
+            <button
+              onClick={() => setShowOriginPicker(s => !s)}
+              className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                originPoint ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  : "bg-background border-border text-muted-foreground")}>
+              <Navigation className="h-3.5 w-3.5" />
+              {originPoint ? `✓ ${originPoint.label ?? 'Origen'}` : 'Origen'}
+            </button>
+            {showOriginPicker && (
+              <div className="absolute top-full right-0 mt-2 z-20 w-72 bg-card border border-border rounded-xl shadow-lg p-3">
+                <OriginPicker
+                  value={originPoint}
+                  onChange={(v) => { setOriginPoint(v); setRouteResult(null); setMultiResults(null); if (v) setShowOriginPicker(false); }}
+                  onPickFromMapRequest={() => { setSettingOrigin(true); setShowOriginPicker(false); toast.info('Click en el mapa'); }}
+                  pickingFromMap={settingOrigin}
+                />
+              </div>
+            )}
+            {isAdmin && originPoint && withGps.length >= 1 && (
               <button onClick={handleOptimize} disabled={optimizing}
                 className={cn("flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all",
-                  routeResult ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
+                  (routeResult || multiResults) ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600"
                     : "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
                   optimizing && "opacity-70")}>
-                {optimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : routeResult ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Route className="h-3.5 w-3.5" />}
-                {optimizing ? 'Optimizando...' : routeResult ? 'Optimizada' : 'Optimizar'}
+                {optimizing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : (routeResult || multiResults) ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Route className="h-3.5 w-3.5" />}
+                {optimizing ? 'Optimizando...' : multiResults ? `${multiResults.length} rutas` : routeResult ? 'Optimizada' : isMultiVendor ? 'Optimizar todas' : 'Optimizar'}
               </button>
             )}
           </div>
