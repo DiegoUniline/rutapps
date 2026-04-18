@@ -74,8 +74,8 @@ export function fmtDuration(d?: string) {
  * Renderiza polilíneas + marcadores numerados para múltiples rutas a la vez.
  * Cada ruta tiene un color y se puede ocultar individualmente.
  */
-export function MultiRouteOverlay({ results, clientesById, visibility }: {
-  results: RouteResultEntry[]; clientesById: Map<string, ClienteLite>; visibility: Record<string, boolean>;
+export function MultiRouteOverlay({ results, clientesById, visibility, hidePolylines = false }: {
+  results: RouteResultEntry[]; clientesById: Map<string, ClienteLite>; visibility: Record<string, boolean>; hidePolylines?: boolean;
 }) {
   const items = useMemo(() => results.map((r, idx) => ({ r, idx, color: getRouteColor(idx) })), [results]);
 
