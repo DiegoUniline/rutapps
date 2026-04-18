@@ -367,7 +367,7 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <img src={heroDashboard} alt="Dashboard" className="rounded-2xl shadow-xl border border-gray-200" />
+            <LiveDashboardMockup />
           </div>
 
           <div className="grid md:grid-cols-2 gap-10 items-center mb-20">
