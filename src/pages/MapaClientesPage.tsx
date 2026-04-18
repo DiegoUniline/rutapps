@@ -782,7 +782,7 @@ export default function MapaClientesPage() {
                   onClick={() => setSelectedCliente(c)}
                 />
               ))
-            ) : (
+            ) : multiResults ? null : (
               <>
                 {/* Numbered markers (with orden) rendered outside cluster so labels always show */}
                 {withGps.filter((c: any) => typeof c.orden === 'number' && c.orden > 0).map((c: any) => (
