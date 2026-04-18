@@ -815,8 +815,8 @@ export default function MapaClientesPage() {
         )}
         <MapRecenterButton onClick={handleRecenter} className="bottom-6 left-3" />
 
-        {/* Route order sidebar */}
-        {orderedClients && orderedClients.length > 0 && (
+        {/* Route order sidebar (single route, hidden when multi-route panel is active) */}
+        {orderedClients && orderedClients.length > 0 && !multiResults && (
           <div className={cn("absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-72 flex flex-col transition-all",
             showRoutePanel ? "max-h-[65vh]" : "max-h-[42px]")}>
             <button onClick={() => setShowRoutePanel(!showRoutePanel)}
