@@ -60,6 +60,8 @@ export const CLIENT_IMPORT_COLUMNS: ImportColumn[] = [
   { key: 'dias_credito', header: 'Días Crédito', example: '30' },
   { key: 'frecuencia', header: 'Frecuencia', example: 'semanal' },
   { key: 'status', header: 'Estado', example: 'activo' },
+  { key: 'gps_lat', header: 'Latitud', example: '19.432608' },
+  { key: 'gps_lng', header: 'Longitud', example: '-99.133209' },
 ];
 
 // ─── Template generation ────────────────────────────────────────
