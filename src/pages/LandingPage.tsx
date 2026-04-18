@@ -9,9 +9,7 @@ import {
   Tag, Building2, Calculator, ScanLine, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import heroDashboard from '@/assets/landing-hero-dashboard.jpg';
-import mobileApp from '@/assets/landing-mobile-app.png';
-import routeMap from '@/assets/landing-route-map.jpg';
+import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 
 // ── Hero highlight: seguimiento en tiempo real ──
 const REALTIME_BULLETS = [
@@ -207,12 +205,11 @@ export default function LandingPage() {
             <p className="text-xs text-gray-400 mt-4">Sin tarjeta · Configuración en 5 minutos · 14 días de prueba</p>
           </div>
 
-          {/* Hero image */}
+          {/* Hero — live dashboard mockup */}
           <div className="relative max-w-5xl mx-auto">
             <div className="absolute inset-0 rounded-2xl opacity-20 blur-3xl -z-10"
               style={{ background: 'linear-gradient(135deg, hsl(230, 55%, 52%), hsl(260, 45%, 60%))' }} />
-            <img src={heroDashboard} alt="Dashboard de Rutapp con seguimiento de vendedores en tiempo real"
-              className="w-full rounded-2xl shadow-2xl shadow-gray-900/10 border border-gray-200" />
+            <LiveDashboardMockup />
           </div>
         </div>
       </section>
@@ -272,32 +269,11 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* Mock map */}
+            {/* LIVE animated supervisor map */}
             <div className="relative">
               <div className="absolute -inset-4 rounded-3xl opacity-30 blur-2xl"
                 style={{ background: 'linear-gradient(135deg, hsl(152, 56%, 50%), hsl(180, 56%, 50%))' }} />
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
-                <img src={routeMap} alt="Mapa de seguimiento en tiempo real" className="w-full block" />
-                {/* Live badge overlay */}
-                <div className="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-2 rounded-xl shadow-lg flex items-center gap-2">
-                  <span className="relative flex h-2.5 w-2.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                  </span>
-                  <span className="text-xs font-bold text-gray-900">EN VIVO · 8 vendedores activos</span>
-                </div>
-                {/* Card overlays */}
-                <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur px-4 py-3 rounded-xl shadow-lg max-w-[200px]">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[11px] font-bold">CR</div>
-                    <div>
-                      <div className="text-[11px] font-bold text-gray-900 leading-tight">Carlos Ramírez</div>
-                      <div className="text-[10px] text-emerald-600 leading-tight">● En cliente</div>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-gray-500">12 ventas · $8,420 · 87% 🔋</div>
-                </div>
-              </div>
+              <LiveSupervisorMap />
             </div>
           </div>
         </div>
@@ -391,11 +367,11 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <img src={heroDashboard} alt="Dashboard" className="rounded-2xl shadow-xl border border-gray-200" />
+            <LiveDashboardMockup />
           </div>
 
           <div className="grid md:grid-cols-2 gap-10 items-center mb-20">
-            <img src={mobileApp} alt="Aplicación móvil" className="rounded-2xl max-w-sm mx-auto md:order-1" />
+            <div className="md:order-1"><LiveMobileApp /></div>
             <div className="md:order-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-semibold mb-4">
                 <Smartphone className="h-3.5 w-3.5" /> App para vendedores
@@ -433,7 +409,7 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <img src={routeMap} alt="Optimización de rutas" className="rounded-2xl shadow-xl border border-gray-200" />
+            <LiveSupervisorMap />
           </div>
         </div>
       </section>
