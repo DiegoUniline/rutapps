@@ -1591,21 +1591,36 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
         ],
       }}
     >
-      {markers.map((m) => (
+      {/* Marcadores base: ocultos cuando hay multirruta para evitar duplicados */}
+      {multiRoutes.length === 0 && markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
           onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
           icon={makePinIcon(m.orden, m.visitado, m.outOfRange)}
           title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
         />
       ))}
-      {/* Multi-route overlay (polilíneas guardadas + paradas numeradas por color de vendedor) */}
+      {/* Multi-route overlay (polilíneas guardadas + paradas numeradas por color de vendedor, con estado de visita) */}
       {multiRoutes.length > 0 && (
         <MultiRouteOverlay
           results={multiRoutes}
-          clientesById={new Map(markers.map(m => [m.id, { id: m.id, nombre: m.nombre, gps_lat: m.lat, gps_lng: m.lng }]))}
+          clientesById={new Map(markers.map(m => [m.id, {
+            id: m.id, nombre: m.nombre, gps_lat: m.lat, gps_lng: m.lng,
+            visitado: m.visitado, outOfRange: m.outOfRange, outOfRangeMeters: m.outOfRangeMeters,
+          }]))}
           visibility={Object.fromEntries(multiRoutes.map(r => [r.vendedor_id, true]))}
         />
       )}
+      {/* Hit-area invisible para abrir InfoWindow con detalle del cliente sobre el overlay */}
+      {multiRoutes.length > 0 && markers.map((m) => (
+        <Marker
+          key={`hit-${m.id}`}
+          position={{ lat: m.lat, lng: m.lng }}
+          onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
+          opacity={0}
+          zIndex={9999}
+          title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
+        />
+      ))}
       {sellerLocations.map((s) => (
         <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
           onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
