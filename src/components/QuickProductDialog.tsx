@@ -14,15 +14,17 @@ import { Loader2, Sparkles } from 'lucide-react';
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  /** Nombre pre-rellenado desde el buscador */
   initialName?: string;
-  /** Costo pre-rellenado desde la línea de compra (si aplica) */
   initialCosto?: number;
-  /** Callback al crear: recibe el producto creado para asignarlo a la línea */
-  onCreated: (producto: { id: string; codigo: string; nombre: string; costo: number; iva_pct: number; tiene_iva: boolean; tiene_ieps: boolean; ieps_pct: number }) => void;
+  onCreated: (producto: {
+    id: string; codigo: string; nombre: string; costo: number;
+    iva_pct: number; tiene_iva: boolean; tiene_ieps: boolean; ieps_pct: number;
+    unidad_compra_id: string | null; factor_conversion: number;
+  }) => void;
 }
 
 const MARGIN_DEFAULT = 30;
+const GRANEL_UNIDADES = ['kg', 'g', 'lb', 'l', 'ml', 'm', 'cm'];
 
 export default function QuickProductDialog({ open, onOpenChange, initialName = '', initialCosto = 0, onCreated }: Props) {
   const { empresa } = useAuth();
@@ -30,21 +32,27 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
 
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
-  const [unidadId, setUnidadId] = useState('');
+  const [unidadVentaId, setUnidadVentaId] = useState('');
+  const [unidadCompraId, setUnidadCompraId] = useState('');
+  const [factorConversion, setFactorConversion] = useState(1);
   const [categoriaId, setCategoriaId] = useState('');
   const [costo, setCosto] = useState(0);
   const [margen, setMargen] = useState(MARGIN_DEFAULT);
   const [precio, setPrecio] = useState(0);
   const [precioManual, setPrecioManual] = useState(false);
+  const [modoPrecio, setModoPrecio] = useState<'directo' | 'lista'>('directo');
+  const [listaPrecioId, setListaPrecioId] = useState<string>('');
   const [tieneIva, setTieneIva] = useState(true);
   const [ivaPct, setIvaPct] = useState(16);
   const [tieneIeps, setTieneIeps] = useState(false);
   const [iepsPct, setIepsPct] = useState(0);
+  const [iepsTipo, setIepsTipo] = useState<'porcentaje' | 'cuota'>('porcentaje');
+  const [esGranel, setEsGranel] = useState(false);
+  const [unidadGranel, setUnidadGranel] = useState('kg');
   const [venderSinStock, setVenderSinStock] = useState(false);
   const [claveSat, setClaveSat] = useState('01010101');
   const [claveUnidadSat, setClaveUnidadSat] = useState('H87');
 
-  // Cargar catálogos
   const { data: unidades = [] } = useQuery({
     queryKey: ['unidades-quick', empresa?.id],
     enabled: !!empresa?.id && open,
@@ -63,7 +71,19 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
     },
   });
 
-  // Auto-código sugerido
+  const { data: listasPrecio = [] } = useQuery({
+    queryKey: ['listas-precio-quick', empresa?.id],
+    enabled: !!empresa?.id && open,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('lista_precios')
+        .select('id, nombre, es_principal, tarifa_id')
+        .eq('empresa_id', empresa!.id)
+        .order('es_principal', { ascending: false });
+      return (data ?? []) as { id: string; nombre: string; es_principal: boolean; tarifa_id: string }[];
+    },
+  });
+
   const { data: sugCodigo } = useQuery({
     queryKey: ['next-prod-code', empresa?.id, open],
     enabled: !!empresa?.id && open,
@@ -80,10 +100,15 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
       setCosto(initialCosto || 0);
       setMargen(MARGIN_DEFAULT);
       setPrecioManual(false);
+      setModoPrecio('directo');
       setTieneIva(true);
       setIvaPct(16);
       setTieneIeps(false);
       setIepsPct(0);
+      setIepsTipo('porcentaje');
+      setEsGranel(false);
+      setUnidadGranel('kg');
+      setFactorConversion(1);
       setVenderSinStock(false);
       setClaveSat('01010101');
       setClaveUnidadSat('H87');
@@ -91,19 +116,27 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
     }
   }, [open, initialName, initialCosto]);
 
-  useEffect(() => {
-    if (sugCodigo && !codigo) setCodigo(sugCodigo);
-  }, [sugCodigo, codigo]);
+  useEffect(() => { if (sugCodigo && !codigo) setCodigo(sugCodigo); }, [sugCodigo, codigo]);
 
-  // Default unidad: primera disponible (típicamente "Pieza")
+  // Default unidades: pieza para venta y compra
   useEffect(() => {
-    if (unidades.length > 0 && !unidadId) {
+    if (unidades.length > 0 && !unidadVentaId) {
       const pieza = unidades.find(u => u.abreviatura?.toLowerCase() === 'pza' || u.nombre?.toLowerCase().includes('pieza'));
-      setUnidadId(pieza?.id ?? unidades[0].id);
+      const def = pieza?.id ?? unidades[0].id;
+      setUnidadVentaId(def);
+      setUnidadCompraId(def);
     }
-  }, [unidades, unidadId]);
+  }, [unidades, unidadVentaId]);
 
-  // Auto-cálculo de precio según margen
+  // Default lista principal
+  useEffect(() => {
+    if (listasPrecio.length > 0 && !listaPrecioId) {
+      const principal = listasPrecio.find(l => l.es_principal) ?? listasPrecio[0];
+      setListaPrecioId(principal.id);
+    }
+  }, [listasPrecio, listaPrecioId]);
+
+  // Auto-cálculo de precio
   useEffect(() => {
     if (!precioManual) {
       const calc = Math.round(costo * (1 + margen / 100) * 100) / 100;
@@ -111,14 +144,16 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
     }
   }, [costo, margen, precioManual]);
 
-  const unidadAbrev = useMemo(() => unidades.find(u => u.id === unidadId)?.abreviatura ?? 'pza', [unidades, unidadId]);
+  const unidadAbrev = useMemo(() => unidades.find(u => u.id === unidadVentaId)?.abreviatura ?? 'pza', [unidades, unidadVentaId]);
 
   const createMut = useMutation({
     mutationFn: async () => {
       if (!empresa?.id) throw new Error('Sin empresa');
       if (!nombre.trim()) throw new Error('El nombre es obligatorio');
-      if (!unidadId) throw new Error('Selecciona una unidad de medida');
+      if (!unidadVentaId) throw new Error('Selecciona una unidad de venta');
+      if (!unidadCompraId) throw new Error('Selecciona una unidad de compra');
       if (costo < 0 || precio < 0) throw new Error('Los montos no pueden ser negativos');
+      if (modoPrecio === 'lista' && !listaPrecioId) throw new Error('Selecciona la lista de precios');
 
       const finalCodigo = codigo.trim() || sugCodigo || `PROD-${Date.now()}`;
 
@@ -129,7 +164,11 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
           empresa_id: empresa.id,
           codigo: finalCodigo,
           nombre: nombre.trim(),
-          unidad_id: unidadId,
+          unidad_venta_id: unidadVentaId,
+          unidad_compra_id: unidadCompraId,
+          factor_conversion: factorConversion || 1,
+          es_granel: esGranel,
+          unidad_granel: esGranel ? unidadGranel : null,
           clasificacion_id: categoriaId || null,
           costo,
           precio_principal: precio,
@@ -137,7 +176,7 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
           iva_pct: tieneIva ? ivaPct : 0,
           tiene_ieps: tieneIeps,
           ieps_pct: tieneIeps ? iepsPct : 0,
-          ieps_tipo: 'porcentaje',
+          ieps_tipo: iepsTipo,
           vender_sin_stock: venderSinStock,
           se_puede_comprar: true,
           se_puede_vender: true,
@@ -150,52 +189,44 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
 
       if (prodErr) throw prodErr;
 
-      // 2. Asignar precio a la Lista de Precios principal (vía tarifa_lineas)
-      try {
-        const { data: listaPrincipal } = await supabase
-          .from('lista_precios')
-          .select('id, tarifa_id')
-          .eq('empresa_id', empresa.id)
-          .eq('es_principal', true)
-          .maybeSingle();
+      // 2. Asignar precio a la lista seleccionada (solo si es modo lista)
+      if (modoPrecio === 'lista' && listaPrecioId) {
+        try {
+          const lista = listasPrecio.find(l => l.id === listaPrecioId);
+          if (lista?.tarifa_id) {
+            await supabase.from('tarifa_lineas').insert({
+              tarifa_id: lista.tarifa_id,
+              lista_precio_id: lista.id,
+              producto_id: (prod as any).id,
+              precio,
+              tipo_calculo: 'precio_fijo',
+            } as any);
+          }
+        } catch { /* no bloqueante */ }
+      }
 
-        if (listaPrincipal?.id && (listaPrincipal as any).tarifa_id) {
-          await supabase.from('tarifa_lineas').insert({
-            tarifa_id: (listaPrincipal as any).tarifa_id,
-            lista_precio_id: listaPrincipal.id,
-            producto_id: (prod as any).id,
-            precio,
-            tipo_calculo: 'precio_fijo',
-          } as any);
-        }
-      } catch { /* no bloqueante */ }
-
-      return prod as any;
+      return { ...(prod as any), unidad_compra_id: unidadCompraId, factor_conversion: factorConversion || 1 };
     },
     onSuccess: (prod) => {
       qc.invalidateQueries({ queryKey: ['productos'] });
       qc.invalidateQueries({ queryKey: ['productos-list'] });
-      toast.success(`Producto "${prod.nombre}" creado ✅`, {
-        description: 'Puedes completar más detalles después en Productos.',
-      });
+      toast.success(`Producto "${prod.nombre}" creado ✅`);
       onCreated(prod);
       onOpenChange(false);
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'No se pudo crear el producto');
-    },
+    onError: (err: any) => toast.error(err?.message || 'No se pudo crear el producto'),
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
             Crear producto rápido
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Solo lo esencial para que funcione en compras, ventas e inventario. El resto lo puedes completar después.
+            Completa los datos esenciales para que el producto funcione en compras, ventas e inventario.
           </DialogDescription>
         </DialogHeader>
 
@@ -212,26 +243,63 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
             </div>
           </div>
 
-          {/* Unidad + Categoría */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Unidad *</Label>
-              <Select value={unidadId} onValueChange={setUnidadId}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                <SelectContent>
-                  {unidades.map(u => <SelectItem key={u.id} value={u.id}>{u.nombre} ({u.abreviatura})</SelectItem>)}
-                </SelectContent>
-              </Select>
+          {/* Categoría */}
+          <div className="space-y-1">
+            <Label className="text-xs">Categoría</Label>
+            <Select value={categoriaId || 'none'} onValueChange={v => setCategoriaId(v === 'none' ? '' : v)}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin categoría</SelectItem>
+                {categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Unidades + Factor */}
+          <div className="bg-muted/30 rounded-md p-3 space-y-2">
+            <Label className="text-xs font-semibold">Unidades de medida</Label>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Unid. venta *</Label>
+                <Select value={unidadVentaId} onValueChange={setUnidadVentaId}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="..." /></SelectTrigger>
+                  <SelectContent>
+                    {unidades.map(u => <SelectItem key={u.id} value={u.id}>{u.nombre} ({u.abreviatura})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Unid. compra *</Label>
+                <Select value={unidadCompraId} onValueChange={setUnidadCompraId}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="..." /></SelectTrigger>
+                  <SelectContent>
+                    {unidades.map(u => <SelectItem key={u.id} value={u.id}>{u.nombre} ({u.abreviatura})</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Factor conv.</Label>
+                <Input type="number" min={1} value={factorConversion} onChange={e => setFactorConversion(Math.max(1, Number(e.target.value) || 1))} className="h-9 text-sm text-right" />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Categoría</Label>
-              <Select value={categoriaId || 'none'} onValueChange={v => setCategoriaId(v === 'none' ? '' : v)}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sin categoría</SelectItem>
-                  {categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <p className="text-[10px] text-muted-foreground">
+              Factor = piezas por unidad de compra (ej: caja con 12 piezas → factor 12).
+            </p>
+
+            {/* Granel */}
+            <div className="flex items-center justify-between border-t border-border pt-2 mt-2">
+              <div className="flex items-center gap-2">
+                <Switch checked={esGranel} onCheckedChange={setEsGranel} id="granel-quick" />
+                <Label htmlFor="granel-quick" className="text-xs cursor-pointer">Producto a granel (peso/volumen)</Label>
+              </div>
+              {esGranel && (
+                <Select value={unidadGranel} onValueChange={setUnidadGranel}>
+                  <SelectTrigger className="h-8 text-xs w-24"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {GRANEL_UNIDADES.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -256,6 +324,35 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
                 ↺ Volver a calcular automático ({margen}% sobre costo)
               </button>
             )}
+
+            {/* Modo de precio */}
+            <div className="border-t border-border pt-2 space-y-2">
+              <Label className="text-xs font-semibold">¿Cómo se asigna el precio?</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setModoPrecio('directo')}
+                  className={`text-xs rounded-md border p-2 text-left transition-colors ${modoPrecio === 'directo' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+                  <div className="font-medium">Precio directo</div>
+                  <div className="text-[10px]">Solo se guarda en el producto</div>
+                </button>
+                <button type="button" onClick={() => setModoPrecio('lista')}
+                  className={`text-xs rounded-md border p-2 text-left transition-colors ${modoPrecio === 'lista' ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:bg-muted'}`}>
+                  <div className="font-medium">Lista de precios</div>
+                  <div className="text-[10px]">Se vincula a una lista</div>
+                </button>
+              </div>
+              {modoPrecio === 'lista' && (
+                <Select value={listaPrecioId} onValueChange={setListaPrecioId}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecciona lista..." /></SelectTrigger>
+                  <SelectContent>
+                    {listasPrecio.map(l => (
+                      <SelectItem key={l.id} value={l.id}>
+                        {l.nombre}{l.es_principal ? ' (Principal)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {/* Impuestos */}
@@ -266,7 +363,10 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
                 <Switch checked={tieneIva} onCheckedChange={setTieneIva} />
               </div>
               {tieneIva && (
-                <Input type="number" value={ivaPct} onChange={e => setIvaPct(Number(e.target.value) || 0)} className="h-8 text-xs text-right" />
+                <div className="flex items-center gap-1">
+                  <Input type="number" value={ivaPct} onChange={e => setIvaPct(Number(e.target.value) || 0)} className="h-8 text-xs text-right" />
+                  <span className="text-xs text-muted-foreground">%</span>
+                </div>
               )}
             </div>
             <div className="border border-border rounded-md p-2.5 space-y-1.5">
@@ -275,12 +375,21 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
                 <Switch checked={tieneIeps} onCheckedChange={setTieneIeps} />
               </div>
               {tieneIeps && (
-                <Input type="number" value={iepsPct} onChange={e => setIepsPct(Number(e.target.value) || 0)} className="h-8 text-xs text-right" />
+                <div className="flex gap-1">
+                  <Input type="number" value={iepsPct} onChange={e => setIepsPct(Number(e.target.value) || 0)} className="h-8 text-xs text-right flex-1" />
+                  <Select value={iepsTipo} onValueChange={(v: any) => setIepsTipo(v)}>
+                    <SelectTrigger className="h-8 text-xs w-20"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="porcentaje">%</SelectItem>
+                      <SelectItem value="cuota">$</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
             </div>
           </div>
 
-          {/* SAT (colapsable visual) */}
+          {/* SAT */}
           <details className="text-xs">
             <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">Claves SAT (para CFDI) — opcional</summary>
             <div className="grid grid-cols-2 gap-2 mt-2">
@@ -297,18 +406,16 @@ export default function QuickProductDialog({ open, onOpenChange, initialName = '
             </div>
           </details>
 
-          <div className="flex items-center justify-between border-t border-border pt-3">
-            <div className="flex items-center gap-2">
-              <Switch checked={venderSinStock} onCheckedChange={setVenderSinStock} id="vss-quick" />
-              <Label htmlFor="vss-quick" className="text-xs cursor-pointer">Permitir vender sin stock</Label>
-            </div>
+          <div className="flex items-center gap-2 border-t border-border pt-3">
+            <Switch checked={venderSinStock} onCheckedChange={setVenderSinStock} id="vss-quick" />
+            <Label htmlFor="vss-quick" className="text-xs cursor-pointer">Permitir vender sin stock</Label>
           </div>
 
           <div className="flex gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1" disabled={createMut.isPending}>
               Cancelar
             </Button>
-            <Button onClick={() => createMut.mutate()} className="flex-1" disabled={createMut.isPending || !nombre.trim() || !unidadId}>
+            <Button onClick={() => createMut.mutate()} className="flex-1" disabled={createMut.isPending || !nombre.trim() || !unidadVentaId || !unidadCompraId}>
               {createMut.isPending ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Creando...</> : 'Crear y agregar'}
             </Button>
           </div>
