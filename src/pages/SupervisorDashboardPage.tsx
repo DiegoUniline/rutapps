@@ -1622,7 +1622,13 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
           key={`hit-${m.id}`}
           position={{ lat: m.lat, lng: m.lng }}
           onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          opacity={0}
+          icon={{
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 16,
+            fillColor: '#000',
+            fillOpacity: 0.001,
+            strokeOpacity: 0,
+          }}
           zIndex={9999}
           title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
         />

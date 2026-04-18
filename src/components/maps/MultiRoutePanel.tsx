@@ -166,6 +166,7 @@ export function MultiRouteOverlay({ results, clientesById, visibility, hidePolyl
                   }}
                   title={`${idx + 1}. ${c.nombre} (${r.vendedor_nombre})${visited ? ' · ✅ Visitado' : ''}${oor ? ` · ⚠️ Fuera de rango` : ''}`}
                   zIndex={500}
+                  clickable={false}
                 />
               );
             })}
