@@ -9,9 +9,7 @@ import {
   Tag, Building2, Calculator, ScanLine, Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import heroDashboard from '@/assets/landing-hero-dashboard.jpg';
-import mobileApp from '@/assets/landing-mobile-app.png';
-import routeMap from '@/assets/landing-route-map.jpg';
+import { LiveSupervisorMap, LiveMobileApp, LiveDashboardMockup } from '@/components/landing/LiveMockups';
 
 // ── Hero highlight: seguimiento en tiempo real ──
 const REALTIME_BULLETS = [
