@@ -225,7 +225,7 @@ export default function MapaClientesPage() {
     entries.forEach(e => { vis[e.vendedor_id] = true; });
     setRouteVisibility(vis);
     setApplied(true);
-  }, [savedOrder]);
+  }, [savedOrder, vendedores]);
 
   const filtered = useMemo(() => {
     let result = clientes ?? [];
