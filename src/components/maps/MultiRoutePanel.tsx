@@ -43,6 +43,9 @@ export interface RouteResultEntry {
 
 interface ClienteLite {
   id: string; nombre: string; gps_lat: number; gps_lng: number; direccion?: string | null;
+  visitado?: boolean;
+  outOfRange?: boolean;
+  outOfRangeMeters?: number | null;
 }
 
 interface Props {
