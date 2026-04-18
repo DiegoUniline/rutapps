@@ -240,20 +240,23 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Quota check (each route counts as 1 toward the monthly limit)
-    const now = new Date();
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const { count: monthlyCount } = await supabase
-      .from("optimizacion_rutas_log")
-      .select("id", { count: "exact", head: true })
-      .eq("empresa_id", profile.empresa_id)
-      .gte("created_at", firstOfMonth);
+    // Quota check (each optimization counts as 1; preserve_order calls are free)
+    const optimizingCount = routesIn.filter(r => r.preserve_order !== true).length;
+    if (optimizingCount > 0) {
+      const now = new Date();
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { count: monthlyCount } = await supabase
+        .from("optimizacion_rutas_log")
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", profile.empresa_id)
+        .gte("created_at", firstOfMonth);
 
-    const used = monthlyCount ?? 0;
-    if (used + routesIn.length > MONTHLY_LIMIT) {
-      return new Response(JSON.stringify({
-        error: `Límite mensual alcanzado (${MONTHLY_LIMIT} optimizaciones por mes). Disponibles: ${Math.max(0, MONTHLY_LIMIT - used)}, requeridas: ${routesIn.length}.`,
-      }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const used = monthlyCount ?? 0;
+      if (used + optimizingCount > MONTHLY_LIMIT) {
+        return new Response(JSON.stringify({
+          error: `Límite mensual alcanzado (${MONTHLY_LIMIT} optimizaciones por mes). Disponibles: ${Math.max(0, MONTHLY_LIMIT - used)}, requeridas: ${optimizingCount}.`,
+        }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const results: RouteResult[] = [];
