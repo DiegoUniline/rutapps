@@ -318,6 +318,8 @@ export async function importClients(rows: Record<string, any>[], empresaId: stri
         dias_credito: raw.dias_credito ? Number(raw.dias_credito) : 0,
         frecuencia: ['diaria', 'semanal', 'quincenal', 'mensual'].includes(raw.frecuencia?.toLowerCase?.()) ? raw.frecuencia.toLowerCase() : 'semanal',
         status: ['activo', 'inactivo', 'suspendido'].includes(raw.status?.toLowerCase?.()) ? raw.status.toLowerCase() : 'activo',
+        gps_lat: raw.gps_lat != null && raw.gps_lat !== '' && !isNaN(Number(raw.gps_lat)) ? Number(raw.gps_lat) : null,
+        gps_lng: raw.gps_lng != null && raw.gps_lng !== '' && !isNaN(Number(raw.gps_lng)) ? Number(raw.gps_lng) : null,
         ...(zona_id && { zona_id }),
         ...(vendedor_id && { vendedor_id }),
         ...(cobrador_id && { cobrador_id }),
