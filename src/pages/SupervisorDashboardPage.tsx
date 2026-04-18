@@ -1600,8 +1600,18 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
       {markers.map((m) => (
         <Marker key={m.id} position={{ lat: m.lat, lng: m.lng }}
           onClick={() => { setSelected(m); setSelectedSellerLoc(null); onSelectClient?.(m.id); }}
-          icon={makePinIcon(m.orden, m.visitado)} />
+          icon={makePinIcon(m.orden, m.visitado, m.outOfRange)}
+          title={m.outOfRange ? `${m.nombre} — ⚠️ Visitado a ${m.outOfRangeMeters ?? '?'} m del cliente` : m.nombre}
+        />
       ))}
+      {/* Multi-route overlay (polilíneas guardadas + paradas numeradas por color de vendedor) */}
+      {multiRoutes.length > 0 && (
+        <MultiRouteOverlay
+          results={multiRoutes}
+          clientesById={new Map(markers.map(m => [m.id, { id: m.id, nombre: m.nombre, gps_lat: m.lat, gps_lng: m.lng }]))}
+          visibility={Object.fromEntries(multiRoutes.map(r => [r.vendedor_id, true]))}
+        />
+      )}
       {sellerLocations.map((s) => (
         <Marker key={`seller-${s.id}`} position={{ lat: s.lat, lng: s.lng }}
           onClick={() => { setSelectedSellerLoc(s); setSelected(null); }}
@@ -1620,6 +1630,11 @@ function SupervisorMap({ markers, sellerLocations = [], selectedClientId, onSele
             <p className="font-semibold">{selected.nombre}</p>
             <p style={{ color: '#6b7280' }}>{selected.vendedorNombre}</p>
             <p>{selected.visitado ? '✅ Visitado' : '⏳ Pendiente'}</p>
+            {selected.outOfRange && (
+              <p style={{ color: '#b45309', fontWeight: 600 }}>
+                ⚠️ Venta registrada a {selected.outOfRangeMeters ?? '?'} m del cliente (fuera del rango de {VISIT_RADIUS_METERS} m)
+              </p>
+            )}
             {selected.diasSinComprar !== null && <p>{selected.diasSinComprar} días sin comprar</p>}
           </div>
         </InfoWindow>
