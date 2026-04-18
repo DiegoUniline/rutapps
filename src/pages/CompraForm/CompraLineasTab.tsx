@@ -86,7 +86,6 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
         initialCosto={quickCosto}
         onCreated={(prod) => {
           if (quickIdx === null) return;
-          // Asignar producto + auto-rellenar costo e impuestos del producto recién creado
           updateLinea(quickIdx, 'producto_id', prod.id);
           if (prod.costo && !lineas[quickIdx]?.precio_unitario) {
             updateLinea(quickIdx, 'precio_unitario', prod.costo);
@@ -95,6 +94,8 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
           if (prod.tiene_iva) updateLinea(quickIdx, '_iva_pct', prod.iva_pct ?? 16);
           updateLinea(quickIdx, '_tiene_ieps', !!prod.tiene_ieps);
           if (prod.tiene_ieps) updateLinea(quickIdx, '_ieps_pct', prod.ieps_pct ?? 0);
+          // Factor de conversión y unidad desde el producto recién creado
+          if (prod.factor_conversion) updateLinea(quickIdx, '_factor_conversion', prod.factor_conversion);
         }}
       />
     </div>
