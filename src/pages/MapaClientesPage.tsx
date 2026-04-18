@@ -855,6 +855,20 @@ export default function MapaClientesPage() {
           </div>
         )}
 
+        {/* Multi-route panel */}
+        {multiResults && multiResults.length > 0 && (
+          <MultiRoutePanel
+            results={multiResults}
+            clientesById={clientesById}
+            visibility={routeVisibility}
+            onToggleVisibility={(vid) => setRouteVisibility(v => ({ ...v, [vid]: !v[vid] }))}
+            onApply={handleApplyMulti}
+            applying={applying}
+            applied={applied}
+            onClose={() => { setMultiResults(null); setApplied(false); }}
+          />
+        )}
+
         {/* Without GPS sidebar (only when no route) */}
         {!orderedClients && withoutGps.length > 0 && (
           <div className="absolute top-3 right-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl shadow-lg w-64 max-h-[50vh] flex flex-col">
