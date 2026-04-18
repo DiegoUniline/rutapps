@@ -299,7 +299,7 @@ export default function MapaClientesPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [savedOrder, vendedores, clientesById, originPoint, diaFilter]);
+  }, [savedOrder, vendedores, clientes, originPoint, diaFilter]);
 
   const filtered = useMemo(() => {
     let result = clientes ?? [];
