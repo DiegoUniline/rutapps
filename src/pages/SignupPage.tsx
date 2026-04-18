@@ -418,7 +418,10 @@ export default function SignupPage() {
 
             {/* Verification method */}
             <div className="space-y-3 p-3 bg-card rounded-lg border">
-              <p className="text-sm font-medium text-center">Verifica tu identidad</p>
+              <div className="text-center space-y-1">
+                <p className="text-sm font-semibold">¿Cómo te enviamos tu código?</p>
+                <p className="text-xs text-muted-foreground">Solo queremos confirmar que eres una persona real 👋 Elige el medio que prefieras:</p>
+              </div>
 
               {otpVerified && verificationMethod === 'whatsapp' ? (
                 <div className="flex items-center gap-2 text-sm text-emerald-600 font-medium bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
