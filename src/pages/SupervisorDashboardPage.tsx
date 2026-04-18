@@ -144,7 +144,7 @@ export default function SupervisorDashboardPage() {
     queryKey: ['supervisor-ventas-hoy', desde, hasta, empresa?.id], enabled: !!empresa?.id,
     queryFn: async () => {
       const { data } = await supabase.from('ventas')
-        .select('id, vendedor_id, total, subtotal, status, tipo, condicion_pago, created_at, cliente_id, gps_lat, gps_lng, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(nombre, codigo))')
+        .select('id, vendedor_id, total, subtotal, status, tipo, condicion_pago, created_at, cliente_id, clientes(nombre), venta_lineas(producto_id, cantidad, total, productos(nombre, codigo))')
         .eq('empresa_id', empresa!.id).gte('fecha', desde).lte('fecha', hasta).neq('status', 'cancelado').order('created_at', { ascending: false });
       return (data ?? []) as any[];
     },
@@ -543,19 +543,13 @@ export default function SupervisorDashboardPage() {
       }
       map.set(clienteId, prev);
     };
-    (ventasHoy ?? []).forEach((v: any) => {
-      const cli = (clientesAsignados ?? []).find((c: any) => c.id === v.cliente_id);
-      const gpsClient = cli?.gps_lat && cli?.gps_lng ? { lat: Number(cli.gps_lat), lng: Number(cli.gps_lng) } : null;
-      const gpsEvent = v.gps_lat && v.gps_lng ? { lat: Number(v.gps_lat), lng: Number(v.gps_lng) } : null;
-      updateClient(v.cliente_id, gpsClient, gpsEvent);
-    });
     (visitasHoy ?? []).forEach((v: any) => {
       const gpsClient = v.clientes?.gps_lat && v.clientes?.gps_lng ? { lat: Number(v.clientes.gps_lat), lng: Number(v.clientes.gps_lng) } : null;
       const gpsEvent = v.gps_lat && v.gps_lng ? { lat: Number(v.gps_lat), lng: Number(v.gps_lng) } : null;
       updateClient(v.cliente_id, gpsClient, gpsEvent);
     });
     return map;
-  }, [ventasHoy, visitasHoy, clientesAsignados]);
+  }, [visitasHoy]);
 
   const mapMarkers = useMemo<MarkerPoint[]>(() => clienteActivity.filter((c) => c.gps_lat && c.gps_lng).map((c) => {
     const oor = outOfRangeByClient.get(c.id);
