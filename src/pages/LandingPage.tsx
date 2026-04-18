@@ -371,7 +371,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-10 items-center mb-20">
-            <img src={mobileApp} alt="Aplicación móvil" className="rounded-2xl max-w-sm mx-auto md:order-1" />
+            <div className="md:order-1"><LiveMobileApp /></div>
             <div className="md:order-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-xs font-semibold mb-4">
                 <Smartphone className="h-3.5 w-3.5" /> App para vendedores
