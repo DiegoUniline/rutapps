@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
+import QuickProductDialog from '@/components/QuickProductDialog';
 import { Switch } from '@/components/ui/switch';
 import type { CompraLinea } from './types';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -15,6 +17,18 @@ interface Props {
 
 export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea, addLine, removeLine }: Props) {
   const { fmt } = useCurrency();
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickIdx, setQuickIdx] = useState<number | null>(null);
+  const [quickName, setQuickName] = useState('');
+  const [quickCosto, setQuickCosto] = useState(0);
+
+  const triggerQuickCreate = (idx: number, name: string) => {
+    setQuickIdx(idx);
+    setQuickName(name);
+    setQuickCosto(Number(lineas[idx]?.precio_unitario) || 0);
+    setQuickOpen(true);
+  };
+
   return (
     <div className="space-y-3">
       <div className="bg-card border border-border rounded overflow-x-auto">
@@ -35,7 +49,17 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
                   <td className="py-1.5 px-2 text-muted-foreground text-xs">{idx + 1}</td>
                   <td className="py-1.5 px-2">
                     {isEditable ? (
-                      <SearchableSelect options={(productosList as any[])?.filter(p => { const usedIds = lineas.filter((_, j) => j !== idx).map(l => l.producto_id).filter(Boolean); return !usedIds.includes(p.id); }).map(p => ({ value: p.id, label: `[${p.codigo}] ${p.nombre}` })) ?? []} value={line.producto_id ?? ''} onChange={val => updateLinea(idx, 'producto_id', val)} placeholder="Buscar producto..." />
+                      <SearchableSelect
+                        options={(productosList as any[])?.filter(p => { const usedIds = lineas.filter((_, j) => j !== idx).map(l => l.producto_id).filter(Boolean); return !usedIds.includes(p.id); }).map(p => ({ value: p.id, label: `[${p.codigo}] ${p.nombre}` })) ?? []}
+                        value={line.producto_id ?? ''}
+                        onChange={val => updateLinea(idx, 'producto_id', val)}
+                        placeholder="Buscar producto..."
+                        onCreateNew={async (name) => {
+                          // Abrimos el modal en lugar de crear inline
+                          triggerQuickCreate(idx, name);
+                          return undefined; // no asignamos aún; lo hace onCreated
+                        }}
+                      />
                     ) : <span className="text-xs truncate block">{line.productos ? `[${line.productos.codigo}] ${line.productos.nombre}` : '—'}</span>}
                   </td>
                   <td className="py-1.5 px-2 text-center text-xs text-muted-foreground uppercase">{line._unidad_compra || 'pz'}</td>
@@ -54,6 +78,25 @@ export function CompraLineasTab({ lineas, productosList, isEditable, updateLinea
         </table>
       </div>
       {isEditable && <button onClick={addLine} className="btn-odoo-secondary text-xs gap-1"><Plus className="h-3.5 w-3.5" /> Agregar línea</button>}
+
+      <QuickProductDialog
+        open={quickOpen}
+        onOpenChange={setQuickOpen}
+        initialName={quickName}
+        initialCosto={quickCosto}
+        onCreated={(prod) => {
+          if (quickIdx === null) return;
+          // Asignar producto + auto-rellenar costo e impuestos del producto recién creado
+          updateLinea(quickIdx, 'producto_id', prod.id);
+          if (prod.costo && !lineas[quickIdx]?.precio_unitario) {
+            updateLinea(quickIdx, 'precio_unitario', prod.costo);
+          }
+          updateLinea(quickIdx, '_tiene_iva', !!prod.tiene_iva);
+          if (prod.tiene_iva) updateLinea(quickIdx, '_iva_pct', prod.iva_pct ?? 16);
+          updateLinea(quickIdx, '_tiene_ieps', !!prod.tiene_ieps);
+          if (prod.tiene_ieps) updateLinea(quickIdx, '_ieps_pct', prod.ieps_pct ?? 0);
+        }}
+      />
     </div>
   );
 }
