@@ -32,6 +32,7 @@ import { cn, todayInTimezone } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
 import { GoogleMapsProvider, useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import { GoogleMap, InfoWindow, Marker } from '@react-google-maps/api';
+import { MultiRouteOverlay, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
 import LiveVendedoresLayer from '@/components/LiveVendedoresLayer';
 import VendedorRecorridoLayer from '@/components/VendedorRecorridoLayer';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
@@ -45,8 +46,20 @@ const ROUTE_COLORS = [
 ];
 
 type DashboardSeller = { id: string; user_id: string; nombre: string; aliases: string[] };
-type MarkerPoint = { id: string; nombre: string; lat: number; lng: number; visitado: boolean; diasSinComprar: number | null; vendedorNombre: string; vendedorId: string; orden: number | null };
+type MarkerPoint = { id: string; nombre: string; lat: number; lng: number; visitado: boolean; diasSinComprar: number | null; vendedorNombre: string; vendedorId: string; orden: number | null; outOfRange: boolean; outOfRangeMeters: number | null };
 type SellerLocation = { id: string; nombre: string; lat: number; lng: number; hora: string };
+
+/** Distancia máxima (m) para considerar que una venta/visita se hizo "en el cliente" */
+const VISIT_RADIUS_METERS = 100;
+
+function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const R = 6371000;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
 
 function normalizePersonName(value?: string | null) {
   return (value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
