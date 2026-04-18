@@ -236,6 +236,69 @@ export default function SupervisorDashboardPage() {
     refetchInterval: 60000,
   });
 
+  // Rutas guardadas (cliente_orden_ruta) para visualizar multirruta tal como el Mapa de Clientes
+  const { data: savedRoutes } = useQuery({
+    queryKey: ['supervisor-saved-routes', empresa?.id, diaHoyLabel, selectedSeller?.id ?? null, soloHoy],
+    enabled: !!empresa?.id && soloHoy,
+    queryFn: async () => {
+      let q = supabase
+        .from('cliente_orden_ruta' as any)
+        .select('cliente_id, orden, vendedor_id, origin_lat, origin_lng, origin_label, dia')
+        .eq('empresa_id', empresa!.id)
+        .order('vendedor_id', { ascending: true, nullsFirst: false })
+        .order('orden', { ascending: true });
+      if (selectedSeller?.id) q = q.eq('vendedor_id', selectedSeller.id);
+      const { data } = await q;
+      return ((data ?? []) as unknown) as {
+        cliente_id: string; orden: number; vendedor_id: string | null;
+        origin_lat: number | null; origin_lng: number | null; origin_label: string | null;
+        dia: string | null;
+      }[];
+    },
+  });
+
+  // Build multi-route entries from saved order, restricted to today's clients with GPS
+  const multiRouteEntries = useMemo<RouteResultEntry[]>(() => {
+    if (!savedRoutes || savedRoutes.length === 0) return [];
+    // Match the day used by the supervisor view (soloHoy = day-of-week)
+    // Saved routes can have dia=null (global) or a specific day. Prefer rows that match today, otherwise globals.
+    const todayCap = diaHoyLabel.charAt(0).toUpperCase() + diaHoyLabel.slice(1);
+    const filtered = savedRoutes.filter(r => !r.dia || r.dia === todayCap || r.dia.toLowerCase() === diaHoyLabel);
+    if (filtered.length === 0) return [];
+    const groups = new Map<string, { rows: typeof filtered; origin: { lat: number; lng: number; label: string } | null }>();
+    for (const row of filtered) {
+      const key = row.vendedor_id ?? '__sin_vendedor__';
+      if (!groups.has(key)) {
+        groups.set(key, {
+          rows: [],
+          origin: row.origin_lat != null && row.origin_lng != null
+            ? { lat: Number(row.origin_lat), lng: Number(row.origin_lng), label: row.origin_label ?? 'Origen' }
+            : null,
+        });
+      }
+      const g = groups.get(key)!;
+      if (!g.origin && row.origin_lat != null && row.origin_lng != null) {
+        g.origin = { lat: Number(row.origin_lat), lng: Number(row.origin_lng), label: row.origin_label ?? 'Origen' };
+      }
+      g.rows.push(row);
+    }
+    if (groups.size > 1 && groups.has('__sin_vendedor__')) groups.delete('__sin_vendedor__');
+    return Array.from(groups.entries()).map(([vid, g]) => {
+      const ordered = g.rows.sort((a, b) => a.orden - b.orden).map(r => r.cliente_id);
+      const vendedor = (vendedores ?? []).find(v => v.id === vid);
+      return {
+        vendedor_id: vid,
+        vendedor_nombre: vendedor?.nombre ?? (vid === '__sin_vendedor__' ? 'Sin vendedor' : 'Vendedor'),
+        origin: g.origin ?? { lat: 0, lng: 0, label: 'Origen' },
+        optimized_order: ordered,
+        polyline: null, // straight-line fallback in MultiRouteOverlay
+        distance_meters: 0,
+        duration: '0s',
+        original_distance_meters: 0,
+      };
+    });
+  }, [savedRoutes, vendedores, diaHoyLabel]);
+
   // Weekly data for charts
   const { data: ventasSemana } = useQuery({
     queryKey: ['supervisor-ventas-semana', week.desde, week.hasta, empresa?.id], enabled: !!empresa?.id,
