@@ -409,7 +409,7 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <img src={routeMap} alt="Optimización de rutas" className="rounded-2xl shadow-xl border border-gray-200" />
+            <LiveSupervisorMap />
           </div>
         </div>
       </section>
