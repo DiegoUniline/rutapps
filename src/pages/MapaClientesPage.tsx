@@ -162,13 +162,15 @@ export default function MapaClientesPage() {
     queryFn: async () => {
       let q = supabase
         .from('cliente_orden_ruta' as any)
-        .select('cliente_id, orden')
+        .select('cliente_id, orden, vendedor_id')
         .eq('empresa_id', empresa!.id)
+        .order('vendedor_id', { ascending: true, nullsFirst: false })
         .order('orden', { ascending: true });
       q = diaFilter ? q.eq('dia', diaFilter) : q.is('dia', null);
-      q = vendedorFilter ? q.eq('vendedor_id', vendedorFilter) : q.is('vendedor_id', null);
+      // If a vendedor filter is set, restrict; otherwise return ALL groups so multi-route persists
+      if (vendedorFilter) q = q.eq('vendedor_id', vendedorFilter);
       const { data } = await q;
-      return ((data ?? []) as unknown) as { cliente_id: string; orden: number }[];
+      return ((data ?? []) as unknown) as { cliente_id: string; orden: number; vendedor_id: string | null }[];
     },
   });
 
