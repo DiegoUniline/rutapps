@@ -325,7 +325,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    const remaining = Math.max(0, MONTHLY_LIMIT - used - routesIn.length);
+    const remaining = Math.max(0, MONTHLY_LIMIT - (await (async () => {
+      const fm = new Date(); fm.setDate(1); fm.setHours(0,0,0,0);
+      const { count } = await supabase.from("optimizacion_rutas_log")
+        .select("id", { count: "exact", head: true })
+        .eq("empresa_id", profile.empresa_id)
+        .gte("created_at", fm.toISOString());
+      return count ?? 0;
+    })()));
 
     // Backwards-compatible response: when single route, expose top-level fields too.
     const single = results.length === 1 ? results[0] : null;
