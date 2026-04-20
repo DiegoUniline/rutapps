@@ -13,10 +13,11 @@ interface Props {
   onProductSelect: (idx: number, pid: string) => void;
   onUpdateLine: (idx: number, field: string, val: any) => void;
   onRemoveLine: (idx: number) => void;
+  setLineas?: React.Dispatch<React.SetStateAction<Partial<VentaLinea>[]>>;
   currencySymbol?: string;
 }
 
-export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, currencySymbol: cs = '$' }: Props) {
+export function VentaLineaMobile({ idx, line: l, lineas, productosList, readOnly, onProductSelect, onUpdateLine, onRemoveLine, setLineas, currencySymbol: cs = '$' }: Props) {
   const { fmt } = useCurrency();
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const qty = Number(l.cantidad) || 0;
