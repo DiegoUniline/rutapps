@@ -57,8 +57,7 @@ export function StepProductos(props: Props) {
     // keep scanner open for rapid scanning
   };
 
-  const showBanner = !bannerDismissed && cart.filter(c => !c.es_cambio).length === 0
-    && (insights.suggested.length > 0 || insights.lastSaleLineas.length > 0);
+  const showBanner = !bannerDismissed && cart.filter(c => !c.es_cambio).length === 0;
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

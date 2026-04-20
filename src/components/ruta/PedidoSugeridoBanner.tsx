@@ -1,4 +1,4 @@
-import { Sparkles, RotateCw, X } from 'lucide-react';
+import { Sparkles, RotateCw, X, Info } from 'lucide-react';
 
 interface Props {
   hasSuggestion: boolean;
@@ -13,13 +13,28 @@ interface Props {
 
 /**
  * Sticky banner shown at the top of the products step offering one-tap
- * suggestion or repeat-last-sale actions.
+ * suggestion or repeat-last-sale actions. When neither is available,
+ * shows an informative empty-state so the vendor knows the feature exists.
  */
 export default function PedidoSugeridoBanner({
   hasSuggestion, hasLastSale, suggestedSource, suggestedCount, lastSaleCount,
   onApplySuggestion, onRepeatLastSale, onDismiss,
 }: Props) {
-  if (!hasSuggestion && !hasLastSale) return null;
+  const empty = !hasSuggestion && !hasLastSale;
+
+  if (empty) {
+    return (
+      <div className="mx-3 mb-2 rounded-xl bg-accent/40 border border-border/60 px-3 py-2 flex items-center gap-2">
+        <Info className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <p className="text-[10.5px] text-muted-foreground flex-1 leading-snug">
+          Cliente sin historial. Tras la 1ª venta podrás <b>repetir</b> o usar <b>pedido sugerido</b>.
+        </p>
+        <button onClick={onDismiss} className="w-6 h-6 rounded-full bg-background flex items-center justify-center shrink-0 active:scale-95">
+          <X className="h-3 w-3 text-muted-foreground" />
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-3 mb-2 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 px-3 py-2.5">
