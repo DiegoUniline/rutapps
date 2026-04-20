@@ -246,6 +246,87 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return stockAbordo.get(productoId) ?? 0;
   };
 
+  /** Apply the smart suggested order (manual list or last-3 average) */
+  const applySmartSuggestion = () => {
+    if (!productos || !insights.suggested.length) return;
+    const newItems: CartItem[] = [];
+    insights.suggested.forEach(s => {
+      const prod = (productos as any[]).find(p => p.id === s.producto_id);
+      if (!prod) return;
+      const pf = resolvePricingFull(prod);
+      newItems.push({
+        producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
+        precio_unitario: pf.unitPrice, cantidad: s.cantidad,
+        unidad: (prod.unidades as any)?.abreviatura || 'pz',
+        unidad_id: prod.unidad_venta_id ?? undefined,
+        tiene_iva: prod.tiene_iva ?? false,
+        iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0,
+        tiene_ieps: prod.tiene_ieps ?? false,
+        ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0,
+        precio_unitario_sin_redondeo: pf.rawUnitPrice,
+        precio_display_sin_redondeo: pf.rawDisplayPrice,
+        base_precio: pf.basePrecio, redondeo: pf.redondeo,
+      });
+    });
+    setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
+    setBannerDismissed(true);
+    toast.success(`${newItems.length} productos cargados`);
+  };
+
+  /** Repeat the client's last sale */
+  const repeatLastSale = () => {
+    if (!productos || !insights.lastSaleLineas.length) return;
+    const newItems: CartItem[] = [];
+    insights.lastSaleLineas.forEach(l => {
+      const prod = (productos as any[]).find(p => p.id === l.producto_id);
+      if (!prod) return;
+      const pf = resolvePricingFull(prod);
+      newItems.push({
+        producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
+        precio_unitario: pf.unitPrice, cantidad: Number(l.cantidad) || 1,
+        unidad: (prod.unidades as any)?.abreviatura || 'pz',
+        unidad_id: prod.unidad_venta_id ?? undefined,
+        tiene_iva: prod.tiene_iva ?? false,
+        iva_pct: prod.tiene_iva ? (prod.iva_pct ?? 16) : 0,
+        tiene_ieps: prod.tiene_ieps ?? false,
+        ieps_pct: prod.tiene_ieps ? (prod.ieps_pct ?? 0) : 0,
+        precio_unitario_sin_redondeo: pf.rawUnitPrice,
+        precio_display_sin_redondeo: pf.rawDisplayPrice,
+        base_precio: pf.basePrecio, redondeo: pf.redondeo,
+      });
+    });
+    setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
+    setBannerDismissed(true);
+    toast.success(`${newItems.length} productos de la última venta`);
+  };
+
+  /** Find product by scanned code (barcode → SKU → name fuzzy) */
+  const findProductByCode = (code: string): any | null => {
+    if (!productos || !code) return null;
+    const c = code.trim().toLowerCase();
+    const list = productos as any[];
+    return (
+      list.find(p => (p.codigo_barras ?? '').toLowerCase() === c) ||
+      list.find(p => (p.codigo ?? '').toLowerCase() === c) ||
+      list.find(p => (p.codigo_barras ?? '').toLowerCase().includes(c)) ||
+      list.find(p => (p.codigo ?? '').toLowerCase().includes(c)) ||
+      list.find(p => (p.nombre ?? '').toLowerCase().includes(c)) ||
+      null
+    );
+  };
+
+  /** Set exact qty (used by numeric keypad) */
+  const setItemQty = (productoId: string, qty: number, esCambio = false) => {
+    const match = !!esCambio;
+    if (qty <= 0) {
+      setCart(prev => prev.filter(c => !(c.producto_id === productoId && !!c.es_cambio === match)));
+      return;
+    }
+    const maxQty = esCambio ? Infinity : getMaxQty(productoId);
+    const capped = Math.min(qty, maxQty);
+    setCart(prev => prev.map(c => c.producto_id === productoId && !!c.es_cambio === match ? { ...c, cantidad: capped } : c));
+  };
+
   const addToCart = (p: any, esCambio = false) => {
     const maxQty = esCambio ? Infinity : getMaxQty(p.id);
     const existing = cart.find(c => c.producto_id === p.id && c.es_cambio === esCambio);
@@ -606,9 +687,12 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     promoResults, totals, creditoDisponible, excedeCredito, totalAplicarCuentas,
     totalACobrar, montoRecibidoNum, cambio, saldoPendienteTotal, cambioItems, chargedItems,
     currentStepIdx, goBack, goToPayment, fmt, fmtM, currSym, markVisited, saveVisita,
-    addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty,
+    addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setItemQty,
     addDevolucion, updateDevQty, updateDevMotivo, updateDevAccion, batchUpdateDevDefaults, setReemplazo, removeDevolucion,
     processDevolucionesAndGoToProductos, initCuentasPendientes, liquidarTodas, updateCuentaMonto,
     handleSave,
+    // Insights & smart actions
+    insights, bannerDismissed, setBannerDismissed,
+    applySmartSuggestion, repeatLastSale, findProductByCode,
   };
 }
