@@ -242,6 +242,28 @@ Deno.serve(async (req) => {
 
     // Quota check (each optimization counts as 1; preserve_order calls are free)
     const optimizingCount = routesIn.filter(r => r.preserve_order !== true).length;
+
+    // Calcular cuota dinámica: (usuarios activos * 30) + recargas disponibles
+    const { count: activeUsers } = await supabase
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("empresa_id", profile.empresa_id)
+      .eq("activo", true);
+    const baseQuota = (activeUsers ?? 0) * PER_USER_QUOTA;
+
+    const { data: rechargeRows } = await supabase
+      .from("optimizacion_recargas")
+      .select("id, cantidad_creditos, creditos_consumidos")
+      .eq("empresa_id", profile.empresa_id)
+      .eq("status", "paid");
+    const availableRecharges = (rechargeRows ?? []).reduce(
+      (sum: number, r: any) => sum + Math.max(0, (r.cantidad_creditos ?? 0) - (r.creditos_consumidos ?? 0)),
+      0
+    );
+
+    const totalQuota = baseQuota + availableRecharges;
+    let usedThisMonth = 0;
+
     if (optimizingCount > 0) {
       const now = new Date();
       const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -251,10 +273,11 @@ Deno.serve(async (req) => {
         .eq("empresa_id", profile.empresa_id)
         .gte("created_at", firstOfMonth);
 
-      const used = monthlyCount ?? 0;
-      if (used + optimizingCount > MONTHLY_LIMIT) {
+      usedThisMonth = monthlyCount ?? 0;
+      if (usedThisMonth + optimizingCount > totalQuota) {
         return new Response(JSON.stringify({
-          error: `Límite mensual alcanzado (${MONTHLY_LIMIT} optimizaciones por mes). Disponibles: ${Math.max(0, MONTHLY_LIMIT - used)}, requeridas: ${optimizingCount}.`,
+          error: `Límite mensual alcanzado. Cuota: ${totalQuota} (${activeUsers ?? 0} usuarios × ${PER_USER_QUOTA} + ${availableRecharges} recargas). Disponibles: ${Math.max(0, totalQuota - usedThisMonth)}, requeridas: ${optimizingCount}.`,
+          quota: { base: baseQuota, recharges: availableRecharges, total: totalQuota, used: usedThisMonth, available: Math.max(0, totalQuota - usedThisMonth) },
         }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
