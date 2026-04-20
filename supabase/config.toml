@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.billing-notify-email]
 verify_jwt = false
+
+[functions.purchase-route-credits]
+verify_jwt = false
+
+[functions.verify-route-credits]
+verify_jwt = false

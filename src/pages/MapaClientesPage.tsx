@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useGoogleMaps } from '@/hooks/useGoogleMapsKey';
 import OriginPicker, { type OriginValue } from '@/components/maps/OriginPicker';
 import MultiRoutePanel, { MultiRouteOverlay, getRouteColor, type RouteResultEntry } from '@/components/maps/MultiRoutePanel';
+import RouteOptimizationQuotaWidget from '@/components/RouteOptimizationQuotaWidget';
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 const DIA_HOY = (() => {
@@ -801,6 +802,15 @@ export default function MapaClientesPage() {
                 color="bg-[hsl(var(--chart-2))]" />
             </>
           )}
+        </div>
+
+        {/* Quota widget — top right (above origin picker on desktop) */}
+        <div className="absolute top-3 right-3 z-10 hidden md:block max-w-[320px]">
+          <RouteOptimizationQuotaWidget />
+        </div>
+        {/* Mobile: just below KPIs */}
+        <div className="md:hidden absolute top-3 left-2 right-2 z-10">
+          <RouteOptimizationQuotaWidget />
         </div>
 
         {/* Color legend */}

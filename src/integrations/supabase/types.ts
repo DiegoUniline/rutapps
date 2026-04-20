@@ -2863,6 +2863,59 @@ export type Database = {
           },
         ]
       }
+      optimizacion_recargas: {
+        Row: {
+          cantidad_creditos: number
+          created_at: string
+          creditos_consumidos: number
+          empresa_id: string
+          id: string
+          moneda: string
+          monto_centavos: number
+          paid_at: string | null
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          cantidad_creditos?: number
+          created_at?: string
+          creditos_consumidos?: number
+          empresa_id: string
+          id?: string
+          moneda?: string
+          monto_centavos?: number
+          paid_at?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          cantidad_creditos?: number
+          created_at?: string
+          creditos_consumidos?: number
+          empresa_id?: string
+          id?: string
+          moneda?: string
+          monto_centavos?: number
+          paid_at?: string | null
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "optimizacion_recargas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       optimizacion_rutas_log: {
         Row: {
           clientes_count: number
@@ -5665,6 +5718,17 @@ export type Database = {
         }[]
       }
       get_my_empresa_id: { Args: never; Returns: string }
+      get_optimization_quota: {
+        Args: { _empresa_id: string }
+        Returns: {
+          cuota_base: number
+          cuota_total: number
+          disponibles: number
+          recargas_disponibles: number
+          usadas_mes_actual: number
+          usuarios_activos: number
+        }[]
+      }
       is_email_blacklisted: { Args: { p_email: string }; Returns: boolean }
       is_super_admin: { Args: { p_user_id: string }; Returns: boolean }
       next_folio: {
