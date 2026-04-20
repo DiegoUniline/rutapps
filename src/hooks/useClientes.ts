@@ -48,7 +48,7 @@ export function useClientesPaginated(search?: string, statusFilter?: string, pag
       }
       const { data, error, count } = await q;
       if (error) throw error;
-      return { rows: (data ?? []) as Cliente[], total: count ?? 0 };
+      return { rows: (data ?? []) as unknown as Cliente[], total: count ?? 0 };
     },
   });
 }
