@@ -415,13 +415,32 @@ Deno.serve(async (req) => {
 
         const original = totalOriginalDistance(r.origin, r.waypoints);
         let orderedWp: Waypoint[];
+        let optMethod: "real_matrix" | "haversine" | "preserved" = "haversine";
         if (preserveOrder) {
           orderedWp = r.waypoints;
+          optMethod = "preserved";
         } else {
-          const nn = nearestNeighborOrder(r.origin, r.waypoints);
-          const optimized = twoOptImprove(r.origin, r.waypoints, nn);
-          orderedWp = optimized.map(idx => r.waypoints[idx]);
+          // Intentar matriz REAL por calle si hay API key y la ruta es razonable
+          let usedReal = false;
+          if (googleApiKey && r.waypoints.length <= REAL_MATRIX_MAX_STOPS) {
+            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints);
+            if (matrix) {
+              const n = r.waypoints.length + 1;
+              const nn = nearestNeighborOrderMatrix(n, matrix);
+              const optimized = twoOptImproveMatrix(matrix, nn);
+              orderedWp = optimized.map(idx => r.waypoints[idx]);
+              optMethod = "real_matrix";
+              usedReal = true;
+            }
+          }
+          if (!usedReal) {
+            const nn = nearestNeighborOrder(r.origin, r.waypoints);
+            const optimized = twoOptImprove(r.origin, r.waypoints, nn);
+            orderedWp = optimized.map(idx => r.waypoints[idx]);
+            optMethod = "haversine";
+          }
         }
+        console.log(`Route ${r.key}: method=${optMethod}, stops=${r.waypoints.length}`);
 
         let polyline: string | null = null;
         let distanceMeters = 0;
