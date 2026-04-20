@@ -359,7 +359,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   const conImp = filtered.filter(p => p.base_precio === 'con_impuestos');
   const sinImp = filtered.filter(p => p.base_precio !== 'con_impuestos');
 
-  const fmt = (v: number) => `${currencySymbol} {fmt(v)}`;
+  const fmt = (v: number) => fmtCur(v);
 
   const renderGroup = (items: typeof filtered, isConImp: boolean) => {
     if (items.length === 0) return null;
