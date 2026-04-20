@@ -240,7 +240,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     // Sort by orden
     all.sort((a, b) => a.orden - b.orden);
     return all;
-  }, [clientesData, allEntregas, vendedorId, clienteMap]);
+  }, [clientesData, allEntregas, vendedorId, clienteMap, attendedClientIds]);
 
   const completedCount = completedIds.size;
   const totalCount = stops.length;
