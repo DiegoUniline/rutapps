@@ -277,9 +277,10 @@ export default function MiSuscripcionPage() {
   // ─── Derived update state ───
   const targetPlan = newSelectedPlan || currentPlan;
   const totalNewUsers = currentUsuarios + extraUsers;
-  const isFreqChange = selectedFreq && currentPlan && selectedFreq !== currentPlan.periodo;
+  const isInitialPlanSelection = !currentPlan && !!selectedFreq;
+  const isFreqChange = !!selectedFreq && !!currentPlan && selectedFreq !== currentPlan.periodo;
   const isUserChange = extraUsers !== 0;
-  const hasChanges = isFreqChange || isUserChange;
+  const hasChanges = isInitialPlanSelection || isFreqChange || isUserChange;
 
   // Calculate what to charge for the update
   function calcUpdateCharge(): { amount: number; label: string; detail: string; isDowngrade: boolean; totalPeriodo: number } {
@@ -356,7 +357,13 @@ export default function MiSuscripcionPage() {
       amount: charge.amount,
     });
     setCart(filtered);
-    toast.success(charge.isDowngrade ? 'Cambio programado para el siguiente periodo' : 'Actualización agregada al pedido');
+    toast.success(
+      isInitialPlanSelection
+        ? 'Plan agregado al pedido'
+        : charge.isDowngrade
+          ? 'Cambio programado para el siguiente periodo'
+          : 'Actualización agregada al pedido'
+    );
   }
 
   function addTimbresToCart() {
