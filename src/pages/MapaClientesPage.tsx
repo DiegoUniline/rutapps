@@ -803,6 +803,15 @@ export default function MapaClientesPage() {
           )}
         </div>
 
+        {/* Quota widget — top right (above origin picker on desktop) */}
+        <div className="absolute top-3 right-3 z-10 hidden md:block max-w-[320px]">
+          <RouteOptimizationQuotaWidget />
+        </div>
+        {/* Mobile: just below KPIs */}
+        <div className="md:hidden absolute top-3 left-2 right-2 z-10">
+          <RouteOptimizationQuotaWidget />
+        </div>
+
         {/* Color legend */}
         <div className="absolute bottom-2 left-2 md:bottom-3 md:left-3 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-xl px-2 py-1.5 md:px-3 md:py-2 shadow-sm max-w-[calc(100vw-1rem)] overflow-x-auto hidden md:block">
           {colorMode === 'dia' && (
