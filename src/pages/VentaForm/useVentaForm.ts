@@ -337,7 +337,7 @@ export function useVentaForm() {
     const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
     const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
     const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') } as any; return next; });
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false } as any; return next; });
     setDirty(true);
   };
 
