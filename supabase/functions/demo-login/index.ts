@@ -22,9 +22,16 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // ── 1) Find or create demo user ──
-    const { data: listData } = await admin.auth.admin.listUsers();
-    let demoUser = listData?.users?.find((u: any) => u.email === DEMO_EMAIL);
+    // ── 1) Find or create demo user (paginate to find across all pages) ──
+    let demoUser: any = null;
+    let page = 1;
+    while (true) {
+      const { data: listData } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+      const found = listData?.users?.find((u: any) => u.email === DEMO_EMAIL);
+      if (found) { demoUser = found; break; }
+      if (!listData?.users?.length || listData.users.length < 1000) break;
+      page++;
+    }
 
     if (!demoUser) {
       const { data: created, error: createErr } =
@@ -34,9 +41,24 @@ Deno.serve(async (req) => {
           email_confirm: true,
           user_metadata: { full_name: "Admin Demo", empresa_nombre: DEMO_EMPRESA_NOMBRE },
         });
-      if (createErr) throw createErr;
-      demoUser = created.user;
-      await new Promise((r) => setTimeout(r, 2500));
+      if (createErr) {
+        // Race condition: user may have been created between listUsers and createUser
+        if ((createErr as any).code !== "email_exists") throw createErr;
+        // Re-fetch by paginating again
+        let p = 1;
+        while (true) {
+          const { data: ld } = await admin.auth.admin.listUsers({ page: p, perPage: 1000 });
+          const f = ld?.users?.find((u: any) => u.email === DEMO_EMAIL);
+          if (f) { demoUser = f; break; }
+          if (!ld?.users?.length || ld.users.length < 1000) break;
+          p++;
+        }
+        if (!demoUser) throw createErr;
+        await admin.auth.admin.updateUserById(demoUser.id, { password: DEMO_PASSWORD });
+      } else {
+        demoUser = created.user;
+        await new Promise((r) => setTimeout(r, 2500));
+      }
     } else {
       await admin.auth.admin.updateUserById(demoUser.id, { password: DEMO_PASSWORD });
     }
