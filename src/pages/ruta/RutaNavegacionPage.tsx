@@ -177,7 +177,7 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
         .eq('empresa_id', empresa!.id)
         .gte('fecha', `${filterDate}T00:00:00`)
         .lte('fecha', `${filterDate}T23:59:59`)
-        .neq('status', 'cancelada');
+        .neq('status', 'cancelado');
       return data ?? [];
     },
     staleTime: 15_000,
