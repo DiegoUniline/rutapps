@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download, Link2, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ExportButton } from '@/components/ExportButton';
@@ -204,7 +204,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
@@ -473,7 +473,49 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
           />
         </div>
         <span className="text-[11px] text-muted-foreground">{filtered.length} productos</span>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          {(() => {
+            const compartibles = listasPrecio.filter(l => l.share_activo && l.share_token);
+            if (compartibles.length === 0) return null;
+            const openCatalog = (token: string) => window.open(`${window.location.origin}/catalogo/${token}`, '_blank');
+            const copyLink = (token: string) => {
+              navigator.clipboard.writeText(`${window.location.origin}/catalogo/${token}`);
+              toast.success('Link copiado');
+            };
+            if (compartibles.length === 1) {
+              const l = compartibles[0];
+              return (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => copyLink(l.share_token!)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-input bg-background hover:bg-accent text-[12px] text-foreground"
+                    title="Copiar link público"
+                  >
+                    <Link2 className="h-3.5 w-3.5" /> Copiar link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openCatalog(l.share_token!)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-input bg-background hover:bg-accent text-[12px] text-foreground"
+                    title="Abrir catálogo público"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> Ver catálogo
+                  </button>
+                </>
+              );
+            }
+            return (
+              <select
+                onChange={(e) => { if (e.target.value) { openCatalog(e.target.value); e.currentTarget.value = ''; } }}
+                className="px-2.5 py-1.5 rounded-md border border-input bg-background text-[12px] text-foreground"
+                defaultValue=""
+              >
+                <option value="" disabled>Ver catálogo público…</option>
+                {compartibles.map(l => (<option key={l.id} value={l.share_token}>{l.nombre}</option>))}
+              </select>
+            );
+          })()}
           <ExportButton onExcel={handleExportExcel} onPDF={handleExportPDF} />
         </div>
       </div>
@@ -1077,7 +1119,7 @@ export default function TarifaFormPage() {
             {
               key: 'precios',
               label: 'Vista Precios',
-              content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} />,
+              content: <PreciosPreviewTab tarifaId={id} tarifaNombre={form.nombre || 'Tarifa'} listasPrecio={listasPrecios ?? []} />,
             },
             {
               key: 'info',
