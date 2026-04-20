@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
 import type { VentaLinea } from '@/types';
 
