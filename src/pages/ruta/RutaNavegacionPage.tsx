@@ -149,6 +149,48 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
     },
   });
 
+  // Fetch visitas of the filter date (clients already attended: sale, order, or no-sale)
+  const { data: visitasHoy } = useQuery({
+    queryKey: ['nav-visitas', empresa?.id, filterDate],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('visitas')
+        .select('cliente_id')
+        .eq('empresa_id', empresa!.id)
+        .gte('fecha', `${filterDate}T00:00:00`)
+        .lte('fecha', `${filterDate}T23:59:59`);
+      return data ?? [];
+    },
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  // Also fetch ventas of the date as a safety net (in case visita wasn't recorded)
+  const { data: ventasHoy } = useQuery({
+    queryKey: ['nav-ventas', empresa?.id, filterDate, vendedorId],
+    enabled: !!empresa?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('ventas')
+        .select('cliente_id')
+        .eq('empresa_id', empresa!.id)
+        .gte('fecha', `${filterDate}T00:00:00`)
+        .lte('fecha', `${filterDate}T23:59:59`)
+        .neq('status', 'cancelada');
+      return data ?? [];
+    },
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  const attendedClientIds = useMemo(() => {
+    const s = new Set<string>();
+    visitasHoy?.forEach((v: any) => v.cliente_id && s.add(v.cliente_id));
+    ventasHoy?.forEach((v: any) => v.cliente_id && s.add(v.cliente_id));
+    return s;
+  }, [visitasHoy, ventasHoy]);
+
   // Fetch entregas
   const { data: allEntregas, refetch: refetchEntregas } = useOfflineQuery('entregas', {
     empresa_id: empresa?.id,
