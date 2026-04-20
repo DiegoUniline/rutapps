@@ -207,7 +207,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
-  const { profile } = (require('@/contexts/AuthContext') as typeof import('@/contexts/AuthContext')).useAuth();
+  const { profile } = useAuth();
   const empresaId = profile?.empresa_id;
 
   const { data: productos } = useQuery({
