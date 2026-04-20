@@ -212,6 +212,11 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return (pedidoSugeridoRaw as any[]).map(ps => { const prod = productos.find((p: any) => p.id === ps.producto_id); return prod ? { ...ps, productos: prod } : null; }).filter(Boolean);
   }, [pedidoSugeridoRaw, productos]);
 
+  // ── Client insights (smart suggestion + alerts) ──
+  const insights = useClienteInsights(clienteId, selectedClienteData);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  useEffect(() => { setBannerDismissed(false); }, [clienteId]);
+
   const filteredClientes = clientes?.filter(c => !searchCliente || c.nombre.toLowerCase().includes(searchCliente.toLowerCase()) || c.codigo?.toLowerCase().includes(searchCliente.toLowerCase()));
   const productosDisponibles = useMemo(() => {
     if (!productos) return [];
