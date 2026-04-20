@@ -210,12 +210,13 @@ export default function CatalogoPublicoPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             {filtered.map(p => {
               const inCart = cart.find(c => c.producto.id === p.id);
+              const sinStock = (p.stock ?? 0) <= 0;
               return (
-                <div key={p.id} className="group bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-100 overflow-hidden transition-all hover:-translate-y-0.5">
+                <div key={p.id} className={`group bg-white rounded-2xl shadow-sm hover:shadow-md border border-slate-100 overflow-hidden transition-all hover:-translate-y-0.5 ${sinStock ? 'opacity-75' : ''}`}>
                   {/* Image */}
                   <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
                     {p.imagen_url ? (
-                      <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                      <img src={p.imagen_url} alt={p.nombre} className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${sinStock ? 'grayscale' : ''}`} loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <Package className="h-10 w-10 text-slate-200" />
@@ -224,6 +225,11 @@ export default function CatalogoPublicoPage() {
                     {p.categoria && (
                       <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-[10px] text-slate-600 rounded-full px-2 py-0.5 font-medium">
                         {p.categoria}
+                      </span>
+                    )}
+                    {sinStock && (
+                      <span className="absolute top-2 right-2 bg-rose-500 text-white text-[10px] rounded-full px-2 py-0.5 font-bold shadow">
+                        Sin stock
                       </span>
                     )}
                   </div>
@@ -239,7 +245,9 @@ export default function CatalogoPublicoPage() {
                         <p className="text-indigo-600 font-bold text-sm sm:text-base">{fmt(p.precio)}</p>
                         {p.unidad_venta && <p className="text-[10px] text-slate-400">/{p.unidad_venta}</p>}
                       </div>
-                      {inCart ? (
+                      {sinStock ? (
+                        <span className="text-[10px] font-semibold text-rose-500 bg-rose-50 rounded-lg px-2 py-1">Agotado</span>
+                      ) : inCart ? (
                         <div className="flex items-center gap-1 bg-indigo-50 rounded-lg px-1">
                           <button onClick={() => updateQty(p.id, inCart.cantidad - 1)} className="text-indigo-600 hover:text-indigo-800 p-1 text-sm font-bold">−</button>
                           <span className="text-xs font-semibold text-indigo-700 w-5 text-center">{inCart.cantidad}</span>
