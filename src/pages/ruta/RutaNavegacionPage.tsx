@@ -204,18 +204,21 @@ function NavegacionContent({ onBack }: { onBack?: () => void }) {
 
   // Build unified stops: clients + entregas merged, avoiding duplicates (same client GPS)
   const stops: Stop[] = useMemo(() => {
-    const clientStops: Stop[] = (clientesData ?? []).map((c, i) => ({
-      id: `cli-${c.id}`, nombre: c.nombre,
-      direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
-      telefono: c.telefono ?? undefined,
-      gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
-      orden: c.orden ?? i,
-    }));
+    const clientStops: Stop[] = (clientesData ?? [])
+      .filter(c => !attendedClientIds.has(c.id))
+      .map((c, i) => ({
+        id: `cli-${c.id}`, nombre: c.nombre,
+        direccion: c.direccion ?? undefined, colonia: c.colonia ?? undefined,
+        telefono: c.telefono ?? undefined,
+        gps_lat: c.gps_lat!, gps_lng: c.gps_lng!, tipo: 'cliente' as const,
+        orden: c.orden ?? i,
+      }));
 
     const entregaStops: Stop[] = (allEntregas ?? [])
       .filter((e: any) =>
         (e.status === 'cargado' || e.status === 'en_ruta') &&
-        (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId)
+        (e.vendedor_ruta_id === vendedorId || e.vendedor_id === vendedorId) &&
+        !attendedClientIds.has(e.cliente_id)
       )
       .sort((a: any, b: any) => (a.orden_entrega ?? 999) - (b.orden_entrega ?? 999))
       .map((e: any) => {
