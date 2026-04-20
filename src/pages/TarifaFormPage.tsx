@@ -1184,6 +1184,20 @@ export default function TarifaFormPage() {
           ]}
         />
       </div>
+      <AlertDialog open={confirmAllCatsOpen} onOpenChange={setConfirmAllCatsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cargar todas las categorías</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se agregarán <strong>{pendingUnusedCats?.length ?? 0}</strong> reglas (una por categoría). ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLoadAllCategories}>Continuar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={confirmAllProdsOpen} onOpenChange={setConfirmAllProdsOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
