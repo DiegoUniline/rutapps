@@ -1136,6 +1136,14 @@ export default function TarifaFormPage() {
                         <Layers className="h-3.5 w-3.5 inline mr-1" />
                         {loadingAllCats ? 'Cargando...' : 'Cargar todas las categorías'}
                       </button>
+                      <button
+                        className="odoo-link"
+                        onClick={handleLoadAllProducts}
+                        disabled={loadingAllProds}
+                      >
+                        <Plus className="h-3.5 w-3.5 inline mr-1" />
+                        {loadingAllProds ? 'Cargando...' : 'Cargar todos los productos'}
+                      </button>
                     </div>
                   )}
                 </div>
