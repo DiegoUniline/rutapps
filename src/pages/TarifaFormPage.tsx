@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download } from 'lucide-react';
+import { Save, X, Trash2, Plus, Star, Layers, Crown, Search, Download, Link2, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ExportButton } from '@/components/ExportButton';
