@@ -750,10 +750,19 @@ export default function TarifaFormPage() {
 
   // ── Load all categories button ──
   const [loadingAllCats, setLoadingAllCats] = useState(false);
-  const handleLoadAllCategories = async () => {
+  const [confirmAllCatsOpen, setConfirmAllCatsOpen] = useState(false);
+  const [pendingUnusedCats, setPendingUnusedCats] = useState<any[]>([]);
+  const handleLoadAllCategories = () => {
     if (!id || isNew || !clasificaciones) return;
     const unusedCats = clasificaciones.filter(c => !usedCatIds.has(c.id));
     if (unusedCats.length === 0) { toast.info('Todas las categorías ya tienen regla'); return; }
+    setPendingUnusedCats(unusedCats);
+    setConfirmAllCatsOpen(true);
+  };
+  const confirmLoadAllCategories = async () => {
+    const unusedCats = pendingUnusedCats;
+    setConfirmAllCatsOpen(false);
+    if (!unusedCats || unusedCats.length === 0) return;
     setLoadingAllCats(true);
     try {
       for (const cat of unusedCats) {
