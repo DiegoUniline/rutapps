@@ -204,7 +204,7 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 }
 
 /* ── Precios Preview Tab ─────────────────────────── */
-function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
+function PreciosPreviewTab({ tarifaId, tarifaNombre, listasPrecio = [] }: { tarifaId?: string; tarifaNombre: string; listasPrecio?: Array<{ id: string; nombre: string; share_token?: string; share_activo?: boolean }> }) {
   const [search, setSearch] = useState('');
   const { fmt: fmtCur } = useCurrency();
   const { profile } = useAuth();
