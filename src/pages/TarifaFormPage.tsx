@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Tarifa, TarifaLinea, AplicaATarifa, TipoCalculoTarifa, RedondeoTarifa } from '@/types';
 import { resolveProductPricing, type TarifaLineaRule, type ProductForPricing } from '@/lib/priceResolver';
+import { useAuth } from '@/contexts/AuthContext';
 
 const APLICA_LABELS: Record<AplicaATarifa, string> = {
   todos: 'Todos los productos',
@@ -205,12 +206,13 @@ function ListasPrecioTab({ tarifaId, isNew }: { tarifaId?: string; isNew: boolea
 /* ── Precios Preview Tab ─────────────────────────── */
 function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tarifaNombre: string }) {
   const [search, setSearch] = useState('');
-  const { symbol: currencySymbol } = useCurrency();
-
+  const { fmt: fmtCur } = useCurrency();
+  const { profile } = useAuth();
+  const empresaId = profile?.empresa_id;
 
   const { data: productos } = useQuery({
-    queryKey: ['precios_preview_tarifa', tarifaId],
-    enabled: !!tarifaId,
+    queryKey: ['precios_preview_tarifa', tarifaId, empresaId],
+    enabled: !!tarifaId && !!empresaId,
     staleTime: 30_000,
     queryFn: async () => {
       const { data: lineas } = await supabase.from('tarifa_lineas')
@@ -219,6 +221,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
 
       const { data: prods } = await supabase.from('productos')
         .select('id, codigo, nombre, costo, precio_principal, clasificacion_id, status, tiene_iva, tiene_ieps, iva_pct, ieps_pct, ieps_tipo')
+        .eq('empresa_id', empresaId!)
         .eq('status', 'activo')
         .order('nombre');
 
@@ -356,7 +359,7 @@ function PreciosPreviewTab({ tarifaId, tarifaNombre }: { tarifaId?: string; tari
   const conImp = filtered.filter(p => p.base_precio === 'con_impuestos');
   const sinImp = filtered.filter(p => p.base_precio !== 'con_impuestos');
 
-  const fmt = (v: number) => `${currencySymbol} {fmt(v)}`;
+  const fmt = (v: number) => fmtCur(v);
 
   const renderGroup = (items: typeof filtered, isConImp: boolean) => {
     if (items.length === 0) return null;
