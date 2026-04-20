@@ -1,5 +1,10 @@
+import { useState } from 'react';
 import { useCurrency } from '@/hooks/useCurrency';
-import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, RotateCcw, ScanLine } from 'lucide-react';
+import { toast } from 'sonner';
+import BarcodeScanner from '@/components/ruta/BarcodeScanner';
+import NumericKeypadModal from '@/components/ruta/NumericKeypadModal';
+import PedidoSugeridoBanner from '@/components/ruta/PedidoSugeridoBanner';
 import type { CartItem, DevolucionItem } from './types';
 
 interface Props {
@@ -22,11 +27,38 @@ interface Props {
   stockAbordo: Map<string, number>;
   usandoAlmacen: boolean;
   fmt: (n: number) => string;
+  // Smart actions
+  insights: { suggested: any[]; lastSaleLineas: any[] };
+  bannerDismissed: boolean;
+  setBannerDismissed: (v: boolean) => void;
+  applySmartSuggestion: () => void;
+  repeatLastSale: () => void;
+  findProductByCode: (code: string) => any | null;
+  setItemQty: (pid: string, qty: number, esCambio?: boolean) => void;
 }
 
 export function StepProductos(props: Props) {
-  const { clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos, cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart, getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt } = props;
+  const {
+    clienteNombre, devoluciones, searchProducto, setSearchProducto, filteredProductos,
+    cart, cambioItems, tipoVenta, totals, addToCart, updateQty, removeFromCart,
+    getItemInCart, getMaxQty, setStep, setCart, stockAbordo, usandoAlmacen, fmt,
+    insights, bannerDismissed, setBannerDismissed,
+    applySmartSuggestion, repeatLastSale, findProductByCode, setItemQty,
+  } = props;
   const { symbol: s } = useCurrency();
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [keypadFor, setKeypadFor] = useState<{ producto_id: string; nombre: string; cantidad: number; max: number; granel: boolean } | null>(null);
+
+  const handleScan = (code: string) => {
+    const prod = findProductByCode(code);
+    if (!prod) { toast.error(`Sin coincidencias para "${code}"`); return; }
+    addToCart(prod);
+    toast.success(`+ ${prod.nombre}`);
+    // keep scanner open for rapid scanning
+  };
+
+  const showBanner = !bannerDismissed && cart.filter(c => !c.es_cambio).length === 0
+    && (insights.suggested.length > 0 || insights.lastSaleLineas.length > 0);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -41,12 +73,33 @@ export function StepProductos(props: Props) {
           </div>
         )}
       </div>
-      <div className="px-3 pb-1.5">
-        <div className="relative">
+
+      {showBanner && (
+        <PedidoSugeridoBanner
+          hasSuggestion={insights.suggested.length > 0}
+          hasLastSale={insights.lastSaleLineas.length > 0}
+          suggestedSource={insights.suggested[0]?.source ?? null}
+          suggestedCount={insights.suggested.length}
+          lastSaleCount={insights.lastSaleLineas.length}
+          onApplySuggestion={applySmartSuggestion}
+          onRepeatLastSale={repeatLastSale}
+          onDismiss={() => setBannerDismissed(true)}
+        />
+      )}
+
+      <div className="px-3 pb-1.5 flex gap-1.5">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <input type="text" placeholder="Buscar producto..." className="w-full bg-accent/60 rounded-lg pl-8 pr-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1.5 focus:ring-primary/40"
-            value={searchProducto} onChange={e => setSearchProducto(e.target.value)} autoFocus />
+            value={searchProducto} onChange={e => setSearchProducto(e.target.value)} />
         </div>
+        <button
+          onClick={() => setScannerOpen(true)}
+          aria-label="Escanear código"
+          className="w-10 h-10 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 active:scale-95 transition-transform shadow-sm shadow-primary/20"
+        >
+          <ScanLine className="h-4.5 w-4.5" />
+        </button>
       </div>
       {cambioItems.length > 0 && (
         <div className="mx-3 mb-1.5 bg-accent/40 rounded-lg px-3 py-2">
@@ -81,8 +134,13 @@ export function StepProductos(props: Props) {
                     <button onClick={() => inCart.cantidad === 1 ? removeFromCart(p.id) : updateQty(p.id, -1)} className="w-7 h-7 rounded-md bg-accent flex items-center justify-center active:scale-90 transition-transform">
                       {inCart.cantidad === 1 ? <Trash2 className="h-3 w-3 text-destructive" /> : <Minus className="h-3 w-3 text-foreground" />}
                     </button>
-                    <input type="number" inputMode={p.es_granel ? "decimal" : "numeric"} className="w-9 text-center text-[13px] font-bold bg-transparent focus:outline-none py-0.5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-foreground"
-                      value={inCart.cantidad} step={p.es_granel ? "0.001" : "1"} onChange={e => { const val = parseFloat(e.target.value); if (!isNaN(val) && val > 0) { const capped = tipoVenta === 'venta_directa' && !p.es_granel ? Math.min(val, maxQty) : val; setCart((prev: CartItem[]) => prev.map(c => c.producto_id === p.id && !c.es_cambio ? { ...c, cantidad: capped } : c)); } }} onFocus={e => e.target.select()} />
+                    <button
+                      onClick={() => setKeypadFor({ producto_id: p.id, nombre: p.nombre, cantidad: inCart.cantidad, max: maxQty === Infinity ? Number.MAX_SAFE_INTEGER : maxQty, granel: !!p.es_granel })}
+                      className="min-w-[36px] px-1 h-7 text-center text-[13px] font-bold bg-transparent text-foreground active:bg-accent/40 rounded-md transition-colors"
+                      aria-label="Editar cantidad"
+                    >
+                      {inCart.cantidad}
+                    </button>
                     <button onClick={() => addToCart(p)} disabled={!!atMax} className={`w-7 h-7 rounded-md flex items-center justify-center active:scale-90 transition-transform ${atMax ? 'bg-muted text-muted-foreground' : 'bg-primary text-primary-foreground'}`}><Plus className="h-3 w-3" /></button>
                   </div>
                 ) : (
@@ -102,6 +160,19 @@ export function StepProductos(props: Props) {
           </button>
         </div>
       )}
+
+      <BarcodeScanner open={scannerOpen} onClose={() => setScannerOpen(false)} onDetected={handleScan} />
+
+      <NumericKeypadModal
+        open={!!keypadFor}
+        title="Cantidad"
+        subtitle={keypadFor?.nombre}
+        initialValue={keypadFor?.cantidad ?? 0}
+        allowDecimal={!!keypadFor?.granel}
+        maxValue={tipoVenta === 'venta_directa' && keypadFor && !keypadFor.granel ? keypadFor.max : undefined}
+        onClose={() => setKeypadFor(null)}
+        onConfirm={(v) => { if (keypadFor) setItemQty(keypadFor.producto_id, v); }}
+      />
     </div>
   );
 }
