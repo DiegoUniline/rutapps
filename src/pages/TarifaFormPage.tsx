@@ -771,6 +771,31 @@ export default function TarifaFormPage() {
     setLoadingAllCats(false);
   };
 
+  // ── Load all products button ──
+  const [loadingAllProds, setLoadingAllProds] = useState(false);
+  const handleLoadAllProducts = async () => {
+    if (!id || isNew || !productosDisp) return;
+    const unusedProds = productosDisp.filter(p => !usedProdIds.has(p.id));
+    if (unusedProds.length === 0) { toast.info('Todos los productos ya tienen regla'); return; }
+    if (!window.confirm(`Se agregarán ${unusedProds.length} reglas (una por producto). ¿Continuar?`)) return;
+    setLoadingAllProds(true);
+    try {
+      for (const prod of unusedProds) {
+        await saveLinea.mutateAsync({
+          tarifa_id: id,
+          aplica_a: 'producto',
+          tipo_calculo: 'margen_costo',
+          precio: 0, precio_minimo: 0, descuento_max: 0, margen_pct: 0, descuento_pct: 0,
+          producto_ids: [prod.id],
+          clasificacion_ids: [],
+        } as any);
+      }
+      refetch();
+      toast.success(`${unusedProds.length} productos agregados`);
+    } catch (err: any) { toast.error(err.message); }
+    setLoadingAllProds(false);
+  };
+
   const getCalculoDisplay = (l: TarifaLinea) => {
     if (l.tipo_calculo === 'margen_costo') return `+${l.margen_pct}% s/costo`;
     if (l.tipo_calculo === 'descuento_precio') return `-${l.descuento_pct}% s/precio`;
