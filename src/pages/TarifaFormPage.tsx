@@ -773,11 +773,19 @@ export default function TarifaFormPage() {
 
   // ── Load all products button ──
   const [loadingAllProds, setLoadingAllProds] = useState(false);
-  const handleLoadAllProducts = async () => {
+  const [confirmAllProdsOpen, setConfirmAllProdsOpen] = useState(false);
+  const [pendingUnusedProds, setPendingUnusedProds] = useState<typeof productosDisp>([]);
+  const handleLoadAllProducts = () => {
     if (!id || isNew || !productosDisp) return;
     const unusedProds = productosDisp.filter(p => !usedProdIds.has(p.id));
     if (unusedProds.length === 0) { toast.info('Todos los productos ya tienen regla'); return; }
-    if (!window.confirm(`Se agregarán ${unusedProds.length} reglas (una por producto). ¿Continuar?`)) return;
+    setPendingUnusedProds(unusedProds);
+    setConfirmAllProdsOpen(true);
+  };
+  const confirmLoadAllProducts = async () => {
+    const unusedProds = pendingUnusedProds;
+    setConfirmAllProdsOpen(false);
+    if (!unusedProds || unusedProds.length === 0) return;
     setLoadingAllProds(true);
     try {
       for (const prod of unusedProds) {
