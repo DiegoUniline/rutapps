@@ -14,6 +14,7 @@ import { usePromocionesActivas, evaluatePromociones, type CartItemForPromo, type
 import type { CartItem, DevolucionItem, CuentaPendiente, Step, PagoLinea } from './types';
 import { locationService } from '@/lib/locationService';
 import { useCurrency } from '@/hooks/useCurrency';
+import { useClienteInsights } from '@/hooks/useClienteInsights';
 import { STEPS } from './types';
 
 export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
