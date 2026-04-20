@@ -348,14 +348,14 @@ Deno.serve(async (req) => {
       }
     }
 
-    const remaining = Math.max(0, MONTHLY_LIMIT - (await (async () => {
-      const fm = new Date(); fm.setDate(1); fm.setHours(0,0,0,0);
-      const { count } = await supabase.from("optimizacion_rutas_log")
-        .select("id", { count: "exact", head: true })
-        .eq("empresa_id", profile.empresa_id)
-        .gte("created_at", fm.toISOString());
-      return count ?? 0;
-    })()));
+    // Recalcular uso final tras los inserts
+    const fmFinal = new Date(); fmFinal.setDate(1); fmFinal.setHours(0,0,0,0);
+    const { count: finalUsed } = await supabase.from("optimizacion_rutas_log")
+      .select("id", { count: "exact", head: true })
+      .eq("empresa_id", profile.empresa_id)
+      .gte("created_at", fmFinal.toISOString());
+    const usedNow = finalUsed ?? 0;
+    const remaining = Math.max(0, totalQuota - usedNow);
 
     // Backwards-compatible response: when single route, expose top-level fields too.
     const single = results.length === 1 ? results[0] : null;
@@ -363,6 +363,15 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       routes: results,
       remaining_this_month: remaining,
+      quota: {
+        usuarios_activos: activeUsers ?? 0,
+        per_user: PER_USER_QUOTA,
+        base: baseQuota,
+        recharges: availableRecharges,
+        total: totalQuota,
+        used: usedNow,
+        available: remaining,
+      },
       ...(single ? {
         optimized_order: single.optimized_order,
         polyline: single.polyline,
