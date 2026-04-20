@@ -95,7 +95,6 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
     const existing = (tarifaLineas ?? []) as any[];
     const listaId = newRule.lista_precio_id || null;
     const duplicate = existing.find((l: any) => {
-      if (l.tarifas?.id !== newRule.tarifa_id) return false;
       const existLista = l.lista_precios?.id ?? l.lista_precio_id ?? null;
       if (existLista !== listaId) return false;
       if (newRule.aplica_a === 'producto' && l.aplica_a === 'producto' && (l.producto_ids ?? []).includes(productoId)) return true;
@@ -106,7 +105,11 @@ export function PreciosTab({ form, tarifaLineas, tarifasDisp, productoId, isNew,
       if (newRule.aplica_a === 'todos' && l.aplica_a === 'todos') return true;
       return false;
     });
-    if (duplicate) { toast.error('Ya existe una regla con la misma tarifa, lista y alcance.'); return; }
+    if (duplicate) {
+      const listaName = duplicate.lista_precios?.nombre ?? 'esta lista';
+      toast.error(`Ya existe una regla en "${listaName}" con el mismo alcance. Edítala o elimínala antes de crear otra.`);
+      return;
+    }
 
     try {
       await saveLinea.mutateAsync({
