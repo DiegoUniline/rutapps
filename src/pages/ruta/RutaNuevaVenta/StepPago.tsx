@@ -193,19 +193,15 @@ export function StepPago(props: Props) {
                     />
                   </div>
 
-                  {/* Quick bill buttons for efectivo */}
+                  {/* Quick bill buttons for efectivo - dynamic based on remaining */}
                   {pago.metodo_pago === 'efectivo' && (
-                    <div className="flex gap-1.5 mt-1.5">
-                      {BILLETES.map(b => (
-                        <button key={b} onClick={() => updatePago(pago.id, 'monto', b)}
-                          className={`flex-1 py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${pago.monto === b ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
-                          {s}{b}
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {getDynamicBills(restante + pago.monto).map(b => (
+                        <button key={b.label} onClick={() => updatePago(pago.id, 'monto', b.amount)}
+                          className={`flex-1 min-w-[60px] py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-95 ${pago.monto === b.amount ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-accent/60 text-foreground'}`}>
+                          {b.label === 'Exacto' ? b.label : `${s}${b.amount}`}
                         </button>
                       ))}
-                      <button onClick={() => updatePago(pago.id, 'monto', restante + pago.monto)}
-                        className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 bg-accent/60 text-foreground`}>
-                        Exacto
-                      </button>
                     </div>
                   )}
                 </div>
