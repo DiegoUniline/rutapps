@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const PER_USER_QUOTA = 30; // optimizaciones incluidas por usuario activo / mes
 const MAX_WAYPOINTS_PER_REQUEST = 23; // Google Routes hard limit is 25 incl. origin/destination
+const REAL_MATRIX_MAX_STOPS = 60; // arriba de esto usamos Haversine para no disparar costo
 
 type LatLng = { lat: number; lng: number };
 type Waypoint = LatLng & { id: string };
@@ -21,6 +22,119 @@ function haversine(a: LatLng, b: LatLng): number {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * Construye matriz NxN de distancias REALES por calle usando Google Routes
+ * computeRouteMatrix. N = waypoints.length + 1 (índice 0 = origen).
+ * Devuelve null si falla, para poder hacer fallback a Haversine.
+ */
+async function buildRealDistanceMatrix(
+  googleApiKey: string,
+  origin: LatLng,
+  waypoints: Waypoint[],
+): Promise<number[][] | null> {
+  const points: LatLng[] = [origin, ...waypoints];
+  const n = points.length;
+  // Google computeRouteMatrix: máx 625 elementos por request (25x25). Para N<=25 cabe en 1 request.
+  // Para N mayor, hacemos en bloques.
+  const matrix: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  const BLOCK = 25;
+
+  try {
+    for (let oStart = 0; oStart < n; oStart += BLOCK) {
+      for (let dStart = 0; dStart < n; dStart += BLOCK) {
+        const origins = points.slice(oStart, oStart + BLOCK);
+        const destinations = points.slice(dStart, dStart + BLOCK);
+        const body = {
+          origins: origins.map(p => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } })),
+          destinations: destinations.map(p => ({ waypoint: { location: { latLng: { latitude: p.lat, longitude: p.lng } } } })),
+          travelMode: "DRIVE",
+        };
+        const res = await fetch("https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": googleApiKey,
+            "X-Goog-FieldMask": "originIndex,destinationIndex,distanceMeters,condition",
+          },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          console.error("DistanceMatrix block error:", await res.text());
+          return null;
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          console.error("DistanceMatrix unexpected response:", data);
+          return null;
+        }
+        for (const cell of data) {
+          if (cell.condition !== "ROUTE_EXISTS") continue;
+          const oi = oStart + (cell.originIndex ?? 0);
+          const di = dStart + (cell.destinationIndex ?? 0);
+          matrix[oi][di] = cell.distanceMeters ?? 0;
+        }
+      }
+    }
+    return matrix;
+  } catch (e) {
+    console.error("buildRealDistanceMatrix error:", e);
+    return null;
+  }
+}
+
+/** NN sobre matriz precomputada. Índice 0 = origen. Devuelve orden de waypoints (índices base 0 sobre waypoints). */
+function nearestNeighborOrderMatrix(n: number, matrix: number[][]): number[] {
+  // n = total puntos incluyendo origen. waypoints son índices 1..n-1
+  const visited = new Array(n).fill(false);
+  visited[0] = true;
+  const order: number[] = [];
+  let current = 0;
+  for (let step = 0; step < n - 1; step++) {
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 1; i < n; i++) {
+      if (visited[i]) continue;
+      const d = matrix[current][i];
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (bestIdx === -1) break;
+    visited[bestIdx] = true;
+    order.push(bestIdx - 1); // a índice de waypoints
+    current = bestIdx;
+  }
+  return order;
+}
+
+function twoOptImproveMatrix(matrix: number[][], order: number[]): number[] {
+  // order: array de índices de waypoint (0..n-2). En matriz son order[i]+1.
+  const route = [...order];
+  const n = route.length;
+  const idx = (i: number) => (i === -1 || i === n) ? 0 : route[i] + 1;
+  let improved = true;
+  let iterations = 0;
+  const maxIterations = Math.min(n * n, 400);
+  while (improved && iterations < maxIterations) {
+    improved = false;
+    iterations++;
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const a = idx(i - 1), b = idx(i), c = idx(j), d = idx(j + 1);
+        const currentDist = matrix[a][b] + matrix[c][d];
+        const newDist = matrix[a][c] + matrix[b][d];
+        if (newDist < currentDist - 1) {
+          let left = i, right = j;
+          while (left < right) {
+            [route[left], route[right]] = [route[right], route[left]];
+            left++; right--;
+          }
+          improved = true;
+        }
+      }
+    }
+  }
+  return route;
 }
 
 function nearestNeighborOrder(origin: LatLng, waypoints: Waypoint[]): number[] {
@@ -301,13 +415,32 @@ Deno.serve(async (req) => {
 
         const original = totalOriginalDistance(r.origin, r.waypoints);
         let orderedWp: Waypoint[];
+        let optMethod: "real_matrix" | "haversine" | "preserved" = "haversine";
         if (preserveOrder) {
           orderedWp = r.waypoints;
+          optMethod = "preserved";
         } else {
-          const nn = nearestNeighborOrder(r.origin, r.waypoints);
-          const optimized = twoOptImprove(r.origin, r.waypoints, nn);
-          orderedWp = optimized.map(idx => r.waypoints[idx]);
+          // Intentar matriz REAL por calle si hay API key y la ruta es razonable
+          let usedReal = false;
+          if (googleApiKey && r.waypoints.length <= REAL_MATRIX_MAX_STOPS) {
+            const matrix = await buildRealDistanceMatrix(googleApiKey, r.origin, r.waypoints);
+            if (matrix) {
+              const n = r.waypoints.length + 1;
+              const nn = nearestNeighborOrderMatrix(n, matrix);
+              const optimized = twoOptImproveMatrix(matrix, nn);
+              orderedWp = optimized.map(idx => r.waypoints[idx]);
+              optMethod = "real_matrix";
+              usedReal = true;
+            }
+          }
+          if (!usedReal) {
+            const nn = nearestNeighborOrder(r.origin, r.waypoints);
+            const optimized = twoOptImprove(r.origin, r.waypoints, nn);
+            orderedWp = optimized.map(idx => r.waypoints[idx]);
+            optMethod = "haversine";
+          }
         }
+        console.log(`Route ${r.key}: method=${optMethod}, stops=${r.waypoints.length}`);
 
         let polyline: string | null = null;
         let distanceMeters = 0;
