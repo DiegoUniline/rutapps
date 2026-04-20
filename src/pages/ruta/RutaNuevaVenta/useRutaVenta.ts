@@ -246,17 +246,24 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     return stockAbordo.get(productoId) ?? 0;
   };
 
-  /** Apply a list of suggested items into the cart */
+  /** Apply a list of suggested items into the cart, capping qty at available stock */
   const applySuggestionList = (items: { producto_id: string; cantidad: number }[], label: string) => {
     if (!productos || !items.length) return;
     const newItems: CartItem[] = [];
+    let cappedCount = 0;
+    let skippedCount = 0;
     items.forEach(s => {
       const prod = (productos as any[]).find(p => p.id === s.producto_id);
       if (!prod) return;
+      const max = getMaxQty(prod.id);
+      // Skip products with zero stock when in venta_directa mode
+      if (max <= 0 && !prod.vender_sin_stock) { skippedCount++; return; }
+      const finalQty = Math.min(s.cantidad, max);
+      if (finalQty < s.cantidad) cappedCount++;
       const pf = resolvePricingFull(prod);
       newItems.push({
         producto_id: prod.id, codigo: prod.codigo, nombre: prod.nombre,
-        precio_unitario: pf.unitPrice, cantidad: s.cantidad,
+        precio_unitario: pf.unitPrice, cantidad: finalQty,
         unidad: (prod.unidades as any)?.abreviatura || 'pz',
         unidad_id: prod.unidad_venta_id ?? undefined,
         tiene_iva: prod.tiene_iva ?? false,
@@ -270,7 +277,10 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
     });
     setCart(prev => [...prev.filter(c => c.es_cambio), ...newItems]);
     setBannerDismissed(true);
-    toast.success(`${newItems.length} productos cargados (${label})`);
+    let msg = `${newItems.length} productos cargados (${label})`;
+    if (cappedCount > 0) msg += ` · ${cappedCount} ajustados al stock`;
+    if (skippedCount > 0) msg += ` · ${skippedCount} sin stock`;
+    toast.success(msg);
   };
 
   /** Backwards-compatible: smart pick (manual list preferred, fallback to historial) */
@@ -362,9 +372,6 @@ export function useRutaVenta(opts?: { onAlmacenMissing?: () => void }) {
 
   const processDevolucionesAndGoToProductos = () => {
     let newCart = cart.filter(c => !c.es_cambio);
-    if (newCart.length === 0 && pedidoSugerido && pedidoSugerido.length > 0) {
-      newCart = pedidoSugerido.map((ps: any) => { const pf = resolvePricingFull(ps.productos); return { producto_id: ps.productos.id, codigo: ps.productos.codigo, nombre: ps.productos.nombre, precio_unitario: pf.unitPrice, cantidad: ps.cantidad, unidad: (ps.productos.unidades as any)?.abreviatura || 'pz', unidad_id: ps.productos.unidad_venta_id ?? undefined, tiene_iva: ps.productos.tiene_iva ?? false, iva_pct: ps.productos.tiene_iva ? ((ps.productos.tasas_iva as any)?.porcentaje ?? ps.productos.iva_pct ?? 16) : 0, tiene_ieps: ps.productos.tiene_ieps ?? false, ieps_pct: ps.productos.tiene_ieps ? ((ps.productos.tasas_ieps as any)?.porcentaje ?? ps.productos.ieps_pct ?? 0) : 0, precio_unitario_sin_redondeo: pf.rawUnitPrice, precio_display_sin_redondeo: pf.rawDisplayPrice, base_precio: pf.basePrecio, redondeo: pf.redondeo }; });
-    }
     // Add replacement products (reposición) at $0
     devoluciones.filter(d => d.accion === 'reposicion' && d.reemplazo_producto_id).forEach(d => {
       const p = productos?.find(pr => pr.id === d.reemplazo_producto_id);
