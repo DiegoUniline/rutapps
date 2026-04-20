@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MONTHLY_LIMIT = 200; // higher limit since multi-route can call several at once
+const PER_USER_QUOTA = 30; // optimizaciones incluidas por usuario activo / mes
 const MAX_WAYPOINTS_PER_REQUEST = 23; // Google Routes hard limit is 25 incl. origin/destination
 
 type LatLng = { lat: number; lng: number };
