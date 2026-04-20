@@ -291,12 +291,15 @@ export function useVentaForm() {
     };
   }, [totals, promoByProduct, rawPricingMap, lineas, sinImpuestos]);
 
-  // Re-price existing lines when tarifa rules or lista_precio changes
+  // Re-price existing lines when tarifa rules or lista_precio changes (skip manual lines)
   useEffect(() => {
     if (!tarifaRules?.length || !productosList || readOnly) return;
     const listaPrecioId = (form as any).lista_precio_id || null;
     setLineas(prev => prev.map(l => {
       if (!l.producto_id) return l;
+      if ((l as any).precio_manual) return l;
+      // If line has its own lista_precio_id, keep it (per-line override)
+      const lineLista = (l as any).lista_precio_id ?? listaPrecioId;
       const prod = productosList.find((p: any) => p.id === l.producto_id);
       if (!prod) return l;
       const prodForPricing: ProductForPricing = {
@@ -305,7 +308,7 @@ export function useVentaForm() {
         tiene_ieps: prod.tiene_ieps, ieps_pct: Number(prod.ieps_pct ?? 0), ieps_tipo: prod.ieps_tipo,
         usa_listas_precio: prod.usa_listas_precio,
       };
-      const pricing = resolveProductPricing(tarifaRules, prodForPricing, listaPrecioId);
+      const pricing = resolveProductPricing(tarifaRules, prodForPricing, lineLista);
       const snap = buildSalePricingSnapshot(prodForPricing, pricing);
       if (snap.unitPrice === Number(l.precio_unitario)) return l;
       return { ...l, precio_unitario: snap.unitPrice, display_unit_price: snap.displayPrice } as any;
@@ -337,7 +340,7 @@ export function useVentaForm() {
     const snap = pricing ? buildSalePricingSnapshot(prodForPricing, pricing) : null;
     const finalUnitPrice = snap ? snap.unitPrice : Number(producto.precio_principal) || 0;
     const finalDisplayPrice = snap ? snap.displayPrice : finalUnitPrice;
-    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', ') } as any; return next; });
+    setLineas(prev => { const next = [...prev]; next[idx] = { ...next[idx], producto_id: productoId, descripcion: producto.nombre, precio_unitario: finalUnitPrice, display_unit_price: finalDisplayPrice, unidad_id: unidadId, iva_pct: ivaPct, ieps_pct: iepsPct, unidad_label: unidadLabel, impuestos_label: taxes.join(', '), lista_precio_id: (form as any).lista_precio_id ?? null, precio_manual: false } as any; return next; });
     setDirty(true);
   };
 

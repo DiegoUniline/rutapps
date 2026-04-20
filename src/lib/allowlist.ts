@@ -32,6 +32,7 @@ export const VENTA_COLUMNS = [
 export const VENTA_LINEA_COLUMNS = [
   'id','venta_id','producto_id','cantidad','precio_unitario','descuento_porcentaje','descuento_monto',
   'subtotal','iva_monto','ieps_monto','total','notas','facturado','unidad_id','created_at',
+  'lista_precio_id','precio_manual',
 ] as const;
 
 export const COMPRA_COLUMNS = [

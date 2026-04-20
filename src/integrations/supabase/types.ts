@@ -5104,7 +5104,9 @@ export type Database = {
           ieps_pct: number | null
           iva_monto: number | null
           iva_pct: number | null
+          lista_precio_id: string | null
           notas: string | null
+          precio_manual: boolean
           precio_unitario: number
           producto_id: string | null
           subtotal: number | null
@@ -5124,7 +5126,9 @@ export type Database = {
           ieps_pct?: number | null
           iva_monto?: number | null
           iva_pct?: number | null
+          lista_precio_id?: string | null
           notas?: string | null
+          precio_manual?: boolean
           precio_unitario?: number
           producto_id?: string | null
           subtotal?: number | null
@@ -5144,7 +5148,9 @@ export type Database = {
           ieps_pct?: number | null
           iva_monto?: number | null
           iva_pct?: number | null
+          lista_precio_id?: string | null
           notas?: string | null
+          precio_manual?: boolean
           precio_unitario?: number
           producto_id?: string | null
           subtotal?: number | null
@@ -5158,6 +5164,13 @@ export type Database = {
             columns: ["factura_cfdi_id"]
             isOneToOne: false
             referencedRelation: "cfdis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "venta_lineas_lista_precio_id_fkey"
+            columns: ["lista_precio_id"]
+            isOneToOne: false
+            referencedRelation: "lista_precios"
             referencedColumns: ["id"]
           },
           {

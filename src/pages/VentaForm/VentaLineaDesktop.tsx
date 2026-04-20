@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react';
 import { useCurrency } from '@/hooks/useCurrency';
 import ProductSearchInput from '@/components/ProductSearchInput';
+import { ListaPrecioPicker } from '@/components/venta/ListaPrecioPicker';
 import { cn } from '@/lib/utils';
 import type { VentaLinea } from '@/types';
 
@@ -101,7 +102,40 @@ export function VentaLineaDesktop({ idx, line: l, isLast, lineas, productosList,
       <td className="py-1 px-2">
         {readOnly ? <span className="text-[12px] block text-right">{fmt(price)}</span>
         : isEmpty ? <span></span>
-        : <input ref={el => setCellRef(idx, 2, el)} type="number" inputMode="decimal" className="inline-edit-input text-[12px] text-right !py-1 w-full" value={l.precio_unitario ?? ''} onChange={e => onUpdateLine(idx, 'precio_unitario', e.target.value)} onKeyDown={e => onCellKeyDown(e, idx, 2)} onFocus={e => e.target.select()} min="0" step="0.01" />}
+        : (
+          <div className="flex items-center gap-1 justify-end">
+            <ListaPrecioPicker
+              producto={prod ?? prodDisplay}
+              currentListaPrecioId={(l as any).lista_precio_id ?? null}
+              isManual={!!(l as any).precio_manual}
+              compact
+              onSelectLista={(listaPrecioId, _tarifaId, unitPrice, displayPrice, _nombre) => {
+                setLineas(prev => {
+                  const next = [...prev];
+                  (next[idx] as any) = { ...next[idx], lista_precio_id: listaPrecioId, precio_unitario: unitPrice, display_unit_price: displayPrice, precio_manual: false };
+                  return next;
+                });
+              }}
+            />
+            <input
+              ref={el => setCellRef(idx, 2, el)}
+              type="number" inputMode="decimal"
+              className="inline-edit-input text-[12px] text-right !py-1 w-20"
+              value={l.precio_unitario ?? ''}
+              onChange={e => {
+                onUpdateLine(idx, 'precio_unitario', e.target.value);
+                setLineas(prev => {
+                  const next = [...prev];
+                  (next[idx] as any).precio_manual = true;
+                  return next;
+                });
+              }}
+              onKeyDown={e => onCellKeyDown(e, idx, 2)}
+              onFocus={e => e.target.select()}
+              min="0" step="0.01"
+            />
+          </div>
+        )}
       </td>
       <td className="py-1.5 px-2 text-center hidden md:table-cell">
         {isEmpty ? '' : (
