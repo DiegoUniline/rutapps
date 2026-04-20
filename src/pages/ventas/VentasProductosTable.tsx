@@ -44,7 +44,7 @@ export function VentasProductosTable({ items, fmt }: Props) {
             <td className="py-2 px-3">
               <span className={cn(
                 "text-[11px] font-medium px-2 py-0.5 rounded",
-                row.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-secondary text-secondary-foreground"
+                row.tipo === 'pedido' ? "bg-primary/10 text-primary" : "bg-accent text-accent-foreground"
               )}>
                 {TIPO_LABELS[row.tipo] || row.tipo}
               </span>
